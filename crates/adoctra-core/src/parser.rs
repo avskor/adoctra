@@ -78,32 +78,12 @@ pub fn parse(source: &str) -> ParseResult {
             continue;
         }
 
-        // List: consecutive lines carrying the *same* marker char form one
-        // flat list (`*`/`-` unordered, `.` ordered).
-        if let Some((marker, ordered, _)) = parse_list_marker(trimmed) {
-            let start = off;
-            let mut end = off + line.len();
-            let mut items = Vec::new();
-            while i < lines.len() {
-                let (loff, lline) = lines[i];
-                match parse_list_marker(lline.trim_end()) {
-                    Some((m, _, mlen)) if m == marker => {
-                        let content = &source[loff + mlen..loff + lline.len()];
-                        let inlines = scan_inlines(content, loff + mlen, &doc.attributes);
-                        items.push(ListItem {
-                            inlines,
-                            span: Span::new(loff, loff + lline.len()),
-                        });
-                        end = loff + lline.len();
-                        i += 1;
-                    }
-                    _ => break,
-                }
-            }
-            doc.blocks.push(Block {
-                span: Span::new(start, end),
-                kind: BlockKind::List { ordered, items },
-            });
+        // List: a run of items that nests a level deeper whenever a *unique*
+        // marker appears. `parse_list` consumes the whole (possibly nested)
+        // list and advances `i` past every line it owns.
+        if parse_list_marker(trimmed).is_some() {
+            let block = parse_list(source, &lines, &mut i, &doc.attributes, &[]);
+            doc.blocks.push(block);
             continue;
         }
 
@@ -134,6 +114,78 @@ pub fn parse(source: &str) -> ParseResult {
     ParseResult {
         document: doc,
         diagnostics,
+    }
+}
+
+/// Parse a list — and any deeper sublists — starting at `lines[*i]`, which must
+/// carry a list marker. Advances `*i` past every consumed line.
+///
+/// `ancestors` holds the marker identities of the enclosing lists. A line whose
+/// marker matches an ancestor ends this list (returning control to that
+/// ancestor); a *unique* marker opens a sublist under the current item. This is
+/// asciidoctor's marker-stack nesting rule.
+fn parse_list(
+    source: &str,
+    lines: &[(usize, &str)],
+    i: &mut usize,
+    attrs: &Attributes,
+    ancestors: &[MarkerId],
+) -> Block {
+    let (marker, ordered, _) =
+        parse_list_marker(lines[*i].1.trim_end()).expect("parse_list called on a non-list line");
+    let start = lines[*i].0;
+    let mut end = start;
+    let mut items = Vec::new();
+
+    while *i < lines.len() {
+        let (loff, lline) = lines[*i];
+        let trimmed = lline.trim_end();
+        if trimmed.trim().is_empty() {
+            break; // a blank line ends the list
+        }
+        let Some((m, _, mlen)) = parse_list_marker(trimmed) else {
+            break; // a non-list line ends the list
+        };
+        if m == marker {
+            // A sibling item at this level.
+            let content = &source[loff + mlen..loff + lline.len()];
+            let inlines = scan_inlines(content, loff + mlen, attrs);
+            let item_start = loff;
+            let mut item_end = loff + lline.len();
+            *i += 1;
+            // A unique marker on the next line opens a sublist under this item.
+            let mut blocks = Vec::new();
+            if let Some((nm, _, _)) = lines
+                .get(*i)
+                .and_then(|(_, l)| parse_list_marker(l.trim_end()))
+            {
+                if nm != marker && !ancestors.contains(&nm) {
+                    let mut child_anc = ancestors.to_vec();
+                    child_anc.push(marker);
+                    let child = parse_list(source, lines, i, attrs, &child_anc);
+                    item_end = child.span.end;
+                    blocks.push(child);
+                }
+            }
+            end = item_end;
+            items.push(ListItem {
+                inlines,
+                blocks,
+                span: Span::new(item_start, item_end),
+            });
+        } else if ancestors.contains(&m) {
+            break; // marker belongs to an ancestor: this list is finished
+        } else {
+            // A unique deeper marker never reaches the top of the loop (the
+            // look-ahead above folds it into a sublist), so anything else here
+            // ends the list defensively.
+            break;
+        }
+    }
+
+    Block {
+        span: Span::new(start, end),
+        kind: BlockKind::List { ordered, items },
     }
 }
 
@@ -175,22 +227,37 @@ pub(crate) fn parse_attribute_entry(line: &str) -> Option<(String, String)> {
     Some((key.to_string(), value))
 }
 
-/// A list marker at the very start of `line`: exactly one of `*`/`-`/`.`
-/// followed by a space. Returns `(marker_char, ordered, marker_len_bytes)`,
+/// Identity of a list marker: its leading byte and how many times that byte
+/// repeats. `-` is always width 1; `*` and `.` may repeat (`**`, `...`) to mark
+/// a deeper level. Two markers open distinct nesting levels iff they differ —
+/// this is asciidoctor's rule ("a new level for each unique marker"), so it
+/// also nests across kinds (e.g. a `.` item inside a `*` list).
+pub(crate) type MarkerId = (u8, usize);
+
+/// A list marker at the very start of `line`: a run of `*` or `.`, or a single
+/// `-`, followed by a space. Returns `(marker, ordered, marker_len_bytes)`,
 /// where `marker_len_bytes` is the byte offset at which item content begins.
-/// Top-level only for now: leading whitespace is not accepted.
-pub(crate) fn parse_list_marker(line: &str) -> Option<(char, bool, usize)> {
-    let mut chars = line.chars();
-    let marker = chars.next()?;
-    let ordered = match marker {
-        '*' | '-' => false,
-        '.' => true,
+/// Markers must be at column 0: leading whitespace is not accepted. (All marker
+/// bytes are ASCII, so the run width equals its byte length.)
+pub(crate) fn parse_list_marker(line: &str) -> Option<(MarkerId, bool, usize)> {
+    let bytes = line.as_bytes();
+    let first = *bytes.first()?;
+    let (ordered, repeatable) = match first {
+        b'*' => (false, true),
+        b'.' => (true, true),
+        b'-' => (false, false),
         _ => return None,
     };
-    if chars.next() != Some(' ') {
+    let mut width = 1;
+    if repeatable {
+        while bytes.get(width) == Some(&first) {
+            width += 1;
+        }
+    }
+    if bytes.get(width) != Some(&b' ') {
         return None;
     }
-    Some((marker, ordered, marker.len_utf8() + 1))
+    Some(((first, width), ordered, width + 1))
 }
 
 pub(crate) fn parse_heading(line: &str) -> Option<(u8, &str)> {
@@ -328,6 +395,23 @@ mod tests {
         }
     }
 
+    /// The single nested list held by `item`, or panic.
+    fn sublist(item: &ListItem) -> (bool, Vec<ListItem>) {
+        assert_eq!(item.blocks.len(), 1, "expected exactly one nested block");
+        match &item.blocks[0].kind {
+            BlockKind::List { ordered, items } => (*ordered, items.clone()),
+            other => panic!("expected nested List, got {other:?}"),
+        }
+    }
+
+    /// The principal text of `item` (its first inline, asserted to be text).
+    fn item_text(item: &ListItem) -> String {
+        match &item.inlines[0] {
+            Inline::Text { value, .. } => value.clone(),
+            other => panic!("expected Text, got {other:?}"),
+        }
+    }
+
     #[test]
     fn parses_unordered_star_list() {
         let r = parse("* one\n* two");
@@ -381,17 +465,94 @@ mod tests {
     }
 
     #[test]
-    fn different_markers_make_separate_lists() {
+    fn different_marker_nests_as_sublist() {
+        // asciidoctor's rule: a *unique* marker opens a deeper level. So `. b`
+        // (ordered) nests inside the `* a` (unordered) item — it does not start
+        // a second top-level list. (Confirmed against asciidoctor 2.0.23.)
         let r = parse("* a\n. b");
-        assert_eq!(r.document.blocks.len(), 2);
-        assert!(matches!(
-            r.document.blocks[0].kind,
-            BlockKind::List { ordered: false, .. }
-        ));
-        assert!(matches!(
-            r.document.blocks[1].kind,
-            BlockKind::List { ordered: true, .. }
-        ));
+        assert_eq!(r.document.blocks.len(), 1);
+        let (ordered, items) = list("* a\n. b");
+        assert!(!ordered);
+        assert_eq!(items.len(), 1);
+        assert_eq!(item_text(&items[0]), "a");
+        let (sub_ordered, sub_items) = sublist(&items[0]);
+        assert!(sub_ordered);
+        assert_eq!(sub_items.len(), 1);
+        assert_eq!(item_text(&sub_items[0]), "b");
+    }
+
+    #[test]
+    fn doubled_marker_nests_under_its_item() {
+        // `*` then `**` then back to `*`.
+        let (ordered, items) = list("* one\n** a\n** b\n* two");
+        assert!(!ordered);
+        assert_eq!(items.len(), 2);
+        assert_eq!(item_text(&items[0]), "one");
+        let (sub_ordered, sub_items) = sublist(&items[0]);
+        assert!(!sub_ordered);
+        assert_eq!(sub_items.len(), 2);
+        assert_eq!(item_text(&sub_items[0]), "a");
+        assert_eq!(item_text(&sub_items[1]), "b");
+        // The second top-level item is a sibling with no nested content.
+        assert_eq!(item_text(&items[1]), "two");
+        assert!(items[1].blocks.is_empty());
+    }
+
+    #[test]
+    fn three_levels_nest_and_unwind() {
+        // `*` / `**` / `***`, then `**` (back one level), then `*` (back to top).
+        let (_, items) = list("* one\n** a\n*** x\n** b\n* two");
+        assert_eq!(items.len(), 2);
+        let (_, lvl2) = sublist(&items[0]);
+        assert_eq!(lvl2.len(), 2); // a (with a deeper child), b
+        assert_eq!(item_text(&lvl2[0]), "a");
+        let (_, lvl3) = sublist(&lvl2[0]);
+        assert_eq!(lvl3.len(), 1);
+        assert_eq!(item_text(&lvl3[0]), "x");
+        assert_eq!(item_text(&lvl2[1]), "b");
+        assert!(lvl2[1].blocks.is_empty());
+        assert!(items[1].blocks.is_empty());
+    }
+
+    #[test]
+    fn ordered_marker_run_nests() {
+        let (ordered, items) = list(". one\n.. a\n.. b\n. two");
+        assert!(ordered);
+        assert_eq!(items.len(), 2);
+        let (sub_ordered, sub_items) = sublist(&items[0]);
+        assert!(sub_ordered);
+        assert_eq!(sub_items.len(), 2);
+    }
+
+    #[test]
+    fn mixed_ordered_unordered_from_docs() {
+        // The hybrid-list example from the asciidoctor docs: an ordered list
+        // whose items each hold a nested unordered list.
+        let (ordered, items) = list(". Linux\n* Fedora\n* Ubuntu\n. BSD\n* FreeBSD");
+        assert!(ordered);
+        assert_eq!(items.len(), 2);
+        assert_eq!(item_text(&items[0]), "Linux");
+        let (o0, distros0) = sublist(&items[0]);
+        assert!(!o0);
+        assert_eq!(distros0.len(), 2);
+        assert_eq!(item_text(&distros0[0]), "Fedora");
+        assert_eq!(item_text(&distros0[1]), "Ubuntu");
+        assert_eq!(item_text(&items[1]), "BSD");
+        let (o1, distros1) = sublist(&items[1]);
+        assert!(!o1);
+        assert_eq!(distros1.len(), 1);
+        assert_eq!(item_text(&distros1[0]), "FreeBSD");
+    }
+
+    #[test]
+    fn item_span_covers_its_nested_sublist() {
+        // "* one\n** a": item "one" spans the whole construct (0..10); the
+        // nested list block spans just its own line (6..10).
+        let src = "* one\n** a";
+        let (_, items) = list(src);
+        assert_eq!(items[0].span, Span::new(0, 10));
+        assert_eq!(&src[items[0].span.start..items[0].span.end], "* one\n** a");
+        assert_eq!(items[0].blocks[0].span, Span::new(6, 10));
     }
 
     #[test]

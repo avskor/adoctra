@@ -102,6 +102,15 @@ fn write_block(b: &Block, s: &mut String) {
                 write_span_field(&item.span, s);
                 s.push_str(",\"inlines\":");
                 write_inlines(&item.inlines, s);
+                // Nested blocks (e.g. a sublist); each carries its own spans.
+                s.push_str(",\"blocks\":[");
+                for (j, child) in item.blocks.iter().enumerate() {
+                    if j > 0 {
+                        s.push(',');
+                    }
+                    write_block(child, s);
+                }
+                s.push(']');
                 s.push('}');
             }
             s.push(']');
@@ -346,5 +355,21 @@ mod tests {
     fn list_marker_is_tokenized() {
         let json = tokens_json("* one");
         assert!(json.contains("\"kind\":\"list-marker\""), "got: {json}");
+    }
+
+    #[test]
+    fn nested_list_serializes_with_spans() {
+        // "* one\n** a": item "one" spans 0..10 and carries a nested list block
+        // (span 6..10) in its "blocks"; the editor can map every level.
+        let json = parse_json("* one\n** a");
+        assert!(
+            json.contains("\"blocks\":[{\"span\":{\"start\":6,\"end\":10},\"name\":\"list\""),
+            "got: {json}"
+        );
+        // The nested item's principal text sits at bytes 9..10.
+        assert!(
+            json.contains("\"span\":{\"start\":9,\"end\":10},\"name\":\"text\""),
+            "got: {json}"
+        );
     }
 }

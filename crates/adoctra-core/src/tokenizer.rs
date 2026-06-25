@@ -243,6 +243,19 @@ mod tests {
     }
 
     #[test]
+    fn nested_marker_token_covers_the_whole_run() {
+        // A `**` marker token spans both stars plus the trailing space.
+        let src = "* one\n** deep";
+        let toks = tokens(src);
+        let nested = toks
+            .iter()
+            .filter(|t| t.kind == TokenKind::ListMarker)
+            .find(|t| t.span.start == 6)
+            .expect("no nested list marker token");
+        assert_eq!(&src[nested.span.start..nested.span.end], "** ");
+    }
+
+    #[test]
     fn token_spans_match_ast_spans() {
         // The whole point of the refactor: tokens are a projection of the same
         // inline scan the parser uses, so their spans must coincide.

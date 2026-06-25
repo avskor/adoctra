@@ -28,17 +28,49 @@ fn paragraph_inner(html: &str) -> String {
         .join(" ")
 }
 
-/// Visible text of each `<li>…</li>`, with inner tags stripped and whitespace
-/// collapsed. Robust to asciidoctor wrapping item text in `<p>` while our
-/// backend emits `<li>` content directly.
-fn list_items(html: &str) -> Vec<String> {
+/// Flatten a list into `(depth, principal_text)` per item, depth-aware so it
+/// survives nesting. `depth` counts enclosing `<ul>`/`<ol>` (asciidoctor's
+/// wrapping `<div class="ulist">` is a `<div>`, so it never affects the count —
+/// and neither does our backend's lack of one). `principal_text` is the item's
+/// own text up to its first nested list, with inner tags stripped and
+/// whitespace collapsed (so asciidoctor's `<p>` wrapper drops out and the text
+/// of nested items is excluded). Searching for `<ul`/`<ol` with the leading `<`
+/// avoids matching the `ulist`/`olist` substrings in asciidoctor's class names.
+fn flat_list(html: &str) -> Vec<(usize, String)> {
     let mut items = Vec::new();
-    let mut rest = html;
-    while let Some(open) = rest.find("<li>") {
-        let after = &rest[open + "<li>".len()..];
-        let close = after.find("</li>").expect("unbalanced <li> in output");
-        items.push(strip_tags(&after[..close]));
-        rest = &after[close + "</li>".len()..];
+    let mut depth = 0usize;
+    let mut pos = 0usize;
+    while pos < html.len() {
+        let rest = &html[pos..];
+        let next = ["<ul", "<ol", "</ul", "</ol", "<li>"]
+            .iter()
+            .filter_map(|m| rest.find(m).map(|i| (i, *m)))
+            .min_by_key(|(i, _)| *i);
+        let Some((rel, marker)) = next else { break };
+        let at = pos + rel;
+        match marker {
+            "<ul" | "<ol" => {
+                depth += 1;
+                pos = at + marker.len();
+            }
+            "</ul" | "</ol" => {
+                depth = depth.saturating_sub(1);
+                pos = at + marker.len();
+            }
+            _ => {
+                // "<li>": principal text runs until the item's first nested list
+                // (`<ul`/`<ol`) or its close (`</li`).
+                let after = at + "<li>".len();
+                let tail = &html[after..];
+                let stop = ["<ul", "<ol", "</li"]
+                    .iter()
+                    .filter_map(|m| tail.find(m))
+                    .min()
+                    .unwrap_or(tail.len());
+                items.push((depth, strip_tags(&tail[..stop])));
+                pos = after;
+            }
+        }
     }
     items
 }
@@ -115,9 +147,9 @@ fn html_lists_match_asciidoctor() {
         let ours = String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap();
 
         assert_eq!(
-            list_items(&ours),
-            list_items(&expected),
-            "HTML list items diverge from asciidoctor for `{name}`"
+            flat_list(&ours),
+            flat_list(&expected),
+            "HTML list structure diverges from asciidoctor for `{name}`"
         );
     }
 }

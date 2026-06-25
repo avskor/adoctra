@@ -69,7 +69,15 @@ fn write_block(block: &Block, s: &mut String) {
                 }
                 s.push_str("{\"inlines\":");
                 write_inlines(&item.inlines, s);
-                s.push('}');
+                // Nested blocks (e.g. a sublist) under this item.
+                s.push_str(",\"blocks\":[");
+                for (j, child) in item.blocks.iter().enumerate() {
+                    if j > 0 {
+                        s.push(',');
+                    }
+                    write_block(child, s);
+                }
+                s.push_str("]}");
             }
             s.push_str("]}");
         }
@@ -207,5 +215,21 @@ mod tests {
         let json = render("* a *b*");
         assert!(json.contains("\"name\":\"list\""), "got: {json}");
         assert!(json.contains("\"name\":\"strong\""), "got: {json}");
+    }
+
+    #[test]
+    fn nested_list_serializes_under_item_blocks() {
+        let json = render("* one\n** a");
+        // The parent item carries the sublist in its "blocks".
+        assert!(
+            json.contains("\"blocks\":[{\"name\":\"list\""),
+            "got: {json}"
+        );
+        assert!(
+            json.contains("{\"name\":\"text\",\"value\":\"a\"}"),
+            "got: {json}"
+        );
+        // The leaf item has an empty "blocks".
+        assert!(json.contains("\"blocks\":[]}"), "got: {json}");
     }
 }

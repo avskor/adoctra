@@ -56,6 +56,11 @@ fn render_block(block: &Block, out: &mut String) {
             for item in items {
                 out.push_str("<li>");
                 render_inlines(&item.inlines, out);
+                // Nested blocks (e.g. a sublist) render inside the <li>, after
+                // the item's principal text — matching asciidoctor's structure.
+                for child in &item.blocks {
+                    render_block(child, out);
+                }
                 out.push_str("</li>\n");
             }
             out.push_str(&format!("</{tag}>\n"));
@@ -198,5 +203,26 @@ mod tests {
             html.contains("<li>a <strong>b</strong></li>"),
             "got: {html}"
         );
+    }
+
+    #[test]
+    fn nested_list_renders_inside_parent_li() {
+        let html = render("* one\n** a\n** b\n* two");
+        // Two <ul> levels; the nested one opens inside the first item.
+        assert_eq!(html.matches("<ul>").count(), 2, "got: {html}");
+        assert!(html.contains("<li>one<ul>"), "got: {html}");
+        assert!(html.contains("<li>a</li>"), "got: {html}");
+        assert!(html.contains("<li>b</li>"), "got: {html}");
+        assert!(html.contains("<li>two</li>"), "got: {html}");
+    }
+
+    #[test]
+    fn nested_ordered_under_unordered() {
+        // A unique marker nests across kinds: `. b` becomes an <ol> in the <li>.
+        let html = render("* a\n. b");
+        assert!(html.contains("<ul>"), "got: {html}");
+        assert!(html.contains("<ol>"), "got: {html}");
+        assert!(html.contains("<li>a<ol>"), "got: {html}");
+        assert!(html.contains("<li>b</li>"), "got: {html}");
     }
 }
