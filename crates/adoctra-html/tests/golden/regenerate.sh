@@ -17,7 +17,9 @@ if ! command -v asciidoctor >/dev/null 2>&1; then
 fi
 
 echo "using $(asciidoctor --version | head -1)"
-for adoc in *.adoc; do
+# Top-level inline fixtures plus the flat-list fixtures under lists/.
+for adoc in *.adoc lists/*.adoc; do
+  [ -e "$adoc" ] || continue
   name="${adoc%.adoc}"
   asciidoctor -s -o - "$adoc" >"${name}.expected.html"
   echo "  ${name}.expected.html"

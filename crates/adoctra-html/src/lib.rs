@@ -50,6 +50,16 @@ fn render_block(block: &Block, out: &mut String) {
             out.push_str(&escape(text));
             out.push_str("</pre>\n");
         }
+        BlockKind::List { ordered, items } => {
+            let tag = if *ordered { "ol" } else { "ul" };
+            out.push_str(&format!("<{tag}>\n"));
+            for item in items {
+                out.push_str("<li>");
+                render_inlines(&item.inlines, out);
+                out.push_str("</li>\n");
+            }
+            out.push_str(&format!("</{tag}>\n"));
+        }
     }
 }
 
@@ -156,5 +166,37 @@ mod tests {
         // The model keeps text literal; escaping is the backend's job.
         let html = render("1 < 2 & 3");
         assert!(html.contains("1 &lt; 2 &amp; 3"), "got: {html}");
+    }
+
+    #[test]
+    fn renders_unordered_list() {
+        let html = render("* one\n* two");
+        assert!(html.contains("<ul>"), "got: {html}");
+        assert!(html.contains("<li>one</li>"), "got: {html}");
+        assert!(html.contains("<li>two</li>"), "got: {html}");
+        assert!(html.contains("</ul>"), "got: {html}");
+    }
+
+    #[test]
+    fn dash_list_also_renders_ul() {
+        let html = render("- a\n- b");
+        assert!(html.contains("<ul>"), "got: {html}");
+    }
+
+    #[test]
+    fn renders_ordered_list() {
+        let html = render(". first\n. second");
+        assert!(html.contains("<ol>"), "got: {html}");
+        assert!(html.contains("<li>first</li>"), "got: {html}");
+        assert!(html.contains("</ol>"), "got: {html}");
+    }
+
+    #[test]
+    fn list_item_keeps_inline_markup() {
+        let html = render("* a *b*");
+        assert!(
+            html.contains("<li>a <strong>b</strong></li>"),
+            "got: {html}"
+        );
     }
 }

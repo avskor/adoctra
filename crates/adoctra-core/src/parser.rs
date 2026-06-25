@@ -5,7 +5,7 @@
 //! [`Diagnostic`]s. This is what lets an editor parse on every keystroke while
 //! the buffer is half-written.
 
-use crate::ast::{Block, BlockKind, Document, Span};
+use crate::ast::{Block, BlockKind, Document, ListItem, Span};
 use crate::attributes::Attributes;
 use crate::diagnostic::{Diagnostic, ParseResult, Severity};
 use crate::inline::scan_inlines;
@@ -78,13 +78,45 @@ pub fn parse(source: &str) -> ParseResult {
             continue;
         }
 
+        // List: consecutive lines carrying the *same* marker char form one
+        // flat list (`*`/`-` unordered, `.` ordered).
+        if let Some((marker, ordered, _)) = parse_list_marker(trimmed) {
+            let start = off;
+            let mut end = off + line.len();
+            let mut items = Vec::new();
+            while i < lines.len() {
+                let (loff, lline) = lines[i];
+                match parse_list_marker(lline.trim_end()) {
+                    Some((m, _, mlen)) if m == marker => {
+                        let content = &source[loff + mlen..loff + lline.len()];
+                        let inlines = scan_inlines(content, loff + mlen, &doc.attributes);
+                        items.push(ListItem {
+                            inlines,
+                            span: Span::new(loff, loff + lline.len()),
+                        });
+                        end = loff + lline.len();
+                        i += 1;
+                    }
+                    _ => break,
+                }
+            }
+            doc.blocks.push(Block {
+                span: Span::new(start, end),
+                kind: BlockKind::List { ordered, items },
+            });
+            continue;
+        }
+
         // Paragraph: accumulate contiguous non-blank, non-heading lines.
         let start = off;
         let mut end = off + line.len();
         i += 1;
         while i < lines.len() {
             let (loff, lline) = lines[i];
-            if lline.trim().is_empty() || parse_heading(lline.trim_end()).is_some() {
+            if lline.trim().is_empty()
+                || parse_heading(lline.trim_end()).is_some()
+                || parse_list_marker(lline.trim_end()).is_some()
+            {
                 break;
             }
             end = loff + lline.len();
@@ -141,6 +173,24 @@ pub(crate) fn parse_attribute_entry(line: &str) -> Option<(String, String)> {
     }
     let value = rest[end + 1..].trim().to_string();
     Some((key.to_string(), value))
+}
+
+/// A list marker at the very start of `line`: exactly one of `*`/`-`/`.`
+/// followed by a space. Returns `(marker_char, ordered, marker_len_bytes)`,
+/// where `marker_len_bytes` is the byte offset at which item content begins.
+/// Top-level only for now: leading whitespace is not accepted.
+pub(crate) fn parse_list_marker(line: &str) -> Option<(char, bool, usize)> {
+    let mut chars = line.chars();
+    let marker = chars.next()?;
+    let ordered = match marker {
+        '*' | '-' => false,
+        '.' => true,
+        _ => return None,
+    };
+    if chars.next() != Some(' ') {
+        return None;
+    }
+    Some((marker, ordered, marker.len_utf8() + 1))
 }
 
 pub(crate) fn parse_heading(line: &str) -> Option<(u8, &str)> {
@@ -268,5 +318,100 @@ mod tests {
         assert!(inlines
             .iter()
             .any(|n| matches!(n, Inline::AttributeRef { value: None, .. })));
+    }
+
+    /// The list block of `src`, or panic if the first block is not a list.
+    fn list(src: &str) -> (bool, Vec<ListItem>) {
+        match &parse(src).document.blocks[0].kind {
+            BlockKind::List { ordered, items } => (*ordered, items.clone()),
+            other => panic!("expected List, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parses_unordered_star_list() {
+        let r = parse("* one\n* two");
+        assert!(r.diagnostics.is_empty());
+        assert_eq!(r.document.blocks.len(), 1);
+        let (ordered, items) = list("* one\n* two");
+        assert!(!ordered);
+        assert_eq!(items.len(), 2);
+        // Item content is scanned with the right base offset.
+        assert!(matches!(&items[0].inlines[0], Inline::Text { value, span }
+            if value == "one" && *span == Span::new(2, 5)));
+    }
+
+    #[test]
+    fn dash_is_an_unordered_marker() {
+        let (ordered, items) = list("- a\n- b");
+        assert!(!ordered);
+        assert_eq!(items.len(), 2);
+    }
+
+    #[test]
+    fn parses_ordered_dot_list() {
+        let (ordered, items) = list(". first\n. second");
+        assert!(ordered);
+        assert_eq!(items.len(), 2);
+    }
+
+    #[test]
+    fn list_block_and_item_spans_cover_their_lines() {
+        let src = "* one\n* two";
+        let block = &parse(src).document.blocks[0];
+        assert_eq!(block.span, Span::new(0, 11));
+        let items = match &block.kind {
+            BlockKind::List { items, .. } => items,
+            _ => unreachable!(),
+        };
+        assert_eq!(items[0].span, Span::new(0, 5));
+        assert_eq!(items[1].span, Span::new(6, 11));
+    }
+
+    #[test]
+    fn list_stops_at_blank_line() {
+        let r = parse("* one\n\nA paragraph");
+        assert_eq!(r.document.blocks.len(), 2);
+        let (_, items) = list("* one\n\nA paragraph");
+        assert_eq!(items.len(), 1);
+        assert!(matches!(
+            r.document.blocks[1].kind,
+            BlockKind::Paragraph { .. }
+        ));
+    }
+
+    #[test]
+    fn different_markers_make_separate_lists() {
+        let r = parse("* a\n. b");
+        assert_eq!(r.document.blocks.len(), 2);
+        assert!(matches!(
+            r.document.blocks[0].kind,
+            BlockKind::List { ordered: false, .. }
+        ));
+        assert!(matches!(
+            r.document.blocks[1].kind,
+            BlockKind::List { ordered: true, .. }
+        ));
+    }
+
+    #[test]
+    fn star_without_space_is_not_a_list() {
+        // `*bold*` has no space after the marker → it stays a paragraph.
+        let r = parse("*bold*");
+        assert!(matches!(
+            r.document.blocks[0].kind,
+            BlockKind::Paragraph { .. }
+        ));
+    }
+
+    #[test]
+    fn a_list_interrupts_a_paragraph_without_a_blank_line() {
+        let r = parse("text\n* item");
+        assert_eq!(r.document.blocks.len(), 2);
+        assert!(matches!(
+            r.document.blocks[0].kind,
+            BlockKind::Paragraph { .. }
+        ));
+        assert!(matches!(r.document.blocks[1].kind, BlockKind::List { .. }));
     }
 }

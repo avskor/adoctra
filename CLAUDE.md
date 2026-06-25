@@ -121,22 +121,24 @@ later".
 ## Current state (so you don't assume more than exists)
 
 Working: parser for header attributes, headings, listing blocks, paragraphs,
-and inline `*strong*` / `_emphasis_`, `` `monospace` `` / `#mark#` (constrained)
+flat lists (unordered `*`/`-`, ordered `.`; one level, single-line items), and
+inline `*strong*` / `_emphasis_`, `` `monospace` `` / `#mark#` (constrained)
 and `^superscript^` / `~subscript~` (unconstrained); a single inline scanner
 (`adoctra-core/src/inline.rs`) shared by the parser and tokenizer; inline nodes
 carry byte spans; attribute references `{name}` are resolved once in core
 against the document attributes; HTML and JSON backends; editor layer
 (error-tolerant `parse`, spans, diagnostics, tokenizer); WASM `parse_json` /
 `tokens_json`; golden compatibility tests against asciidoctor
-(`adoctra-html/tests/golden/`).
+(`adoctra-html/tests/golden/`, list fixtures under `golden/lists/`).
 
 Scaffold only: DOCX backend; the extension API exists but `parse`/`convert` do
 not invoke it yet.
 
 Not yet implemented (common asks — treat as roadmap, do not assume present):
-broader language coverage (lists, tables, links/xrefs, footnotes, admonitions,
-includes, conditionals, block/inline macros, typographic `REPLACEMENTS`), TOC
-generation, incremental/block reparse, and a pull/event API over the AST.
+broader language coverage (nested lists, explicit-numbered `1.` and continuation
+list items, tables, links/xrefs, footnotes, admonitions, includes, conditionals,
+block/inline macros, typographic `REPLACEMENTS`), TOC generation,
+incremental/block reparse, and a pull/event API over the AST.
 
 When asked to "add a feature," check this list first and say plainly whether it
 is new work or wiring up an existing seam.

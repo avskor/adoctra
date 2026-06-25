@@ -89,6 +89,23 @@ fn write_block(b: &Block, s: &mut String) {
             s.push_str("\"name\":\"listing\",\"text\":");
             write_str(text, s);
         }
+        BlockKind::List { ordered, items } => {
+            s.push_str(&format!(
+                "\"name\":\"list\",\"ordered\":{ordered},\"items\":["
+            ));
+            for (i, item) in items.iter().enumerate() {
+                if i > 0 {
+                    s.push(',');
+                }
+                // Each item carries its own span for the editor.
+                s.push('{');
+                write_span_field(&item.span, s);
+                s.push_str(",\"inlines\":");
+                write_inlines(&item.inlines, s);
+                s.push('}');
+            }
+            s.push(']');
+        }
     }
     s.push('}');
 }
@@ -291,5 +308,43 @@ mod tests {
         let json = parse_json("Ref {nope}");
         assert!(json.contains("\"name\":\"attribute-ref\""), "got: {json}");
         assert!(json.contains("\"value\":null"), "got: {json}");
+    }
+
+    #[test]
+    fn list_block_serializes_items_with_spans() {
+        let json = parse_json("* one\n* two");
+        assert!(json.contains("\"name\":\"list\""), "got: {json}");
+        assert!(json.contains("\"ordered\":false"), "got: {json}");
+        // Each item carries its own span (the whole item line).
+        assert!(
+            json.contains("\"span\":{\"start\":0,\"end\":5}"),
+            "got: {json}"
+        );
+        assert!(
+            json.contains("\"span\":{\"start\":6,\"end\":11}"),
+            "got: {json}"
+        );
+    }
+
+    #[test]
+    fn ordered_list_marks_ordered_true() {
+        let json = parse_json(". a\n. b");
+        assert!(json.contains("\"ordered\":true"), "got: {json}");
+    }
+
+    #[test]
+    fn list_item_inlines_carry_spans() {
+        // The item content "one" sits at bytes 2..5 of "* one".
+        let json = parse_json("* one");
+        assert!(
+            json.contains("\"span\":{\"start\":2,\"end\":5},\"name\":\"text\""),
+            "got: {json}"
+        );
+    }
+
+    #[test]
+    fn list_marker_is_tokenized() {
+        let json = tokens_json("* one");
+        assert!(json.contains("\"kind\":\"list-marker\""), "got: {json}");
     }
 }

@@ -59,6 +59,20 @@ fn write_block(block: &Block, s: &mut String) {
             escape_into(text, s);
             s.push('}');
         }
+        BlockKind::List { ordered, items } => {
+            s.push_str(&format!(
+                "{{\"name\":\"list\",\"ordered\":{ordered},\"items\":["
+            ));
+            for (i, item) in items.iter().enumerate() {
+                if i > 0 {
+                    s.push(',');
+                }
+                s.push_str("{\"inlines\":");
+                write_inlines(&item.inlines, s);
+                s.push('}');
+            }
+            s.push_str("]}");
+        }
     }
 }
 
@@ -168,5 +182,30 @@ mod tests {
             "got: {json}"
         );
         assert!(!json.contains("attribute"), "got: {json}");
+    }
+
+    #[test]
+    fn unordered_list_serializes_by_name() {
+        let json = render("* one\n* two");
+        assert!(json.contains("\"name\":\"list\""), "got: {json}");
+        assert!(json.contains("\"ordered\":false"), "got: {json}");
+        assert!(
+            json.contains("{\"name\":\"text\",\"value\":\"one\"}"),
+            "got: {json}"
+        );
+    }
+
+    #[test]
+    fn ordered_list_sets_ordered_true() {
+        let json = render(". a\n. b");
+        assert!(json.contains("\"name\":\"list\""), "got: {json}");
+        assert!(json.contains("\"ordered\":true"), "got: {json}");
+    }
+
+    #[test]
+    fn list_item_nests_inline_children() {
+        let json = render("* a *b*");
+        assert!(json.contains("\"name\":\"list\""), "got: {json}");
+        assert!(json.contains("\"name\":\"strong\""), "got: {json}");
     }
 }

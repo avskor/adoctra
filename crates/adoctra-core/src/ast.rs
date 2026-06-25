@@ -62,6 +62,17 @@ pub enum BlockKind {
     Paragraph { inlines: Vec<Inline> },
     /// A literal/listing block (verbatim, no inline substitutions).
     Listing { text: String },
+    /// A flat unordered (`*`/`-`) or ordered (`.`) list. `ordered` selects the
+    /// rendered list kind; each [`ListItem`] is one source line of inlines.
+    List { ordered: bool, items: Vec<ListItem> },
+}
+
+/// One item of a [`BlockKind::List`]: its resolved inline content plus the
+/// source [`Span`] of the whole item line (marker included).
+#[derive(Debug, Clone, PartialEq)]
+pub struct ListItem {
+    pub inlines: Vec<Inline>,
+    pub span: Span,
 }
 
 /// Inline (phrase-level) elements. Every variant carries its source [`Span`].

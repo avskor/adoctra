@@ -12,7 +12,7 @@
 
 use crate::ast::{Inline, Span};
 use crate::inline::scan_inlines;
-use crate::parser::{collect_header, parse_attribute_entry, parse_heading};
+use crate::parser::{collect_header, parse_attribute_entry, parse_heading, parse_list_marker};
 use crate::scanner::lines_with_offsets;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -34,6 +34,7 @@ pub enum TokenKind {
     Superscript,
     Subscript,
     AttributeRef,
+    ListMarker,
 }
 
 impl TokenKind {
@@ -50,6 +51,7 @@ impl TokenKind {
             TokenKind::Superscript => "superscript",
             TokenKind::Subscript => "subscript",
             TokenKind::AttributeRef => "attribute-ref",
+            TokenKind::ListMarker => "list-marker",
         }
     }
 }
@@ -91,6 +93,17 @@ pub fn tokens(source: &str) -> Vec<Token> {
                 span: line_span,
                 kind: TokenKind::Heading,
             });
+            continue;
+        }
+        // List item: a marker token, then the item content flattened like any
+        // other body line — same `scan_inlines` (and base offset) the parser
+        // uses, so token spans coincide with the item's inline spans.
+        if let Some((_, _, mlen)) = parse_list_marker(line.trim_end()) {
+            out.push(Token {
+                span: Span::new(off, off + mlen),
+                kind: TokenKind::ListMarker,
+            });
+            flatten_inlines(&scan_inlines(&line[mlen..], off + mlen, &attrs), &mut out);
             continue;
         }
         // Body text line: flatten the shared inline scan to highlight tokens.
@@ -204,6 +217,29 @@ mod tests {
             .find(|t| t.kind == TokenKind::Monospace)
             .unwrap();
         assert_eq!(&src[t.span.start..t.span.end], "`code`");
+    }
+
+    #[test]
+    fn list_marker_is_tokenized_with_inline_content() {
+        let src = "* one *b*";
+        let toks = tokens(src);
+        let marker = toks
+            .iter()
+            .find(|t| t.kind == TokenKind::ListMarker)
+            .expect("no list marker token");
+        assert_eq!(&src[marker.span.start..marker.span.end], "* ");
+        // Inline markup inside the item is still tokenized.
+        assert!(toks.iter().any(|t| t.kind == TokenKind::Strong));
+    }
+
+    #[test]
+    fn ordered_list_emits_a_marker_per_item() {
+        let toks = tokens(". a\n. b");
+        let markers = toks
+            .iter()
+            .filter(|t| t.kind == TokenKind::ListMarker)
+            .count();
+        assert_eq!(markers, 2);
     }
 
     #[test]
