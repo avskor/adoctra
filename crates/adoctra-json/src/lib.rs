@@ -232,4 +232,30 @@ mod tests {
         // The leaf item has an empty "blocks".
         assert!(json.contains("\"blocks\":[]}"), "got: {json}");
     }
+
+    #[test]
+    fn continuation_paragraph_serializes_in_item_blocks() {
+        // `+` attaches a paragraph as a block inside the item's "blocks".
+        let json = render("* one\n+\nattached\n* two");
+        assert!(
+            json.contains("\"blocks\":[{\"name\":\"paragraph\""),
+            "got: {json}"
+        );
+        assert!(
+            json.contains("{\"name\":\"text\",\"value\":\"attached\"}"),
+            "got: {json}"
+        );
+    }
+
+    #[test]
+    fn multi_line_item_text_serializes_folded() {
+        // A wrapped line folds into the item's text — its newline and indent
+        // become spaces (the resolved content), while the source is two lines.
+        let json = render("* one\n  two");
+        assert!(json.contains("\"name\":\"list\""), "got: {json}");
+        assert!(
+            json.contains("{\"name\":\"text\",\"value\":\"one   two\"}"),
+            "got: {json}"
+        );
+    }
 }

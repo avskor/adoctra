@@ -22,93 +22,20 @@ pub fn parse(source: &str) -> ParseResult {
 
     // --- body blocks ---
     while i < lines.len() {
-        let (off, line) = lines[i];
-        let trimmed = line.trim_end();
-
-        if trimmed.trim().is_empty() {
+        if lines[i].1.trim().is_empty() {
             i += 1;
             continue;
         }
-
-        if let Some((level, title)) = parse_heading(trimmed) {
-            // `title` is a subslice of `source`, so its absolute offset gives an
-            // exact base for inline spans.
-            let base = abs_offset(source, title);
-            let inlines = scan_inlines(title, base, &doc.attributes);
-            doc.blocks.push(Block {
-                span: Span::new(off, off + line.len()),
-                kind: BlockKind::Heading { level, inlines },
-            });
-            i += 1;
-            continue;
-        }
-
-        if trimmed.trim() == "----" {
-            let start = off;
-            let mut end = off + line.len();
-            i += 1;
-            let mut text = String::new();
-            let mut closed = false;
-            while i < lines.len() {
-                let (loff, lline) = lines[i];
-                if lline.trim() == "----" {
-                    end = loff + lline.len();
-                    i += 1;
-                    closed = true;
-                    break;
-                }
-                if !text.is_empty() {
-                    text.push('\n');
-                }
-                text.push_str(lline);
-                end = loff + lline.len();
-                i += 1;
-            }
-            if !closed {
-                diagnostics.push(Diagnostic {
-                    span: Span::new(start, start + 4),
-                    severity: Severity::Error,
-                    message: "unterminated listing block (missing closing `----`)".to_string(),
-                });
-            }
-            doc.blocks.push(Block {
-                span: Span::new(start, end),
-                kind: BlockKind::Listing { text },
-            });
-            continue;
-        }
-
-        // List: a run of items that nests a level deeper whenever a *unique*
-        // marker appears. `parse_list` consumes the whole (possibly nested)
-        // list and advances `i` past every line it owns.
-        if parse_list_marker(trimmed).is_some() {
-            let block = parse_list(source, &lines, &mut i, &doc.attributes, &[]);
+        if let Some(block) = parse_block(
+            source,
+            &lines,
+            &mut i,
+            &doc.attributes,
+            &mut diagnostics,
+            BlockCtx::TopLevel,
+        ) {
             doc.blocks.push(block);
-            continue;
         }
-
-        // Paragraph: accumulate contiguous non-blank, non-heading lines.
-        let start = off;
-        let mut end = off + line.len();
-        i += 1;
-        while i < lines.len() {
-            let (loff, lline) = lines[i];
-            if lline.trim().is_empty()
-                || parse_heading(lline.trim_end()).is_some()
-                || parse_list_marker(lline.trim_end()).is_some()
-            {
-                break;
-            }
-            end = loff + lline.len();
-            i += 1;
-        }
-        // Scan inlines over the original source slice (newlines and all), so
-        // every inline span maps back to real bytes — no re-joined string.
-        let inlines = scan_inlines(&source[start..end], start, &doc.attributes);
-        doc.blocks.push(Block {
-            span: Span::new(start, end),
-            kind: BlockKind::Paragraph { inlines },
-        });
     }
 
     ParseResult {
@@ -117,70 +44,242 @@ pub fn parse(source: &str) -> ParseResult {
     }
 }
 
+/// Where a block is being parsed. The only behavioural difference is how a
+/// paragraph *ends*: at the top level it runs until a blank line, a heading or a
+/// column-0 list marker; inside a list item (after a `+` continuation) it
+/// additionally ends at a lone `+` line or an *indented* list marker, so an
+/// attached paragraph does not swallow the next continuation or sibling item.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum BlockCtx {
+    TopLevel,
+    InListItem,
+}
+
+/// Parse exactly one block starting at `lines[*i]` (which the caller has ensured
+/// is non-blank), advancing `*i` past every line it consumes. Returns `None`
+/// only defensively, if a blank line slipped through. Shared by the top-level
+/// loop and by list-item `+` continuations, so attached blocks reuse the very
+/// same block grammar.
+fn parse_block(
+    source: &str,
+    lines: &[(usize, &str)],
+    i: &mut usize,
+    attrs: &Attributes,
+    diagnostics: &mut Vec<Diagnostic>,
+    ctx: BlockCtx,
+) -> Option<Block> {
+    let (off, line) = lines[*i];
+    let trimmed = line.trim_end();
+
+    if trimmed.trim().is_empty() {
+        *i += 1;
+        return None;
+    }
+
+    // Heading.
+    if let Some((level, title)) = parse_heading(trimmed) {
+        // `title` is a subslice of `source`, so its absolute offset gives an
+        // exact base for inline spans.
+        let base = abs_offset(source, title);
+        let inlines = scan_inlines(title, base, attrs);
+        *i += 1;
+        return Some(Block {
+            span: Span::new(off, off + line.len()),
+            kind: BlockKind::Heading { level, inlines },
+        });
+    }
+
+    // Listing block (verbatim, fenced by `----`).
+    if trimmed.trim() == "----" {
+        let start = off;
+        let mut end = off + line.len();
+        *i += 1;
+        let mut text = String::new();
+        let mut closed = false;
+        while *i < lines.len() {
+            let (loff, lline) = lines[*i];
+            if lline.trim() == "----" {
+                end = loff + lline.len();
+                *i += 1;
+                closed = true;
+                break;
+            }
+            if !text.is_empty() {
+                text.push('\n');
+            }
+            text.push_str(lline);
+            end = loff + lline.len();
+            *i += 1;
+        }
+        if !closed {
+            diagnostics.push(Diagnostic {
+                span: Span::new(start, start + 4),
+                severity: Severity::Error,
+                message: "unterminated listing block (missing closing `----`)".to_string(),
+            });
+        }
+        return Some(Block {
+            span: Span::new(start, end),
+            kind: BlockKind::Listing { text },
+        });
+    }
+
+    // List: a run of items that nests a level deeper whenever a *unique* marker
+    // appears. A list only *starts* at column 0 (an indented marker elsewhere is
+    // ordinary text); deeper levels may be indented, handled inside `parse_list`,
+    // which consumes the whole (possibly nested) list.
+    if parse_list_marker(trimmed).is_some() {
+        return Some(parse_list(source, lines, i, attrs, diagnostics, &[]));
+    }
+
+    // Paragraph: accumulate contiguous lines until this context's terminator.
+    let start = off;
+    let mut end = off + line.len();
+    *i += 1;
+    while *i < lines.len() {
+        let (loff, lline) = lines[*i];
+        let t = lline.trim_end();
+        let ends = t.trim().is_empty()
+            || parse_heading(t).is_some()
+            || match ctx {
+                BlockCtx::TopLevel => parse_list_marker(t).is_some(),
+                BlockCtx::InListItem => t.trim() == "+" || list_marker_indented(t).is_some(),
+            };
+        if ends {
+            break;
+        }
+        end = loff + lline.len();
+        *i += 1;
+    }
+    // Scan inlines over the original source slice (newlines and all), so every
+    // inline span maps back to real bytes — no re-joined string.
+    let inlines = scan_inlines(&source[start..end], start, attrs);
+    Some(Block {
+        span: Span::new(start, end),
+        kind: BlockKind::Paragraph { inlines },
+    })
+}
+
+/// The role of a source line *relative to a list level* (its current `marker`
+/// and the `ancestors` stack). Computing it in one place lets `parse_list` read
+/// as a small state machine: for the next line it decides whether the line
+/// continues the item's text, attaches a block, opens a sublist, or ends the
+/// list.
+#[derive(Debug, PartialEq, Eq)]
+enum LineRole {
+    /// Blank line — ends the list (the current simplification).
+    Blank,
+    /// A lone `+` — a list continuation; the next block attaches to the item.
+    Continuation,
+    /// A marker identical to this level's — the next sibling item.
+    Sibling,
+    /// A marker belonging to an enclosing list — hands control back up.
+    Ancestor,
+    /// A unique, deeper marker — opens a sublist under the current item.
+    Nested,
+    /// Anything else — principal-text continuation of the current item.
+    Text,
+}
+
+/// Classify `line` against the current list `marker` and `ancestors`. Marker
+/// detection is indent-aware ([`list_marker_indented`]): asciidoctor decides
+/// nesting by marker *identity*, not indentation, so an indented `*` under a
+/// `*` list is a sibling, while `**` opens a deeper level regardless of indent.
+fn classify(line: &str, marker: MarkerId, ancestors: &[MarkerId]) -> LineRole {
+    let t = line.trim_end();
+    if t.trim().is_empty() {
+        return LineRole::Blank;
+    }
+    if t.trim() == "+" {
+        return LineRole::Continuation;
+    }
+    match list_marker_indented(t) {
+        Some((m, _, _)) if m == marker => LineRole::Sibling,
+        Some((m, _, _)) if ancestors.contains(&m) => LineRole::Ancestor,
+        Some(_) => LineRole::Nested,
+        None => LineRole::Text,
+    }
+}
+
 /// Parse a list — and any deeper sublists — starting at `lines[*i]`, which must
 /// carry a list marker. Advances `*i` past every consumed line.
 ///
 /// `ancestors` holds the marker identities of the enclosing lists. A line whose
 /// marker matches an ancestor ends this list (returning control to that
-/// ancestor); a *unique* marker opens a sublist under the current item. This is
-/// asciidoctor's marker-stack nesting rule.
+/// ancestor); a *unique* marker opens a sublist under the current item — this is
+/// asciidoctor's marker-stack nesting rule. Each item's principal text may wrap
+/// over several plain lines, and a `+` continuation attaches following blocks
+/// (paragraph, listing) to the item; both nested sublists and attached blocks
+/// live in `item.blocks`, in source order.
 fn parse_list(
     source: &str,
     lines: &[(usize, &str)],
     i: &mut usize,
     attrs: &Attributes,
+    diagnostics: &mut Vec<Diagnostic>,
     ancestors: &[MarkerId],
 ) -> Block {
     let (marker, ordered, _) =
-        parse_list_marker(lines[*i].1.trim_end()).expect("parse_list called on a non-list line");
+        list_marker_indented(lines[*i].1.trim_end()).expect("parse_list called on a non-list line");
     let start = lines[*i].0;
     let mut end = start;
     let mut items = Vec::new();
 
-    while *i < lines.len() {
+    // Only a sibling marker begins another item; everything else (a blank line,
+    // an ancestor's marker) ends this list. Deeper markers and `+` lines are
+    // folded into the item below, so they never reach this guard.
+    while *i < lines.len() && classify(lines[*i].1, marker, ancestors) == LineRole::Sibling {
         let (loff, lline) = lines[*i];
-        let trimmed = lline.trim_end();
-        if trimmed.trim().is_empty() {
-            break; // a blank line ends the list
-        }
-        let Some((m, _, mlen)) = parse_list_marker(trimmed) else {
-            break; // a non-list line ends the list
-        };
-        if m == marker {
-            // A sibling item at this level.
-            let content = &source[loff + mlen..loff + lline.len()];
-            let inlines = scan_inlines(content, loff + mlen, attrs);
-            let item_start = loff;
-            let mut item_end = loff + lline.len();
+        let content_off = list_marker_indented(lline.trim_end())
+            .map(|(_, _, off)| off)
+            .expect("a sibling line carries a marker");
+        let item_start = loff;
+        let content_start = loff + content_off;
+        let mut principal_end = loff + lline.len();
+        *i += 1;
+
+        // Multi-line principal text: fold following plain lines into this item.
+        while *i < lines.len() && classify(lines[*i].1, marker, ancestors) == LineRole::Text {
+            let (toff, tline) = lines[*i];
+            principal_end = toff + tline.len();
             *i += 1;
-            // A unique marker on the next line opens a sublist under this item.
-            let mut blocks = Vec::new();
-            if let Some((nm, _, _)) = lines
-                .get(*i)
-                .and_then(|(_, l)| parse_list_marker(l.trim_end()))
-            {
-                if nm != marker && !ancestors.contains(&nm) {
+        }
+        let inlines = scan_inlines(&source[content_start..principal_end], content_start, attrs);
+
+        // Attached blocks (`+` continuations) and nested sublists, in source
+        // order, all collected into `item.blocks`.
+        let mut blocks = Vec::new();
+        let mut item_end = principal_end;
+        while *i < lines.len() {
+            match classify(lines[*i].1, marker, ancestors) {
+                LineRole::Continuation => {
+                    *i += 1; // consume the `+`
+                    if *i < lines.len() && !lines[*i].1.trim().is_empty() {
+                        if let Some(b) =
+                            parse_block(source, lines, i, attrs, diagnostics, BlockCtx::InListItem)
+                        {
+                            item_end = b.span.end;
+                            blocks.push(b);
+                        }
+                    }
+                }
+                LineRole::Nested => {
                     let mut child_anc = ancestors.to_vec();
                     child_anc.push(marker);
-                    let child = parse_list(source, lines, i, attrs, &child_anc);
+                    let child = parse_list(source, lines, i, attrs, diagnostics, &child_anc);
                     item_end = child.span.end;
                     blocks.push(child);
                 }
+                _ => break,
             }
-            end = item_end;
-            items.push(ListItem {
-                inlines,
-                blocks,
-                span: Span::new(item_start, item_end),
-            });
-        } else if ancestors.contains(&m) {
-            break; // marker belongs to an ancestor: this list is finished
-        } else {
-            // A unique deeper marker never reaches the top of the loop (the
-            // look-ahead above folds it into a sublist), so anything else here
-            // ends the list defensively.
-            break;
         }
+
+        end = item_end;
+        items.push(ListItem {
+            inlines,
+            blocks,
+            span: Span::new(item_start, item_end),
+        });
     }
 
     Block {
@@ -258,6 +357,18 @@ pub(crate) fn parse_list_marker(line: &str) -> Option<(MarkerId, bool, usize)> {
         return None;
     }
     Some(((first, width), ordered, width + 1))
+}
+
+/// Like [`parse_list_marker`] but tolerant of leading ASCII spaces. Indentation
+/// is cosmetic in asciidoctor — nesting is decided by marker *identity*, not
+/// indent — so we strip leading spaces before matching and fold their width into
+/// the returned content offset. The [`MarkerId`] comes from the de-indented
+/// marker, so an indented `*` is the *same* level as a column-0 `*` (a sibling),
+/// while `**` opens a new level regardless of indent.
+pub(crate) fn list_marker_indented(line: &str) -> Option<(MarkerId, bool, usize)> {
+    let indent = line.len() - line.trim_start_matches(' ').len();
+    let (marker, ordered, mlen) = parse_list_marker(&line[indent..])?;
+    Some((marker, ordered, indent + mlen))
 }
 
 pub(crate) fn parse_heading(line: &str) -> Option<(u8, &str)> {
@@ -574,5 +685,109 @@ mod tests {
             BlockKind::Paragraph { .. }
         ));
         assert!(matches!(r.document.blocks[1].kind, BlockKind::List { .. }));
+    }
+
+    /// `item_text` with interior whitespace collapsed — handy where a multi-line
+    /// item folds its line break (and any indent) to spaces.
+    fn item_text_squeezed(item: &ListItem) -> String {
+        item_text(item)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+    }
+
+    /// The single nested/attached block of `item`, asserted to be a paragraph,
+    /// returning its principal text.
+    fn paragraph_text(block: &Block) -> String {
+        match &block.kind {
+            BlockKind::Paragraph { inlines } => match &inlines[0] {
+                Inline::Text { value, .. } => value.clone(),
+                other => panic!("expected Text, got {other:?}"),
+            },
+            other => panic!("expected Paragraph, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn item_text_wraps_over_several_lines() {
+        // A plain line after the marker folds into the same item's text — its
+        // line break (and indent) become spaces, but the item span covers both
+        // source lines. (Confirmed against asciidoctor 2.0.23: one <li>.)
+        let src = "* one\n  two\n* three";
+        let (_, items) = list(src);
+        assert_eq!(items.len(), 2);
+        assert_eq!(item_text_squeezed(&items[0]), "one two");
+        assert_eq!(item_text(&items[1]), "three");
+        assert_eq!(&src[items[0].span.start..items[0].span.end], "* one\n  two");
+    }
+
+    #[test]
+    fn indented_same_marker_is_a_sibling_not_nested() {
+        // asciidoctor decides nesting by marker identity, not indent: an
+        // indented `*` under a `*` list is a *sibling*, not a child.
+        let src = "* one\n  * nested";
+        let (_, items) = list(src);
+        assert_eq!(items.len(), 2);
+        assert_eq!(item_text(&items[0]), "one");
+        assert_eq!(item_text(&items[1]), "nested");
+        assert!(items[0].blocks.is_empty());
+    }
+
+    #[test]
+    fn indented_unique_marker_nests() {
+        // A unique marker (`**`) opens a deeper level even when indented.
+        let src = "* one\n  ** nested";
+        let (_, items) = list(src);
+        assert_eq!(items.len(), 1);
+        let (_, sub) = sublist(&items[0]);
+        assert_eq!(sub.len(), 1);
+        assert_eq!(item_text(&sub[0]), "nested");
+    }
+
+    #[test]
+    fn continuation_attaches_a_paragraph() {
+        // `+` attaches the following paragraph as a block inside the item.
+        let src = "* one\n+\nattached para\n* two";
+        let (_, items) = list(src);
+        assert_eq!(items.len(), 2);
+        assert_eq!(item_text(&items[0]), "one");
+        assert_eq!(items[0].blocks.len(), 1);
+        assert_eq!(paragraph_text(&items[0].blocks[0]), "attached para");
+        assert_eq!(item_text(&items[1]), "two");
+        assert!(items[1].blocks.is_empty());
+    }
+
+    #[test]
+    fn continuation_attaches_a_listing() {
+        let src = "* one\n+\n----\ncode\n----\n* two";
+        let (_, items) = list(src);
+        assert_eq!(items.len(), 2);
+        assert_eq!(items[0].blocks.len(), 1);
+        assert!(matches!(
+            &items[0].blocks[0].kind,
+            BlockKind::Listing { text } if text == "code"
+        ));
+        assert_eq!(item_text(&items[1]), "two");
+    }
+
+    #[test]
+    fn double_continuation_attaches_two_blocks_in_order() {
+        let src = "* one\n+\npara A\n+\npara B";
+        let (_, items) = list(src);
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].blocks.len(), 2);
+        assert_eq!(paragraph_text(&items[0].blocks[0]), "para A");
+        assert_eq!(paragraph_text(&items[0].blocks[1]), "para B");
+    }
+
+    #[test]
+    fn item_span_covers_an_attached_block() {
+        let src = "* one\n+\nattached";
+        let (_, items) = list(src);
+        assert_eq!(items.len(), 1);
+        assert_eq!(
+            &src[items[0].span.start..items[0].span.end],
+            "* one\n+\nattached"
+        );
     }
 }

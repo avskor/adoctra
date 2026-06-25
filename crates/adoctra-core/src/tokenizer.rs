@@ -62,6 +62,10 @@ pub fn tokens(source: &str) -> Vec<Token> {
     let (attrs, _) = collect_header(&lines);
     let mut out = Vec::new();
     let mut in_listing = false;
+    // Whether we're inside a list (started by a column-0 marker, ended by a
+    // blank line — mirroring the parser). While set, indented markers are
+    // recognised; this is the tokenizer's share of "indented nested markers".
+    let mut in_list = false;
 
     for (off, line) in lines {
         let line_span = Span::new(off, off + line.len());
@@ -81,6 +85,10 @@ pub fn tokens(source: &str) -> Vec<Token> {
             });
             continue;
         }
+        if line.trim().is_empty() {
+            in_list = false; // a blank line ends a list (mirrors the parser)
+            continue;
+        }
         if parse_attribute_entry(line).is_some() {
             out.push(Token {
                 span: line_span,
@@ -97,13 +105,28 @@ pub fn tokens(source: &str) -> Vec<Token> {
         }
         // List item: a marker token, then the item content flattened like any
         // other body line — same `scan_inlines` (and base offset) the parser
-        // uses, so token spans coincide with the item's inline spans.
-        if let Some((_, _, mlen)) = parse_list_marker(line.trim_end()) {
+        // uses, so token spans coincide with the item's inline spans. A list
+        // starts at column 0; once inside one, a deeper marker may be indented
+        // (asciidoctor folds the indent and nests by marker identity), so we
+        // recognise an indented marker only while `in_list` and keep the indent
+        // out of the marker token.
+        let t = line.trim_end();
+        let indent = if in_list {
+            t.len() - t.trim_start_matches(' ').len()
+        } else {
+            0
+        };
+        if let Some((_, _, mlen)) = parse_list_marker(&t[indent..]) {
+            in_list = true;
+            let mstart = off + indent;
             out.push(Token {
-                span: Span::new(off, off + mlen),
+                span: Span::new(mstart, mstart + mlen),
                 kind: TokenKind::ListMarker,
             });
-            flatten_inlines(&scan_inlines(&line[mlen..], off + mlen, &attrs), &mut out);
+            flatten_inlines(
+                &scan_inlines(&line[indent + mlen..], off + indent + mlen, &attrs),
+                &mut out,
+            );
             continue;
         }
         // Body text line: flatten the shared inline scan to highlight tokens.
@@ -278,5 +301,35 @@ mod tests {
                 "no token matches AST node span {want_span:?}"
             );
         }
+    }
+
+    #[test]
+    fn indented_marker_is_tokenized_inside_a_list() {
+        // Once a list has started at column 0, an indented marker is still a
+        // marker; the marker token excludes the leading spaces.
+        let src = "* one\n  ** deep";
+        let toks = tokens(src);
+        let nested = toks
+            .iter()
+            .filter(|t| t.kind == TokenKind::ListMarker)
+            .find(|t| t.span.start == 8) // "* one\n  " is 8 bytes
+            .expect("no indented list marker token");
+        assert_eq!(&src[nested.span.start..nested.span.end], "** ");
+    }
+
+    #[test]
+    fn indented_marker_is_not_tokenized_outside_a_list() {
+        // With no list in progress, a leading-space marker is ordinary text
+        // (lists start at column 0) — no marker token at the indented position.
+        let toks = tokens("  * not a list");
+        assert!(toks.iter().all(|t| t.kind != TokenKind::ListMarker));
+    }
+
+    #[test]
+    fn wrapped_item_line_still_tokenizes_inline_markup() {
+        // A plain continuation line of a list item is highlighted like body
+        // text — its inline markup still yields tokens.
+        let toks = tokens("* one\n  *bold* wrap");
+        assert!(toks.iter().any(|t| t.kind == TokenKind::Strong));
     }
 }

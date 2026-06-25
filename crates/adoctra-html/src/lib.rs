@@ -56,9 +56,12 @@ fn render_block(block: &Block, out: &mut String) {
             for item in items {
                 out.push_str("<li>");
                 render_inlines(&item.inlines, out);
-                // Nested blocks (e.g. a sublist) render inside the <li>, after
-                // the item's principal text — matching asciidoctor's structure.
+                // Nested blocks (a sublist, or a `+`-attached paragraph/listing)
+                // render inside the <li>, after the item's principal text. Each
+                // starts on its own line, matching asciidoctor's structure and
+                // keeping the principal text from running into the block's text.
                 for child in &item.blocks {
+                    out.push('\n');
                     render_block(child, out);
                 }
                 out.push_str("</li>\n");
@@ -210,7 +213,8 @@ mod tests {
         let html = render("* one\n** a\n** b\n* two");
         // Two <ul> levels; the nested one opens inside the first item.
         assert_eq!(html.matches("<ul>").count(), 2, "got: {html}");
-        assert!(html.contains("<li>one<ul>"), "got: {html}");
+        // A nested block opens on its own line, after the item's principal text.
+        assert!(html.contains("<li>one\n<ul>"), "got: {html}");
         assert!(html.contains("<li>a</li>"), "got: {html}");
         assert!(html.contains("<li>b</li>"), "got: {html}");
         assert!(html.contains("<li>two</li>"), "got: {html}");
@@ -222,7 +226,33 @@ mod tests {
         let html = render("* a\n. b");
         assert!(html.contains("<ul>"), "got: {html}");
         assert!(html.contains("<ol>"), "got: {html}");
-        assert!(html.contains("<li>a<ol>"), "got: {html}");
+        assert!(html.contains("<li>a\n<ol>"), "got: {html}");
         assert!(html.contains("<li>b</li>"), "got: {html}");
+    }
+
+    #[test]
+    fn continuation_paragraph_renders_inside_li() {
+        // `+` attaches a paragraph block; it renders inside the <li>, after the
+        // item's principal text (the same recursion that renders a sublist).
+        let html = render("* one\n+\nattached\n* two");
+        assert!(html.contains("<li>one\n<p>attached</p>"), "got: {html}");
+        assert!(html.contains("<li>two</li>"), "got: {html}");
+    }
+
+    #[test]
+    fn continuation_listing_renders_inside_li() {
+        let html = render("* one\n+\n----\ncode\n----");
+        assert!(
+            html.contains("<li>one\n<pre class=\"listing\">code</pre>"),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn multi_line_item_text_folds_into_one_li() {
+        // A wrapped line folds into the item's text (one <li>, no extra item).
+        let html = render("* one\n  two");
+        assert_eq!(html.matches("<li>").count(), 1, "got: {html}");
+        assert!(html.contains("two</li>"), "got: {html}");
     }
 }

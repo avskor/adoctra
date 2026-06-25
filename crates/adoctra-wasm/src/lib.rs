@@ -372,4 +372,27 @@ mod tests {
             "got: {json}"
         );
     }
+
+    #[test]
+    fn continuation_block_serializes_in_item_blocks() {
+        // `+` attaches a paragraph; it serializes as a spanned block inside the
+        // item's "blocks", so the editor can map the attached content too.
+        let json = parse_json("* one\n+\nattached");
+        assert!(json.contains("\"name\":\"paragraph\""), "got: {json}");
+        assert!(
+            json.contains("\"name\":\"text\",\"value\":\"attached\""),
+            "got: {json}"
+        );
+    }
+
+    #[test]
+    fn multi_line_item_span_covers_both_lines() {
+        // The wrapped item "* one\n  two" spans 0..11 (both source lines), so the
+        // editor maps the whole item even though its text folds to one line.
+        let json = parse_json("* one\n  two");
+        assert!(
+            json.contains("\"span\":{\"start\":0,\"end\":11}"),
+            "got: {json}"
+        );
+    }
 }
