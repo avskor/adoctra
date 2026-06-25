@@ -1,0 +1,21 @@
+[package]
+name = "adoctra-wasm"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+description = "WASM bindings exposing the adoctra parser to a JavaScript editor"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+adoctra-core = { workspace = true }
+
+# wasm-only glue: present only when targeting wasm32, so native `cargo build`
+# and `cargo test` compile the pure serialization layer with zero extra deps.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+console_error_panic_hook = "0.1"

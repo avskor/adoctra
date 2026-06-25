@@ -1,0 +1,33 @@
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/adoctra/adoctra"
+authors = ["Alexey"]
+description = "An AsciiDoc processor and publishing toolchain, written in Rust"
+
+# Internal crates are wired via path + version so the same manifests work
+# both inside the workspace and when published to crates.io.
+[workspace.dependencies]
+adoctra      = { path = "crates/adoctra",      version = "0.1.0" }
+adoctra-core = { path = "crates/adoctra-core", version = "0.1.0" }
+adoctra-html = { path = "crates/adoctra-html", version = "0.1.0" }
+adoctra-docx = { path = "crates/adoctra-docx", version = "0.1.0" }
+adoctra-json = { path = "crates/adoctra-json", version = "0.1.0" }
+
+# Third-party deps you'll likely want later (kept out of the scaffold so it
+# builds offline with zero external crates). Uncomment + `cargo add` as needed:
+# thiserror = "2"
+# docx-rs   = "0.4"
+# clap      = { version = "4", features = ["derive"] }
+# serde     = { version = "1", features = ["derive"] }
+# serde_json = "1"
+
+[profile.release]
+lto = true
+codegen-units = 1

@@ -1,0 +1,27 @@
+= adoctra
+:toc: macro
+
+An AsciiDoc processor and publishing toolchain, written in Rust.
+
+NOTE: AsciiDoc is a registered trademark of the Eclipse Foundation, Inc.
+This project is an independent processor of the AsciiDoc markup language and is
+not affiliated with or endorsed by the Eclipse Foundation or the Asciidoctor
+project.
+
+== Workspace layout
+
+* `adoctra-core` — parser and document model (backend-agnostic)
+* `adoctra-html` — HTML5 backend
+* `adoctra-docx` — DOCX backend (scaffold; wire up `docx-rs`)
+* `adoctra-json` — JSON/ASG backend, useful as a TCK adapter
+* `adoctra` — umbrella crate, backends behind feature flags
+* `adoctra-cli` — the `adoctra` command-line tool
+
+== Build
+
+[source,sh]
+----
+cargo build
+cargo test
+cargo run -p adoctra-cli -- README.adoc --to html --stdout
+----
