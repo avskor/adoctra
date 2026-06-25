@@ -67,6 +67,26 @@ fn render_inlines(inlines: &[Inline], out: &mut String) {
                 render_inlines(children, out);
                 out.push_str("</em>");
             }
+            Inline::Monospace { children, .. } => {
+                out.push_str("<code>");
+                render_inlines(children, out);
+                out.push_str("</code>");
+            }
+            Inline::Mark { children, .. } => {
+                out.push_str("<mark>");
+                render_inlines(children, out);
+                out.push_str("</mark>");
+            }
+            Inline::Superscript { children, .. } => {
+                out.push_str("<sup>");
+                render_inlines(children, out);
+                out.push_str("</sup>");
+            }
+            Inline::Subscript { children, .. } => {
+                out.push_str("<sub>");
+                render_inlines(children, out);
+                out.push_str("</sub>");
+            }
             // Resolved in core: emit the value, or fall back to the literal
             // `{name}` for a missing attribute (asciidoctor's default).
             Inline::AttributeRef { name, value, .. } => match value {
@@ -111,6 +131,24 @@ mod tests {
     fn missing_attribute_falls_back_to_literal() {
         let html = render("Use {nope} here.");
         assert!(html.contains("Use {nope} here."), "got: {html}");
+    }
+
+    #[test]
+    fn renders_monospace_mark_super_and_subscript() {
+        let html = render("A `code`, #hot#, E=mc^2^, H~2~O.");
+        assert!(html.contains("<code>code</code>"), "got: {html}");
+        assert!(html.contains("<mark>hot</mark>"), "got: {html}");
+        assert!(html.contains("mc<sup>2</sup>"), "got: {html}");
+        assert!(html.contains("H<sub>2</sub>O"), "got: {html}");
+    }
+
+    #[test]
+    fn monospace_renders_nested_markup() {
+        let html = render("Run `*bold* code`.");
+        assert!(
+            html.contains("<code><strong>bold</strong> code</code>"),
+            "got: {html}"
+        );
     }
 
     #[test]

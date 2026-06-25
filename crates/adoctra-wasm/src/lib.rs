@@ -117,6 +117,22 @@ fn write_inlines(inlines: &[Inline], s: &mut String) {
                 s.push_str("\"name\":\"emphasis\",\"inlines\":");
                 write_inlines(children, s);
             }
+            Inline::Monospace { children, .. } => {
+                s.push_str("\"name\":\"monospace\",\"inlines\":");
+                write_inlines(children, s);
+            }
+            Inline::Mark { children, .. } => {
+                s.push_str("\"name\":\"mark\",\"inlines\":");
+                write_inlines(children, s);
+            }
+            Inline::Superscript { children, .. } => {
+                s.push_str("\"name\":\"superscript\",\"inlines\":");
+                write_inlines(children, s);
+            }
+            Inline::Subscript { children, .. } => {
+                s.push_str("\"name\":\"subscript\",\"inlines\":");
+                write_inlines(children, s);
+            }
             // The editor gets the structured reference (name + resolved value),
             // unlike the backends which only need the resolved text.
             Inline::AttributeRef { name, value, .. } => {
@@ -238,6 +254,27 @@ mod tests {
             json.contains("\"span\":{\"start\":3,\"end\":7},\"name\":\"strong\""),
             "got: {json}"
         );
+    }
+
+    #[test]
+    fn new_quotes_are_structured_nodes_with_spans() {
+        let json = parse_json("ab `cd`");
+        // the monospace span runs from byte 3 to byte 7 ("`cd`")
+        assert!(
+            json.contains("\"span\":{\"start\":3,\"end\":7},\"name\":\"monospace\""),
+            "got: {json}"
+        );
+    }
+
+    #[test]
+    fn all_new_quote_names_appear() {
+        let json = parse_json("`c` #m# x^2^ y~1~");
+        for name in ["monospace", "mark", "superscript", "subscript"] {
+            assert!(
+                json.contains(&format!("\"name\":\"{name}\"")),
+                "missing {name} in {json}"
+            );
+        }
     }
 
     #[test]

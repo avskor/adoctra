@@ -84,6 +84,26 @@ fn write_inlines(inlines: &[Inline], s: &mut String) {
                 write_inlines(children, s);
                 s.push('}');
             }
+            Inline::Monospace { children, .. } => {
+                s.push_str("{\"name\":\"monospace\",\"inlines\":");
+                write_inlines(children, s);
+                s.push('}');
+            }
+            Inline::Mark { children, .. } => {
+                s.push_str("{\"name\":\"mark\",\"inlines\":");
+                write_inlines(children, s);
+                s.push('}');
+            }
+            Inline::Superscript { children, .. } => {
+                s.push_str("{\"name\":\"superscript\",\"inlines\":");
+                write_inlines(children, s);
+                s.push('}');
+            }
+            Inline::Subscript { children, .. } => {
+                s.push_str("{\"name\":\"subscript\",\"inlines\":");
+                write_inlines(children, s);
+                s.push('}');
+            }
             // Attribute reference resolved in core: serialize as plain text
             // (the value, or the literal `{name}` when the attribute was
             // missing), which is what the ASG carries after resolution.
@@ -121,6 +141,22 @@ mod tests {
         let json = render("a *b _c_*");
         assert!(json.contains("\"name\":\"strong\""));
         assert!(json.contains("\"name\":\"emphasis\""));
+    }
+
+    #[test]
+    fn new_quotes_serialize_by_name() {
+        let json = render("A `code`, #hot#, x^2^, y~1~.");
+        assert!(json.contains("\"name\":\"monospace\""), "got: {json}");
+        assert!(json.contains("\"name\":\"mark\""), "got: {json}");
+        assert!(json.contains("\"name\":\"superscript\""), "got: {json}");
+        assert!(json.contains("\"name\":\"subscript\""), "got: {json}");
+    }
+
+    #[test]
+    fn monospace_nests_inline_children() {
+        let json = render("`*b*`");
+        assert!(json.contains("\"name\":\"monospace\""), "got: {json}");
+        assert!(json.contains("\"name\":\"strong\""), "got: {json}");
     }
 
     #[test]

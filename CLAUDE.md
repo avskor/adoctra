@@ -121,7 +121,8 @@ later".
 ## Current state (so you don't assume more than exists)
 
 Working: parser for header attributes, headings, listing blocks, paragraphs,
-and inline `*strong*` / `_emphasis_`; a single inline scanner
+and inline `*strong*` / `_emphasis_`, `` `monospace` `` / `#mark#` (constrained)
+and `^superscript^` / `~subscript~` (unconstrained); a single inline scanner
 (`adoctra-core/src/inline.rs`) shared by the parser and tokenizer; inline nodes
 carry byte spans; attribute references `{name}` are resolved once in core
 against the document attributes; HTML and JSON backends; editor layer
@@ -134,9 +135,8 @@ not invoke it yet.
 
 Not yet implemented (common asks — treat as roadmap, do not assume present):
 broader language coverage (lists, tables, links/xrefs, footnotes, admonitions,
-includes, conditionals, block/inline macros, the remaining `QUOTE_SUBS` quote
-types, typographic `REPLACEMENTS`), TOC generation, incremental/block reparse,
-and a pull/event API over the AST.
+includes, conditionals, block/inline macros, typographic `REPLACEMENTS`), TOC
+generation, incremental/block reparse, and a pull/event API over the AST.
 
 When asked to "add a feature," check this list first and say plainly whether it
 is new work or wiring up an existing seam.

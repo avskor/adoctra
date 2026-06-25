@@ -74,6 +74,18 @@ pub enum Inline {
     Strong { children: Vec<Inline>, span: Span },
     /// `_emphasis_` — italic. `span` covers the whole construct incl. markers.
     Emphasis { children: Vec<Inline>, span: Span },
+    /// `` `monospace` `` — code/literal phrase. `span` covers the whole
+    /// construct incl. markers.
+    Monospace { children: Vec<Inline>, span: Span },
+    /// `#mark#` — highlighted text. `span` covers the whole construct incl.
+    /// markers.
+    Mark { children: Vec<Inline>, span: Span },
+    /// `^superscript^` — an *unconstrained* quote (matches mid-word, e.g.
+    /// `E=mc^2^`). `span` covers the whole construct incl. markers.
+    Superscript { children: Vec<Inline>, span: Span },
+    /// `~subscript~` — an *unconstrained* quote (matches mid-word, e.g.
+    /// `H~2~O`). `span` covers the whole construct incl. markers.
+    Subscript { children: Vec<Inline>, span: Span },
     /// An attribute reference `{name}`, resolved once in core against the
     /// document attributes. `value` is `Some` when the attribute was found, and
     /// `None` for a missing attribute (consumers then fall back to the literal
@@ -84,7 +96,7 @@ pub enum Inline {
         value: Option<String>,
         span: Span,
     },
-    // TODO: monospace/mark/super/subscript, links, cross-references, macros...
+    // TODO: links, cross-references, block/inline macros, typographic replacements...
 }
 
 impl Inline {
@@ -94,6 +106,10 @@ impl Inline {
             Inline::Text { span, .. }
             | Inline::Strong { span, .. }
             | Inline::Emphasis { span, .. }
+            | Inline::Monospace { span, .. }
+            | Inline::Mark { span, .. }
+            | Inline::Superscript { span, .. }
+            | Inline::Subscript { span, .. }
             | Inline::AttributeRef { span, .. } => *span,
         }
     }

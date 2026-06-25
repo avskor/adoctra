@@ -29,6 +29,10 @@ pub enum TokenKind {
     ListingText,
     Strong,
     Emphasis,
+    Monospace,
+    Mark,
+    Superscript,
+    Subscript,
     AttributeRef,
 }
 
@@ -41,6 +45,10 @@ impl TokenKind {
             TokenKind::ListingText => "listing-text",
             TokenKind::Strong => "strong",
             TokenKind::Emphasis => "emphasis",
+            TokenKind::Monospace => "monospace",
+            TokenKind::Mark => "mark",
+            TokenKind::Superscript => "superscript",
+            TokenKind::Subscript => "subscript",
             TokenKind::AttributeRef => "attribute-ref",
         }
     }
@@ -111,6 +119,34 @@ fn flatten_inlines(inlines: &[Inline], out: &mut Vec<Token>) {
                 });
                 flatten_inlines(children, out);
             }
+            Inline::Monospace { children, span } => {
+                out.push(Token {
+                    span: *span,
+                    kind: TokenKind::Monospace,
+                });
+                flatten_inlines(children, out);
+            }
+            Inline::Mark { children, span } => {
+                out.push(Token {
+                    span: *span,
+                    kind: TokenKind::Mark,
+                });
+                flatten_inlines(children, out);
+            }
+            Inline::Superscript { children, span } => {
+                out.push(Token {
+                    span: *span,
+                    kind: TokenKind::Superscript,
+                });
+                flatten_inlines(children, out);
+            }
+            Inline::Subscript { children, span } => {
+                out.push(Token {
+                    span: *span,
+                    kind: TokenKind::Subscript,
+                });
+                flatten_inlines(children, out);
+            }
             Inline::AttributeRef { span, .. } => {
                 out.push(Token {
                     span: *span,
@@ -147,6 +183,27 @@ mod tests {
         let toks = tokens(":v: 1\n\nusing {v} here");
         let attr = toks.iter().find(|t| t.kind == TokenKind::AttributeRef);
         assert!(attr.is_some());
+    }
+
+    #[test]
+    fn new_quotes_are_tokenized() {
+        let toks = tokens("a `c`, #m#, x^2^, y~1~");
+        let kinds: Vec<_> = toks.iter().map(|t| t.kind).collect();
+        assert!(kinds.contains(&TokenKind::Monospace));
+        assert!(kinds.contains(&TokenKind::Mark));
+        assert!(kinds.contains(&TokenKind::Superscript));
+        assert!(kinds.contains(&TokenKind::Subscript));
+    }
+
+    #[test]
+    fn monospace_token_span_is_global() {
+        let src = "use `code` now";
+        let toks = tokens(src);
+        let t = toks
+            .iter()
+            .find(|t| t.kind == TokenKind::Monospace)
+            .unwrap();
+        assert_eq!(&src[t.span.start..t.span.end], "`code`");
     }
 
     #[test]

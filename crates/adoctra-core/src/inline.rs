@@ -38,27 +38,43 @@ pub(crate) fn scan_inlines(src: &str, base: usize, attrs: &Attributes) -> Vec<In
 }
 
 /// Try to recognise a construct starting at byte `i`. Returns the node and the
-/// byte index just past it.
+/// byte index (src-relative) just past it.
 fn try_match(src: &str, i: usize, base: usize, attrs: &Attributes) -> Option<(Inline, usize)> {
+    // Wrap a matcher's `(children, absolute_end)` into a quote node: the span
+    // covers the markers, and `scan_inlines` wants the end as a src-relative
+    // index (hence `end - base`).
+    let quote = |make: fn(Vec<Inline>, Span) -> Inline, res: Option<(Vec<Inline>, usize)>| {
+        res.map(|(children, end)| (make(children, Span::new(base + i, end)), end - base))
+    };
     match src.as_bytes()[i] {
-        b'*' => match_quoted(src, i, b'*', base, attrs).map(|(children, end)| {
-            (
-                Inline::Strong {
-                    children,
-                    span: Span::new(base + i, end),
-                },
-                end - base,
-            )
-        }),
-        b'_' => match_quoted(src, i, b'_', base, attrs).map(|(children, end)| {
-            (
-                Inline::Emphasis {
-                    children,
-                    span: Span::new(base + i, end),
-                },
-                end - base,
-            )
-        }),
+        // Constrained quotes: the marker must hug its content (no space just
+        // inside the open marker), matching the parser's naive rule.
+        b'*' => quote(
+            |children, span| Inline::Strong { children, span },
+            match_quoted(src, i, b'*', base, attrs),
+        ),
+        b'_' => quote(
+            |children, span| Inline::Emphasis { children, span },
+            match_quoted(src, i, b'_', base, attrs),
+        ),
+        b'`' => quote(
+            |children, span| Inline::Monospace { children, span },
+            match_quoted(src, i, b'`', base, attrs),
+        ),
+        b'#' => quote(
+            |children, span| Inline::Mark { children, span },
+            match_quoted(src, i, b'#', base, attrs),
+        ),
+        // Unconstrained quotes: match anywhere (incl. mid-word), but the content
+        // may not be empty or contain whitespace.
+        b'^' => quote(
+            |children, span| Inline::Superscript { children, span },
+            match_unconstrained(src, i, b'^', base, attrs),
+        ),
+        b'~' => quote(
+            |children, span| Inline::Subscript { children, span },
+            match_unconstrained(src, i, b'~', base, attrs),
+        ),
         b'{' => match_attribute(src, i, base, attrs),
         _ => None,
     }
@@ -83,6 +99,29 @@ fn match_quoted(
     let rel_close = src[inner_start..].find(marker as char)?;
     let close = inner_start + rel_close;
     let children = scan_inlines(&src[inner_start..close], base + inner_start, attrs);
+    Some((children, base + close + 1))
+}
+
+/// An unconstrained quote `^...^` / `~...~`: open marker at `i`, first matching
+/// marker closes it. Unlike [`match_quoted`] there is no word-boundary rule (it
+/// matches mid-word, e.g. `E=mc^2^`), but the content must be non-empty and
+/// contain no whitespace — otherwise the marker is just text. Returns the parsed
+/// children and the absolute end offset (one past the closing marker).
+fn match_unconstrained(
+    src: &str,
+    i: usize,
+    marker: u8,
+    base: usize,
+    attrs: &Attributes,
+) -> Option<(Vec<Inline>, usize)> {
+    let inner_start = i + 1;
+    let rel_close = src[inner_start..].find(marker as char)?;
+    let close = inner_start + rel_close;
+    let inner = &src[inner_start..close];
+    if inner.is_empty() || inner.contains(char::is_whitespace) {
+        return None;
+    }
+    let children = scan_inlines(inner, base + inner_start, attrs);
     Some((children, base + close + 1))
 }
 
@@ -221,5 +260,80 @@ mod tests {
                 span: Span::new(0, 3)
             }
         );
+    }
+
+    #[test]
+    fn monospace_span_covers_markers() {
+        let src = "use `code` here";
+        let v = scan_inlines(src, 0, &attrs());
+        let span = v.iter().find_map(|n| match n {
+            Inline::Monospace { span, .. } => Some(*span),
+            _ => None,
+        });
+        assert_eq!(&src[span.unwrap().start..span.unwrap().end], "`code`");
+    }
+
+    #[test]
+    fn mark_span_covers_markers() {
+        let src = "a #hot# word";
+        let v = scan_inlines(src, 0, &attrs());
+        let span = v.iter().find_map(|n| match n {
+            Inline::Mark { span, .. } => Some(*span),
+            _ => None,
+        });
+        assert_eq!(&src[span.unwrap().start..span.unwrap().end], "#hot#");
+    }
+
+    #[test]
+    fn superscript_matches_mid_word() {
+        let src = "E=mc^2^";
+        let v = scan_inlines(src, 0, &attrs());
+        let sup = v.iter().find_map(|n| match n {
+            Inline::Superscript { children, span } => Some((children.clone(), *span)),
+            _ => None,
+        });
+        let (children, span) = sup.expect("superscript not parsed");
+        assert_eq!(&src[span.start..span.end], "^2^");
+        assert_eq!(
+            children,
+            vec![Inline::Text {
+                value: "2".into(),
+                span: Span::new(5, 6)
+            }]
+        );
+    }
+
+    #[test]
+    fn subscript_matches_mid_word() {
+        let src = "H~2~O";
+        let v = scan_inlines(src, 0, &attrs());
+        let span = v.iter().find_map(|n| match n {
+            Inline::Subscript { span, .. } => Some(*span),
+            _ => None,
+        });
+        assert_eq!(&src[span.unwrap().start..span.unwrap().end], "~2~");
+        // text right after the subscript still parses
+        assert!(matches!(v.last(), Some(Inline::Text { value, .. }) if value == "O"));
+    }
+
+    #[test]
+    fn unconstrained_with_space_stays_text() {
+        // asciidoctor does not render `~a b~` — whitespace inside breaks the match
+        let v = scan_inlines("x ~a b~ y", 0, &attrs());
+        assert!(v.iter().all(|n| matches!(n, Inline::Text { .. })));
+    }
+
+    #[test]
+    fn monospace_parses_nested_markup() {
+        // `*bold* code` -> Monospace whose children include a Strong node
+        let v = scan_inlines("`*bold* code`", 0, &attrs());
+        let children = v
+            .iter()
+            .find_map(|n| match n {
+                Inline::Monospace { children, .. } => Some(children.clone()),
+                _ => None,
+            })
+            .expect("monospace not parsed");
+        assert!(children.iter().any(|n| matches!(n, Inline::Strong { .. })));
     }
 }
