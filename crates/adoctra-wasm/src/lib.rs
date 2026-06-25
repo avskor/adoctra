@@ -19,6 +19,7 @@
 
 use adoctra_core::ast::{Block, BlockKind, Inline, Span};
 use adoctra_core::diagnostic::{Diagnostic, ParseResult};
+use adoctra_core::json::escape_into as write_str;
 use adoctra_core::{Token, TokenKind};
 
 /// Parse `src` and return JSON `{ "document": {...}, "diagnostics": [...] }`.
@@ -98,23 +99,37 @@ fn write_inlines(inlines: &[Inline], s: &mut String) {
         if i > 0 {
             s.push(',');
         }
+        // Every inline now carries a span, so the editor can map highlight /
+        // hover ranges straight off the AST.
+        s.push('{');
+        write_span_field(&inline.span(), s);
+        s.push(',');
         match inline {
-            Inline::Text(t) => {
-                s.push_str("{\"name\":\"text\",\"value\":");
-                write_str(t, s);
-                s.push('}');
+            Inline::Text { value, .. } => {
+                s.push_str("\"name\":\"text\",\"value\":");
+                write_str(value, s);
             }
-            Inline::Strong(c) => {
-                s.push_str("{\"name\":\"strong\",\"inlines\":");
-                write_inlines(c, s);
-                s.push('}');
+            Inline::Strong { children, .. } => {
+                s.push_str("\"name\":\"strong\",\"inlines\":");
+                write_inlines(children, s);
             }
-            Inline::Emphasis(c) => {
-                s.push_str("{\"name\":\"emphasis\",\"inlines\":");
-                write_inlines(c, s);
-                s.push('}');
+            Inline::Emphasis { children, .. } => {
+                s.push_str("\"name\":\"emphasis\",\"inlines\":");
+                write_inlines(children, s);
+            }
+            // The editor gets the structured reference (name + resolved value),
+            // unlike the backends which only need the resolved text.
+            Inline::AttributeRef { name, value, .. } => {
+                s.push_str("\"name\":\"attribute-ref\",\"attribute\":");
+                write_str(name, s);
+                s.push_str(",\"value\":");
+                match value {
+                    Some(v) => write_str(v, s),
+                    None => s.push_str("null"),
+                }
             }
         }
+        s.push('}');
     }
     s.push(']');
 }
@@ -162,22 +177,6 @@ fn write_span_field(span: &Span, s: &mut String) {
         "\"span\":{{\"start\":{},\"end\":{}}}",
         span.start, span.end
     ));
-}
-
-fn write_str(value: &str, s: &mut String) {
-    s.push('"');
-    for c in value.chars() {
-        match c {
-            '"' => s.push_str("\\\""),
-            '\\' => s.push_str("\\\\"),
-            '\n' => s.push_str("\\n"),
-            '\t' => s.push_str("\\t"),
-            '\r' => s.push_str("\\r"),
-            c if (c as u32) < 0x20 => s.push_str(&format!("\\u{:04x}", c as u32)),
-            c => s.push(c),
-        }
-    }
-    s.push('"');
 }
 
 // ---- wasm glue (only compiled for wasm32) ---------------------------------
@@ -228,5 +227,32 @@ mod tests {
         let json = tokens_json("= Title");
         assert!(json.starts_with('['));
         assert!(json.contains("\"kind\":\"heading\""));
+    }
+
+    #[test]
+    fn inline_nodes_carry_spans() {
+        // The editor needs a span on every inline, not just on blocks.
+        let json = parse_json("ab *cd*");
+        // the strong runs from byte 3 to byte 7 ("*cd*")
+        assert!(
+            json.contains("\"span\":{\"start\":3,\"end\":7},\"name\":\"strong\""),
+            "got: {json}"
+        );
+    }
+
+    #[test]
+    fn attribute_reference_is_a_structured_node() {
+        // Unlike the backends, the editor keeps the reference structured.
+        let json = parse_json(":v: 9\n\nVersion {v}");
+        assert!(json.contains("\"name\":\"attribute-ref\""), "got: {json}");
+        assert!(json.contains("\"attribute\":\"v\""), "got: {json}");
+        assert!(json.contains("\"value\":\"9\""), "got: {json}");
+    }
+
+    #[test]
+    fn missing_attribute_reference_has_null_value() {
+        let json = parse_json("Ref {nope}");
+        assert!(json.contains("\"name\":\"attribute-ref\""), "got: {json}");
+        assert!(json.contains("\"value\":null"), "got: {json}");
     }
 }

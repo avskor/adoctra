@@ -2,12 +2,17 @@
 //!
 //! Produces a flat list of [`Token`]s with byte spans, classifying the
 //! "interesting" parts of the source (headings, attribute entries, listing
-//! delimiters/content, inline `*strong*` / `_emphasis_`). Plain text is left
-//! untokenized. Driving highlighting from here keeps the editor's coloring in
-//! lockstep with the real parser instead of a duplicated JS grammar.
+//! delimiters/content, inline `*strong*` / `_emphasis_` / `{attribute}`).
+//! Plain text is left untokenized.
+//!
+//! Inline tokens are a *projection of the parser's inline scan*: the same
+//! [`scan_inlines`] that builds the document model is flattened to tokens here,
+//! so highlighting can never disagree with parsing about where a `*strong*`
+//! starts. There is no second grammar.
 
-use crate::ast::Span;
-use crate::parser::{parse_attribute_entry, parse_heading};
+use crate::ast::{Inline, Span};
+use crate::inline::scan_inlines;
+use crate::parser::{collect_header, parse_attribute_entry, parse_heading};
 use crate::scanner::lines_with_offsets;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -24,6 +29,7 @@ pub enum TokenKind {
     ListingText,
     Strong,
     Emphasis,
+    AttributeRef,
 }
 
 impl TokenKind {
@@ -35,15 +41,19 @@ impl TokenKind {
             TokenKind::ListingText => "listing-text",
             TokenKind::Strong => "strong",
             TokenKind::Emphasis => "emphasis",
+            TokenKind::AttributeRef => "attribute-ref",
         }
     }
 }
 
 pub fn tokens(source: &str) -> Vec<Token> {
+    let lines = lines_with_offsets(source);
+    // Resolve `{attr}` against the same header table the parser uses.
+    let (attrs, _) = collect_header(&lines);
     let mut out = Vec::new();
     let mut in_listing = false;
 
-    for (off, line) in lines_with_offsets(source) {
+    for (off, line) in lines {
         let line_span = Span::new(off, off + line.len());
 
         if line.trim() == "----" {
@@ -75,30 +85,38 @@ pub fn tokens(source: &str) -> Vec<Token> {
             });
             continue;
         }
-        scan_marker(off, line, '*', TokenKind::Strong, &mut out);
-        scan_marker(off, line, '_', TokenKind::Emphasis, &mut out);
+        // Body text line: flatten the shared inline scan to highlight tokens.
+        flatten_inlines(&scan_inlines(line, off, &attrs), &mut out);
     }
 
     out
 }
 
-fn scan_marker(off: usize, line: &str, marker: char, kind: TokenKind, out: &mut Vec<Token>) {
-    let bytes = line.as_bytes();
-    let mut idx = 0usize;
-    while let Some(rel_open) = line[idx..].find(marker) {
-        let open = idx + rel_open;
-        match line[open + 1..].find(marker) {
-            Some(rel_close) => {
-                let close = open + 1 + rel_close;
-                if bytes.get(open + 1) != Some(&b' ') {
-                    out.push(Token {
-                        span: Span::new(off + open, off + close + 1),
-                        kind,
-                    });
-                }
-                idx = close + 1;
+/// Project the inline AST onto highlight tokens (depth-first, document order).
+fn flatten_inlines(inlines: &[Inline], out: &mut Vec<Token>) {
+    for node in inlines {
+        match node {
+            Inline::Text { .. } => {}
+            Inline::Strong { children, span } => {
+                out.push(Token {
+                    span: *span,
+                    kind: TokenKind::Strong,
+                });
+                flatten_inlines(children, out);
             }
-            None => break,
+            Inline::Emphasis { children, span } => {
+                out.push(Token {
+                    span: *span,
+                    kind: TokenKind::Emphasis,
+                });
+                flatten_inlines(children, out);
+            }
+            Inline::AttributeRef { span, .. } => {
+                out.push(Token {
+                    span: *span,
+                    kind: TokenKind::AttributeRef,
+                });
+            }
         }
     }
 }
@@ -122,5 +140,37 @@ mod tests {
         let toks = tokens(src);
         let strong = toks.iter().find(|t| t.kind == TokenKind::Strong).unwrap();
         assert_eq!(&src[strong.span.start..strong.span.end], "*bold*");
+    }
+
+    #[test]
+    fn attribute_ref_is_tokenized() {
+        let toks = tokens(":v: 1\n\nusing {v} here");
+        let attr = toks.iter().find(|t| t.kind == TokenKind::AttributeRef);
+        assert!(attr.is_some());
+    }
+
+    #[test]
+    fn token_spans_match_ast_spans() {
+        // The whole point of the refactor: tokens are a projection of the same
+        // inline scan the parser uses, so their spans must coincide.
+        let src = "lead *bold* and _it_ tail";
+        let toks = tokens(src);
+        let blocks = crate::parser::parse(src).document.blocks;
+        let inlines = match &blocks[0].kind {
+            crate::ast::BlockKind::Paragraph { inlines } => inlines.clone(),
+            _ => unreachable!(),
+        };
+        for inline in &inlines {
+            let (want_span, want_kind) = match inline {
+                crate::ast::Inline::Strong { span, .. } => (*span, TokenKind::Strong),
+                crate::ast::Inline::Emphasis { span, .. } => (*span, TokenKind::Emphasis),
+                _ => continue,
+            };
+            assert!(
+                toks.iter()
+                    .any(|t| t.kind == want_kind && t.span == want_span),
+                "no token matches AST node span {want_span:?}"
+            );
+        }
     }
 }

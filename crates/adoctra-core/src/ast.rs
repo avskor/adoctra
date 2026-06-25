@@ -1,10 +1,17 @@
 //! The document model.
 //!
-//! Every block carries a [`Span`] — its byte range in the source — which is
-//! what makes the model usable by an editor (highlighting, fold ranges,
-//! "click in preview -> jump to source", diagnostics). Inline nodes stay
-//! span-free for now; highlighting is driven by the separate token stream
-//! (see [`crate::tokens`]).
+//! Every node — block *and* inline — carries a [`Span`]: its byte range in the
+//! original source. That is what makes the model usable by an editor
+//! (highlighting, fold ranges, "click in preview -> jump to source",
+//! diagnostics) directly from the AST, without a duplicated grammar.
+//!
+//! Inline text is *resolved* (semantic): attribute references are substituted,
+//! and — as the model grows — typographic replacements will be applied here
+//! too. The crucial invariant is that an inline's textual content and its
+//! [`Span`] are **not** required to be the same length: the content is what the
+//! source *means*, the span is where it *came from*. Output-encoding
+//! (HTML-escaping `<` to `&lt;`, etc.) is deliberately left to each backend, so
+//! the shared model stays format-neutral.
 
 use crate::attributes::Attributes;
 
@@ -18,6 +25,16 @@ pub struct Span {
 impl Span {
     pub fn new(start: usize, end: usize) -> Self {
         Self { start, end }
+    }
+
+    /// Length of the source range in bytes.
+    pub fn len(&self) -> usize {
+        self.end - self.start
+    }
+
+    /// Whether the range is empty.
+    pub fn is_empty(&self) -> bool {
+        self.end == self.start
     }
 }
 
@@ -47,11 +64,37 @@ pub enum BlockKind {
     Listing { text: String },
 }
 
-/// Inline (phrase-level) elements.
+/// Inline (phrase-level) elements. Every variant carries its source [`Span`].
 #[derive(Debug, Clone, PartialEq)]
 pub enum Inline {
-    Text(String),
-    Strong(Vec<Inline>),
-    Emphasis(Vec<Inline>),
-    // TODO: links, cross-references, inline macros, attribute references...
+    /// Literal text. `value` is the resolved content; `span` is where it came
+    /// from (the two may differ in length once substitutions apply).
+    Text { value: String, span: Span },
+    /// `*strong*` — bold. `span` covers the whole construct incl. markers.
+    Strong { children: Vec<Inline>, span: Span },
+    /// `_emphasis_` — italic. `span` covers the whole construct incl. markers.
+    Emphasis { children: Vec<Inline>, span: Span },
+    /// An attribute reference `{name}`, resolved once in core against the
+    /// document attributes. `value` is `Some` when the attribute was found, and
+    /// `None` for a missing attribute (consumers then fall back to the literal
+    /// `{name}`, matching asciidoctor's default `attribute-missing=skip`).
+    /// `span` covers the `{name}` token in the source.
+    AttributeRef {
+        name: String,
+        value: Option<String>,
+        span: Span,
+    },
+    // TODO: monospace/mark/super/subscript, links, cross-references, macros...
+}
+
+impl Inline {
+    /// The source span of this inline node.
+    pub fn span(&self) -> Span {
+        match self {
+            Inline::Text { span, .. }
+            | Inline::Strong { span, .. }
+            | Inline::Emphasis { span, .. }
+            | Inline::AttributeRef { span, .. } => *span,
+        }
+    }
 }

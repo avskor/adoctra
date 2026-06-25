@@ -73,6 +73,8 @@ The model serves three audiences; keep their needs in mind when changing core:
   serialization layer in `adoctra-wasm` must remain pure Rust so it compiles and
   unit-tests on the native target.
 - Run `cargo fmt` and keep `cargo clippy --workspace --all-features` clean.
+- **Test coverage is mandatory** for every change — see "Test coverage is
+  mandatory" under "Build, test, run" for what that requires.
 
 ## Build, test, run
 
@@ -94,25 +96,47 @@ wasm-pack build crates/adoctra-wasm --target web   # or --target bundler
 cargo run --example editor_demo -p adoctra-wasm
 ```
 
-Every change should keep `cargo test --workspace --all-features` green. Add
-tests with new functionality — parser changes especially benefit from
-input/AST assertions and span checks.
+### Test coverage is mandatory
+
+Every change ships with tests **in the same commit** — this is a hard rule, not
+a preference. A feature or fix without tests is *incomplete*, not "to be tested
+later".
+
+- **New functionality must be covered.** Core parser/inline changes assert both
+  the resulting AST shape *and* byte [`Span`]s (see the test modules in
+  `crates/adoctra-core/src/{parser,inline,tokenizer}.rs`).
+- **Every new `Inline`/`Block` node type is tested in each consumer that renders
+  it** — HTML, JSON *and* WASM — not only in core. Resolution done once in core
+  (e.g. `{attr}`) is asserted in core; each backend asserts how it renders the
+  resolved node (including fallbacks like a missing attribute).
+- **Bug fixes get a regression test** that fails before the fix and passes
+  after.
+- **Keep the golden compatibility layer in step.** For any new inline/block
+  construct, add an input under `crates/adoctra-html/tests/golden/` and
+  regenerate the asciidoctor reference with `regenerate.sh`.
+- `cargo test --workspace --all-features` must stay green, and `cargo clippy
+  --workspace --all-features` / `cargo fmt --all` must stay clean, before the
+  change is considered done.
 
 ## Current state (so you don't assume more than exists)
 
 Working: parser for header attributes, headings, listing blocks, paragraphs,
-and inline `*strong*` / `_emphasis_`; HTML and JSON backends; editor layer
+and inline `*strong*` / `_emphasis_`; a single inline scanner
+(`adoctra-core/src/inline.rs`) shared by the parser and tokenizer; inline nodes
+carry byte spans; attribute references `{name}` are resolved once in core
+against the document attributes; HTML and JSON backends; editor layer
 (error-tolerant `parse`, spans, diagnostics, tokenizer); WASM `parse_json` /
-`tokens_json`.
+`tokens_json`; golden compatibility tests against asciidoctor
+(`adoctra-html/tests/golden/`).
 
 Scaffold only: DOCX backend; the extension API exists but `parse`/`convert` do
 not invoke it yet.
 
 Not yet implemented (common asks — treat as roadmap, do not assume present):
 broader language coverage (lists, tables, links/xrefs, footnotes, admonitions,
-includes, conditionals, attribute references, block/inline macros), TOC
-generation, inline spans, incremental/block reparse, and a pull/event API over
-the AST.
+includes, conditionals, block/inline macros, the remaining `QUOTE_SUBS` quote
+types, typographic `REPLACEMENTS`), TOC generation, incremental/block reparse,
+and a pull/event API over the AST.
 
 When asked to "add a feature," check this list first and say plainly whether it
 is new work or wiring up an existing seam.

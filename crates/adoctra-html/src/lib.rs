@@ -56,21 +56,29 @@ fn render_block(block: &Block, out: &mut String) {
 fn render_inlines(inlines: &[Inline], out: &mut String) {
     for inline in inlines {
         match inline {
-            Inline::Text(t) => out.push_str(&escape(t)),
-            Inline::Strong(children) => {
+            Inline::Text { value, .. } => out.push_str(&escape(value)),
+            Inline::Strong { children, .. } => {
                 out.push_str("<strong>");
                 render_inlines(children, out);
                 out.push_str("</strong>");
             }
-            Inline::Emphasis(children) => {
+            Inline::Emphasis { children, .. } => {
                 out.push_str("<em>");
                 render_inlines(children, out);
                 out.push_str("</em>");
             }
+            // Resolved in core: emit the value, or fall back to the literal
+            // `{name}` for a missing attribute (asciidoctor's default).
+            Inline::AttributeRef { name, value, .. } => match value {
+                Some(v) => out.push_str(&escape(v)),
+                None => out.push_str(&escape(&format!("{{{name}}}"))),
+            },
         }
     }
 }
 
+/// Output-encoding for HTML. Deliberately a *backend* concern: the shared model
+/// keeps text literal, and each backend escapes for its own format.
 fn escape(s: &str) -> String {
     s.replace('&', "&amp;")
         .replace('<', "&lt;")
@@ -81,11 +89,34 @@ fn escape(s: &str) -> String {
 mod tests {
     use super::*;
 
+    fn render(src: &str) -> String {
+        let doc = adoctra_core::parse(src).document;
+        String::from_utf8(HtmlBackend.convert(&doc).unwrap()).unwrap()
+    }
+
     #[test]
     fn renders_heading_and_paragraph() {
-        let doc = adoctra_core::parse("= Title\n\nHi *there*").document;
-        let html = String::from_utf8(HtmlBackend.convert(&doc).unwrap()).unwrap();
+        let html = render("= Title\n\nHi *there*");
         assert!(html.contains("<h1>Title</h1>"));
         assert!(html.contains("<strong>there</strong>"));
+    }
+
+    #[test]
+    fn resolves_attribute_reference_to_its_value() {
+        let html = render(":product: Adoctra\n\nUse {product}.");
+        assert!(html.contains("<p>Use Adoctra.</p>"), "got: {html}");
+    }
+
+    #[test]
+    fn missing_attribute_falls_back_to_literal() {
+        let html = render("Use {nope} here.");
+        assert!(html.contains("Use {nope} here."), "got: {html}");
+    }
+
+    #[test]
+    fn text_is_html_escaped_by_the_backend() {
+        // The model keeps text literal; escaping is the backend's job.
+        let html = render("1 < 2 & 3");
+        assert!(html.contains("1 &lt; 2 &amp; 3"), "got: {html}");
     }
 }

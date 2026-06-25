@@ -11,6 +11,8 @@ pub mod backend;
 pub mod diagnostic;
 pub mod error;
 pub mod extension;
+mod inline;
+pub mod json;
 mod parser;
 mod scanner;
 mod tokenizer;
