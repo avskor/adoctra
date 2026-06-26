@@ -76,6 +76,13 @@ fn try_match(src: &str, i: usize, base: usize, attrs: &Attributes) -> Option<(In
             match_unconstrained(src, i, b'~', base, attrs),
         ),
         b'{' => match_attribute(src, i, base, attrs),
+        // Link macros (`link:`/`mailto:`) need brackets and — matching
+        // asciidoctor — no left word boundary. A scheme (`https://` etc.) is a
+        // bare autolink or, when followed by `[text]`, a URL macro; both want a
+        // left boundary so a scheme glued to a word is not linked.
+        b'l' => match_link_macro(src, i, base, attrs, "link:"),
+        b'm' => match_link_macro(src, i, base, attrs, "mailto:"),
+        b'h' | b'f' | b'i' => match_url(src, i, base, attrs),
         _ => None,
     }
 }
@@ -146,6 +153,152 @@ fn match_attribute(
         span: Span::new(base + i, base + end),
     };
     Some((node, end))
+}
+
+/// Schemes that autolink as a bare URL or a URL macro. `mailto:` is handled by
+/// [`match_link_macro`] instead (it has no `//` and is *not* bare-autolinked,
+/// matching asciidoctor).
+const URL_SCHEMES: [&str; 4] = ["https://", "http://", "ftp://", "irc://"];
+
+/// Trailing punctuation stripped from a *bare* autolinked URL so a sentence's
+/// period (etc.) stays outside the link. The set is pinned against asciidoctor
+/// 2.0.23; a port colon like `:8080` is kept because only the trailing run is
+/// trimmed.
+fn trim_trailing_url_punct(url: &str) -> &str {
+    url.trim_end_matches([',', '.', ';', ':', '!', '?', ')'])
+}
+
+/// Whether byte `i` may start a bare/URL-macro autolink. asciidoctor only
+/// autolinks a scheme at the start of the text, after whitespace, or after one
+/// of a small set of "opening" chars — *not* after a letter (`x_https://`) and
+/// crucially *not* after `:` (so `link:url`/`word:url` without brackets stay
+/// literal, with the `link:` macro form handled by [`match_link_macro`]).
+fn at_left_boundary(src: &str, i: usize) -> bool {
+    match src[..i].chars().next_back() {
+        None => true,
+        Some(prev) => {
+            prev.is_whitespace()
+                || matches!(prev, '<' | '>' | '(' | ')' | '[' | ']' | ';' | '"' | '\'')
+        }
+    }
+}
+
+/// The `link:target[text]` / `mailto:target[text]` macro. Brackets are
+/// mandatory (a bare `link:url` is literal text); the target may not be empty
+/// or contain whitespace. `link:` puts the bare target in the href, `mailto:`
+/// keeps its scheme. Returns the node and the src-relative end index.
+fn match_link_macro(
+    src: &str,
+    i: usize,
+    base: usize,
+    attrs: &Attributes,
+    prefix: &str,
+) -> Option<(Inline, usize)> {
+    if !src[i..].starts_with(prefix) {
+        return None;
+    }
+    let target_start = i + prefix.len();
+    let rel_bracket = src[target_start..].find('[')?;
+    let target = &src[target_start..target_start + rel_bracket];
+    if target.is_empty() || target.contains(char::is_whitespace) {
+        return None;
+    }
+    let bracket = target_start + rel_bracket;
+    let href = if prefix == "mailto:" {
+        format!("mailto:{target}")
+    } else {
+        target.to_string()
+    };
+    finish_bracketed_link(src, i, bracket, &href, target, base, attrs)
+}
+
+/// A scheme-prefixed URL: either a URL macro `https://h[text]` or a bare
+/// autolink `https://h`. Both require a left word boundary. Returns the node
+/// and the src-relative end index.
+fn match_url(src: &str, i: usize, base: usize, attrs: &Attributes) -> Option<(Inline, usize)> {
+    if !at_left_boundary(src, i) {
+        return None;
+    }
+    let scheme = URL_SCHEMES.iter().find(|s| src[i..].starts_with(**s))?;
+    // The URL run ends at whitespace, a `[`, or end of slice.
+    let rest = &src[i..];
+    let run_len = rest
+        .find(|c: char| c.is_whitespace() || c == '[')
+        .unwrap_or(rest.len());
+    // There must be something after the `scheme://`.
+    if run_len <= scheme.len() {
+        return None;
+    }
+    let run_end = i + run_len;
+    // URL-macro form: the run is immediately followed by `[text]`. If the
+    // bracket has no close it is not a macro — fall through to a bare autolink.
+    if src.as_bytes().get(run_end) == Some(&b'[') {
+        let target = &src[i..run_end];
+        if let Some(node) = finish_bracketed_link(src, i, run_end, target, target, base, attrs) {
+            return Some(node);
+        }
+    }
+    // Bare autolink: trim a sentence's trailing punctuation off the run.
+    let trimmed = trim_trailing_url_punct(&src[i..run_end]);
+    if trimmed.len() <= scheme.len() {
+        return None;
+    }
+    let end = i + trimmed.len();
+    let span = Span::new(base + i, base + end);
+    Some((
+        Inline::Link {
+            target: trimmed.to_string(),
+            children: vec![Inline::Text {
+                value: trimmed.to_string(),
+                span,
+            }],
+            bare: true,
+            span,
+        },
+        end,
+    ))
+}
+
+/// Finish a link whose display text is in `[...]` starting at byte `bracket`.
+/// `href` is the resolved target; `bare_text` is the text used when the
+/// brackets are empty (asciidoctor renders an empty-text link `class="bare"`).
+/// The text inside the brackets is scanned recursively so markup inside a link
+/// (`link:url[*bold*]`) still parses. Returns `None` if the bracket is not
+/// closed. The end index is src-relative (one past the `]`).
+fn finish_bracketed_link(
+    src: &str,
+    start: usize,
+    bracket: usize,
+    href: &str,
+    bare_text: &str,
+    base: usize,
+    attrs: &Attributes,
+) -> Option<(Inline, usize)> {
+    let text_start = bracket + 1;
+    let rel_close = src[text_start..].find(']')?;
+    let close = text_start + rel_close;
+    let text = &src[text_start..close];
+    let end = close + 1;
+    let (children, bare) = if text.is_empty() {
+        (
+            vec![Inline::Text {
+                value: bare_text.to_string(),
+                span: Span::new(base + start, base + bracket),
+            }],
+            true,
+        )
+    } else {
+        (scan_inlines(text, base + text_start, attrs), false)
+    };
+    Some((
+        Inline::Link {
+            target: href.to_string(),
+            children,
+            bare,
+            span: Span::new(base + start, base + end),
+        },
+        end,
+    ))
 }
 
 /// Emit a `Text` node for `src[a..b]` if non-empty, folding newlines to spaces
@@ -335,5 +488,128 @@ mod tests {
             })
             .expect("monospace not parsed");
         assert!(children.iter().any(|n| matches!(n, Inline::Strong { .. })));
+    }
+
+    /// The single link node in `v`, or `None`.
+    fn first_link(v: &[Inline]) -> Option<(String, Vec<Inline>, bool, Span)> {
+        v.iter().find_map(|n| match n {
+            Inline::Link {
+                target,
+                children,
+                bare,
+                span,
+            } => Some((target.clone(), children.clone(), *bare, *span)),
+            _ => None,
+        })
+    }
+
+    #[test]
+    fn link_macro_span_target_and_text() {
+        let src = "See link:https://example.org[the site] now.";
+        let v = scan_inlines(src, 0, &attrs());
+        let (target, children, bare, span) = first_link(&v).expect("no link");
+        assert_eq!(
+            &src[span.start..span.end],
+            "link:https://example.org[the site]"
+        );
+        assert_eq!(target, "https://example.org");
+        assert!(!bare);
+        assert_eq!(
+            children,
+            vec![Inline::Text {
+                value: "the site".into(),
+                span: Span::new(29, 37),
+            }]
+        );
+    }
+
+    #[test]
+    fn mailto_macro_keeps_its_scheme_in_href() {
+        let v = scan_inlines("Mail mailto:me@x.io[me] now.", 0, &attrs());
+        let (target, _, bare, _) = first_link(&v).expect("no link");
+        assert_eq!(target, "mailto:me@x.io");
+        assert!(!bare);
+    }
+
+    #[test]
+    fn url_macro_without_link_prefix() {
+        let src = "Go https://example.org[here].";
+        let v = scan_inlines(src, 0, &attrs());
+        let (target, _, _, span) = first_link(&v).expect("no link");
+        assert_eq!(&src[span.start..span.end], "https://example.org[here]");
+        assert_eq!(target, "https://example.org");
+    }
+
+    #[test]
+    fn bare_autolink_trims_trailing_period() {
+        let src = "End https://example.org.";
+        let v = scan_inlines(src, 0, &attrs());
+        let (target, _, bare, span) = first_link(&v).expect("no link");
+        // The span (and href) stop before the sentence's period.
+        assert_eq!(&src[span.start..span.end], "https://example.org");
+        assert_eq!(target, "https://example.org");
+        assert!(bare);
+        // The trailing period survives as its own text node.
+        assert!(matches!(v.last(), Some(Inline::Text { value, .. }) if value == "."));
+    }
+
+    #[test]
+    fn link_text_parses_inline_markup() {
+        let v = scan_inlines("link:https://h[*bold* text]", 0, &attrs());
+        let (_, children, _, _) = first_link(&v).expect("no link");
+        assert!(children.iter().any(|n| matches!(n, Inline::Strong { .. })));
+    }
+
+    #[test]
+    fn empty_brackets_make_a_bare_link() {
+        let v = scan_inlines("link:https://h[]", 0, &attrs());
+        let (target, children, bare, _) = first_link(&v).expect("no link");
+        assert!(bare);
+        assert_eq!(target, "https://h");
+        assert!(matches!(&children[0], Inline::Text { value, .. } if value == "https://h"));
+    }
+
+    #[test]
+    fn scheme_glued_to_a_word_is_not_autolinked() {
+        // Left-boundary rule: `x_https://...` is not a link (matches asciidoctor).
+        let v = scan_inlines("x_https://example.org here", 0, &attrs());
+        assert!(first_link(&v).is_none());
+    }
+
+    #[test]
+    fn link_macro_without_brackets_is_literal() {
+        // `link:` needs `[...]`; without it the text is plain.
+        let v = scan_inlines("link:https://example.org plain", 0, &attrs());
+        assert!(first_link(&v).is_none());
+    }
+
+    #[test]
+    fn bare_mailto_is_not_autolinked() {
+        // asciidoctor does not autolink a bare `mailto:` (no brackets).
+        let v = scan_inlines("Mail mailto:me@x.io now", 0, &attrs());
+        assert!(first_link(&v).is_none());
+    }
+
+    #[test]
+    fn ftp_scheme_autolinks() {
+        let v = scan_inlines("Get ftp://ftp.example.org/f now", 0, &attrs());
+        let (target, _, bare, _) = first_link(&v).expect("no link");
+        assert_eq!(target, "ftp://ftp.example.org/f");
+        assert!(bare);
+    }
+
+    #[test]
+    fn bare_link_inside_strong_still_links() {
+        // The recursive scanner handles `*https://h*` for free: Strong wraps a
+        // bare Link.
+        let v = scan_inlines("*https://h*", 0, &attrs());
+        let children = v
+            .iter()
+            .find_map(|n| match n {
+                Inline::Strong { children, .. } => Some(children.clone()),
+                _ => None,
+            })
+            .expect("no strong");
+        assert!(children.iter().any(|n| matches!(n, Inline::Link { .. })));
     }
 }

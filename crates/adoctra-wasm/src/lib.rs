@@ -159,6 +159,19 @@ fn write_inlines(inlines: &[Inline], s: &mut String) {
                 s.push_str("\"name\":\"subscript\",\"inlines\":");
                 write_inlines(children, s);
             }
+            // The editor gets the resolved href, the `bare` flag and the display
+            // text (each child carries its own span, like any other inline).
+            Inline::Link {
+                target,
+                children,
+                bare,
+                ..
+            } => {
+                s.push_str("\"name\":\"link\",\"target\":");
+                write_str(target, s);
+                s.push_str(&format!(",\"bare\":{bare},\"inlines\":"));
+                write_inlines(children, s);
+            }
             // The editor gets the structured reference (name + resolved value),
             // unlike the backends which only need the resolved text.
             Inline::AttributeRef { name, value, .. } => {
@@ -301,6 +314,29 @@ mod tests {
                 "missing {name} in {json}"
             );
         }
+    }
+
+    #[test]
+    fn link_is_a_structured_node_with_span_and_target() {
+        let json = parse_json("See link:https://h[the site]");
+        // The link runs from byte 4 ("link:") through the closing bracket (28).
+        assert!(
+            json.contains("\"span\":{\"start\":4,\"end\":28},\"name\":\"link\""),
+            "got: {json}"
+        );
+        assert!(json.contains("\"target\":\"https://h\""), "got: {json}");
+        assert!(json.contains("\"bare\":false"), "got: {json}");
+    }
+
+    #[test]
+    fn bare_autolink_is_structured_and_bare() {
+        let json = parse_json("Bare https://example.org now");
+        assert!(json.contains("\"name\":\"link\""), "got: {json}");
+        assert!(json.contains("\"bare\":true"), "got: {json}");
+        assert!(
+            json.contains("\"target\":\"https://example.org\""),
+            "got: {json}"
+        );
     }
 
     #[test]

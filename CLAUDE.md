@@ -132,7 +132,12 @@ at column 0 but deeper levels may be **indented** — nesting is decided by mark
 **continuations** attaching blocks (paragraph, listing) to the item in source
 order; a blank line ends the list), and
 inline `*strong*` / `_emphasis_`, `` `monospace` `` / `#mark#` (constrained)
-and `^superscript^` / `~subscript~` (unconstrained); a single inline scanner
+and `^superscript^` / `~subscript~` (unconstrained); **links** — the
+`link:target[text]` / `mailto:target[text]` macro (brackets required), the URL
+macro `https://h[text]` and **bare autolinks** for `http(s)`/`ftp`/`irc` (with
+asciidoctor's left-boundary rule and trailing-punctuation trimming), an empty
+or omitted text rendered `class="bare"`, and inline markup inside link text;
+a single inline scanner
 (`adoctra-core/src/inline.rs`) shared by the parser and tokenizer; inline nodes
 carry byte spans; attribute references `{name}` are resolved once in core
 against the document attributes; HTML and JSON backends; editor layer
@@ -144,7 +149,7 @@ Scaffold only: DOCX backend; the extension API exists but `parse`/`convert` do
 not invoke it yet.
 
 Not yet implemented (common asks — treat as roadmap, do not assume present):
-broader language coverage (tables, links/xrefs, footnotes, admonitions, includes, conditionals,
+broader language coverage (tables, cross-references/`<<xref>>`, footnotes, admonitions, includes, conditionals,
 block/inline macros, typographic `REPLACEMENTS`), TOC generation,
 incremental/block reparse, and a pull/event API over the AST.
 

@@ -111,7 +111,20 @@ pub enum Inline {
         value: Option<String>,
         span: Span,
     },
-    // TODO: links, cross-references, block/inline macros, typographic replacements...
+    /// A link: the `link:target[text]` macro, an autolinked URL macro
+    /// `https://host[text]`, or a bare autolinked URL `https://host`. `target`
+    /// is the resolved href; `children` is the display text (parsed inlines),
+    /// which for a bare link is the target's own text. `bare` is `true` when no
+    /// explicit link text was given — asciidoctor renders those with a
+    /// `class="bare"` on the `<a>`. `span` covers the whole construct (markers,
+    /// scheme and brackets) in the source.
+    Link {
+        target: String,
+        children: Vec<Inline>,
+        bare: bool,
+        span: Span,
+    },
+    // TODO: cross-references, block/inline macros, typographic replacements...
 }
 
 impl Inline {
@@ -125,7 +138,8 @@ impl Inline {
             | Inline::Mark { span, .. }
             | Inline::Superscript { span, .. }
             | Inline::Subscript { span, .. }
-            | Inline::AttributeRef { span, .. } => *span,
+            | Inline::AttributeRef { span, .. }
+            | Inline::Link { span, .. } => *span,
         }
     }
 }

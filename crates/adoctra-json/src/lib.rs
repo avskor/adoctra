@@ -126,6 +126,18 @@ fn write_inlines(inlines: &[Inline], s: &mut String) {
                 write_inlines(children, s);
                 s.push('}');
             }
+            Inline::Link {
+                target,
+                children,
+                bare,
+                ..
+            } => {
+                s.push_str("{\"name\":\"link\",\"target\":");
+                escape_into(target, s);
+                s.push_str(&format!(",\"bare\":{bare},\"inlines\":"));
+                write_inlines(children, s);
+                s.push('}');
+            }
             // Attribute reference resolved in core: serialize as plain text
             // (the value, or the literal `{name}` when the attribute was
             // missing), which is what the ASG carries after resolution.
@@ -179,6 +191,32 @@ mod tests {
         let json = render("`*b*`");
         assert!(json.contains("\"name\":\"monospace\""), "got: {json}");
         assert!(json.contains("\"name\":\"strong\""), "got: {json}");
+    }
+
+    #[test]
+    fn link_serializes_with_target_and_bare_flag() {
+        let json = render("See link:https://example.org[the site].");
+        assert!(json.contains("\"name\":\"link\""), "got: {json}");
+        assert!(
+            json.contains("\"target\":\"https://example.org\""),
+            "got: {json}"
+        );
+        assert!(json.contains("\"bare\":false"), "got: {json}");
+        assert!(
+            json.contains("{\"name\":\"text\",\"value\":\"the site\"}"),
+            "got: {json}"
+        );
+    }
+
+    #[test]
+    fn bare_autolink_sets_bare_true() {
+        let json = render("Bare https://example.org now.");
+        assert!(json.contains("\"name\":\"link\""), "got: {json}");
+        assert!(json.contains("\"bare\":true"), "got: {json}");
+        assert!(
+            json.contains("\"target\":\"https://example.org\""),
+            "got: {json}"
+        );
     }
 
     #[test]

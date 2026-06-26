@@ -34,6 +34,7 @@ pub enum TokenKind {
     Superscript,
     Subscript,
     AttributeRef,
+    Link,
     ListMarker,
 }
 
@@ -51,6 +52,7 @@ impl TokenKind {
             TokenKind::Superscript => "superscript",
             TokenKind::Subscript => "subscript",
             TokenKind::AttributeRef => "attribute-ref",
+            TokenKind::Link => "link",
             TokenKind::ListMarker => "list-marker",
         }
     }
@@ -189,6 +191,15 @@ fn flatten_inlines(inlines: &[Inline], out: &mut Vec<Token>) {
                     kind: TokenKind::AttributeRef,
                 });
             }
+            // One token for the whole link, then highlight any markup in its
+            // display text (for a bare link the child is plain Text → no token).
+            Inline::Link { children, span, .. } => {
+                out.push(Token {
+                    span: *span,
+                    kind: TokenKind::Link,
+                });
+                flatten_inlines(children, out);
+            }
         }
     }
 }
@@ -276,6 +287,17 @@ mod tests {
             .find(|t| t.span.start == 6)
             .expect("no nested list marker token");
         assert_eq!(&src[nested.span.start..nested.span.end], "** ");
+    }
+
+    #[test]
+    fn link_is_tokenized_with_global_span() {
+        let src = "See link:https://h[the site] now";
+        let toks = tokens(src);
+        let link = toks.iter().find(|t| t.kind == TokenKind::Link).unwrap();
+        assert_eq!(
+            &src[link.span.start..link.span.end],
+            "link:https://h[the site]"
+        );
     }
 
     #[test]

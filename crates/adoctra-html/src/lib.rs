@@ -105,6 +105,23 @@ fn render_inlines(inlines: &[Inline], out: &mut String) {
                 render_inlines(children, out);
                 out.push_str("</sub>");
             }
+            // A bare link (no explicit text) gets `class="bare"`, matching
+            // asciidoctor; the href and display text are otherwise independent.
+            Inline::Link {
+                target,
+                children,
+                bare,
+                ..
+            } => {
+                out.push_str("<a href=\"");
+                out.push_str(&escape(target));
+                if *bare {
+                    out.push_str("\" class=\"bare");
+                }
+                out.push_str("\">");
+                render_inlines(children, out);
+                out.push_str("</a>");
+            }
             // Resolved in core: emit the value, or fall back to the literal
             // `{name}` for a missing attribute (asciidoctor's default).
             Inline::AttributeRef { name, value, .. } => match value {
@@ -165,6 +182,42 @@ mod tests {
         let html = render("Run `*bold* code`.");
         assert!(
             html.contains("<code><strong>bold</strong> code</code>"),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn renders_link_macro_with_text() {
+        let html = render("See link:https://example.org[the site].");
+        assert!(
+            html.contains("<a href=\"https://example.org\">the site</a>"),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn bare_autolink_gets_the_bare_class() {
+        let html = render("Bare https://example.org now.");
+        assert!(
+            html.contains("<a href=\"https://example.org\" class=\"bare\">https://example.org</a>"),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn link_text_keeps_inline_markup() {
+        let html = render("link:https://h[*bold* text]");
+        assert!(
+            html.contains("<a href=\"https://h\"><strong>bold</strong> text</a>"),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn mailto_macro_renders_scheme_in_href() {
+        let html = render("Mail mailto:me@x.io[me].");
+        assert!(
+            html.contains("<a href=\"mailto:me@x.io\">me</a>"),
             "got: {html}"
         );
     }

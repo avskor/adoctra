@@ -488,6 +488,22 @@ mod tests {
     }
 
     #[test]
+    fn link_span_is_accurate_across_a_line_break() {
+        // Like strong, a link on a wrapped line keeps real byte offsets.
+        let src = "first line\nsee link:https://example.org[here] now";
+        let inlines = match &parse(src).document.blocks[0].kind {
+            BlockKind::Paragraph { inlines } => inlines.clone(),
+            _ => unreachable!(),
+        };
+        let link = inlines
+            .iter()
+            .find(|n| matches!(n, Inline::Link { .. }))
+            .unwrap();
+        let s = link.span();
+        assert_eq!(&src[s.start..s.end], "link:https://example.org[here]");
+    }
+
+    #[test]
     fn attribute_reference_is_resolved_in_core() {
         let src = ":v: 9\n\nVersion {v}";
         let attr = match first_inline(src) {
