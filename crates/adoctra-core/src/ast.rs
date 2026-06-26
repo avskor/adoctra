@@ -14,6 +14,7 @@
 //! the shared model stays format-neutral.
 
 use crate::attributes::Attributes;
+use std::collections::BTreeMap;
 
 /// A byte range `[start, end)` in the original source.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -62,6 +63,12 @@ pub struct Document {
 /// emits them as a `class`), not part of cross-reference resolution. Empty when
 /// none were given. Order is source order.
 ///
+/// `attrs` is the rest of a block-attribute list (`[style, name=value, %option]`):
+/// the block `style`, named attributes and `%options`. `id` and `role` are *not*
+/// here — they fold into `id` / `roles` above (the canonical anchor/role
+/// targets), regardless of whether they came from shorthand (`#id` / `.role`) or
+/// the longhand (`id=` / `role=`). See [`BlockAttrs`].
+///
 /// [`sectids`]: crate::resolve
 #[derive(Debug, Clone, PartialEq)]
 pub struct Block {
@@ -69,23 +76,52 @@ pub struct Block {
     pub id: Option<String>,
     pub reftext: Option<Vec<Inline>>,
     pub roles: Vec<String>,
+    pub attrs: BlockAttrs,
     pub kind: BlockKind,
 }
 
 impl Block {
-    /// A block with no anchor: `id`/`reftext` default to `None` and `roles` is
-    /// empty. The parser fills them in when an explicit `[[id]]` /
-    /// `[[id,reftext]]` anchor or a `[#id.role]` shorthand line precedes the
-    /// block; the resolve pass fills `id` for an auto-id section.
+    /// A block with no anchor: `id`/`reftext` default to `None` and `roles` /
+    /// `attrs` are empty. The parser fills them in from an explicit `[[id]]` /
+    /// `[[id,reftext]]` anchor or a `[style, #id.role, name=value]` attribute
+    /// line preceding the block; the resolve pass fills `id` for an auto-id
+    /// section.
     pub fn new(span: Span, kind: BlockKind) -> Self {
         Self {
             span,
             id: None,
             reftext: None,
             roles: Vec::new(),
+            attrs: BlockAttrs::default(),
             kind,
         }
     }
+}
+
+/// The non-id, non-role part of a block-attribute list
+/// (`[style, positional, name=value, %option]`).
+///
+/// adoctra keeps the anchor id (`#id` / `id=`) on [`Block::id`] and CSS roles
+/// (`.role` / `role=`) on [`Block::roles`], because those drive cross-reference
+/// resolution and class output respectively. Everything else from the list lands
+/// here:
+///
+/// - `style` — the first positional attribute (`source`, `literal`, `NOTE`, …).
+///   Only `source` currently changes rendering (a listing's language); other
+///   styles are parsed and carried but do not yet change a block's type.
+/// - `named` — `name=value` pairs, deterministic order (a [`BTreeMap`] so JSON /
+///   snapshot output stays stable). For a `source`-style block the language
+///   positional is folded in here under the `language` key, in core, so every
+///   backend reads it the same way.
+/// - `options` — `%option` flags, in source order.
+/// - `positional` — positional attributes after the style that core did not map
+///   to a named key, verbatim and in source order.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct BlockAttrs {
+    pub style: Option<String>,
+    pub named: BTreeMap<String, String>,
+    pub options: Vec<String>,
+    pub positional: Vec<String>,
 }
 
 /// Block-level element kinds.

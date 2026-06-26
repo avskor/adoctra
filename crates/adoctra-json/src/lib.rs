@@ -7,6 +7,7 @@
 use adoctra_core::ast::{Block, BlockKind, Inline};
 use adoctra_core::json::escape_into;
 use adoctra_core::{Backend, Document, Result};
+use std::collections::BTreeMap;
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct JsonBackend;
@@ -46,6 +47,9 @@ fn write_block(block: &Block, s: &mut String) {
             s.push_str(&format!("{{\"name\":\"heading\",\"level\":{level},"));
             write_id(&block.id, s);
             write_roles(&block.roles, s);
+            write_style(&block.attrs.style, s);
+            write_attributes(&block.attrs.named, s);
+            write_options(&block.attrs.options, s);
             s.push_str(",\"inlines\":");
             write_inlines(inlines, s);
             s.push('}');
@@ -54,6 +58,9 @@ fn write_block(block: &Block, s: &mut String) {
             s.push_str("{\"name\":\"paragraph\",");
             write_id(&block.id, s);
             write_roles(&block.roles, s);
+            write_style(&block.attrs.style, s);
+            write_attributes(&block.attrs.named, s);
+            write_options(&block.attrs.options, s);
             s.push_str(",\"inlines\":");
             write_inlines(inlines, s);
             s.push('}');
@@ -62,6 +69,9 @@ fn write_block(block: &Block, s: &mut String) {
             s.push_str("{\"name\":\"listing\",");
             write_id(&block.id, s);
             write_roles(&block.roles, s);
+            write_style(&block.attrs.style, s);
+            write_attributes(&block.attrs.named, s);
+            write_options(&block.attrs.options, s);
             s.push_str(",\"text\":");
             escape_into(text, s);
             s.push('}');
@@ -70,6 +80,9 @@ fn write_block(block: &Block, s: &mut String) {
             s.push_str(&format!("{{\"name\":\"list\",\"ordered\":{ordered},"));
             write_id(&block.id, s);
             write_roles(&block.roles, s);
+            write_style(&block.attrs.style, s);
+            write_attributes(&block.attrs.named, s);
+            write_options(&block.attrs.options, s);
             s.push_str(",\"items\":[");
             for (i, item) in items.iter().enumerate() {
                 if i > 0 {
@@ -110,6 +123,44 @@ fn write_roles(roles: &[String], s: &mut String) {
             s.push(',');
         }
         escape_into(role, s);
+    }
+    s.push(']');
+}
+
+/// Emit the leading-comma `,"style":<string|null>` field — the block style (the
+/// first positional attribute), or `null`.
+fn write_style(style: &Option<String>, s: &mut String) {
+    s.push_str(",\"style\":");
+    match style {
+        Some(v) => escape_into(v, s),
+        None => s.push_str("null"),
+    }
+}
+
+/// Emit the leading-comma `,"attributes":{…}` field — named `name=value` pairs.
+/// Keys come from a `BTreeMap`, so the order is deterministic.
+fn write_attributes(named: &BTreeMap<String, String>, s: &mut String) {
+    s.push_str(",\"attributes\":{");
+    for (i, (k, v)) in named.iter().enumerate() {
+        if i > 0 {
+            s.push(',');
+        }
+        escape_into(k, s);
+        s.push(':');
+        escape_into(v, s);
+    }
+    s.push('}');
+}
+
+/// Emit the leading-comma `,"options":[…]` field — `%option` flags in source
+/// order (an empty array when there are none).
+fn write_options(options: &[String], s: &mut String) {
+    s.push_str(",\"options\":[");
+    for (i, opt) in options.iter().enumerate() {
+        if i > 0 {
+            s.push(',');
+        }
+        escape_into(opt, s);
     }
     s.push(']');
 }
@@ -331,7 +382,9 @@ mod tests {
             json.contains("{\"name\":\"text\",\"value\":\"9\"}"),
             "got: {json}"
         );
-        assert!(!json.contains("attribute"), "got: {json}");
+        // No attribute-ref *node* leaks through (it resolved to text). The
+        // block-level `"attributes"` field is a separate, legitimate concern.
+        assert!(!json.contains("\"name\":\"attribute"), "got: {json}");
     }
 
     #[test]
@@ -468,5 +521,31 @@ mod tests {
     fn plain_paragraph_serializes_empty_roles() {
         let json = render("Hi.");
         assert!(json.contains("\"id\":null,\"roles\":[]"), "got: {json}");
+    }
+
+    #[test]
+    fn source_style_and_language_serialize() {
+        let json = render("[source,ruby]\n----\nx\n----");
+        assert!(
+            json.contains(
+                "\"style\":\"source\",\"attributes\":{\"language\":\"ruby\"},\"options\":[]"
+            ),
+            "got: {json}"
+        );
+    }
+
+    #[test]
+    fn options_serialize_as_array() {
+        let json = render("[%hardbreaks]\nHi.");
+        assert!(json.contains("\"options\":[\"hardbreaks\"]"), "got: {json}");
+    }
+
+    #[test]
+    fn plain_paragraph_serializes_empty_attrs() {
+        let json = render("Hi.");
+        assert!(
+            json.contains("\"roles\":[],\"style\":null,\"attributes\":{},\"options\":[]"),
+            "got: {json}"
+        );
     }
 }

@@ -21,6 +21,7 @@ use adoctra_core::ast::{Block, BlockKind, Inline, Span};
 use adoctra_core::diagnostic::{Diagnostic, ParseResult};
 use adoctra_core::json::escape_into as write_str;
 use adoctra_core::{Token, TokenKind};
+use std::collections::BTreeMap;
 
 /// Parse `src` and return JSON `{ "document": {...}, "diagnostics": [...] }`.
 pub fn parse_json(src: &str) -> String {
@@ -82,6 +83,9 @@ fn write_block(b: &Block, s: &mut String) {
             // targets and build a TOC.
             write_id(&b.id, s);
             write_roles(&b.roles, s);
+            write_style(&b.attrs.style, s);
+            write_attributes(&b.attrs.named, s);
+            write_options(&b.attrs.options, s);
             s.push_str(",\"inlines\":");
             write_inlines(inlines, s);
         }
@@ -89,6 +93,9 @@ fn write_block(b: &Block, s: &mut String) {
             s.push_str("\"name\":\"paragraph\",");
             write_id(&b.id, s);
             write_roles(&b.roles, s);
+            write_style(&b.attrs.style, s);
+            write_attributes(&b.attrs.named, s);
+            write_options(&b.attrs.options, s);
             s.push_str(",\"inlines\":");
             write_inlines(inlines, s);
         }
@@ -96,6 +103,9 @@ fn write_block(b: &Block, s: &mut String) {
             s.push_str("\"name\":\"listing\",");
             write_id(&b.id, s);
             write_roles(&b.roles, s);
+            write_style(&b.attrs.style, s);
+            write_attributes(&b.attrs.named, s);
+            write_options(&b.attrs.options, s);
             s.push_str(",\"text\":");
             write_str(text, s);
         }
@@ -103,6 +113,9 @@ fn write_block(b: &Block, s: &mut String) {
             s.push_str(&format!("\"name\":\"list\",\"ordered\":{ordered},"));
             write_id(&b.id, s);
             write_roles(&b.roles, s);
+            write_style(&b.attrs.style, s);
+            write_attributes(&b.attrs.named, s);
+            write_options(&b.attrs.options, s);
             s.push_str(",\"items\":[");
             for (i, item) in items.iter().enumerate() {
                 if i > 0 {
@@ -148,6 +161,44 @@ fn write_roles(roles: &[String], s: &mut String) {
             s.push(',');
         }
         write_str(role, s);
+    }
+    s.push(']');
+}
+
+/// Emit the leading-comma `,"style":<string|null>` field — the block style (the
+/// first positional attribute), or `null`.
+fn write_style(style: &Option<String>, s: &mut String) {
+    s.push_str(",\"style\":");
+    match style {
+        Some(v) => write_str(v, s),
+        None => s.push_str("null"),
+    }
+}
+
+/// Emit the leading-comma `,"attributes":{…}` field — named `name=value` pairs.
+/// Keys come from a `BTreeMap`, so the order is deterministic.
+fn write_attributes(named: &BTreeMap<String, String>, s: &mut String) {
+    s.push_str(",\"attributes\":{");
+    for (i, (k, v)) in named.iter().enumerate() {
+        if i > 0 {
+            s.push(',');
+        }
+        write_str(k, s);
+        s.push(':');
+        write_str(v, s);
+    }
+    s.push('}');
+}
+
+/// Emit the leading-comma `,"options":[…]` field — `%option` flags in source
+/// order (an empty array when there are none).
+fn write_options(options: &[String], s: &mut String) {
+    s.push_str(",\"options\":[");
+    for (i, opt) in options.iter().enumerate() {
+        if i > 0 {
+            s.push(',');
+        }
+        write_str(opt, s);
     }
     s.push(']');
 }
@@ -623,5 +674,29 @@ mod tests {
     fn plain_block_exposes_empty_roles() {
         let json = parse_json("Hi.");
         assert!(json.contains("\"id\":null,\"roles\":[]"), "got: {json}");
+    }
+
+    #[test]
+    fn source_style_and_options_are_exposed() {
+        // The editor sees the block style, named attributes (language folded from
+        // `[source,LANG]`) and `%options`.
+        let json = parse_json("[source,ruby]\n----\nx\n----");
+        assert!(
+            json.contains(
+                "\"style\":\"source\",\"attributes\":{\"language\":\"ruby\"},\"options\":[]"
+            ),
+            "got: {json}"
+        );
+        let json = parse_json("[%hardbreaks]\nHi.");
+        assert!(json.contains("\"options\":[\"hardbreaks\"]"), "got: {json}");
+    }
+
+    #[test]
+    fn plain_block_exposes_empty_attrs() {
+        let json = parse_json("Hi.");
+        assert!(
+            json.contains("\"style\":null,\"attributes\":{},\"options\":[]"),
+            "got: {json}"
+        );
     }
 }

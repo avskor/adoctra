@@ -55,10 +55,33 @@ fn render_block(block: &Block, out: &mut String) {
             out.push_str("</p>\n");
         }
         BlockKind::Listing { text } => {
-            let class = class_attr(&["listing"], &block.roles);
-            out.push_str(&format!("<pre{class}{id}>"));
-            out.push_str(&escape(text));
-            out.push_str("</pre>\n");
+            // A `[source]`-style listing renders as asciidoctor's highlight form:
+            // `<pre class="highlight"><code class="language-LANG" data-lang="LANG">`,
+            // with the language taken from the `language` attribute that core
+            // folded out of `[source,LANG]`. Without `source` it stays a plain
+            // listing. asciidoctor hangs roles/id on a wrapping `<div>`; adoctra
+            // has no wrapper, so they go on the `<pre>` (roles appended to the base
+            // class), as elsewhere.
+            if block.attrs.style.as_deref() == Some("source") {
+                let class = class_attr(&["highlight"], &block.roles);
+                out.push_str(&format!("<pre{class}{id}>"));
+                match block.attrs.named.get("language") {
+                    Some(lang) => {
+                        let lang = escape(lang);
+                        out.push_str(&format!(
+                            "<code class=\"language-{lang}\" data-lang=\"{lang}\">"
+                        ));
+                    }
+                    None => out.push_str("<code>"),
+                }
+                out.push_str(&escape(text));
+                out.push_str("</code></pre>\n");
+            } else {
+                let class = class_attr(&["listing"], &block.roles);
+                out.push_str(&format!("<pre{class}{id}>"));
+                out.push_str(&escape(text));
+                out.push_str("</pre>\n");
+            }
         }
         BlockKind::List { ordered, items } => {
             let tag = if *ordered { "ol" } else { "ul" };
@@ -591,5 +614,52 @@ mod tests {
     fn shorthand_role_renders_on_list() {
         let html = render("[.compact]\n* one\n* two");
         assert!(html.contains("<ul class=\"compact\">"), "got: {html}");
+    }
+
+    #[test]
+    fn source_listing_renders_highlight_code_with_language() {
+        let html = render("[source,ruby]\n----\nputs 1\n----");
+        assert!(
+            html.contains(
+                "<pre class=\"highlight\"><code class=\"language-ruby\" data-lang=\"ruby\">puts 1</code></pre>"
+            ),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn source_listing_without_language_omits_code_class() {
+        let html = render("[source]\n----\nputs 1\n----");
+        assert!(
+            html.contains("<pre class=\"highlight\"><code>puts 1</code></pre>"),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn source_listing_role_appends_to_highlight_class() {
+        let html = render("[source,ruby,role=numbered]\n----\nx\n----");
+        assert!(
+            html.contains("<pre class=\"highlight numbered\"><code class=\"language-ruby\""),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn source_listing_id_renders_on_pre() {
+        let html = render("[source#snip,ruby]\n----\nx\n----");
+        assert!(
+            html.contains("<pre class=\"highlight\" id=\"snip\"><code class=\"language-ruby\""),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn listing_without_source_style_is_unchanged() {
+        let html = render("----\nx = 1\n----");
+        assert!(
+            html.contains("<pre class=\"listing\">x = 1</pre>"),
+            "got: {html}"
+        );
     }
 }

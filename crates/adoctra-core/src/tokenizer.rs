@@ -13,7 +13,8 @@
 use crate::ast::{Inline, Span};
 use crate::inline::scan_inlines;
 use crate::parser::{
-    collect_header, parse_attribute_entry, parse_block_anchor, parse_heading, parse_list_marker,
+    collect_header, parse_attribute_entry, parse_block_anchor, parse_block_attr_list,
+    parse_heading, parse_list_marker,
 };
 use crate::scanner::lines_with_offsets;
 
@@ -27,6 +28,7 @@ pub struct Token {
 pub enum TokenKind {
     Heading,
     Anchor,
+    BlockAttributeList,
     AttributeEntry,
     ListingDelimiter,
     ListingText,
@@ -47,6 +49,7 @@ impl TokenKind {
         match self {
             TokenKind::Heading => "heading",
             TokenKind::Anchor => "anchor",
+            TokenKind::BlockAttributeList => "block-attribute-list",
             TokenKind::AttributeEntry => "attribute-entry",
             TokenKind::ListingDelimiter => "listing-delimiter",
             TokenKind::ListingText => "listing-text",
@@ -118,6 +121,16 @@ pub fn tokens(source: &str) -> Vec<Token> {
             out.push(Token {
                 span: line_span,
                 kind: TokenKind::Anchor,
+            });
+            continue;
+        }
+        // A whole-line block-attribute list (`[style, #id.role, name=value]`):
+        // one token over the line, recognised exactly as the parser consumes it,
+        // so highlighting and parsing never disagree.
+        if parse_block_attr_list(line).is_some() {
+            out.push(Token {
+                span: line_span,
+                kind: TokenKind::BlockAttributeList,
             });
             continue;
         }
@@ -430,6 +443,21 @@ mod tests {
             .expect("anchor token");
         // The token covers the whole `[[…]]` line, not the body line.
         assert_eq!(&src[anchor.span.start..anchor.span.end], "[[pa,The Para]]");
+    }
+
+    #[test]
+    fn block_attribute_list_line_is_one_token() {
+        let src = "[source,ruby]\n----\nx\n----";
+        let toks = tokens(src);
+        let attr = toks
+            .iter()
+            .find(|t| t.kind == TokenKind::BlockAttributeList)
+            .expect("block-attribute-list token");
+        // One token over the whole `[…]` line, recognised like the parser consumes it.
+        assert_eq!(&src[attr.span.start..attr.span.end], "[source,ruby]");
+        // The shorthand form is the same token kind (it is the same grammar).
+        let toks = tokens("[#id.role]\ntext");
+        assert!(toks.iter().any(|t| t.kind == TokenKind::BlockAttributeList));
     }
 
     #[test]

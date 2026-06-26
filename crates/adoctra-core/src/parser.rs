@@ -5,20 +5,23 @@
 //! [`Diagnostic`]s. This is what lets an editor parse on every keystroke while
 //! the buffer is half-written.
 
-use crate::ast::{Block, BlockKind, Document, Inline, ListItem, Span};
+use crate::ast::{Block, BlockAttrs, BlockKind, Document, Inline, ListItem, Span};
 use crate::attributes::Attributes;
 use crate::diagnostic::{Diagnostic, ParseResult, Severity};
 use crate::inline::scan_inlines;
 use crate::scanner::lines_with_offsets;
 
-/// Metadata accumulated from `[[id]]` anchor and `[#id.role]` shorthand lines
-/// that precede a block, transferred onto that block once it is parsed. `id` is
-/// last-wins across both forms; `roles` accumulate in source order.
+/// Metadata accumulated from `[[id]]` anchor and `[style, #id.role, name=value]`
+/// attribute lines that precede a block, transferred onto that block once it is
+/// parsed. `id` is last-wins across all forms; `roles` accumulate in source
+/// order; `attrs` merges across consecutive lines (style last-wins, named/options
+/// accumulate).
 #[derive(Default)]
 struct PendingMeta {
     id: Option<String>,
     reftext: Option<Vec<Inline>>,
     roles: Vec<String>,
+    attrs: BlockAttrs,
 }
 
 pub fn parse(source: &str) -> ParseResult {
@@ -50,11 +53,17 @@ pub fn parse(source: &str) -> ParseResult {
             i += 1;
             continue;
         }
-        if let Some((id, roles)) = parse_block_attr_shorthand(line) {
-            if let Some(id) = id {
+        if let Some(parsed) = parse_block_attr_list(line) {
+            if let Some(id) = parsed.id {
                 pending.id = Some(id);
             }
-            pending.roles.extend(roles);
+            pending.roles.extend(parsed.roles);
+            if parsed.attrs.style.is_some() {
+                pending.attrs.style = parsed.attrs.style;
+            }
+            pending.attrs.named.extend(parsed.attrs.named);
+            pending.attrs.options.extend(parsed.attrs.options);
+            pending.attrs.positional.extend(parsed.attrs.positional);
             i += 1;
             continue;
         }
@@ -70,6 +79,7 @@ pub fn parse(source: &str) -> ParseResult {
             block.id = pending.id;
             block.reftext = pending.reftext;
             block.roles = pending.roles;
+            block.attrs = pending.attrs;
             doc.blocks.push(block);
         }
     }
@@ -482,22 +492,30 @@ pub(crate) fn is_valid_anchor_id(id: &str) -> bool {
     chars.all(|c| c.is_alphanumeric() || matches!(c, '_' | ':' | '.' | '-'))
 }
 
-/// Recognise a *shorthand block-attribute* line — `[#id]`, `[.role]`,
-/// `[#id.role1.role2]` occupying the whole (trimmed) line — and return
-/// `(id?, roles)`. Both the id (`#`) and role (`.`) tokens are optional but the
-/// brackets must be filled *entirely* by them: the inner is a run of `#…` / `.…`
-/// segments with nothing left over. The id is taken from the last `#` token
-/// (there is normally one); roles are the `.` tokens in source order.
+/// The parsed pieces of a whole-line block-attribute list, before they are folded
+/// onto a [`Block`]. `id` and `roles` are split out because they have dedicated
+/// homes ([`Block::id`] / [`Block::roles`]); everything else stays in `attrs`.
+#[derive(Debug, Default, PartialEq)]
+pub(crate) struct AttrLine {
+    id: Option<String>,
+    roles: Vec<String>,
+    attrs: BlockAttrs,
+}
+
+/// Recognise a *whole-line* block-attribute list — `[style, #id.role, name=value,
+/// %option]` filling the entire (trimmed) line — and parse it into an
+/// [`AttrLine`]. This subsumes the `[#id]` / `[.role]` shorthand (the first
+/// positional simply carries no style word).
 ///
-/// Returns `None` — so the line falls through to ordinary parsing — when the
-/// content is not pure shorthand: a leading `[[` (that is the distinct block
-/// *anchor*, matched first), an empty `[]`, or any stray character such as `,`,
-/// `=`, `%` or a bare positional word. Those belong to the full
-/// `[positional, name=value]` attribute list, which is not implemented yet.
-pub(crate) fn parse_block_attr_shorthand(line: &str) -> Option<(Option<String>, Vec<String>)> {
+/// Matches asciidoctor, which treats *any* non-empty `[…]` line that is not the
+/// `[[id]]` block anchor as an attribute list — even `[draft]` or `[Note to self]`
+/// (a style with spaces). Returns `None` (so the line falls through to ordinary
+/// parsing) only for the anchor, an empty `[]`, or a non-bracketed / non-whole-line
+/// occurrence. A malformed id/role token is *skipped* (the line is still
+/// consumed), again matching asciidoctor.
+pub(crate) fn parse_block_attr_list(line: &str) -> Option<AttrLine> {
     let t = line.trim();
-    // `[[…]]` is the block anchor, handled before this; never treat it as
-    // shorthand even if it reaches here (e.g. a malformed anchor id).
+    // `[[…]]` is the block anchor, handled before this.
     if t.starts_with("[[") {
         return None;
     }
@@ -505,39 +523,146 @@ pub(crate) fn parse_block_attr_shorthand(line: &str) -> Option<(Option<String>, 
     if inner.is_empty() {
         return None;
     }
-    let mut id: Option<String> = None;
-    let mut roles: Vec<String> = Vec::new();
-    let mut rest = inner;
-    while !rest.is_empty() {
-        let sigil = rest.as_bytes()[0];
-        if sigil != b'#' && sigil != b'.' {
-            return None; // stray char / positional word → not shorthand
+    let mut out = AttrLine::default();
+    for (idx, seg) in split_attr_segments(inner).into_iter().enumerate() {
+        let seg = seg.trim();
+        if seg.is_empty() {
+            continue;
         }
-        // The token runs until the next sigil (`#`/`.`) or the end.
+        // `name=value` (with a well-formed name) — a named attribute.
+        if let Some((name, value)) = split_named(seg) {
+            let value = unquote(value);
+            match name {
+                "id" => out.id = Some(value.to_string()),
+                "role" => out
+                    .roles
+                    .extend(value.split_whitespace().map(str::to_string)),
+                "opts" | "options" => out
+                    .attrs
+                    .options
+                    .extend(split_list_value(value).map(str::to_string)),
+                _ => {
+                    out.attrs.named.insert(name.to_string(), value.to_string());
+                }
+            }
+            continue;
+        }
+        // A `%option` run (`%a%b`) as its own segment.
+        if seg.starts_with('%') {
+            out.attrs
+                .options
+                .extend(seg.split('%').filter(|s| !s.is_empty()).map(str::to_string));
+            continue;
+        }
+        // The first positional carries the block style plus optional `#id` /
+        // `.role` / `%option` shorthand; later positionals are plain values.
+        if idx == 0 {
+            parse_first_positional(seg, &mut out);
+        } else {
+            out.attrs.positional.push(unquote(seg).to_string());
+        }
+    }
+    // For a `source` block, the first remaining positional is the language. Fold
+    // it into a `language` named attribute here, in core, so every backend reads
+    // it the same way ("core resolves semantics once").
+    if out.attrs.style.as_deref() == Some("source") && !out.attrs.positional.is_empty() {
+        let language = out.attrs.positional.remove(0);
+        out.attrs
+            .named
+            .entry("language".to_string())
+            .or_insert(language);
+    }
+    Some(out)
+}
+
+/// Parse the *first* positional attribute: a leading style word (which may
+/// contain spaces, e.g. `Note to self`) up to the first `#` / `.` / `%`, then a
+/// run of shorthand tokens — `#id` (last wins), `.role` (accumulated), `%option`.
+/// A malformed id/role token is skipped, matching asciidoctor.
+fn parse_first_positional(seg: &str, out: &mut AttrLine) {
+    let (style, mut rest) = match seg.find(['#', '.', '%']) {
+        Some(p) => (seg[..p].trim(), &seg[p..]),
+        None => (seg.trim(), ""),
+    };
+    if !style.is_empty() {
+        out.attrs.style = Some(style.to_string());
+    }
+    while let Some(&sigil) = rest.as_bytes().first() {
         let end = rest[1..]
-            .find(['#', '.'])
+            .find(['#', '.', '%'])
             .map(|i| i + 1)
             .unwrap_or(rest.len());
         let token = &rest[1..end];
         rest = &rest[end..];
-        if sigil == b'#' {
-            if !is_valid_anchor_id(token) {
-                return None;
-            }
-            id = Some(token.to_string());
-        } else {
-            if !is_valid_role(token) {
-                return None;
-            }
-            roles.push(token.to_string());
+        match sigil {
+            b'#' if is_valid_anchor_id(token) => out.id = Some(token.to_string()),
+            b'.' if is_valid_role(token) => out.roles.push(token.to_string()),
+            b'%' if !token.is_empty() => out.attrs.options.push(token.to_string()),
+            _ => {} // malformed token → skip, but still consume the line
         }
     }
-    Some((id, roles))
+}
+
+/// Split an attribute-list inner on commas that are *not* inside single/double
+/// quotes. Whitespace is left intact (the caller trims each segment).
+fn split_attr_segments(inner: &str) -> Vec<&str> {
+    let mut segs = Vec::new();
+    let mut start = 0;
+    let mut quote: Option<u8> = None;
+    for (idx, &b) in inner.as_bytes().iter().enumerate() {
+        match quote {
+            Some(q) if b == q => quote = None,
+            Some(_) => {}
+            None if b == b'"' || b == b'\'' => quote = Some(b),
+            None if b == b',' => {
+                segs.push(&inner[start..idx]);
+                start = idx + 1;
+            }
+            None => {}
+        }
+    }
+    segs.push(&inner[start..]);
+    segs
+}
+
+/// If `seg` is `name=value` with a well-formed attribute name, return the trimmed
+/// `(name, value)`; otherwise `None` (the segment is positional). The value is
+/// returned verbatim — still quoted, if it was; see [`unquote`].
+fn split_named(seg: &str) -> Option<(&str, &str)> {
+    let eq = seg.find('=')?;
+    let name = seg[..eq].trim();
+    is_valid_attr_name(name).then(|| (name, seg[eq + 1..].trim()))
+}
+
+/// Whether `name` is a well-formed attribute name: a leading ASCII letter or `_`,
+/// then letters / digits / `_` / `-`.
+fn is_valid_attr_name(name: &str) -> bool {
+    let mut chars = name.chars();
+    match chars.next() {
+        Some(c) if c.is_ascii_alphabetic() || c == '_' => {}
+        _ => return false,
+    }
+    chars.all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '-'))
+}
+
+/// Strip a matching pair of surrounding single or double quotes, if present.
+fn unquote(s: &str) -> &str {
+    let b = s.as_bytes();
+    if b.len() >= 2 && (b[0] == b'"' || b[0] == b'\'') && b[b.len() - 1] == b[0] {
+        &s[1..s.len() - 1]
+    } else {
+        s
+    }
+}
+
+/// Split a list-valued attribute (`opts="a,b c"`) on commas and whitespace.
+fn split_list_value(value: &str) -> impl Iterator<Item = &str> {
+    value.split([',', ' ', '\t']).filter(|s| !s.is_empty())
 }
 
 /// Whether `role` is a well-formed CSS role: non-empty, alphanumeric plus `_`
 /// and `-` (asciidoctor folds anything else, but adoctra only accepts the clean
-/// shape and otherwise leaves the line unrecognised).
+/// shape and otherwise skips the token).
 fn is_valid_role(role: &str) -> bool {
     !role.is_empty()
         && role
@@ -1136,43 +1261,80 @@ mod tests {
     }
 
     #[test]
-    fn parse_block_attr_shorthand_recognises_forms() {
-        let id = |s: &str| Some(s.to_string());
-        let roles = |v: &[&str]| v.iter().map(|s| s.to_string()).collect::<Vec<_>>();
-        assert_eq!(
-            parse_block_attr_shorthand("[#id]"),
-            Some((id("id"), vec![]))
-        );
-        assert_eq!(
-            parse_block_attr_shorthand("[.lead]"),
-            Some((None, roles(&["lead"])))
-        );
-        assert_eq!(
-            parse_block_attr_shorthand("[#id.r1.r2]"),
-            Some((id("id"), roles(&["r1", "r2"])))
-        );
-        assert_eq!(
-            parse_block_attr_shorthand("[.r1.r2]"),
-            Some((None, roles(&["r1", "r2"])))
-        );
+    fn parse_block_attr_list_recognises_forms() {
+        let lang = |p: &AttrLine| p.attrs.named.get("language").cloned();
+
+        // Shorthand-only forms (style = None) — unchanged behaviour.
+        let p = parse_block_attr_list("[#id]").unwrap();
+        assert_eq!(p.id.as_deref(), Some("id"));
+        assert!(p.roles.is_empty() && p.attrs.style.is_none());
+        let p = parse_block_attr_list("[.lead]").unwrap();
+        assert!(p.id.is_none());
+        assert_eq!(p.roles, ["lead"]);
+        let p = parse_block_attr_list("[#id.r1.r2]").unwrap();
+        assert_eq!(p.id.as_deref(), Some("id"));
+        assert_eq!(p.roles, ["r1", "r2"]);
         // Surrounding whitespace is tolerated, like the anchor form.
         assert_eq!(
-            parse_block_attr_shorthand("  [#id]  "),
-            Some((id("id"), vec![]))
+            parse_block_attr_list("  [#id]  ").unwrap().id.as_deref(),
+            Some("id")
         );
-        // Not shorthand → None, so the line falls through to ordinary parsing:
-        // the block anchor (double bracket), an empty `[]`, the deferred
-        // full-attribute / positional forms, a malformed id/role, and an
-        // embedded (non-whole-line) occurrence.
-        assert_eq!(parse_block_attr_shorthand("[[id]]"), None);
-        assert_eq!(parse_block_attr_shorthand("[]"), None);
-        assert_eq!(parse_block_attr_shorthand("[source,ruby]"), None);
-        assert_eq!(parse_block_attr_shorthand("[%option]"), None);
-        assert_eq!(parse_block_attr_shorthand("[role=lead]"), None);
-        assert_eq!(parse_block_attr_shorthand("[1]"), None);
-        assert_eq!(parse_block_attr_shorthand("[#bad id]"), None);
-        assert_eq!(parse_block_attr_shorthand("[.a b]"), None);
-        assert_eq!(parse_block_attr_shorthand("text [#id]"), None);
+
+        // Full list: a `source` style folds its language positional into `named`.
+        let p = parse_block_attr_list("[source,ruby]").unwrap();
+        assert_eq!(p.attrs.style.as_deref(), Some("source"));
+        assert_eq!(lang(&p).as_deref(), Some("ruby"));
+        assert!(p.attrs.positional.is_empty());
+
+        // `id=` / `role=` longhand fold into id/roles; a role value splits on space.
+        let p = parse_block_attr_list("[#a,role=lead big]").unwrap();
+        assert_eq!(p.id.as_deref(), Some("a"));
+        assert_eq!(p.roles, ["lead", "big"]);
+
+        // `%option` shorthand, including a run of them.
+        let p = parse_block_attr_list("[%hardbreaks%nowrap]").unwrap();
+        assert_eq!(p.attrs.options, ["hardbreaks", "nowrap"]);
+        assert!(p.attrs.style.is_none());
+
+        // First-positional shorthand `style#id.role` plus a language positional.
+        let p = parse_block_attr_list("[source#x.foo,ruby]").unwrap();
+        assert_eq!(p.attrs.style.as_deref(), Some("source"));
+        assert_eq!(p.id.as_deref(), Some("x"));
+        assert_eq!(p.roles, ["foo"]);
+        assert_eq!(lang(&p).as_deref(), Some("ruby"));
+
+        // A style with spaces is kept verbatim (asciidoctor consumes it too).
+        assert_eq!(
+            parse_block_attr_list("[Note to self]")
+                .unwrap()
+                .attrs
+                .style
+                .as_deref(),
+            Some("Note to self")
+        );
+
+        // A malformed id/role token is skipped, but the line is still consumed.
+        let p = parse_block_attr_list("[#bad id]").unwrap();
+        assert!(p.id.is_none() && p.roles.is_empty());
+        assert!(parse_block_attr_list("[.a b]").unwrap().roles.is_empty());
+
+        // A plain `name=value` lands in `named`.
+        assert_eq!(
+            parse_block_attr_list("[width=50]")
+                .unwrap()
+                .attrs
+                .named
+                .get("width")
+                .map(String::as_str),
+            Some("50")
+        );
+
+        // Not an attribute list → None, so the line falls through to ordinary
+        // parsing: the block anchor, an empty `[]`, and an embedded (non-whole-line)
+        // occurrence.
+        assert_eq!(parse_block_attr_list("[[id]]"), None);
+        assert_eq!(parse_block_attr_list("[]"), None);
+        assert_eq!(parse_block_attr_list("text [#id]"), None);
     }
 
     #[test]
@@ -1249,15 +1411,48 @@ mod tests {
     }
 
     #[test]
-    fn non_shorthand_bracket_line_stays_a_paragraph() {
-        // The deferred `[positional, name=value]` form is not recognised yet, so
-        // such a line is plain paragraph text (no id, no roles) — a documented
-        // limitation, pinned here so a future change is a deliberate one.
+    fn attr_list_line_is_consumed_and_carried_on_block() {
+        // `[source,ruby]` is now a recognised attribute list (it was a documented
+        // limitation before): the line is consumed — not shown as text — and its
+        // style/language ride on the following block. Here that is a paragraph,
+        // since there is no `----` listing; id/roles stay empty.
         let doc = parse("[source,ruby]\nx = 1").document;
         assert_eq!(doc.blocks.len(), 1);
         let b = &doc.blocks[0];
         assert!(b.id.is_none());
         assert!(b.roles.is_empty());
+        assert_eq!(b.attrs.style.as_deref(), Some("source"));
+        assert_eq!(
+            b.attrs.named.get("language").map(String::as_str),
+            Some("ruby")
+        );
+        assert!(matches!(b.kind, BlockKind::Paragraph { .. }));
+        // The attribute line is excluded from the block span, like an anchor line.
+        assert_eq!(
+            b.span,
+            Span::new("[source,ruby]\n".len(), "[source,ruby]\nx = 1".len())
+        );
+    }
+
+    #[test]
+    fn attr_list_attaches_style_and_language_to_listing() {
+        let doc = parse("[source,ruby]\n----\nputs 1\n----").document;
+        let b = &doc.blocks[0];
+        assert!(matches!(b.kind, BlockKind::Listing { .. }));
+        assert_eq!(b.attrs.style.as_deref(), Some("source"));
+        assert_eq!(
+            b.attrs.named.get("language").map(String::as_str),
+            Some("ruby")
+        );
+    }
+
+    #[test]
+    fn attr_list_named_and_options_merge_across_lines() {
+        // Consecutive attribute lines merge: named accumulate (last-wins per key),
+        // options accumulate, and the whole thing floats across a blank line.
+        let b = &parse("[%hardbreaks]\n[width=40]\n\nHi.").document.blocks[0];
+        assert_eq!(b.attrs.options, ["hardbreaks"]);
+        assert_eq!(b.attrs.named.get("width").map(String::as_str), Some("40"));
         assert!(matches!(b.kind, BlockKind::Paragraph { .. }));
     }
 }
