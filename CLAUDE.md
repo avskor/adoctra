@@ -137,7 +137,12 @@ and `^superscript^` / `~subscript~` (unconstrained); **links** — the
 macro `https://h[text]` and **bare autolinks** for `http(s)`/`ftp`/`irc` (with
 asciidoctor's left-boundary rule and trailing-punctuation trimming), an empty
 or omitted text rendered `class="bare"`, and inline markup inside link text;
-a single inline scanner
+**cross-references** — the `<<id>>` / `<<id,text>>` angle form and the
+`xref:id[text]` macro, rendered as an internal `<a href="#id">` link, with inline
+markup parsed inside the reftext; a textless `<<id>>` falls back to `[id]`
+(asciidoctor's *unresolved*-reference rendering — there is no anchor/section-id
+registry yet, so the raw `target` is kept on the node for a future resolution
+pass); a single inline scanner
 (`adoctra-core/src/inline.rs`) shared by the parser and tokenizer; inline nodes
 carry byte spans; attribute references `{name}` are resolved once in core
 against the document attributes; typographic replacements (`(C)`/`(R)`/`(TM)`,
@@ -153,8 +158,10 @@ Scaffold only: DOCX backend; the extension API exists but `parse`/`convert` do
 not invoke it yet.
 
 Not yet implemented (common asks — treat as roadmap, do not assume present):
-broader language coverage (tables, cross-references/`<<xref>>`, footnotes, admonitions, includes, conditionals,
-block/inline macros), TOC generation,
+broader language coverage (tables, footnotes, admonitions, includes, conditionals,
+block/inline macros), an **anchor/section-id registry** so `<<id>>` resolves to a
+section's title (and an unknown id becomes a diagnostic) instead of the current
+`[id]` fallback, TOC generation,
 incremental/block reparse, and a pull/event API over the AST.
 
 When asked to "add a feature," check this list first and say plainly whether it

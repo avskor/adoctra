@@ -138,6 +138,15 @@ fn write_inlines(inlines: &[Inline], s: &mut String) {
                 write_inlines(children, s);
                 s.push('}');
             }
+            Inline::CrossReference {
+                target, children, ..
+            } => {
+                s.push_str("{\"name\":\"xref\",\"target\":");
+                escape_into(target, s);
+                s.push_str(",\"inlines\":");
+                write_inlines(children, s);
+                s.push('}');
+            }
             // Attribute reference resolved in core: serialize as plain text
             // (the value, or the literal `{name}` when the attribute was
             // missing), which is what the ASG carries after resolution.
@@ -215,6 +224,39 @@ mod tests {
         assert!(json.contains("\"bare\":true"), "got: {json}");
         assert!(
             json.contains("\"target\":\"https://example.org\""),
+            "got: {json}"
+        );
+    }
+
+    #[test]
+    fn xref_serializes_with_target_and_inlines() {
+        let json = render("See <<sec,Section Two>>.");
+        assert!(json.contains("\"name\":\"xref\""), "got: {json}");
+        assert!(json.contains("\"target\":\"sec\""), "got: {json}");
+        assert!(
+            json.contains("{\"name\":\"text\",\"value\":\"Section Two\"}"),
+            "got: {json}"
+        );
+    }
+
+    #[test]
+    fn textless_xref_serializes_bracketed_id() {
+        let json = render("See <<sec>>.");
+        assert!(json.contains("\"name\":\"xref\""), "got: {json}");
+        assert!(json.contains("\"target\":\"sec\""), "got: {json}");
+        assert!(
+            json.contains("{\"name\":\"text\",\"value\":\"[sec]\"}"),
+            "got: {json}"
+        );
+    }
+
+    #[test]
+    fn xref_macro_serializes_like_angle_form() {
+        let json = render("See xref:sec[Mac].");
+        assert!(json.contains("\"name\":\"xref\""), "got: {json}");
+        assert!(json.contains("\"target\":\"sec\""), "got: {json}");
+        assert!(
+            json.contains("{\"name\":\"text\",\"value\":\"Mac\"}"),
             "got: {json}"
         );
     }

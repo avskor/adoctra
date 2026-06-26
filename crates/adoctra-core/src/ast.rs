@@ -124,7 +124,21 @@ pub enum Inline {
         bare: bool,
         span: Span,
     },
-    // TODO: cross-references, block/inline macros...
+    /// A cross-reference: `<<id>>`, `<<id,text>>`, or the `xref:id[text]` macro.
+    /// `target` is the raw anchor id (without the leading `#`); the HTML backend
+    /// renders it as `href="#id"`. `children` is the display text — the explicit
+    /// reftext, or, when none was given, the core-generated `[id]` text. The
+    /// latter matches asciidoctor's rendering of an *unresolved* reference: there
+    /// is no anchor/section-id registry yet, so a textless `<<id>>` always falls
+    /// back to `[id]`. Keeping the raw `target` lets a future resolution pass
+    /// substitute a section's title (and diagnose a truly unknown id). `span`
+    /// covers the whole construct (the `<<…>>` or `xref:…[…]`) in the source.
+    CrossReference {
+        target: String,
+        children: Vec<Inline>,
+        span: Span,
+    },
+    // TODO: block/inline macros (image:, footnote:)...
 }
 
 impl Inline {
@@ -139,7 +153,8 @@ impl Inline {
             | Inline::Superscript { span, .. }
             | Inline::Subscript { span, .. }
             | Inline::AttributeRef { span, .. }
-            | Inline::Link { span, .. } => *span,
+            | Inline::Link { span, .. }
+            | Inline::CrossReference { span, .. } => *span,
         }
     }
 }

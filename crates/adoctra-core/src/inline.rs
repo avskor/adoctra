@@ -83,6 +83,10 @@ fn try_match(src: &str, i: usize, base: usize, attrs: &Attributes) -> Option<(In
         b'l' => match_link_macro(src, i, base, attrs, "link:"),
         b'm' => match_link_macro(src, i, base, attrs, "mailto:"),
         b'h' | b'f' | b'i' => match_url(src, i, base, attrs),
+        // Cross-references: the `<<id>>` / `<<id,text>>` angle form, and the
+        // `xref:id[text]` macro (brackets mandatory, like `link:`).
+        b'<' => match_xref_angle(src, i, base, attrs),
+        b'x' => match_xref_macro(src, i, base, attrs),
         _ => None,
     }
 }
@@ -299,6 +303,120 @@ fn finish_bracketed_link(
         },
         end,
     ))
+}
+
+/// A cross-reference in angle-bracket form: `<<id>>` or `<<id,text>>`. Requires
+/// the doubled `<<` … `>>` delimiters; the content is split on the *first* comma
+/// into the raw `target` id and an optional reftext. The reftext is trimmed and
+/// scanned for inline markup (`<<id,*bold*>>` works). With no reftext (or an
+/// empty one) the display text is the core-generated `[id]`, matching
+/// asciidoctor's rendering of an unresolved reference. An empty `target`, or a
+/// missing `>>`, is not a cross-reference (the `<` stays literal text). Returns
+/// the node and the src-relative end index (one past the closing `>>`).
+fn match_xref_angle(
+    src: &str,
+    i: usize,
+    base: usize,
+    attrs: &Attributes,
+) -> Option<(Inline, usize)> {
+    if !src[i..].starts_with("<<") {
+        return None;
+    }
+    let inner_start = i + 2;
+    let rel_close = src[inner_start..].find(">>")?;
+    let inner = &src[inner_start..inner_start + rel_close];
+    let end = inner_start + rel_close + 2;
+    // Split target from reftext on the first comma; keep the reftext's absolute
+    // offset so its scanned children carry real source spans.
+    let (target, reftext, reftext_off) = match inner.find(',') {
+        Some(comma) => {
+            let after = &inner[comma + 1..];
+            let lead = after.len() - after.trim_start().len();
+            (
+                &inner[..comma],
+                after.trim(),
+                inner_start + comma + 1 + lead,
+            )
+        }
+        None => (inner, "", inner_start),
+    };
+    if target.is_empty() {
+        return None;
+    }
+    let children = xref_children(target, reftext, reftext_off, base, i, end, attrs);
+    Some((
+        Inline::CrossReference {
+            target: target.to_string(),
+            children,
+            span: Span::new(base + i, base + end),
+        },
+        end,
+    ))
+}
+
+/// The `xref:id[text]` macro. Brackets are mandatory (like `link:`); `target` is
+/// the id up to `[` (non-empty, no whitespace). Empty brackets fall back to the
+/// `[id]` display text, like the textless angle form. Returns the node and the
+/// src-relative end index (one past the `]`).
+fn match_xref_macro(
+    src: &str,
+    i: usize,
+    base: usize,
+    attrs: &Attributes,
+) -> Option<(Inline, usize)> {
+    const PREFIX: &str = "xref:";
+    if !src[i..].starts_with(PREFIX) {
+        return None;
+    }
+    let target_start = i + PREFIX.len();
+    let rel_bracket = src[target_start..].find('[')?;
+    let target = &src[target_start..target_start + rel_bracket];
+    if target.is_empty() || target.contains(char::is_whitespace) {
+        return None;
+    }
+    let text_start = target_start + rel_bracket + 1;
+    let rel_close = src[text_start..].find(']')?;
+    let close = text_start + rel_close;
+    let end = close + 1;
+    let children = xref_children(
+        target,
+        &src[text_start..close],
+        text_start,
+        base,
+        i,
+        end,
+        attrs,
+    );
+    Some((
+        Inline::CrossReference {
+            target: target.to_string(),
+            children,
+            span: Span::new(base + i, base + end),
+        },
+        end,
+    ))
+}
+
+/// The display children of a cross-reference: the scanned `reftext` (at absolute
+/// offset `base + reftext_off`) when non-empty, otherwise the core-generated
+/// `[target]` text spanning the whole construct (`base + start .. base + end`).
+fn xref_children(
+    target: &str,
+    reftext: &str,
+    reftext_off: usize,
+    base: usize,
+    start: usize,
+    end: usize,
+    attrs: &Attributes,
+) -> Vec<Inline> {
+    if reftext.is_empty() {
+        vec![Inline::Text {
+            value: format!("[{target}]"),
+            span: Span::new(base + start, base + end),
+        }]
+    } else {
+        scan_inlines(reftext, base + reftext_off, attrs)
+    }
 }
 
 /// Emit a `Text` node for `src[a..b]` if non-empty, folding newlines to spaces
@@ -649,6 +767,120 @@ mod tests {
             vec![Inline::Text {
                 value: "it\u{2019}s".into(),
                 span: Span::new(1, 5),
+            }]
+        );
+    }
+
+    /// The single cross-reference node in `v`, or `None`.
+    fn first_xref(v: &[Inline]) -> Option<(String, Vec<Inline>, Span)> {
+        v.iter().find_map(|n| match n {
+            Inline::CrossReference {
+                target,
+                children,
+                span,
+            } => Some((target.clone(), children.clone(), *span)),
+            _ => None,
+        })
+    }
+
+    #[test]
+    fn xref_angle_with_text_span_target_and_children() {
+        let src = "See <<sec,Section Two>> now.";
+        let v = scan_inlines(src, 0, &attrs());
+        let (target, children, span) = first_xref(&v).expect("no xref");
+        assert_eq!(&src[span.start..span.end], "<<sec,Section Two>>");
+        assert_eq!(target, "sec");
+        // The reftext is scanned at its real offset (spans point at real bytes).
+        assert_eq!(
+            children,
+            vec![Inline::Text {
+                value: "Section Two".into(),
+                span: Span::new(10, 21),
+            }]
+        );
+    }
+
+    #[test]
+    fn xref_angle_without_text_falls_back_to_bracketed_id() {
+        let src = "<<sec>>";
+        let v = scan_inlines(src, 0, &attrs());
+        let (target, children, span) = first_xref(&v).expect("no xref");
+        assert_eq!(target, "sec");
+        assert_eq!(&src[span.start..span.end], "<<sec>>");
+        // The synthesized `[sec]` text spans the whole construct.
+        assert_eq!(
+            children,
+            vec![Inline::Text {
+                value: "[sec]".into(),
+                span,
+            }]
+        );
+    }
+
+    #[test]
+    fn xref_macro_form_span_and_target() {
+        let src = "Go xref:sec[Mac].";
+        let v = scan_inlines(src, 0, &attrs());
+        let (target, children, span) = first_xref(&v).expect("no xref");
+        assert_eq!(&src[span.start..span.end], "xref:sec[Mac]");
+        assert_eq!(target, "sec");
+        assert!(matches!(&children[0], Inline::Text { value, .. } if value == "Mac"));
+    }
+
+    #[test]
+    fn xref_macro_empty_brackets_fall_back_to_bracketed_id() {
+        let v = scan_inlines("xref:sec[]", 0, &attrs());
+        let (target, children, _) = first_xref(&v).expect("no xref");
+        assert_eq!(target, "sec");
+        assert!(matches!(&children[0], Inline::Text { value, .. } if value == "[sec]"));
+    }
+
+    #[test]
+    fn xref_reftext_parses_inline_markup() {
+        // The reftext is scanned recursively, so markup inside it still parses.
+        let v = scan_inlines("<<id,*bold* ref>>", 0, &attrs());
+        let (_, children, _) = first_xref(&v).expect("no xref");
+        assert!(children.iter().any(|n| matches!(n, Inline::Strong { .. })));
+    }
+
+    #[test]
+    fn unterminated_angle_xref_stays_text() {
+        // `<<` with no closing `>>` is not a cross-reference.
+        let v = scan_inlines("a << b c", 0, &attrs());
+        assert!(first_xref(&v).is_none());
+    }
+
+    #[test]
+    fn xref_macro_without_brackets_is_literal() {
+        // `xref:` needs `[...]`; without it the text is plain.
+        let v = scan_inlines("xref:sec plain", 0, &attrs());
+        assert!(first_xref(&v).is_none());
+    }
+
+    #[test]
+    fn empty_target_angle_is_literal() {
+        // `<<>>` and `<<,text>>` have no id — not a cross-reference.
+        assert!(first_xref(&scan_inlines("<<>>", 0, &attrs())).is_none());
+        assert!(first_xref(&scan_inlines("<<,text>>", 0, &attrs())).is_none());
+    }
+
+    #[test]
+    fn lone_angle_does_not_break_text() {
+        // A single `<` (e.g. before the arrow replacement) is just text.
+        let v = scan_inlines("a < b", 0, &attrs());
+        assert!(first_xref(&v).is_none());
+        assert!(v.iter().all(|n| matches!(n, Inline::Text { .. })));
+    }
+
+    #[test]
+    fn x_word_that_is_not_xref_stays_text() {
+        // The `b'x'` dispatch arm must not split ordinary words starting with x.
+        let v = scan_inlines("extra example", 0, &attrs());
+        assert_eq!(
+            v,
+            vec![Inline::Text {
+                value: "extra example".into(),
+                span: Span::new(0, 13),
             }]
         );
     }

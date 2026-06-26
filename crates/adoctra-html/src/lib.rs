@@ -122,6 +122,18 @@ fn render_inlines(inlines: &[Inline], out: &mut String) {
                 render_inlines(children, out);
                 out.push_str("</a>");
             }
+            // A cross-reference renders as an internal link `href="#id"`. The
+            // display text (explicit reftext, or the core-generated `[id]`) is in
+            // `children`; no `class="bare"` (that is a link-only concern).
+            Inline::CrossReference {
+                target, children, ..
+            } => {
+                out.push_str("<a href=\"#");
+                out.push_str(&escape(target));
+                out.push_str("\">");
+                render_inlines(children, out);
+                out.push_str("</a>");
+            }
             // Resolved in core: emit the value, or fall back to the literal
             // `{name}` for a missing attribute (asciidoctor's default).
             Inline::AttributeRef { name, value, .. } => match value {
@@ -253,6 +265,29 @@ mod tests {
             html.contains("<a href=\"mailto:me@x.io\">me</a>"),
             "got: {html}"
         );
+    }
+
+    #[test]
+    fn xref_with_text_renders_internal_link() {
+        let html = render("See <<sec,Section Two>>.");
+        assert!(
+            html.contains("<a href=\"#sec\">Section Two</a>"),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn textless_xref_renders_bracketed_id() {
+        // No anchor registry yet: a textless `<<id>>` falls back to `[id]`,
+        // matching asciidoctor's rendering of an unresolved reference.
+        let html = render("See <<sec>>.");
+        assert!(html.contains("<a href=\"#sec\">[sec]</a>"), "got: {html}");
+    }
+
+    #[test]
+    fn xref_macro_renders_internal_link() {
+        let html = render("See xref:sec[Mac].");
+        assert!(html.contains("<a href=\"#sec\">Mac</a>"), "got: {html}");
     }
 
     #[test]

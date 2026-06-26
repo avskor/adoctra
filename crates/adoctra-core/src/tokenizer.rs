@@ -35,6 +35,7 @@ pub enum TokenKind {
     Subscript,
     AttributeRef,
     Link,
+    CrossReference,
     ListMarker,
 }
 
@@ -53,6 +54,7 @@ impl TokenKind {
             TokenKind::Subscript => "subscript",
             TokenKind::AttributeRef => "attribute-ref",
             TokenKind::Link => "link",
+            TokenKind::CrossReference => "xref",
             TokenKind::ListMarker => "list-marker",
         }
     }
@@ -200,6 +202,15 @@ fn flatten_inlines(inlines: &[Inline], out: &mut Vec<Token>) {
                 });
                 flatten_inlines(children, out);
             }
+            // One token for the whole cross-reference, then highlight any markup
+            // in its display text (a textless `<<id>>` has a plain Text child).
+            Inline::CrossReference { children, span, .. } => {
+                out.push(Token {
+                    span: *span,
+                    kind: TokenKind::CrossReference,
+                });
+                flatten_inlines(children, out);
+            }
         }
     }
 }
@@ -298,6 +309,19 @@ mod tests {
             &src[link.span.start..link.span.end],
             "link:https://h[the site]"
         );
+    }
+
+    #[test]
+    fn xref_is_tokenized_with_global_span() {
+        // Both spellings emit one `xref` token spanning the whole construct.
+        let src = "See <<sec,Two>> and xref:sec[M] now";
+        let toks = tokens(src);
+        let spans: Vec<_> = toks
+            .iter()
+            .filter(|t| t.kind == TokenKind::CrossReference)
+            .map(|t| &src[t.span.start..t.span.end])
+            .collect();
+        assert_eq!(spans, vec!["<<sec,Two>>", "xref:sec[M]"]);
     }
 
     #[test]

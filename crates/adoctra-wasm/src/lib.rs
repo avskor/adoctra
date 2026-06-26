@@ -172,6 +172,16 @@ fn write_inlines(inlines: &[Inline], s: &mut String) {
                 s.push_str(&format!(",\"bare\":{bare},\"inlines\":"));
                 write_inlines(children, s);
             }
+            // The editor gets the raw anchor id (`target`) so it can resolve or
+            // validate the reference; the display text is in `inlines`.
+            Inline::CrossReference {
+                target, children, ..
+            } => {
+                s.push_str("\"name\":\"xref\",\"target\":");
+                write_str(target, s);
+                s.push_str(",\"inlines\":");
+                write_inlines(children, s);
+            }
             // The editor gets the structured reference (name + resolved value),
             // unlike the backends which only need the resolved text.
             Inline::AttributeRef { name, value, .. } => {
@@ -335,6 +345,28 @@ mod tests {
         assert!(json.contains("\"bare\":true"), "got: {json}");
         assert!(
             json.contains("\"target\":\"https://example.org\""),
+            "got: {json}"
+        );
+    }
+
+    #[test]
+    fn xref_is_a_structured_node_with_span_and_target() {
+        // "<<sec,Two>>" spans bytes 0..11; the editor gets the raw `target`.
+        let json = parse_json("<<sec,Two>>");
+        assert!(
+            json.contains("\"span\":{\"start\":0,\"end\":11},\"name\":\"xref\""),
+            "got: {json}"
+        );
+        assert!(json.contains("\"target\":\"sec\""), "got: {json}");
+    }
+
+    #[test]
+    fn textless_xref_carries_target_and_bracketed_text() {
+        let json = parse_json("<<sec>>");
+        assert!(json.contains("\"name\":\"xref\""), "got: {json}");
+        assert!(json.contains("\"target\":\"sec\""), "got: {json}");
+        assert!(
+            json.contains("\"name\":\"text\",\"value\":\"[sec]\""),
             "got: {json}"
         );
     }
