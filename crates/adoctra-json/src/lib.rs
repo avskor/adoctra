@@ -304,4 +304,16 @@ mod tests {
             "got: {json}"
         );
     }
+
+    #[test]
+    fn typographic_replacements_emit_the_literal_char() {
+        // Unlike HTML (which uses numeric entities), the JSON backend renders the
+        // resolved Unicode character verbatim — encoding is a per-backend choice.
+        let json = render("(C) and it's");
+        assert!(
+            json.contains("{\"name\":\"text\",\"value\":\"\u{a9} and it\u{2019}s\"}"),
+            "got: {json}"
+        );
+        assert!(!json.contains("&#169;"), "should not HTML-encode: {json}");
+    }
 }

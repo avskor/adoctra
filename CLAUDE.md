@@ -140,7 +140,11 @@ or omitted text rendered `class="bare"`, and inline markup inside link text;
 a single inline scanner
 (`adoctra-core/src/inline.rs`) shared by the parser and tokenizer; inline nodes
 carry byte spans; attribute references `{name}` are resolved once in core
-against the document attributes; HTML and JSON backends; editor layer
+against the document attributes; typographic replacements (`(C)`/`(R)`/`(TM)`,
+spaced/word `--` em dashes, `...` ellipsis, the `'` apostrophe, and the
+`->`/`=>`/`<-`/`<=` arrows, with `\` escaping) are resolved once in core into
+the `Text` value (the HTML backend emits numeric entities, JSON the literal
+char); HTML and JSON backends; editor layer
 (error-tolerant `parse`, spans, diagnostics, tokenizer); WASM `parse_json` /
 `tokens_json`; golden compatibility tests against asciidoctor
 (`adoctra-html/tests/golden/`, list fixtures under `golden/lists/`).
@@ -150,7 +154,7 @@ not invoke it yet.
 
 Not yet implemented (common asks — treat as roadmap, do not assume present):
 broader language coverage (tables, cross-references/`<<xref>>`, footnotes, admonitions, includes, conditionals,
-block/inline macros, typographic `REPLACEMENTS`), TOC generation,
+block/inline macros), TOC generation,
 incremental/block reparse, and a pull/event API over the AST.
 
 When asked to "add a feature," check this list first and say plainly whether it

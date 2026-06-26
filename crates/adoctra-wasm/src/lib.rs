@@ -443,4 +443,19 @@ mod tests {
             "got: {json}"
         );
     }
+
+    #[test]
+    fn typographic_replacements_resolve_in_text_value() {
+        // The editor receives resolved text (the literal Unicode char), while the
+        // span still covers the original `(C)` source bytes (0..3).
+        let json = parse_json("(C) it's");
+        assert!(
+            json.contains("\"name\":\"text\",\"value\":\"\u{a9} it\u{2019}s\""),
+            "got: {json}"
+        );
+        assert!(
+            json.contains("\"span\":{\"start\":0,\"end\":8}"),
+            "got: {json}"
+        );
+    }
 }

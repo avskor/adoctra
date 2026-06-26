@@ -14,6 +14,7 @@ pub mod extension;
 mod inline;
 pub mod json;
 mod parser;
+mod replacements;
 mod scanner;
 mod tokenizer;
 

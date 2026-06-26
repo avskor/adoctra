@@ -5,9 +5,9 @@
 //! (highlighting, fold ranges, "click in preview -> jump to source",
 //! diagnostics) directly from the AST, without a duplicated grammar.
 //!
-//! Inline text is *resolved* (semantic): attribute references are substituted,
-//! and — as the model grows — typographic replacements will be applied here
-//! too. The crucial invariant is that an inline's textual content and its
+//! Inline text is *resolved* (semantic): attribute references are substituted
+//! and typographic replacements (`(C)` -> `©`, `--` -> `—`, …) are applied
+//! here. The crucial invariant is that an inline's textual content and its
 //! [`Span`] are **not** required to be the same length: the content is what the
 //! source *means*, the span is where it *came from*. Output-encoding
 //! (HTML-escaping `<` to `&lt;`, etc.) is deliberately left to each backend, so
@@ -124,7 +124,7 @@ pub enum Inline {
         bare: bool,
         span: Span,
     },
-    // TODO: cross-references, block/inline macros, typographic replacements...
+    // TODO: cross-references, block/inline macros...
 }
 
 impl Inline {

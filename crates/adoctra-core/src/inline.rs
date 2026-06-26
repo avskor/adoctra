@@ -302,16 +302,22 @@ fn finish_bracketed_link(
 }
 
 /// Emit a `Text` node for `src[a..b]` if non-empty, folding newlines to spaces
-/// in the content while the span stays anchored to the real bytes.
+/// and applying typographic replacements (`(C)`, `--`, `...`, `'`, arrows) in
+/// the content while the span stays anchored to the real bytes — so a `Text`'s
+/// value is what the source *means* and its span is where it *came from*.
 fn flush_text(src: &str, a: usize, b: usize, base: usize, out: &mut Vec<Inline>) {
     if a >= b {
         return;
     }
     let raw = &src[a..b];
-    let value = if raw.contains(['\n', '\r']) {
+    let folded = if raw.contains(['\n', '\r']) {
         raw.replace(['\n', '\r'], " ")
     } else {
         raw.to_string()
+    };
+    let value = match crate::replacements::apply(&folded) {
+        std::borrow::Cow::Borrowed(_) => folded,
+        std::borrow::Cow::Owned(s) => s,
     };
     out.push(Inline::Text {
         value,
@@ -611,5 +617,39 @@ mod tests {
             })
             .expect("no strong");
         assert!(children.iter().any(|n| matches!(n, Inline::Link { .. })));
+    }
+
+    #[test]
+    fn replacement_resolves_value_but_span_stays_on_source() {
+        // `(C)` (3 source bytes) resolves to a single © char; the Text span still
+        // covers the original bytes, so value length and span length differ.
+        let v = scan_inlines("(C) 2026", 0, &attrs());
+        assert_eq!(
+            v,
+            vec![Inline::Text {
+                value: "\u{a9} 2026".into(),
+                span: Span::new(0, 8),
+            }]
+        );
+    }
+
+    #[test]
+    fn replacements_apply_inside_formatting() {
+        // asciidoctor applies replacements within formatted text too.
+        let v = scan_inlines("*it's*", 0, &attrs());
+        let children = v
+            .iter()
+            .find_map(|n| match n {
+                Inline::Strong { children, .. } => Some(children.clone()),
+                _ => None,
+            })
+            .expect("no strong");
+        assert_eq!(
+            children,
+            vec![Inline::Text {
+                value: "it\u{2019}s".into(),
+                span: Span::new(1, 5),
+            }]
+        );
     }
 }

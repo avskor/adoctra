@@ -74,7 +74,7 @@ fn render_block(block: &Block, out: &mut String) {
 fn render_inlines(inlines: &[Inline], out: &mut String) {
     for inline in inlines {
         match inline {
-            Inline::Text { value, .. } => out.push_str(&escape(value)),
+            Inline::Text { value, .. } => out.push_str(&escape_text(value)),
             Inline::Strong { children, .. } => {
                 out.push_str("<strong>");
                 render_inlines(children, out);
@@ -125,7 +125,7 @@ fn render_inlines(inlines: &[Inline], out: &mut String) {
             // Resolved in core: emit the value, or fall back to the literal
             // `{name}` for a missing attribute (asciidoctor's default).
             Inline::AttributeRef { name, value, .. } => match value {
-                Some(v) => out.push_str(&escape(v)),
+                Some(v) => out.push_str(&escape_text(v)),
                 None => out.push_str(&escape(&format!("{{{name}}}"))),
             },
         }
@@ -133,11 +133,44 @@ fn render_inlines(inlines: &[Inline], out: &mut String) {
 }
 
 /// Output-encoding for HTML. Deliberately a *backend* concern: the shared model
-/// keeps text literal, and each backend escapes for its own format.
+/// keeps text literal, and each backend escapes for its own format. Used for
+/// verbatim text (listing blocks) and link targets, where typographic
+/// characters are not remapped.
 fn escape(s: &str) -> String {
     s.replace('&', "&amp;")
         .replace('<', "&lt;")
         .replace('>', "&gt;")
+}
+
+/// Output-encoding for resolved *inline text*. Beyond the usual `&<>` escaping,
+/// the typographic characters core produces for replacements (`(C)` -> `©`,
+/// `--` -> `—`, `...` -> `…`, the arrows, …) are emitted as numeric character
+/// references, matching asciidoctor's HTML byte-for-byte. Choosing entities
+/// over the literal UTF-8 char is an HTML-encoding decision, so it lives here in
+/// the backend rather than in the format-neutral core.
+fn escape_text(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for ch in s.chars() {
+        match ch {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '\u{a9}' => out.push_str("&#169;"),
+            '\u{ae}' => out.push_str("&#174;"),
+            '\u{2122}' => out.push_str("&#8482;"),
+            '\u{2009}' => out.push_str("&#8201;"),
+            '\u{2014}' => out.push_str("&#8212;"),
+            '\u{200b}' => out.push_str("&#8203;"),
+            '\u{2026}' => out.push_str("&#8230;"),
+            '\u{2019}' => out.push_str("&#8217;"),
+            '\u{2192}' => out.push_str("&#8594;"),
+            '\u{21d2}' => out.push_str("&#8658;"),
+            '\u{2190}' => out.push_str("&#8592;"),
+            '\u{21d0}' => out.push_str("&#8656;"),
+            _ => out.push(ch),
+        }
+    }
+    out
 }
 
 #[cfg(test)]
@@ -316,5 +349,42 @@ mod tests {
         let html = render("* one\n  two");
         assert_eq!(html.matches("<li>").count(), 1, "got: {html}");
         assert!(html.contains("two</li>"), "got: {html}");
+    }
+
+    #[test]
+    fn typographic_replacements_render_as_numeric_entities() {
+        // The HTML backend encodes the resolved typographic chars as numeric
+        // character references, matching asciidoctor.
+        let html = render("(C) (R) (TM)");
+        assert!(html.contains("<p>&#169; &#174; &#8482;</p>"), "got: {html}");
+
+        let html = render("A -- B and word--word");
+        assert!(
+            html.contains("<p>A&#8201;&#8212;&#8201;B and word&#8212;&#8203;word</p>"),
+            "got: {html}"
+        );
+
+        let html = render("Wait... it's done");
+        assert!(
+            html.contains("<p>Wait&#8230;&#8203; it&#8217;s done</p>"),
+            "got: {html}"
+        );
+
+        // Arrows, including the `<=>` -> `<` + `⇒` precedence (the `<` then
+        // escapes to `&lt;`).
+        let html = render("-> => <- <= and <=>");
+        assert!(
+            html.contains("<p>&#8594; &#8658; &#8592; &#8656; and &lt;&#8658;</p>"),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn escaped_replacement_renders_literally() {
+        let html = render("escaped \\(C) and \\-> here");
+        assert!(
+            html.contains("<p>escaped (C) and -&gt; here</p>"),
+            "got: {html}"
+        );
     }
 }
