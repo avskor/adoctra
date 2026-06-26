@@ -139,10 +139,17 @@ asciidoctor's left-boundary rule and trailing-punctuation trimming), an empty
 or omitted text rendered `class="bare"`, and inline markup inside link text;
 **cross-references** — the `<<id>>` / `<<id,text>>` angle form and the
 `xref:id[text]` macro, rendered as an internal `<a href="#id">` link, with inline
-markup parsed inside the reftext; a textless `<<id>>` falls back to `[id]`
-(asciidoctor's *unresolved*-reference rendering — there is no anchor/section-id
-registry yet, so the raw `target` is kept on the node for a future resolution
-pass); a single inline scanner
+markup parsed inside the reftext; a **post-parse resolve pass**
+(`adoctra-core/src/resolve.rs`, the first pass over the *whole* document — needed
+because a reference may point forward) builds a registry of **auto-generated
+section ids** (asciidoctor's `sectids`: lowercase, non-alphanumerics dropped or
+folded to `_`, `_`-prefixed — `== Hello World` → `_hello_world`, with `_2`/`_3`
+deduplication) and resolves each reference: a textless `<<id>>` / `xref:id[]` takes
+the section's title as display text (inline formatting preserved), an explicit
+reftext is kept verbatim, and an unknown id emits a `Warning` diagnostic and
+renders the `[id]` *unresolved* fallback (asciidoctor-compatible); the section id
+lives on the node (`Heading.id`, `None` for the level-0 doctitle) — the HTML
+backend emits it as `<hN id="…">` and JSON/WASM expose it; a single inline scanner
 (`adoctra-core/src/inline.rs`) shared by the parser and tokenizer; inline nodes
 carry byte spans; attribute references `{name}` are resolved once in core
 against the document attributes; typographic replacements (`(C)`/`(R)`/`(TM)`,
@@ -159,9 +166,9 @@ not invoke it yet.
 
 Not yet implemented (common asks — treat as roadmap, do not assume present):
 broader language coverage (tables, footnotes, admonitions, includes, conditionals,
-block/inline macros), an **anchor/section-id registry** so `<<id>>` resolves to a
-section's title (and an unknown id becomes a diagnostic) instead of the current
-`[id]` fallback, TOC generation,
+block/inline macros), **explicit anchors** (`[[id]]` / `[#id]` block anchors and a
+custom `reftext`) to complement the auto-generated section ids — this needs
+block-attribute parsing, which does not exist yet, TOC generation,
 incremental/block reparse, and a pull/event API over the AST.
 
 When asked to "add a feature," check this list first and say plainly whether it

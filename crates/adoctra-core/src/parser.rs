@@ -38,6 +38,11 @@ pub fn parse(source: &str) -> ParseResult {
         }
     }
 
+    // Post-parse pass over the whole document: assign section ids and resolve
+    // cross-references against them (forward references need every id known
+    // first, so this cannot happen during the block-local inline scan).
+    crate::resolve::resolve(&mut doc, &mut diagnostics);
+
     ParseResult {
         document: doc,
         diagnostics,
@@ -85,7 +90,13 @@ fn parse_block(
         *i += 1;
         return Some(Block {
             span: Span::new(off, off + line.len()),
-            kind: BlockKind::Heading { level, inlines },
+            // `id` is assigned later, by the resolve pass, once the whole
+            // document is known (it deduplicates ids across all sections).
+            kind: BlockKind::Heading {
+                level,
+                id: None,
+                inlines,
+            },
         });
     }
 

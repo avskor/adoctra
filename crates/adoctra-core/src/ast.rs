@@ -57,7 +57,15 @@ pub struct Block {
 pub enum BlockKind {
     /// A section title. `level` is the number of leading `=` minus one
     /// (so a document title `= Title` is level 0, `== Section` is level 1).
-    Heading { level: u8, inlines: Vec<Inline> },
+    /// `id` is the section's anchor, auto-generated from the title during the
+    /// resolve pass (asciidoctor's `sectids`, e.g. `== Hello World` →
+    /// `_hello_world`); it is `None` for the level-0 document title (not a
+    /// section) and before resolution runs. Cross-references resolve against it.
+    Heading {
+        level: u8,
+        id: Option<String>,
+        inlines: Vec<Inline>,
+    },
     /// A run of text forming a paragraph.
     Paragraph { inlines: Vec<Inline> },
     /// A literal/listing block (verbatim, no inline substitutions).
@@ -126,13 +134,13 @@ pub enum Inline {
     },
     /// A cross-reference: `<<id>>`, `<<id,text>>`, or the `xref:id[text]` macro.
     /// `target` is the raw anchor id (without the leading `#`); the HTML backend
-    /// renders it as `href="#id"`. `children` is the display text — the explicit
-    /// reftext, or, when none was given, the core-generated `[id]` text. The
-    /// latter matches asciidoctor's rendering of an *unresolved* reference: there
-    /// is no anchor/section-id registry yet, so a textless `<<id>>` always falls
-    /// back to `[id]`. Keeping the raw `target` lets a future resolution pass
-    /// substitute a section's title (and diagnose a truly unknown id). `span`
-    /// covers the whole construct (the `<<…>>` or `xref:…[…]`) in the source.
+    /// renders it as `href="#id"`. `children` is the display text. The parser
+    /// leaves it *empty* for a textless reference; the resolve pass then fills it
+    /// in — with the referenced section's title inlines (formatting preserved,
+    /// like asciidoctor's `xrefstyle=basic`) when the id is known, or the literal
+    /// `[id]` text when it is not (asciidoctor's *unresolved*-reference rendering,
+    /// which also emits a diagnostic). An explicit reftext is kept verbatim.
+    /// `span` covers the whole construct (the `<<…>>` or `xref:…[…]`).
     CrossReference {
         target: String,
         children: Vec<Inline>,

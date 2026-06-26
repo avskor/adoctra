@@ -343,7 +343,7 @@ fn match_xref_angle(
     if target.is_empty() {
         return None;
     }
-    let children = xref_children(target, reftext, reftext_off, base, i, end, attrs);
+    let children = xref_children(reftext, reftext_off, base, attrs);
     Some((
         Inline::CrossReference {
             target: target.to_string(),
@@ -355,9 +355,9 @@ fn match_xref_angle(
 }
 
 /// The `xref:id[text]` macro. Brackets are mandatory (like `link:`); `target` is
-/// the id up to `[` (non-empty, no whitespace). Empty brackets fall back to the
-/// `[id]` display text, like the textless angle form. Returns the node and the
-/// src-relative end index (one past the `]`).
+/// the id up to `[` (non-empty, no whitespace). Empty brackets leave the display
+/// text empty for the resolve pass to fill in, like the textless angle form.
+/// Returns the node and the src-relative end index (one past the `]`).
 fn match_xref_macro(
     src: &str,
     i: usize,
@@ -378,15 +378,7 @@ fn match_xref_macro(
     let rel_close = src[text_start..].find(']')?;
     let close = text_start + rel_close;
     let end = close + 1;
-    let children = xref_children(
-        target,
-        &src[text_start..close],
-        text_start,
-        base,
-        i,
-        end,
-        attrs,
-    );
+    let children = xref_children(&src[text_start..close], text_start, base, attrs);
     Some((
         Inline::CrossReference {
             target: target.to_string(),
@@ -398,22 +390,17 @@ fn match_xref_macro(
 }
 
 /// The display children of a cross-reference: the scanned `reftext` (at absolute
-/// offset `base + reftext_off`) when non-empty, otherwise the core-generated
-/// `[target]` text spanning the whole construct (`base + start .. base + end`).
+/// offset `base + reftext_off`) when non-empty, otherwise **empty** — a textless
+/// reference has no display text until the resolve pass fills it in (with the
+/// section title, or the `[id]` fallback for an unknown id).
 fn xref_children(
-    target: &str,
     reftext: &str,
     reftext_off: usize,
     base: usize,
-    start: usize,
-    end: usize,
     attrs: &Attributes,
 ) -> Vec<Inline> {
     if reftext.is_empty() {
-        vec![Inline::Text {
-            value: format!("[{target}]"),
-            span: Span::new(base + start, base + end),
-        }]
+        Vec::new()
     } else {
         scan_inlines(reftext, base + reftext_off, attrs)
     }
@@ -801,20 +788,15 @@ mod tests {
     }
 
     #[test]
-    fn xref_angle_without_text_falls_back_to_bracketed_id() {
+    fn xref_angle_without_text_has_empty_children() {
         let src = "<<sec>>";
         let v = scan_inlines(src, 0, &attrs());
         let (target, children, span) = first_xref(&v).expect("no xref");
         assert_eq!(target, "sec");
         assert_eq!(&src[span.start..span.end], "<<sec>>");
-        // The synthesized `[sec]` text spans the whole construct.
-        assert_eq!(
-            children,
-            vec![Inline::Text {
-                value: "[sec]".into(),
-                span,
-            }]
-        );
+        // Scan-level: a textless reference has no display text yet; the resolve
+        // pass fills it in (section title, or the `[sec]` unresolved fallback).
+        assert!(children.is_empty());
     }
 
     #[test]
@@ -828,11 +810,12 @@ mod tests {
     }
 
     #[test]
-    fn xref_macro_empty_brackets_fall_back_to_bracketed_id() {
+    fn xref_macro_empty_brackets_have_empty_children() {
         let v = scan_inlines("xref:sec[]", 0, &attrs());
         let (target, children, _) = first_xref(&v).expect("no xref");
         assert_eq!(target, "sec");
-        assert!(matches!(&children[0], Inline::Text { value, .. } if value == "[sec]"));
+        // Like the textless angle form: display text is filled in by resolve.
+        assert!(children.is_empty());
     }
 
     #[test]

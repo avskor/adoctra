@@ -75,10 +75,15 @@ fn write_block(b: &Block, s: &mut String) {
     write_span_field(&b.span, s);
     s.push(',');
     match &b.kind {
-        BlockKind::Heading { level, inlines } => {
-            s.push_str(&format!(
-                "\"name\":\"heading\",\"level\":{level},\"inlines\":"
-            ));
+        BlockKind::Heading { level, id, inlines } => {
+            s.push_str(&format!("\"name\":\"heading\",\"level\":{level},\"id\":"));
+            // The editor gets the section anchor (or null for the doctitle), so
+            // it can resolve/validate `<<id>>` targets and build a TOC.
+            match id {
+                Some(id) => write_str(id, s),
+                None => s.push_str("null"),
+            }
+            s.push_str(",\"inlines\":");
             write_inlines(inlines, s);
         }
         BlockKind::Paragraph { inlines } => {
@@ -285,6 +290,24 @@ mod tests {
     fn parse_json_reports_diagnostic() {
         let json = parse_json("----\nunterminated");
         assert!(json.contains("\"severity\":\"error\""));
+    }
+
+    #[test]
+    fn section_heading_carries_auto_id() {
+        // The editor gets the section anchor; the doctitle's id is null.
+        let json = parse_json("= Doc\n\n== Hello World\n\nbody");
+        assert!(json.contains("\"level\":0,\"id\":null"), "got: {json}");
+        assert!(json.contains("\"id\":\"_hello_world\""), "got: {json}");
+    }
+
+    #[test]
+    fn unresolved_xref_reports_warning() {
+        let json = parse_json("See <<nope>>.");
+        assert!(json.contains("\"severity\":\"warning\""), "got: {json}");
+        assert!(
+            json.contains("\"name\":\"text\",\"value\":\"[nope]\""),
+            "got: {json}"
+        );
     }
 
     #[test]

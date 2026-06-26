@@ -42,10 +42,13 @@ impl Backend for JsonBackend {
 
 fn write_block(block: &Block, s: &mut String) {
     match &block.kind {
-        BlockKind::Heading { level, inlines } => {
-            s.push_str(&format!(
-                "{{\"name\":\"heading\",\"level\":{level},\"inlines\":"
-            ));
+        BlockKind::Heading { level, id, inlines } => {
+            s.push_str(&format!("{{\"name\":\"heading\",\"level\":{level},\"id\":"));
+            match id {
+                Some(id) => escape_into(id, s),
+                None => s.push_str("null"),
+            }
+            s.push_str(",\"inlines\":");
             write_inlines(inlines, s);
             s.push('}');
         }
@@ -177,6 +180,30 @@ mod tests {
         let json = render("= Title");
         assert!(json.starts_with("{\"name\":\"document\""));
         assert!(json.contains("\"heading\""));
+    }
+
+    #[test]
+    fn doctitle_heading_has_null_id() {
+        // The level-0 document title is not a section.
+        let json = render("= Title");
+        assert!(json.contains("\"level\":0,\"id\":null"), "got: {json}");
+    }
+
+    #[test]
+    fn section_heading_serializes_auto_id() {
+        let json = render("== Hello World\n\nbody");
+        assert!(json.contains("\"id\":\"_hello_world\""), "got: {json}");
+    }
+
+    #[test]
+    fn resolved_xref_serializes_section_title() {
+        let json = render("== Section Two\n\nSee <<_section_two>>.");
+        assert!(json.contains("\"name\":\"xref\""), "got: {json}");
+        assert!(json.contains("\"target\":\"_section_two\""), "got: {json}");
+        assert!(
+            json.contains("{\"name\":\"text\",\"value\":\"Section Two\"}"),
+            "got: {json}"
+        );
     }
 
     #[test]

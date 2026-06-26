@@ -18,6 +18,31 @@ fn diagnostics_are_reported_not_fatal() {
 }
 
 #[test]
+fn cross_reference_resolves_to_section() {
+    // A section gets an auto id; `<<id>>` resolves to its title, end to end.
+    let result = adoctra::parse("== Hello\n\nSee <<_hello>>.");
+    assert!(result.diagnostics.is_empty());
+    let html = String::from_utf8(
+        adoctra::html::HtmlBackend::new()
+            .convert(&result.document)
+            .unwrap(),
+    )
+    .unwrap();
+    assert!(html.contains("<h2 id=\"_hello\">Hello</h2>"), "got: {html}");
+    assert!(
+        html.contains("<a href=\"#_hello\">Hello</a>"),
+        "got: {html}"
+    );
+}
+
+#[test]
+fn unresolved_cross_reference_is_a_diagnostic() {
+    let result = adoctra::parse("See <<missing>>.");
+    assert_eq!(result.diagnostics.len(), 1);
+    assert_eq!(result.diagnostics[0].severity, adoctra::Severity::Warning);
+}
+
+#[test]
 fn tokens_drive_highlighting() {
     let toks = adoctra::tokens("= Title\n\ntext *bold*");
     assert!(toks.iter().any(|t| t.kind == adoctra::TokenKind::Heading));

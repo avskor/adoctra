@@ -34,9 +34,14 @@ impl Backend for HtmlBackend {
 
 fn render_block(block: &Block, out: &mut String) {
     match &block.kind {
-        BlockKind::Heading { level, inlines } => {
+        BlockKind::Heading { level, id, inlines } => {
             let h = (level + 1).min(6);
-            out.push_str(&format!("<h{h}>"));
+            // A section carries an auto-generated `id` (the anchor a `<<id>>`
+            // resolves to); the level-0 doctitle has none.
+            match id {
+                Some(id) => out.push_str(&format!("<h{h} id=\"{}\">", escape(id))),
+                None => out.push_str(&format!("<h{h}>")),
+            }
             render_inlines(inlines, out);
             out.push_str(&format!("</h{h}>\n"));
         }
@@ -277,9 +282,9 @@ mod tests {
     }
 
     #[test]
-    fn textless_xref_renders_bracketed_id() {
-        // No anchor registry yet: a textless `<<id>>` falls back to `[id]`,
-        // matching asciidoctor's rendering of an unresolved reference.
+    fn textless_xref_to_unknown_id_renders_bracketed_id() {
+        // An *unresolved* textless `<<id>>` falls back to `[id]` (still inside
+        // the anchor), matching asciidoctor.
         let html = render("See <<sec>>.");
         assert!(html.contains("<a href=\"#sec\">[sec]</a>"), "got: {html}");
     }
@@ -288,6 +293,31 @@ mod tests {
     fn xref_macro_renders_internal_link() {
         let html = render("See xref:sec[Mac].");
         assert!(html.contains("<a href=\"#sec\">Mac</a>"), "got: {html}");
+    }
+
+    #[test]
+    fn section_heading_renders_with_auto_id() {
+        let html = render("== Hello World\n\nbody");
+        assert!(
+            html.contains("<h2 id=\"_hello_world\">Hello World</h2>"),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn doctitle_has_no_id() {
+        // The level-0 document title is not a section, so it carries no id.
+        let html = render("= Doc Title\n\nbody");
+        assert!(html.contains("<h1>Doc Title</h1>"), "got: {html}");
+    }
+
+    #[test]
+    fn resolved_xref_renders_section_title() {
+        let html = render("== Section Two\n\nSee <<_section_two>>.");
+        assert!(
+            html.contains("<a href=\"#_section_two\">Section Two</a>"),
+            "got: {html}"
+        );
     }
 
     #[test]
