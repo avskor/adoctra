@@ -342,6 +342,18 @@ mod tests {
     }
 
     #[test]
+    fn explicit_numbered_list_marks_ordered_true() {
+        // `1. a` reuses the ordered-list node; spans still anchor to real bytes.
+        let json = parse_json("1. a\n2. b");
+        assert!(json.contains("\"ordered\":true"), "got: {json}");
+        // Item content "a" sits at bytes 3..4 of "1. a".
+        assert!(
+            json.contains("\"span\":{\"start\":3,\"end\":4},\"name\":\"text\""),
+            "got: {json}"
+        );
+    }
+
+    #[test]
     fn list_item_inlines_carry_spans() {
         // The item content "one" sits at bytes 2..5 of "* one".
         let json = parse_json("* one");

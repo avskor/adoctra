@@ -121,7 +121,10 @@ later".
 ## Current state (so you don't assume more than exists)
 
 Working: parser for header attributes, headings, listing blocks, paragraphs,
-lists (unordered `*`/`-`, ordered `.`; **nested** via marker runs `**`/`...` and
+lists (unordered `*`/`-`, ordered `.` and explicit-numbered `1.` — the latter a
+marker identity *distinct* from `.` (so a `1.` after a `.` list nests), with
+digit values ignored (numbering is positional, matching asciidoctor); **nested**
+via marker runs `**`/`...` and
 across kinds, asciidoctor's "unique marker → deeper level" rule; a list starts
 at column 0 but deeper levels may be **indented** — nesting is decided by marker
 *identity*, not indent, so an indented same-marker line is a sibling;
@@ -141,8 +144,7 @@ Scaffold only: DOCX backend; the extension API exists but `parse`/`convert` do
 not invoke it yet.
 
 Not yet implemented (common asks — treat as roadmap, do not assume present):
-broader language coverage (explicit-numbered `1.`,
-tables, links/xrefs, footnotes, admonitions, includes, conditionals,
+broader language coverage (tables, links/xrefs, footnotes, admonitions, includes, conditionals,
 block/inline macros, typographic `REPLACEMENTS`), TOC generation,
 incremental/block reparse, and a pull/event API over the AST.
 

@@ -200,6 +200,15 @@ mod tests {
     }
 
     #[test]
+    fn explicit_numbered_list_renders_as_ol() {
+        // `1.`/`2.` reuse the ordered-list node, so they render like `.`.
+        let html = render("1. first\n2. second");
+        assert!(html.contains("<ol>"), "got: {html}");
+        assert!(html.contains("<li>first</li>"), "got: {html}");
+        assert!(html.contains("</ol>"), "got: {html}");
+    }
+
+    #[test]
     fn list_item_keeps_inline_markup() {
         let html = render("* a *b*");
         assert!(

@@ -211,6 +211,14 @@ mod tests {
     }
 
     #[test]
+    fn explicit_numbered_list_sets_ordered_true() {
+        // `1.`/`2.` reuse the ordered-list node, serialized like `.`.
+        let json = render("1. a\n2. b");
+        assert!(json.contains("\"name\":\"list\""), "got: {json}");
+        assert!(json.contains("\"ordered\":true"), "got: {json}");
+    }
+
+    #[test]
     fn list_item_nests_inline_children() {
         let json = render("* a *b*");
         assert!(json.contains("\"name\":\"list\""), "got: {json}");

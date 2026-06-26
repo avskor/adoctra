@@ -332,4 +332,19 @@ mod tests {
         let toks = tokens("* one\n  *bold* wrap");
         assert!(toks.iter().any(|t| t.kind == TokenKind::Strong));
     }
+
+    #[test]
+    fn explicit_numbered_marker_is_tokenized() {
+        // The marker token covers the digits, the dot and the trailing space;
+        // multi-digit markers extend it accordingly.
+        let src = "1. one\n10. ten";
+        let toks = tokens(src);
+        let markers: Vec<_> = toks
+            .iter()
+            .filter(|t| t.kind == TokenKind::ListMarker)
+            .collect();
+        assert_eq!(markers.len(), 2);
+        assert_eq!(&src[markers[0].span.start..markers[0].span.end], "1. ");
+        assert_eq!(&src[markers[1].span.start..markers[1].span.end], "10. ");
+    }
 }

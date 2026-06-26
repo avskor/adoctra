@@ -326,21 +326,47 @@ pub(crate) fn parse_attribute_entry(line: &str) -> Option<(String, String)> {
     Some((key.to_string(), value))
 }
 
-/// Identity of a list marker: its leading byte and how many times that byte
-/// repeats. `-` is always width 1; `*` and `.` may repeat (`**`, `...`) to mark
-/// a deeper level. Two markers open distinct nesting levels iff they differ —
-/// this is asciidoctor's rule ("a new level for each unique marker"), so it
-/// also nests across kinds (e.g. a `.` item inside a `*` list).
-pub(crate) type MarkerId = (u8, usize);
+/// Identity of a list marker. Two markers open distinct nesting levels iff they
+/// differ — this is asciidoctor's rule ("a new level for each unique marker"),
+/// so nesting works across kinds (e.g. a `.` item inside a `*` list).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum MarkerId {
+    /// A run-marker: its leading byte and how many times that byte repeats. `-`
+    /// is always width 1; `*` and `.` may repeat (`**`, `...`) to mark a deeper
+    /// level.
+    Run { byte: u8, width: usize },
+    /// An explicit-numbered ordered marker (`1.`, `2.`, `10.`, …). All of them
+    /// share one identity: the digit *value* and *count* don't affect nesting,
+    /// and the numbers are rendered positionally — so this is distinct from the
+    /// implicit ordered marker `Run { byte: b'.', .. }`, matching asciidoctor
+    /// (a `1.` item after a `.` list nests rather than continuing it).
+    OrderedExplicit,
+}
 
-/// A list marker at the very start of `line`: a run of `*` or `.`, or a single
-/// `-`, followed by a space. Returns `(marker, ordered, marker_len_bytes)`,
-/// where `marker_len_bytes` is the byte offset at which item content begins.
-/// Markers must be at column 0: leading whitespace is not accepted. (All marker
-/// bytes are ASCII, so the run width equals its byte length.)
+/// A list marker at the very start of `line`: a run of `*` or `.`, a single
+/// `-`, or an explicit-numbered `<digits>.` — each followed by a space. Returns
+/// `(marker, ordered, marker_len_bytes)`, where `marker_len_bytes` is the byte
+/// offset at which item content begins. Markers must be at column 0: leading
+/// whitespace is not accepted. (All marker bytes are ASCII, so a run's width
+/// equals its byte length.)
 pub(crate) fn parse_list_marker(line: &str) -> Option<(MarkerId, bool, usize)> {
     let bytes = line.as_bytes();
     let first = *bytes.first()?;
+
+    // Explicit-numbered ordered marker: a run of ASCII digits, then `.`, then a
+    // space (e.g. `1. `, `10. `). Collapses to a single identity regardless of
+    // the digits — `1.` and `10.` are siblings of one list.
+    if first.is_ascii_digit() {
+        let mut digits = 1;
+        while matches!(bytes.get(digits), Some(b) if b.is_ascii_digit()) {
+            digits += 1;
+        }
+        if bytes.get(digits) != Some(&b'.') || bytes.get(digits + 1) != Some(&b' ') {
+            return None;
+        }
+        return Some((MarkerId::OrderedExplicit, true, digits + 2));
+    }
+
     let (ordered, repeatable) = match first {
         b'*' => (false, true),
         b'.' => (true, true),
@@ -356,7 +382,7 @@ pub(crate) fn parse_list_marker(line: &str) -> Option<(MarkerId, bool, usize)> {
     if bytes.get(width) != Some(&b' ') {
         return None;
     }
-    Some(((first, width), ordered, width + 1))
+    Some((MarkerId::Run { byte: first, width }, ordered, width + 1))
 }
 
 /// Like [`parse_list_marker`] but tolerant of leading ASCII spaces. Indentation
@@ -789,5 +815,72 @@ mod tests {
             &src[items[0].span.start..items[0].span.end],
             "* one\n+\nattached"
         );
+    }
+
+    #[test]
+    fn explicit_numbered_marker_is_an_ordered_list() {
+        let src = "1. one\n2. two\n3. three";
+        let (ordered, items) = list(src);
+        assert!(ordered);
+        assert_eq!(items.len(), 3);
+        assert_eq!(item_text(&items[0]), "one");
+        assert_eq!(item_text(&items[1]), "two");
+        assert_eq!(item_text(&items[2]), "three");
+        // Item content is scanned after the `1. ` marker (3 bytes).
+        assert!(matches!(&items[0].inlines[0], Inline::Text { value, span }
+            if value == "one" && *span == Span::new(3, 6)));
+    }
+
+    #[test]
+    fn multi_digit_numbers_are_siblings_not_nested() {
+        // `9.`, `10.`, `11.` collapse to one marker identity, so they form a
+        // single flat list — the digit count must not leak into nesting.
+        let (ordered, items) = list("9. nine\n10. ten\n11. eleven");
+        assert!(ordered);
+        assert_eq!(items.len(), 3);
+        assert!(items.iter().all(|it| it.blocks.is_empty()));
+        assert_eq!(item_text(&items[2]), "eleven");
+    }
+
+    #[test]
+    fn explicit_number_nests_under_implicit_dot() {
+        // A `1.` marker is a *unique* identity vs the implicit `.`, so it opens
+        // a sublist under the preceding `.` item rather than continuing the
+        // list. (Confirmed against asciidoctor 2.0.23.)
+        let (ordered, items) = list(". a\n. b\n1. c");
+        assert!(ordered);
+        assert_eq!(items.len(), 2);
+        assert_eq!(item_text(&items[0]), "a");
+        assert_eq!(item_text(&items[1]), "b");
+        let (sub_ordered, sub) = sublist(&items[1]);
+        assert!(sub_ordered);
+        assert_eq!(sub.len(), 1);
+        assert_eq!(item_text(&sub[0]), "c");
+    }
+
+    #[test]
+    fn implicit_dot_nests_under_explicit_number() {
+        // The symmetric case: a `.` after a `1.` item nests, since the two
+        // markers are distinct identities. (Confirmed against asciidoctor 2.0.23.)
+        let (ordered, items) = list("1. a\n. b");
+        assert!(ordered);
+        assert_eq!(items.len(), 1);
+        assert_eq!(item_text(&items[0]), "a");
+        let (sub_ordered, sub) = sublist(&items[0]);
+        assert!(sub_ordered);
+        assert_eq!(item_text(&sub[0]), "b");
+    }
+
+    #[test]
+    fn number_without_space_or_dot_is_not_a_list() {
+        // `1.text` (no space) and `1) item` (no dot) are not markers → paragraph.
+        assert!(matches!(
+            parse("1.text").document.blocks[0].kind,
+            BlockKind::Paragraph { .. }
+        ));
+        assert!(matches!(
+            parse("1) item").document.blocks[0].kind,
+            BlockKind::Paragraph { .. }
+        ));
     }
 }
