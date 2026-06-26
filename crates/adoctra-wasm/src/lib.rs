@@ -75,29 +75,31 @@ fn write_block(b: &Block, s: &mut String) {
     write_span_field(&b.span, s);
     s.push(',');
     match &b.kind {
-        BlockKind::Heading { level, id, inlines } => {
-            s.push_str(&format!("\"name\":\"heading\",\"level\":{level},\"id\":"));
-            // The editor gets the section anchor (or null for the doctitle), so
-            // it can resolve/validate `<<id>>` targets and build a TOC.
-            match id {
-                Some(id) => write_str(id, s),
-                None => s.push_str("null"),
-            }
+        BlockKind::Heading { level, inlines } => {
+            s.push_str(&format!("\"name\":\"heading\",\"level\":{level},"));
+            // The editor gets each block's anchor (the section auto-id, an
+            // explicit `[[id]]`, or null), so it can resolve/validate `<<id>>`
+            // targets and build a TOC.
+            write_id(&b.id, s);
             s.push_str(",\"inlines\":");
             write_inlines(inlines, s);
         }
         BlockKind::Paragraph { inlines } => {
-            s.push_str("\"name\":\"paragraph\",\"inlines\":");
+            s.push_str("\"name\":\"paragraph\",");
+            write_id(&b.id, s);
+            s.push_str(",\"inlines\":");
             write_inlines(inlines, s);
         }
         BlockKind::Listing { text } => {
-            s.push_str("\"name\":\"listing\",\"text\":");
+            s.push_str("\"name\":\"listing\",");
+            write_id(&b.id, s);
+            s.push_str(",\"text\":");
             write_str(text, s);
         }
         BlockKind::List { ordered, items } => {
-            s.push_str(&format!(
-                "\"name\":\"list\",\"ordered\":{ordered},\"items\":["
-            ));
+            s.push_str(&format!("\"name\":\"list\",\"ordered\":{ordered},"));
+            write_id(&b.id, s);
+            s.push_str(",\"items\":[");
             for (i, item) in items.iter().enumerate() {
                 if i > 0 {
                     s.push(',');
@@ -122,6 +124,15 @@ fn write_block(b: &Block, s: &mut String) {
         }
     }
     s.push('}');
+}
+
+/// Emit the `"id":<string|null>` field for a block's anchor.
+fn write_id(id: &Option<String>, s: &mut String) {
+    s.push_str("\"id\":");
+    match id {
+        Some(id) => write_str(id, s),
+        None => s.push_str("null"),
+    }
 }
 
 fn write_inlines(inlines: &[Inline], s: &mut String) {
@@ -510,6 +521,35 @@ mod tests {
         );
         assert!(
             json.contains("\"span\":{\"start\":0,\"end\":8}"),
+            "got: {json}"
+        );
+    }
+
+    #[test]
+    fn anchored_block_exposes_its_id() {
+        let json = parse_json("[[pa]]\nHi.");
+        assert!(
+            json.contains("\"name\":\"paragraph\",\"id\":\"pa\""),
+            "got: {json}"
+        );
+    }
+
+    #[test]
+    fn plain_paragraph_exposes_null_id() {
+        let json = parse_json("Hi.");
+        assert!(
+            json.contains("\"name\":\"paragraph\",\"id\":null"),
+            "got: {json}"
+        );
+    }
+
+    #[test]
+    fn block_anchor_line_is_tokenized_as_anchor() {
+        // `tokens_json` should classify a whole `[[id]]` line as one anchor token.
+        let json = tokens_json("[[pa]]\nHi.");
+        assert!(json.contains("\"kind\":\"anchor\""), "got: {json}");
+        assert!(
+            json.contains("\"span\":{\"start\":0,\"end\":6},\"kind\":\"anchor\""),
             "got: {json}"
         );
     }

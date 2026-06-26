@@ -42,30 +42,31 @@ impl Backend for JsonBackend {
 
 fn write_block(block: &Block, s: &mut String) {
     match &block.kind {
-        BlockKind::Heading { level, id, inlines } => {
-            s.push_str(&format!("{{\"name\":\"heading\",\"level\":{level},\"id\":"));
-            match id {
-                Some(id) => escape_into(id, s),
-                None => s.push_str("null"),
-            }
+        BlockKind::Heading { level, inlines } => {
+            s.push_str(&format!("{{\"name\":\"heading\",\"level\":{level},"));
+            write_id(&block.id, s);
             s.push_str(",\"inlines\":");
             write_inlines(inlines, s);
             s.push('}');
         }
         BlockKind::Paragraph { inlines } => {
-            s.push_str("{\"name\":\"paragraph\",\"inlines\":");
+            s.push_str("{\"name\":\"paragraph\",");
+            write_id(&block.id, s);
+            s.push_str(",\"inlines\":");
             write_inlines(inlines, s);
             s.push('}');
         }
         BlockKind::Listing { text } => {
-            s.push_str("{\"name\":\"listing\",\"text\":");
+            s.push_str("{\"name\":\"listing\",");
+            write_id(&block.id, s);
+            s.push_str(",\"text\":");
             escape_into(text, s);
             s.push('}');
         }
         BlockKind::List { ordered, items } => {
-            s.push_str(&format!(
-                "{{\"name\":\"list\",\"ordered\":{ordered},\"items\":["
-            ));
+            s.push_str(&format!("{{\"name\":\"list\",\"ordered\":{ordered},"));
+            write_id(&block.id, s);
+            s.push_str(",\"items\":[");
             for (i, item) in items.iter().enumerate() {
                 if i > 0 {
                     s.push(',');
@@ -84,6 +85,15 @@ fn write_block(block: &Block, s: &mut String) {
             }
             s.push_str("]}");
         }
+    }
+}
+
+/// Emit the `"id":<string|null>` field for a block's anchor.
+fn write_id(id: &Option<String>, s: &mut String) {
+    s.push_str("\"id\":");
+    match id {
+        Some(id) => escape_into(id, s),
+        None => s.push_str("null"),
     }
 }
 
@@ -384,5 +394,23 @@ mod tests {
             "got: {json}"
         );
         assert!(!json.contains("&#169;"), "should not HTML-encode: {json}");
+    }
+
+    #[test]
+    fn anchored_paragraph_serializes_its_id() {
+        let json = render("[[pa]]\nHi.");
+        assert!(
+            json.contains("\"name\":\"paragraph\",\"id\":\"pa\""),
+            "got: {json}"
+        );
+    }
+
+    #[test]
+    fn plain_paragraph_serializes_null_id() {
+        let json = render("Hi.");
+        assert!(
+            json.contains("\"name\":\"paragraph\",\"id\":null"),
+            "got: {json}"
+        );
     }
 }

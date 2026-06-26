@@ -12,7 +12,9 @@
 
 use crate::ast::{Inline, Span};
 use crate::inline::scan_inlines;
-use crate::parser::{collect_header, parse_attribute_entry, parse_heading, parse_list_marker};
+use crate::parser::{
+    collect_header, parse_attribute_entry, parse_block_anchor, parse_heading, parse_list_marker,
+};
 use crate::scanner::lines_with_offsets;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -24,6 +26,7 @@ pub struct Token {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TokenKind {
     Heading,
+    Anchor,
     AttributeEntry,
     ListingDelimiter,
     ListingText,
@@ -43,6 +46,7 @@ impl TokenKind {
     pub fn as_str(self) -> &'static str {
         match self {
             TokenKind::Heading => "heading",
+            TokenKind::Anchor => "anchor",
             TokenKind::AttributeEntry => "attribute-entry",
             TokenKind::ListingDelimiter => "listing-delimiter",
             TokenKind::ListingText => "listing-text",
@@ -104,6 +108,16 @@ pub fn tokens(source: &str) -> Vec<Token> {
             out.push(Token {
                 span: line_span,
                 kind: TokenKind::Heading,
+            });
+            continue;
+        }
+        // A `[[id]]` / `[[id,reftext]]` block anchor: one token over the whole
+        // line. Recognised the same way the parser attaches it to the next block,
+        // so highlighting and parsing never disagree.
+        if parse_block_anchor(line).is_some() {
+            out.push(Token {
+                span: line_span,
+                kind: TokenKind::Anchor,
             });
             continue;
         }
@@ -392,5 +406,17 @@ mod tests {
         assert_eq!(markers.len(), 2);
         assert_eq!(&src[markers[0].span.start..markers[0].span.end], "1. ");
         assert_eq!(&src[markers[1].span.start..markers[1].span.end], "10. ");
+    }
+
+    #[test]
+    fn block_anchor_line_is_one_anchor_token() {
+        let src = "[[pa,The Para]]\ntext";
+        let toks = tokens(src);
+        let anchor = toks
+            .iter()
+            .find(|t| t.kind == TokenKind::Anchor)
+            .expect("anchor token");
+        // The token covers the whole `[[…]]` line, not the body line.
+        assert_eq!(&src[anchor.span.start..anchor.span.end], "[[pa,The Para]]");
     }
 }

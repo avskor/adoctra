@@ -33,31 +33,29 @@ impl Backend for HtmlBackend {
 }
 
 fn render_block(block: &Block, out: &mut String) {
+    // A block's anchor (an explicit `[[id]]` or a section's auto-generated id)
+    // renders as an `id` attribute on the block's element; `None` → no attribute.
+    let id = id_attr(&block.id);
     match &block.kind {
-        BlockKind::Heading { level, id, inlines } => {
+        BlockKind::Heading { level, inlines } => {
             let h = (level + 1).min(6);
-            // A section carries an auto-generated `id` (the anchor a `<<id>>`
-            // resolves to); the level-0 doctitle has none.
-            match id {
-                Some(id) => out.push_str(&format!("<h{h} id=\"{}\">", escape(id))),
-                None => out.push_str(&format!("<h{h}>")),
-            }
+            out.push_str(&format!("<h{h}{id}>"));
             render_inlines(inlines, out);
             out.push_str(&format!("</h{h}>\n"));
         }
         BlockKind::Paragraph { inlines } => {
-            out.push_str("<p>");
+            out.push_str(&format!("<p{id}>"));
             render_inlines(inlines, out);
             out.push_str("</p>\n");
         }
         BlockKind::Listing { text } => {
-            out.push_str("<pre class=\"listing\">");
+            out.push_str(&format!("<pre class=\"listing\"{id}>"));
             out.push_str(&escape(text));
             out.push_str("</pre>\n");
         }
         BlockKind::List { ordered, items } => {
             let tag = if *ordered { "ol" } else { "ul" };
-            out.push_str(&format!("<{tag}>\n"));
+            out.push_str(&format!("<{tag}{id}>\n"));
             for item in items {
                 out.push_str("<li>");
                 render_inlines(&item.inlines, out);
@@ -146,6 +144,15 @@ fn render_inlines(inlines: &[Inline], out: &mut String) {
                 None => out.push_str(&escape(&format!("{{{name}}}"))),
             },
         }
+    }
+}
+
+/// An ` id="…"` attribute (with a leading space) for a block that carries an
+/// anchor, or the empty string. The id is escaped as an HTML attribute value.
+fn id_attr(id: &Option<String>) -> String {
+    match id {
+        Some(id) => format!(" id=\"{}\"", escape(id)),
+        None => String::new(),
     }
 }
 
@@ -449,6 +456,28 @@ mod tests {
         let html = render("escaped \\(C) and \\-> here");
         assert!(
             html.contains("<p>escaped (C) and -&gt; here</p>"),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn anchored_paragraph_renders_id_attribute() {
+        let html = render("[[pa]]\nHello.");
+        assert!(html.contains("<p id=\"pa\">Hello.</p>"), "got: {html}");
+    }
+
+    #[test]
+    fn xref_to_anchor_reftext_renders_reftext() {
+        let html = render("[[pa,The Para]]\nHi.\n\nSee <<pa>>.");
+        assert!(html.contains("<a href=\"#pa\">The Para</a>"), "got: {html}");
+    }
+
+    #[test]
+    fn explicit_anchor_on_section_overrides_auto_id() {
+        // `[[custom]]` replaces the auto id `_real_title` on the <h2>.
+        let html = render("[[custom]]\n== Real Title\n\nbody");
+        assert!(
+            html.contains("<h2 id=\"custom\">Real Title</h2>"),
             "got: {html}"
         );
     }

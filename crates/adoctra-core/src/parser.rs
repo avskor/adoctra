@@ -5,7 +5,7 @@
 //! [`Diagnostic`]s. This is what lets an editor parse on every keystroke while
 //! the buffer is half-written.
 
-use crate::ast::{Block, BlockKind, Document, ListItem, Span};
+use crate::ast::{Block, BlockKind, Document, Inline, ListItem, Span};
 use crate::attributes::Attributes;
 use crate::diagnostic::{Diagnostic, ParseResult, Severity};
 use crate::inline::scan_inlines;
@@ -21,12 +21,25 @@ pub fn parse(source: &str) -> ParseResult {
     doc.attributes = attributes;
 
     // --- body blocks ---
+    // A `[[id]]` / `[[id,reftext]]` anchor line attaches its id (and reftext) to
+    // the next block. asciidoctor lets blank lines sit between the anchor and its
+    // block, so we keep the anchor *pending* and let the loop skip blanks; a
+    // second anchor before the same block wins (last-wins).
+    let mut pending_anchor: Option<(String, Option<Vec<Inline>>)> = None;
     while i < lines.len() {
-        if lines[i].1.trim().is_empty() {
+        let line = lines[i].1;
+        if line.trim().is_empty() {
             i += 1;
             continue;
         }
-        if let Some(block) = parse_block(
+        if let Some((id, reftext)) = parse_block_anchor(line) {
+            let reftext =
+                reftext.map(|rt| scan_inlines(rt, abs_offset(source, rt), &doc.attributes));
+            pending_anchor = Some((id.to_string(), reftext));
+            i += 1;
+            continue;
+        }
+        if let Some(mut block) = parse_block(
             source,
             &lines,
             &mut i,
@@ -34,6 +47,10 @@ pub fn parse(source: &str) -> ParseResult {
             &mut diagnostics,
             BlockCtx::TopLevel,
         ) {
+            if let Some((id, reftext)) = pending_anchor.take() {
+                block.id = Some(id);
+                block.reftext = reftext;
+            }
             doc.blocks.push(block);
         }
     }
@@ -88,16 +105,13 @@ fn parse_block(
         let base = abs_offset(source, title);
         let inlines = scan_inlines(title, base, attrs);
         *i += 1;
-        return Some(Block {
-            span: Span::new(off, off + line.len()),
-            // `id` is assigned later, by the resolve pass, once the whole
-            // document is known (it deduplicates ids across all sections).
-            kind: BlockKind::Heading {
-                level,
-                id: None,
-                inlines,
-            },
-        });
+        // `Block.id` is assigned later, by the resolve pass, once the whole
+        // document is known (it deduplicates ids across all sections) — unless an
+        // explicit `[[id]]` anchor on the enclosing block already set it.
+        return Some(Block::new(
+            Span::new(off, off + line.len()),
+            BlockKind::Heading { level, inlines },
+        ));
     }
 
     // Listing block (verbatim, fenced by `----`).
@@ -129,10 +143,10 @@ fn parse_block(
                 message: "unterminated listing block (missing closing `----`)".to_string(),
             });
         }
-        return Some(Block {
-            span: Span::new(start, end),
-            kind: BlockKind::Listing { text },
-        });
+        return Some(Block::new(
+            Span::new(start, end),
+            BlockKind::Listing { text },
+        ));
     }
 
     // List: a run of items that nests a level deeper whenever a *unique* marker
@@ -165,10 +179,10 @@ fn parse_block(
     // Scan inlines over the original source slice (newlines and all), so every
     // inline span maps back to real bytes — no re-joined string.
     let inlines = scan_inlines(&source[start..end], start, attrs);
-    Some(Block {
-        span: Span::new(start, end),
-        kind: BlockKind::Paragraph { inlines },
-    })
+    Some(Block::new(
+        Span::new(start, end),
+        BlockKind::Paragraph { inlines },
+    ))
 }
 
 /// The role of a source line *relative to a list level* (its current `marker`
@@ -293,10 +307,7 @@ fn parse_list(
         });
     }
 
-    Block {
-        span: Span::new(start, end),
-        kind: BlockKind::List { ordered, items },
-    }
+    Block::new(Span::new(start, end), BlockKind::List { ordered, items })
 }
 
 /// Read leading `:key: value` entries and blank lines. Returns the collected
@@ -417,6 +428,38 @@ pub(crate) fn parse_heading(line: &str) -> Option<(u8, &str)> {
     let rest = &line[eqs..];
     let title = rest.strip_prefix(' ')?;
     Some(((eqs - 1) as u8, title.trim()))
+}
+
+/// Recognise a *block anchor* line — `[[id]]` or `[[id,reftext]]` occupying the
+/// whole (trimmed) line — and return `(id, reftext?)` as slices of `line`. The
+/// reftext is the trimmed, non-empty remainder after the first comma. An empty
+/// `[[]]` or an id that is not well-formed (see [`is_valid_anchor_id`]) returns
+/// `None`, so the line falls through to be parsed as ordinary text — matching
+/// asciidoctor, which treats only a well-formed anchor specially.
+///
+/// An *inline* `[[id]]` embedded mid-line is a different construct (an empty
+/// `<a id>`); this matches only a line that is wholly an anchor.
+pub(crate) fn parse_block_anchor(line: &str) -> Option<(&str, Option<&str>)> {
+    let inner = line.trim().strip_prefix("[[")?.strip_suffix("]]")?;
+    let (id, reftext) = match inner.find(',') {
+        Some(c) => {
+            let rt = inner[c + 1..].trim();
+            (&inner[..c], (!rt.is_empty()).then_some(rt))
+        }
+        None => (inner, None),
+    };
+    is_valid_anchor_id(id).then_some((id, reftext))
+}
+
+/// Whether `id` is a well-formed anchor id (asciidoctor's `[\p{Word}:][\p{Word}:.-]*`):
+/// a leading alphanumeric / `_` / `:`, then those plus `.` and `-`, no whitespace.
+fn is_valid_anchor_id(id: &str) -> bool {
+    let mut chars = id.chars();
+    match chars.next() {
+        Some(c) if c.is_alphanumeric() || c == '_' || c == ':' => {}
+        _ => return false,
+    }
+    chars.all(|c| c.is_alphanumeric() || matches!(c, '_' | ':' | '.' | '-'))
 }
 
 #[cfg(test)]
@@ -909,5 +952,72 @@ mod tests {
             parse("1) item").document.blocks[0].kind,
             BlockKind::Paragraph { .. }
         ));
+    }
+
+    #[test]
+    fn parse_block_anchor_recognises_well_formed_lines() {
+        assert_eq!(parse_block_anchor("[[id]]"), Some(("id", None)));
+        assert_eq!(
+            parse_block_anchor("[[id,ref text]]"),
+            Some(("id", Some("ref text")))
+        );
+        // Surrounding whitespace and a trimmed-empty reftext are tolerated.
+        assert_eq!(parse_block_anchor("  [[id]]  "), Some(("id", None)));
+        assert_eq!(parse_block_anchor("[[id, ]]"), Some(("id", None)));
+        // Not anchors: empty id, a space in the id, embedded (inline) anchor,
+        // and a single-bracket `[id]`.
+        assert_eq!(parse_block_anchor("[[]]"), None);
+        assert_eq!(parse_block_anchor("[[a b]]"), None);
+        assert_eq!(parse_block_anchor("text [[id]]"), None);
+        assert_eq!(parse_block_anchor("[id]"), None);
+    }
+
+    #[test]
+    fn block_anchor_attaches_id_to_paragraph() {
+        let b = &parse("[[pa]]\nHello.").document.blocks[0];
+        assert_eq!(b.id.as_deref(), Some("pa"));
+        assert!(b.reftext.is_none());
+        assert!(matches!(b.kind, BlockKind::Paragraph { .. }));
+    }
+
+    #[test]
+    fn block_anchor_reftext_parses_inline_markup() {
+        // asciidoctor renders `[[pa,*Bold* ref]]` reftext with the markup.
+        let b = &parse("[[pa,*Bold* ref]]\nHello.").document.blocks[0];
+        assert_eq!(b.id.as_deref(), Some("pa"));
+        let reftext = b.reftext.as_ref().expect("reftext present");
+        assert!(
+            reftext.iter().any(|n| matches!(n, Inline::Strong { .. })),
+            "expected strong in reftext, got {reftext:?}"
+        );
+    }
+
+    #[test]
+    fn block_anchor_floats_across_a_blank_line() {
+        // asciidoctor lets a blank line sit between the anchor and its block.
+        let b = &parse("[[pa]]\n\nHello.").document.blocks[0];
+        assert_eq!(b.id.as_deref(), Some("pa"));
+    }
+
+    #[test]
+    fn block_anchor_before_heading_sets_block_id() {
+        // The explicit anchor overrides the auto-generated section id.
+        let b = &parse("[[custom]]\n== Real Title\n\nbody").document.blocks[0];
+        assert!(matches!(b.kind, BlockKind::Heading { level: 1, .. }));
+        assert_eq!(b.id.as_deref(), Some("custom"));
+    }
+
+    #[test]
+    fn block_anchor_before_listing_sets_block_id() {
+        let b = &parse("[[code1]]\n----\nx = 1\n----").document.blocks[0];
+        assert_eq!(b.id.as_deref(), Some("code1"));
+        assert!(matches!(b.kind, BlockKind::Listing { .. }));
+    }
+
+    #[test]
+    fn second_anchor_before_a_block_wins() {
+        // Stacked anchors: the one nearest the block (last seen) attaches.
+        let b = &parse("[[first]]\n[[second]]\nHello.").document.blocks[0];
+        assert_eq!(b.id.as_deref(), Some("second"));
     }
 }

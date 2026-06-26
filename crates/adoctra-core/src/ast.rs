@@ -45,11 +45,39 @@ pub struct Document {
     pub blocks: Vec<Block>,
 }
 
-/// A block node: its source span plus its kind.
+/// A block node: its source span, an optional id, and its kind.
+///
+/// `id` is the block's anchor — the target a `<<id>>` resolves to. It comes from
+/// an explicit anchor (`[[id]]`, set by the parser) or, for a section heading
+/// without one, an auto-generated [`sectids`] id assigned during the resolve
+/// pass. It is `None` for any block with no anchor (a plain paragraph, the
+/// level-0 document title, …) and before resolution runs for an auto-id section.
+///
+/// `reftext` is the inline display text from an explicit `[[id,reftext]]` anchor;
+/// the resolve pass uses it as a textless reference's display text (preferring it
+/// over a section's own title). `None` when no reftext was given.
+///
+/// [`sectids`]: crate::resolve
 #[derive(Debug, Clone, PartialEq)]
 pub struct Block {
     pub span: Span,
+    pub id: Option<String>,
+    pub reftext: Option<Vec<Inline>>,
     pub kind: BlockKind,
+}
+
+impl Block {
+    /// A block with no anchor: `id` and `reftext` default to `None`. The parser
+    /// fills them in when an explicit `[[id]]` / `[[id,reftext]]` anchor precedes
+    /// the block; the resolve pass fills `id` for an auto-id section.
+    pub fn new(span: Span, kind: BlockKind) -> Self {
+        Self {
+            span,
+            id: None,
+            reftext: None,
+            kind,
+        }
+    }
 }
 
 /// Block-level element kinds.
@@ -57,15 +85,11 @@ pub struct Block {
 pub enum BlockKind {
     /// A section title. `level` is the number of leading `=` minus one
     /// (so a document title `= Title` is level 0, `== Section` is level 1).
-    /// `id` is the section's anchor, auto-generated from the title during the
-    /// resolve pass (asciidoctor's `sectids`, e.g. `== Hello World` →
-    /// `_hello_world`); it is `None` for the level-0 document title (not a
-    /// section) and before resolution runs. Cross-references resolve against it.
-    Heading {
-        level: u8,
-        id: Option<String>,
-        inlines: Vec<Inline>,
-    },
+    /// The section's anchor lives on the enclosing [`Block::id`] — auto-generated
+    /// from the title during the resolve pass (asciidoctor's `sectids`, e.g.
+    /// `== Hello World` → `_hello_world`) unless an explicit `[[id]]` anchor
+    /// overrides it. Cross-references resolve against that id.
+    Heading { level: u8, inlines: Vec<Inline> },
     /// A run of text forming a paragraph.
     Paragraph { inlines: Vec<Inline> },
     /// A literal/listing block (verbatim, no inline substitutions).

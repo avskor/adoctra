@@ -15,41 +15,68 @@
 //!      and fall back to the `[id]` text asciidoctor renders for unresolved
 //!      references.
 
-use std::collections::BTreeMap;
+use std::collections::{btree_map::Entry, BTreeMap};
 
 use crate::ast::{Block, BlockKind, Document, Inline};
 use crate::diagnostic::{Diagnostic, Severity};
 
-/// A registry of section ids → the title inlines used as a reference's display
-/// text. Ordered so the structure stays deterministic (like [`Attributes`]).
-type Registry = BTreeMap<String, Vec<Inline>>;
+/// A registry of anchor ids → the inlines a *textless* reference displays. The
+/// value is `Some(text)` for a section (its title) or an explicit
+/// `[[id,reftext]]` anchor; `None` for an id whose block has no natural text
+/// (e.g. a plain paragraph anchor), where a textless reference falls back to
+/// `[id]` *without* a diagnostic. Ordered so the structure stays deterministic
+/// (like [`Attributes`]).
+type Registry = BTreeMap<String, Option<Vec<Inline>>>;
 
 /// Assign section ids and resolve cross-references over `doc`, pushing a
-/// diagnostic for every reference whose id is not in the registry.
+/// diagnostic for every reference whose id is not in the registry (and for a
+/// duplicate explicit id).
 pub(crate) fn resolve(doc: &mut Document, diagnostics: &mut Vec<Diagnostic>) {
     let mut registry = Registry::new();
-    assign_ids(&mut doc.blocks, &mut registry);
+    assign_ids(&mut doc.blocks, &mut registry, diagnostics);
     resolve_xrefs(&mut doc.blocks, &registry, diagnostics);
 }
 
-/// Phase 1: walk the block tree, give each section an id and register its title.
-fn assign_ids(blocks: &mut [Block], registry: &mut Registry) {
+/// Phase 1: walk the block tree, register every anchor id (explicit `[[id]]` and
+/// auto-generated section ids), and record each id's reference text.
+fn assign_ids(blocks: &mut [Block], registry: &mut Registry, diagnostics: &mut Vec<Diagnostic>) {
     for block in blocks {
-        match &mut block.kind {
-            BlockKind::Heading { level, id, inlines } => {
-                // The level-0 document title is not a section and gets no id.
-                if *level >= 1 {
-                    let unique = dedup(generate_id(&inline_text(inlines)), registry);
-                    registry.insert(unique.clone(), inlines.clone());
-                    *id = Some(unique);
+        // A section's title doubles as a reference-text source and the seed for
+        // its auto-generated id; `None` for non-sections and the level-0 doctitle.
+        let heading_title = match &block.kind {
+            BlockKind::Heading { level, inlines } if *level >= 1 => Some(inlines.clone()),
+            _ => None,
+        };
+
+        // `block.id.clone()` ends the borrow before we may write `block.id` below.
+        if let Some(id) = block.id.clone() {
+            // Explicit `[[id]]` anchor: registered verbatim, never renamed. Its
+            // reference text is the anchor's reftext, else the section title (so
+            // `[[s]]\n== Title` still shows "Title"), else none.
+            let reftext = block.reftext.clone().or(heading_title);
+            match registry.entry(id) {
+                // asciidoctor warns and keeps the first definition; the duplicate
+                // block still renders its (now ambiguous) id in the backends.
+                Entry::Occupied(e) => diagnostics.push(Diagnostic {
+                    span: block.span,
+                    severity: Severity::Warning,
+                    message: format!("id already in use: '{}'", e.key()),
+                }),
+                Entry::Vacant(e) => {
+                    e.insert(reftext);
                 }
             }
-            BlockKind::List { items, .. } => {
-                for item in items {
-                    assign_ids(&mut item.blocks, registry);
-                }
+        } else if let Some(title) = heading_title {
+            // No explicit anchor: a section gets an auto-generated, deduplicated id.
+            let unique = dedup(generate_id(&inline_text(&title)), registry);
+            registry.insert(unique.clone(), Some(title));
+            block.id = Some(unique);
+        }
+
+        if let BlockKind::List { items, .. } = &mut block.kind {
+            for item in items {
+                assign_ids(&mut item.blocks, registry, diagnostics);
             }
-            BlockKind::Paragraph { .. } | BlockKind::Listing { .. } => {}
         }
     }
 }
@@ -171,12 +198,21 @@ fn resolve_inlines(inlines: &mut [Inline], registry: &Registry, diagnostics: &mu
                 children,
                 span,
             } => match registry.get(target.as_str()) {
-                // Known id: a textless reference borrows the section title as
-                // display text; an explicit reftext is kept (and still scanned
-                // for nested references the author may have written).
-                Some(title) => {
+                // Known id. A textless reference borrows the id's reference text
+                // (a section title or explicit reftext); if the id has none (a
+                // plain paragraph anchor), fall back to `[id]` *without* a
+                // diagnostic — the id is valid, only its display text is unknown,
+                // matching asciidoctor. An explicit reftext is kept (and still
+                // scanned for nested references the author may have written).
+                Some(reftext) => {
                     if children.is_empty() {
-                        *children = title.clone();
+                        *children = match reftext {
+                            Some(text) => text.clone(),
+                            None => vec![Inline::Text {
+                                value: format!("[{target}]"),
+                                span: *span,
+                            }],
+                        };
                     } else {
                         resolve_inlines(children, registry, diagnostics);
                     }
@@ -223,10 +259,8 @@ mod tests {
         let doc = crate::parse(src).document;
         doc.blocks
             .iter()
-            .filter_map(|b| match &b.kind {
-                BlockKind::Heading { id, .. } => Some(id.clone()),
-                _ => None,
-            })
+            .filter(|b| matches!(b.kind, BlockKind::Heading { .. }))
+            .map(|b| b.id.clone())
             .nth(nth)
             .flatten()
     }
@@ -384,5 +418,66 @@ mod tests {
         assert_eq!(result.diagnostics.len(), 1);
         let (_, children) = first_xref(src);
         assert_eq!(text_of(&children), "go there");
+    }
+
+    #[test]
+    fn textless_ref_to_paragraph_anchor_falls_back_without_diagnostic() {
+        // The id is *known* (a paragraph anchor) but has no natural text, so the
+        // display falls back to `[id]` — and, unlike an unknown id, no warning.
+        let src = "[[pa]]\nHello.\n\nSee <<pa>>.";
+        let result = crate::parse(src);
+        assert!(
+            result.diagnostics.is_empty(),
+            "no diagnostic for a known id"
+        );
+        let (target, children) = first_xref(src);
+        assert_eq!(target, "pa");
+        assert_eq!(text_of(&children), "[pa]");
+    }
+
+    #[test]
+    fn textless_ref_to_anchor_reftext_is_display_text() {
+        let src = "[[pa,The Para]]\nHello.\n\nSee <<pa>>.";
+        let result = crate::parse(src);
+        assert!(result.diagnostics.is_empty());
+        let (_, children) = first_xref(src);
+        assert_eq!(text_of(&children), "The Para");
+    }
+
+    #[test]
+    fn explicit_anchor_overrides_section_auto_id() {
+        // `[[custom]]` before a section replaces the auto id `_real_title`; a
+        // textless `<<custom>>` still shows the section's title.
+        let src = "[[custom]]\n== Real Title\n\nSee <<custom>>.";
+        let result = crate::parse(src);
+        assert!(result.diagnostics.is_empty());
+        assert_eq!(heading_id(src, 0), Some("custom".into()));
+        let (target, children) = first_xref(src);
+        assert_eq!(target, "custom");
+        assert_eq!(text_of(&children), "Real Title");
+    }
+
+    #[test]
+    fn explicit_reftext_overrides_section_title() {
+        let src = "[[s,Custom Ref]]\n== Real Title\n\nSee <<s>>.";
+        let (_, children) = first_xref(src);
+        assert_eq!(text_of(&children), "Custom Ref");
+        assert!(crate::parse(src).diagnostics.is_empty());
+    }
+
+    #[test]
+    fn duplicate_explicit_id_warns_once_and_first_wins() {
+        let src = "[[dup]]\nFirst.\n\n[[dup]]\nSecond.\n\nSee <<dup>>.";
+        let result = crate::parse(src);
+        assert_eq!(result.diagnostics.len(), 1);
+        assert_eq!(result.diagnostics[0].severity, Severity::Warning);
+        assert!(
+            result.diagnostics[0].message.contains("already in use"),
+            "got: {}",
+            result.diagnostics[0].message
+        );
+        // The first definition (no reftext) wins → textless ref renders `[dup]`.
+        let (_, children) = first_xref(src);
+        assert_eq!(text_of(&children), "[dup]");
     }
 }
