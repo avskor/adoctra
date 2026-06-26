@@ -81,24 +81,28 @@ fn write_block(b: &Block, s: &mut String) {
             // explicit `[[id]]`, or null), so it can resolve/validate `<<id>>`
             // targets and build a TOC.
             write_id(&b.id, s);
+            write_roles(&b.roles, s);
             s.push_str(",\"inlines\":");
             write_inlines(inlines, s);
         }
         BlockKind::Paragraph { inlines } => {
             s.push_str("\"name\":\"paragraph\",");
             write_id(&b.id, s);
+            write_roles(&b.roles, s);
             s.push_str(",\"inlines\":");
             write_inlines(inlines, s);
         }
         BlockKind::Listing { text } => {
             s.push_str("\"name\":\"listing\",");
             write_id(&b.id, s);
+            write_roles(&b.roles, s);
             s.push_str(",\"text\":");
             write_str(text, s);
         }
         BlockKind::List { ordered, items } => {
             s.push_str(&format!("\"name\":\"list\",\"ordered\":{ordered},"));
             write_id(&b.id, s);
+            write_roles(&b.roles, s);
             s.push_str(",\"items\":[");
             for (i, item) in items.iter().enumerate() {
                 if i > 0 {
@@ -133,6 +137,19 @@ fn write_id(id: &Option<String>, s: &mut String) {
         Some(id) => write_str(id, s),
         None => s.push_str("null"),
     }
+}
+
+/// Emit the leading-comma `,"roles":[…]` field for a block's `[.role]` shorthand
+/// roles (an empty array when there are none), so the editor sees them too.
+fn write_roles(roles: &[String], s: &mut String) {
+    s.push_str(",\"roles\":[");
+    for (i, role) in roles.iter().enumerate() {
+        if i > 0 {
+            s.push(',');
+        }
+        write_str(role, s);
+    }
+    s.push(']');
 }
 
 fn write_inlines(inlines: &[Inline], s: &mut String) {
@@ -590,5 +607,21 @@ mod tests {
             json.contains("\"span\":{\"start\":2,\"end\":11},\"kind\":\"anchor\""),
             "got: {json}"
         );
+    }
+
+    #[test]
+    fn shorthand_id_and_roles_are_exposed() {
+        // The editor receives both the id and the `[.role]` roles.
+        let json = parse_json("[#intro.lead]\nHi.");
+        assert!(
+            json.contains("\"id\":\"intro\",\"roles\":[\"lead\"]"),
+            "got: {json}"
+        );
+    }
+
+    #[test]
+    fn plain_block_exposes_empty_roles() {
+        let json = parse_json("Hi.");
+        assert!(json.contains("\"id\":null,\"roles\":[]"), "got: {json}");
     }
 }

@@ -33,29 +33,37 @@ impl Backend for HtmlBackend {
 }
 
 fn render_block(block: &Block, out: &mut String) {
-    // A block's anchor (an explicit `[[id]]` or a section's auto-generated id)
-    // renders as an `id` attribute on the block's element; `None` → no attribute.
+    // A block's anchor (an explicit `[[id]]`/`[#id]` or a section's auto-generated
+    // id) renders as an `id` attribute on the block's element; `None` → none.
+    // `[.role]` shorthand roles render as a `class` (appended to any base class
+    // such as a listing's); asciidoctor puts both on a wrapping `<div>`, but
+    // adoctra emits no wrapper, so they go on the inner element (as the id
+    // already does).
     let id = id_attr(&block.id);
     match &block.kind {
         BlockKind::Heading { level, inlines } => {
             let h = (level + 1).min(6);
-            out.push_str(&format!("<h{h}{id}>"));
+            let class = class_attr(&[], &block.roles);
+            out.push_str(&format!("<h{h}{id}{class}>"));
             render_inlines(inlines, out);
             out.push_str(&format!("</h{h}>\n"));
         }
         BlockKind::Paragraph { inlines } => {
-            out.push_str(&format!("<p{id}>"));
+            let class = class_attr(&[], &block.roles);
+            out.push_str(&format!("<p{id}{class}>"));
             render_inlines(inlines, out);
             out.push_str("</p>\n");
         }
         BlockKind::Listing { text } => {
-            out.push_str(&format!("<pre class=\"listing\"{id}>"));
+            let class = class_attr(&["listing"], &block.roles);
+            out.push_str(&format!("<pre{class}{id}>"));
             out.push_str(&escape(text));
             out.push_str("</pre>\n");
         }
         BlockKind::List { ordered, items } => {
             let tag = if *ordered { "ol" } else { "ul" };
-            out.push_str(&format!("<{tag}{id}>\n"));
+            let class = class_attr(&[], &block.roles);
+            out.push_str(&format!("<{tag}{id}{class}>\n"));
             for item in items {
                 out.push_str("<li>");
                 render_inlines(&item.inlines, out);
@@ -162,6 +170,23 @@ fn id_attr(id: &Option<String>) -> String {
         Some(id) => format!(" id=\"{}\"", escape(id)),
         None => String::new(),
     }
+}
+
+/// A ` class="…"` attribute (with a leading space) joining a block's static
+/// `base` classes (e.g. `listing`) with its `[.role]` shorthand roles, or the
+/// empty string when there are none. Classes are space-separated in order and
+/// escaped as an attribute value.
+fn class_attr(base: &[&str], roles: &[String]) -> String {
+    if base.is_empty() && roles.is_empty() {
+        return String::new();
+    }
+    let classes = base
+        .iter()
+        .copied()
+        .chain(roles.iter().map(String::as_str))
+        .collect::<Vec<_>>()
+        .join(" ");
+    format!(" class=\"{}\"", escape(&classes))
 }
 
 /// Output-encoding for HTML. Deliberately a *backend* concern: the shared model
@@ -518,5 +543,53 @@ mod tests {
             html.contains("<h2 id=\"custom\">Real Title</h2>"),
             "got: {html}"
         );
+    }
+
+    #[test]
+    fn shorthand_id_and_role_render_on_paragraph() {
+        let html = render("[#intro.lead]\nHello.");
+        assert!(
+            html.contains("<p id=\"intro\" class=\"lead\">Hello.</p>"),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn shorthand_role_only_renders_class_without_id() {
+        let html = render("[.lead.big]\nHello.");
+        assert!(
+            html.contains("<p class=\"lead big\">Hello.</p>"),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn shorthand_id_only_renders_id_without_class() {
+        let html = render("[#intro]\nHello.");
+        assert!(html.contains("<p id=\"intro\">Hello.</p>"), "got: {html}");
+    }
+
+    #[test]
+    fn shorthand_role_appends_to_listing_base_class() {
+        let html = render("[.numbered]\n----\nx = 1\n----");
+        assert!(
+            html.contains("<pre class=\"listing numbered\">"),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn shorthand_role_on_section_renders_class_on_heading() {
+        let html = render("[.notice]\n== Hello World\n\nbody");
+        assert!(
+            html.contains("<h2 id=\"_hello_world\" class=\"notice\">Hello World</h2>"),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn shorthand_role_renders_on_list() {
+        let html = render("[.compact]\n* one\n* two");
+        assert!(html.contains("<ul class=\"compact\">"), "got: {html}");
     }
 }

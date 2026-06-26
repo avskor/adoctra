@@ -154,10 +154,18 @@ overriding a section's auto id; an *inline anchor* (`[[id]]` / `[[id,reftext]]`
 sharing its line with text, or the `anchor:id[reftext]` macro) renders as an empty
 `<a id>` at that point, its `reftext` feeding a textless `<<id>>`; a known id with
 no natural text falls back to `[id]` *without* a diagnostic and a duplicate id
-warns once (first definition wins). The id lives on the block (`Block.id`, `None`
-for the level-0 doctitle and plain blocks) — the HTML backend emits it on
-`hN`/`p`/`pre`/`ol`/`ul`, inline anchors as `<a id="…"></a>`, and JSON/WASM expose
-it; a single inline scanner
+warns once (first definition wins). **Shorthand block attributes** share that
+seam: a whole-line `[#id]` sets the block id (a sibling of `[[id]]`) and
+`[.role]` / combined `[#id.role1.role2]` attach one or more CSS roles — id is
+last-wins across both forms, roles accumulate across consecutive attribute lines;
+a line that is *not* pure shorthand (a `,`/`=`/`%` or a positional word — the full
+`[positional,name=value]` list) is left unrecognized and falls through to a
+paragraph. The id lives on the block (`Block.id`, `None` for the level-0 doctitle
+and plain blocks) and roles on `Block.roles` — the HTML backend emits the id on
+`hN`/`p`/`pre`/`ol`/`ul` and roles as a `class` (appended to a listing's base
+class; asciidoctor hangs both on a wrapping `<div>`, adoctra emits no wrapper so
+they go on the inner element), inline anchors as `<a id="…"></a>`, and JSON/WASM
+expose both; a single inline scanner
 (`adoctra-core/src/inline.rs`) shared by the parser and tokenizer; inline nodes
 carry byte spans; attribute references `{name}` are resolved once in core
 against the document attributes; typographic replacements (`(C)`/`(R)`/`(TM)`,
@@ -174,11 +182,11 @@ not invoke it yet.
 
 Not yet implemented (common asks — treat as roadmap, do not assume present):
 broader language coverage (tables, footnotes, admonitions, includes, conditionals,
-block/inline macros), the **`[#id]` anchor form** and other **block attributes**
-(`[.role]`, `[positional,named=value]`) that would complement the existing `[[id]]`
-anchors — these need block-attribute parsing, which does not exist yet — **anchors
-on individual list items**, TOC generation, incremental/block reparse, and a
-pull/event API over the AST.
+block/inline macros), the **full block-attribute list** (`[positional,name=value]`
+and the `[%option]` shorthand) beyond the `[#id]` / `[.role]` shorthand that
+already works — this needs positional/named attribute parsing and block types to
+render most named values against — **anchors on individual list items**, TOC
+generation, incremental/block reparse, and a pull/event API over the AST.
 
 When asked to "add a feature," check this list first and say plainly whether it
 is new work or wiring up an existing seam.

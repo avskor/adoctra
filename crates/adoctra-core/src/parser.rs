@@ -11,6 +11,16 @@ use crate::diagnostic::{Diagnostic, ParseResult, Severity};
 use crate::inline::scan_inlines;
 use crate::scanner::lines_with_offsets;
 
+/// Metadata accumulated from `[[id]]` anchor and `[#id.role]` shorthand lines
+/// that precede a block, transferred onto that block once it is parsed. `id` is
+/// last-wins across both forms; `roles` accumulate in source order.
+#[derive(Default)]
+struct PendingMeta {
+    id: Option<String>,
+    reftext: Option<Vec<Inline>>,
+    roles: Vec<String>,
+}
+
 pub fn parse(source: &str) -> ParseResult {
     let lines = lines_with_offsets(source);
     let mut doc = Document::default();
@@ -21,11 +31,12 @@ pub fn parse(source: &str) -> ParseResult {
     doc.attributes = attributes;
 
     // --- body blocks ---
-    // A `[[id]]` / `[[id,reftext]]` anchor line attaches its id (and reftext) to
-    // the next block. asciidoctor lets blank lines sit between the anchor and its
-    // block, so we keep the anchor *pending* and let the loop skip blanks; a
-    // second anchor before the same block wins (last-wins).
-    let mut pending_anchor: Option<(String, Option<Vec<Inline>>)> = None;
+    // A `[[id]]` / `[[id,reftext]]` anchor line *or* a `[#id.role]` shorthand
+    // attribute line attaches metadata to the next block. asciidoctor lets blank
+    // lines sit between such a line and its block, so we keep the metadata
+    // *pending* and let the loop skip blanks. The id is last-wins across both
+    // forms; roles accumulate in source order across consecutive lines.
+    let mut pending = PendingMeta::default();
     while i < lines.len() {
         let line = lines[i].1;
         if line.trim().is_empty() {
@@ -33,9 +44,17 @@ pub fn parse(source: &str) -> ParseResult {
             continue;
         }
         if let Some((id, reftext)) = parse_block_anchor(line) {
-            let reftext =
+            pending.id = Some(id.to_string());
+            pending.reftext =
                 reftext.map(|rt| scan_inlines(rt, abs_offset(source, rt), &doc.attributes));
-            pending_anchor = Some((id.to_string(), reftext));
+            i += 1;
+            continue;
+        }
+        if let Some((id, roles)) = parse_block_attr_shorthand(line) {
+            if let Some(id) = id {
+                pending.id = Some(id);
+            }
+            pending.roles.extend(roles);
             i += 1;
             continue;
         }
@@ -47,10 +66,10 @@ pub fn parse(source: &str) -> ParseResult {
             &mut diagnostics,
             BlockCtx::TopLevel,
         ) {
-            if let Some((id, reftext)) = pending_anchor.take() {
-                block.id = Some(id);
-                block.reftext = reftext;
-            }
+            let pending = std::mem::take(&mut pending);
+            block.id = pending.id;
+            block.reftext = pending.reftext;
+            block.roles = pending.roles;
             doc.blocks.push(block);
         }
     }
@@ -461,6 +480,69 @@ pub(crate) fn is_valid_anchor_id(id: &str) -> bool {
         _ => return false,
     }
     chars.all(|c| c.is_alphanumeric() || matches!(c, '_' | ':' | '.' | '-'))
+}
+
+/// Recognise a *shorthand block-attribute* line — `[#id]`, `[.role]`,
+/// `[#id.role1.role2]` occupying the whole (trimmed) line — and return
+/// `(id?, roles)`. Both the id (`#`) and role (`.`) tokens are optional but the
+/// brackets must be filled *entirely* by them: the inner is a run of `#…` / `.…`
+/// segments with nothing left over. The id is taken from the last `#` token
+/// (there is normally one); roles are the `.` tokens in source order.
+///
+/// Returns `None` — so the line falls through to ordinary parsing — when the
+/// content is not pure shorthand: a leading `[[` (that is the distinct block
+/// *anchor*, matched first), an empty `[]`, or any stray character such as `,`,
+/// `=`, `%` or a bare positional word. Those belong to the full
+/// `[positional, name=value]` attribute list, which is not implemented yet.
+pub(crate) fn parse_block_attr_shorthand(line: &str) -> Option<(Option<String>, Vec<String>)> {
+    let t = line.trim();
+    // `[[…]]` is the block anchor, handled before this; never treat it as
+    // shorthand even if it reaches here (e.g. a malformed anchor id).
+    if t.starts_with("[[") {
+        return None;
+    }
+    let inner = t.strip_prefix('[')?.strip_suffix(']')?;
+    if inner.is_empty() {
+        return None;
+    }
+    let mut id: Option<String> = None;
+    let mut roles: Vec<String> = Vec::new();
+    let mut rest = inner;
+    while !rest.is_empty() {
+        let sigil = rest.as_bytes()[0];
+        if sigil != b'#' && sigil != b'.' {
+            return None; // stray char / positional word → not shorthand
+        }
+        // The token runs until the next sigil (`#`/`.`) or the end.
+        let end = rest[1..]
+            .find(['#', '.'])
+            .map(|i| i + 1)
+            .unwrap_or(rest.len());
+        let token = &rest[1..end];
+        rest = &rest[end..];
+        if sigil == b'#' {
+            if !is_valid_anchor_id(token) {
+                return None;
+            }
+            id = Some(token.to_string());
+        } else {
+            if !is_valid_role(token) {
+                return None;
+            }
+            roles.push(token.to_string());
+        }
+    }
+    Some((id, roles))
+}
+
+/// Whether `role` is a well-formed CSS role: non-empty, alphanumeric plus `_`
+/// and `-` (asciidoctor folds anything else, but adoctra only accepts the clean
+/// shape and otherwise leaves the line unrecognised).
+fn is_valid_role(role: &str) -> bool {
+    !role.is_empty()
+        && role
+            .chars()
+            .all(|c| c.is_alphanumeric() || matches!(c, '_' | '-'))
 }
 
 #[cfg(test)]
@@ -1051,5 +1133,131 @@ mod tests {
             inlines.first(),
             Some(Inline::Anchor { id, .. }) if id == "id"
         ));
+    }
+
+    #[test]
+    fn parse_block_attr_shorthand_recognises_forms() {
+        let id = |s: &str| Some(s.to_string());
+        let roles = |v: &[&str]| v.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        assert_eq!(
+            parse_block_attr_shorthand("[#id]"),
+            Some((id("id"), vec![]))
+        );
+        assert_eq!(
+            parse_block_attr_shorthand("[.lead]"),
+            Some((None, roles(&["lead"])))
+        );
+        assert_eq!(
+            parse_block_attr_shorthand("[#id.r1.r2]"),
+            Some((id("id"), roles(&["r1", "r2"])))
+        );
+        assert_eq!(
+            parse_block_attr_shorthand("[.r1.r2]"),
+            Some((None, roles(&["r1", "r2"])))
+        );
+        // Surrounding whitespace is tolerated, like the anchor form.
+        assert_eq!(
+            parse_block_attr_shorthand("  [#id]  "),
+            Some((id("id"), vec![]))
+        );
+        // Not shorthand → None, so the line falls through to ordinary parsing:
+        // the block anchor (double bracket), an empty `[]`, the deferred
+        // full-attribute / positional forms, a malformed id/role, and an
+        // embedded (non-whole-line) occurrence.
+        assert_eq!(parse_block_attr_shorthand("[[id]]"), None);
+        assert_eq!(parse_block_attr_shorthand("[]"), None);
+        assert_eq!(parse_block_attr_shorthand("[source,ruby]"), None);
+        assert_eq!(parse_block_attr_shorthand("[%option]"), None);
+        assert_eq!(parse_block_attr_shorthand("[role=lead]"), None);
+        assert_eq!(parse_block_attr_shorthand("[1]"), None);
+        assert_eq!(parse_block_attr_shorthand("[#bad id]"), None);
+        assert_eq!(parse_block_attr_shorthand("[.a b]"), None);
+        assert_eq!(parse_block_attr_shorthand("text [#id]"), None);
+    }
+
+    #[test]
+    fn block_attr_id_sets_block_id_and_excludes_line_from_span() {
+        let b = &parse("[#intro]\nHello.").document.blocks[0];
+        assert_eq!(b.id.as_deref(), Some("intro"));
+        assert!(b.roles.is_empty());
+        assert!(matches!(b.kind, BlockKind::Paragraph { .. }));
+        // The block's span starts at the paragraph, not the `[#intro]\n` line,
+        // matching how `[[id]]` anchor lines are excluded from the block span.
+        assert_eq!(
+            b.span,
+            Span::new("[#intro]\n".len(), "[#intro]\nHello.".len())
+        );
+    }
+
+    #[test]
+    fn block_attr_role_sets_roles() {
+        let b = &parse("[.lead]\nHello.").document.blocks[0];
+        assert!(b.id.is_none());
+        assert_eq!(b.roles, ["lead"]);
+    }
+
+    #[test]
+    fn block_attr_combined_sets_id_and_roles() {
+        let b = &parse("[#intro.lead.big]\nHi.").document.blocks[0];
+        assert_eq!(b.id.as_deref(), Some("intro"));
+        assert_eq!(b.roles, ["lead", "big"]);
+    }
+
+    #[test]
+    fn block_attr_roles_accumulate_across_lines() {
+        let b = &parse("[.a]\n[.b]\nHi.").document.blocks[0];
+        assert_eq!(b.roles, ["a", "b"]);
+    }
+
+    #[test]
+    fn block_attr_floats_across_a_blank_line() {
+        let b = &parse("[.lead]\n\nHello.").document.blocks[0];
+        assert_eq!(b.roles, ["lead"]);
+    }
+
+    #[test]
+    fn block_attr_id_overrides_section_auto_id() {
+        // `[#id]` on a section must survive the resolve pass (which would
+        // otherwise assign the auto-id `_real_title`), just like `[[id]]`.
+        let b = &parse("[#custom]\n== Real Title\n\nbody").document.blocks[0];
+        assert!(matches!(b.kind, BlockKind::Heading { level: 1, .. }));
+        assert_eq!(b.id.as_deref(), Some("custom"));
+    }
+
+    #[test]
+    fn block_attr_role_on_section_keeps_auto_id() {
+        let b = &parse("[.notice]\n== Hello World\n\nbody").document.blocks[0];
+        assert_eq!(b.id.as_deref(), Some("_hello_world"));
+        assert_eq!(b.roles, ["notice"]);
+    }
+
+    #[test]
+    fn anchor_and_shorthand_id_last_wins_both_orders() {
+        // Shorthand after anchor wins; anchor after shorthand wins; and a role
+        // line followed by an anchor keeps the roles (anchor only sets the id).
+        assert_eq!(
+            parse("[[a1]]\n[#a2]\nHi.").document.blocks[0].id.as_deref(),
+            Some("a2")
+        );
+        assert_eq!(
+            parse("[#a1]\n[[a2]]\nHi.").document.blocks[0].id.as_deref(),
+            Some("a2")
+        );
+        let b = &parse("[.lead]\n[[a2]]\nHi.").document.blocks[0];
+        assert_eq!(b.id.as_deref(), Some("a2"));
+        assert_eq!(b.roles, ["lead"]);
+    }
+
+    #[test]
+    fn non_shorthand_bracket_line_stays_a_paragraph() {
+        // The deferred `[positional, name=value]` form is not recognised yet, so
+        // such a line is plain paragraph text (no id, no roles) — a documented
+        // limitation, pinned here so a future change is a deliberate one.
+        let doc = parse("[source,ruby]\nx = 1").document;
+        assert_eq!(doc.blocks.len(), 1);
+        let b = &doc.blocks[0];
+        assert!(b.id.is_none());
+        assert!(b.roles.is_empty());
+        assert!(matches!(b.kind, BlockKind::Paragraph { .. }));
     }
 }

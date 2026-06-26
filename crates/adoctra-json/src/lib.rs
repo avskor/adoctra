@@ -45,6 +45,7 @@ fn write_block(block: &Block, s: &mut String) {
         BlockKind::Heading { level, inlines } => {
             s.push_str(&format!("{{\"name\":\"heading\",\"level\":{level},"));
             write_id(&block.id, s);
+            write_roles(&block.roles, s);
             s.push_str(",\"inlines\":");
             write_inlines(inlines, s);
             s.push('}');
@@ -52,6 +53,7 @@ fn write_block(block: &Block, s: &mut String) {
         BlockKind::Paragraph { inlines } => {
             s.push_str("{\"name\":\"paragraph\",");
             write_id(&block.id, s);
+            write_roles(&block.roles, s);
             s.push_str(",\"inlines\":");
             write_inlines(inlines, s);
             s.push('}');
@@ -59,6 +61,7 @@ fn write_block(block: &Block, s: &mut String) {
         BlockKind::Listing { text } => {
             s.push_str("{\"name\":\"listing\",");
             write_id(&block.id, s);
+            write_roles(&block.roles, s);
             s.push_str(",\"text\":");
             escape_into(text, s);
             s.push('}');
@@ -66,6 +69,7 @@ fn write_block(block: &Block, s: &mut String) {
         BlockKind::List { ordered, items } => {
             s.push_str(&format!("{{\"name\":\"list\",\"ordered\":{ordered},"));
             write_id(&block.id, s);
+            write_roles(&block.roles, s);
             s.push_str(",\"items\":[");
             for (i, item) in items.iter().enumerate() {
                 if i > 0 {
@@ -95,6 +99,19 @@ fn write_id(id: &Option<String>, s: &mut String) {
         Some(id) => escape_into(id, s),
         None => s.push_str("null"),
     }
+}
+
+/// Emit the leading-comma `,"roles":[…]` field for a block's `[.role]` shorthand
+/// roles (an empty array when there are none).
+fn write_roles(roles: &[String], s: &mut String) {
+    s.push_str(",\"roles\":[");
+    for (i, role) in roles.iter().enumerate() {
+        if i > 0 {
+            s.push(',');
+        }
+        escape_into(role, s);
+    }
+    s.push(']');
 }
 
 fn write_inlines(inlines: &[Inline], s: &mut String) {
@@ -430,5 +447,26 @@ mod tests {
             json.contains("{\"name\":\"anchor\",\"id\":\"point\"}"),
             "got: {json}"
         );
+    }
+
+    #[test]
+    fn shorthand_id_and_roles_serialize() {
+        let json = render("[#intro.lead]\nHi.");
+        assert!(
+            json.contains("\"name\":\"paragraph\",\"id\":\"intro\",\"roles\":[\"lead\"]"),
+            "got: {json}"
+        );
+    }
+
+    #[test]
+    fn multiple_roles_serialize_as_array() {
+        let json = render("[.a.b]\nHi.");
+        assert!(json.contains("\"roles\":[\"a\",\"b\"]"), "got: {json}");
+    }
+
+    #[test]
+    fn plain_paragraph_serializes_empty_roles() {
+        let json = render("Hi.");
+        assert!(json.contains("\"id\":null,\"roles\":[]"), "got: {json}");
     }
 }

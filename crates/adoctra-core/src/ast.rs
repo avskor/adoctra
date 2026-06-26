@@ -57,24 +57,32 @@ pub struct Document {
 /// the resolve pass uses it as a textless reference's display text (preferring it
 /// over a section's own title). `None` when no reftext was given.
 ///
+/// `roles` are the CSS roles attached by a `[.role]` / `[#id.role1.role2]`
+/// shorthand block-attribute line — pure rendering metadata (the HTML backend
+/// emits them as a `class`), not part of cross-reference resolution. Empty when
+/// none were given. Order is source order.
+///
 /// [`sectids`]: crate::resolve
 #[derive(Debug, Clone, PartialEq)]
 pub struct Block {
     pub span: Span,
     pub id: Option<String>,
     pub reftext: Option<Vec<Inline>>,
+    pub roles: Vec<String>,
     pub kind: BlockKind,
 }
 
 impl Block {
-    /// A block with no anchor: `id` and `reftext` default to `None`. The parser
-    /// fills them in when an explicit `[[id]]` / `[[id,reftext]]` anchor precedes
-    /// the block; the resolve pass fills `id` for an auto-id section.
+    /// A block with no anchor: `id`/`reftext` default to `None` and `roles` is
+    /// empty. The parser fills them in when an explicit `[[id]]` /
+    /// `[[id,reftext]]` anchor or a `[#id.role]` shorthand line precedes the
+    /// block; the resolve pass fills `id` for an auto-id section.
     pub fn new(span: Span, kind: BlockKind) -> Self {
         Self {
             span,
             id: None,
             reftext: None,
+            roles: Vec::new(),
             kind,
         }
     }

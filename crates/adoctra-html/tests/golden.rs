@@ -18,9 +18,18 @@ use adoctra_core::Backend;
 use adoctra_html::HtmlBackend;
 
 /// Inner text of the first `<p>…</p>`, with runs of whitespace collapsed so
-/// asciidoctor's literal newline and our folded space compare equal.
+/// asciidoctor's literal newline and our folded space compare equal. The open
+/// tag may carry attributes (`<p id="…" class="…">`): asciidoctor hangs a
+/// block's id/role on a wrapping `<div>`, but our backend emits no wrapper and
+/// puts them on the `<p>` itself, so we match `<p>` or `<p …>` (but not `<pre>`)
+/// and take the content after the tag's closing `>`.
 fn paragraph_inner(html: &str) -> String {
-    let start = html.find("<p>").expect("no <p> in output") + "<p>".len();
+    let open = ["<p>", "<p "]
+        .iter()
+        .filter_map(|m| html.find(m))
+        .min()
+        .expect("no <p> in output");
+    let start = html[open..].find('>').expect("unterminated <p tag") + open + 1;
     let end = html[start..].find("</p>").expect("no </p> in output") + start;
     html[start..end]
         .split_whitespace()
