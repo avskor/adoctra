@@ -97,6 +97,22 @@ fn listing_block(html: &str) -> String {
         .join(" ")
 }
 
+/// Inner markup of the first `<pre …>…</pre>` (after the open tag, before the
+/// close), with whitespace runs collapsed. Unlike [`listing_block`] this drops
+/// the open tag, so it tolerates adoctra's deliberate class divergence on
+/// literal blocks: adoctra emits `<pre class="literalblock">` while asciidoctor
+/// hangs `literalblock` on a wrapping `<div>` and leaves the `<pre>` bare.
+/// Comparing the *content* still pins the verbatim text and HTML escaping.
+fn pre_inner(html: &str) -> String {
+    let open = html.find("<pre").expect("no <pre> in output");
+    let start = html[open..].find('>').expect("unterminated <pre tag") + open + 1;
+    let end = html[start..].find("</pre>").expect("no </pre> in output") + start;
+    html[start..end]
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 /// Drop all `<…>` tags and collapse whitespace runs to a single space.
 fn strip_tags(s: &str) -> String {
     let mut text = String::new();
@@ -202,6 +218,36 @@ fn html_source_blocks_match_asciidoctor() {
             listing_block(&ours),
             listing_block(&expected),
             "HTML source-block markup diverges from asciidoctor for `{name}`"
+        );
+    }
+}
+
+#[test]
+fn html_literal_blocks_match_asciidoctor() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/literals");
+
+    for entry in fs::read_dir(&dir).expect("golden/literals dir is missing") {
+        let path = entry.unwrap().path();
+        if path.extension().and_then(|e| e.to_str()) != Some("adoc") {
+            continue;
+        }
+        let expected_path = path.with_extension("expected.html");
+        if !expected_path.exists() {
+            // No reference yet (asciidoctor unavailable) — skip, don't fail.
+            continue;
+        }
+
+        let name = path.file_stem().unwrap().to_string_lossy().into_owned();
+        let adoc = fs::read_to_string(&path).unwrap();
+        let expected = fs::read_to_string(&expected_path).unwrap();
+
+        let doc = adoctra_core::parse(&adoc).document;
+        let ours = String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap();
+
+        assert_eq!(
+            pre_inner(&ours),
+            pre_inner(&expected),
+            "HTML literal-block content diverges from asciidoctor for `{name}`"
         );
     }
 }

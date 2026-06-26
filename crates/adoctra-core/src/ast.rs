@@ -107,8 +107,9 @@ impl Block {
 /// here:
 ///
 /// - `style` — the first positional attribute (`source`, `literal`, `NOTE`, …).
-///   Only `source` currently changes rendering (a listing's language); other
-///   styles are parsed and carried but do not yet change a block's type.
+///   `source` selects a listing's highlight form (its language); `literal` turns
+///   a paragraph into a [`BlockKind::Literal`]. Other styles are parsed and
+///   carried but do not yet change a block's type.
 /// - `named` — `name=value` pairs, deterministic order (a [`BTreeMap`] so JSON /
 ///   snapshot output stays stable). For a `source`-style block the language
 ///   positional is folded in here under the `language` key, in core, so every
@@ -136,8 +137,15 @@ pub enum BlockKind {
     Heading { level: u8, inlines: Vec<Inline> },
     /// A run of text forming a paragraph.
     Paragraph { inlines: Vec<Inline> },
-    /// A literal/listing block (verbatim, no inline substitutions).
+    /// A listing block (verbatim, no inline substitutions), fenced by `----`.
+    /// Rendered as a `listingblock`; a `[source,LANG]` style further selects the
+    /// highlight form (see [`BlockAttrs::style`]).
     Listing { text: String },
+    /// A literal block: verbatim, no inline substitutions, either fenced by
+    /// `....` or produced by a `[literal]` style on a paragraph. Same verbatim
+    /// `text` as [`BlockKind::Listing`] but rendered as a `literalblock` — no
+    /// language / `<code>` handling.
+    Literal { text: String },
     /// An unordered (`*`/`-`) or ordered (`.`) list. `ordered` selects the
     /// rendered list kind. Nesting is structural: a deeper level is a
     /// [`BlockKind::List`] held in a [`ListItem`]'s `blocks`.

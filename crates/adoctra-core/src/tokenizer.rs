@@ -32,6 +32,8 @@ pub enum TokenKind {
     AttributeEntry,
     ListingDelimiter,
     ListingText,
+    LiteralDelimiter,
+    LiteralText,
     Strong,
     Emphasis,
     Monospace,
@@ -53,6 +55,8 @@ impl TokenKind {
             TokenKind::AttributeEntry => "attribute-entry",
             TokenKind::ListingDelimiter => "listing-delimiter",
             TokenKind::ListingText => "listing-text",
+            TokenKind::LiteralDelimiter => "literal-delimiter",
+            TokenKind::LiteralText => "literal-text",
             TokenKind::Strong => "strong",
             TokenKind::Emphasis => "emphasis",
             TokenKind::Monospace => "monospace",
@@ -73,6 +77,7 @@ pub fn tokens(source: &str) -> Vec<Token> {
     let (attrs, _) = collect_header(&lines);
     let mut out = Vec::new();
     let mut in_listing = false;
+    let mut in_literal = false;
     // Whether we're inside a list (started by a column-0 marker, ended by a
     // blank line — mirroring the parser). While set, indented markers are
     // recognised; this is the tokenizer's share of "indented nested markers".
@@ -81,7 +86,11 @@ pub fn tokens(source: &str) -> Vec<Token> {
     for (off, line) in lines {
         let line_span = Span::new(off, off + line.len());
 
-        if line.trim() == "----" {
+        // `----` listing and `....` literal are verbatim regions. Each opens and
+        // closes only its own kind, and inside one the other delimiter is just
+        // verbatim text — so a `....` inside a `----` block (and vice versa) is
+        // text, matching the parser.
+        if !in_literal && line.trim() == "----" {
             out.push(Token {
                 span: line_span,
                 kind: TokenKind::ListingDelimiter,
@@ -93,6 +102,21 @@ pub fn tokens(source: &str) -> Vec<Token> {
             out.push(Token {
                 span: line_span,
                 kind: TokenKind::ListingText,
+            });
+            continue;
+        }
+        if line.trim() == "...." {
+            out.push(Token {
+                span: line_span,
+                kind: TokenKind::LiteralDelimiter,
+            });
+            in_literal = !in_literal;
+            continue;
+        }
+        if in_literal {
+            out.push(Token {
+                span: line_span,
+                kind: TokenKind::LiteralText,
             });
             continue;
         }
@@ -472,5 +496,23 @@ mod tests {
             .map(|t| &src[t.span.start..t.span.end])
             .collect();
         assert_eq!(spans, vec!["[[point]]", "anchor:spot[ref]"]);
+    }
+
+    #[test]
+    fn literal_block_is_tokenized() {
+        let kinds: Vec<_> = tokens("....\nx *y* z\n....")
+            .iter()
+            .map(|t| t.kind)
+            .collect();
+        // The delimiters bracket the verbatim text; no inline markup tokens leak
+        // out of the literal body (the `*y*` stays literal text).
+        assert_eq!(
+            kinds,
+            [
+                TokenKind::LiteralDelimiter,
+                TokenKind::LiteralText,
+                TokenKind::LiteralDelimiter,
+            ]
+        );
     }
 }

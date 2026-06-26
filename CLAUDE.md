@@ -120,7 +120,8 @@ later".
 
 ## Current state (so you don't assume more than exists)
 
-Working: parser for header attributes, headings, listing blocks, paragraphs,
+Working: parser for header attributes, headings, listing blocks, literal blocks
+(`....` and `[literal]`), paragraphs,
 lists (unordered `*`/`-`, ordered `.` and explicit-numbered `1.` — the latter a
 marker identity *distinct* from `.` (so a `1.` after a `.` list nests), with
 digit values ignored (numbering is positional, matching asciidoctor); **nested**
@@ -162,12 +163,19 @@ so a malformed id/role token is skipped rather than rejecting the line. The
 shorthand `#id`/`.role` and the longhand `id=`/`role=` both fold into `Block.id`
 (last-wins) and `Block.roles` (accumulated; a `role=` value splits on spaces); the
 first positional is the block **style**, `name=value` pairs land in
-`Block.attrs.named` (a `BTreeMap`), `%option` flags in `Block.attrs.options`. The
-one style wired to rendering is `source`: `[source,<lang>]` folds the language
+`Block.attrs.named` (a `BTreeMap`), `%option` flags in `Block.attrs.options`. Two
+styles are wired to rendering. `source`: `[source,<lang>]` folds the language
 into a `language` attribute *in core*, and the HTML backend renders the listing as
 asciidoctor's highlight form `<pre class="highlight"><code class="language-LANG"
-data-lang="LANG">` (no language ⇒ a bare `<code>`); other styles are parsed and
-carried on `Block.attrs.style` but do not yet change a block's *type*. The id
+data-lang="LANG">` (no language ⇒ a bare `<code>`). `literal`: `[literal]` on a
+paragraph turns it into a verbatim **literal block** (`BlockKind::Literal`, raw
+source text, no inline subs) — the first style that changes a block's *type*; the
+delimited form `....` … `....` (mirror of the `----` listing) yields the same kind.
+The HTML backend renders both as `<pre class="literalblock">` (asciidoctor's
+`literalblock` class moved onto the inner `<pre>`, per adoctra's no-wrapper
+convention); the tokenizer emits `literal-delimiter`/`literal-text`. Other styles
+are parsed and carried on `Block.attrs.style` but do not yet change a block's
+*type*. The id
 lives on the block (`Block.id`, `None` for the level-0 doctitle and plain blocks)
 and roles on `Block.roles` — the HTML backend emits the id on `hN`/`p`/`pre`/`ol`/
 `ul` and roles as a `class` (appended to a listing's base class; asciidoctor hangs
@@ -185,7 +193,7 @@ char); HTML and JSON backends; editor layer
 (error-tolerant `parse`, spans, diagnostics, tokenizer); WASM `parse_json` /
 `tokens_json`; golden compatibility tests against asciidoctor
 (`adoctra-html/tests/golden/`, list fixtures under `golden/lists/`, source-block
-fixtures under `golden/blocks/`).
+fixtures under `golden/blocks/`, literal-block fixtures under `golden/literals/`).
 
 Scaffold only: DOCX backend; the extension API exists but `parse`/`convert` do
 not invoke it yet.
@@ -194,10 +202,11 @@ Not yet implemented (common asks — treat as roadmap, do not assume present):
 broader language coverage (tables, footnotes, admonitions, includes, conditionals,
 block/inline macros). The full block-attribute list is now *parsed* (style, named
 attributes, `%options`, id/role folding), but most of it has nothing to render
-against yet: a **style that changes a block's type** (`[literal]` → literal block,
-`[NOTE]` → admonition, `[quote]`/`[verse]` → quote, …) is unimplemented — only
-`[source,<lang>]` is wired — as is **rendering of options** (`%hardbreaks`,
-`%nowrap`, …), which are captured but not yet acted on. Also: **anchors on
+against yet: most **styles that change a block's type** (`[NOTE]` → admonition,
+`[quote]`/`[verse]` → quote, …) are unimplemented — only `[source,<lang>]` and
+`[literal]` are wired — as is **rendering of options** (`%hardbreaks`,
+`%nowrap`, …), which are captured but not yet acted on. Also: **indented/offset
+literal** (leading-space lines) and delimiters longer than four chars; **anchors on
 individual list items**, TOC generation, incremental/block reparse, and a
 pull/event API over the AST.
 

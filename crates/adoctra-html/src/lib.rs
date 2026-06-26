@@ -83,6 +83,15 @@ fn render_block(block: &Block, out: &mut String) {
                 out.push_str("</pre>\n");
             }
         }
+        BlockKind::Literal { text } => {
+            // A literal block: verbatim `<pre>`, like a plain listing but with the
+            // `literalblock` base class. asciidoctor wraps it in a `<div>`; adoctra
+            // hangs the class/id/roles on the `<pre>` itself, as for a listing.
+            let class = class_attr(&["literalblock"], &block.roles);
+            out.push_str(&format!("<pre{class}{id}>"));
+            out.push_str(&escape(text));
+            out.push_str("</pre>\n");
+        }
         BlockKind::List { ordered, items } => {
             let tag = if *ordered { "ol" } else { "ul" };
             let class = class_attr(&[], &block.roles);
@@ -659,6 +668,34 @@ mod tests {
         let html = render("----\nx = 1\n----");
         assert!(
             html.contains("<pre class=\"listing\">x = 1</pre>"),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn delimited_literal_renders_literalblock_pre() {
+        let html = render("....\nverbatim *not bold*\n....");
+        assert!(
+            html.contains("<pre class=\"literalblock\">verbatim *not bold*</pre>"),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn literal_style_paragraph_renders_verbatim_and_escaped() {
+        // `[literal]` paragraph: markup stays literal, HTML specials are escaped.
+        let html = render("[literal]\na < b & *c*");
+        assert!(
+            html.contains("<pre class=\"literalblock\">a &lt; b &amp; *c*</pre>"),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn literal_id_and_role_render_on_pre() {
+        let html = render("[literal#lit.special]\nverbatim");
+        assert!(
+            html.contains("<pre class=\"literalblock special\" id=\"lit\">verbatim</pre>"),
             "got: {html}"
         );
     }

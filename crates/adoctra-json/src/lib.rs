@@ -76,6 +76,17 @@ fn write_block(block: &Block, s: &mut String) {
             escape_into(text, s);
             s.push('}');
         }
+        BlockKind::Literal { text } => {
+            s.push_str("{\"name\":\"literal\",");
+            write_id(&block.id, s);
+            write_roles(&block.roles, s);
+            write_style(&block.attrs.style, s);
+            write_attributes(&block.attrs.named, s);
+            write_options(&block.attrs.options, s);
+            s.push_str(",\"text\":");
+            escape_into(text, s);
+            s.push('}');
+        }
         BlockKind::List { ordered, items } => {
             s.push_str(&format!("{{\"name\":\"list\",\"ordered\":{ordered},"));
             write_id(&block.id, s);
@@ -547,5 +558,25 @@ mod tests {
             json.contains("\"roles\":[],\"style\":null,\"attributes\":{},\"options\":[]"),
             "got: {json}"
         );
+    }
+
+    #[test]
+    fn delimited_literal_serializes_by_name() {
+        let json = render("....\nverbatim *not bold*\n....");
+        assert!(json.contains("\"name\":\"literal\""), "got: {json}");
+        assert!(
+            json.contains("\"text\":\"verbatim *not bold*\""),
+            "got: {json}"
+        );
+    }
+
+    #[test]
+    fn literal_style_paragraph_serializes_by_name() {
+        // `[literal]` paragraph: a literal node carrying the verbatim text and the
+        // `literal` style.
+        let json = render("[literal]\na *b* c");
+        assert!(json.contains("\"name\":\"literal\""), "got: {json}");
+        assert!(json.contains("\"style\":\"literal\""), "got: {json}");
+        assert!(json.contains("\"text\":\"a *b* c\""), "got: {json}");
     }
 }

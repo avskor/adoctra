@@ -80,6 +80,16 @@ pub fn parse(source: &str) -> ParseResult {
             block.reftext = pending.reftext;
             block.roles = pending.roles;
             block.attrs = pending.attrs;
+            // A `[literal]` style turns a paragraph into a verbatim literal block:
+            // its content is the *raw* source slice, not the inlines that were
+            // already scanned (which are discarded). Only a paragraph converts —
+            // a `[literal]` before a `....`/`----` block leaves the block as-is.
+            if block.attrs.style.as_deref() == Some("literal")
+                && matches!(block.kind, BlockKind::Paragraph { .. })
+            {
+                let text = source[block.span.start..block.span.end].to_string();
+                block.kind = BlockKind::Literal { text };
+            }
             doc.blocks.push(block);
         }
     }
@@ -175,6 +185,42 @@ fn parse_block(
         return Some(Block::new(
             Span::new(start, end),
             BlockKind::Listing { text },
+        ));
+    }
+
+    // Literal block (verbatim, fenced by `....`). Same shape as the `----`
+    // listing above, but yields a `Literal` (rendered as a `literalblock`).
+    if trimmed.trim() == "...." {
+        let start = off;
+        let mut end = off + line.len();
+        *i += 1;
+        let mut text = String::new();
+        let mut closed = false;
+        while *i < lines.len() {
+            let (loff, lline) = lines[*i];
+            if lline.trim() == "...." {
+                end = loff + lline.len();
+                *i += 1;
+                closed = true;
+                break;
+            }
+            if !text.is_empty() {
+                text.push('\n');
+            }
+            text.push_str(lline);
+            end = loff + lline.len();
+            *i += 1;
+        }
+        if !closed {
+            diagnostics.push(Diagnostic {
+                span: Span::new(start, start + 4),
+                severity: Severity::Error,
+                message: "unterminated literal block (missing closing `....`)".to_string(),
+            });
+        }
+        return Some(Block::new(
+            Span::new(start, end),
+            BlockKind::Literal { text },
         ));
     }
 
@@ -1454,5 +1500,51 @@ mod tests {
         assert_eq!(b.attrs.options, ["hardbreaks"]);
         assert_eq!(b.attrs.named.get("width").map(String::as_str), Some("40"));
         assert!(matches!(b.kind, BlockKind::Paragraph { .. }));
+    }
+
+    #[test]
+    fn delimited_literal_block_parses_verbatim() {
+        let src = "....\nverbatim *not bold*\n....";
+        let r = parse(src);
+        assert!(r.diagnostics.is_empty());
+        let b = &r.document.blocks[0];
+        match &b.kind {
+            BlockKind::Literal { text } => assert_eq!(text, "verbatim *not bold*"),
+            other => panic!("expected literal, got {other:?}"),
+        }
+        // Span covers the whole block, opening through closing delimiter.
+        assert_eq!(b.span, Span::new(0, src.len()));
+    }
+
+    #[test]
+    fn literal_style_turns_paragraph_into_literal() {
+        // `[literal]` makes the following paragraph a verbatim literal block: its
+        // text is the raw source (markup like `*not bold*` is NOT processed).
+        let b = &parse("[literal]\nverbatim *not bold* text").document.blocks[0];
+        match &b.kind {
+            BlockKind::Literal { text } => assert_eq!(text, "verbatim *not bold* text"),
+            other => panic!("expected literal, got {other:?}"),
+        }
+        assert_eq!(b.attrs.style.as_deref(), Some("literal"));
+        // The attribute line is excluded from the block span, as elsewhere.
+        assert_eq!(
+            b.span,
+            Span::new(
+                "[literal]\n".len(),
+                "[literal]\nverbatim *not bold* text".len()
+            )
+        );
+    }
+
+    #[test]
+    fn unterminated_literal_is_a_diagnostic_not_a_failure() {
+        let r = parse("....\nverbatim");
+        assert_eq!(r.document.blocks.len(), 1);
+        assert_eq!(r.diagnostics.len(), 1);
+        assert_eq!(r.diagnostics[0].severity, Severity::Error);
+        assert!(matches!(
+            r.document.blocks[0].kind,
+            BlockKind::Literal { .. }
+        ));
     }
 }

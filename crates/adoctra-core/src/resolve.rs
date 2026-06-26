@@ -76,7 +76,7 @@ fn assign_ids(blocks: &mut [Block], registry: &mut Registry, diagnostics: &mut V
                     assign_ids(&mut item.blocks, registry, diagnostics);
                 }
             }
-            BlockKind::Listing { .. } => {}
+            BlockKind::Listing { .. } | BlockKind::Literal { .. } => {}
         }
     }
 }
@@ -243,7 +243,7 @@ fn resolve_xrefs(blocks: &mut [Block], registry: &Registry, diagnostics: &mut Ve
                     resolve_xrefs(&mut item.blocks, registry, diagnostics);
                 }
             }
-            BlockKind::Listing { .. } => {}
+            BlockKind::Listing { .. } | BlockKind::Literal { .. } => {}
         }
     }
 }

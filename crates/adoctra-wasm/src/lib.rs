@@ -109,6 +109,16 @@ fn write_block(b: &Block, s: &mut String) {
             s.push_str(",\"text\":");
             write_str(text, s);
         }
+        BlockKind::Literal { text } => {
+            s.push_str("\"name\":\"literal\",");
+            write_id(&b.id, s);
+            write_roles(&b.roles, s);
+            write_style(&b.attrs.style, s);
+            write_attributes(&b.attrs.named, s);
+            write_options(&b.attrs.options, s);
+            s.push_str(",\"text\":");
+            write_str(text, s);
+        }
         BlockKind::List { ordered, items } => {
             s.push_str(&format!("\"name\":\"list\",\"ordered\":{ordered},"));
             write_id(&b.id, s);
@@ -698,5 +708,19 @@ mod tests {
             json.contains("\"style\":null,\"attributes\":{},\"options\":[]"),
             "got: {json}"
         );
+    }
+
+    #[test]
+    fn literal_block_is_exposed_to_the_editor() {
+        // Both the `....` delimiter and the `[literal]` style surface a literal
+        // node with verbatim text.
+        let json = parse_json("....\nverbatim *x*\n....");
+        assert!(json.contains("\"name\":\"literal\""), "got: {json}");
+        assert!(json.contains("\"text\":\"verbatim *x*\""), "got: {json}");
+
+        let json = parse_json("[literal]\na *b* c");
+        assert!(json.contains("\"name\":\"literal\""), "got: {json}");
+        assert!(json.contains("\"style\":\"literal\""), "got: {json}");
+        assert!(json.contains("\"text\":\"a *b* c\""), "got: {json}");
     }
 }
