@@ -160,6 +160,14 @@ fn write_inlines(inlines: &[Inline], s: &mut String) {
                 write_inlines(children, s);
                 s.push('}');
             }
+            // An inline anchor: an empty `<a id>` target. Its reftext is resolve
+            // metadata (the display text of a textless xref), not content, so —
+            // like a block anchor's reftext — only the id is serialized.
+            Inline::Anchor { id, .. } => {
+                s.push_str("{\"name\":\"anchor\",\"id\":");
+                escape_into(id, s);
+                s.push('}');
+            }
             // Attribute reference resolved in core: serialize as plain text
             // (the value, or the literal `{name}` when the attribute was
             // missing), which is what the ASG carries after resolution.
@@ -410,6 +418,16 @@ mod tests {
         let json = render("Hi.");
         assert!(
             json.contains("\"name\":\"paragraph\",\"id\":null"),
+            "got: {json}"
+        );
+    }
+
+    #[test]
+    fn inline_anchor_serializes_with_id() {
+        // The inline `[[point]]` node carries its id; the reftext is resolve-only.
+        let json = render("x [[point]]y");
+        assert!(
+            json.contains("{\"name\":\"anchor\",\"id\":\"point\"}"),
             "got: {json}"
         );
     }

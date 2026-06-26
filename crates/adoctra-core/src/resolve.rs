@@ -17,7 +17,7 @@
 
 use std::collections::{btree_map::Entry, BTreeMap};
 
-use crate::ast::{Block, BlockKind, Document, Inline};
+use crate::ast::{Block, BlockKind, Document, Inline, Span};
 use crate::diagnostic::{Diagnostic, Severity};
 
 /// A registry of anchor ids → the inlines a *textless* reference displays. The
@@ -54,18 +54,7 @@ fn assign_ids(blocks: &mut [Block], registry: &mut Registry, diagnostics: &mut V
             // reference text is the anchor's reftext, else the section title (so
             // `[[s]]\n== Title` still shows "Title"), else none.
             let reftext = block.reftext.clone().or(heading_title);
-            match registry.entry(id) {
-                // asciidoctor warns and keeps the first definition; the duplicate
-                // block still renders its (now ambiguous) id in the backends.
-                Entry::Occupied(e) => diagnostics.push(Diagnostic {
-                    span: block.span,
-                    severity: Severity::Warning,
-                    message: format!("id already in use: '{}'", e.key()),
-                }),
-                Entry::Vacant(e) => {
-                    e.insert(reftext);
-                }
-            }
+            register_id(registry, id, reftext, block.span, diagnostics);
         } else if let Some(title) = heading_title {
             // No explicit anchor: a section gets an auto-generated, deduplicated id.
             let unique = dedup(generate_id(&inline_text(&title)), registry);
@@ -73,10 +62,76 @@ fn assign_ids(blocks: &mut [Block], registry: &mut Registry, diagnostics: &mut V
             block.id = Some(unique);
         }
 
-        if let BlockKind::List { items, .. } = &mut block.kind {
-            for item in items {
-                assign_ids(&mut item.blocks, registry, diagnostics);
+        // Register inline anchors found in this block's own content, so a `<<id>>`
+        // can target an inline `[[id]]` exactly like a block anchor. (Verbatim
+        // listing text carries no inline markup.) Done in document order, after
+        // the block's own id, so duplicate diagnostics read left-to-right.
+        match &mut block.kind {
+            BlockKind::Heading { inlines, .. } | BlockKind::Paragraph { inlines } => {
+                register_inline_anchors(inlines, registry, diagnostics);
             }
+            BlockKind::List { items, .. } => {
+                for item in items {
+                    register_inline_anchors(&item.inlines, registry, diagnostics);
+                    assign_ids(&mut item.blocks, registry, diagnostics);
+                }
+            }
+            BlockKind::Listing { .. } => {}
+        }
+    }
+}
+
+/// Register `id -> reftext` in the registry, warning (at `span`) on a duplicate
+/// and keeping the first definition — asciidoctor's behaviour. The duplicate
+/// block/anchor still renders its (now ambiguous) id in the backends. Shared by
+/// block anchors and inline anchors.
+fn register_id(
+    registry: &mut Registry,
+    id: String,
+    reftext: Option<Vec<Inline>>,
+    span: Span,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    match registry.entry(id) {
+        Entry::Occupied(e) => diagnostics.push(Diagnostic {
+            span,
+            severity: Severity::Warning,
+            message: format!("id already in use: '{}'", e.key()),
+        }),
+        Entry::Vacant(e) => {
+            e.insert(reftext);
+        }
+    }
+}
+
+/// Register every inline anchor (`[[id]]` / `anchor:id[]`) in `inlines`, recursing
+/// through formatting and link/xref children so an anchor nested inside markup is
+/// still found. Each contributes `id -> reftext` like a block anchor (a textless
+/// `<<id>>` then displays that reftext, or `[id]` when there is none).
+fn register_inline_anchors(
+    inlines: &[Inline],
+    registry: &mut Registry,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    for inline in inlines {
+        match inline {
+            Inline::Anchor { id, reftext, span } => {
+                register_id(registry, id.clone(), reftext.clone(), *span, diagnostics);
+                if let Some(rt) = reftext {
+                    register_inline_anchors(rt, registry, diagnostics);
+                }
+            }
+            Inline::Strong { children, .. }
+            | Inline::Emphasis { children, .. }
+            | Inline::Monospace { children, .. }
+            | Inline::Mark { children, .. }
+            | Inline::Superscript { children, .. }
+            | Inline::Subscript { children, .. }
+            | Inline::Link { children, .. }
+            | Inline::CrossReference { children, .. } => {
+                register_inline_anchors(children, registry, diagnostics);
+            }
+            Inline::Text { .. } | Inline::AttributeRef { .. } => {}
         }
     }
 }
@@ -167,6 +222,9 @@ fn push_text(inlines: &[Inline], s: &mut String) {
             | Inline::Subscript { children, .. }
             | Inline::Link { children, .. }
             | Inline::CrossReference { children, .. } => push_text(children, s),
+            // An inline anchor renders as an empty `<a id>` — no visible text, so
+            // it contributes nothing to a section id generated from this run.
+            Inline::Anchor { .. } => {}
         }
     }
 }
@@ -243,6 +301,14 @@ fn resolve_inlines(inlines: &mut [Inline], registry: &Registry, diagnostics: &mu
             | Inline::Subscript { children, .. }
             | Inline::Link { children, .. } => {
                 resolve_inlines(children, registry, diagnostics);
+            }
+            // Resolve any cross-references the author wrote inside an anchor's
+            // reftext, in place (so a textless `<<id>>` borrowing this reftext gets
+            // already-resolved children).
+            Inline::Anchor { reftext, .. } => {
+                if let Some(rt) = reftext {
+                    resolve_inlines(rt, registry, diagnostics);
+                }
             }
             Inline::Text { .. } | Inline::AttributeRef { .. } => {}
         }
@@ -479,5 +545,45 @@ mod tests {
         // The first definition (no reftext) wins → textless ref renders `[dup]`.
         let (_, children) = first_xref(src);
         assert_eq!(text_of(&children), "[dup]");
+    }
+
+    #[test]
+    fn xref_resolves_to_inline_anchor_reftext() {
+        // A textless `<<id>>` to an *inline* `[[id,reftext]]` shows the reftext —
+        // and resolves forward, the anchor coming after the reference.
+        let src = "Go to <<point>>.\n\nSee the [[point,the Important Part]]here.";
+        let result = crate::parse(src);
+        assert!(result.diagnostics.is_empty(), "known id → no diagnostic");
+        let (target, children) = first_xref(src);
+        assert_eq!(target, "point");
+        assert_eq!(text_of(&children), "the Important Part");
+    }
+
+    #[test]
+    fn xref_to_textless_inline_anchor_falls_back_without_diagnostic() {
+        // The inline anchor's id is known but has no reftext → `[id]`, no warning.
+        let src = "Go to <<spot>>.\n\nSee the [[spot]]here.";
+        let result = crate::parse(src);
+        assert!(result.diagnostics.is_empty(), "known id → no diagnostic");
+        let (_, children) = first_xref(src);
+        assert_eq!(text_of(&children), "[spot]");
+    }
+
+    #[test]
+    fn anchor_macro_id_resolves_like_the_shorthand() {
+        let src = "Go to <<point>>.\n\nSee anchor:point[the Part] now.";
+        let (_, children) = first_xref(src);
+        assert_eq!(text_of(&children), "the Part");
+    }
+
+    #[test]
+    fn duplicate_inline_anchor_and_block_anchor_warns() {
+        // An inline `[[dup]]` colliding with an earlier block `[[dup]]` warns once
+        // (the first definition wins), like two block anchors.
+        let src = "[[dup]]\nFirst.\n\nthen [[dup]]again.";
+        let result = crate::parse(src);
+        assert_eq!(result.diagnostics.len(), 1);
+        assert_eq!(result.diagnostics[0].severity, Severity::Warning);
+        assert!(result.diagnostics[0].message.contains("already in use"));
     }
 }

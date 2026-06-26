@@ -137,6 +137,14 @@ fn render_inlines(inlines: &[Inline], out: &mut String) {
                 render_inlines(children, out);
                 out.push_str("</a>");
             }
+            // An inline anchor renders as an empty `<a id="…">` at this point, like
+            // asciidoctor. The reftext (if any) is *not* shown here — it only feeds
+            // a textless cross-reference's display text during resolution.
+            Inline::Anchor { id, .. } => {
+                out.push_str("<a id=\"");
+                out.push_str(&escape(id));
+                out.push_str("\"></a>");
+            }
             // Resolved in core: emit the value, or fall back to the literal
             // `{name}` for a missing attribute (asciidoctor's default).
             Inline::AttributeRef { name, value, .. } => match value {
@@ -300,6 +308,36 @@ mod tests {
     fn xref_macro_renders_internal_link() {
         let html = render("See xref:sec[Mac].");
         assert!(html.contains("<a href=\"#sec\">Mac</a>"), "got: {html}");
+    }
+
+    #[test]
+    fn inline_anchor_renders_empty_a_with_id() {
+        // An inline `[[id]]` renders as an empty `<a id>` in place; the reftext is
+        // not shown here (it only feeds a textless xref). Matches asciidoctor.
+        let html = render("See the [[point,the Important Part]]here.");
+        assert!(
+            html.contains("See the <a id=\"point\"></a>here."),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn anchor_macro_renders_empty_a_with_id() {
+        let html = render("See anchor:point[] the part.");
+        assert!(
+            html.contains("See <a id=\"point\"></a> the part."),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn xref_resolves_to_an_inline_anchor() {
+        // `<<point>>` to an inline `[[point,…]]` renders the anchor's reftext.
+        let html = render("Go to <<point>>.\n\nSee the [[point,the Important Part]]here.");
+        assert!(
+            html.contains("<a href=\"#point\">the Important Part</a>"),
+            "got: {html}"
+        );
     }
 
     #[test]

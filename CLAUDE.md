@@ -147,9 +147,17 @@ folded to `_`, `_`-prefixed — `== Hello World` → `_hello_world`, with `_2`/`
 deduplication) and resolves each reference: a textless `<<id>>` / `xref:id[]` takes
 the section's title as display text (inline formatting preserved), an explicit
 reftext is kept verbatim, and an unknown id emits a `Warning` diagnostic and
-renders the `[id]` *unresolved* fallback (asciidoctor-compatible); the section id
-lives on the node (`Heading.id`, `None` for the level-0 doctitle) — the HTML
-backend emits it as `<hN id="…">` and JSON/WASM expose it; a single inline scanner
+renders the `[id]` *unresolved* fallback (asciidoctor-compatible). **Explicit
+anchors** join the same registry: a *block anchor* (a whole-line `[[id]]` /
+`[[id,reftext]]`) attaches its id and inline `reftext` to the next block,
+overriding a section's auto id; an *inline anchor* (`[[id]]` / `[[id,reftext]]`
+sharing its line with text, or the `anchor:id[reftext]` macro) renders as an empty
+`<a id>` at that point, its `reftext` feeding a textless `<<id>>`; a known id with
+no natural text falls back to `[id]` *without* a diagnostic and a duplicate id
+warns once (first definition wins). The id lives on the block (`Block.id`, `None`
+for the level-0 doctitle and plain blocks) — the HTML backend emits it on
+`hN`/`p`/`pre`/`ol`/`ul`, inline anchors as `<a id="…"></a>`, and JSON/WASM expose
+it; a single inline scanner
 (`adoctra-core/src/inline.rs`) shared by the parser and tokenizer; inline nodes
 carry byte spans; attribute references `{name}` are resolved once in core
 against the document attributes; typographic replacements (`(C)`/`(R)`/`(TM)`,
@@ -166,10 +174,11 @@ not invoke it yet.
 
 Not yet implemented (common asks — treat as roadmap, do not assume present):
 broader language coverage (tables, footnotes, admonitions, includes, conditionals,
-block/inline macros), **explicit anchors** (`[[id]]` / `[#id]` block anchors and a
-custom `reftext`) to complement the auto-generated section ids — this needs
-block-attribute parsing, which does not exist yet, TOC generation,
-incremental/block reparse, and a pull/event API over the AST.
+block/inline macros), the **`[#id]` anchor form** and other **block attributes**
+(`[.role]`, `[positional,named=value]`) that would complement the existing `[[id]]`
+anchors — these need block-attribute parsing, which does not exist yet — **anchors
+on individual list items**, TOC generation, incremental/block reparse, and a
+pull/event API over the AST.
 
 When asked to "add a feature," check this list first and say plainly whether it
 is new work or wiring up an existing seam.

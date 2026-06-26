@@ -225,6 +225,18 @@ fn flatten_inlines(inlines: &[Inline], out: &mut Vec<Token>) {
                 });
                 flatten_inlines(children, out);
             }
+            // One `Anchor` token over the whole `[[id]]` / `anchor:id[…]`, then
+            // highlight any markup in its reftext (the same kind the whole-line
+            // block anchor uses, so inline and block anchors read alike).
+            Inline::Anchor { reftext, span, .. } => {
+                out.push(Token {
+                    span: *span,
+                    kind: TokenKind::Anchor,
+                });
+                if let Some(rt) = reftext {
+                    flatten_inlines(rt, out);
+                }
+            }
         }
     }
 }
@@ -418,5 +430,19 @@ mod tests {
             .expect("anchor token");
         // The token covers the whole `[[…]]` line, not the body line.
         assert_eq!(&src[anchor.span.start..anchor.span.end], "[[pa,The Para]]");
+    }
+
+    #[test]
+    fn inline_anchor_is_tokenized_with_global_span() {
+        // Both spellings emit one `anchor` token spanning the whole construct,
+        // mid-line, the same kind the whole-line block anchor uses.
+        let src = "x [[point]]y and anchor:spot[ref] z";
+        let toks = tokens(src);
+        let spans: Vec<_> = toks
+            .iter()
+            .filter(|t| t.kind == TokenKind::Anchor)
+            .map(|t| &src[t.span.start..t.span.end])
+            .collect();
+        assert_eq!(spans, vec!["[[point]]", "anchor:spot[ref]"]);
     }
 }

@@ -198,6 +198,13 @@ fn write_inlines(inlines: &[Inline], s: &mut String) {
                 s.push_str(",\"inlines\":");
                 write_inlines(children, s);
             }
+            // An inline anchor: an empty `<a id>`. The editor gets the id (a xref
+            // target / definition site) on the node's own span; the reftext is
+            // resolve metadata, surfaced via a textless xref's resolved text.
+            Inline::Anchor { id, .. } => {
+                s.push_str("\"name\":\"anchor\",\"id\":");
+                write_str(id, s);
+            }
             // The editor gets the structured reference (name + resolved value),
             // unlike the backends which only need the resolved text.
             Inline::AttributeRef { name, value, .. } => {
@@ -550,6 +557,37 @@ mod tests {
         assert!(json.contains("\"kind\":\"anchor\""), "got: {json}");
         assert!(
             json.contains("\"span\":{\"start\":0,\"end\":6},\"kind\":\"anchor\""),
+            "got: {json}"
+        );
+    }
+
+    #[test]
+    fn inline_anchor_is_a_structured_node_with_span_and_id() {
+        // "[[point]]" spans bytes 2..11 here; the editor gets the anchor id.
+        let json = parse_json("x [[point]]y");
+        assert!(
+            json.contains("\"span\":{\"start\":2,\"end\":11},\"name\":\"anchor\""),
+            "got: {json}"
+        );
+        assert!(json.contains("\"id\":\"point\""), "got: {json}");
+    }
+
+    #[test]
+    fn xref_resolves_to_an_inline_anchor_reftext() {
+        // A textless `<<point>>` to an inline `[[point,…]]` gets the reftext text.
+        let json = parse_json("Go <<point>>.\n\n[[point,the Part]]here.");
+        assert!(
+            json.contains("\"name\":\"text\",\"value\":\"the Part\""),
+            "got: {json}"
+        );
+    }
+
+    #[test]
+    fn inline_anchor_is_tokenized_as_anchor() {
+        // A mid-line `[[id]]` is one anchor token over the whole construct.
+        let json = tokens_json("x [[point]]y");
+        assert!(
+            json.contains("\"span\":{\"start\":2,\"end\":11},\"kind\":\"anchor\""),
             "got: {json}"
         );
     }

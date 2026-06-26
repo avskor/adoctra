@@ -453,7 +453,8 @@ pub(crate) fn parse_block_anchor(line: &str) -> Option<(&str, Option<&str>)> {
 
 /// Whether `id` is a well-formed anchor id (asciidoctor's `[\p{Word}:][\p{Word}:.-]*`):
 /// a leading alphanumeric / `_` / `:`, then those plus `.` and `-`, no whitespace.
-fn is_valid_anchor_id(id: &str) -> bool {
+/// Shared with the inline scanner, which validates *inline* `[[id]]` anchors.
+pub(crate) fn is_valid_anchor_id(id: &str) -> bool {
     let mut chars = id.chars();
     match chars.next() {
         Some(c) if c.is_alphanumeric() || c == '_' || c == ':' => {}
@@ -1019,5 +1020,36 @@ mod tests {
         // Stacked anchors: the one nearest the block (last seen) attaches.
         let b = &parse("[[first]]\n[[second]]\nHello.").document.blocks[0];
         assert_eq!(b.id.as_deref(), Some("second"));
+    }
+
+    #[test]
+    fn whole_line_anchor_is_block_not_inline() {
+        // A line that is *wholly* `[[id]]` stays a block anchor on the next block
+        // (no inline `Anchor` node in the paragraph text), unlike an anchor that
+        // shares its line with other text. Matches asciidoctor's disambiguation.
+        let b = &parse("[[pa]]\nHello.").document.blocks[0];
+        assert_eq!(b.id.as_deref(), Some("pa"));
+        let BlockKind::Paragraph { inlines } = &b.kind else {
+            panic!("expected paragraph");
+        };
+        assert!(
+            !inlines.iter().any(|n| matches!(n, Inline::Anchor { .. })),
+            "whole-line anchor must not also appear inline, got {inlines:?}"
+        );
+    }
+
+    #[test]
+    fn anchor_sharing_its_line_is_inline() {
+        // `[[id]]` with other text on the line is an *inline* anchor: the block
+        // gets no id, and the paragraph carries an `Anchor` node.
+        let b = &parse("[[id]] and more text").document.blocks[0];
+        assert!(b.id.is_none(), "inline anchor does not set the block id");
+        let BlockKind::Paragraph { inlines } = &b.kind else {
+            panic!("expected paragraph");
+        };
+        assert!(matches!(
+            inlines.first(),
+            Some(Inline::Anchor { id, .. }) if id == "id"
+        ));
     }
 }
