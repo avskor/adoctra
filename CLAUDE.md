@@ -226,10 +226,20 @@ wrapper for the container blocks (after the `.admonition-title` label in an
 `<aside>`, as the first child of an `exampleblock`); `adoctra.css` ships a `.title`
 rule; JSON/WASM serialize a `title` field (the inlines, or `null`); the tokenizer
 emits one `block-title` token per `.Title` line (its inline markup *not*
-sub-tokenized, like the block anchor's reftext). asciidoctor's **caption
-numbering** (the `Example 1.` counter prefix) is *not* emitted — deferred with the
-rest of the caption-counter feature, so a titled example renders its bare title.
-Other styles
+sub-tokenized, like the block anchor's reftext). Building on titles, asciidoctor's
+**caption numbering** is wired for example blocks: a third resolve phase
+(`assign_captions`, in `resolve.rs`, walking the whole document in source order)
+numbers every **titled** `Example` block — an untitled example is skipped and does
+*not* advance the counter, matching asciidoctor — and stores the resolved prefix on
+`Block.caption` (`Option<String>`, a ready-to-render `"Example 1. "` like
+asciidoctor's `@caption`). The prefix word comes from the `example-caption`
+attribute (default `Example`, overridable with `:example-caption: …`). The HTML
+backend prepends it inside the `<div class="title">` (`#{caption}#{title}`), and
+JSON/WASM serialize a `caption` field (the string, or `null`). Only example blocks
+are numbered: `listing-caption` stays unset (a titled listing/literal keeps its bare
+title) and `figure-caption`/`table-caption` are moot until image/table blocks exist.
+Snapshotted by `golden/examples/caption_numbering.adoc` and the golden oracle no
+longer strips the counter. Other styles
 are parsed and carried on `Block.attrs.style` but do not yet change a block's
 *type*. The id
 lives on the block (`Block.id`, `None` for the level-0 doctitle and plain blocks)
@@ -267,9 +277,12 @@ quote, `[sidebar]`, …) are unimplemented — only `[source,<lang>]`, `[literal
 **admonitions**, the *paragraph* forms (`[NOTE]` style and `NOTE: ` label) and the
 **delimited form** (`[NOTE]` on a `====` block) are done. **Block titles**
 (`.Title`) are parsed and rendered on every block (on `Block.title`); still missing
-here: admonitions on list items. **Caption numbering** — the `Example N.` /
-`Figure N.` / `Table N.` counters and the `example-caption` attribute — is *not*
-done, so a titled captioned block renders its bare title. Also: **indented/offset
+here: admonitions on list items. **Caption numbering** is done for **example
+blocks** (`Example N.` via the `example-caption` attribute, on `Block.caption`); the
+`Figure N.` / `Table N.` counters await image/table blocks, the unset form
+`:!example-caption:` awaits **attribute-unset** support (`parse_attribute_entry`
+does not yet parse `:!name:`), and there is no custom per-block `caption=` attribute
+override. Also: **indented/offset
 literal** (leading-space lines) and delimiters longer than four chars (the same
 single-length limitation applies to `====`: a nested same-length `====` closes the
 outer block); **anchors on individual list items**, TOC generation,

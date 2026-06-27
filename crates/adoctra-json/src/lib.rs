@@ -51,6 +51,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_attributes(&block.attrs.named, s);
             write_options(&block.attrs.options, s);
             write_title(&block.title, s);
+            write_caption(&block.caption, s);
             s.push_str(",\"inlines\":");
             write_inlines(inlines, s);
             s.push('}');
@@ -63,6 +64,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_attributes(&block.attrs.named, s);
             write_options(&block.attrs.options, s);
             write_title(&block.title, s);
+            write_caption(&block.caption, s);
             s.push_str(",\"inlines\":");
             write_inlines(inlines, s);
             s.push('}');
@@ -75,6 +77,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_attributes(&block.attrs.named, s);
             write_options(&block.attrs.options, s);
             write_title(&block.title, s);
+            write_caption(&block.caption, s);
             s.push_str(",\"text\":");
             escape_into(text, s);
             s.push('}');
@@ -87,6 +90,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_attributes(&block.attrs.named, s);
             write_options(&block.attrs.options, s);
             write_title(&block.title, s);
+            write_caption(&block.caption, s);
             s.push_str(",\"text\":");
             escape_into(text, s);
             s.push('}');
@@ -99,6 +103,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_attributes(&block.attrs.named, s);
             write_options(&block.attrs.options, s);
             write_title(&block.title, s);
+            write_caption(&block.caption, s);
             s.push_str(",\"items\":[");
             for (i, item) in items.iter().enumerate() {
                 if i > 0 {
@@ -129,6 +134,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_attributes(&block.attrs.named, s);
             write_options(&block.attrs.options, s);
             write_title(&block.title, s);
+            write_caption(&block.caption, s);
             s.push_str(",\"blocks\":[");
             for (i, child) in blocks.iter().enumerate() {
                 if i > 0 {
@@ -146,6 +152,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_attributes(&block.attrs.named, s);
             write_options(&block.attrs.options, s);
             write_title(&block.title, s);
+            write_caption(&block.caption, s);
             s.push_str(",\"blocks\":[");
             for (i, child) in blocks.iter().enumerate() {
                 if i > 0 {
@@ -224,6 +231,17 @@ fn write_title(title: &Option<Vec<Inline>>, s: &mut String) {
     s.push_str(",\"title\":");
     match title {
         Some(inlines) => write_inlines(inlines, s),
+        None => s.push_str("null"),
+    }
+}
+
+/// Emit the leading-comma `,"caption":<string|null>` field — the block's resolved
+/// caption prefix (e.g. `"Example 1. "` on a numbered example), or `null` when the
+/// block has none (every block but a titled example block).
+fn write_caption(caption: &Option<String>, s: &mut String) {
+    s.push_str(",\"caption\":");
+    match caption {
+        Some(c) => escape_into(c, s),
         None => s.push_str("null"),
     }
 }
@@ -701,5 +719,28 @@ mod tests {
             json.contains("\"title\":[{\"name\":\"text\",\"value\":\"Demo\"}]"),
             "got: {json}"
         );
+    }
+
+    #[test]
+    fn titled_example_serializes_caption() {
+        // A titled example carries its resolved counter prefix as a string caption.
+        let json = render(".Demo\n====\nhi\n====");
+        assert!(json.contains("\"caption\":\"Example 1. \""), "got: {json}");
+    }
+
+    #[test]
+    fn untitled_block_serializes_null_caption() {
+        // No title (or a non-example titled block) → no caption.
+        let json = render("Body.");
+        assert!(json.contains("\"caption\":null"), "got: {json}");
+    }
+
+    #[test]
+    fn titled_listing_serializes_null_caption() {
+        // Only example blocks are numbered; a titled listing has a title but no
+        // caption.
+        let json = render(".Code\n----\nputs 1\n----");
+        assert!(json.contains("\"name\":\"listing\""), "got: {json}");
+        assert!(json.contains("\"caption\":null"), "got: {json}");
     }
 }

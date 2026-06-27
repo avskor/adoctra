@@ -52,20 +52,20 @@ fn render_block(block: &Block, out: &mut String) {
         BlockKind::Heading { level, inlines } => {
             let h = (level + 1).min(6);
             let class = class_attr(&[], &block.roles);
-            render_title(&block.title, out);
+            render_title(&block.title, &block.caption, out);
             out.push_str(&format!("<h{h}{id}{class}>"));
             render_inlines(inlines, out);
             out.push_str(&format!("</h{h}>\n"));
         }
         BlockKind::Paragraph { inlines } => {
             let class = class_attr(&[], &block.roles);
-            render_title(&block.title, out);
+            render_title(&block.title, &block.caption, out);
             out.push_str(&format!("<p{id}{class}>"));
             render_inlines(inlines, out);
             out.push_str("</p>\n");
         }
         BlockKind::Listing { text } => {
-            render_title(&block.title, out);
+            render_title(&block.title, &block.caption, out);
             // A `[source]`-style listing renders as asciidoctor's highlight form:
             // `<pre class="highlight"><code class="language-LANG" data-lang="LANG">`,
             // with the language taken from the `language` attribute that core
@@ -98,7 +98,7 @@ fn render_block(block: &Block, out: &mut String) {
             // A literal block: verbatim `<pre>`, like a plain listing but with the
             // `literalblock` base class. asciidoctor wraps it in a `<div>`; adoctra
             // hangs the class/id/roles on the `<pre>` itself, as for a listing.
-            render_title(&block.title, out);
+            render_title(&block.title, &block.caption, out);
             let class = class_attr(&["literalblock"], &block.roles);
             out.push_str(&format!("<pre{class}{id}>"));
             out.push_str(&escape(text));
@@ -107,7 +107,7 @@ fn render_block(block: &Block, out: &mut String) {
         BlockKind::List { ordered, items } => {
             let tag = if *ordered { "ol" } else { "ul" };
             let class = class_attr(&[], &block.roles);
-            render_title(&block.title, out);
+            render_title(&block.title, &block.caption, out);
             out.push_str(&format!("<{tag}{id}{class}>\n"));
             for item in items {
                 out.push_str("<li>");
@@ -142,7 +142,7 @@ fn render_block(block: &Block, out: &mut String) {
             // A `.Title` on the admonition is the block's *own* title (distinct from
             // the `Note`/`Tip`/… label), rendered above the body — matching where
             // asciidoctor places it in the content cell.
-            render_title(&block.title, out);
+            render_title(&block.title, &block.caption, out);
             for child in blocks {
                 render_block(child, out);
             }
@@ -155,7 +155,7 @@ fn render_block(block: &Block, out: &mut String) {
             // the class plus the block's id/roles, children render straight in.
             let class = class_attr(&["exampleblock"], &block.roles);
             out.push_str(&format!("<div{class}{id}>\n"));
-            render_title(&block.title, out);
+            render_title(&block.title, &block.caption, out);
             for child in blocks {
                 render_block(child, out);
             }
@@ -170,9 +170,17 @@ fn render_block(block: &Block, out: &mut String) {
 /// the title is a sibling rendered immediately before the block's element, and for
 /// the container blocks (example/admonition) it is emitted just inside their
 /// element. The title text is parsed inlines, so its markup renders.
-fn render_title(title: &Option<Vec<Inline>>, out: &mut String) {
+///
+/// A resolved `caption` (e.g. `"Example 1. "` on a numbered example block) is
+/// prepended verbatim inside the same `<div>`, exactly like asciidoctor's
+/// `#{caption}#{title}`. It is `None` for every block but a numbered example, so
+/// titles elsewhere are unaffected.
+fn render_title(title: &Option<Vec<Inline>>, caption: &Option<String>, out: &mut String) {
     if let Some(inlines) = title {
         out.push_str("<div class=\"title\">");
+        if let Some(caption) = caption {
+            out.push_str(&escape(caption));
+        }
         render_inlines(inlines, out);
         out.push_str("</div>\n");
     }
@@ -942,11 +950,12 @@ mod tests {
     #[test]
     fn example_title_renders_inside_the_wrapper() {
         // The title goes just inside `<div class="exampleblock">`, before the
-        // children (matching asciidoctor's content ordering).
+        // children (matching asciidoctor's content ordering). A titled example is
+        // numbered, so the title carries the `Example 1. ` caption prefix.
         let html = render(".Demo\n====\nhi\n====");
         assert!(
             html.contains(
-                "<div class=\"exampleblock\">\n<div class=\"title\">Demo</div>\n<p>hi</p>\n</div>"
+                "<div class=\"exampleblock\">\n<div class=\"title\">Example 1. Demo</div>\n<p>hi</p>\n</div>"
             ),
             "got: {html}"
         );
@@ -975,5 +984,37 @@ mod tests {
     fn block_title_stylesheet_rule_is_shipped() {
         let html = render("Hello.");
         assert!(html.contains(".title {"), "stylesheet missing: {html}");
+    }
+
+    #[test]
+    fn titled_example_caption_prefixes_the_title() {
+        // The resolved `"Example 1. "` caption renders verbatim inside the title
+        // div, before the title text (asciidoctor's `#{caption}#{title}`).
+        let html = render(".First\n====\none\n====\n\n.Second\n====\ntwo\n====");
+        assert!(
+            html.contains("<div class=\"title\">Example 1. First</div>"),
+            "got: {html}"
+        );
+        assert!(
+            html.contains("<div class=\"title\">Example 2. Second</div>"),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn untitled_example_renders_no_caption() {
+        // No title → no caption (and the counter is untouched, asserted in core).
+        let html = render("====\nbody\n====");
+        assert!(!html.contains("class=\"title\""), "got: {html}");
+    }
+
+    #[test]
+    fn titled_listing_renders_bare_title_without_caption() {
+        // Only example blocks are numbered; a titled listing keeps its bare title.
+        let html = render(".Code\n----\nputs 1\n----");
+        assert!(
+            html.contains("<div class=\"title\">Code</div>"),
+            "got: {html}"
+        );
     }
 }

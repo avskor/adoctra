@@ -87,6 +87,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_attributes(&b.attrs.named, s);
             write_options(&b.attrs.options, s);
             write_title(&b.title, s);
+            write_caption(&b.caption, s);
             s.push_str(",\"inlines\":");
             write_inlines(inlines, s);
         }
@@ -98,6 +99,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_attributes(&b.attrs.named, s);
             write_options(&b.attrs.options, s);
             write_title(&b.title, s);
+            write_caption(&b.caption, s);
             s.push_str(",\"inlines\":");
             write_inlines(inlines, s);
         }
@@ -109,6 +111,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_attributes(&b.attrs.named, s);
             write_options(&b.attrs.options, s);
             write_title(&b.title, s);
+            write_caption(&b.caption, s);
             s.push_str(",\"text\":");
             write_str(text, s);
         }
@@ -120,6 +123,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_attributes(&b.attrs.named, s);
             write_options(&b.attrs.options, s);
             write_title(&b.title, s);
+            write_caption(&b.caption, s);
             s.push_str(",\"text\":");
             write_str(text, s);
         }
@@ -131,6 +135,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_attributes(&b.attrs.named, s);
             write_options(&b.attrs.options, s);
             write_title(&b.title, s);
+            write_caption(&b.caption, s);
             s.push_str(",\"items\":[");
             for (i, item) in items.iter().enumerate() {
                 if i > 0 {
@@ -165,6 +170,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_attributes(&b.attrs.named, s);
             write_options(&b.attrs.options, s);
             write_title(&b.title, s);
+            write_caption(&b.caption, s);
             // Children carry their own spans; recurse so the editor sees the tree.
             s.push_str(",\"blocks\":[");
             for (j, child) in blocks.iter().enumerate() {
@@ -183,6 +189,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_attributes(&b.attrs.named, s);
             write_options(&b.attrs.options, s);
             write_title(&b.title, s);
+            write_caption(&b.caption, s);
             // Children carry their own spans; recurse so the editor sees the tree.
             s.push_str(",\"blocks\":[");
             for (j, child) in blocks.iter().enumerate() {
@@ -264,6 +271,17 @@ fn write_title(title: &Option<Vec<Inline>>, s: &mut String) {
     s.push_str(",\"title\":");
     match title {
         Some(inlines) => write_inlines(inlines, s),
+        None => s.push_str("null"),
+    }
+}
+
+/// Emit the leading-comma `,"caption":<string|null>` field — the block's resolved
+/// caption prefix (e.g. `"Example 1. "` on a numbered example block), or `null`
+/// when the block has none.
+fn write_caption(caption: &Option<String>, s: &mut String) {
+    s.push_str(",\"caption\":");
+    match caption {
+        Some(c) => write_str(c, s),
         None => s.push_str("null"),
     }
 }
@@ -841,5 +859,26 @@ mod tests {
     fn untitled_block_serializes_null_title() {
         let json = parse_json("Body.");
         assert!(json.contains("\"title\":null"), "got: {json}");
+    }
+
+    #[test]
+    fn titled_example_serializes_caption() {
+        // The editor gets the resolved counter prefix as a string caption.
+        let json = parse_json(".Demo\n====\nhi\n====");
+        assert!(json.contains("\"caption\":\"Example 1. \""), "got: {json}");
+    }
+
+    #[test]
+    fn untitled_block_serializes_null_caption() {
+        let json = parse_json("Body.");
+        assert!(json.contains("\"caption\":null"), "got: {json}");
+    }
+
+    #[test]
+    fn titled_listing_serializes_null_caption() {
+        // Only example blocks are numbered; a titled listing has no caption.
+        let json = parse_json(".Code\n----\nputs 1\n----");
+        assert!(json.contains("\"name\":\"listing\""), "got: {json}");
+        assert!(json.contains("\"caption\":null"), "got: {json}");
     }
 }

@@ -129,13 +129,12 @@ fn strip_tags(s: &str) -> String {
 }
 
 /// The inner text of the first `<div class="title">…</div>` (tags stripped,
-/// whitespace collapsed), with asciidoctor's caption counter removed. A titled
-/// block renders the same `<div class="title">` in both processors — adoctra as a
-/// sibling / just inside the block element (no wrapper), asciidoctor inside its
-/// wrapping `<div>` — so the title text compares directly. asciidoctor also
-/// prefixes a *captioned* block (example/figure/table) with a counter
-/// ("Example 1. "), which adoctra does not emit yet (caption numbering is
-/// deferred), so strip a leading `Word N. ` before comparing.
+/// whitespace collapsed). A titled block renders the same `<div class="title">` in
+/// both processors — adoctra as a sibling / just inside the block element (no
+/// wrapper), asciidoctor inside its wrapping `<div>` — so the title text compares
+/// directly. This now *includes* the caption counter a numbered block carries
+/// (asciidoctor's `Example 1. `, which adoctra emits too), so the comparison pins
+/// caption numbering rather than stripping it.
 fn block_title(html: &str) -> String {
     // Restrict to <body> for our full document (its inlined stylesheet has a
     // `.title` rule); asciidoctor's `-s` fragment has no <body> and falls through.
@@ -143,26 +142,7 @@ fn block_title(html: &str) -> String {
     let marker = "<div class=\"title\">";
     let at = body.find(marker).expect("no block title in output") + marker.len();
     let end = body[at..].find("</div>").expect("unterminated title") + at;
-    strip_caption_prefix(&strip_tags(&body[at..end]))
-}
-
-/// Strip a leading `Word N. ` caption counter (asciidoctor's example / figure /
-/// table numbering), e.g. "Example 1. Demo" → "Demo". Text without such a prefix
-/// is returned unchanged.
-fn strip_caption_prefix(text: &str) -> String {
-    let after_word = text.trim_start_matches(|c: char| c.is_alphanumeric());
-    let Some(after_space) = after_word.strip_prefix(' ') else {
-        return text.to_string();
-    };
-    let after_num = after_space.trim_start_matches(|c: char| c.is_ascii_digit());
-    // A counter needs at least one digit followed by a dot; otherwise leave it be.
-    if after_num.len() == after_space.len() {
-        return text.to_string();
-    }
-    match after_num.strip_prefix('.') {
-        Some(rest) => rest.trim_start().to_string(),
-        None => text.to_string(),
-    }
+    strip_tags(&body[at..end])
 }
 
 /// Normalise an admonition to `(type, body markup)`. adoctra emits a modern

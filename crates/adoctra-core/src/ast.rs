@@ -86,6 +86,18 @@ pub struct Block {
     ///
     /// [`BlockTitleRx`]: crate::parser
     pub title: Option<Vec<Inline>>,
+    /// The block's resolved **caption** — the counter prefix a titled block
+    /// carries before its [`title`], e.g. `"Example 1. "` (note the trailing
+    /// space). Filled by the resolve pass and *only* for a titled
+    /// [`BlockKind::Example`] (asciidoctor numbers example blocks via the
+    /// `example-caption` attribute; an untitled example gets no caption and does
+    /// not advance the counter). `None` for every other block — a titled listing
+    /// or paragraph renders its bare title, matching asciidoctor's unset
+    /// `listing-caption`. Stored pre-rendered, like asciidoctor's `@caption`
+    /// (`#{caption}#{title}`): backends prepend it to the title verbatim.
+    ///
+    /// [`title`]: Block::title
+    pub caption: Option<String>,
     pub attrs: BlockAttrs,
     pub kind: BlockKind,
 }
@@ -103,6 +115,7 @@ impl Block {
             reftext: None,
             roles: Vec::new(),
             title: None,
+            caption: None,
             attrs: BlockAttrs::default(),
             kind,
         }

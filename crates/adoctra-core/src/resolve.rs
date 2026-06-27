@@ -35,6 +35,47 @@ pub(crate) fn resolve(doc: &mut Document, diagnostics: &mut Vec<Diagnostic>) {
     let mut registry = Registry::new();
     assign_ids(&mut doc.blocks, &mut registry, diagnostics);
     resolve_xrefs(&mut doc.blocks, &registry, diagnostics);
+
+    // Caption numbering is independent of the id/xref passes, so it runs last. The
+    // prefix is read once here (default `Example`, matching asciidoctor's built-in
+    // `example-caption`) and a single counter walks the whole document in order.
+    let prefix = doc
+        .attributes
+        .get("example-caption")
+        .unwrap_or("Example")
+        .to_owned();
+    assign_captions(&mut doc.blocks, &prefix, &mut 0u32);
+}
+
+/// Phase 3: number titled example blocks. asciidoctor's caption counter applies
+/// to an example block *only when it has a title*: such a block gets the next
+/// number and a `"<prefix> <n>. "` caption; an untitled example is left alone and
+/// does **not** advance the counter. The counter is document-wide and runs in
+/// source order, so it recurses into containers (an example/admonition body, list
+/// items) after numbering the block itself — depth-first, top-down. Other block
+/// kinds carry no caption (asciidoctor's `listing-caption` etc. are unset), so a
+/// titled listing or paragraph keeps its bare title.
+fn assign_captions(blocks: &mut [Block], prefix: &str, counter: &mut u32) {
+    for block in blocks {
+        if matches!(block.kind, BlockKind::Example { .. }) && block.title.is_some() {
+            *counter += 1;
+            block.caption = Some(format!("{prefix} {counter}. "));
+        }
+        match &mut block.kind {
+            BlockKind::Example { blocks } | BlockKind::Admonition { blocks, .. } => {
+                assign_captions(blocks, prefix, counter);
+            }
+            BlockKind::List { items, .. } => {
+                for item in items {
+                    assign_captions(&mut item.blocks, prefix, counter);
+                }
+            }
+            BlockKind::Heading { .. }
+            | BlockKind::Paragraph { .. }
+            | BlockKind::Listing { .. }
+            | BlockKind::Literal { .. } => {}
+        }
+    }
 }
 
 /// Phase 1: walk the block tree, register every anchor id (explicit `[[id]]` and
@@ -624,5 +665,62 @@ mod tests {
         assert_eq!(result.diagnostics.len(), 1);
         assert_eq!(result.diagnostics[0].severity, Severity::Warning);
         assert!(result.diagnostics[0].message.contains("already in use"));
+    }
+
+    /// The `caption` of every top-level example block, in document order.
+    fn example_captions(src: &str) -> Vec<Option<String>> {
+        crate::parse(src)
+            .document
+            .blocks
+            .iter()
+            .filter(|b| matches!(b.kind, BlockKind::Example { .. }))
+            .map(|b| b.caption.clone())
+            .collect()
+    }
+
+    #[test]
+    fn titled_example_gets_numbered_caption() {
+        let src = ".First\n====\none\n====";
+        assert_eq!(example_captions(src), vec![Some("Example 1. ".into())]);
+    }
+
+    #[test]
+    fn two_titled_examples_number_sequentially() {
+        let src = ".First\n====\none\n====\n\n.Second\n====\ntwo\n====";
+        assert_eq!(
+            example_captions(src),
+            vec![Some("Example 1. ".into()), Some("Example 2. ".into())]
+        );
+    }
+
+    #[test]
+    fn untitled_example_has_no_caption_and_does_not_advance_counter() {
+        // titled, untitled, titled → 1, (none), 2 — the untitled block neither
+        // gets a caption nor consumes a number, matching asciidoctor.
+        let src = ".First\n====\none\n====\n\n====\nmid\n====\n\n.Third\n====\nthree\n====";
+        assert_eq!(
+            example_captions(src),
+            vec![Some("Example 1. ".into()), None, Some("Example 2. ".into())]
+        );
+    }
+
+    #[test]
+    fn example_caption_attribute_overrides_prefix() {
+        let src = ":example-caption: Esempio\n\n.Custom\n====\nx\n====";
+        assert_eq!(example_captions(src), vec![Some("Esempio 1. ".into())]);
+    }
+
+    #[test]
+    fn titled_listing_gets_no_caption() {
+        // Only example blocks are numbered; a titled listing keeps a bare title
+        // (asciidoctor's `listing-caption` is unset by default).
+        let src = ".Code\n----\nputs 1\n----";
+        let caption = crate::parse(src)
+            .document
+            .blocks
+            .iter()
+            .find(|b| matches!(b.kind, BlockKind::Listing { .. }))
+            .and_then(|b| b.caption.clone());
+        assert_eq!(caption, None);
     }
 }
