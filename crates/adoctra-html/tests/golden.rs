@@ -128,6 +128,43 @@ fn strip_tags(s: &str) -> String {
     text.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
+/// The inner text of the first `<div class="title">…</div>` (tags stripped,
+/// whitespace collapsed), with asciidoctor's caption counter removed. A titled
+/// block renders the same `<div class="title">` in both processors — adoctra as a
+/// sibling / just inside the block element (no wrapper), asciidoctor inside its
+/// wrapping `<div>` — so the title text compares directly. asciidoctor also
+/// prefixes a *captioned* block (example/figure/table) with a counter
+/// ("Example 1. "), which adoctra does not emit yet (caption numbering is
+/// deferred), so strip a leading `Word N. ` before comparing.
+fn block_title(html: &str) -> String {
+    // Restrict to <body> for our full document (its inlined stylesheet has a
+    // `.title` rule); asciidoctor's `-s` fragment has no <body> and falls through.
+    let body = html.split("<body>").nth(1).unwrap_or(html);
+    let marker = "<div class=\"title\">";
+    let at = body.find(marker).expect("no block title in output") + marker.len();
+    let end = body[at..].find("</div>").expect("unterminated title") + at;
+    strip_caption_prefix(&strip_tags(&body[at..end]))
+}
+
+/// Strip a leading `Word N. ` caption counter (asciidoctor's example / figure /
+/// table numbering), e.g. "Example 1. Demo" → "Demo". Text without such a prefix
+/// is returned unchanged.
+fn strip_caption_prefix(text: &str) -> String {
+    let after_word = text.trim_start_matches(|c: char| c.is_alphanumeric());
+    let Some(after_space) = after_word.strip_prefix(' ') else {
+        return text.to_string();
+    };
+    let after_num = after_space.trim_start_matches(|c: char| c.is_ascii_digit());
+    // A counter needs at least one digit followed by a dot; otherwise leave it be.
+    if after_num.len() == after_space.len() {
+        return text.to_string();
+    }
+    match after_num.strip_prefix('.') {
+        Some(rest) => rest.trim_start().to_string(),
+        None => text.to_string(),
+    }
+}
+
 /// Normalise an admonition to `(type, body markup)`. adoctra emits a modern
 /// `<aside class="admonition" data-type="TYPE">…<p>BODY</p></aside>`; asciidoctor
 /// a `<div class="admonitionblock TYPE"><table>…<td class="content">BODY</td>`.
@@ -399,6 +436,36 @@ fn html_example_blocks_match_asciidoctor() {
             example_body(&ours),
             example_body(&expected),
             "HTML example-block content diverges from asciidoctor for `{name}`"
+        );
+    }
+}
+
+#[test]
+fn html_block_titles_match_asciidoctor() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/titles");
+
+    for entry in fs::read_dir(&dir).expect("golden/titles dir is missing") {
+        let path = entry.unwrap().path();
+        if path.extension().and_then(|e| e.to_str()) != Some("adoc") {
+            continue;
+        }
+        let expected_path = path.with_extension("expected.html");
+        if !expected_path.exists() {
+            // No reference yet (asciidoctor unavailable) — skip, don't fail.
+            continue;
+        }
+
+        let name = path.file_stem().unwrap().to_string_lossy().into_owned();
+        let adoc = fs::read_to_string(&path).unwrap();
+        let expected = fs::read_to_string(&expected_path).unwrap();
+
+        let doc = adoctra_core::parse(&adoc).document;
+        let ours = String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap();
+
+        assert_eq!(
+            block_title(&ours),
+            block_title(&expected),
+            "HTML block title diverges from asciidoctor for `{name}`"
         );
     }
 }

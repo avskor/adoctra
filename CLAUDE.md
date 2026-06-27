@@ -211,7 +211,25 @@ form: `apply_style_fixup` moves the parsed `Example` children into
 (paragraphs, a listing, …); HTML renders the same `<aside>` with the children
 inside (no `exampleblock` wrapper), JSON/WASM serialize `name:"admonition"` with
 the nested `blocks` array, the resolve pass recurses into it, and `[note]`
-(lowercase) stays a plain example. Other styles
+(lowercase) stays a plain example. A **block title** — a `.Title` line preceding
+*any* block (asciidoctor's `BlockTitleRx`: a leading `.` then a non-space,
+non-`.` char, so it is *distinct* from the ordered-list marker `. `, the `....`
+delimiter and the `..`/`...` nested markers) — is the first block metadata that is
+neither id, role nor attribute: it rides the same `PendingMeta` seam in
+`collect_blocks` (so it floats across blank lines and attaches at any depth), its
+text is parsed inlines (inline subs apply, e.g. `.A *bold* caption`), a second
+`.Title` wins, and it lives on `Block.title` (`Option<Vec<Inline>>`) — *not* inside
+`BlockKind`, so a `.Title` before a `[NOTE]`/`[example]` block stays on the
+resulting container, not the wrapped child. The HTML backend renders it as a
+`<div class="title">` immediately before the block's element — just *inside* the
+wrapper for the container blocks (after the `.admonition-title` label in an
+`<aside>`, as the first child of an `exampleblock`); `adoctra.css` ships a `.title`
+rule; JSON/WASM serialize a `title` field (the inlines, or `null`); the tokenizer
+emits one `block-title` token per `.Title` line (its inline markup *not*
+sub-tokenized, like the block anchor's reftext). asciidoctor's **caption
+numbering** (the `Example 1.` counter prefix) is *not* emitted — deferred with the
+rest of the caption-counter feature, so a titled example renders its bare title.
+Other styles
 are parsed and carried on `Block.attrs.style` but do not yet change a block's
 *type*. The id
 lives on the block (`Block.id`, `None` for the level-0 doctitle and plain blocks)
@@ -233,7 +251,7 @@ char); HTML and JSON backends; editor layer
 (`adoctra-html/tests/golden/`, list fixtures under `golden/lists/`, source-block
 fixtures under `golden/blocks/`, literal-block fixtures under `golden/literals/`,
 admonition fixtures under `golden/admonitions/`, example-block fixtures under
-`golden/examples/`).
+`golden/examples/`, and block-title fixtures under `golden/titles/`).
 
 Scaffold only: DOCX backend; the extension API exists but `parse`/`convert` do
 not invoke it yet.
@@ -247,8 +265,11 @@ quote, `[sidebar]`, …) are unimplemented — only `[source,<lang>]`, `[literal
 `[example]` and the admonition styles are wired — as is **rendering of options**
 (`%hardbreaks`, `%nowrap`, …), which are captured but not yet acted on. For
 **admonitions**, the *paragraph* forms (`[NOTE]` style and `NOTE: ` label) and the
-**delimited form** (`[NOTE]` on a `====` block) are done. Still missing: admonition
-**block titles** (`.Title`) and admonitions on list items. Also: **indented/offset
+**delimited form** (`[NOTE]` on a `====` block) are done. **Block titles**
+(`.Title`) are parsed and rendered on every block (on `Block.title`); still missing
+here: admonitions on list items. **Caption numbering** — the `Example N.` /
+`Figure N.` / `Table N.` counters and the `example-caption` attribute — is *not*
+done, so a titled captioned block renders its bare title. Also: **indented/offset
 literal** (leading-space lines) and delimiters longer than four chars (the same
 single-length limitation applies to `====`: a nested same-length `====` closes the
 outer block); **anchors on individual list items**, TOC generation,

@@ -76,6 +76,16 @@ pub struct Block {
     pub id: Option<String>,
     pub reftext: Option<Vec<Inline>>,
     pub roles: Vec<String>,
+    /// The block's *title* — a `.Title` line preceding the block (asciidoctor's
+    /// [`BlockTitleRx`]). `None` when the block has no title. The text is parsed
+    /// inlines (inline substitutions apply, e.g. `.A *bold* caption`), so it
+    /// carries formatting. The title lives on the [`Block`] (not inside
+    /// [`BlockKind`]) so it survives the type-changing style fixups — a `.Title`
+    /// before a `[NOTE]`/`[example]` block stays on the resulting container, not
+    /// on the wrapped child.
+    ///
+    /// [`BlockTitleRx`]: crate::parser
+    pub title: Option<Vec<Inline>>,
     pub attrs: BlockAttrs,
     pub kind: BlockKind,
 }
@@ -92,6 +102,7 @@ impl Block {
             id: None,
             reftext: None,
             roles: Vec::new(),
+            title: None,
             attrs: BlockAttrs::default(),
             kind,
         }

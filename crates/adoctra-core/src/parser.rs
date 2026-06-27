@@ -21,6 +21,7 @@ struct PendingMeta {
     id: Option<String>,
     reftext: Option<Vec<Inline>>,
     roles: Vec<String>,
+    title: Option<Vec<Inline>>,
     attrs: BlockAttrs,
 }
 
@@ -109,6 +110,17 @@ fn collect_blocks(
             *i += 1;
             continue;
         }
+        // A `.Title` line sets the next block's title (asciidoctor's
+        // [`BlockTitleRx`]). Like the anchor / attribute-list lines it is *pending*
+        // metadata that attaches to the block that follows (blank lines may sit
+        // between); the title text is parsed inlines, so inline substitutions
+        // apply. A second `.Title` overrides the first (last-wins, matching
+        // asciidoctor).
+        if let Some(title) = parse_block_title(line) {
+            pending.title = Some(scan_inlines(title, abs_offset(source, title), attrs));
+            *i += 1;
+            continue;
+        }
         if let Some(mut block) =
             parse_block(source, lines, i, attrs, diagnostics, BlockCtx::TopLevel)
         {
@@ -116,6 +128,7 @@ fn collect_blocks(
             block.id = pending.id;
             block.reftext = pending.reftext;
             block.roles = pending.roles;
+            block.title = pending.title;
             block.attrs = pending.attrs;
             apply_style_fixup(&mut block, source);
             blocks.push(block);
@@ -654,6 +667,31 @@ pub(crate) fn parse_block_anchor(line: &str) -> Option<(&str, Option<&str>)> {
         None => (inner, None),
     };
     is_valid_anchor_id(id).then_some((id, reftext))
+}
+
+/// Recognise a *block title* line — a single leading `.` immediately followed by
+/// a non-space, non-`.` character (after at most one extra leading `.`), the rest
+/// of the line being the title. This is asciidoctor's `BlockTitleRx`
+/// (`^\.(\.?[^.\s].*)$`): it sets the title of the block that follows.
+///
+/// The leading `.` marker is stripped; the returned slice is the title *text*
+/// (trailing whitespace trimmed) and remains a sub-slice of the source line, so
+/// callers can recover its byte offset with [`abs_offset`]. The optional second
+/// dot is *part of the title* (`..foo` → title `.foo`), matching asciidoctor.
+///
+/// The leading-character rule is what disambiguates a title from the look-alikes
+/// that also start with `.`: the ordered-list marker `. ` (dot + space → space
+/// fails), the `....` literal delimiter and `..`/`...` nested list markers (a
+/// second/third `.` fails). A line like `.NET release` *is* a title here, exactly
+/// as asciidoctor parses it.
+pub(crate) fn parse_block_title(line: &str) -> Option<&str> {
+    let rest = line.strip_prefix('.')?;
+    let mut bytes = rest.bytes();
+    let first = bytes.next()?;
+    // An optional single dot may lead the title text; the *next* byte is the one
+    // that must be significant (non-dot, non-whitespace).
+    let significant = if first == b'.' { bytes.next()? } else { first };
+    (significant != b'.' && !significant.is_ascii_whitespace()).then(|| rest.trim_end())
 }
 
 /// Whether `id` is a well-formed anchor id (asciidoctor's `[\p{Word}:][\p{Word}:.-]*`):
@@ -2017,5 +2055,113 @@ mod tests {
             Inline::Text { value, .. } => assert_eq!(value, "Target"),
             other => panic!("expected resolved Text, got {other:?}"),
         }
+    }
+
+    // --- block titles (`.Title`) ---
+
+    /// The first `Text` inline of a block's title, or `None` if it has no title.
+    fn block_title_text(block: &Block) -> Option<String> {
+        block.title.as_ref().map(|inlines| match &inlines[0] {
+            Inline::Text { value, .. } => value.clone(),
+            other => panic!("expected Text in title, got {other:?}"),
+        })
+    }
+
+    #[test]
+    fn parse_block_title_recognises_and_disambiguates() {
+        // A leading `.` + a non-space, non-dot char is a title; the marker dot is
+        // stripped, an inner dot kept (asciidoctor's `BlockTitleRx`).
+        assert_eq!(parse_block_title(".Title"), Some("Title"));
+        assert_eq!(parse_block_title(".A caption"), Some("A caption"));
+        assert_eq!(parse_block_title("..foo"), Some(".foo"));
+        assert_eq!(parse_block_title(".NET release"), Some("NET release"));
+        assert_eq!(parse_block_title(".Title  "), Some("Title")); // trailing trimmed
+                                                                  // Not titles: ordered-list marker (dot + space), the `....`/`..` delimiters,
+                                                                  // a bare dot, and a line that does not start with a dot.
+        assert_eq!(parse_block_title(". item"), None);
+        assert_eq!(parse_block_title("...."), None);
+        assert_eq!(parse_block_title(".."), None);
+        assert_eq!(parse_block_title("."), None);
+        assert_eq!(parse_block_title("plain"), None);
+    }
+
+    #[test]
+    fn block_title_attaches_to_paragraph() {
+        let b = &parse(".A caption\nBody text.").document.blocks[0];
+        assert_eq!(block_title_text(b).as_deref(), Some("A caption"));
+        assert!(matches!(b.kind, BlockKind::Paragraph { .. }));
+        // The title line is metadata; the paragraph body is just its own text.
+        assert_eq!(paragraph_text(b), "Body text.");
+    }
+
+    #[test]
+    fn block_title_span_points_at_real_source() {
+        // The title text begins right after the marker dot (byte offset 1).
+        let b = &parse(".Caption\nbody").document.blocks[0];
+        let title = b.title.as_ref().expect("title present");
+        match &title[0] {
+            Inline::Text { value, span } => {
+                assert_eq!(value, "Caption");
+                assert_eq!(*span, Span::new(1, 1 + "Caption".len()));
+            }
+            other => panic!("expected Text, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn block_title_parses_inline_markup() {
+        // Inline substitutions apply in a title (asciidoctor renders the markup).
+        let b = &parse(".A *bold* caption\nbody").document.blocks[0];
+        let title = b.title.as_ref().expect("title present");
+        assert!(
+            title.iter().any(|n| matches!(n, Inline::Strong { .. })),
+            "expected strong in title, got {title:?}"
+        );
+    }
+
+    #[test]
+    fn block_title_floats_across_a_blank_line() {
+        // As with anchors / attribute lines, a blank line may sit before the block.
+        let b = &parse(".Caption\n\nbody").document.blocks[0];
+        assert_eq!(block_title_text(b).as_deref(), Some("Caption"));
+    }
+
+    #[test]
+    fn second_block_title_wins() {
+        let b = &parse(".first\n.second\nbody").document.blocks[0];
+        assert_eq!(block_title_text(b).as_deref(), Some("second"));
+    }
+
+    #[test]
+    fn dot_space_is_an_ordered_list_not_a_title() {
+        // `. item` is an ordered-list marker, never a title.
+        let b = &parse(". item").document.blocks[0];
+        assert!(b.title.is_none());
+        assert!(matches!(b.kind, BlockKind::List { ordered: true, .. }));
+    }
+
+    #[test]
+    fn block_title_on_listing_and_example() {
+        let listing = &parse(".Code\n----\nx = 1\n----").document.blocks[0];
+        assert_eq!(block_title_text(listing).as_deref(), Some("Code"));
+        assert!(matches!(listing.kind, BlockKind::Listing { .. }));
+
+        let example = &parse(".Demo\n====\ninside\n====").document.blocks[0];
+        assert_eq!(block_title_text(example).as_deref(), Some("Demo"));
+        assert!(matches!(example.kind, BlockKind::Example { .. }));
+    }
+
+    #[test]
+    fn block_title_before_note_style_stays_on_the_admonition() {
+        // A `.Title` before `[NOTE]` attaches to the resulting admonition container,
+        // not the wrapped child paragraph (confirmed vs asciidoctor: the block title
+        // renders alongside the `Note` label).
+        let b = &parse(".My note\n[NOTE]\nNote body.").document.blocks[0];
+        assert_eq!(block_title_text(b).as_deref(), Some("My note"));
+        let BlockKind::Admonition { kind, blocks } = &b.kind else {
+            panic!("expected admonition, got {:?}", b.kind);
+        };
+        assert_eq!(*kind, AdmonitionKind::Note);
+        assert!(blocks[0].title.is_none(), "child must not carry the title");
     }
 }

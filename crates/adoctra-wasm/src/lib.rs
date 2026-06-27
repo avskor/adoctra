@@ -86,6 +86,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_style(&b.attrs.style, s);
             write_attributes(&b.attrs.named, s);
             write_options(&b.attrs.options, s);
+            write_title(&b.title, s);
             s.push_str(",\"inlines\":");
             write_inlines(inlines, s);
         }
@@ -96,6 +97,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_style(&b.attrs.style, s);
             write_attributes(&b.attrs.named, s);
             write_options(&b.attrs.options, s);
+            write_title(&b.title, s);
             s.push_str(",\"inlines\":");
             write_inlines(inlines, s);
         }
@@ -106,6 +108,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_style(&b.attrs.style, s);
             write_attributes(&b.attrs.named, s);
             write_options(&b.attrs.options, s);
+            write_title(&b.title, s);
             s.push_str(",\"text\":");
             write_str(text, s);
         }
@@ -116,6 +119,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_style(&b.attrs.style, s);
             write_attributes(&b.attrs.named, s);
             write_options(&b.attrs.options, s);
+            write_title(&b.title, s);
             s.push_str(",\"text\":");
             write_str(text, s);
         }
@@ -126,6 +130,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_style(&b.attrs.style, s);
             write_attributes(&b.attrs.named, s);
             write_options(&b.attrs.options, s);
+            write_title(&b.title, s);
             s.push_str(",\"items\":[");
             for (i, item) in items.iter().enumerate() {
                 if i > 0 {
@@ -159,6 +164,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_style(&b.attrs.style, s);
             write_attributes(&b.attrs.named, s);
             write_options(&b.attrs.options, s);
+            write_title(&b.title, s);
             // Children carry their own spans; recurse so the editor sees the tree.
             s.push_str(",\"blocks\":[");
             for (j, child) in blocks.iter().enumerate() {
@@ -176,6 +182,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_style(&b.attrs.style, s);
             write_attributes(&b.attrs.named, s);
             write_options(&b.attrs.options, s);
+            write_title(&b.title, s);
             // Children carry their own spans; recurse so the editor sees the tree.
             s.push_str(",\"blocks\":[");
             for (j, child) in blocks.iter().enumerate() {
@@ -248,6 +255,17 @@ fn write_options(options: &[String], s: &mut String) {
         write_str(opt, s);
     }
     s.push(']');
+}
+
+/// Emit the leading-comma `,"title":<array|null>` field — the block's `.Title`
+/// inlines (each carrying its span, like any inline the editor sees), or `null`
+/// when the block has no title.
+fn write_title(title: &Option<Vec<Inline>>, s: &mut String) {
+    s.push_str(",\"title\":");
+    match title {
+        Some(inlines) => write_inlines(inlines, s),
+        None => s.push_str("null"),
+    }
 }
 
 fn write_inlines(inlines: &[Inline], s: &mut String) {
@@ -806,5 +824,22 @@ mod tests {
         );
         // The nested paragraph carries its own span too.
         assert!(json.contains("\"name\":\"paragraph\""), "got: {json}");
+    }
+
+    #[test]
+    fn block_title_serializes_as_inlines_with_spans() {
+        // The editor gets the title as parsed inlines, each carrying its span.
+        let json = parse_json(".A *bold* caption\nBody.");
+        assert!(
+            json.contains("\"title\":[{\"span\":{\"start\":1,\"end\":3},\"name\":\"text\""),
+            "got: {json}"
+        );
+        assert!(json.contains("\"name\":\"strong\""), "got: {json}");
+    }
+
+    #[test]
+    fn untitled_block_serializes_null_title() {
+        let json = parse_json("Body.");
+        assert!(json.contains("\"title\":null"), "got: {json}");
     }
 }

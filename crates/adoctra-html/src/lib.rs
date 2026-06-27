@@ -52,17 +52,20 @@ fn render_block(block: &Block, out: &mut String) {
         BlockKind::Heading { level, inlines } => {
             let h = (level + 1).min(6);
             let class = class_attr(&[], &block.roles);
+            render_title(&block.title, out);
             out.push_str(&format!("<h{h}{id}{class}>"));
             render_inlines(inlines, out);
             out.push_str(&format!("</h{h}>\n"));
         }
         BlockKind::Paragraph { inlines } => {
             let class = class_attr(&[], &block.roles);
+            render_title(&block.title, out);
             out.push_str(&format!("<p{id}{class}>"));
             render_inlines(inlines, out);
             out.push_str("</p>\n");
         }
         BlockKind::Listing { text } => {
+            render_title(&block.title, out);
             // A `[source]`-style listing renders as asciidoctor's highlight form:
             // `<pre class="highlight"><code class="language-LANG" data-lang="LANG">`,
             // with the language taken from the `language` attribute that core
@@ -95,6 +98,7 @@ fn render_block(block: &Block, out: &mut String) {
             // A literal block: verbatim `<pre>`, like a plain listing but with the
             // `literalblock` base class. asciidoctor wraps it in a `<div>`; adoctra
             // hangs the class/id/roles on the `<pre>` itself, as for a listing.
+            render_title(&block.title, out);
             let class = class_attr(&["literalblock"], &block.roles);
             out.push_str(&format!("<pre{class}{id}>"));
             out.push_str(&escape(text));
@@ -103,6 +107,7 @@ fn render_block(block: &Block, out: &mut String) {
         BlockKind::List { ordered, items } => {
             let tag = if *ordered { "ol" } else { "ul" };
             let class = class_attr(&[], &block.roles);
+            render_title(&block.title, out);
             out.push_str(&format!("<{tag}{id}{class}>\n"));
             for item in items {
                 out.push_str("<li>");
@@ -134,6 +139,10 @@ fn render_block(block: &Block, out: &mut String) {
                 "<aside{id}{class} data-type=\"{ty}\" aria-label=\"{label}\">\n"
             ));
             out.push_str(&format!("<p class=\"admonition-title\">{label}</p>\n"));
+            // A `.Title` on the admonition is the block's *own* title (distinct from
+            // the `Note`/`Tip`/… label), rendered above the body — matching where
+            // asciidoctor places it in the content cell.
+            render_title(&block.title, out);
             for child in blocks {
                 render_block(child, out);
             }
@@ -146,11 +155,26 @@ fn render_block(block: &Block, out: &mut String) {
             // the class plus the block's id/roles, children render straight in.
             let class = class_attr(&["exampleblock"], &block.roles);
             out.push_str(&format!("<div{class}{id}>\n"));
+            render_title(&block.title, out);
             for child in blocks {
                 render_block(child, out);
             }
             out.push_str("</div>\n");
         }
+    }
+}
+
+/// Emit a block's `.Title` as `<div class="title">…</div>` when present (nothing
+/// when absent). asciidoctor wraps a titled block in a `<div>` and puts the title
+/// inside it as `<div class="title">`; adoctra has no wrapper, so for most blocks
+/// the title is a sibling rendered immediately before the block's element, and for
+/// the container blocks (example/admonition) it is emitted just inside their
+/// element. The title text is parsed inlines, so its markup renders.
+fn render_title(title: &Option<Vec<Inline>>, out: &mut String) {
+    if let Some(inlines) = title {
+        out.push_str("<div class=\"title\">");
+        render_inlines(inlines, out);
+        out.push_str("</div>\n");
     }
 }
 
@@ -884,5 +908,72 @@ mod tests {
     fn example_stylesheet_rule_is_shipped() {
         let html = render("Hello.");
         assert!(html.contains(".exampleblock"), "stylesheet missing: {html}");
+    }
+
+    #[test]
+    fn paragraph_title_renders_before_the_element() {
+        // adoctra has no wrapping `<div class="paragraph">`, so the title is a
+        // sibling `<div class="title">` rendered immediately before the `<p>`.
+        let html = render(".A caption\nBody.");
+        assert!(
+            html.contains("<div class=\"title\">A caption</div>\n<p>Body.</p>"),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn block_title_renders_inline_markup() {
+        let html = render(".A *bold* caption\nBody.");
+        assert!(
+            html.contains("<div class=\"title\">A <strong>bold</strong> caption</div>"),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn listing_title_renders_before_pre() {
+        let html = render(".Code\n----\nx\n----");
+        assert!(
+            html.contains("<div class=\"title\">Code</div>\n<pre"),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn example_title_renders_inside_the_wrapper() {
+        // The title goes just inside `<div class="exampleblock">`, before the
+        // children (matching asciidoctor's content ordering).
+        let html = render(".Demo\n====\nhi\n====");
+        assert!(
+            html.contains(
+                "<div class=\"exampleblock\">\n<div class=\"title\">Demo</div>\n<p>hi</p>\n</div>"
+            ),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn admonition_title_renders_after_the_label() {
+        // A `.Title` on an admonition is the block's own title (distinct from the
+        // `Note` label), rendered just below the label.
+        let html = render(".My note\n[NOTE]\nbody");
+        assert!(
+            html.contains(
+                "<p class=\"admonition-title\">Note</p>\n<div class=\"title\">My note</div>"
+            ),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn untitled_block_emits_no_title_div() {
+        let html = render("Just body.");
+        assert!(!html.contains("class=\"title\""), "got: {html}");
+    }
+
+    #[test]
+    fn block_title_stylesheet_rule_is_shipped() {
+        let html = render("Hello.");
+        assert!(html.contains(".title {"), "stylesheet missing: {html}");
     }
 }

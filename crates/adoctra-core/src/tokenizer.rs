@@ -14,7 +14,7 @@ use crate::ast::{AdmonitionKind, Inline, Span};
 use crate::inline::scan_inlines;
 use crate::parser::{
     collect_header, parse_attribute_entry, parse_block_anchor, parse_block_attr_list,
-    parse_heading, parse_list_marker,
+    parse_block_title, parse_heading, parse_list_marker,
 };
 use crate::scanner::lines_with_offsets;
 
@@ -35,6 +35,7 @@ pub enum TokenKind {
     LiteralDelimiter,
     LiteralText,
     ExampleDelimiter,
+    BlockTitle,
     AdmonitionLabel,
     Strong,
     Emphasis,
@@ -60,6 +61,7 @@ impl TokenKind {
             TokenKind::LiteralDelimiter => "literal-delimiter",
             TokenKind::LiteralText => "literal-text",
             TokenKind::ExampleDelimiter => "example-delimiter",
+            TokenKind::BlockTitle => "block-title",
             TokenKind::AdmonitionLabel => "admonition-label",
             TokenKind::Strong => "strong",
             TokenKind::Emphasis => "emphasis",
@@ -179,6 +181,18 @@ pub fn tokens(source: &str) -> Vec<Token> {
             out.push(Token {
                 span: line_span,
                 kind: TokenKind::BlockAttributeList,
+            });
+            continue;
+        }
+        // A `.Title` line: one token over the whole line, recognised with the same
+        // helper the parser uses to attach the title to the next block (so
+        // highlighting and parsing never disagree). Like the anchor / attribute
+        // lines it leaves the next line a fresh block start, and like the block
+        // anchor's reftext its inline markup is not sub-tokenized.
+        if parse_block_title(line).is_some() {
+            out.push(Token {
+                span: line_span,
+                kind: TokenKind::BlockTitle,
             });
             continue;
         }
@@ -527,6 +541,31 @@ mod tests {
         // The shorthand form is the same token kind (it is the same grammar).
         let toks = tokens("[#id.role]\ntext");
         assert!(toks.iter().any(|t| t.kind == TokenKind::BlockAttributeList));
+    }
+
+    #[test]
+    fn block_title_line_is_one_token() {
+        let src = ".A *bold* caption\nBody *text*.";
+        let toks = tokens(src);
+        let title = toks
+            .iter()
+            .find(|t| t.kind == TokenKind::BlockTitle)
+            .expect("block-title token");
+        // One token over the whole `.Title` line (incl. the marker dot), recognised
+        // exactly as the parser attaches the title to the next block. Like the block
+        // anchor's reftext, its inline markup is *not* sub-tokenized — so the only
+        // `Strong` token comes from the body line, which tokenizes as usual.
+        assert_eq!(&src[title.span.start..title.span.end], ".A *bold* caption");
+        let strong: Vec<_> = toks
+            .iter()
+            .filter(|t| t.kind == TokenKind::Strong)
+            .map(|t| &src[t.span.start..t.span.end])
+            .collect();
+        assert_eq!(strong, vec!["*text*"]);
+        // `. item` is an ordered-list marker, never a block title.
+        let toks = tokens(". item");
+        assert!(!toks.iter().any(|t| t.kind == TokenKind::BlockTitle));
+        assert!(toks.iter().any(|t| t.kind == TokenKind::ListMarker));
     }
 
     #[test]

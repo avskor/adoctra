@@ -50,6 +50,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_style(&block.attrs.style, s);
             write_attributes(&block.attrs.named, s);
             write_options(&block.attrs.options, s);
+            write_title(&block.title, s);
             s.push_str(",\"inlines\":");
             write_inlines(inlines, s);
             s.push('}');
@@ -61,6 +62,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_style(&block.attrs.style, s);
             write_attributes(&block.attrs.named, s);
             write_options(&block.attrs.options, s);
+            write_title(&block.title, s);
             s.push_str(",\"inlines\":");
             write_inlines(inlines, s);
             s.push('}');
@@ -72,6 +74,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_style(&block.attrs.style, s);
             write_attributes(&block.attrs.named, s);
             write_options(&block.attrs.options, s);
+            write_title(&block.title, s);
             s.push_str(",\"text\":");
             escape_into(text, s);
             s.push('}');
@@ -83,6 +86,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_style(&block.attrs.style, s);
             write_attributes(&block.attrs.named, s);
             write_options(&block.attrs.options, s);
+            write_title(&block.title, s);
             s.push_str(",\"text\":");
             escape_into(text, s);
             s.push('}');
@@ -94,6 +98,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_style(&block.attrs.style, s);
             write_attributes(&block.attrs.named, s);
             write_options(&block.attrs.options, s);
+            write_title(&block.title, s);
             s.push_str(",\"items\":[");
             for (i, item) in items.iter().enumerate() {
                 if i > 0 {
@@ -123,6 +128,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_style(&block.attrs.style, s);
             write_attributes(&block.attrs.named, s);
             write_options(&block.attrs.options, s);
+            write_title(&block.title, s);
             s.push_str(",\"blocks\":[");
             for (i, child) in blocks.iter().enumerate() {
                 if i > 0 {
@@ -139,6 +145,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_style(&block.attrs.style, s);
             write_attributes(&block.attrs.named, s);
             write_options(&block.attrs.options, s);
+            write_title(&block.title, s);
             s.push_str(",\"blocks\":[");
             for (i, child) in blocks.iter().enumerate() {
                 if i > 0 {
@@ -209,6 +216,16 @@ fn write_options(options: &[String], s: &mut String) {
         escape_into(opt, s);
     }
     s.push(']');
+}
+
+/// Emit the leading-comma `,"title":<array|null>` field — the block's `.Title`
+/// inlines (so formatting is preserved), or `null` when the block has no title.
+fn write_title(title: &Option<Vec<Inline>>, s: &mut String) {
+    s.push_str(",\"title\":");
+    match title {
+        Some(inlines) => write_inlines(inlines, s),
+        None => s.push_str("null"),
+    }
 }
 
 fn write_inlines(inlines: &[Inline], s: &mut String) {
@@ -657,5 +674,32 @@ mod tests {
         assert!(json.contains("\"blocks\":["), "got: {json}");
         assert!(json.contains("\"name\":\"paragraph\""), "got: {json}");
         assert!(json.contains("\"name\":\"strong\""), "got: {json}");
+    }
+
+    #[test]
+    fn block_title_serializes_as_inlines() {
+        // The title is the block's parsed inlines, so formatting is preserved.
+        let json = render(".A *bold* caption\nBody.");
+        assert!(
+            json.contains("\"title\":[{\"name\":\"text\",\"value\":\"A \"},{\"name\":\"strong\""),
+            "got: {json}"
+        );
+    }
+
+    #[test]
+    fn untitled_block_serializes_null_title() {
+        let json = render("Body.");
+        assert!(json.contains("\"title\":null"), "got: {json}");
+    }
+
+    #[test]
+    fn example_block_title_serializes_on_the_container() {
+        // The `.Title` stays on the example container, its body under `blocks`.
+        let json = render(".Demo\n====\nhi\n====");
+        assert!(json.contains("\"name\":\"example\""), "got: {json}");
+        assert!(
+            json.contains("\"title\":[{\"name\":\"text\",\"value\":\"Demo\"}]"),
+            "got: {json}"
+        );
     }
 }
