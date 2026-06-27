@@ -233,6 +233,13 @@ pub enum BlockKind {
         kind: AdmonitionKind,
         inlines: Vec<Inline>,
     },
+    /// An example block: a parsed container of child blocks, delimited by `====`
+    /// (or produced by an `[example]` style on a paragraph). The first container
+    /// kind besides a [`BlockKind::List`] — unlike the verbatim
+    /// [`BlockKind::Listing`]/[`BlockKind::Literal`], `blocks` are parsed *as
+    /// blocks* (not raw text), so inline substitutions, nested blocks and anchors
+    /// all apply inside.
+    Example { blocks: Vec<Block> },
 }
 
 /// One item of a [`BlockKind::List`]: its resolved inline content (the

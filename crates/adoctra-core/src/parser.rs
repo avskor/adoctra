@@ -34,23 +34,65 @@ pub fn parse(source: &str) -> ParseResult {
     doc.attributes = attributes;
 
     // --- body blocks ---
-    // A `[[id]]` / `[[id,reftext]]` anchor line *or* a `[#id.role]` shorthand
-    // attribute line attaches metadata to the next block. asciidoctor lets blank
-    // lines sit between such a line and its block, so we keep the metadata
-    // *pending* and let the loop skip blanks. The id is last-wins across both
-    // forms; roles accumulate in source order across consecutive lines.
+    // Collect blocks to end-of-input (the never-true `stop`). The same collector
+    // drives a delimited container's body (an example block stops at `====`).
+    let blocks = collect_blocks(
+        source,
+        &lines,
+        &mut i,
+        &doc.attributes,
+        &mut diagnostics,
+        |_| false,
+    );
+    doc.blocks = blocks;
+
+    // Post-parse pass over the whole document: assign section ids and resolve
+    // cross-references against them (forward references need every id known
+    // first, so this cannot happen during the block-local inline scan).
+    crate::resolve::resolve(&mut doc, &mut diagnostics);
+
+    ParseResult {
+        document: doc,
+        diagnostics,
+    }
+}
+
+/// Collect a run of blocks, draining `lines` from `*i` until `stop` matches a
+/// non-blank line (the caller consumes that line) or input ends. This is the
+/// shared body of the document and of every delimited container (e.g. an example
+/// block's `====` … `====`), so block metadata (`[[id]]` anchors, `[#id.role]`
+/// shorthand, `[style]` lines) and type-changing style fixups work at any depth.
+///
+/// A `[[id]]` / `[[id,reftext]]` anchor line *or* a `[#id.role]` shorthand
+/// attribute line attaches metadata to the next block. asciidoctor lets blank
+/// lines sit between such a line and its block, so we keep the metadata *pending*
+/// and let the loop skip blanks. The id is last-wins across both forms; roles
+/// accumulate in source order across consecutive lines.
+fn collect_blocks(
+    source: &str,
+    lines: &[(usize, &str)],
+    i: &mut usize,
+    attrs: &Attributes,
+    diagnostics: &mut Vec<Diagnostic>,
+    stop: impl Fn(&str) -> bool,
+) -> Vec<Block> {
+    let mut blocks = Vec::new();
     let mut pending = PendingMeta::default();
-    while i < lines.len() {
-        let line = lines[i].1;
+    while *i < lines.len() {
+        let line = lines[*i].1;
         if line.trim().is_empty() {
-            i += 1;
+            *i += 1;
             continue;
+        }
+        // A delimited container's closing fence ends the run; the caller consumes
+        // the fence line itself.
+        if stop(line) {
+            break;
         }
         if let Some((id, reftext)) = parse_block_anchor(line) {
             pending.id = Some(id.to_string());
-            pending.reftext =
-                reftext.map(|rt| scan_inlines(rt, abs_offset(source, rt), &doc.attributes));
-            i += 1;
+            pending.reftext = reftext.map(|rt| scan_inlines(rt, abs_offset(source, rt), attrs));
+            *i += 1;
             continue;
         }
         if let Some(parsed) = parse_block_attr_list(line) {
@@ -64,58 +106,63 @@ pub fn parse(source: &str) -> ParseResult {
             pending.attrs.named.extend(parsed.attrs.named);
             pending.attrs.options.extend(parsed.attrs.options);
             pending.attrs.positional.extend(parsed.attrs.positional);
-            i += 1;
+            *i += 1;
             continue;
         }
-        if let Some(mut block) = parse_block(
-            source,
-            &lines,
-            &mut i,
-            &doc.attributes,
-            &mut diagnostics,
-            BlockCtx::TopLevel,
-        ) {
+        if let Some(mut block) =
+            parse_block(source, lines, i, attrs, diagnostics, BlockCtx::TopLevel)
+        {
             let pending = std::mem::take(&mut pending);
             block.id = pending.id;
             block.reftext = pending.reftext;
             block.roles = pending.roles;
             block.attrs = pending.attrs;
-            // A `[literal]` style turns a paragraph into a verbatim literal block:
-            // its content is the *raw* source slice, not the inlines that were
-            // already scanned (which are discarded). Only a paragraph converts —
-            // a `[literal]` before a `....`/`----` block leaves the block as-is.
-            if block.attrs.style.as_deref() == Some("literal")
-                && matches!(block.kind, BlockKind::Paragraph { .. })
-            {
-                let text = source[block.span.start..block.span.end].to_string();
-                block.kind = BlockKind::Literal { text };
-            } else if let Some(kind) = block
-                .attrs
-                .style
-                .as_deref()
-                .and_then(AdmonitionKind::from_style)
-            {
-                // An uppercase admonition style (`[NOTE]`, …) on a paragraph turns
-                // it into an admonition, carrying over the already-scanned inlines
-                // (there is no label to strip). On any other block kind the style
-                // is inert (left on `attrs.style`).
+            apply_style_fixup(&mut block, source);
+            blocks.push(block);
+        }
+    }
+    blocks
+}
+
+/// Apply a type-changing block *style* to a freshly parsed block. A `[literal]`,
+/// `[example]` or admonition (`[NOTE]`, …) style on a *paragraph* rewrites its
+/// kind; on any other block kind these styles are inert (left on `attrs.style`).
+fn apply_style_fixup(block: &mut Block, source: &str) {
+    let Some(style) = block.attrs.style.as_deref() else {
+        return;
+    };
+    if !matches!(block.kind, BlockKind::Paragraph { .. }) {
+        return;
+    }
+    match style {
+        // The literal body is the *raw* source slice, not the already-scanned
+        // inlines (which are discarded).
+        "literal" => {
+            let text = source[block.span.start..block.span.end].to_string();
+            block.kind = BlockKind::Literal { text };
+        }
+        // `[example]` on a paragraph wraps it into a single-child example block.
+        // The container keeps the block's id/roles/attrs; the child is a plain
+        // paragraph carrying just its kind and span.
+        "example" => {
+            let para = Block::new(
+                block.span,
+                std::mem::replace(&mut block.kind, BlockKind::Example { blocks: Vec::new() }),
+            );
+            if let BlockKind::Example { blocks } = &mut block.kind {
+                blocks.push(para);
+            }
+        }
+        // An uppercase admonition style (`[NOTE]`, …) carries over the
+        // already-scanned inlines (there is no label to strip).
+        _ => {
+            if let Some(kind) = AdmonitionKind::from_style(style) {
                 if let BlockKind::Paragraph { inlines } = &mut block.kind {
                     let inlines = std::mem::take(inlines);
                     block.kind = BlockKind::Admonition { kind, inlines };
                 }
             }
-            doc.blocks.push(block);
         }
-    }
-
-    // Post-parse pass over the whole document: assign section ids and resolve
-    // cross-references against them (forward references need every id known
-    // first, so this cannot happen during the block-local inline scan).
-    crate::resolve::resolve(&mut doc, &mut diagnostics);
-
-    ParseResult {
-        document: doc,
-        diagnostics,
     }
 }
 
@@ -238,6 +285,36 @@ fn parse_block(
         ));
     }
 
+    // Example block (a parsed container, fenced by `====`). Unlike the verbatim
+    // `----`/`....` blocks above, the body is parsed *as blocks* via the shared
+    // `collect_blocks` (so nested blocks, inline subs and anchors all apply). A
+    // same-length `====` inside closes the outer block (delimiter-length nesting
+    // is not implemented), matching the single-length limitation of `----`/`....`.
+    if trimmed.trim() == "====" {
+        let start = off;
+        *i += 1;
+        let blocks = collect_blocks(source, lines, i, attrs, diagnostics, |l| l.trim() == "====");
+        let end;
+        if *i < lines.len() && lines[*i].1.trim() == "====" {
+            let (loff, lline) = lines[*i];
+            end = loff + lline.len();
+            *i += 1;
+        } else {
+            // Unterminated: span ends at the last child (or the opening fence when
+            // empty); the missing close is a diagnostic, not a parse failure.
+            end = blocks.last().map_or(off + line.len(), |b| b.span.end);
+            diagnostics.push(Diagnostic {
+                span: Span::new(start, start + 4),
+                severity: Severity::Error,
+                message: "unterminated example block (missing closing `====`)".to_string(),
+            });
+        }
+        return Some(Block::new(
+            Span::new(start, end),
+            BlockKind::Example { blocks },
+        ));
+    }
+
     // List: a run of items that nests a level deeper whenever a *unique* marker
     // appears. A list only *starts* at column 0 (an indented marker elsewhere is
     // ordinary text); deeper levels may be indented, handled inside `parse_list`,
@@ -253,8 +330,12 @@ fn parse_block(
     while *i < lines.len() {
         let (loff, lline) = lines[*i];
         let t = lline.trim_end();
+        // A paragraph also ends at any block delimiter line, so it never spans
+        // into a `----`/`....`/`====` block (notably the closing fence of an
+        // enclosing example block, which would otherwise be folded in as text).
         let ends = t.trim().is_empty()
             || parse_heading(t).is_some()
+            || matches!(t.trim(), "----" | "...." | "====")
             || match ctx {
                 BlockCtx::TopLevel => parse_list_marker(t).is_some(),
                 BlockCtx::InListItem => t.trim() == "+" || list_marker_indented(t).is_some(),
@@ -1691,6 +1772,122 @@ mod tests {
                 other => panic!("expected Text, got {other:?}"),
             },
             _ => unreachable!(),
+        }
+    }
+
+    /// Borrow an example block's children, panicking on any other kind.
+    fn example_children(block: &Block) -> &[Block] {
+        match &block.kind {
+            BlockKind::Example { blocks } => blocks,
+            other => panic!("expected example, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn example_block_parses_children_not_verbatim() {
+        // Unlike `----`/`....`, the body is parsed as blocks: the `*strong*` is a
+        // real inline, not raw text.
+        let src = "====\nHello *world*.\n====";
+        let r = parse(src);
+        assert!(r.diagnostics.is_empty());
+        let b = &r.document.blocks[0];
+        let kids = example_children(b);
+        assert_eq!(kids.len(), 1);
+        assert!(matches!(kids[0].kind, BlockKind::Paragraph { .. }));
+        // Span covers the whole block, opening through closing delimiter.
+        assert_eq!(b.span, Span::new(0, src.len()));
+    }
+
+    #[test]
+    fn example_block_holds_a_nested_listing() {
+        let src = "====\nIntro.\n\n----\ncode\n----\n====";
+        let kids = example_children(&parse(src).document.blocks[0]).to_vec();
+        assert_eq!(kids.len(), 2);
+        assert!(matches!(kids[0].kind, BlockKind::Paragraph { .. }));
+        match &kids[1].kind {
+            BlockKind::Listing { text } => assert_eq!(text, "code"),
+            other => panic!("expected listing, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn example_style_wraps_paragraph_in_container() {
+        // `[example]` on a paragraph yields a single-child example block; the
+        // container keeps id/roles, the child is a plain paragraph.
+        let b = &parse("[#ex.box]\n[example]\nJust text.").document.blocks[0];
+        assert_eq!(b.id.as_deref(), Some("ex"));
+        assert_eq!(b.roles, ["box"]);
+        let kids = example_children(b);
+        assert_eq!(kids.len(), 1);
+        assert!(matches!(kids[0].kind, BlockKind::Paragraph { .. }));
+        assert!(kids[0].id.is_none() && kids[0].roles.is_empty());
+    }
+
+    #[test]
+    fn example_paragraph_does_not_swallow_closing_fence() {
+        // Regression: a paragraph hugging the closing `====` (no blank line) must
+        // end at the fence, not fold it into the body.
+        let src = "====\ntext\n====\nafter";
+        let doc = parse(src).document;
+        assert_eq!(doc.blocks.len(), 2);
+        let kids = example_children(&doc.blocks[0]);
+        match &kids[0].kind {
+            BlockKind::Paragraph { inlines } => match &inlines[0] {
+                Inline::Text { value, .. } => assert_eq!(value, "text"),
+                other => panic!("expected Text, got {other:?}"),
+            },
+            other => panic!("expected paragraph, got {other:?}"),
+        }
+        assert!(matches!(doc.blocks[1].kind, BlockKind::Paragraph { .. }));
+    }
+
+    #[test]
+    fn block_metadata_applies_inside_an_example() {
+        // A `[source,rust]` style inside an example reaches the child listing —
+        // proof that style fixups and pending metadata work at any depth.
+        let src = "====\n[source,rust]\n----\nlet x = 1;\n----\n====";
+        let kids = example_children(&parse(src).document.blocks[0]).to_vec();
+        assert_eq!(kids.len(), 1);
+        assert!(matches!(kids[0].kind, BlockKind::Listing { .. }));
+        assert_eq!(kids[0].attrs.style.as_deref(), Some("source"));
+        assert_eq!(
+            kids[0].attrs.named.get("language").map(String::as_str),
+            Some("rust")
+        );
+    }
+
+    #[test]
+    fn unterminated_example_is_a_diagnostic_not_a_failure() {
+        let r = parse("====\nopen but never closed");
+        assert_eq!(r.document.blocks.len(), 1);
+        assert_eq!(r.diagnostics.len(), 1);
+        assert_eq!(r.diagnostics[0].severity, Severity::Error);
+        assert!(matches!(
+            r.document.blocks[0].kind,
+            BlockKind::Example { .. }
+        ));
+    }
+
+    #[test]
+    fn cross_reference_inside_example_resolves_against_whole_document() {
+        // The resolve pass must descend into an example: a `<<_target>>` inside it
+        // picks up the section title, just like one at the top level.
+        let src = "== Target\n\n====\nSee <<_target>>.\n====";
+        let kids = example_children(&parse(src).document.blocks[1]).to_vec();
+        let inlines = match &kids[0].kind {
+            BlockKind::Paragraph { inlines } => inlines.clone(),
+            other => panic!("expected paragraph, got {other:?}"),
+        };
+        let xref = inlines
+            .iter()
+            .find_map(|i| match i {
+                Inline::CrossReference { children, .. } => Some(children.clone()),
+                _ => None,
+            })
+            .expect("no cross-reference in example body");
+        match &xref[0] {
+            Inline::Text { value, .. } => assert_eq!(value, "Target"),
+            other => panic!("expected resolved Text, got {other:?}"),
         }
     }
 }

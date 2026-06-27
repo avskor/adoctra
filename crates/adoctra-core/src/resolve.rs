@@ -78,6 +78,9 @@ fn assign_ids(blocks: &mut [Block], registry: &mut Registry, diagnostics: &mut V
                     assign_ids(&mut item.blocks, registry, diagnostics);
                 }
             }
+            // An example block is a parsed container: descend so anchors and
+            // section ids inside it join the registry.
+            BlockKind::Example { blocks } => assign_ids(blocks, registry, diagnostics),
             BlockKind::Listing { .. } | BlockKind::Literal { .. } => {}
         }
     }
@@ -247,6 +250,9 @@ fn resolve_xrefs(blocks: &mut [Block], registry: &Registry, diagnostics: &mut Ve
                     resolve_xrefs(&mut item.blocks, registry, diagnostics);
                 }
             }
+            // Descend into an example block's children so references inside it
+            // resolve against the whole-document registry.
+            BlockKind::Example { blocks } => resolve_xrefs(blocks, registry, diagnostics),
             BlockKind::Listing { .. } | BlockKind::Literal { .. } => {}
         }
     }

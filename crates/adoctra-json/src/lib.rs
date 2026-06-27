@@ -127,6 +127,22 @@ fn write_block(block: &Block, s: &mut String) {
             write_inlines(inlines, s);
             s.push('}');
         }
+        BlockKind::Example { blocks } => {
+            s.push_str("{\"name\":\"example\",");
+            write_id(&block.id, s);
+            write_roles(&block.roles, s);
+            write_style(&block.attrs.style, s);
+            write_attributes(&block.attrs.named, s);
+            write_options(&block.attrs.options, s);
+            s.push_str(",\"blocks\":[");
+            for (i, child) in blocks.iter().enumerate() {
+                if i > 0 {
+                    s.push(',');
+                }
+                write_block(child, s);
+            }
+            s.push_str("]}");
+        }
     }
 }
 
@@ -608,6 +624,16 @@ mod tests {
         let json = render("TIP: be *bold*");
         assert!(json.contains("\"name\":\"admonition\""), "got: {json}");
         assert!(json.contains("\"admonition-type\":\"tip\""), "got: {json}");
+        assert!(json.contains("\"name\":\"strong\""), "got: {json}");
+    }
+
+    #[test]
+    fn example_block_serializes_nested_blocks() {
+        let json = render("====\nHi *there*.\n====");
+        assert!(json.contains("\"name\":\"example\""), "got: {json}");
+        // The child paragraph (with its own inline markup) is nested under blocks.
+        assert!(json.contains("\"blocks\":["), "got: {json}");
+        assert!(json.contains("\"name\":\"paragraph\""), "got: {json}");
         assert!(json.contains("\"name\":\"strong\""), "got: {json}");
     }
 }

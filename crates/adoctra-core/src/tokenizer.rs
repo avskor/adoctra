@@ -34,6 +34,7 @@ pub enum TokenKind {
     ListingText,
     LiteralDelimiter,
     LiteralText,
+    ExampleDelimiter,
     AdmonitionLabel,
     Strong,
     Emphasis,
@@ -58,6 +59,7 @@ impl TokenKind {
             TokenKind::ListingText => "listing-text",
             TokenKind::LiteralDelimiter => "literal-delimiter",
             TokenKind::LiteralText => "literal-text",
+            TokenKind::ExampleDelimiter => "example-delimiter",
             TokenKind::AdmonitionLabel => "admonition-label",
             TokenKind::Strong => "strong",
             TokenKind::Emphasis => "emphasis",
@@ -129,6 +131,16 @@ pub fn tokens(source: &str) -> Vec<Token> {
             out.push(Token {
                 span: line_span,
                 kind: TokenKind::LiteralText,
+            });
+            continue;
+        }
+        // `====` example delimiter. Unlike `----`/`....`, the body is *not*
+        // verbatim — we only mark the fence and let the lines inside tokenize
+        // normally (so `*strong*` in an example stays highlighted).
+        if line.trim() == "====" {
+            out.push(Token {
+                span: line_span,
+                kind: TokenKind::ExampleDelimiter,
             });
             continue;
         }
@@ -579,5 +591,21 @@ mod tests {
     fn lowercase_label_is_not_tokenized() {
         let toks = tokens("note: nope");
         assert!(!toks.iter().any(|t| t.kind == TokenKind::AdmonitionLabel));
+    }
+
+    #[test]
+    fn example_delimiter_is_tokenized_and_body_is_not_verbatim() {
+        // The `====` fences are delimiter tokens, but unlike `----`/`....` the body
+        // is highlighted normally — `*bold*` inside stays a Strong token.
+        let toks = tokens("====\ntext *bold*\n====");
+        let kinds: Vec<_> = toks.iter().map(|t| t.kind).collect();
+        assert_eq!(
+            kinds
+                .iter()
+                .filter(|k| **k == TokenKind::ExampleDelimiter)
+                .count(),
+            2
+        );
+        assert!(kinds.contains(&TokenKind::Strong));
     }
 }

@@ -186,7 +186,23 @@ reference stylesheet**: `adoctra-html` exposes `STYLESHEET` (`assets/adoctra.css
 a modern theme — custom properties, `color-mix()`, logical properties, SVG-mask
 icons) and `convert()` inlines it into a `<head>` so output is styled out of the
 box. The tokenizer emits an `admonition-label` token for the `NOTE:` prefix (the
-`[NOTE]` style is just a `block-attribute-list`). Other styles
+`[NOTE]` style is just a `block-attribute-list`). **Example blocks** are the
+first **container** block kind besides a list: a `====` … `====` delimited block
+(and the `[example]` style on a paragraph) yields `BlockKind::Example { blocks }`.
+Unlike the verbatim `----`/`....` blocks, the body is parsed *as blocks* — the
+top-level block collector was refactored into a shared `collect_blocks(stop)`
+that both the document body and a container body call, so nested blocks, inline
+subs, block metadata (`[[id]]`/`[.role]`/`[source]`) and the type-changing style
+fixups (`[literal]`/`[NOTE]`/`[example]`) all work at any depth, and the resolve
+pass recurses into a container so anchors/ids inside register and `<<id>>`
+resolves across the whole document. A paragraph now ends at any block-delimiter
+line (`----`/`....`/`====`) so a container's closing fence is never folded into
+the body. The HTML backend renders a single `<div class="exampleblock">` wrapping
+the rendered children (asciidoctor nests `exampleblock`/`content` divs; adoctra's
+no-wrapper convention emits one element carrying the id/roles), `adoctra.css`
+ships an `.exampleblock` rule, JSON/WASM serialize `name:"example"` with a nested
+`blocks` array, and the tokenizer emits `example-delimiter` (the body, *not*
+verbatim, keeps its normal tokens). Other styles
 are parsed and carried on `Block.attrs.style` but do not yet change a block's
 *type*. The id
 lives on the block (`Block.id`, `None` for the level-0 doctitle and plain blocks)
@@ -207,7 +223,8 @@ char); HTML and JSON backends; editor layer
 `tokens_json`; golden compatibility tests against asciidoctor
 (`adoctra-html/tests/golden/`, list fixtures under `golden/lists/`, source-block
 fixtures under `golden/blocks/`, literal-block fixtures under `golden/literals/`,
-admonition fixtures under `golden/admonitions/`).
+admonition fixtures under `golden/admonitions/`, example-block fixtures under
+`golden/examples/`).
 
 Scaffold only: DOCX backend; the extension API exists but `parse`/`convert` do
 not invoke it yet.
@@ -217,16 +234,18 @@ broader language coverage (tables, footnotes, includes, conditionals,
 block/inline macros). The full block-attribute list is now *parsed* (style, named
 attributes, `%options`, id/role folding), but most of it has nothing to render
 against yet: most **styles that change a block's type** (`[quote]`/`[verse]` →
-quote, `[example]`, …) are unimplemented — only `[source,<lang>]`, `[literal]` and
-the admonition styles are wired — as is **rendering of options** (`%hardbreaks`,
-`%nowrap`, …), which are captured but not yet acted on. For **admonitions**, only
-the *paragraph* forms (`[NOTE]` style and `NOTE: ` label) are done; the
-**delimited example form** (`[NOTE]` on a `====` block) needs example blocks,
-which do not exist yet, as do admonition **block titles** (`.Title`) and
-admonitions on list items. Also: **indented/offset
-literal** (leading-space lines) and delimiters longer than four chars; **anchors on
-individual list items**, TOC generation, incremental/block reparse, and a
-pull/event API over the AST.
+quote, `[sidebar]`, …) are unimplemented — only `[source,<lang>]`, `[literal]`,
+`[example]` and the admonition styles are wired — as is **rendering of options**
+(`%hardbreaks`, `%nowrap`, …), which are captured but not yet acted on. For
+**admonitions**, only the *paragraph* forms (`[NOTE]` style and `NOTE: ` label)
+are done; the **delimited example form** (`[NOTE]` on a `====` block) is now
+*unblocked* (example blocks exist) and is the natural next step — wire `[NOTE]`
+on a `BlockKind::Example` to a delimited admonition. Still missing: admonition
+**block titles** (`.Title`) and admonitions on list items. Also: **indented/offset
+literal** (leading-space lines) and delimiters longer than four chars (the same
+single-length limitation applies to `====`: a nested same-length `====` closes the
+outer block); **anchors on individual list items**, TOC generation,
+incremental/block reparse, and a pull/event API over the AST.
 
 When asked to "add a feature," check this list first and say plainly whether it
 is new work or wiring up an existing seam.

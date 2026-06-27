@@ -162,6 +162,23 @@ fn write_block(b: &Block, s: &mut String) {
             s.push_str(",\"inlines\":");
             write_inlines(inlines, s);
         }
+        BlockKind::Example { blocks } => {
+            s.push_str("\"name\":\"example\",");
+            write_id(&b.id, s);
+            write_roles(&b.roles, s);
+            write_style(&b.attrs.style, s);
+            write_attributes(&b.attrs.named, s);
+            write_options(&b.attrs.options, s);
+            // Children carry their own spans; recurse so the editor sees the tree.
+            s.push_str(",\"blocks\":[");
+            for (j, child) in blocks.iter().enumerate() {
+                if j > 0 {
+                    s.push(',');
+                }
+                write_block(child, s);
+            }
+            s.push(']');
+        }
     }
     s.push('}');
 }
@@ -754,5 +771,19 @@ mod tests {
             json.contains("\"span\":{\"start\":9,\"end\":15},\"name\":\"strong\""),
             "got: {json}"
         );
+    }
+
+    #[test]
+    fn example_block_serializes_with_nested_blocks_and_spans() {
+        let json = parse_json("====\nHi.\n====");
+        assert!(json.contains("\"name\":\"example\""), "got: {json}");
+        assert!(json.contains("\"blocks\":["), "got: {json}");
+        // The example block carries its own span (opening through closing fence).
+        assert!(
+            json.contains("\"span\":{\"start\":0,\"end\":13},\"name\":\"example\""),
+            "got: {json}"
+        );
+        // The nested paragraph carries its own span too.
+        assert!(json.contains("\"name\":\"paragraph\""), "got: {json}");
     }
 }

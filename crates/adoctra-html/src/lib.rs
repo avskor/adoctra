@@ -136,6 +136,18 @@ fn render_block(block: &Block, out: &mut String) {
             render_inlines(inlines, out);
             out.push_str("</p>\n</aside>\n");
         }
+        BlockKind::Example { blocks } => {
+            // A parsed container: one `<div class="exampleblock">` wrapping the
+            // rendered children. asciidoctor nests `<div class="content">` inside;
+            // adoctra keeps the no-wrapper convention — a single element carries
+            // the class plus the block's id/roles, children render straight in.
+            let class = class_attr(&["exampleblock"], &block.roles);
+            out.push_str(&format!("<div{class}{id}>\n"));
+            for child in blocks {
+                render_block(child, out);
+            }
+            out.push_str("</div>\n");
+        }
     }
 }
 
@@ -798,5 +810,43 @@ mod tests {
         assert!(html.contains("<meta charset=\"utf-8\">"), "got: {html}");
         assert!(html.contains("<style>"), "got: {html}");
         assert!(html.contains(".admonition"), "stylesheet missing: {html}");
+    }
+
+    #[test]
+    fn example_block_renders_single_wrapper_with_children() {
+        // One `<div class="exampleblock">` wrapping the rendered children (no
+        // nested `.content`), the body parsed normally (`*world*` → `<strong>`).
+        let html = render("====\nHello *world*.\n====");
+        assert!(
+            html.contains(
+                "<div class=\"exampleblock\">\n<p>Hello <strong>world</strong>.</p>\n</div>"
+            ),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn example_block_id_and_roles_on_wrapper() {
+        // id/roles hang on the `exampleblock` div (no extra wrapper), as elsewhere.
+        let html = render("[#ex.box]\n====\nhi\n====");
+        assert!(
+            html.contains("<div class=\"exampleblock box\" id=\"ex\">"),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn example_style_paragraph_renders_as_example() {
+        let html = render("[example]\nJust text.");
+        assert!(
+            html.contains("<div class=\"exampleblock\">\n<p>Just text.</p>\n</div>"),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn example_stylesheet_rule_is_shipped() {
+        let html = render("Hello.");
+        assert!(html.contains(".exampleblock"), "stylesheet missing: {html}");
     }
 }
