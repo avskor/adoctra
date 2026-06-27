@@ -67,9 +67,7 @@ fn assign_ids(blocks: &mut [Block], registry: &mut Registry, diagnostics: &mut V
         // listing text carries no inline markup.) Done in document order, after
         // the block's own id, so duplicate diagnostics read left-to-right.
         match &mut block.kind {
-            BlockKind::Heading { inlines, .. }
-            | BlockKind::Paragraph { inlines }
-            | BlockKind::Admonition { inlines, .. } => {
+            BlockKind::Heading { inlines, .. } | BlockKind::Paragraph { inlines } => {
                 register_inline_anchors(inlines, registry, diagnostics);
             }
             BlockKind::List { items, .. } => {
@@ -78,9 +76,11 @@ fn assign_ids(blocks: &mut [Block], registry: &mut Registry, diagnostics: &mut V
                     assign_ids(&mut item.blocks, registry, diagnostics);
                 }
             }
-            // An example block is a parsed container: descend so anchors and
-            // section ids inside it join the registry.
-            BlockKind::Example { blocks } => assign_ids(blocks, registry, diagnostics),
+            // An example block (and a delimited admonition) is a parsed container:
+            // descend so anchors and section ids inside it join the registry.
+            BlockKind::Example { blocks } | BlockKind::Admonition { blocks, .. } => {
+                assign_ids(blocks, registry, diagnostics)
+            }
             BlockKind::Listing { .. } | BlockKind::Literal { .. } => {}
         }
     }
@@ -239,9 +239,7 @@ fn push_text(inlines: &[Inline], s: &mut String) {
 fn resolve_xrefs(blocks: &mut [Block], registry: &Registry, diagnostics: &mut Vec<Diagnostic>) {
     for block in blocks {
         match &mut block.kind {
-            BlockKind::Heading { inlines, .. }
-            | BlockKind::Paragraph { inlines }
-            | BlockKind::Admonition { inlines, .. } => {
+            BlockKind::Heading { inlines, .. } | BlockKind::Paragraph { inlines } => {
                 resolve_inlines(inlines, registry, diagnostics);
             }
             BlockKind::List { items, .. } => {
@@ -250,9 +248,11 @@ fn resolve_xrefs(blocks: &mut [Block], registry: &Registry, diagnostics: &mut Ve
                     resolve_xrefs(&mut item.blocks, registry, diagnostics);
                 }
             }
-            // Descend into an example block's children so references inside it
-            // resolve against the whole-document registry.
-            BlockKind::Example { blocks } => resolve_xrefs(blocks, registry, diagnostics),
+            // Descend into an example block (and a delimited admonition) so
+            // references inside it resolve against the whole-document registry.
+            BlockKind::Example { blocks } | BlockKind::Admonition { blocks, .. } => {
+                resolve_xrefs(blocks, registry, diagnostics)
+            }
             BlockKind::Listing { .. } | BlockKind::Literal { .. } => {}
         }
     }
@@ -475,8 +475,8 @@ mod tests {
 
     #[test]
     fn cross_reference_inside_admonition_resolves() {
-        // A `<<id>>` in an admonition body must resolve — the admonition's inlines
-        // are walked like a paragraph's, not skipped like verbatim listing text.
+        // A `<<id>>` in an admonition body must resolve — the resolve pass descends
+        // into the admonition's child blocks, not skipping them like verbatim text.
         let src = "== Later\n\nNOTE: see <<_later>>.";
         let result = crate::parse(src);
         assert!(result.diagnostics.is_empty(), "known id, no diagnostic");
@@ -485,10 +485,13 @@ mod tests {
             .blocks
             .iter()
             .find_map(|b| match &b.kind {
-                BlockKind::Admonition { inlines, .. } => Some(inlines.clone()),
+                BlockKind::Admonition { blocks, .. } => match &blocks[0].kind {
+                    BlockKind::Paragraph { inlines } => Some(inlines.clone()),
+                    _ => None,
+                },
                 _ => None,
             })
-            .expect("an admonition block");
+            .expect("an admonition block with a paragraph body");
         let children = inlines
             .iter()
             .find_map(|n| match n {

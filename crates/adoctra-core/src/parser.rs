@@ -131,6 +131,29 @@ fn apply_style_fixup(block: &mut Block, source: &str) {
     let Some(style) = block.attrs.style.as_deref() else {
         return;
     };
+    // An uppercase admonition style (`[NOTE]`, …) wraps the block's body into an
+    // admonition container. On a paragraph the already-scanned inlines become a
+    // single child paragraph; on a `====` example block its children move over
+    // unchanged. Unlike `[literal]`/`[example]` below it also fires on a
+    // container, so it is handled before the paragraph-only guard.
+    if let Some(kind) = AdmonitionKind::from_style(style) {
+        match &mut block.kind {
+            BlockKind::Paragraph { inlines } => {
+                let inlines = std::mem::take(inlines);
+                let child = Block::new(block.span, BlockKind::Paragraph { inlines });
+                block.kind = BlockKind::Admonition {
+                    kind,
+                    blocks: vec![child],
+                };
+            }
+            BlockKind::Example { blocks } => {
+                let blocks = std::mem::take(blocks);
+                block.kind = BlockKind::Admonition { kind, blocks };
+            }
+            _ => {}
+        }
+        return;
+    }
     if !matches!(block.kind, BlockKind::Paragraph { .. }) {
         return;
     }
@@ -153,16 +176,7 @@ fn apply_style_fixup(block: &mut Block, source: &str) {
                 blocks.push(para);
             }
         }
-        // An uppercase admonition style (`[NOTE]`, …) carries over the
-        // already-scanned inlines (there is no label to strip).
-        _ => {
-            if let Some(kind) = AdmonitionKind::from_style(style) {
-                if let BlockKind::Paragraph { inlines } = &mut block.kind {
-                    let inlines = std::mem::take(inlines);
-                    block.kind = BlockKind::Admonition { kind, inlines };
-                }
-            }
-        }
+        _ => {}
     }
 }
 
@@ -353,9 +367,18 @@ fn parse_block(
     if let Some((kind, prefix_len)) = AdmonitionKind::from_label_prefix(line) {
         let content_start = start + prefix_len;
         let inlines = scan_inlines(&source[content_start..end], content_start, attrs);
+        // The body is a single child paragraph spanning the text after the prefix;
+        // the admonition block still spans the whole paragraph (label included).
+        let child = Block::new(
+            Span::new(content_start, end),
+            BlockKind::Paragraph { inlines },
+        );
         return Some(Block::new(
             Span::new(start, end),
-            BlockKind::Admonition { kind, inlines },
+            BlockKind::Admonition {
+                kind,
+                blocks: vec![child],
+            },
         ));
     }
     // Scan inlines over the original source slice (newlines and all), so every
@@ -1655,18 +1678,29 @@ mod tests {
         ));
     }
 
-    /// The [`AdmonitionKind`] and first inline `Text` value of an admonition block.
-    fn admonition(block: &Block) -> (AdmonitionKind, String) {
+    /// The [`AdmonitionKind`] and the inlines of an admonition's single body
+    /// paragraph — the shape the paragraph and label forms always produce.
+    fn admonition_para(block: &Block) -> (AdmonitionKind, &[Inline]) {
         match &block.kind {
-            BlockKind::Admonition { kind, inlines } => {
-                let text = match &inlines[0] {
-                    Inline::Text { value, .. } => value.clone(),
-                    other => panic!("expected Text, got {other:?}"),
-                };
-                (*kind, text)
+            BlockKind::Admonition { kind, blocks } => {
+                assert_eq!(blocks.len(), 1, "expected a single body paragraph");
+                match &blocks[0].kind {
+                    BlockKind::Paragraph { inlines } => (*kind, inlines),
+                    other => panic!("expected Paragraph body, got {other:?}"),
+                }
             }
             other => panic!("expected Admonition, got {other:?}"),
         }
+    }
+
+    /// Convenience: the kind and the first body inline's `Text` value.
+    fn admonition(block: &Block) -> (AdmonitionKind, String) {
+        let (kind, inlines) = admonition_para(block);
+        let text = match &inlines[0] {
+            Inline::Text { value, .. } => value.clone(),
+            other => panic!("expected Text, got {other:?}"),
+        };
+        (kind, text)
     }
 
     #[test]
@@ -1677,18 +1711,17 @@ mod tests {
         let (kind, text) = admonition(b);
         assert_eq!(kind, AdmonitionKind::Note);
         assert_eq!(text, "This is a ");
+        let (_, inlines) = admonition_para(b);
+        assert!(inlines.iter().any(|n| matches!(n, Inline::Strong { .. })));
+        assert_eq!(b.attrs.style.as_deref(), Some("NOTE"));
+        // The attribute line is excluded from the block span, as elsewhere; the
+        // synthetic child paragraph spans the same range.
+        let span = Span::new("[NOTE]\n".len(), "[NOTE]\nThis is a *note*.".len());
+        assert_eq!(b.span, span);
         match &b.kind {
-            BlockKind::Admonition { inlines, .. } => {
-                assert!(inlines.iter().any(|n| matches!(n, Inline::Strong { .. })))
-            }
+            BlockKind::Admonition { blocks, .. } => assert_eq!(blocks[0].span, span),
             _ => unreachable!(),
         }
-        assert_eq!(b.attrs.style.as_deref(), Some("NOTE"));
-        // The attribute line is excluded from the block span, as elsewhere.
-        assert_eq!(
-            b.span,
-            Span::new("[NOTE]\n".len(), "[NOTE]\nThis is a *note*.".len())
-        );
     }
 
     #[test]
@@ -1704,10 +1737,18 @@ mod tests {
         assert!(!text.contains("NOTE"));
         assert_eq!(b.span, Span::new(0, src.len()));
         match &b.kind {
-            BlockKind::Admonition { inlines, .. } => match &inlines[0] {
-                Inline::Text { span, .. } => assert_eq!(span.start, "NOTE: ".len()),
-                other => panic!("expected Text, got {other:?}"),
-            },
+            // The admonition spans the whole paragraph, but the body paragraph
+            // spans only the text after the `NOTE: ` prefix.
+            BlockKind::Admonition { blocks, .. } => {
+                assert_eq!(blocks[0].span, Span::new("NOTE: ".len(), src.len()));
+                match &blocks[0].kind {
+                    BlockKind::Paragraph { inlines } => match &inlines[0] {
+                        Inline::Text { span, .. } => assert_eq!(span.start, "NOTE: ".len()),
+                        other => panic!("expected Text, got {other:?}"),
+                    },
+                    other => panic!("expected Paragraph, got {other:?}"),
+                }
+            }
             _ => unreachable!(),
         }
     }
@@ -1715,13 +1756,9 @@ mod tests {
     #[test]
     fn label_prefix_inline_markup_is_processed() {
         let b = &parse("TIP: be *bold*").document.blocks[0];
-        match &b.kind {
-            BlockKind::Admonition { kind, inlines } => {
-                assert_eq!(*kind, AdmonitionKind::Tip);
-                assert!(inlines.iter().any(|n| matches!(n, Inline::Strong { .. })));
-            }
-            other => panic!("expected Admonition, got {other:?}"),
-        }
+        let (kind, inlines) = admonition_para(b);
+        assert_eq!(kind, AdmonitionKind::Tip);
+        assert!(inlines.iter().any(|n| matches!(n, Inline::Strong { .. })));
     }
 
     #[test]
@@ -1762,16 +1799,107 @@ mod tests {
         let b = &parse(src).document.blocks[0];
         assert_eq!(admonition(b).0, AdmonitionKind::Note);
         assert_eq!(b.span, Span::new(0, src.len()));
-        match &b.kind {
-            BlockKind::Admonition { inlines, .. } => match &inlines[0] {
-                Inline::Text { value, span } => {
-                    assert!(value.contains("first line"));
-                    assert!(value.contains("second line"));
-                    assert_eq!(span.start, "NOTE: ".len());
-                }
-                other => panic!("expected Text, got {other:?}"),
-            },
-            _ => unreachable!(),
+        let (_, inlines) = admonition_para(b);
+        match &inlines[0] {
+            Inline::Text { value, span } => {
+                assert!(value.contains("first line"));
+                assert!(value.contains("second line"));
+                assert_eq!(span.start, "NOTE: ".len());
+            }
+            other => panic!("expected Text, got {other:?}"),
+        }
+    }
+
+    /// The kind and child blocks of an admonition container.
+    fn admonition_blocks(block: &Block) -> (AdmonitionKind, &[Block]) {
+        match &block.kind {
+            BlockKind::Admonition { kind, blocks } => (*kind, blocks),
+            other => panic!("expected Admonition, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn note_delimited_block_wraps_example_children() {
+        // `[NOTE]` on a `====` block becomes a delimited admonition whose body is
+        // the parsed children (not verbatim): the `*strong*` is a real inline.
+        let src = "[NOTE]\n====\nbody *strong*.\n====";
+        let r = parse(src);
+        assert!(r.diagnostics.is_empty());
+        let b = &r.document.blocks[0];
+        let (kind, blocks) = admonition_blocks(b);
+        assert_eq!(kind, AdmonitionKind::Note);
+        assert_eq!(blocks.len(), 1);
+        match &blocks[0].kind {
+            BlockKind::Paragraph { inlines } => {
+                assert!(inlines.iter().any(|n| matches!(n, Inline::Strong { .. })));
+            }
+            other => panic!("expected Paragraph, got {other:?}"),
+        }
+        // The span covers the whole block, `====` fences included; the leading
+        // attribute line is excluded as elsewhere.
+        assert_eq!(b.span, Span::new("[NOTE]\n".len(), src.len()));
+    }
+
+    #[test]
+    fn delimited_admonition_holds_multiple_blocks() {
+        // A delimited admonition can hold several child blocks — the gain over the
+        // paragraph form.
+        let src = "[WARNING]\n====\nIntro.\n\n----\ncode\n----\n====";
+        let doc = parse(src).document;
+        let (kind, blocks) = admonition_blocks(&doc.blocks[0]);
+        assert_eq!(kind, AdmonitionKind::Warning);
+        assert_eq!(blocks.len(), 2);
+        assert!(matches!(blocks[0].kind, BlockKind::Paragraph { .. }));
+        match &blocks[1].kind {
+            BlockKind::Listing { text } => assert_eq!(text, "code"),
+            other => panic!("expected listing, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn lowercase_style_on_delimited_stays_example() {
+        // Case-sensitive: `[note]` on a `====` block is a custom style, not an
+        // admonition, so the block stays a plain example.
+        let src = "[note]\n====\ntext\n====";
+        let b = &parse(src).document.blocks[0];
+        assert!(matches!(b.kind, BlockKind::Example { .. }));
+        assert_eq!(b.attrs.style.as_deref(), Some("note"));
+    }
+
+    #[test]
+    fn delimited_admonition_id_and_roles_on_container() {
+        // id/roles attach to the admonition container; the children carry none.
+        let src = "[NOTE#warn.box]\n====\ntext\n====";
+        let doc = parse(src).document;
+        let b = &doc.blocks[0];
+        assert_eq!(b.id.as_deref(), Some("warn"));
+        assert_eq!(b.roles, ["box"]);
+        let (kind, blocks) = admonition_blocks(b);
+        assert_eq!(kind, AdmonitionKind::Note);
+        assert!(blocks[0].id.is_none() && blocks[0].roles.is_empty());
+    }
+
+    #[test]
+    fn cross_reference_inside_delimited_admonition_resolves() {
+        // The resolve pass descends into a delimited admonition just like an
+        // example: a `<<_target>>` inside picks up the section title.
+        let src = "== Target\n\n[NOTE]\n====\nSee <<_target>>.\n====";
+        let doc = parse(src).document;
+        let (_, blocks) = admonition_blocks(&doc.blocks[1]);
+        let inlines = match &blocks[0].kind {
+            BlockKind::Paragraph { inlines } => inlines.clone(),
+            other => panic!("expected paragraph, got {other:?}"),
+        };
+        let xref = inlines
+            .iter()
+            .find_map(|i| match i {
+                Inline::CrossReference { children, .. } => Some(children.clone()),
+                _ => None,
+            })
+            .expect("no cross-reference in admonition body");
+        match &xref[0] {
+            Inline::Text { value, .. } => assert_eq!(value, "Target"),
+            other => panic!("expected resolved Text, got {other:?}"),
         }
     }
 

@@ -177,11 +177,13 @@ convention); the tokenizer emits `literal-delimiter`/`literal-text`. The
 uppercase admonition styles (`NOTE`/`TIP`/`IMPORTANT`/`WARNING`/`CAUTION`) are the
 next type-changing styles: `[NOTE]` on a paragraph **and** the label prefix
 `NOTE: …` on a paragraph's first line both yield a `BlockKind::Admonition { kind,
-inlines }` (an `AdmonitionKind` enum; both forms case-sensitive, matching
-asciidoctor — `[note]`/`note:` stay paragraphs). The HTML backend renders a
-**modern, semantic** `<aside class="admonition" data-type="TYPE" aria-label="…">`
-with a `.admonition-title` and the body — *not* asciidoctor's table/icon-font
-layout; id/roles hang on the `<aside>`. This is also where adoctra first **ships a
+blocks }` — like asciidoctor the body is a parsed *container* of child blocks, so
+the paragraph and label forms wrap their inlines in a single child paragraph (an
+`AdmonitionKind` enum; both forms case-sensitive, matching asciidoctor —
+`[note]`/`note:` stay paragraphs). The HTML backend renders a **modern, semantic**
+`<aside class="admonition" data-type="TYPE" aria-label="…">` with a
+`.admonition-title` and the rendered child blocks — *not* asciidoctor's
+table/icon-font layout; id/roles hang on the `<aside>`. This is also where adoctra first **ships a
 reference stylesheet**: `adoctra-html` exposes `STYLESHEET` (`assets/adoctra.css`,
 a modern theme — custom properties, `color-mix()`, logical properties, SVG-mask
 icons) and `convert()` inlines it into a `<head>` so output is styled out of the
@@ -202,7 +204,14 @@ the rendered children (asciidoctor nests `exampleblock`/`content` divs; adoctra'
 no-wrapper convention emits one element carrying the id/roles), `adoctra.css`
 ships an `.exampleblock` rule, JSON/WASM serialize `name:"example"` with a nested
 `blocks` array, and the tokenizer emits `example-delimiter` (the body, *not*
-verbatim, keeps its normal tokens). Other styles
+verbatim, keeps its normal tokens). Building directly on that container, an
+uppercase admonition style on a `====` block is now the **delimited admonition**
+form: `apply_style_fixup` moves the parsed `Example` children into
+`BlockKind::Admonition { kind, blocks }`, so an admonition can hold several blocks
+(paragraphs, a listing, …); HTML renders the same `<aside>` with the children
+inside (no `exampleblock` wrapper), JSON/WASM serialize `name:"admonition"` with
+the nested `blocks` array, the resolve pass recurses into it, and `[note]`
+(lowercase) stays a plain example. Other styles
 are parsed and carried on `Block.attrs.style` but do not yet change a block's
 *type*. The id
 lives on the block (`Block.id`, `None` for the level-0 doctitle and plain blocks)
@@ -237,10 +246,8 @@ against yet: most **styles that change a block's type** (`[quote]`/`[verse]` →
 quote, `[sidebar]`, …) are unimplemented — only `[source,<lang>]`, `[literal]`,
 `[example]` and the admonition styles are wired — as is **rendering of options**
 (`%hardbreaks`, `%nowrap`, …), which are captured but not yet acted on. For
-**admonitions**, only the *paragraph* forms (`[NOTE]` style and `NOTE: ` label)
-are done; the **delimited example form** (`[NOTE]` on a `====` block) is now
-*unblocked* (example blocks exist) and is the natural next step — wire `[NOTE]`
-on a `BlockKind::Example` to a delimited admonition. Still missing: admonition
+**admonitions**, the *paragraph* forms (`[NOTE]` style and `NOTE: ` label) and the
+**delimited form** (`[NOTE]` on a `====` block) are done. Still missing: admonition
 **block titles** (`.Title`) and admonitions on list items. Also: **indented/offset
 literal** (leading-space lines) and delimiters longer than four chars (the same
 single-length limitation applies to `====`: a nested same-length `====` closes the

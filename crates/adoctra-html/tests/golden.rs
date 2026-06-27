@@ -158,15 +158,19 @@ fn admonition(html: &str) -> (String, String) {
         let end = body[start..].find("</td>").unwrap() + start;
         &body[start..end]
     } else {
-        // adoctra: the body paragraph follows the title <p>; skip the title.
+        // adoctra: the body blocks follow the title <p> and run to the closing
+        // </aside> (a delimited admonition holds several blocks, not just one <p>).
         let after_title = body.find("</p>").map(|i| i + "</p>".len()).unwrap_or(0);
         let seg = &body[after_title..];
-        let s = seg.find("<p>").expect("no body <p> in admonition") + "<p>".len();
-        let e = seg[s..].find("</p>").unwrap() + s;
-        &seg[s..e]
+        let end = seg.find("</aside>").unwrap_or(seg.len());
+        &seg[..end]
     };
 
-    (ty, content.split_whitespace().collect::<Vec<_>>().join(" "))
+    // Both bodies normalise to their surviving inline markup: asciidoctor wraps
+    // each child in `<div class="paragraph"><p>…</p></div>` (and its shorthand form
+    // emits bare text), adoctra in a bare `<p>…</p>` — so drop the `<div>` and `<p>`
+    // wrappers on both sides and compare what is left.
+    (ty, normalize_container(content, true))
 }
 
 /// Normalise an example block to its children's markup in document order.
@@ -186,12 +190,14 @@ fn example_body(html: &str) -> String {
         .find("exampleblock")
         .expect("no example block in output");
     let open = body[..at].rfind('<').expect("malformed example block tag");
-    normalize_container(&body[open..])
+    normalize_container(&body[open..], false)
 }
 
 /// Drop `<div …>`/`</div>` wrapper tags, rewrite `<pre …>` open tags to a bare
-/// `<pre>`, keep all other tags and text, then collapse whitespace.
-fn normalize_container(s: &str) -> String {
+/// `<pre>`, optionally also drop `<p>`/`</p>` (admonition bodies — asciidoctor's
+/// shorthand form emits bare text while adoctra wraps in `<p>`), keep all other
+/// tags and text, then collapse whitespace.
+fn normalize_container(s: &str, strip_p: bool) -> String {
     let mut out = String::new();
     let mut rest = s;
     while let Some(lt) = rest.find('<') {
@@ -202,7 +208,8 @@ fn normalize_container(s: &str) -> String {
         let bare = inner.trim_start_matches('/').trim();
         let name = bare.split_whitespace().next().unwrap_or("");
         match name {
-            "div" => {} // structural wrapper — drop it
+            "div" => {}          // structural wrapper — drop it
+            "p" if strip_p => {} // admonition body paragraph wrapper — drop it
             "pre" if !inner.starts_with('/') => out.push_str("<pre>"),
             _ => out.push_str(tag),
         }

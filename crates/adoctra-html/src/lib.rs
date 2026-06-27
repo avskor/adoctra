@@ -119,12 +119,14 @@ fn render_block(block: &Block, out: &mut String) {
             }
             out.push_str(&format!("</{tag}>\n"));
         }
-        BlockKind::Admonition { kind, inlines } => {
+        BlockKind::Admonition { kind, blocks } => {
             // A modern, semantic admonition: a single `<aside>` carrying the type
-            // (`data-type`) and an accessible label, then a title and the body. No
-            // table/icon-font scaffolding (asciidoctor's) — the styling is the
-            // reference stylesheet's job. As elsewhere there is no wrapping `<div>`:
-            // id/roles hang on the `<aside>` itself (roles append to `admonition`).
+            // (`data-type`) and an accessible label, then a title and the rendered
+            // child blocks. No table/icon-font scaffolding (asciidoctor's) — the
+            // styling is the reference stylesheet's job. As elsewhere there is no
+            // wrapping `<div>`: id/roles hang on the `<aside>` itself (roles append
+            // to `admonition`). The paragraph/label forms carry a single child
+            // paragraph, so their body renders as `<p>…</p>` exactly as before.
             let class = class_attr(&["admonition"], &block.roles);
             let ty = kind.as_str();
             let label = kind.label();
@@ -132,9 +134,10 @@ fn render_block(block: &Block, out: &mut String) {
                 "<aside{id}{class} data-type=\"{ty}\" aria-label=\"{label}\">\n"
             ));
             out.push_str(&format!("<p class=\"admonition-title\">{label}</p>\n"));
-            out.push_str("<p>");
-            render_inlines(inlines, out);
-            out.push_str("</p>\n</aside>\n");
+            for child in blocks {
+                render_block(child, out);
+            }
+            out.push_str("</aside>\n");
         }
         BlockKind::Example { blocks } => {
             // A parsed container: one `<div class="exampleblock">` wrapping the
@@ -794,6 +797,39 @@ mod tests {
     #[test]
     fn admonition_id_and_role_render_on_aside() {
         let html = render("[NOTE#warn.box]\ntext");
+        assert!(
+            html.contains(
+                "<aside id=\"warn\" class=\"admonition box\" data-type=\"note\" aria-label=\"Note\">"
+            ),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn delimited_admonition_renders_block_body() {
+        // `[NOTE]` on a `====` block: one semantic <aside> with the title, then the
+        // rendered child blocks (two paragraphs here) — no exampleblock wrapper.
+        let html = render("[NOTE]\n====\nFirst.\n\nSecond.\n====");
+        assert!(
+            html.contains("<aside class=\"admonition\" data-type=\"note\" aria-label=\"Note\">"),
+            "got: {html}"
+        );
+        assert!(
+            html.contains("<p class=\"admonition-title\">Note</p>"),
+            "got: {html}"
+        );
+        assert!(html.contains("<p>First.</p>"), "got: {html}");
+        assert!(html.contains("<p>Second.</p>"), "got: {html}");
+        // The `[NOTE]` style replaced the example container — no exampleblock
+        // wrapper survives (the stylesheet still mentions `.exampleblock`, so check
+        // for the element, not the substring).
+        assert!(!html.contains("<div class=\"exampleblock\""), "got: {html}");
+    }
+
+    #[test]
+    fn delimited_admonition_id_and_roles_on_aside() {
+        // As in the paragraph form, id/roles hang on the <aside> itself.
+        let html = render("[NOTE#warn.box]\n====\ntext\n====");
         assert!(
             html.contains(
                 "<aside id=\"warn\" class=\"admonition box\" data-type=\"note\" aria-label=\"Note\">"

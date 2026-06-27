@@ -113,7 +113,7 @@ fn write_block(block: &Block, s: &mut String) {
             }
             s.push_str("]}");
         }
-        BlockKind::Admonition { kind, inlines } => {
+        BlockKind::Admonition { kind, blocks } => {
             s.push_str(&format!(
                 "{{\"name\":\"admonition\",\"admonition-type\":\"{}\",",
                 kind.as_str()
@@ -123,9 +123,14 @@ fn write_block(block: &Block, s: &mut String) {
             write_style(&block.attrs.style, s);
             write_attributes(&block.attrs.named, s);
             write_options(&block.attrs.options, s);
-            s.push_str(",\"inlines\":");
-            write_inlines(inlines, s);
-            s.push('}');
+            s.push_str(",\"blocks\":[");
+            for (i, child) in blocks.iter().enumerate() {
+                if i > 0 {
+                    s.push(',');
+                }
+                write_block(child, s);
+            }
+            s.push_str("]}");
         }
         BlockKind::Example { blocks } => {
             s.push_str("{\"name\":\"example\",");
@@ -615,7 +620,10 @@ mod tests {
         let json = render("[NOTE]\nThis is a *note*.");
         assert!(json.contains("\"name\":\"admonition\""), "got: {json}");
         assert!(json.contains("\"admonition-type\":\"note\""), "got: {json}");
-        // The body keeps its inline markup (unlike a verbatim literal).
+        // The body is a nested paragraph that keeps its inline markup (unlike a
+        // verbatim literal).
+        assert!(json.contains("\"blocks\":["), "got: {json}");
+        assert!(json.contains("\"name\":\"paragraph\""), "got: {json}");
         assert!(json.contains("\"name\":\"strong\""), "got: {json}");
     }
 
@@ -624,7 +632,21 @@ mod tests {
         let json = render("TIP: be *bold*");
         assert!(json.contains("\"name\":\"admonition\""), "got: {json}");
         assert!(json.contains("\"admonition-type\":\"tip\""), "got: {json}");
+        assert!(json.contains("\"blocks\":["), "got: {json}");
+        assert!(json.contains("\"name\":\"paragraph\""), "got: {json}");
         assert!(json.contains("\"name\":\"strong\""), "got: {json}");
+    }
+
+    #[test]
+    fn delimited_admonition_serializes_block_body() {
+        // `[NOTE]` on a `====` block serializes as an admonition whose body is the
+        // nested child blocks (a paragraph and a listing here).
+        let json = render("[NOTE]\n====\nIntro.\n\n----\ncode\n----\n====");
+        assert!(json.contains("\"name\":\"admonition\""), "got: {json}");
+        assert!(json.contains("\"admonition-type\":\"note\""), "got: {json}");
+        assert!(json.contains("\"blocks\":["), "got: {json}");
+        assert!(json.contains("\"name\":\"paragraph\""), "got: {json}");
+        assert!(json.contains("\"name\":\"listing\""), "got: {json}");
     }
 
     #[test]

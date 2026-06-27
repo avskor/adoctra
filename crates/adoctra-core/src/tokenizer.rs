@@ -608,4 +608,24 @@ mod tests {
         );
         assert!(kinds.contains(&TokenKind::Strong));
     }
+
+    #[test]
+    fn delimited_admonition_keeps_example_delimiter_tokens() {
+        // `[NOTE]` on a `====` block: the attribute line is a `block-attribute-list`
+        // token and the fences stay `ExampleDelimiter` — the admonition is a
+        // parse-time fixup, invisible to the tokenizer. The body tokenizes normally
+        // (so `*x*` is a Strong token) and there is no `AdmonitionLabel`.
+        let toks = tokens("[NOTE]\n====\n*x*\n====");
+        let kinds: Vec<_> = toks.iter().map(|t| t.kind).collect();
+        assert!(kinds.contains(&TokenKind::BlockAttributeList));
+        assert_eq!(
+            kinds
+                .iter()
+                .filter(|k| **k == TokenKind::ExampleDelimiter)
+                .count(),
+            2
+        );
+        assert!(kinds.contains(&TokenKind::Strong));
+        assert!(!kinds.contains(&TokenKind::AdmonitionLabel));
+    }
 }

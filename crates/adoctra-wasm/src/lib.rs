@@ -149,7 +149,7 @@ fn write_block(b: &Block, s: &mut String) {
             }
             s.push(']');
         }
-        BlockKind::Admonition { kind, inlines } => {
+        BlockKind::Admonition { kind, blocks } => {
             s.push_str(&format!(
                 "\"name\":\"admonition\",\"admonition-type\":\"{}\",",
                 kind.as_str()
@@ -159,8 +159,15 @@ fn write_block(b: &Block, s: &mut String) {
             write_style(&b.attrs.style, s);
             write_attributes(&b.attrs.named, s);
             write_options(&b.attrs.options, s);
-            s.push_str(",\"inlines\":");
-            write_inlines(inlines, s);
+            // Children carry their own spans; recurse so the editor sees the tree.
+            s.push_str(",\"blocks\":[");
+            for (j, child) in blocks.iter().enumerate() {
+                if j > 0 {
+                    s.push(',');
+                }
+                write_block(child, s);
+            }
+            s.push(']');
         }
         BlockKind::Example { blocks } => {
             s.push_str("\"name\":\"example\",");
@@ -756,11 +763,13 @@ mod tests {
 
     #[test]
     fn admonition_is_exposed_to_the_editor() {
-        // Both forms surface an admonition node with its type; the body keeps its
-        // inline markup (unlike a verbatim literal).
+        // Both forms surface an admonition node with its type; the body is a nested
+        // paragraph that keeps its inline markup (unlike a verbatim literal).
         let json = parse_json("[NOTE]\nThis is a *note*.");
         assert!(json.contains("\"name\":\"admonition\""), "got: {json}");
         assert!(json.contains("\"admonition-type\":\"note\""), "got: {json}");
+        assert!(json.contains("\"blocks\":["), "got: {json}");
+        assert!(json.contains("\"name\":\"paragraph\""), "got: {json}");
         assert!(json.contains("\"name\":\"strong\""), "got: {json}");
 
         // Label form: same node, and the body's inline still carries a global span
@@ -771,6 +780,18 @@ mod tests {
             json.contains("\"span\":{\"start\":9,\"end\":15},\"name\":\"strong\""),
             "got: {json}"
         );
+    }
+
+    #[test]
+    fn delimited_admonition_exposes_nested_blocks() {
+        // `[NOTE]` on a `====` block surfaces an admonition node whose body is the
+        // nested child blocks (parsed, not verbatim — the `*there*` is a strong).
+        let json = parse_json("[NOTE]\n====\nHi *there*.\n====");
+        assert!(json.contains("\"name\":\"admonition\""), "got: {json}");
+        assert!(json.contains("\"admonition-type\":\"note\""), "got: {json}");
+        assert!(json.contains("\"blocks\":["), "got: {json}");
+        assert!(json.contains("\"name\":\"paragraph\""), "got: {json}");
+        assert!(json.contains("\"name\":\"strong\""), "got: {json}");
     }
 
     #[test]

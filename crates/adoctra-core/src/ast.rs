@@ -125,10 +125,11 @@ pub struct BlockAttrs {
     pub positional: Vec<String>,
 }
 
-/// The five admonition types. An admonition is a callout paragraph produced
-/// either by an uppercase block style (`[NOTE]`, `[TIP]`, `[IMPORTANT]`,
-/// `[WARNING]`, `[CAUTION]`) or by an uppercase label prefix on a paragraph's
-/// first line (`NOTE: …`). Both forms are case-sensitive, matching asciidoctor.
+/// The five admonition types. An admonition is a callout produced by an
+/// uppercase block style (`[NOTE]`, `[TIP]`, `[IMPORTANT]`, `[WARNING]`,
+/// `[CAUTION]`) on a paragraph or a `====` block, or by an uppercase label
+/// prefix on a paragraph's first line (`NOTE: …`). All forms are
+/// case-sensitive, matching asciidoctor.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AdmonitionKind {
     Note,
@@ -225,13 +226,15 @@ pub enum BlockKind {
     /// [`BlockKind::List`] held in a [`ListItem`]'s `blocks`.
     List { ordered: bool, items: Vec<ListItem> },
     /// An admonition callout (`NOTE`/`TIP`/`IMPORTANT`/`WARNING`/`CAUTION`),
-    /// produced by an uppercase block style (`[NOTE]`) or an uppercase label
-    /// prefix (`NOTE: …`). Carries resolved `inlines` like a [`BlockKind::Paragraph`]
-    /// (the label prefix, if any, is stripped before scanning); `kind` selects
-    /// the type.
+    /// produced by an uppercase block style (`[NOTE]`), an uppercase label prefix
+    /// (`NOTE: …`) or an uppercase style on a `====` block. Like asciidoctor, the
+    /// body is a parsed *container* of child blocks: the paragraph and label forms
+    /// wrap their inlines in a single child [`BlockKind::Paragraph`] (the label
+    /// prefix, if any, stripped first), and the delimited form carries the `====`
+    /// block's children. `kind` selects the type.
     Admonition {
         kind: AdmonitionKind,
-        inlines: Vec<Inline>,
+        blocks: Vec<Block>,
     },
     /// An example block: a parsed container of child blocks, delimited by `====`
     /// (or produced by an `[example]` style on a paragraph). The first container
