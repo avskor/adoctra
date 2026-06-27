@@ -1,0 +1,103 @@
+/* adoctra reference stylesheet.
+ *
+ * A modern, self-contained theme for adoctra's HTML output. The HTML backend
+ * inlines it into the document <head>, so a converted document looks intentional
+ * with no external assets. It grows as more constructs gain rendering; today it
+ * covers the document base and admonition callouts.
+ *
+ * Deliberately modern (and a deliberate divergence from asciidoctor's stock CSS):
+ * custom properties, color-mix(), logical properties, and SVG-mask icons rather
+ * than a table layout and an icon font. adoctra emits a semantic <aside> per
+ * admonition; this file gives it the familiar accent-bordered callout look.
+ */
+
+:root {
+  --adoctra-font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --adoctra-mono: ui-monospace, "SFMono-Regular", "Cascadia Code", Menlo, Consolas, monospace;
+  --adoctra-fg: #1f2328;
+  --adoctra-bg: #ffffff;
+  --adoctra-code-bg: #f6f8fa;
+  color-scheme: light dark;
+}
+
+body {
+  font-family: var(--adoctra-font);
+  line-height: 1.6;
+  color: var(--adoctra-fg);
+  background: var(--adoctra-bg);
+  max-width: 46rem;
+  margin-inline: auto;
+  padding: 2rem 1.25rem;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  font-weight: 600;
+  margin-block: 1.5em 0.5em;
+}
+
+code { font-family: var(--adoctra-mono); font-size: 0.9em; }
+
+pre {
+  font-family: var(--adoctra-mono);
+  overflow-x: auto;
+  padding: 1rem;
+  border-radius: 8px;
+  background: var(--adoctra-code-bg);
+  line-height: 1.45;
+}
+pre code { font-size: inherit; }
+
+/* --- Admonitions ---------------------------------------------------------- */
+
+.admonition {
+  --accent: #0969da;
+  display: flow-root;
+  margin-block: 1.25rem;
+  padding: 0.75rem 1rem;
+  border-inline-start: 4px solid var(--accent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+}
+.admonition > :last-child { margin-bottom: 0; }
+.admonition > p:not(.admonition-title) { margin-block: 0.35rem 0; }
+
+.admonition[data-type="note"]      { --accent: #0969da; }
+.admonition[data-type="tip"]       { --accent: #1a7f37; }
+.admonition[data-type="important"] { --accent: #8250df; }
+.admonition[data-type="warning"]   { --accent: #9a6700; }
+.admonition[data-type="caution"]   { --accent: #cf222e; }
+
+.admonition-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-weight: 600;
+  color: var(--accent);
+}
+.admonition-title::before {
+  content: "";
+  inline-size: 1.15em;
+  block-size: 1.15em;
+  flex: none;
+  background: var(--accent);
+  -webkit-mask: var(--adoctra-icon) center / contain no-repeat;
+  mask: var(--adoctra-icon) center / contain no-repeat;
+}
+
+.admonition[data-type="note"] {
+  --adoctra-icon: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20fill-rule='evenodd'%20d='M12,2a10,10,0,1,1,0,20a10,10,0,1,1,0,-20zM11,10h2v7h-2zM11,6h2v2h-2z'/%3E%3C/svg%3E");
+}
+.admonition[data-type="tip"] {
+  --adoctra-icon: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M12,3a6,6,0,0,0-3,11.2V16h6v-1.8A6,6,0,0,0,12,3zM9,18h6v1a1,1,0,0,1-1,1h-4a1,1,0,0,1-1-1z'/%3E%3C/svg%3E");
+}
+.admonition[data-type="important"] {
+  --adoctra-icon: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20fill-rule='evenodd'%20d='M12,2a10,10,0,1,1,0,20a10,10,0,1,1,0,-20zM11,6h2v8h-2zM11,16h2v2h-2z'/%3E%3C/svg%3E");
+}
+.admonition[data-type="warning"] {
+  --adoctra-icon: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20fill-rule='evenodd'%20d='M12,2L23,21H1zM11,9h2v6h-2zM11,17h2v2h-2z'/%3E%3C/svg%3E");
+}
+.admonition[data-type="caution"] {
+  --adoctra-icon: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20fill-rule='evenodd'%20d='M8,2h8l6,6v8l-6,6H8l-6-6V8l6-6zM11,7h2v7h-2zM11,16h2v2h-2z'/%3E%3C/svg%3E");
+}

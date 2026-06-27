@@ -10,7 +10,7 @@
 //! so highlighting can never disagree with parsing about where a `*strong*`
 //! starts. There is no second grammar.
 
-use crate::ast::{Inline, Span};
+use crate::ast::{AdmonitionKind, Inline, Span};
 use crate::inline::scan_inlines;
 use crate::parser::{
     collect_header, parse_attribute_entry, parse_block_anchor, parse_block_attr_list,
@@ -34,6 +34,7 @@ pub enum TokenKind {
     ListingText,
     LiteralDelimiter,
     LiteralText,
+    AdmonitionLabel,
     Strong,
     Emphasis,
     Monospace,
@@ -57,6 +58,7 @@ impl TokenKind {
             TokenKind::ListingText => "listing-text",
             TokenKind::LiteralDelimiter => "literal-delimiter",
             TokenKind::LiteralText => "literal-text",
+            TokenKind::AdmonitionLabel => "admonition-label",
             TokenKind::Strong => "strong",
             TokenKind::Emphasis => "emphasis",
             TokenKind::Monospace => "monospace",
@@ -82,9 +84,19 @@ pub fn tokens(source: &str) -> Vec<Token> {
     // blank line — mirroring the parser). While set, indented markers are
     // recognised; this is the tokenizer's share of "indented nested markers".
     let mut in_list = false;
+    // Whether the *previous* line continued a running paragraph (or list item).
+    // Captured per line as `at_para_start` so an admonition label (`NOTE: `) is
+    // only recognised at a paragraph start, exactly like the parser — a `NOTE:`
+    // folded into a running paragraph is plain text.
+    let mut mid_paragraph = false;
 
     for (off, line) in lines {
         let line_span = Span::new(off, off + line.len());
+        let at_para_start = !mid_paragraph;
+        // Default: structural / blank lines (all of which `continue` below) leave
+        // the next line a fresh block. The body-text and list-item branches set it
+        // back to `true`.
+        mid_paragraph = false;
 
         // `----` listing and `....` literal are verbatim regions. Each opens and
         // closes only its own kind, and inside one the other delimiter is just
@@ -173,6 +185,7 @@ pub fn tokens(source: &str) -> Vec<Token> {
         };
         if let Some((_, _, mlen)) = parse_list_marker(&t[indent..]) {
             in_list = true;
+            mid_paragraph = true; // a folded line after the marker is item text
             let mstart = off + indent;
             out.push(Token {
                 span: Span::new(mstart, mstart + mlen),
@@ -184,8 +197,28 @@ pub fn tokens(source: &str) -> Vec<Token> {
             );
             continue;
         }
-        // Body text line: flatten the shared inline scan to highlight tokens.
+        // Body text line: flatten the shared inline scan to highlight tokens. An
+        // admonition label (`NOTE: `, …) at a paragraph start is one token, then
+        // the rest of the line is scanned normally — matching the parser's label
+        // form (recognised only at a paragraph start, never mid-paragraph).
+        if at_para_start {
+            if let Some((_, prefix_len)) = AdmonitionKind::from_label_prefix(line) {
+                // The token covers `NOTE:` (label + colon); the trailing space and
+                // the body are scanned/untokenized as usual.
+                out.push(Token {
+                    span: Span::new(off, off + prefix_len - 1),
+                    kind: TokenKind::AdmonitionLabel,
+                });
+                flatten_inlines(
+                    &scan_inlines(&line[prefix_len..], off + prefix_len, &attrs),
+                    &mut out,
+                );
+                mid_paragraph = true;
+                continue;
+            }
+        }
         flatten_inlines(&scan_inlines(line, off, &attrs), &mut out);
+        mid_paragraph = true;
     }
 
     out
@@ -514,5 +547,37 @@ mod tests {
                 TokenKind::LiteralDelimiter,
             ]
         );
+    }
+
+    #[test]
+    fn admonition_label_is_tokenized() {
+        let toks = tokens("NOTE: be *bold*");
+        let kinds: Vec<_> = toks.iter().map(|t| t.kind).collect();
+        // The label is its own token; inline markup in the body is still scanned.
+        assert!(kinds.contains(&TokenKind::AdmonitionLabel));
+        assert!(kinds.contains(&TokenKind::Strong));
+    }
+
+    #[test]
+    fn admonition_label_span_covers_label_and_colon() {
+        let src = "TIP: go";
+        let t = tokens(src)
+            .into_iter()
+            .find(|t| t.kind == TokenKind::AdmonitionLabel)
+            .unwrap();
+        assert_eq!(&src[t.span.start..t.span.end], "TIP:");
+    }
+
+    #[test]
+    fn note_mid_paragraph_is_not_a_label() {
+        // `NOTE:` on a continuation line is plain text, matching the parser.
+        let toks = tokens("intro\nNOTE: not here");
+        assert!(!toks.iter().any(|t| t.kind == TokenKind::AdmonitionLabel));
+    }
+
+    #[test]
+    fn lowercase_label_is_not_tokenized() {
+        let toks = tokens("note: nope");
+        assert!(!toks.iter().any(|t| t.kind == TokenKind::AdmonitionLabel));
     }
 }

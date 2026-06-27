@@ -128,6 +128,47 @@ fn strip_tags(s: &str) -> String {
     text.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
+/// Normalise an admonition to `(type, body markup)`. adoctra emits a modern
+/// `<aside class="admonition" data-type="TYPE">…<p>BODY</p></aside>`; asciidoctor
+/// a `<div class="admonitionblock TYPE"><table>…<td class="content">BODY</td>`.
+/// We pin the admonition *type* and the body's inline markup; the surrounding
+/// structure (aside vs table, the title/icon cell) is adoctra's deliberate
+/// divergence and is not compared.
+fn admonition(html: &str) -> (String, String) {
+    // Restrict to <body>: adoctra inlines its stylesheet in <head>, which also
+    // mentions `data-type` and `.admonition`. asciidoctor's `-s` fragment has no
+    // <body>, so it falls through unchanged.
+    let body = html.split("<body>").nth(1).unwrap_or(html);
+
+    let ty = if let Some(i) = body.find("data-type=\"") {
+        let rest = &body[i + "data-type=\"".len()..];
+        rest[..rest.find('"').unwrap()].to_string()
+    } else {
+        let i = body
+            .find("admonitionblock ")
+            .expect("no admonition in output")
+            + "admonitionblock ".len();
+        let rest = &body[i..];
+        let end = rest.find(|c| c == '"' || c == ' ').unwrap_or(rest.len());
+        rest[..end].to_string()
+    };
+
+    let content = if let Some(i) = body.find("<td class=\"content\">") {
+        let start = i + "<td class=\"content\">".len();
+        let end = body[start..].find("</td>").unwrap() + start;
+        &body[start..end]
+    } else {
+        // adoctra: the body paragraph follows the title <p>; skip the title.
+        let after_title = body.find("</p>").map(|i| i + "</p>".len()).unwrap_or(0);
+        let seg = &body[after_title..];
+        let s = seg.find("<p>").expect("no body <p> in admonition") + "<p>".len();
+        let e = seg[s..].find("</p>").unwrap() + s;
+        &seg[s..e]
+    };
+
+    (ty, content.split_whitespace().collect::<Vec<_>>().join(" "))
+}
+
 #[test]
 fn html_inline_markup_matches_asciidoctor() {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden");
@@ -248,6 +289,36 @@ fn html_literal_blocks_match_asciidoctor() {
             pre_inner(&ours),
             pre_inner(&expected),
             "HTML literal-block content diverges from asciidoctor for `{name}`"
+        );
+    }
+}
+
+#[test]
+fn html_admonition_blocks_match_asciidoctor() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/admonitions");
+
+    for entry in fs::read_dir(&dir).expect("golden/admonitions dir is missing") {
+        let path = entry.unwrap().path();
+        if path.extension().and_then(|e| e.to_str()) != Some("adoc") {
+            continue;
+        }
+        let expected_path = path.with_extension("expected.html");
+        if !expected_path.exists() {
+            // No reference yet (asciidoctor unavailable) — skip, don't fail.
+            continue;
+        }
+
+        let name = path.file_stem().unwrap().to_string_lossy().into_owned();
+        let adoc = fs::read_to_string(&path).unwrap();
+        let expected = fs::read_to_string(&expected_path).unwrap();
+
+        let doc = adoctra_core::parse(&adoc).document;
+        let ours = String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap();
+
+        assert_eq!(
+            admonition(&ours),
+            admonition(&expected),
+            "HTML admonition type/content diverges from asciidoctor for `{name}`"
         );
     }
 }

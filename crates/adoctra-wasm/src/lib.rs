@@ -149,6 +149,19 @@ fn write_block(b: &Block, s: &mut String) {
             }
             s.push(']');
         }
+        BlockKind::Admonition { kind, inlines } => {
+            s.push_str(&format!(
+                "\"name\":\"admonition\",\"admonition-type\":\"{}\",",
+                kind.as_str()
+            ));
+            write_id(&b.id, s);
+            write_roles(&b.roles, s);
+            write_style(&b.attrs.style, s);
+            write_attributes(&b.attrs.named, s);
+            write_options(&b.attrs.options, s);
+            s.push_str(",\"inlines\":");
+            write_inlines(inlines, s);
+        }
     }
     s.push('}');
 }
@@ -722,5 +735,24 @@ mod tests {
         assert!(json.contains("\"name\":\"literal\""), "got: {json}");
         assert!(json.contains("\"style\":\"literal\""), "got: {json}");
         assert!(json.contains("\"text\":\"a *b* c\""), "got: {json}");
+    }
+
+    #[test]
+    fn admonition_is_exposed_to_the_editor() {
+        // Both forms surface an admonition node with its type; the body keeps its
+        // inline markup (unlike a verbatim literal).
+        let json = parse_json("[NOTE]\nThis is a *note*.");
+        assert!(json.contains("\"name\":\"admonition\""), "got: {json}");
+        assert!(json.contains("\"admonition-type\":\"note\""), "got: {json}");
+        assert!(json.contains("\"name\":\"strong\""), "got: {json}");
+
+        // Label form: same node, and the body's inline still carries a global span
+        // (the label prefix is stripped, so the strong starts at byte 9).
+        let json = parse_json("NOTE: be *bold*");
+        assert!(json.contains("\"admonition-type\":\"note\""), "got: {json}");
+        assert!(
+            json.contains("\"span\":{\"start\":9,\"end\":15},\"name\":\"strong\""),
+            "got: {json}"
+        );
     }
 }

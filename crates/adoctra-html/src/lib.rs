@@ -3,6 +3,12 @@
 use adoctra_core::ast::{Block, BlockKind, Inline};
 use adoctra_core::{Backend, Document, Result};
 
+/// adoctra's reference stylesheet — a modern, self-contained theme (custom
+/// properties, `color-mix()`, SVG-mask icons). [`HtmlBackend::convert`] inlines
+/// it into the document `<head>` so output is styled out of the box; consumers
+/// that want their own styling can ignore it and read the semantic markup.
+pub const STYLESHEET: &str = include_str!("../assets/adoctra.css");
+
 #[derive(Debug, Default, Clone, Copy)]
 pub struct HtmlBackend;
 
@@ -23,7 +29,9 @@ impl Backend for HtmlBackend {
 
     fn convert(&self, doc: &Document) -> Result<Vec<u8>> {
         let mut out = String::new();
-        out.push_str("<!DOCTYPE html>\n<html>\n<body>\n");
+        out.push_str("<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"utf-8\">\n<style>\n");
+        out.push_str(STYLESHEET);
+        out.push_str("</style>\n</head>\n<body>\n");
         for block in &doc.blocks {
             render_block(block, &mut out);
         }
@@ -110,6 +118,23 @@ fn render_block(block: &Block, out: &mut String) {
                 out.push_str("</li>\n");
             }
             out.push_str(&format!("</{tag}>\n"));
+        }
+        BlockKind::Admonition { kind, inlines } => {
+            // A modern, semantic admonition: a single `<aside>` carrying the type
+            // (`data-type`) and an accessible label, then a title and the body. No
+            // table/icon-font scaffolding (asciidoctor's) — the styling is the
+            // reference stylesheet's job. As elsewhere there is no wrapping `<div>`:
+            // id/roles hang on the `<aside>` itself (roles append to `admonition`).
+            let class = class_attr(&["admonition"], &block.roles);
+            let ty = kind.as_str();
+            let label = kind.label();
+            out.push_str(&format!(
+                "<aside{id}{class} data-type=\"{ty}\" aria-label=\"{label}\">\n"
+            ));
+            out.push_str(&format!("<p class=\"admonition-title\">{label}</p>\n"));
+            out.push_str("<p>");
+            render_inlines(inlines, out);
+            out.push_str("</p>\n</aside>\n");
         }
     }
 }
@@ -698,5 +723,80 @@ mod tests {
             html.contains("<pre class=\"literalblock special\" id=\"lit\">verbatim</pre>"),
             "got: {html}"
         );
+    }
+
+    #[test]
+    fn note_style_renders_semantic_aside() {
+        // `[NOTE]` → a semantic <aside>; inline markup in the body is processed.
+        let html = render("[NOTE]\nThis is a *note*.");
+        assert!(
+            html.contains("<aside class=\"admonition\" data-type=\"note\" aria-label=\"Note\">"),
+            "got: {html}"
+        );
+        assert!(
+            html.contains("<p class=\"admonition-title\">Note</p>"),
+            "got: {html}"
+        );
+        assert!(
+            html.contains("<p>This is a <strong>note</strong>.</p>"),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn label_form_renders_like_style_form() {
+        // `NOTE: ` produces the same admonition; the label is not in the body.
+        let html = render("NOTE: This is a *note*.");
+        assert!(
+            html.contains("<aside class=\"admonition\" data-type=\"note\" aria-label=\"Note\">"),
+            "got: {html}"
+        );
+        assert!(
+            html.contains("<p>This is a <strong>note</strong>.</p>"),
+            "got: {html}"
+        );
+        assert!(!html.contains("NOTE:"), "label leaked into body: {html}");
+    }
+
+    #[test]
+    fn all_admonition_types_render_with_type_and_label() {
+        for (src, ty, label) in [
+            ("[NOTE]\nx", "note", "Note"),
+            ("[TIP]\nx", "tip", "Tip"),
+            ("[IMPORTANT]\nx", "important", "Important"),
+            ("[WARNING]\nx", "warning", "Warning"),
+            ("[CAUTION]\nx", "caution", "Caution"),
+        ] {
+            let html = render(src);
+            assert!(
+                html.contains(&format!("data-type=\"{ty}\" aria-label=\"{label}\"")),
+                "got: {html}"
+            );
+            assert!(
+                html.contains(&format!("<p class=\"admonition-title\">{label}</p>")),
+                "got: {html}"
+            );
+        }
+    }
+
+    #[test]
+    fn admonition_id_and_role_render_on_aside() {
+        let html = render("[NOTE#warn.box]\ntext");
+        assert!(
+            html.contains(
+                "<aside id=\"warn\" class=\"admonition box\" data-type=\"note\" aria-label=\"Note\">"
+            ),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn reference_stylesheet_is_embedded_in_head() {
+        // The converter inlines the reference stylesheet so output is styled out
+        // of the box.
+        let html = render("Hello.");
+        assert!(html.contains("<meta charset=\"utf-8\">"), "got: {html}");
+        assert!(html.contains("<style>"), "got: {html}");
+        assert!(html.contains(".admonition"), "stylesheet missing: {html}");
     }
 }

@@ -67,7 +67,9 @@ fn assign_ids(blocks: &mut [Block], registry: &mut Registry, diagnostics: &mut V
         // listing text carries no inline markup.) Done in document order, after
         // the block's own id, so duplicate diagnostics read left-to-right.
         match &mut block.kind {
-            BlockKind::Heading { inlines, .. } | BlockKind::Paragraph { inlines } => {
+            BlockKind::Heading { inlines, .. }
+            | BlockKind::Paragraph { inlines }
+            | BlockKind::Admonition { inlines, .. } => {
                 register_inline_anchors(inlines, registry, diagnostics);
             }
             BlockKind::List { items, .. } => {
@@ -234,7 +236,9 @@ fn push_text(inlines: &[Inline], s: &mut String) {
 fn resolve_xrefs(blocks: &mut [Block], registry: &Registry, diagnostics: &mut Vec<Diagnostic>) {
     for block in blocks {
         match &mut block.kind {
-            BlockKind::Heading { inlines, .. } | BlockKind::Paragraph { inlines } => {
+            BlockKind::Heading { inlines, .. }
+            | BlockKind::Paragraph { inlines }
+            | BlockKind::Admonition { inlines, .. } => {
                 resolve_inlines(inlines, registry, diagnostics);
             }
             BlockKind::List { items, .. } => {
@@ -461,6 +465,32 @@ mod tests {
         let (target, children) = first_xref(src);
         assert_eq!(target, "_section_two");
         assert_eq!(text_of(&children), "Section Two");
+    }
+
+    #[test]
+    fn cross_reference_inside_admonition_resolves() {
+        // A `<<id>>` in an admonition body must resolve — the admonition's inlines
+        // are walked like a paragraph's, not skipped like verbatim listing text.
+        let src = "== Later\n\nNOTE: see <<_later>>.";
+        let result = crate::parse(src);
+        assert!(result.diagnostics.is_empty(), "known id, no diagnostic");
+        let inlines = result
+            .document
+            .blocks
+            .iter()
+            .find_map(|b| match &b.kind {
+                BlockKind::Admonition { inlines, .. } => Some(inlines.clone()),
+                _ => None,
+            })
+            .expect("an admonition block");
+        let children = inlines
+            .iter()
+            .find_map(|n| match n {
+                Inline::CrossReference { children, .. } => Some(children.clone()),
+                _ => None,
+            })
+            .expect("a cross-reference in the admonition body");
+        assert_eq!(text_of(&children), "Later");
     }
 
     #[test]
