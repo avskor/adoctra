@@ -125,6 +125,80 @@ pub struct BlockAttrs {
     pub positional: Vec<String>,
 }
 
+/// The five admonition types. An admonition is a callout paragraph produced
+/// either by an uppercase block style (`[NOTE]`, `[TIP]`, `[IMPORTANT]`,
+/// `[WARNING]`, `[CAUTION]`) or by an uppercase label prefix on a paragraph's
+/// first line (`NOTE: …`). Both forms are case-sensitive, matching asciidoctor.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AdmonitionKind {
+    Note,
+    Tip,
+    Important,
+    Warning,
+    Caution,
+}
+
+impl AdmonitionKind {
+    /// The lowercase identifier (`"note"`, …): the HTML `data-type` and the JSON
+    /// `admonition-type`.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Note => "note",
+            Self::Tip => "tip",
+            Self::Important => "important",
+            Self::Warning => "warning",
+            Self::Caution => "caution",
+        }
+    }
+
+    /// The human-readable label (`"Note"`, …): the rendered title / `aria-label`.
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Note => "Note",
+            Self::Tip => "Tip",
+            Self::Important => "Important",
+            Self::Warning => "Warning",
+            Self::Caution => "Caution",
+        }
+    }
+
+    /// Match an uppercase block style word (`"NOTE"`, …). Case-sensitive: `[note]`
+    /// is *not* an admonition (asciidoctor treats it as a custom paragraph style).
+    pub fn from_style(style: &str) -> Option<Self> {
+        match style {
+            "NOTE" => Some(Self::Note),
+            "TIP" => Some(Self::Tip),
+            "IMPORTANT" => Some(Self::Important),
+            "WARNING" => Some(Self::Warning),
+            "CAUTION" => Some(Self::Caution),
+            _ => None,
+        }
+    }
+
+    /// Recognise an admonition label at the start of `line`: an uppercase type
+    /// word followed by a colon and a single space (`"NOTE: "`, …). Returns the
+    /// kind and the byte length of the prefix to strip (incl. the space). `note:`
+    /// and `NOTE:` without the trailing space are *not* admonitions, matching
+    /// asciidoctor.
+    pub fn from_label_prefix(line: &str) -> Option<(Self, usize)> {
+        const LABELS: [(&str, AdmonitionKind); 5] = [
+            ("NOTE", AdmonitionKind::Note),
+            ("TIP", AdmonitionKind::Tip),
+            ("IMPORTANT", AdmonitionKind::Important),
+            ("WARNING", AdmonitionKind::Warning),
+            ("CAUTION", AdmonitionKind::Caution),
+        ];
+        for (word, kind) in LABELS {
+            if let Some(rest) = line.strip_prefix(word) {
+                if rest.strip_prefix(": ").is_some() {
+                    return Some((kind, word.len() + 2));
+                }
+            }
+        }
+        None
+    }
+}
+
 /// Block-level element kinds.
 #[derive(Debug, Clone, PartialEq)]
 pub enum BlockKind {
@@ -150,6 +224,15 @@ pub enum BlockKind {
     /// rendered list kind. Nesting is structural: a deeper level is a
     /// [`BlockKind::List`] held in a [`ListItem`]'s `blocks`.
     List { ordered: bool, items: Vec<ListItem> },
+    /// An admonition callout (`NOTE`/`TIP`/`IMPORTANT`/`WARNING`/`CAUTION`),
+    /// produced by an uppercase block style (`[NOTE]`) or an uppercase label
+    /// prefix (`NOTE: …`). Carries resolved `inlines` like a [`BlockKind::Paragraph`]
+    /// (the label prefix, if any, is stripped before scanning); `kind` selects
+    /// the type.
+    Admonition {
+        kind: AdmonitionKind,
+        inlines: Vec<Inline>,
+    },
 }
 
 /// One item of a [`BlockKind::List`]: its resolved inline content (the

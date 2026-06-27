@@ -121,7 +121,7 @@ later".
 ## Current state (so you don't assume more than exists)
 
 Working: parser for header attributes, headings, listing blocks, literal blocks
-(`....` and `[literal]`), paragraphs,
+(`....` and `[literal]`), admonitions (paragraph form), paragraphs,
 lists (unordered `*`/`-`, ordered `.` and explicit-numbered `1.` — the latter a
 marker identity *distinct* from `.` (so a `1.` after a `.` list nests), with
 digit values ignored (numbering is positional, matching asciidoctor); **nested**
@@ -173,7 +173,20 @@ source text, no inline subs) — the first style that changes a block's *type*; 
 delimited form `....` … `....` (mirror of the `----` listing) yields the same kind.
 The HTML backend renders both as `<pre class="literalblock">` (asciidoctor's
 `literalblock` class moved onto the inner `<pre>`, per adoctra's no-wrapper
-convention); the tokenizer emits `literal-delimiter`/`literal-text`. Other styles
+convention); the tokenizer emits `literal-delimiter`/`literal-text`. The
+uppercase admonition styles (`NOTE`/`TIP`/`IMPORTANT`/`WARNING`/`CAUTION`) are the
+next type-changing styles: `[NOTE]` on a paragraph **and** the label prefix
+`NOTE: …` on a paragraph's first line both yield a `BlockKind::Admonition { kind,
+inlines }` (an `AdmonitionKind` enum; both forms case-sensitive, matching
+asciidoctor — `[note]`/`note:` stay paragraphs). The HTML backend renders a
+**modern, semantic** `<aside class="admonition" data-type="TYPE" aria-label="…">`
+with a `.admonition-title` and the body — *not* asciidoctor's table/icon-font
+layout; id/roles hang on the `<aside>`. This is also where adoctra first **ships a
+reference stylesheet**: `adoctra-html` exposes `STYLESHEET` (`assets/adoctra.css`,
+a modern theme — custom properties, `color-mix()`, logical properties, SVG-mask
+icons) and `convert()` inlines it into a `<head>` so output is styled out of the
+box. The tokenizer emits an `admonition-label` token for the `NOTE:` prefix (the
+`[NOTE]` style is just a `block-attribute-list`). Other styles
 are parsed and carried on `Block.attrs.style` but do not yet change a block's
 *type*. The id
 lives on the block (`Block.id`, `None` for the level-0 doctitle and plain blocks)
@@ -193,19 +206,24 @@ char); HTML and JSON backends; editor layer
 (error-tolerant `parse`, spans, diagnostics, tokenizer); WASM `parse_json` /
 `tokens_json`; golden compatibility tests against asciidoctor
 (`adoctra-html/tests/golden/`, list fixtures under `golden/lists/`, source-block
-fixtures under `golden/blocks/`, literal-block fixtures under `golden/literals/`).
+fixtures under `golden/blocks/`, literal-block fixtures under `golden/literals/`,
+admonition fixtures under `golden/admonitions/`).
 
 Scaffold only: DOCX backend; the extension API exists but `parse`/`convert` do
 not invoke it yet.
 
 Not yet implemented (common asks — treat as roadmap, do not assume present):
-broader language coverage (tables, footnotes, admonitions, includes, conditionals,
+broader language coverage (tables, footnotes, includes, conditionals,
 block/inline macros). The full block-attribute list is now *parsed* (style, named
 attributes, `%options`, id/role folding), but most of it has nothing to render
-against yet: most **styles that change a block's type** (`[NOTE]` → admonition,
-`[quote]`/`[verse]` → quote, …) are unimplemented — only `[source,<lang>]` and
-`[literal]` are wired — as is **rendering of options** (`%hardbreaks`,
-`%nowrap`, …), which are captured but not yet acted on. Also: **indented/offset
+against yet: most **styles that change a block's type** (`[quote]`/`[verse]` →
+quote, `[example]`, …) are unimplemented — only `[source,<lang>]`, `[literal]` and
+the admonition styles are wired — as is **rendering of options** (`%hardbreaks`,
+`%nowrap`, …), which are captured but not yet acted on. For **admonitions**, only
+the *paragraph* forms (`[NOTE]` style and `NOTE: ` label) are done; the
+**delimited example form** (`[NOTE]` on a `====` block) needs example blocks,
+which do not exist yet, as do admonition **block titles** (`.Title`) and
+admonitions on list items. Also: **indented/offset
 literal** (leading-space lines) and delimiters longer than four chars; **anchors on
 individual list items**, TOC generation, incremental/block reparse, and a
 pull/event API over the AST.

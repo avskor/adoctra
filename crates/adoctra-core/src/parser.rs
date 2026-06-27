@@ -5,7 +5,7 @@
 //! [`Diagnostic`]s. This is what lets an editor parse on every keystroke while
 //! the buffer is half-written.
 
-use crate::ast::{Block, BlockAttrs, BlockKind, Document, Inline, ListItem, Span};
+use crate::ast::{AdmonitionKind, Block, BlockAttrs, BlockKind, Document, Inline, ListItem, Span};
 use crate::attributes::Attributes;
 use crate::diagnostic::{Diagnostic, ParseResult, Severity};
 use crate::inline::scan_inlines;
@@ -89,6 +89,20 @@ pub fn parse(source: &str) -> ParseResult {
             {
                 let text = source[block.span.start..block.span.end].to_string();
                 block.kind = BlockKind::Literal { text };
+            } else if let Some(kind) = block
+                .attrs
+                .style
+                .as_deref()
+                .and_then(AdmonitionKind::from_style)
+            {
+                // An uppercase admonition style (`[NOTE]`, …) on a paragraph turns
+                // it into an admonition, carrying over the already-scanned inlines
+                // (there is no label to strip). On any other block kind the style
+                // is inert (left on `attrs.style`).
+                if let BlockKind::Paragraph { inlines } = &mut block.kind {
+                    let inlines = std::mem::take(inlines);
+                    block.kind = BlockKind::Admonition { kind, inlines };
+                }
             }
             doc.blocks.push(block);
         }
@@ -250,6 +264,18 @@ fn parse_block(
         }
         end = loff + lline.len();
         *i += 1;
+    }
+    // An admonition label prefix (`NOTE: `, …) on the first line turns the whole
+    // paragraph into an admonition: the prefix is stripped and the rest (incl. any
+    // folded lines) is the body. The block span stays the whole paragraph. The
+    // `[NOTE]` *style* form is handled later, in the pending-attrs fixup.
+    if let Some((kind, prefix_len)) = AdmonitionKind::from_label_prefix(line) {
+        let content_start = start + prefix_len;
+        let inlines = scan_inlines(&source[content_start..end], content_start, attrs);
+        return Some(Block::new(
+            Span::new(start, end),
+            BlockKind::Admonition { kind, inlines },
+        ));
     }
     // Scan inlines over the original source slice (newlines and all), so every
     // inline span maps back to real bytes — no re-joined string.
@@ -1546,5 +1572,125 @@ mod tests {
             r.document.blocks[0].kind,
             BlockKind::Literal { .. }
         ));
+    }
+
+    /// The [`AdmonitionKind`] and first inline `Text` value of an admonition block.
+    fn admonition(block: &Block) -> (AdmonitionKind, String) {
+        match &block.kind {
+            BlockKind::Admonition { kind, inlines } => {
+                let text = match &inlines[0] {
+                    Inline::Text { value, .. } => value.clone(),
+                    other => panic!("expected Text, got {other:?}"),
+                };
+                (*kind, text)
+            }
+            other => panic!("expected Admonition, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn note_style_turns_paragraph_into_admonition() {
+        // `[NOTE]` on a paragraph makes it an admonition; inline markup is still
+        // processed (unlike `[literal]`, which is verbatim).
+        let b = &parse("[NOTE]\nThis is a *note*.").document.blocks[0];
+        let (kind, text) = admonition(b);
+        assert_eq!(kind, AdmonitionKind::Note);
+        assert_eq!(text, "This is a ");
+        match &b.kind {
+            BlockKind::Admonition { inlines, .. } => {
+                assert!(inlines.iter().any(|n| matches!(n, Inline::Strong { .. })))
+            }
+            _ => unreachable!(),
+        }
+        assert_eq!(b.attrs.style.as_deref(), Some("NOTE"));
+        // The attribute line is excluded from the block span, as elsewhere.
+        assert_eq!(
+            b.span,
+            Span::new("[NOTE]\n".len(), "[NOTE]\nThis is a *note*.".len())
+        );
+    }
+
+    #[test]
+    fn label_prefix_turns_paragraph_into_admonition() {
+        // `NOTE: ` label form. The label is stripped from the content, but the
+        // span still covers the whole paragraph (label included) for source
+        // fidelity, and the content's first inline starts after the prefix.
+        let src = "NOTE: This is a note.";
+        let b = &parse(src).document.blocks[0];
+        let (kind, text) = admonition(b);
+        assert_eq!(kind, AdmonitionKind::Note);
+        assert_eq!(text, "This is a note.");
+        assert!(!text.contains("NOTE"));
+        assert_eq!(b.span, Span::new(0, src.len()));
+        match &b.kind {
+            BlockKind::Admonition { inlines, .. } => match &inlines[0] {
+                Inline::Text { span, .. } => assert_eq!(span.start, "NOTE: ".len()),
+                other => panic!("expected Text, got {other:?}"),
+            },
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn label_prefix_inline_markup_is_processed() {
+        let b = &parse("TIP: be *bold*").document.blocks[0];
+        match &b.kind {
+            BlockKind::Admonition { kind, inlines } => {
+                assert_eq!(*kind, AdmonitionKind::Tip);
+                assert!(inlines.iter().any(|n| matches!(n, Inline::Strong { .. })));
+            }
+            other => panic!("expected Admonition, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn all_admonition_label_types_recognised() {
+        for (src, want) in [
+            ("NOTE: x", AdmonitionKind::Note),
+            ("TIP: x", AdmonitionKind::Tip),
+            ("IMPORTANT: x", AdmonitionKind::Important),
+            ("WARNING: x", AdmonitionKind::Warning),
+            ("CAUTION: x", AdmonitionKind::Caution),
+        ] {
+            let b = &parse(src).document.blocks[0];
+            let (kind, _) = admonition(b);
+            assert_eq!(kind, want, "for {src:?}");
+        }
+    }
+
+    #[test]
+    fn lowercase_style_and_label_are_not_admonitions() {
+        // Case-sensitive, matching asciidoctor: `[note]` / `note:` stay paragraphs,
+        // and a missing space after the colon (`NOTE:text`) is not an admonition.
+        for src in ["[note]\ntext", "note: text", "NOTE:text"] {
+            assert!(
+                matches!(
+                    parse(src).document.blocks[0].kind,
+                    BlockKind::Paragraph { .. }
+                ),
+                "{src:?} should stay a paragraph"
+            );
+        }
+    }
+
+    #[test]
+    fn label_admonition_folds_multiple_lines() {
+        // A wrapped line after `NOTE: ` folds into the admonition body, as
+        // asciidoctor does; the span covers both source lines.
+        let src = "NOTE: first line\nsecond line";
+        let b = &parse(src).document.blocks[0];
+        assert_eq!(admonition(b).0, AdmonitionKind::Note);
+        assert_eq!(b.span, Span::new(0, src.len()));
+        match &b.kind {
+            BlockKind::Admonition { inlines, .. } => match &inlines[0] {
+                Inline::Text { value, span } => {
+                    assert!(value.contains("first line"));
+                    assert!(value.contains("second line"));
+                    assert_eq!(span.start, "NOTE: ".len());
+                }
+                other => panic!("expected Text, got {other:?}"),
+            },
+            _ => unreachable!(),
+        }
     }
 }

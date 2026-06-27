@@ -113,6 +113,20 @@ fn write_block(block: &Block, s: &mut String) {
             }
             s.push_str("]}");
         }
+        BlockKind::Admonition { kind, inlines } => {
+            s.push_str(&format!(
+                "{{\"name\":\"admonition\",\"admonition-type\":\"{}\",",
+                kind.as_str()
+            ));
+            write_id(&block.id, s);
+            write_roles(&block.roles, s);
+            write_style(&block.attrs.style, s);
+            write_attributes(&block.attrs.named, s);
+            write_options(&block.attrs.options, s);
+            s.push_str(",\"inlines\":");
+            write_inlines(inlines, s);
+            s.push('}');
+        }
     }
 }
 
@@ -578,5 +592,22 @@ mod tests {
         assert!(json.contains("\"name\":\"literal\""), "got: {json}");
         assert!(json.contains("\"style\":\"literal\""), "got: {json}");
         assert!(json.contains("\"text\":\"a *b* c\""), "got: {json}");
+    }
+
+    #[test]
+    fn note_style_serializes_as_admonition() {
+        let json = render("[NOTE]\nThis is a *note*.");
+        assert!(json.contains("\"name\":\"admonition\""), "got: {json}");
+        assert!(json.contains("\"admonition-type\":\"note\""), "got: {json}");
+        // The body keeps its inline markup (unlike a verbatim literal).
+        assert!(json.contains("\"name\":\"strong\""), "got: {json}");
+    }
+
+    #[test]
+    fn label_form_serializes_as_admonition() {
+        let json = render("TIP: be *bold*");
+        assert!(json.contains("\"name\":\"admonition\""), "got: {json}");
+        assert!(json.contains("\"admonition-type\":\"tip\""), "got: {json}");
+        assert!(json.contains("\"name\":\"strong\""), "got: {json}");
     }
 }

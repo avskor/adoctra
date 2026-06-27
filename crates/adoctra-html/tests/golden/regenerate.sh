@@ -18,9 +18,9 @@ fi
 
 echo "using $(asciidoctor --version | head -1)"
 # Top-level inline fixtures, flat-list fixtures under lists/, block-level
-# fixtures (e.g. source listings) under blocks/, and literal blocks under
-# literals/.
-for adoc in *.adoc lists/*.adoc blocks/*.adoc literals/*.adoc; do
+# fixtures (e.g. source listings) under blocks/, literal blocks under literals/,
+# and admonitions under admonitions/.
+for adoc in *.adoc lists/*.adoc blocks/*.adoc literals/*.adoc admonitions/*.adoc; do
   [ -e "$adoc" ] || continue
   name="${adoc%.adoc}"
   asciidoctor -s -o - "$adoc" >"${name}.expected.html"
