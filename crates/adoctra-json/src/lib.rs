@@ -4,7 +4,7 @@
 //! AsciiDoc Abstract Syntax Graph and act as a TCK adapter. Hand-serialized to
 //! stay dependency-free; switch to serde for the real ASG shape.
 
-use adoctra_core::ast::{Block, BlockKind, Inline};
+use adoctra_core::ast::{Attribution, Block, BlockKind, Inline};
 use adoctra_core::json::escape_into;
 use adoctra_core::{Backend, Document, Result};
 use std::collections::BTreeMap;
@@ -162,6 +162,68 @@ fn write_block(block: &Block, s: &mut String) {
             }
             s.push_str("]}");
         }
+        BlockKind::Quote {
+            attribution,
+            blocks,
+        } => {
+            s.push_str("{\"name\":\"quote\",");
+            write_id(&block.id, s);
+            write_roles(&block.roles, s);
+            write_style(&block.attrs.style, s);
+            write_attributes(&block.attrs.named, s);
+            write_options(&block.attrs.options, s);
+            write_title(&block.title, s);
+            write_caption(&block.caption, s);
+            write_attribution(attribution, s);
+            s.push_str(",\"blocks\":[");
+            for (i, child) in blocks.iter().enumerate() {
+                if i > 0 {
+                    s.push(',');
+                }
+                write_block(child, s);
+            }
+            s.push_str("]}");
+        }
+        BlockKind::Verse {
+            attribution,
+            inlines,
+        } => {
+            s.push_str("{\"name\":\"verse\",");
+            write_id(&block.id, s);
+            write_roles(&block.roles, s);
+            write_style(&block.attrs.style, s);
+            write_attributes(&block.attrs.named, s);
+            write_options(&block.attrs.options, s);
+            write_title(&block.title, s);
+            write_caption(&block.caption, s);
+            write_attribution(attribution, s);
+            s.push_str(",\"inlines\":");
+            write_inlines(inlines, s);
+            s.push('}');
+        }
+    }
+}
+
+/// Emit the leading-comma `,"attribution":{…}|null` field of a quote/verse block.
+/// Each part is the inline array (so formatting is preserved) or `null`; an absent
+/// attribution is the JSON `null`.
+fn write_attribution(attribution: &Option<Attribution>, s: &mut String) {
+    s.push_str(",\"attribution\":");
+    match attribution {
+        Some(attr) => {
+            s.push_str("{\"author\":");
+            match &attr.author {
+                Some(a) => write_inlines(a, s),
+                None => s.push_str("null"),
+            }
+            s.push_str(",\"citetitle\":");
+            match &attr.citetitle {
+                Some(c) => write_inlines(c, s),
+                None => s.push_str("null"),
+            }
+            s.push('}');
+        }
+        None => s.push_str("null"),
     }
 }
 
@@ -742,5 +804,53 @@ mod tests {
         let json = render(".Code\n----\nputs 1\n----");
         assert!(json.contains("\"name\":\"listing\""), "got: {json}");
         assert!(json.contains("\"caption\":null"), "got: {json}");
+    }
+
+    // --- quote & verse blocks ---
+
+    #[test]
+    fn quote_block_serializes_attribution_and_blocks() {
+        let json = render("[quote, Albert Einstein, Theory]\n____\nHi *there*.\n____");
+        assert!(json.contains("\"name\":\"quote\""), "got: {json}");
+        assert!(
+            json.contains(
+                "\"attribution\":{\"author\":[{\"name\":\"text\",\"value\":\"Albert Einstein\"}],\"citetitle\":[{\"name\":\"text\",\"value\":\"Theory\"}]}"
+            ),
+            "got: {json}"
+        );
+        assert!(json.contains("\"name\":\"paragraph\""), "got: {json}");
+        assert!(json.contains("\"name\":\"strong\""), "got: {json}");
+    }
+
+    #[test]
+    fn quote_without_attribution_serializes_null() {
+        let json = render("____\nx\n____");
+        assert!(json.contains("\"name\":\"quote\""), "got: {json}");
+        assert!(json.contains("\"attribution\":null"), "got: {json}");
+    }
+
+    #[test]
+    fn verse_block_serializes_attribution_and_inlines() {
+        let json = render("[verse, Carl Sandburg, Fog]\n____\nfirst\nsecond\n____");
+        assert!(json.contains("\"name\":\"verse\""), "got: {json}");
+        assert!(
+            json.contains(
+                "\"attribution\":{\"author\":[{\"name\":\"text\",\"value\":\"Carl Sandburg\"}]"
+            ),
+            "got: {json}"
+        );
+        // Verse keeps its line break — a JSON-escaped newline in the inline text.
+        assert!(json.contains(r"first\nsecond"), "got: {json}");
+    }
+
+    #[test]
+    fn verse_citetitle_only_serializes_null_author() {
+        let json = render("[verse, , Fog]\n____\nx\n____");
+        assert!(
+            json.contains(
+                "\"attribution\":{\"author\":null,\"citetitle\":[{\"name\":\"text\",\"value\":\"Fog\"}]}"
+            ),
+            "got: {json}"
+        );
     }
 }

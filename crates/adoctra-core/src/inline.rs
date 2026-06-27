@@ -17,15 +17,32 @@ use crate::attributes::Attributes;
 use crate::parser::is_valid_anchor_id;
 
 /// Scan inline markup in `src`. `base` is the absolute byte offset of `src[0]`
-/// in the original source; `attrs` resolves `{name}` references.
+/// in the original source; `attrs` resolves `{name}` references. Newlines in text
+/// content fold to spaces (asciidoctor's soft wrap); use [`scan_inlines_with`] to
+/// keep them.
 pub(crate) fn scan_inlines(src: &str, base: usize, attrs: &Attributes) -> Vec<Inline> {
+    scan_inlines_with(src, base, attrs, true)
+}
+
+/// Like [`scan_inlines`], but `fold_newlines` chooses whether newlines in *text*
+/// content collapse to spaces. A paragraph folds (a soft line wrap is just a
+/// space); a verse block does **not** — its line breaks are significant and render
+/// inside a `<pre>`. A newline *inside* an inline-markup span still folds (markup
+/// children are scanned through the regular folding path), but markup straddling a
+/// line break is vanishingly rare in verse.
+pub(crate) fn scan_inlines_with(
+    src: &str,
+    base: usize,
+    attrs: &Attributes,
+    fold_newlines: bool,
+) -> Vec<Inline> {
     let mut out = Vec::new();
     let mut text_start = 0usize;
     let mut i = 0usize;
 
     while i < src.len() {
         if let Some((node, end)) = try_match(src, i, base, attrs) {
-            flush_text(src, text_start, i, base, &mut out);
+            flush_text(src, text_start, i, base, fold_newlines, &mut out);
             out.push(node);
             i = end;
             text_start = end;
@@ -34,7 +51,7 @@ pub(crate) fn scan_inlines(src: &str, base: usize, attrs: &Attributes) -> Vec<In
             i += utf8_step(src, i);
         }
     }
-    flush_text(src, text_start, src.len(), base, &mut out);
+    flush_text(src, text_start, src.len(), base, fold_newlines, &mut out);
     out
 }
 
@@ -514,15 +531,23 @@ fn anchor_reftext(
 }
 
 /// Emit a `Text` node for `src[a..b]` if non-empty, folding newlines to spaces
-/// and applying typographic replacements (`(C)`, `--`, `...`, `'`, arrows) in
-/// the content while the span stays anchored to the real bytes — so a `Text`'s
-/// value is what the source *means* and its span is where it *came from*.
-fn flush_text(src: &str, a: usize, b: usize, base: usize, out: &mut Vec<Inline>) {
+/// (when `fold_newlines`) and applying typographic replacements (`(C)`, `--`,
+/// `...`, `'`, arrows) in the content while the span stays anchored to the real
+/// bytes — so a `Text`'s value is what the source *means* and its span is where it
+/// *came from*.
+fn flush_text(
+    src: &str,
+    a: usize,
+    b: usize,
+    base: usize,
+    fold_newlines: bool,
+    out: &mut Vec<Inline>,
+) {
     if a >= b {
         return;
     }
     let raw = &src[a..b];
-    let folded = if raw.contains(['\n', '\r']) {
+    let folded = if fold_newlines && raw.contains(['\n', '\r']) {
         raw.replace(['\n', '\r'], " ")
     } else {
         raw.to_string()

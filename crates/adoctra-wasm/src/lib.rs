@@ -17,7 +17,7 @@
 //! and diagnostics/tokens carry byte spans (`{ start, end }`) that map directly
 //! onto CodeMirror/Monaco ranges.
 
-use adoctra_core::ast::{Block, BlockKind, Inline, Span};
+use adoctra_core::ast::{Attribution, Block, BlockKind, Inline, Span};
 use adoctra_core::diagnostic::{Diagnostic, ParseResult};
 use adoctra_core::json::escape_into as write_str;
 use adoctra_core::{Token, TokenKind};
@@ -200,8 +200,70 @@ fn write_block(b: &Block, s: &mut String) {
             }
             s.push(']');
         }
+        BlockKind::Quote {
+            attribution,
+            blocks,
+        } => {
+            s.push_str("\"name\":\"quote\",");
+            write_id(&b.id, s);
+            write_roles(&b.roles, s);
+            write_style(&b.attrs.style, s);
+            write_attributes(&b.attrs.named, s);
+            write_options(&b.attrs.options, s);
+            write_title(&b.title, s);
+            write_caption(&b.caption, s);
+            write_attribution(attribution, s);
+            // Children carry their own spans; recurse so the editor sees the tree.
+            s.push_str(",\"blocks\":[");
+            for (j, child) in blocks.iter().enumerate() {
+                if j > 0 {
+                    s.push(',');
+                }
+                write_block(child, s);
+            }
+            s.push(']');
+        }
+        BlockKind::Verse {
+            attribution,
+            inlines,
+        } => {
+            s.push_str("\"name\":\"verse\",");
+            write_id(&b.id, s);
+            write_roles(&b.roles, s);
+            write_style(&b.attrs.style, s);
+            write_attributes(&b.attrs.named, s);
+            write_options(&b.attrs.options, s);
+            write_title(&b.title, s);
+            write_caption(&b.caption, s);
+            write_attribution(attribution, s);
+            s.push_str(",\"inlines\":");
+            write_inlines(inlines, s);
+        }
     }
     s.push('}');
+}
+
+/// Emit the leading-comma `,"attribution":{…}|null` field of a quote/verse block.
+/// Each part is the inline array (carrying spans, like any inline the editor sees)
+/// or `null`; an absent attribution is the JSON `null`.
+fn write_attribution(attribution: &Option<Attribution>, s: &mut String) {
+    s.push_str(",\"attribution\":");
+    match attribution {
+        Some(attr) => {
+            s.push_str("{\"author\":");
+            match &attr.author {
+                Some(a) => write_inlines(a, s),
+                None => s.push_str("null"),
+            }
+            s.push_str(",\"citetitle\":");
+            match &attr.citetitle {
+                Some(c) => write_inlines(c, s),
+                None => s.push_str("null"),
+            }
+            s.push('}');
+        }
+        None => s.push_str("null"),
+    }
 }
 
 /// Emit the `"id":<string|null>` field for a block's anchor.
@@ -880,5 +942,41 @@ mod tests {
         let json = parse_json(".Code\n----\nputs 1\n----");
         assert!(json.contains("\"name\":\"listing\""), "got: {json}");
         assert!(json.contains("\"caption\":null"), "got: {json}");
+    }
+
+    // --- quote & verse blocks ---
+
+    #[test]
+    fn quote_block_serializes_with_nested_blocks_and_spans() {
+        let json = parse_json("____\nHi.\n____");
+        assert!(json.contains("\"name\":\"quote\""), "got: {json}");
+        assert!(json.contains("\"blocks\":["), "got: {json}");
+        // The quote block carries its own span (opening through closing fence).
+        assert!(
+            json.contains("\"span\":{\"start\":0,\"end\":13},\"name\":\"quote\""),
+            "got: {json}"
+        );
+        assert!(json.contains("\"attribution\":null"), "got: {json}");
+    }
+
+    #[test]
+    fn quote_serializes_attribution_for_the_editor() {
+        let json = parse_json("[quote, Carl Sandburg, Fog]\n____\nx\n____");
+        // Attribution parts are inline arrays, each inline carrying its own span.
+        assert!(
+            json.contains("\"attribution\":{\"author\":[{\"span\":"),
+            "got: {json}"
+        );
+        assert!(json.contains("\"value\":\"Carl Sandburg\""), "got: {json}");
+        assert!(json.contains("\"value\":\"Fog\""), "got: {json}");
+    }
+
+    #[test]
+    fn verse_block_serializes_inlines_preserving_newline() {
+        let json = parse_json("[verse]\n____\nfirst\nsecond\n____");
+        assert!(json.contains("\"name\":\"verse\""), "got: {json}");
+        assert!(json.contains("\"inlines\":["), "got: {json}");
+        // Verse keeps its line break — a JSON-escaped newline in the inline text.
+        assert!(json.contains(r"first\nsecond"), "got: {json}");
     }
 }

@@ -1,6 +1,6 @@
 //! HTML5 backend.
 
-use adoctra_core::ast::{Block, BlockKind, Inline};
+use adoctra_core::ast::{Attribution, Block, BlockKind, Inline};
 use adoctra_core::{Backend, Document, Result};
 
 /// adoctra's reference stylesheet — a modern, self-contained theme (custom
@@ -161,7 +161,70 @@ fn render_block(block: &Block, out: &mut String) {
             }
             out.push_str("</div>\n");
         }
+        BlockKind::Quote {
+            attribution,
+            blocks,
+        } => {
+            // A modern, semantic quote: a `<figure class="quoteblock">` wrapping a
+            // `<blockquote>` of the rendered children and an optional
+            // `<figcaption>` attribution. asciidoctor nests
+            // `quoteblock`/`blockquote`/`attribution` `<div>`s; adoctra keeps the
+            // no-wrapper convention and the HTML5 figure/blockquote/figcaption/cite
+            // idiom — id/roles hang on the `<figure>`.
+            let class = class_attr(&["quoteblock"], &block.roles);
+            out.push_str(&format!("<figure{class}{id}>\n"));
+            render_title(&block.title, &block.caption, out);
+            out.push_str("<blockquote>\n");
+            for child in blocks {
+                render_block(child, out);
+            }
+            out.push_str("</blockquote>\n");
+            render_attribution(attribution, out);
+            out.push_str("</figure>\n");
+        }
+        BlockKind::Verse {
+            attribution,
+            inlines,
+        } => {
+            // A verse: like a quote, but the body is verbatim — rendered in a
+            // `<pre>` so the source line breaks survive — while inline
+            // substitutions still apply (the scanned `inlines` render their
+            // markup). No newline after `<pre>` (it is whitespace-significant).
+            let class = class_attr(&["verseblock"], &block.roles);
+            out.push_str(&format!("<figure{class}{id}>\n"));
+            render_title(&block.title, &block.caption, out);
+            out.push_str("<pre class=\"verse\">");
+            render_inlines(inlines, out);
+            out.push_str("</pre>\n");
+            render_attribution(attribution, out);
+            out.push_str("</figure>\n");
+        }
     }
+}
+
+/// Emit a quote/verse [`Attribution`] as a `<figcaption>` (nothing when absent).
+/// Mirrors asciidoctor's content — an em dash before the author, the cited work in
+/// a `<cite>` — but as a semantic `<figcaption>` rather than a `<div
+/// class="attribution">`. The em dash is emitted only with an author, so a
+/// citetitle-only attribution renders just the `<cite>` (matching asciidoctor).
+fn render_attribution(attribution: &Option<Attribution>, out: &mut String) {
+    let Some(attr) = attribution else {
+        return;
+    };
+    out.push_str("<figcaption>");
+    if let Some(author) = &attr.author {
+        out.push_str("&#8212; ");
+        render_inlines(author, out);
+        if attr.citetitle.is_some() {
+            out.push_str("<br>\n");
+        }
+    }
+    if let Some(cite) = &attr.citetitle {
+        out.push_str("<cite>");
+        render_inlines(cite, out);
+        out.push_str("</cite>");
+    }
+    out.push_str("</figcaption>\n");
 }
 
 /// Emit a block's `.Title` as `<div class="title">…</div>` when present (nothing
@@ -1015,6 +1078,91 @@ mod tests {
         assert!(
             html.contains("<div class=\"title\">Code</div>"),
             "got: {html}"
+        );
+    }
+
+    // --- quote & verse blocks ---
+
+    #[test]
+    fn quote_block_renders_figure_blockquote_and_attribution() {
+        let html = render("[quote, Albert Einstein, Theory]\n____\nA *bold* quote.\n____");
+        assert!(
+            html.contains("<figure class=\"quoteblock\">"),
+            "got: {html}"
+        );
+        assert!(
+            html.contains("<blockquote>\n<p>A <strong>bold</strong> quote.</p>\n</blockquote>"),
+            "got: {html}"
+        );
+        assert!(
+            html.contains(
+                "<figcaption>&#8212; Albert Einstein<br>\n<cite>Theory</cite></figcaption>"
+            ),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn quote_without_attribution_has_no_figcaption() {
+        let html = render("____\nx\n____");
+        assert!(
+            html.contains("<figure class=\"quoteblock\">"),
+            "got: {html}"
+        );
+        assert!(!html.contains("<figcaption>"), "got: {html}");
+    }
+
+    #[test]
+    fn quote_id_and_roles_on_figure() {
+        let html = render("[#q.box]\n____\nx\n____");
+        assert!(
+            html.contains("<figure class=\"quoteblock box\" id=\"q\">"),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn quote_citetitle_only_omits_the_em_dash() {
+        // `[quote, , Fog]` — no author, so no em dash, just the `<cite>`.
+        let html = render("[quote, , Fog]\n____\nx\n____");
+        assert!(
+            html.contains("<figcaption><cite>Fog</cite></figcaption>"),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn verse_block_renders_pre_preserving_newlines() {
+        let html = render("[verse]\n____\nThe fog comes\non little cat feet.\n____");
+        assert!(
+            html.contains("<figure class=\"verseblock\">"),
+            "got: {html}"
+        );
+        assert!(
+            html.contains("<pre class=\"verse\">The fog comes\non little cat feet.</pre>"),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn verse_renders_attribution_figcaption() {
+        let html = render("[verse, Carl Sandburg, Fog]\n____\nx\n____");
+        assert!(
+            html.contains("<figcaption>&#8212; Carl Sandburg<br>\n<cite>Fog</cite></figcaption>"),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn quote_and_verse_stylesheet_rules_are_shipped() {
+        let html = render("Hello.");
+        assert!(
+            html.contains(".quoteblock"),
+            "stylesheet missing quote: {html}"
+        );
+        assert!(
+            html.contains(".verseblock"),
+            "stylesheet missing verse: {html}"
         );
     }
 }

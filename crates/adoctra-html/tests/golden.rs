@@ -225,8 +225,10 @@ fn normalize_container(s: &str, strip_p: bool) -> String {
         let bare = inner.trim_start_matches('/').trim();
         let name = bare.split_whitespace().next().unwrap_or("");
         match name {
-            "div" => {}          // structural wrapper — drop it
-            "p" if strip_p => {} // admonition body paragraph wrapper — drop it
+            // Structural wrappers — drop them. `figure`/`figcaption` are adoctra's
+            // quote/verse wrappers (asciidoctor uses `div`s), so both collapse alike.
+            "div" | "figure" | "figcaption" => {}
+            "p" if strip_p => {} // admonition/quote body paragraph wrapper — drop it
             "pre" if !inner.starts_with('/') => out.push_str("<pre>"),
             _ => out.push_str(tag),
         }
@@ -234,6 +236,26 @@ fn normalize_container(s: &str, strip_p: bool) -> String {
     }
     out.push_str(rest);
     out.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// Normalise a quote or verse block to its quoted content plus attribution markup.
+/// adoctra emits the HTML5 `<figure class="quoteblock|verseblock">` /
+/// `<blockquote>`|`<pre>` / `<figcaption>` / `<cite>` idiom; asciidoctor nests
+/// `<div class="quoteblock|verseblock">` / `<blockquote>`|`<pre class="content">` /
+/// `<div class="attribution">` / `<cite>`. Stripping the structural wrappers
+/// (`<div>`/`<figure>`/`<figcaption>`/`<p>`) and rewriting `<pre …>` to bare
+/// collapses both to the same shape — the quoted text/markup, the em dash, the
+/// author and the `<cite>` — which must match. (Whitespace is collapsed, so the
+/// verse line-break *preservation* is pinned by the unit tests, not here.)
+fn quote_verse_body(html: &str) -> String {
+    let body = html.split("<body>").nth(1).unwrap_or(html);
+    let body = body.split("</body>").next().unwrap_or(body);
+    let at = body
+        .find("quoteblock")
+        .or_else(|| body.find("verseblock"))
+        .expect("no quote/verse block in output");
+    let open = body[..at].rfind('<').expect("malformed quote/verse tag");
+    normalize_container(&body[open..], true)
 }
 
 #[test]
@@ -446,6 +468,66 @@ fn html_block_titles_match_asciidoctor() {
             block_title(&ours),
             block_title(&expected),
             "HTML block title diverges from asciidoctor for `{name}`"
+        );
+    }
+}
+
+#[test]
+fn html_quote_blocks_match_asciidoctor() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/quotes");
+
+    for entry in fs::read_dir(&dir).expect("golden/quotes dir is missing") {
+        let path = entry.unwrap().path();
+        if path.extension().and_then(|e| e.to_str()) != Some("adoc") {
+            continue;
+        }
+        let expected_path = path.with_extension("expected.html");
+        if !expected_path.exists() {
+            // No reference yet (asciidoctor unavailable) — skip, don't fail.
+            continue;
+        }
+
+        let name = path.file_stem().unwrap().to_string_lossy().into_owned();
+        let adoc = fs::read_to_string(&path).unwrap();
+        let expected = fs::read_to_string(&expected_path).unwrap();
+
+        let doc = adoctra_core::parse(&adoc).document;
+        let ours = String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap();
+
+        assert_eq!(
+            quote_verse_body(&ours),
+            quote_verse_body(&expected),
+            "HTML quote-block content diverges from asciidoctor for `{name}`"
+        );
+    }
+}
+
+#[test]
+fn html_verse_blocks_match_asciidoctor() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/verses");
+
+    for entry in fs::read_dir(&dir).expect("golden/verses dir is missing") {
+        let path = entry.unwrap().path();
+        if path.extension().and_then(|e| e.to_str()) != Some("adoc") {
+            continue;
+        }
+        let expected_path = path.with_extension("expected.html");
+        if !expected_path.exists() {
+            // No reference yet (asciidoctor unavailable) — skip, don't fail.
+            continue;
+        }
+
+        let name = path.file_stem().unwrap().to_string_lossy().into_owned();
+        let adoc = fs::read_to_string(&path).unwrap();
+        let expected = fs::read_to_string(&expected_path).unwrap();
+
+        let doc = adoctra_core::parse(&adoc).document;
+        let ours = String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap();
+
+        assert_eq!(
+            quote_verse_body(&ours),
+            quote_verse_body(&expected),
+            "HTML verse-block content diverges from asciidoctor for `{name}`"
         );
     }
 }

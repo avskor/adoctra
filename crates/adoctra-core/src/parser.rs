@@ -5,10 +5,12 @@
 //! [`Diagnostic`]s. This is what lets an editor parse on every keystroke while
 //! the buffer is half-written.
 
-use crate::ast::{AdmonitionKind, Block, BlockAttrs, BlockKind, Document, Inline, ListItem, Span};
+use crate::ast::{
+    AdmonitionKind, Attribution, Block, BlockAttrs, BlockKind, Document, Inline, ListItem, Span,
+};
 use crate::attributes::Attributes;
 use crate::diagnostic::{Diagnostic, ParseResult, Severity};
-use crate::inline::scan_inlines;
+use crate::inline::{scan_inlines, scan_inlines_with};
 use crate::scanner::lines_with_offsets;
 
 /// Metadata accumulated from `[[id]]` anchor and `[style, #id.role, name=value]`
@@ -121,16 +123,22 @@ fn collect_blocks(
             *i += 1;
             continue;
         }
-        if let Some(mut block) =
-            parse_block(source, lines, i, attrs, diagnostics, BlockCtx::TopLevel)
-        {
+        if let Some(mut block) = parse_block(
+            source,
+            lines,
+            i,
+            attrs,
+            diagnostics,
+            BlockCtx::TopLevel,
+            pending.attrs.style.as_deref(),
+        ) {
             let pending = std::mem::take(&mut pending);
             block.id = pending.id;
             block.reftext = pending.reftext;
             block.roles = pending.roles;
             block.title = pending.title;
             block.attrs = pending.attrs;
-            apply_style_fixup(&mut block, source);
+            apply_style_fixup(&mut block, source, attrs);
             blocks.push(block);
         }
     }
@@ -140,15 +148,15 @@ fn collect_blocks(
 /// Apply a type-changing block *style* to a freshly parsed block. A `[literal]`,
 /// `[example]` or admonition (`[NOTE]`, …) style on a *paragraph* rewrites its
 /// kind; on any other block kind these styles are inert (left on `attrs.style`).
-fn apply_style_fixup(block: &mut Block, source: &str) {
+fn apply_style_fixup(block: &mut Block, source: &str, attrs: &Attributes) {
     let Some(style) = block.attrs.style.as_deref() else {
         return;
     };
     // An uppercase admonition style (`[NOTE]`, …) wraps the block's body into an
     // admonition container. On a paragraph the already-scanned inlines become a
-    // single child paragraph; on a `====` example block its children move over
-    // unchanged. Unlike `[literal]`/`[example]` below it also fires on a
-    // container, so it is handled before the paragraph-only guard.
+    // single child paragraph; on a `====` example or `____` quote block its
+    // children move over unchanged. Unlike `[literal]`/`[example]` below it also
+    // fires on a container, so it is handled before the paragraph-only guard.
     if let Some(kind) = AdmonitionKind::from_style(style) {
         match &mut block.kind {
             BlockKind::Paragraph { inlines } => {
@@ -159,7 +167,7 @@ fn apply_style_fixup(block: &mut Block, source: &str) {
                     blocks: vec![child],
                 };
             }
-            BlockKind::Example { blocks } => {
+            BlockKind::Example { blocks } | BlockKind::Quote { blocks, .. } => {
                 let blocks = std::mem::take(blocks);
                 block.kind = BlockKind::Admonition { kind, blocks };
             }
@@ -167,29 +175,111 @@ fn apply_style_fixup(block: &mut Block, source: &str) {
         }
         return;
     }
-    if !matches!(block.kind, BlockKind::Paragraph { .. }) {
-        return;
-    }
-    match style {
-        // The literal body is the *raw* source slice, not the already-scanned
-        // inlines (which are discarded).
-        "literal" => {
-            let text = source[block.span.start..block.span.end].to_string();
-            block.kind = BlockKind::Literal { text };
-        }
-        // `[example]` on a paragraph wraps it into a single-child example block.
-        // The container keeps the block's id/roles/attrs; the child is a plain
-        // paragraph carrying just its kind and span.
-        "example" => {
-            let para = Block::new(
-                block.span,
-                std::mem::replace(&mut block.kind, BlockKind::Example { blocks: Vec::new() }),
-            );
-            if let BlockKind::Example { blocks } = &mut block.kind {
-                blocks.push(para);
+    // Paragraph-only type-changing styles (`[literal]`, `[example]`, `[quote]`,
+    // `[verse]`). A `____` fence already produced a `Quote`/`Verse` in
+    // `parse_block`; these arms cover the *paragraph* shorthand. On any other
+    // block kind the style is inert (left on `attrs.style`).
+    if matches!(block.kind, BlockKind::Paragraph { .. }) {
+        match style {
+            // The literal body is the *raw* source slice, not the already-scanned
+            // inlines (which are discarded).
+            "literal" => {
+                let text = source[block.span.start..block.span.end].to_string();
+                block.kind = BlockKind::Literal { text };
             }
+            // `[example]` on a paragraph wraps it into a single-child example block.
+            // The container keeps the block's id/roles/attrs; the child is a plain
+            // paragraph carrying just its kind and span.
+            "example" => {
+                let para = Block::new(
+                    block.span,
+                    std::mem::replace(&mut block.kind, BlockKind::Example { blocks: Vec::new() }),
+                );
+                if let BlockKind::Example { blocks } = &mut block.kind {
+                    blocks.push(para);
+                }
+            }
+            // `[quote]` on a paragraph wraps it like `[example]` — a single-child
+            // quote container (attribution folded in below).
+            "quote" => {
+                let para = Block::new(
+                    block.span,
+                    std::mem::replace(
+                        &mut block.kind,
+                        BlockKind::Quote {
+                            attribution: None,
+                            blocks: Vec::new(),
+                        },
+                    ),
+                );
+                if let BlockKind::Quote { blocks, .. } = &mut block.kind {
+                    blocks.push(para);
+                }
+            }
+            // `[verse]` on a paragraph: re-scan the paragraph's source *without*
+            // folding newlines (verse renders in a `<pre>`, so a wrapped multi-line
+            // paragraph must keep its breaks). The already-scanned (folded) inlines
+            // are discarded.
+            "verse" => {
+                let text = &source[block.span.start..block.span.end];
+                let inlines = scan_inlines_with(text, block.span.start, attrs, false);
+                block.kind = BlockKind::Verse {
+                    attribution: None,
+                    inlines,
+                };
+            }
+            _ => {}
         }
-        _ => {}
+    }
+    // Fold the positional attributes (`[quote, author, work]`) into the quote /
+    // verse attribution — both the `____` fence form and the paragraph form land
+    // here. Consumed from `attrs.positional` so they are not also surfaced raw.
+    if matches!(
+        block.kind,
+        BlockKind::Quote { .. } | BlockKind::Verse { .. }
+    ) {
+        let positional = std::mem::take(&mut block.attrs.positional);
+        let attribution = build_attribution(positional, block.span.start, attrs);
+        if let BlockKind::Quote {
+            attribution: slot, ..
+        }
+        | BlockKind::Verse {
+            attribution: slot, ..
+        } = &mut block.kind
+        {
+            *slot = attribution;
+        }
+    }
+}
+
+/// Fold the positional attributes of a quote / verse block
+/// (`[quote, author, citetitle]`) into an [`Attribution`]: the first positional
+/// is the author, the second the citetitle. An empty or absent part is `None`
+/// (so `[quote, , Work]` carries only a citetitle, matching asciidoctor), and an
+/// attribution with neither part collapses to `None`. Both parts are inline-scanned
+/// — asciidoctor applies the normal inline substitutions to an attribution.
+///
+/// `base` is a *best-effort* span base: the positional strings are owned (split
+/// out of the `[…]` line and unquoted), so their exact source offset is not
+/// retained. The block's start offset keeps the resulting inline spans in-bounds
+/// and close to the construct.
+fn build_attribution(
+    positional: Vec<String>,
+    base: usize,
+    attrs: &Attributes,
+) -> Option<Attribution> {
+    fn part(seg: Option<String>, base: usize, attrs: &Attributes) -> Option<Vec<Inline>> {
+        let seg = seg?;
+        let seg = seg.trim();
+        (!seg.is_empty()).then(|| scan_inlines(seg, base, attrs))
+    }
+    let mut it = positional.into_iter();
+    let author = part(it.next(), base, attrs);
+    let citetitle = part(it.next(), base, attrs);
+    if author.is_none() && citetitle.is_none() {
+        None
+    } else {
+        Some(Attribution { author, citetitle })
     }
 }
 
@@ -216,6 +306,11 @@ fn parse_block(
     attrs: &Attributes,
     diagnostics: &mut Vec<Diagnostic>,
     ctx: BlockCtx,
+    // The *pending* block style (from a preceding `[verse]` / `[quote]` attribute
+    // line). A `____` fence needs it to choose its content model: `verse` is
+    // verbatim (like `....`), every other style — including the bare default — is
+    // a parsed `quote` container (like `====`).
+    pending_style: Option<&str>,
 ) -> Option<Block> {
     let (off, line) = lines[*i];
     let trimmed = line.trim_end();
@@ -342,6 +437,82 @@ fn parse_block(
         ));
     }
 
+    // Quote / verse block, fenced by `____`. asciidoctor's default style for a
+    // `____` block is `quote`, whose body is parsed *as blocks* (like `====`); a
+    // `[verse]` style instead makes it verbatim (like `....`) while still applying
+    // inline substitutions. The style arrives via `pending_style` (the `[verse]`
+    // attribute line precedes the fence). The positional attribution
+    // (`[quote, author, work]`) is folded in afterwards by `apply_style_fixup`.
+    if trimmed.trim() == "____" {
+        let start = off;
+        // Verse: verbatim body. Capture the exact source slice (so internal line
+        // breaks survive) and inline-scan it — verse keeps newlines but still
+        // formats `*bold*`, unlike the no-subs `Literal`/`Listing`.
+        if pending_style == Some("verse") {
+            *i += 1;
+            let body_start = if *i < lines.len() {
+                lines[*i].0
+            } else {
+                off + line.len()
+            };
+            let mut body_end = body_start;
+            let mut end = off + line.len();
+            let mut closed = false;
+            while *i < lines.len() {
+                let (loff, lline) = lines[*i];
+                if lline.trim() == "____" {
+                    end = loff + lline.len();
+                    *i += 1;
+                    closed = true;
+                    break;
+                }
+                body_end = loff + lline.len();
+                end = body_end;
+                *i += 1;
+            }
+            if !closed {
+                diagnostics.push(Diagnostic {
+                    span: Span::new(start, start + 4),
+                    severity: Severity::Error,
+                    message: "unterminated verse block (missing closing `____`)".to_string(),
+                });
+            }
+            // Verse keeps its line breaks — scan without folding newlines.
+            let inlines =
+                scan_inlines_with(&source[body_start..body_end], body_start, attrs, false);
+            return Some(Block::new(
+                Span::new(start, end),
+                BlockKind::Verse {
+                    attribution: None,
+                    inlines,
+                },
+            ));
+        }
+        // Quote (default): a parsed container, mirror of the `====` example block.
+        *i += 1;
+        let blocks = collect_blocks(source, lines, i, attrs, diagnostics, |l| l.trim() == "____");
+        let end;
+        if *i < lines.len() && lines[*i].1.trim() == "____" {
+            let (loff, lline) = lines[*i];
+            end = loff + lline.len();
+            *i += 1;
+        } else {
+            end = blocks.last().map_or(off + line.len(), |b| b.span.end);
+            diagnostics.push(Diagnostic {
+                span: Span::new(start, start + 4),
+                severity: Severity::Error,
+                message: "unterminated quote block (missing closing `____`)".to_string(),
+            });
+        }
+        return Some(Block::new(
+            Span::new(start, end),
+            BlockKind::Quote {
+                attribution: None,
+                blocks,
+            },
+        ));
+    }
+
     // List: a run of items that nests a level deeper whenever a *unique* marker
     // appears. A list only *starts* at column 0 (an indented marker elsewhere is
     // ordinary text); deeper levels may be indented, handled inside `parse_list`,
@@ -358,11 +529,11 @@ fn parse_block(
         let (loff, lline) = lines[*i];
         let t = lline.trim_end();
         // A paragraph also ends at any block delimiter line, so it never spans
-        // into a `----`/`....`/`====` block (notably the closing fence of an
-        // enclosing example block, which would otherwise be folded in as text).
+        // into a `----`/`....`/`====`/`____` block (notably the closing fence of an
+        // enclosing container, which would otherwise be folded in as text).
         let ends = t.trim().is_empty()
             || parse_heading(t).is_some()
-            || matches!(t.trim(), "----" | "...." | "====")
+            || matches!(t.trim(), "----" | "...." | "====" | "____")
             || match ctx {
                 BlockCtx::TopLevel => parse_list_marker(t).is_some(),
                 BlockCtx::InListItem => t.trim() == "+" || list_marker_indented(t).is_some(),
@@ -498,9 +669,15 @@ fn parse_list(
                 LineRole::Continuation => {
                     *i += 1; // consume the `+`
                     if *i < lines.len() && !lines[*i].1.trim().is_empty() {
-                        if let Some(b) =
-                            parse_block(source, lines, i, attrs, diagnostics, BlockCtx::InListItem)
-                        {
+                        if let Some(b) = parse_block(
+                            source,
+                            lines,
+                            i,
+                            attrs,
+                            diagnostics,
+                            BlockCtx::InListItem,
+                            None,
+                        ) {
                             item_end = b.span.end;
                             blocks.push(b);
                         }
@@ -741,6 +918,12 @@ pub(crate) fn parse_block_attr_list(line: &str) -> Option<AttrLine> {
     for (idx, seg) in split_attr_segments(inner).into_iter().enumerate() {
         let seg = seg.trim();
         if seg.is_empty() {
+            // An empty *positional* slot past the style word is meaningful — an
+            // absent author in `[quote, , citetitle]` (matching asciidoctor). The
+            // style slot (idx 0) and stray empties before it are still dropped.
+            if idx != 0 {
+                out.attrs.positional.push(String::new());
+            }
             continue;
         }
         // `name=value` (with a well-formed name) — a named attribute.
@@ -781,10 +964,13 @@ pub(crate) fn parse_block_attr_list(line: &str) -> Option<AttrLine> {
     // it the same way ("core resolves semantics once").
     if out.attrs.style.as_deref() == Some("source") && !out.attrs.positional.is_empty() {
         let language = out.attrs.positional.remove(0);
-        out.attrs
-            .named
-            .entry("language".to_string())
-            .or_insert(language);
+        // An empty language positional (`[source,,foo]`) carries no language.
+        if !language.is_empty() {
+            out.attrs
+                .named
+                .entry("language".to_string())
+                .or_insert(language);
+        }
     }
     Some(out)
 }
@@ -2051,6 +2237,203 @@ mod tests {
                 _ => None,
             })
             .expect("no cross-reference in example body");
+        match &xref[0] {
+            Inline::Text { value, .. } => assert_eq!(value, "Target"),
+            other => panic!("expected resolved Text, got {other:?}"),
+        }
+    }
+
+    // --- quote & verse blocks (`____`, `[quote]`, `[verse]`) ---
+
+    fn quote_parts(block: &Block) -> (&Option<Attribution>, &[Block]) {
+        match &block.kind {
+            BlockKind::Quote {
+                attribution,
+                blocks,
+            } => (attribution, blocks),
+            other => panic!("expected quote, got {other:?}"),
+        }
+    }
+
+    fn verse_parts(block: &Block) -> (&Option<Attribution>, &[Inline]) {
+        match &block.kind {
+            BlockKind::Verse {
+                attribution,
+                inlines,
+            } => (attribution, inlines),
+            other => panic!("expected verse, got {other:?}"),
+        }
+    }
+
+    /// The concatenated `Text` content of an attribution part (single-`Text`
+    /// authors/citetitles in these tests), or `None` when the part is absent.
+    fn part_text(part: &Option<Vec<Inline>>) -> Option<String> {
+        part.as_ref().map(|inlines| {
+            inlines
+                .iter()
+                .filter_map(|i| match i {
+                    Inline::Text { value, .. } => Some(value.as_str()),
+                    _ => None,
+                })
+                .collect()
+        })
+    }
+
+    /// The concatenated top-level `Text` content of a verse body (markup dropped).
+    fn verse_text(inlines: &[Inline]) -> String {
+        inlines
+            .iter()
+            .filter_map(|i| match i {
+                Inline::Text { value, .. } => Some(value.as_str()),
+                _ => None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn bare_quote_block_defaults_to_quote() {
+        // A bare `____` block is a quote whose body is parsed as blocks, with no
+        // attribution. Span covers the whole block.
+        let src = "____\nA *bold* quote.\n____";
+        let r = parse(src);
+        assert!(r.diagnostics.is_empty());
+        let b = &r.document.blocks[0];
+        let (attribution, blocks) = quote_parts(b);
+        assert!(attribution.is_none());
+        assert_eq!(blocks.len(), 1);
+        assert!(matches!(blocks[0].kind, BlockKind::Paragraph { .. }));
+        assert_eq!(b.span, Span::new(0, src.len()));
+    }
+
+    #[test]
+    fn delimited_quote_carries_attribution() {
+        let src = "[quote, Albert Einstein, Theory of Relativity]\n____\nText.\n____";
+        let r = parse(src);
+        let b = &r.document.blocks[0];
+        let (attribution, blocks) = quote_parts(b);
+        let attr = attribution.as_ref().expect("expected attribution");
+        assert_eq!(part_text(&attr.author).as_deref(), Some("Albert Einstein"));
+        assert_eq!(
+            part_text(&attr.citetitle).as_deref(),
+            Some("Theory of Relativity")
+        );
+        assert_eq!(blocks.len(), 1);
+        // The positional attribution is consumed, not left on `attrs`.
+        assert!(b.attrs.positional.is_empty());
+    }
+
+    #[test]
+    fn quote_style_wraps_paragraph_in_container() {
+        let r = parse("[#q.box]\n[quote]\nShort.");
+        let b = &r.document.blocks[0];
+        assert_eq!(b.id.as_deref(), Some("q"));
+        assert_eq!(b.roles, ["box"]);
+        let (attribution, blocks) = quote_parts(b);
+        assert!(attribution.is_none());
+        assert_eq!(blocks.len(), 1);
+        assert!(matches!(blocks[0].kind, BlockKind::Paragraph { .. }));
+    }
+
+    #[test]
+    fn quote_attribution_author_only() {
+        let r = parse("[quote, Carl Sandburg]\n____\nx\n____");
+        let (attribution, _) = quote_parts(&r.document.blocks[0]);
+        let attr = attribution.as_ref().expect("expected attribution");
+        assert_eq!(part_text(&attr.author).as_deref(), Some("Carl Sandburg"));
+        assert!(attr.citetitle.is_none());
+    }
+
+    #[test]
+    fn quote_attribution_citetitle_only() {
+        // `[quote, , Fog]` — an empty author slot is preserved (matching
+        // asciidoctor): citetitle only, no author.
+        let r = parse("[quote, , Fog]\n____\nx\n____");
+        let (attribution, _) = quote_parts(&r.document.blocks[0]);
+        let attr = attribution.as_ref().expect("expected attribution");
+        assert!(attr.author.is_none());
+        assert_eq!(part_text(&attr.citetitle).as_deref(), Some("Fog"));
+    }
+
+    #[test]
+    fn delimited_verse_preserves_newlines() {
+        let r = parse("[verse]\n____\nThe fog comes\non little cat feet.\n____");
+        let (attribution, inlines) = verse_parts(&r.document.blocks[0]);
+        assert!(attribution.is_none());
+        assert_eq!(verse_text(inlines), "The fog comes\non little cat feet.");
+    }
+
+    #[test]
+    fn verse_carries_attribution_and_inline_markup() {
+        let r = parse("[verse, Carl Sandburg, Fog]\n____\nThe *fog* comes\non feet.\n____");
+        let (attribution, inlines) = verse_parts(&r.document.blocks[0]);
+        let attr = attribution.as_ref().expect("expected attribution");
+        assert_eq!(part_text(&attr.author).as_deref(), Some("Carl Sandburg"));
+        assert_eq!(part_text(&attr.citetitle).as_deref(), Some("Fog"));
+        // Inline markup applies (a Strong node) while the line break survives.
+        assert!(inlines.iter().any(|i| matches!(i, Inline::Strong { .. })));
+        assert!(verse_text(inlines).contains('\n'));
+    }
+
+    #[test]
+    fn verse_style_paragraph_preserves_newlines() {
+        // The paragraph form re-scans without folding, so a wrapped multi-line
+        // `[verse]` paragraph keeps its breaks.
+        let r = parse("[verse]\nRoses are red,\nviolets are blue.");
+        let (_, inlines) = verse_parts(&r.document.blocks[0]);
+        assert_eq!(verse_text(inlines), "Roses are red,\nviolets are blue.");
+    }
+
+    #[test]
+    fn verse_text_span_points_at_real_source() {
+        // The verse body keeps its newline, and the `Text` span maps to the real
+        // bytes (so the editor can locate it).
+        let src = "[verse]\n____\nab\ncd\n____";
+        let r = parse(src);
+        let (_, inlines) = verse_parts(&r.document.blocks[0]);
+        let body_start = src.find("ab").unwrap();
+        match &inlines[0] {
+            Inline::Text { value, span } => {
+                assert_eq!(value, "ab\ncd");
+                assert_eq!(*span, Span::new(body_start, body_start + 5));
+            }
+            other => panic!("expected Text, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn unterminated_quote_is_a_diagnostic_not_a_failure() {
+        let r = parse("____\nopen but never closed");
+        assert_eq!(r.document.blocks.len(), 1);
+        assert_eq!(r.diagnostics.len(), 1);
+        assert_eq!(r.diagnostics[0].severity, Severity::Error);
+        assert!(matches!(r.document.blocks[0].kind, BlockKind::Quote { .. }));
+    }
+
+    #[test]
+    fn unterminated_verse_is_a_diagnostic_not_a_failure() {
+        let r = parse("[verse]\n____\nopen but never closed");
+        assert_eq!(r.document.blocks.len(), 1);
+        assert_eq!(r.diagnostics.len(), 1);
+        assert_eq!(r.diagnostics[0].severity, Severity::Error);
+        assert!(matches!(r.document.blocks[0].kind, BlockKind::Verse { .. }));
+    }
+
+    #[test]
+    fn cross_reference_inside_quote_resolves_against_whole_document() {
+        let src = "== Target\n\n____\nSee <<_target>>.\n____";
+        let r = parse(src);
+        let (_, blocks) = quote_parts(&r.document.blocks[1]);
+        let inlines = match &blocks[0].kind {
+            BlockKind::Paragraph { inlines } => inlines.clone(),
+            other => panic!("expected paragraph, got {other:?}"),
+        };
+        let xref = inlines
+            .iter()
+            .find_map(|i| match i {
+                Inline::CrossReference { children, .. } => Some(children.clone()),
+                _ => None,
+            })
+            .expect("no cross-reference in quote body");
         match &xref[0] {
             Inline::Text { value, .. } => assert_eq!(value, "Target"),
             other => panic!("expected resolved Text, got {other:?}"),

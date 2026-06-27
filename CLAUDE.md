@@ -239,7 +239,37 @@ JSON/WASM serialize a `caption` field (the string, or `null`). Only example bloc
 are numbered: `listing-caption` stays unset (a titled listing/literal keeps its bare
 title) and `figure-caption`/`table-caption` are moot until image/table blocks exist.
 Snapshotted by `golden/examples/caption_numbering.adoc` and the golden oracle no
-longer strips the counter. Other styles
+longer strips the counter. **Quote and verse blocks** are the next type-changing
+styles. A `____` delimited block defaults to `BlockKind::Quote { attribution,
+blocks }` — a parsed *container* like `====` (body is blocks; inline subs, nested
+blocks, anchors and `<<id>>` apply, the resolve pass recurses in) — and a `[quote]`
+style on a paragraph wraps it the same single-child way. A `[verse]` style turns
+either form into `BlockKind::Verse { attribution, inlines }`, which is **verbatim**
+(source line breaks preserved) yet still inline-substituted: the new
+`scan_inlines_with(…, fold_newlines=false)` keeps the newlines (the regular
+`scan_inlines` folds them to spaces) while `*bold*` still formats, and the HTML
+backend renders the body in a `<pre>`. The content model is chosen at the `____`
+fence from the pending style threaded into `parse_block`. Both kinds carry an
+optional `Attribution { author, citetitle }` (each an inline `Vec`, asciidoctor
+applies subs) folded by `apply_style_fixup` from the positional attributes
+(`[quote, author, work]`, consumed off `attrs.positional`); an empty leading slot
+is preserved so `[quote, , Work]` is citetitle-only, matching asciidoctor —
+`parse_block_attr_list` now keeps empty positional slots past the style word (its
+attribution inline spans are best-effort, based at the block start). An admonition
+style on a `____` block (`[NOTE]` on `____`) still wins, moving the quote's children
+into an `Admonition`. HTML renders the **modern HTML5 idiom** — `<figure
+class="quoteblock"><blockquote>…</blockquote><figcaption>&#8212; author
+<cite>work</cite></figcaption></figure>` and `<figure class="verseblock"><pre>…
+</pre>…</figure>` (id/roles on the `<figure>`, the em dash only with an author, a
+citetitle-only attribution rendering just the `<cite>`) — *not* asciidoctor's
+`<div class="quoteblock">` / `<div class="attribution">` layout; `adoctra.css`
+ships `.quoteblock`/`.verseblock` rules. JSON/WASM serialize `name:"quote"` /
+`"verse"` with an `attribution` object (`author`/`citetitle` inline arrays or
+`null`) plus the nested `blocks` / `inlines` field; the tokenizer emits a
+`quote-delimiter` token for the `____` fence (the body keeps its normal tokens, as
+for `====`). Captions do not apply (only example blocks are numbered), but the
+caption pass recurses into a quote so a titled `Example` *inside* a `____` block
+still numbers. Snapshotted by `golden/quotes/` and `golden/verses/`. Other styles
 are parsed and carried on `Block.attrs.style` but do not yet change a block's
 *type*. The id
 lives on the block (`Block.id`, `None` for the level-0 doctitle and plain blocks)
@@ -261,7 +291,8 @@ char); HTML and JSON backends; editor layer
 (`adoctra-html/tests/golden/`, list fixtures under `golden/lists/`, source-block
 fixtures under `golden/blocks/`, literal-block fixtures under `golden/literals/`,
 admonition fixtures under `golden/admonitions/`, example-block fixtures under
-`golden/examples/`, and block-title fixtures under `golden/titles/`).
+`golden/examples/`, block-title fixtures under `golden/titles/`, and quote/verse
+fixtures under `golden/quotes/` and `golden/verses/`).
 
 Scaffold only: DOCX backend; the extension API exists but `parse`/`convert` do
 not invoke it yet.
@@ -270,10 +301,10 @@ Not yet implemented (common asks — treat as roadmap, do not assume present):
 broader language coverage (tables, footnotes, includes, conditionals,
 block/inline macros). The full block-attribute list is now *parsed* (style, named
 attributes, `%options`, id/role folding), but most of it has nothing to render
-against yet: most **styles that change a block's type** (`[quote]`/`[verse]` →
-quote, `[sidebar]`, …) are unimplemented — only `[source,<lang>]`, `[literal]`,
-`[example]` and the admonition styles are wired — as is **rendering of options**
-(`%hardbreaks`, `%nowrap`, …), which are captured but not yet acted on. For
+against yet: some **styles that change a block's type** (`[sidebar]` → sidebar,
+`[pass]`, …) are unimplemented — `[source,<lang>]`, `[literal]`, `[example]`,
+`[quote]`/`[verse]` and the admonition styles are wired — as is **rendering of
+options** (`%hardbreaks`, `%nowrap`, …), which are captured but not yet acted on. For
 **admonitions**, the *paragraph* forms (`[NOTE]` style and `NOTE: ` label) and the
 **delimited form** (`[NOTE]` on a `====` block) are done. **Block titles**
 (`.Title`) are parsed and rendered on every block (on `Block.title`); still missing
@@ -284,8 +315,8 @@ blocks** (`Example N.` via the `example-caption` attribute, on `Block.caption`);
 does not yet parse `:!name:`), and there is no custom per-block `caption=` attribute
 override. Also: **indented/offset
 literal** (leading-space lines) and delimiters longer than four chars (the same
-single-length limitation applies to `====`: a nested same-length `====` closes the
-outer block); **anchors on individual list items**, TOC generation,
+single-length limitation applies to `====`/`____`: a nested same-length `====` /
+`____` closes the outer block); **anchors on individual list items**, TOC generation,
 incremental/block reparse, and a pull/event API over the AST.
 
 When asked to "add a feature," check this list first and say plainly whether it

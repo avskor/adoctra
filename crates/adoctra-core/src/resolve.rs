@@ -62,7 +62,9 @@ fn assign_captions(blocks: &mut [Block], prefix: &str, counter: &mut u32) {
             block.caption = Some(format!("{prefix} {counter}. "));
         }
         match &mut block.kind {
-            BlockKind::Example { blocks } | BlockKind::Admonition { blocks, .. } => {
+            BlockKind::Example { blocks }
+            | BlockKind::Admonition { blocks, .. }
+            | BlockKind::Quote { blocks, .. } => {
                 assign_captions(blocks, prefix, counter);
             }
             BlockKind::List { items, .. } => {
@@ -73,7 +75,8 @@ fn assign_captions(blocks: &mut [Block], prefix: &str, counter: &mut u32) {
             BlockKind::Heading { .. }
             | BlockKind::Paragraph { .. }
             | BlockKind::Listing { .. }
-            | BlockKind::Literal { .. } => {}
+            | BlockKind::Literal { .. }
+            | BlockKind::Verse { .. } => {}
         }
     }
 }
@@ -108,7 +111,11 @@ fn assign_ids(blocks: &mut [Block], registry: &mut Registry, diagnostics: &mut V
         // listing text carries no inline markup.) Done in document order, after
         // the block's own id, so duplicate diagnostics read left-to-right.
         match &mut block.kind {
-            BlockKind::Heading { inlines, .. } | BlockKind::Paragraph { inlines } => {
+            // A verse carries inline content too, so its inline anchors register
+            // like a paragraph's (the attribution is metadata, not anchor-bearing).
+            BlockKind::Heading { inlines, .. }
+            | BlockKind::Paragraph { inlines }
+            | BlockKind::Verse { inlines, .. } => {
                 register_inline_anchors(inlines, registry, diagnostics);
             }
             BlockKind::List { items, .. } => {
@@ -117,11 +124,12 @@ fn assign_ids(blocks: &mut [Block], registry: &mut Registry, diagnostics: &mut V
                     assign_ids(&mut item.blocks, registry, diagnostics);
                 }
             }
-            // An example block (and a delimited admonition) is a parsed container:
-            // descend so anchors and section ids inside it join the registry.
-            BlockKind::Example { blocks } | BlockKind::Admonition { blocks, .. } => {
-                assign_ids(blocks, registry, diagnostics)
-            }
+            // An example/quote block (and a delimited admonition) is a parsed
+            // container: descend so anchors and section ids inside it join the
+            // registry.
+            BlockKind::Example { blocks }
+            | BlockKind::Admonition { blocks, .. }
+            | BlockKind::Quote { blocks, .. } => assign_ids(blocks, registry, diagnostics),
             BlockKind::Listing { .. } | BlockKind::Literal { .. } => {}
         }
     }
@@ -280,7 +288,9 @@ fn push_text(inlines: &[Inline], s: &mut String) {
 fn resolve_xrefs(blocks: &mut [Block], registry: &Registry, diagnostics: &mut Vec<Diagnostic>) {
     for block in blocks {
         match &mut block.kind {
-            BlockKind::Heading { inlines, .. } | BlockKind::Paragraph { inlines } => {
+            BlockKind::Heading { inlines, .. }
+            | BlockKind::Paragraph { inlines }
+            | BlockKind::Verse { inlines, .. } => {
                 resolve_inlines(inlines, registry, diagnostics);
             }
             BlockKind::List { items, .. } => {
@@ -289,11 +299,11 @@ fn resolve_xrefs(blocks: &mut [Block], registry: &Registry, diagnostics: &mut Ve
                     resolve_xrefs(&mut item.blocks, registry, diagnostics);
                 }
             }
-            // Descend into an example block (and a delimited admonition) so
+            // Descend into an example/quote block (and a delimited admonition) so
             // references inside it resolve against the whole-document registry.
-            BlockKind::Example { blocks } | BlockKind::Admonition { blocks, .. } => {
-                resolve_xrefs(blocks, registry, diagnostics)
-            }
+            BlockKind::Example { blocks }
+            | BlockKind::Admonition { blocks, .. }
+            | BlockKind::Quote { blocks, .. } => resolve_xrefs(blocks, registry, diagnostics),
             BlockKind::Listing { .. } | BlockKind::Literal { .. } => {}
         }
     }
@@ -722,5 +732,20 @@ mod tests {
             .find(|b| matches!(b.kind, BlockKind::Listing { .. }))
             .and_then(|b| b.caption.clone());
         assert_eq!(caption, None);
+    }
+
+    #[test]
+    fn example_nested_in_quote_is_numbered_but_quote_is_not() {
+        // The caption pass descends into a quote container: a titled example
+        // inside a `____` block still gets numbered; the quote carries no caption.
+        let src = "____\n.Inner\n====\nx\n====\n____";
+        let doc = crate::parse(src).document;
+        let quote = &doc.blocks[0];
+        assert!(quote.caption.is_none());
+        let inner = match &quote.kind {
+            BlockKind::Quote { blocks, .. } => &blocks[0],
+            other => panic!("expected quote, got {other:?}"),
+        };
+        assert_eq!(inner.caption.as_deref(), Some("Example 1. "));
     }
 }

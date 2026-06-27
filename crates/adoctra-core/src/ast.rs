@@ -224,6 +224,23 @@ impl AdmonitionKind {
     }
 }
 
+/// The attribution of a [`BlockKind::Quote`] / [`BlockKind::Verse`] block: the
+/// positional attributes after the style word (`[quote, author, citetitle]`).
+/// Both parts are parsed inlines — asciidoctor applies the normal inline
+/// substitutions to an attribution, so `[quote, *Ann*]` renders a bold author —
+/// and either may be absent (`[quote, , Source]` carries only a `citetitle`,
+/// `[quote, Ann]` only an `author`). A block with no positional attribution at
+/// all carries `None` rather than an empty `Attribution`.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct Attribution {
+    /// The first positional attribute — the cited author (asciidoctor's
+    /// `attribution`), rendered before the `citetitle`. `None` when omitted.
+    pub author: Option<Vec<Inline>>,
+    /// The second positional attribute — the cited work (asciidoctor's
+    /// `citetitle`), rendered inside a `<cite>`. `None` when omitted.
+    pub citetitle: Option<Vec<Inline>>,
+}
+
 /// Block-level element kinds.
 #[derive(Debug, Clone, PartialEq)]
 pub enum BlockKind {
@@ -267,6 +284,28 @@ pub enum BlockKind {
     /// blocks* (not raw text), so inline substitutions, nested blocks and anchors
     /// all apply inside.
     Example { blocks: Vec<Block> },
+    /// A quote block: a parsed container of child blocks, delimited by `____`
+    /// (or produced by a `[quote]` style on a paragraph), with an optional
+    /// [`Attribution`] from the positional attributes (`[quote, author, work]`).
+    /// Like [`BlockKind::Example`] the body is parsed *as blocks* — inline
+    /// substitutions, nested blocks and anchors apply inside `blocks`. The default
+    /// style of a `____` block is `quote` (asciidoctor), so a bare `____` lands
+    /// here; a `[verse]` style on `____` is the verbatim [`BlockKind::Verse`].
+    Quote {
+        attribution: Option<Attribution>,
+        blocks: Vec<Block>,
+    },
+    /// A verse block: a `[verse]` style on a `____` block or a paragraph. Unlike
+    /// the container [`BlockKind::Quote`], a verse is **verbatim** — its source
+    /// whitespace and line breaks are preserved (rendered in a `<pre>`) — yet the
+    /// normal *inline* substitutions still apply (so `*bold*` formats), which is
+    /// why the body is `inlines` (scanned with newlines kept as text) rather than
+    /// parsed child blocks or the raw `text` of a [`BlockKind::Literal`]. Carries
+    /// the same optional [`Attribution`] as a quote.
+    Verse {
+        attribution: Option<Attribution>,
+        inlines: Vec<Inline>,
+    },
 }
 
 /// One item of a [`BlockKind::List`]: its resolved inline content (the

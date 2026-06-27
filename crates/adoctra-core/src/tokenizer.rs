@@ -35,6 +35,7 @@ pub enum TokenKind {
     LiteralDelimiter,
     LiteralText,
     ExampleDelimiter,
+    QuoteDelimiter,
     BlockTitle,
     AdmonitionLabel,
     Strong,
@@ -61,6 +62,7 @@ impl TokenKind {
             TokenKind::LiteralDelimiter => "literal-delimiter",
             TokenKind::LiteralText => "literal-text",
             TokenKind::ExampleDelimiter => "example-delimiter",
+            TokenKind::QuoteDelimiter => "quote-delimiter",
             TokenKind::BlockTitle => "block-title",
             TokenKind::AdmonitionLabel => "admonition-label",
             TokenKind::Strong => "strong",
@@ -143,6 +145,16 @@ pub fn tokens(source: &str) -> Vec<Token> {
             out.push(Token {
                 span: line_span,
                 kind: TokenKind::ExampleDelimiter,
+            });
+            continue;
+        }
+        // `____` quote / verse delimiter. Like `====`, the body is *not* verbatim:
+        // a quote's children and a verse's text both carry inline markup, so we
+        // mark only the fence and let the lines inside tokenize normally.
+        if line.trim() == "____" {
+            out.push(Token {
+                span: line_span,
+                kind: TokenKind::QuoteDelimiter,
             });
             continue;
         }
@@ -666,5 +678,24 @@ mod tests {
         );
         assert!(kinds.contains(&TokenKind::Strong));
         assert!(!kinds.contains(&TokenKind::AdmonitionLabel));
+    }
+
+    #[test]
+    fn quote_delimiter_is_tokenized_and_body_is_not_verbatim() {
+        // The `____` fences are quote-delimiter tokens; like `====` the body is
+        // highlighted normally, so `*bold*` inside stays a Strong token. A `[verse]`
+        // attribute line is a `block-attribute-list` token — the verse vs quote
+        // distinction is a parse-time concern, invisible to the tokenizer.
+        let toks = tokens("[verse]\n____\ntext *bold*\n____");
+        let kinds: Vec<_> = toks.iter().map(|t| t.kind).collect();
+        assert_eq!(
+            kinds
+                .iter()
+                .filter(|k| **k == TokenKind::QuoteDelimiter)
+                .count(),
+            2
+        );
+        assert!(kinds.contains(&TokenKind::BlockAttributeList));
+        assert!(kinds.contains(&TokenKind::Strong));
     }
 }
