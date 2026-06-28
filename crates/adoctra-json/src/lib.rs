@@ -180,6 +180,24 @@ fn write_block(block: &Block, s: &mut String) {
             }
             s.push_str("]}");
         }
+        BlockKind::Open { blocks } => {
+            s.push_str("{\"name\":\"open\",");
+            write_id(&block.id, s);
+            write_roles(&block.roles, s);
+            write_style(&block.attrs.style, s);
+            write_attributes(&block.attrs.named, s);
+            write_options(&block.attrs.options, s);
+            write_title(&block.title, s);
+            write_caption(&block.caption, s);
+            s.push_str(",\"blocks\":[");
+            for (i, child) in blocks.iter().enumerate() {
+                if i > 0 {
+                    s.push(',');
+                }
+                write_block(child, s);
+            }
+            s.push_str("]}");
+        }
         BlockKind::Quote {
             attribution,
             blocks,
@@ -842,6 +860,35 @@ mod tests {
         assert!(json.contains("\"name\":\"sidebar\""), "got: {json}");
         assert!(json.contains("\"id\":\"sb\""), "got: {json}");
         assert!(json.contains("\"roles\":[\"box\"]"), "got: {json}");
+    }
+
+    // --- open blocks ---
+
+    #[test]
+    fn open_block_serializes_nested_blocks() {
+        let json = render("--\nHi *there*.\n--");
+        assert!(json.contains("\"name\":\"open\""), "got: {json}");
+        // The child paragraph (with its own inline markup) is nested under blocks.
+        assert!(json.contains("\"blocks\":["), "got: {json}");
+        assert!(json.contains("\"name\":\"paragraph\""), "got: {json}");
+        assert!(json.contains("\"name\":\"strong\""), "got: {json}");
+    }
+
+    #[test]
+    fn open_block_id_and_roles_serialize() {
+        let json = render("[#o.box]\n--\nhi\n--");
+        assert!(json.contains("\"name\":\"open\""), "got: {json}");
+        assert!(json.contains("\"id\":\"o\""), "got: {json}");
+        assert!(json.contains("\"roles\":[\"box\"]"), "got: {json}");
+    }
+
+    #[test]
+    fn quote_style_on_open_serializes_as_quote() {
+        // The masquerade resolves before serialization: a `[quote]` on `--` emits a
+        // quote node, not an open node.
+        let json = render("[quote]\n--\nx\n--");
+        assert!(json.contains("\"name\":\"quote\""), "got: {json}");
+        assert!(!json.contains("\"name\":\"open\""), "got: {json}");
     }
 
     // --- quote & verse blocks ---

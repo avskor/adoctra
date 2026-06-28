@@ -65,7 +65,8 @@ fn assign_captions(blocks: &mut [Block], prefix: &str, counter: &mut u32) {
             BlockKind::Example { blocks }
             | BlockKind::Admonition { blocks, .. }
             | BlockKind::Quote { blocks, .. }
-            | BlockKind::Sidebar { blocks } => {
+            | BlockKind::Sidebar { blocks }
+            | BlockKind::Open { blocks } => {
                 assign_captions(blocks, prefix, counter);
             }
             BlockKind::List { items, .. } => {
@@ -131,7 +132,8 @@ fn assign_ids(blocks: &mut [Block], registry: &mut Registry, diagnostics: &mut V
             BlockKind::Example { blocks }
             | BlockKind::Admonition { blocks, .. }
             | BlockKind::Quote { blocks, .. }
-            | BlockKind::Sidebar { blocks } => assign_ids(blocks, registry, diagnostics),
+            | BlockKind::Sidebar { blocks }
+            | BlockKind::Open { blocks } => assign_ids(blocks, registry, diagnostics),
             BlockKind::Listing { .. } | BlockKind::Literal { .. } => {}
         }
     }
@@ -306,7 +308,8 @@ fn resolve_xrefs(blocks: &mut [Block], registry: &Registry, diagnostics: &mut Ve
             BlockKind::Example { blocks }
             | BlockKind::Admonition { blocks, .. }
             | BlockKind::Quote { blocks, .. }
-            | BlockKind::Sidebar { blocks } => resolve_xrefs(blocks, registry, diagnostics),
+            | BlockKind::Sidebar { blocks }
+            | BlockKind::Open { blocks } => resolve_xrefs(blocks, registry, diagnostics),
             BlockKind::Listing { .. } | BlockKind::Literal { .. } => {}
         }
     }

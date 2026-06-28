@@ -314,6 +314,19 @@ pub enum BlockKind {
     /// *inert* (asciidoctor leaves `[NOTE]` on `****` a plain sidebar), so the
     /// style fixup never folds a sidebar into an [`BlockKind::Admonition`].
     Sidebar { blocks: Vec<Block> },
+    /// An open block: a parsed container of child blocks, delimited by `--`
+    /// (or produced by an `[open]` style on a paragraph). The *generic*
+    /// container — with no style it renders as an `openblock`. A **container**
+    /// style "masquerades" the open block into that kind, handled in
+    /// `apply_style_fixup`: `[quote]` → [`BlockKind::Quote`], `[example]` →
+    /// [`BlockKind::Example`], `[sidebar]` → [`BlockKind::Sidebar`] and an
+    /// uppercase admonition style (`[NOTE]`, …) → [`BlockKind::Admonition`],
+    /// each moving the parsed `blocks` over unchanged. Like the other
+    /// containers the body is parsed *as blocks* — inline substitutions, nested
+    /// blocks and anchors apply inside, and the resolve pass recurses in. The
+    /// **verbatim** masquerades (`[source]`/`[literal]`/`[verse]` on `--`) are
+    /// not yet wired and leave the block an `Open`.
+    Open { blocks: Vec<Block> },
 }
 
 /// One item of a [`BlockKind::List`]: its resolved inline content (the

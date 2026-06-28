@@ -213,6 +213,22 @@ fn render_block(block: &Block, out: &mut String) {
             render_attribution(attribution, out);
             out.push_str("</figure>\n");
         }
+        BlockKind::Open { blocks } => {
+            // A parsed container with no semantic styling of its own (a `--` block,
+            // or `[open]` on a paragraph). asciidoctor nests
+            // `<div class="openblock"><div class="content">`; adoctra keeps the
+            // no-wrapper convention — a single `<div class="openblock">` carries the
+            // id/roles, with the `.Title` and children rendered straight inside. A
+            // *container* style on a `--` block masquerades it into another kind in
+            // the parser, so this arm only ever sees a genuine open block.
+            let class = class_attr(&["openblock"], &block.roles);
+            out.push_str(&format!("<div{class}{id}>\n"));
+            render_title(&block.title, &block.caption, out);
+            for child in blocks {
+                render_block(child, out);
+            }
+            out.push_str("</div>\n");
+        }
     }
 }
 
@@ -1044,6 +1060,57 @@ mod tests {
     fn sidebar_stylesheet_rule_is_shipped() {
         let html = render("Hello.");
         assert!(html.contains(".sidebarblock"), "stylesheet missing: {html}");
+    }
+
+    #[test]
+    fn open_block_renders_div_with_children() {
+        // One `<div class="openblock">` wrapping the rendered children (no nested
+        // `.content`), the body parsed normally (`*world*` → `<strong>`).
+        let html = render("--\nHello *world*.\n--");
+        assert!(
+            html.contains(
+                "<div class=\"openblock\">\n<p>Hello <strong>world</strong>.</p>\n</div>"
+            ),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn open_block_id_and_roles_on_div() {
+        let html = render("[#o.box]\n--\nhi\n--");
+        assert!(
+            html.contains("<div class=\"openblock box\" id=\"o\">"),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn open_style_paragraph_renders_as_open() {
+        let html = render("[open]\nJust text.");
+        assert!(
+            html.contains("<div class=\"openblock\">\n<p>Just text.</p>\n</div>"),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn quote_style_on_open_renders_as_quote_not_openblock() {
+        // The masquerade is a parser concern; by render time a `[quote]` on `--` is a
+        // genuine quote block, so it renders the `quoteblock` figure, not an openblock.
+        let html = render("[quote]\n--\nMasqueraded.\n--");
+        assert!(
+            html.contains("<figure class=\"quoteblock\">"),
+            "got: {html}"
+        );
+        // No openblock *element* is rendered (the shipped stylesheet still defines a
+        // `.openblock` rule, so we check the rendered tag, not the CSS).
+        assert!(!html.contains("<div class=\"openblock\""), "got: {html}");
+    }
+
+    #[test]
+    fn open_stylesheet_rule_is_shipped() {
+        let html = render("Hello.");
+        assert!(html.contains(".openblock"), "stylesheet missing: {html}");
     }
 
     #[test]

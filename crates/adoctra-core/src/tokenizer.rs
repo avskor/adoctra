@@ -37,6 +37,7 @@ pub enum TokenKind {
     ExampleDelimiter,
     QuoteDelimiter,
     SidebarDelimiter,
+    OpenDelimiter,
     BlockTitle,
     AdmonitionLabel,
     Strong,
@@ -65,6 +66,7 @@ impl TokenKind {
             TokenKind::ExampleDelimiter => "example-delimiter",
             TokenKind::QuoteDelimiter => "quote-delimiter",
             TokenKind::SidebarDelimiter => "sidebar-delimiter",
+            TokenKind::OpenDelimiter => "open-delimiter",
             TokenKind::BlockTitle => "block-title",
             TokenKind::AdmonitionLabel => "admonition-label",
             TokenKind::Strong => "strong",
@@ -167,6 +169,18 @@ pub fn tokens(source: &str) -> Vec<Token> {
             out.push(Token {
                 span: line_span,
                 kind: TokenKind::SidebarDelimiter,
+            });
+            continue;
+        }
+        // `--` open-block delimiter. Like the other container fences the body is a
+        // parsed container (not verbatim), so we mark only the fence and let the
+        // lines inside tokenize normally. The exact whole-line `--` is checked here,
+        // before the inline scan, so it never collides with an inline `--` (em dash)
+        // inside paragraph text.
+        if line.trim() == "--" {
+            out.push(Token {
+                span: line_span,
+                kind: TokenKind::OpenDelimiter,
             });
             continue;
         }
@@ -733,5 +747,29 @@ mod tests {
         let toks = tokens("**** item");
         assert!(!toks.iter().any(|t| t.kind == TokenKind::SidebarDelimiter));
         assert!(toks.iter().any(|t| t.kind == TokenKind::ListMarker));
+    }
+
+    #[test]
+    fn open_delimiter_is_tokenized_and_body_is_not_verbatim() {
+        // The `--` fences are open-delimiter tokens; like `====` the body is
+        // highlighted normally, so `*bold*` inside stays a Strong token.
+        let toks = tokens("--\ntext *bold*\n--");
+        let kinds: Vec<_> = toks.iter().map(|t| t.kind).collect();
+        assert_eq!(
+            kinds
+                .iter()
+                .filter(|k| **k == TokenKind::OpenDelimiter)
+                .count(),
+            2
+        );
+        assert!(kinds.contains(&TokenKind::Strong));
+    }
+
+    #[test]
+    fn inline_em_dash_is_not_an_open_delimiter() {
+        // An inline `--` (em dash) inside paragraph text is not a *whole-line* `--`,
+        // so no open-delimiter token is emitted for it.
+        let toks = tokens("an em -- dash");
+        assert!(!toks.iter().any(|t| t.kind == TokenKind::OpenDelimiter));
     }
 }

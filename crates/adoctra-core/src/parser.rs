@@ -167,7 +167,12 @@ fn apply_style_fixup(block: &mut Block, source: &str, attrs: &Attributes) {
                     blocks: vec![child],
                 };
             }
-            BlockKind::Example { blocks } | BlockKind::Quote { blocks, .. } => {
+            // A `====` example, a `____` quote and a `--` open block all fold
+            // their parsed children into the admonition. A `****` sidebar is the
+            // sole exception (`[NOTE]` on `****` is inert), so it is absent here.
+            BlockKind::Example { blocks }
+            | BlockKind::Quote { blocks, .. }
+            | BlockKind::Open { blocks } => {
                 let blocks = std::mem::take(blocks);
                 block.kind = BlockKind::Admonition { kind, blocks };
             }
@@ -238,6 +243,42 @@ fn apply_style_fixup(block: &mut Block, source: &str, attrs: &Attributes) {
                     attribution: None,
                     inlines,
                 };
+            }
+            // `[open]` on a paragraph wraps it the same single-child way as
+            // `[example]`/`[sidebar]`; the `--` fence form is built in `parse_block`.
+            "open" => {
+                let para = Block::new(
+                    block.span,
+                    std::mem::replace(&mut block.kind, BlockKind::Open { blocks: Vec::new() }),
+                );
+                if let BlockKind::Open { blocks } = &mut block.kind {
+                    blocks.push(para);
+                }
+            }
+            _ => {}
+        }
+    }
+    // A `--` open block "masquerades" as its *container* style: move its parsed
+    // children into that container kind. The admonition styles are handled by the
+    // early-return block above; the verbatim styles (`source`/`literal`/`verse`)
+    // are not yet wired here, so they leave the block an open block. `[open]` and
+    // no style stay an open block too.
+    if let BlockKind::Open { blocks } = &mut block.kind {
+        match style {
+            "quote" => {
+                let blocks = std::mem::take(blocks);
+                block.kind = BlockKind::Quote {
+                    attribution: None,
+                    blocks,
+                };
+            }
+            "example" => {
+                let blocks = std::mem::take(blocks);
+                block.kind = BlockKind::Example { blocks };
+            }
+            "sidebar" => {
+                let blocks = std::mem::take(blocks);
+                block.kind = BlockKind::Sidebar { blocks };
             }
             _ => {}
         }
@@ -555,6 +596,39 @@ fn parse_block(
         ));
     }
 
+    // Open block (a parsed container, fenced by `--`). The *generic* container:
+    // the body is parsed *as blocks* via `collect_blocks`, exactly like the
+    // `====`/`****` blocks, and a *container* style applied to it masquerades it
+    // into that kind later, in `apply_style_fixup`. The check requires the whole
+    // trimmed line to be exactly `--` (two hyphens): `----` is already consumed
+    // above as a listing fence, `---` falls through to a paragraph, and an inline
+    // `--` (em dash) never reaches here — it lives inside paragraph text, scanned
+    // after block detection. A same-length `--` inside closes the outer block.
+    if trimmed.trim() == "--" {
+        let start = off;
+        *i += 1;
+        let blocks = collect_blocks(source, lines, i, attrs, diagnostics, |l| l.trim() == "--");
+        let end;
+        if *i < lines.len() && lines[*i].1.trim() == "--" {
+            let (loff, lline) = lines[*i];
+            end = loff + lline.len();
+            *i += 1;
+        } else {
+            // Unterminated: span ends at the last child (or the opening fence when
+            // empty); the missing close is a diagnostic, not a parse failure.
+            end = blocks.last().map_or(off + line.len(), |b| b.span.end);
+            diagnostics.push(Diagnostic {
+                span: Span::new(start, start + 2),
+                severity: Severity::Error,
+                message: "unterminated open block (missing closing `--`)".to_string(),
+            });
+        }
+        return Some(Block::new(
+            Span::new(start, end),
+            BlockKind::Open { blocks },
+        ));
+    }
+
     // List: a run of items that nests a level deeper whenever a *unique* marker
     // appears. A list only *starts* at column 0 (an indented marker elsewhere is
     // ordinary text); deeper levels may be indented, handled inside `parse_list`,
@@ -571,11 +645,12 @@ fn parse_block(
         let (loff, lline) = lines[*i];
         let t = lline.trim_end();
         // A paragraph also ends at any block delimiter line, so it never spans
-        // into a `----`/`....`/`====`/`____`/`****` block (notably the closing fence
-        // of an enclosing container, which would otherwise be folded in as text).
+        // into a `----`/`....`/`====`/`____`/`****`/`--` block (notably the closing
+        // fence of an enclosing container, which would otherwise be folded in as
+        // text).
         let ends = t.trim().is_empty()
             || parse_heading(t).is_some()
-            || matches!(t.trim(), "----" | "...." | "====" | "____" | "****")
+            || matches!(t.trim(), "----" | "...." | "====" | "____" | "****" | "--")
             || match ctx {
                 BlockCtx::TopLevel => parse_list_marker(t).is_some(),
                 BlockCtx::InListItem => t.trim() == "+" || list_marker_indented(t).is_some(),
@@ -2404,6 +2479,182 @@ mod tests {
                 _ => None,
             })
             .expect("no cross-reference in sidebar body");
+        match &xref[0] {
+            Inline::Text { value, .. } => assert_eq!(value, "Target"),
+            other => panic!("expected resolved Text, got {other:?}"),
+        }
+    }
+
+    // --- open blocks (`--`, `[open]`, masquerades) ---
+
+    /// Borrow an open block's children, panicking on any other kind.
+    fn open_children(block: &Block) -> &[Block] {
+        match &block.kind {
+            BlockKind::Open { blocks } => blocks,
+            other => panic!("expected open block, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn open_block_parses_children_not_verbatim() {
+        // Like `====`/`****`, a `--` body is parsed as blocks: `*world*` is a real
+        // inline, and the span covers the opening through closing delimiter.
+        let src = "--\nHello *world*.\n--";
+        let r = parse(src);
+        assert!(r.diagnostics.is_empty());
+        let b = &r.document.blocks[0];
+        let kids = open_children(b);
+        assert_eq!(kids.len(), 1);
+        assert!(matches!(kids[0].kind, BlockKind::Paragraph { .. }));
+        assert_eq!(b.span, Span::new(0, src.len()));
+    }
+
+    #[test]
+    fn open_block_holds_a_nested_listing() {
+        let src = "--\nIntro.\n\n----\ncode\n----\n--";
+        let kids = open_children(&parse(src).document.blocks[0]).to_vec();
+        assert_eq!(kids.len(), 2);
+        assert!(matches!(kids[0].kind, BlockKind::Paragraph { .. }));
+        match &kids[1].kind {
+            BlockKind::Listing { text } => assert_eq!(text, "code"),
+            other => panic!("expected listing, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn open_style_wraps_paragraph_in_container() {
+        // `[open]` on a paragraph yields a single-child open block; the container
+        // keeps id/roles, the child is a plain paragraph.
+        let b = &parse("[#o.box]\n[open]\nJust text.").document.blocks[0];
+        assert_eq!(b.id.as_deref(), Some("o"));
+        assert_eq!(b.roles, ["box"]);
+        let kids = open_children(b);
+        assert_eq!(kids.len(), 1);
+        assert!(matches!(kids[0].kind, BlockKind::Paragraph { .. }));
+        assert!(kids[0].id.is_none() && kids[0].roles.is_empty());
+    }
+
+    #[test]
+    fn open_delimiter_is_exactly_two_hyphens() {
+        // A whole-line `--` is the open-block fence; `---` (three hyphens) is not a
+        // delimiter and stays a paragraph.
+        let b = &parse("--\ntext\n--").document.blocks[0];
+        assert!(matches!(b.kind, BlockKind::Open { .. }));
+        let para = &parse("---\ntext\n---").document.blocks[0];
+        assert!(
+            matches!(para.kind, BlockKind::Paragraph { .. }),
+            "got {:?}",
+            para.kind
+        );
+    }
+
+    #[test]
+    fn inline_double_dash_is_not_an_open_block() {
+        // Regression: an inline `--` (em dash) inside paragraph text must not be
+        // mistaken for an open-block fence — the line is not a *whole-line* `--`.
+        let doc = parse("an em -- dash here").document;
+        assert_eq!(doc.blocks.len(), 1);
+        assert!(matches!(doc.blocks[0].kind, BlockKind::Paragraph { .. }));
+    }
+
+    #[test]
+    fn open_paragraph_does_not_swallow_closing_fence() {
+        // Regression: a paragraph hugging the closing `--` (no blank line) must end
+        // at the fence, not fold it into the body.
+        let src = "--\ntext\n--\nafter";
+        let doc = parse(src).document;
+        assert_eq!(doc.blocks.len(), 2);
+        let kids = open_children(&doc.blocks[0]);
+        match &kids[0].kind {
+            BlockKind::Paragraph { inlines } => match &inlines[0] {
+                Inline::Text { value, .. } => assert_eq!(value, "text"),
+                other => panic!("expected Text, got {other:?}"),
+            },
+            other => panic!("expected paragraph, got {other:?}"),
+        }
+        assert!(matches!(doc.blocks[1].kind, BlockKind::Paragraph { .. }));
+    }
+
+    #[test]
+    fn unterminated_open_is_a_diagnostic_not_a_failure() {
+        let r = parse("--\nopen but never closed");
+        assert_eq!(r.document.blocks.len(), 1);
+        assert_eq!(r.diagnostics.len(), 1);
+        assert_eq!(r.diagnostics[0].severity, Severity::Error);
+        assert!(matches!(r.document.blocks[0].kind, BlockKind::Open { .. }));
+    }
+
+    #[test]
+    fn quote_style_on_open_masquerades_to_quote() {
+        // `[quote]` on a `--` block moves its parsed children into a quote, and the
+        // positional attribution folds in just as for a `____` block.
+        let src = "[quote, Anon, A Work]\n--\nMasqueraded.\n--";
+        let b = &parse(src).document.blocks[0];
+        let (attribution, blocks) = quote_parts(b);
+        let attr = attribution.as_ref().expect("expected attribution");
+        assert_eq!(part_text(&attr.author).as_deref(), Some("Anon"));
+        assert_eq!(part_text(&attr.citetitle).as_deref(), Some("A Work"));
+        assert_eq!(blocks.len(), 1);
+        assert!(matches!(blocks[0].kind, BlockKind::Paragraph { .. }));
+    }
+
+    #[test]
+    fn example_style_on_open_masquerades_to_example() {
+        let b = &parse("[example]\n--\nx\n--").document.blocks[0];
+        match &b.kind {
+            BlockKind::Example { blocks } => assert_eq!(blocks.len(), 1),
+            other => panic!("expected example, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn sidebar_style_on_open_masquerades_to_sidebar() {
+        let b = &parse("[sidebar]\n--\nx\n--").document.blocks[0];
+        assert!(matches!(b.kind, BlockKind::Sidebar { .. }));
+    }
+
+    #[test]
+    fn admonition_style_on_open_masquerades_to_admonition() {
+        // Unlike a `****` sidebar (where `[NOTE]` is inert), `[NOTE]` on a `--` block
+        // folds its children into an admonition — matching asciidoctor.
+        let b = &parse("[NOTE]\n--\nHeads up.\n--").document.blocks[0];
+        let (kind, blocks) = admonition_blocks(b);
+        assert_eq!(kind, AdmonitionKind::Note);
+        assert_eq!(blocks.len(), 1);
+    }
+
+    #[test]
+    fn verbatim_styles_on_open_stay_open_for_now() {
+        // The verbatim masquerades (`source`/`literal`/`verse` on `--`) are not yet
+        // wired: the block stays an open block, the style preserved on `attrs`.
+        for style in ["source,ruby", "literal", "verse"] {
+            let src = format!("[{style}]\n--\ncode\n--");
+            let b = &parse(&src).document.blocks[0];
+            assert!(
+                matches!(b.kind, BlockKind::Open { .. }),
+                "[{style}] on `--` should stay open for now, got {:?}",
+                b.kind
+            );
+        }
+    }
+
+    #[test]
+    fn cross_reference_inside_open_resolves_against_whole_document() {
+        // The resolve pass must descend into an open block: a `<<_target>>` inside it
+        // picks up the section title, just like one at the top level.
+        let src = "== Target\n\n--\nSee <<_target>>.\n--";
+        let kids = open_children(&parse(src).document.blocks[1]).to_vec();
+        let inlines = match &kids[0].kind {
+            BlockKind::Paragraph { inlines } => inlines.clone(),
+            other => panic!("expected paragraph, got {other:?}"),
+        };
+        let xref = inlines
+            .iter()
+            .find_map(|i| match i {
+                Inline::CrossReference { children, .. } => Some(children.clone()),
+                _ => None,
+            })
+            .expect("no cross-reference in open block body");
         match &xref[0] {
             Inline::Text { value, .. } => assert_eq!(value, "Target"),
             other => panic!("expected resolved Text, got {other:?}"),

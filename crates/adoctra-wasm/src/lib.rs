@@ -219,6 +219,25 @@ fn write_block(b: &Block, s: &mut String) {
             }
             s.push(']');
         }
+        BlockKind::Open { blocks } => {
+            s.push_str("\"name\":\"open\",");
+            write_id(&b.id, s);
+            write_roles(&b.roles, s);
+            write_style(&b.attrs.style, s);
+            write_attributes(&b.attrs.named, s);
+            write_options(&b.attrs.options, s);
+            write_title(&b.title, s);
+            write_caption(&b.caption, s);
+            // Children carry their own spans; recurse so the editor sees the tree.
+            s.push_str(",\"blocks\":[");
+            for (j, child) in blocks.iter().enumerate() {
+                if j > 0 {
+                    s.push(',');
+                }
+                write_block(child, s);
+            }
+            s.push(']');
+        }
         BlockKind::Quote {
             attribution,
             blocks,
@@ -973,6 +992,22 @@ mod tests {
         // The sidebar block carries its own span (opening through closing fence).
         assert!(
             json.contains("\"span\":{\"start\":0,\"end\":13},\"name\":\"sidebar\""),
+            "got: {json}"
+        );
+        // The nested paragraph carries its own span too.
+        assert!(json.contains("\"name\":\"paragraph\""), "got: {json}");
+    }
+
+    // --- open blocks ---
+
+    #[test]
+    fn open_block_serializes_with_nested_blocks_and_spans() {
+        let json = parse_json("--\nHi.\n--");
+        assert!(json.contains("\"name\":\"open\""), "got: {json}");
+        assert!(json.contains("\"blocks\":["), "got: {json}");
+        // The open block carries its own span (opening through closing fence).
+        assert!(
+            json.contains("\"span\":{\"start\":0,\"end\":9},\"name\":\"open\""),
             "got: {json}"
         );
         // The nested paragraph carries its own span too.
