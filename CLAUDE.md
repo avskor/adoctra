@@ -269,7 +269,24 @@ ships `.quoteblock`/`.verseblock` rules. JSON/WASM serialize `name:"quote"` /
 `quote-delimiter` token for the `____` fence (the body keeps its normal tokens, as
 for `====`). Captions do not apply (only example blocks are numbered), but the
 caption pass recurses into a quote so a titled `Example` *inside* a `____` block
-still numbers. Snapshotted by `golden/quotes/` and `golden/verses/`. Other styles
+still numbers. Snapshotted by `golden/quotes/` and `golden/verses/`. **Sidebar
+blocks** are the next container, a near-exact mirror of the example block: a `****`
+delimited block (and the `[sidebar]` style on a paragraph) yields
+`BlockKind::Sidebar { blocks }` — body parsed *as blocks* via `collect_blocks`, so
+inline subs, nested blocks, anchors and `<<id>>` all apply, the resolve pass
+recurses in, and a titled `Example` *inside* a `****` block still numbers. The
+whole-line `****` check sits before list detection, so it is distinct from the
+`**` unordered marker run (a `**** item` line stays a 4-level list item). Unlike a
+`====` example, an uppercase admonition style on a `****` block is **inert**:
+asciidoctor leaves `[NOTE]` on `****` a plain sidebar, so `apply_style_fixup` never
+folds a sidebar into an `Admonition` (the style stays on `Block.attrs.style`). The
+HTML backend renders the **modern semantic** `<aside class="sidebarblock">` (a
+sidebar *is* an aside) wrapping the children — *not* asciidoctor's nested `<div
+class="sidebarblock"><div class="content">` — with id/roles on the `<aside>` and the
+`.Title` just inside it; `adoctra.css` ships a `.sidebarblock` rule. JSON/WASM
+serialize `name:"sidebar"` with a nested `blocks` array, and the tokenizer emits a
+`sidebar-delimiter` token for the `****` fence (the body keeps its normal tokens, as
+for `====`). Snapshotted by `golden/sidebars/`. Other styles
 are parsed and carried on `Block.attrs.style` but do not yet change a block's
 *type*. The id
 lives on the block (`Block.id`, `None` for the level-0 doctitle and plain blocks)
@@ -301,10 +318,11 @@ Not yet implemented (common asks — treat as roadmap, do not assume present):
 broader language coverage (tables, footnotes, includes, conditionals,
 block/inline macros). The full block-attribute list is now *parsed* (style, named
 attributes, `%options`, id/role folding), but most of it has nothing to render
-against yet: some **styles that change a block's type** (`[sidebar]` → sidebar,
-`[pass]`, …) are unimplemented — `[source,<lang>]`, `[literal]`, `[example]`,
-`[quote]`/`[verse]` and the admonition styles are wired — as is **rendering of
-options** (`%hardbreaks`, `%nowrap`, …), which are captured but not yet acted on. For
+against yet: some **styles that change a block's type** (`[pass]` → passthrough,
+the open block `--`, …) are unimplemented — `[source,<lang>]`, `[literal]`,
+`[example]`, `[sidebar]`, `[quote]`/`[verse]` and the admonition styles are wired —
+as is **rendering of options** (`%hardbreaks`, `%nowrap`, …), which are captured but
+not yet acted on. For
 **admonitions**, the *paragraph* forms (`[NOTE]` style and `NOTE: ` label) and the
 **delimited form** (`[NOTE]` on a `====` block) are done. **Block titles**
 (`.Title`) are parsed and rendered on every block (on `Block.title`); still missing

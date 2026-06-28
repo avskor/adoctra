@@ -226,8 +226,9 @@ fn normalize_container(s: &str, strip_p: bool) -> String {
         let name = bare.split_whitespace().next().unwrap_or("");
         match name {
             // Structural wrappers — drop them. `figure`/`figcaption` are adoctra's
-            // quote/verse wrappers (asciidoctor uses `div`s), so both collapse alike.
-            "div" | "figure" | "figcaption" => {}
+            // quote/verse wrappers (asciidoctor uses `div`s) and `aside` is adoctra's
+            // sidebar wrapper (asciidoctor a `div`), so both collapse alike.
+            "div" | "figure" | "figcaption" | "aside" => {}
             "p" if strip_p => {} // admonition/quote body paragraph wrapper — drop it
             "pre" if !inner.starts_with('/') => out.push_str("<pre>"),
             _ => out.push_str(tag),
@@ -236,6 +237,23 @@ fn normalize_container(s: &str, strip_p: bool) -> String {
     }
     out.push_str(rest);
     out.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// Normalise a sidebar block to its children's markup in document order. Like
+/// [`example_body`]: asciidoctor nests `<div class="sidebarblock"><div
+/// class="content">` with a `<div class="paragraph">` around each child; adoctra
+/// emits a single `<aside class="sidebarblock">` with no inner wrappers. Stripping
+/// every structural `<div>`/`<aside>` (and rewriting `<pre …>` to bare) collapses
+/// both to the same shape — the children (`<p>`/`<pre>`/inline markup), which must
+/// match.
+fn sidebar_body(html: &str) -> String {
+    let body = html.split("<body>").nth(1).unwrap_or(html);
+    let body = body.split("</body>").next().unwrap_or(body);
+    let at = body
+        .find("sidebarblock")
+        .expect("no sidebar block in output");
+    let open = body[..at].rfind('<').expect("malformed sidebar block tag");
+    normalize_container(&body[open..], false)
 }
 
 /// Normalise a quote or verse block to its quoted content plus attribution markup.
@@ -438,6 +456,36 @@ fn html_example_blocks_match_asciidoctor() {
             example_body(&ours),
             example_body(&expected),
             "HTML example-block content diverges from asciidoctor for `{name}`"
+        );
+    }
+}
+
+#[test]
+fn html_sidebar_blocks_match_asciidoctor() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/sidebars");
+
+    for entry in fs::read_dir(&dir).expect("golden/sidebars dir is missing") {
+        let path = entry.unwrap().path();
+        if path.extension().and_then(|e| e.to_str()) != Some("adoc") {
+            continue;
+        }
+        let expected_path = path.with_extension("expected.html");
+        if !expected_path.exists() {
+            // No reference yet (asciidoctor unavailable) — skip, don't fail.
+            continue;
+        }
+
+        let name = path.file_stem().unwrap().to_string_lossy().into_owned();
+        let adoc = fs::read_to_string(&path).unwrap();
+        let expected = fs::read_to_string(&expected_path).unwrap();
+
+        let doc = adoctra_core::parse(&adoc).document;
+        let ours = String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap();
+
+        assert_eq!(
+            sidebar_body(&ours),
+            sidebar_body(&expected),
+            "HTML sidebar-block content diverges from asciidoctor for `{name}`"
         );
     }
 }

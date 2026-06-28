@@ -200,6 +200,25 @@ fn write_block(b: &Block, s: &mut String) {
             }
             s.push(']');
         }
+        BlockKind::Sidebar { blocks } => {
+            s.push_str("\"name\":\"sidebar\",");
+            write_id(&b.id, s);
+            write_roles(&b.roles, s);
+            write_style(&b.attrs.style, s);
+            write_attributes(&b.attrs.named, s);
+            write_options(&b.attrs.options, s);
+            write_title(&b.title, s);
+            write_caption(&b.caption, s);
+            // Children carry their own spans; recurse so the editor sees the tree.
+            s.push_str(",\"blocks\":[");
+            for (j, child) in blocks.iter().enumerate() {
+                if j > 0 {
+                    s.push(',');
+                }
+                write_block(child, s);
+            }
+            s.push(']');
+        }
         BlockKind::Quote {
             attribution,
             blocks,
@@ -942,6 +961,22 @@ mod tests {
         let json = parse_json(".Code\n----\nputs 1\n----");
         assert!(json.contains("\"name\":\"listing\""), "got: {json}");
         assert!(json.contains("\"caption\":null"), "got: {json}");
+    }
+
+    // --- sidebar blocks ---
+
+    #[test]
+    fn sidebar_block_serializes_with_nested_blocks_and_spans() {
+        let json = parse_json("****\nHi.\n****");
+        assert!(json.contains("\"name\":\"sidebar\""), "got: {json}");
+        assert!(json.contains("\"blocks\":["), "got: {json}");
+        // The sidebar block carries its own span (opening through closing fence).
+        assert!(
+            json.contains("\"span\":{\"start\":0,\"end\":13},\"name\":\"sidebar\""),
+            "got: {json}"
+        );
+        // The nested paragraph carries its own span too.
+        assert!(json.contains("\"name\":\"paragraph\""), "got: {json}");
     }
 
     // --- quote & verse blocks ---

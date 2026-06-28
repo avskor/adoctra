@@ -306,6 +306,14 @@ pub enum BlockKind {
         attribution: Option<Attribution>,
         inlines: Vec<Inline>,
     },
+    /// A sidebar block: a parsed container of child blocks, delimited by `****`
+    /// (or produced by a `[sidebar]` style on a paragraph). Like
+    /// [`BlockKind::Example`] the body is parsed *as blocks* — inline
+    /// substitutions, nested blocks and anchors all apply inside `blocks`. Unlike
+    /// a `====` example, an uppercase admonition style on a `****` block is
+    /// *inert* (asciidoctor leaves `[NOTE]` on `****` a plain sidebar), so the
+    /// style fixup never folds a sidebar into an [`BlockKind::Admonition`].
+    Sidebar { blocks: Vec<Block> },
 }
 
 /// One item of a [`BlockKind::List`]: its resolved inline content (the

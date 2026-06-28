@@ -64,7 +64,8 @@ fn assign_captions(blocks: &mut [Block], prefix: &str, counter: &mut u32) {
         match &mut block.kind {
             BlockKind::Example { blocks }
             | BlockKind::Admonition { blocks, .. }
-            | BlockKind::Quote { blocks, .. } => {
+            | BlockKind::Quote { blocks, .. }
+            | BlockKind::Sidebar { blocks } => {
                 assign_captions(blocks, prefix, counter);
             }
             BlockKind::List { items, .. } => {
@@ -129,7 +130,8 @@ fn assign_ids(blocks: &mut [Block], registry: &mut Registry, diagnostics: &mut V
             // registry.
             BlockKind::Example { blocks }
             | BlockKind::Admonition { blocks, .. }
-            | BlockKind::Quote { blocks, .. } => assign_ids(blocks, registry, diagnostics),
+            | BlockKind::Quote { blocks, .. }
+            | BlockKind::Sidebar { blocks } => assign_ids(blocks, registry, diagnostics),
             BlockKind::Listing { .. } | BlockKind::Literal { .. } => {}
         }
     }
@@ -303,7 +305,8 @@ fn resolve_xrefs(blocks: &mut [Block], registry: &Registry, diagnostics: &mut Ve
             // references inside it resolve against the whole-document registry.
             BlockKind::Example { blocks }
             | BlockKind::Admonition { blocks, .. }
-            | BlockKind::Quote { blocks, .. } => resolve_xrefs(blocks, registry, diagnostics),
+            | BlockKind::Quote { blocks, .. }
+            | BlockKind::Sidebar { blocks } => resolve_xrefs(blocks, registry, diagnostics),
             BlockKind::Listing { .. } | BlockKind::Literal { .. } => {}
         }
     }

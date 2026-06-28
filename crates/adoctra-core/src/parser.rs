@@ -199,6 +199,17 @@ fn apply_style_fixup(block: &mut Block, source: &str, attrs: &Attributes) {
                     blocks.push(para);
                 }
             }
+            // `[sidebar]` on a paragraph wraps it the same single-child way as
+            // `[example]`; the `****` fence form is built directly in `parse_block`.
+            "sidebar" => {
+                let para = Block::new(
+                    block.span,
+                    std::mem::replace(&mut block.kind, BlockKind::Sidebar { blocks: Vec::new() }),
+                );
+                if let BlockKind::Sidebar { blocks } = &mut block.kind {
+                    blocks.push(para);
+                }
+            }
             // `[quote]` on a paragraph wraps it like `[example]` — a single-child
             // quote container (attribution folded in below).
             "quote" => {
@@ -513,6 +524,37 @@ fn parse_block(
         ));
     }
 
+    // Sidebar block (a parsed container, fenced by `****`). A mirror of the `====`
+    // example above: the body is parsed *as blocks* via `collect_blocks`. The check
+    // requires the *whole* trimmed line to be `****`, so it precedes (and is
+    // distinct from) the `**` unordered-list marker runs — a `**** item` line keeps
+    // its content and stays a 4-level list item. A same-length `****` inside closes
+    // the outer block (delimiter-length nesting is not implemented).
+    if trimmed.trim() == "****" {
+        let start = off;
+        *i += 1;
+        let blocks = collect_blocks(source, lines, i, attrs, diagnostics, |l| l.trim() == "****");
+        let end;
+        if *i < lines.len() && lines[*i].1.trim() == "****" {
+            let (loff, lline) = lines[*i];
+            end = loff + lline.len();
+            *i += 1;
+        } else {
+            // Unterminated: span ends at the last child (or the opening fence when
+            // empty); the missing close is a diagnostic, not a parse failure.
+            end = blocks.last().map_or(off + line.len(), |b| b.span.end);
+            diagnostics.push(Diagnostic {
+                span: Span::new(start, start + 4),
+                severity: Severity::Error,
+                message: "unterminated sidebar block (missing closing `****`)".to_string(),
+            });
+        }
+        return Some(Block::new(
+            Span::new(start, end),
+            BlockKind::Sidebar { blocks },
+        ));
+    }
+
     // List: a run of items that nests a level deeper whenever a *unique* marker
     // appears. A list only *starts* at column 0 (an indented marker elsewhere is
     // ordinary text); deeper levels may be indented, handled inside `parse_list`,
@@ -529,11 +571,11 @@ fn parse_block(
         let (loff, lline) = lines[*i];
         let t = lline.trim_end();
         // A paragraph also ends at any block delimiter line, so it never spans
-        // into a `----`/`....`/`====`/`____` block (notably the closing fence of an
-        // enclosing container, which would otherwise be folded in as text).
+        // into a `----`/`....`/`====`/`____`/`****` block (notably the closing fence
+        // of an enclosing container, which would otherwise be folded in as text).
         let ends = t.trim().is_empty()
             || parse_heading(t).is_some()
-            || matches!(t.trim(), "----" | "...." | "====" | "____")
+            || matches!(t.trim(), "----" | "...." | "====" | "____" | "****")
             || match ctx {
                 BlockCtx::TopLevel => parse_list_marker(t).is_some(),
                 BlockCtx::InListItem => t.trim() == "+" || list_marker_indented(t).is_some(),
@@ -2237,6 +2279,131 @@ mod tests {
                 _ => None,
             })
             .expect("no cross-reference in example body");
+        match &xref[0] {
+            Inline::Text { value, .. } => assert_eq!(value, "Target"),
+            other => panic!("expected resolved Text, got {other:?}"),
+        }
+    }
+
+    // --- sidebar blocks (`****`, `[sidebar]`) ---
+
+    /// Borrow a sidebar block's children, panicking on any other kind.
+    fn sidebar_children(block: &Block) -> &[Block] {
+        match &block.kind {
+            BlockKind::Sidebar { blocks } => blocks,
+            other => panic!("expected sidebar, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn sidebar_block_parses_children_not_verbatim() {
+        // Like `====`, a `****` body is parsed as blocks: `*world*` is a real inline.
+        let src = "****\nHello *world*.\n****";
+        let r = parse(src);
+        assert!(r.diagnostics.is_empty());
+        let b = &r.document.blocks[0];
+        let kids = sidebar_children(b);
+        assert_eq!(kids.len(), 1);
+        assert!(matches!(kids[0].kind, BlockKind::Paragraph { .. }));
+        // Span covers the whole block, opening through closing delimiter.
+        assert_eq!(b.span, Span::new(0, src.len()));
+    }
+
+    #[test]
+    fn sidebar_block_holds_a_nested_listing() {
+        let src = "****\nIntro.\n\n----\ncode\n----\n****";
+        let kids = sidebar_children(&parse(src).document.blocks[0]).to_vec();
+        assert_eq!(kids.len(), 2);
+        assert!(matches!(kids[0].kind, BlockKind::Paragraph { .. }));
+        match &kids[1].kind {
+            BlockKind::Listing { text } => assert_eq!(text, "code"),
+            other => panic!("expected listing, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn sidebar_style_wraps_paragraph_in_container() {
+        // `[sidebar]` on a paragraph yields a single-child sidebar block; the
+        // container keeps id/roles, the child is a plain paragraph.
+        let b = &parse("[#sb.box]\n[sidebar]\nJust text.").document.blocks[0];
+        assert_eq!(b.id.as_deref(), Some("sb"));
+        assert_eq!(b.roles, ["box"]);
+        let kids = sidebar_children(b);
+        assert_eq!(kids.len(), 1);
+        assert!(matches!(kids[0].kind, BlockKind::Paragraph { .. }));
+        assert!(kids[0].id.is_none() && kids[0].roles.is_empty());
+    }
+
+    #[test]
+    fn sidebar_delimiter_distinct_from_unordered_marker_run() {
+        // A whole-line `****` is the sidebar fence; `**** item` (content after the
+        // marker run) is *not* a delimiter and stays an unordered list.
+        let sb = &parse("****\ntext\n****").document.blocks[0];
+        assert!(matches!(sb.kind, BlockKind::Sidebar { .. }));
+        let list = &parse("**** item").document.blocks[0];
+        assert!(
+            matches!(list.kind, BlockKind::List { .. }),
+            "got {:?}",
+            list.kind
+        );
+    }
+
+    #[test]
+    fn sidebar_paragraph_does_not_swallow_closing_fence() {
+        // Regression: a paragraph hugging the closing `****` (no blank line) must
+        // end at the fence, not fold it into the body.
+        let src = "****\ntext\n****\nafter";
+        let doc = parse(src).document;
+        assert_eq!(doc.blocks.len(), 2);
+        let kids = sidebar_children(&doc.blocks[0]);
+        match &kids[0].kind {
+            BlockKind::Paragraph { inlines } => match &inlines[0] {
+                Inline::Text { value, .. } => assert_eq!(value, "text"),
+                other => panic!("expected Text, got {other:?}"),
+            },
+            other => panic!("expected paragraph, got {other:?}"),
+        }
+        assert!(matches!(doc.blocks[1].kind, BlockKind::Paragraph { .. }));
+    }
+
+    #[test]
+    fn unterminated_sidebar_is_a_diagnostic_not_a_failure() {
+        let r = parse("****\nopen but never closed");
+        assert_eq!(r.document.blocks.len(), 1);
+        assert_eq!(r.diagnostics.len(), 1);
+        assert_eq!(r.diagnostics[0].severity, Severity::Error);
+        assert!(matches!(
+            r.document.blocks[0].kind,
+            BlockKind::Sidebar { .. }
+        ));
+    }
+
+    #[test]
+    fn admonition_style_on_sidebar_stays_a_sidebar() {
+        // Unlike `====` (where `[NOTE]` becomes an admonition), asciidoctor leaves
+        // `[NOTE]` on a `****` block a plain sidebar — the style is inert.
+        let b = &parse("[NOTE]\n****\ntext\n****").document.blocks[0];
+        assert!(matches!(b.kind, BlockKind::Sidebar { .. }));
+        assert_eq!(b.attrs.style.as_deref(), Some("NOTE"));
+    }
+
+    #[test]
+    fn cross_reference_inside_sidebar_resolves_against_whole_document() {
+        // The resolve pass must descend into a sidebar: a `<<_target>>` inside it
+        // picks up the section title, just like one at the top level.
+        let src = "== Target\n\n****\nSee <<_target>>.\n****";
+        let kids = sidebar_children(&parse(src).document.blocks[1]).to_vec();
+        let inlines = match &kids[0].kind {
+            BlockKind::Paragraph { inlines } => inlines.clone(),
+            other => panic!("expected paragraph, got {other:?}"),
+        };
+        let xref = inlines
+            .iter()
+            .find_map(|i| match i {
+                Inline::CrossReference { children, .. } => Some(children.clone()),
+                _ => None,
+            })
+            .expect("no cross-reference in sidebar body");
         match &xref[0] {
             Inline::Text { value, .. } => assert_eq!(value, "Target"),
             other => panic!("expected resolved Text, got {other:?}"),

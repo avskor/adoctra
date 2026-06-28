@@ -161,6 +161,20 @@ fn render_block(block: &Block, out: &mut String) {
             }
             out.push_str("</div>\n");
         }
+        BlockKind::Sidebar { blocks } => {
+            // A parsed container rendered as the semantic HTML5 `<aside>` — a sidebar
+            // is tangential content — carrying `sidebarblock` plus the block's
+            // id/roles. asciidoctor nests `<div class="sidebarblock"><div
+            // class="content">`; adoctra keeps the no-wrapper convention (one
+            // element), and the `.Title` renders just inside it, as for an example.
+            let class = class_attr(&["sidebarblock"], &block.roles);
+            out.push_str(&format!("<aside{class}{id}>\n"));
+            render_title(&block.title, &block.caption, out);
+            for child in blocks {
+                render_block(child, out);
+            }
+            out.push_str("</aside>\n");
+        }
         BlockKind::Quote {
             attribution,
             blocks,
@@ -979,6 +993,57 @@ mod tests {
     fn example_stylesheet_rule_is_shipped() {
         let html = render("Hello.");
         assert!(html.contains(".exampleblock"), "stylesheet missing: {html}");
+    }
+
+    #[test]
+    fn sidebar_block_renders_aside_with_children() {
+        // One semantic `<aside class="sidebarblock">` wrapping the rendered children
+        // (no nested `.content`), the body parsed normally (`*world*` → `<strong>`).
+        let html = render("****\nHello *world*.\n****");
+        assert!(
+            html.contains(
+                "<aside class=\"sidebarblock\">\n<p>Hello <strong>world</strong>.</p>\n</aside>"
+            ),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn sidebar_block_id_and_roles_on_aside() {
+        // id/roles hang on the `sidebarblock` aside (no extra wrapper), as elsewhere.
+        let html = render("[#sb.box]\n****\nhi\n****");
+        assert!(
+            html.contains("<aside class=\"sidebarblock box\" id=\"sb\">"),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn sidebar_style_paragraph_renders_as_sidebar() {
+        let html = render("[sidebar]\nJust text.");
+        assert!(
+            html.contains("<aside class=\"sidebarblock\">\n<p>Just text.</p>\n</aside>"),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn sidebar_title_renders_inside_aside() {
+        // The `.Title` goes just inside the `<aside>`, before the body (sidebars are
+        // not caption-numbered, so the title carries no `Example N.` prefix).
+        let html = render(".My note\n****\nhi\n****");
+        assert!(
+            html.contains(
+                "<aside class=\"sidebarblock\">\n<div class=\"title\">My note</div>\n<p>hi</p>\n</aside>"
+            ),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn sidebar_stylesheet_rule_is_shipped() {
+        let html = render("Hello.");
+        assert!(html.contains(".sidebarblock"), "stylesheet missing: {html}");
     }
 
     #[test]

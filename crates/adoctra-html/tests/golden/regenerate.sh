@@ -19,9 +19,10 @@ fi
 echo "using $(asciidoctor --version | head -1)"
 # Top-level inline fixtures, flat-list fixtures under lists/, block-level
 # fixtures (e.g. source listings) under blocks/, literal blocks under literals/,
-# admonitions under admonitions/, example blocks under examples/, block titles
-# under titles/, and quote/verse blocks under quotes/ and verses/.
-for adoc in *.adoc lists/*.adoc blocks/*.adoc literals/*.adoc admonitions/*.adoc examples/*.adoc titles/*.adoc quotes/*.adoc verses/*.adoc; do
+# admonitions under admonitions/, example blocks under examples/, sidebar blocks
+# under sidebars/, block titles under titles/, and quote/verse blocks under
+# quotes/ and verses/.
+for adoc in *.adoc lists/*.adoc blocks/*.adoc literals/*.adoc admonitions/*.adoc examples/*.adoc sidebars/*.adoc titles/*.adoc quotes/*.adoc verses/*.adoc; do
   [ -e "$adoc" ] || continue
   name="${adoc%.adoc}"
   asciidoctor -s -o - "$adoc" >"${name}.expected.html"

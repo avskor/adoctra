@@ -36,6 +36,7 @@ pub enum TokenKind {
     LiteralText,
     ExampleDelimiter,
     QuoteDelimiter,
+    SidebarDelimiter,
     BlockTitle,
     AdmonitionLabel,
     Strong,
@@ -63,6 +64,7 @@ impl TokenKind {
             TokenKind::LiteralText => "literal-text",
             TokenKind::ExampleDelimiter => "example-delimiter",
             TokenKind::QuoteDelimiter => "quote-delimiter",
+            TokenKind::SidebarDelimiter => "sidebar-delimiter",
             TokenKind::BlockTitle => "block-title",
             TokenKind::AdmonitionLabel => "admonition-label",
             TokenKind::Strong => "strong",
@@ -155,6 +157,16 @@ pub fn tokens(source: &str) -> Vec<Token> {
             out.push(Token {
                 span: line_span,
                 kind: TokenKind::QuoteDelimiter,
+            });
+            continue;
+        }
+        // `****` sidebar delimiter. Like `====`, the body is a parsed container —
+        // not verbatim — so we mark only the fence. The whole-line `****` is checked
+        // before the inline scan, so it never collides with a `**` strong run.
+        if line.trim() == "****" {
+            out.push(Token {
+                span: line_span,
+                kind: TokenKind::SidebarDelimiter,
             });
             continue;
         }
@@ -697,5 +709,29 @@ mod tests {
         );
         assert!(kinds.contains(&TokenKind::BlockAttributeList));
         assert!(kinds.contains(&TokenKind::Strong));
+    }
+
+    #[test]
+    fn sidebar_delimiter_is_tokenized_and_body_is_not_verbatim() {
+        // The `****` fences are sidebar-delimiter tokens; like `====` the body is
+        // highlighted normally, so `*bold*` inside stays a Strong token.
+        let toks = tokens("****\ntext *bold*\n****");
+        let kinds: Vec<_> = toks.iter().map(|t| t.kind).collect();
+        assert_eq!(
+            kinds
+                .iter()
+                .filter(|k| **k == TokenKind::SidebarDelimiter)
+                .count(),
+            2
+        );
+        assert!(kinds.contains(&TokenKind::Strong));
+    }
+
+    #[test]
+    fn unordered_marker_run_is_not_a_sidebar_delimiter() {
+        // `**** item` (content after the run) is a list marker, not a sidebar fence.
+        let toks = tokens("**** item");
+        assert!(!toks.iter().any(|t| t.kind == TokenKind::SidebarDelimiter));
+        assert!(toks.iter().any(|t| t.kind == TokenKind::ListMarker));
     }
 }
