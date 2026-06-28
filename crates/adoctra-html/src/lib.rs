@@ -1297,4 +1297,43 @@ mod tests {
             "stylesheet missing verse: {html}"
         );
     }
+
+    // --- verbatim masquerades on a `--` open block ---
+
+    #[test]
+    fn source_style_on_open_renders_highlight_like_listing() {
+        // `[source,ruby]` on a `--` block renders the same source highlight form as
+        // the `----` listing: verbatim, no inline subs.
+        let html = render("[source,ruby]\n--\nputs *x*\n--");
+        assert!(
+            html.contains(
+                "<pre class=\"highlight\"><code class=\"language-ruby\" data-lang=\"ruby\">puts *x*</code></pre>"
+            ),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn literal_style_on_open_renders_literalblock() {
+        let html = render("[literal]\n--\nverbatim *not bold*\n--");
+        assert!(
+            html.contains("<pre class=\"literalblock\">verbatim *not bold*</pre>"),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn verse_style_on_open_renders_verseblock_preserving_newlines() {
+        // `[verse, …]` on a `--` block renders the verseblock idiom: inline subs
+        // apply (`*fog*` → `<strong>`), the line break survives, attribution shows.
+        let html = render("[verse, Carl Sandburg, Fog]\n--\nThe *fog* comes\non feet.\n--");
+        assert!(
+            html.contains("<pre class=\"verse\">The <strong>fog</strong> comes\non feet.</pre>"),
+            "got: {html}"
+        );
+        assert!(
+            html.contains("<figcaption>&#8212; Carl Sandburg<br>\n<cite>Fog</cite></figcaption>"),
+            "got: {html}"
+        );
+    }
 }

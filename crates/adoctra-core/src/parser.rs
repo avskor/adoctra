@@ -261,8 +261,9 @@ fn apply_style_fixup(block: &mut Block, source: &str, attrs: &Attributes) {
     // A `--` open block "masquerades" as its *container* style: move its parsed
     // children into that container kind. The admonition styles are handled by the
     // early-return block above; the verbatim styles (`source`/`literal`/`verse`)
-    // are not yet wired here, so they leave the block an open block. `[open]` and
-    // no style stay an open block too.
+    // are handled earlier, at the `--` fence in `parse_block` (they switch the
+    // content model, so such a block never reaches here as `Open`). `[open]` and no
+    // style stay an open block.
     if let BlockKind::Open { blocks } = &mut block.kind {
         match style {
             "quote" => {
@@ -333,6 +334,52 @@ fn build_attribution(
     } else {
         Some(Attribution { author, citetitle })
     }
+}
+
+/// Capture the verbatim body of a delimited block whose opening `fence` has just
+/// been consumed (so `*i` points at the first body line). Scans lines until the
+/// matching closing `fence`, returning `(body_start, body_end, block_end)` as byte
+/// offsets into the source. The body slice is taken verbatim — the caller decides
+/// whether to inline-scan it (verse) or keep it raw (literal/source). An
+/// unterminated block pushes a `block_name` diagnostic but is never a failure.
+/// Shared by the `____` verse branch and the `--` verbatim masquerades.
+fn capture_verbatim_body(
+    lines: &[(usize, &str)],
+    i: &mut usize,
+    fence_start: usize,
+    fence: &str,
+    block_name: &str,
+    fallback_end: usize,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> (usize, usize, usize) {
+    let body_start = if *i < lines.len() {
+        lines[*i].0
+    } else {
+        fallback_end
+    };
+    let mut body_end = body_start;
+    let mut end = fallback_end;
+    let mut closed = false;
+    while *i < lines.len() {
+        let (loff, lline) = lines[*i];
+        if lline.trim() == fence {
+            end = loff + lline.len();
+            *i += 1;
+            closed = true;
+            break;
+        }
+        body_end = loff + lline.len();
+        end = body_end;
+        *i += 1;
+    }
+    if !closed {
+        diagnostics.push(Diagnostic {
+            span: Span::new(fence_start, fence_start + fence.len()),
+            severity: Severity::Error,
+            message: format!("unterminated {block_name} block (missing closing `{fence}`)"),
+        });
+    }
+    (body_start, body_end, end)
 }
 
 /// Where a block is being parsed. The only behavioural difference is how a
@@ -502,33 +549,15 @@ fn parse_block(
         // formats `*bold*`, unlike the no-subs `Literal`/`Listing`.
         if pending_style == Some("verse") {
             *i += 1;
-            let body_start = if *i < lines.len() {
-                lines[*i].0
-            } else {
-                off + line.len()
-            };
-            let mut body_end = body_start;
-            let mut end = off + line.len();
-            let mut closed = false;
-            while *i < lines.len() {
-                let (loff, lline) = lines[*i];
-                if lline.trim() == "____" {
-                    end = loff + lline.len();
-                    *i += 1;
-                    closed = true;
-                    break;
-                }
-                body_end = loff + lline.len();
-                end = body_end;
-                *i += 1;
-            }
-            if !closed {
-                diagnostics.push(Diagnostic {
-                    span: Span::new(start, start + 4),
-                    severity: Severity::Error,
-                    message: "unterminated verse block (missing closing `____`)".to_string(),
-                });
-            }
+            let (body_start, body_end, end) = capture_verbatim_body(
+                lines,
+                i,
+                start,
+                "____",
+                "verse",
+                off + line.len(),
+                diagnostics,
+            );
             // Verse keeps its line breaks — scan without folding newlines.
             let inlines =
                 scan_inlines_with(&source[body_start..body_end], body_start, attrs, false);
@@ -606,6 +635,39 @@ fn parse_block(
     // after block detection. A same-length `--` inside closes the outer block.
     if trimmed.trim() == "--" {
         let start = off;
+        // Verbatim masquerades: a `[source]` / `[literal]` / `[verse]` style
+        // switches the open block's content model from "parsed blocks" to
+        // *verbatim*, mirroring how `____` above picks Verse over Quote. The body
+        // must not be parsed as blocks, so the choice is made here at the fence —
+        // not later in `apply_style_fixup`, which only ever sees an already-parsed
+        // body. (The `language` for `[source,lang]` and the verse attribution ride
+        // on `attrs`, applied to the block after this returns.)
+        if matches!(pending_style, Some("source" | "literal" | "verse")) {
+            *i += 1;
+            let (body_start, body_end, end) =
+                capture_verbatim_body(lines, i, start, "--", "open", off + line.len(), diagnostics);
+            let body = &source[body_start..body_end];
+            let kind = match pending_style {
+                // Verse keeps its line breaks but still applies inline subs; the
+                // positional attribution (`[verse, author, work]`) is folded in
+                // afterwards by `apply_style_fixup`, exactly like the `____` form.
+                Some("verse") => BlockKind::Verse {
+                    attribution: None,
+                    inlines: scan_inlines_with(body, body_start, attrs, false),
+                },
+                // Literal / source keep the body raw (no inline subs). For
+                // `[source,lang]` the `source` style and `language` attribute ride
+                // on `attrs` and drive the HTML backend's highlight rendering.
+                Some("literal") => BlockKind::Literal {
+                    text: body.to_string(),
+                },
+                Some("source") => BlockKind::Listing {
+                    text: body.to_string(),
+                },
+                _ => unreachable!(),
+            };
+            return Some(Block::new(Span::new(start, end), kind));
+        }
         *i += 1;
         let blocks = collect_blocks(source, lines, i, attrs, diagnostics, |l| l.trim() == "--");
         let end;
@@ -2624,18 +2686,71 @@ mod tests {
     }
 
     #[test]
-    fn verbatim_styles_on_open_stay_open_for_now() {
-        // The verbatim masquerades (`source`/`literal`/`verse` on `--`) are not yet
-        // wired: the block stays an open block, the style preserved on `attrs`.
-        for style in ["source,ruby", "literal", "verse"] {
-            let src = format!("[{style}]\n--\ncode\n--");
-            let b = &parse(&src).document.blocks[0];
-            assert!(
-                matches!(b.kind, BlockKind::Open { .. }),
-                "[{style}] on `--` should stay open for now, got {:?}",
-                b.kind
-            );
+    fn source_style_on_open_masquerades_to_source_listing() {
+        // `[source,ruby]` on a `--` block switches its content model to a verbatim
+        // source listing: the body stays raw (no inline subs) and the `source`
+        // style + `language` ride on `attrs`, matching asciidoctor.
+        let src = "[source,ruby]\n--\nputs *not bold*\n--";
+        let r = parse(src);
+        assert!(r.diagnostics.is_empty());
+        let b = &r.document.blocks[0];
+        match &b.kind {
+            BlockKind::Listing { text } => assert_eq!(text, "puts *not bold*"),
+            other => panic!("expected listing, got {other:?}"),
         }
+        assert_eq!(b.attrs.style.as_deref(), Some("source"));
+        assert_eq!(
+            b.attrs.named.get("language").map(String::as_str),
+            Some("ruby")
+        );
+        let fence = src.find("--").unwrap();
+        assert_eq!(b.span, Span::new(fence, src.len()));
+    }
+
+    #[test]
+    fn literal_style_on_open_masquerades_to_literal() {
+        // `[literal]` on a `--` block: verbatim body, no inline subs (`*not bold*`
+        // stays literal).
+        let src = "[literal]\n--\nverbatim *not bold*\n--";
+        let b = &parse(src).document.blocks[0];
+        match &b.kind {
+            BlockKind::Literal { text } => assert_eq!(text, "verbatim *not bold*"),
+            other => panic!("expected literal, got {other:?}"),
+        }
+        let fence = src.find("--").unwrap();
+        assert_eq!(b.span, Span::new(fence, src.len()));
+    }
+
+    #[test]
+    fn verse_style_on_open_masquerades_to_verse() {
+        // `[verse, author, work]` on a `--` block: line breaks survive, inline subs
+        // still apply, and the positional attribution folds in like the `____` form.
+        let src = "[verse, Carl Sandburg, Fog]\n--\nThe *fog* comes\non little cat feet.\n--";
+        let r = parse(src);
+        assert!(r.diagnostics.is_empty());
+        let b = &r.document.blocks[0];
+        let (attribution, inlines) = verse_parts(b);
+        let attr = attribution.as_ref().expect("expected attribution");
+        assert_eq!(part_text(&attr.author).as_deref(), Some("Carl Sandburg"));
+        assert_eq!(part_text(&attr.citetitle).as_deref(), Some("Fog"));
+        assert!(inlines.iter().any(|i| matches!(i, Inline::Strong { .. })));
+        assert!(verse_text(inlines).contains('\n'));
+        let fence = src.find("--").unwrap();
+        assert_eq!(b.span, Span::new(fence, src.len()));
+    }
+
+    #[test]
+    fn unterminated_verbatim_open_is_a_diagnostic_not_a_failure() {
+        // An unterminated verbatim `--` masquerade still parses to a partial block
+        // and emits one "unterminated open block" diagnostic, like the `____` forms.
+        let r = parse("[literal]\n--\nopen but never closed");
+        assert_eq!(r.document.blocks.len(), 1);
+        assert_eq!(r.diagnostics.len(), 1);
+        assert_eq!(r.diagnostics[0].severity, Severity::Error);
+        assert!(matches!(
+            r.document.blocks[0].kind,
+            BlockKind::Literal { .. }
+        ));
     }
 
     #[test]

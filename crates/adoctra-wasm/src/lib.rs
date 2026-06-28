@@ -1049,4 +1049,33 @@ mod tests {
         // Verse keeps its line break — a JSON-escaped newline in the inline text.
         assert!(json.contains(r"first\nsecond"), "got: {json}");
     }
+
+    // --- verbatim masquerades on a `--` open block ---
+
+    #[test]
+    fn source_style_on_open_is_exposed_as_listing() {
+        let json = parse_json("[source,ruby]\n--\nputs *x*\n--");
+        assert!(json.contains("\"name\":\"listing\""), "got: {json}");
+        assert!(
+            json.contains("\"style\":\"source\",\"attributes\":{\"language\":\"ruby\"}"),
+            "got: {json}"
+        );
+        assert!(json.contains("\"text\":\"puts *x*\""), "got: {json}");
+    }
+
+    #[test]
+    fn literal_style_on_open_is_exposed_as_literal() {
+        let json = parse_json("[literal]\n--\nverbatim *x*\n--");
+        assert!(json.contains("\"name\":\"literal\""), "got: {json}");
+        assert!(json.contains("\"text\":\"verbatim *x*\""), "got: {json}");
+    }
+
+    #[test]
+    fn verse_style_on_open_is_exposed_preserving_newline() {
+        let json = parse_json("[verse, Carl Sandburg, Fog]\n--\nfirst\nsecond\n--");
+        assert!(json.contains("\"name\":\"verse\""), "got: {json}");
+        assert!(json.contains("\"value\":\"Carl Sandburg\""), "got: {json}");
+        // Verse keeps its line break — a JSON-escaped newline in the inline text.
+        assert!(json.contains(r"first\nsecond"), "got: {json}");
+    }
 }

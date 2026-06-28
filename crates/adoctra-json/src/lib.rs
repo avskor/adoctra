@@ -938,4 +938,41 @@ mod tests {
             "got: {json}"
         );
     }
+
+    // --- verbatim masquerades on a `--` open block ---
+
+    #[test]
+    fn source_style_on_open_serializes_as_listing() {
+        let json = render("[source,ruby]\n--\nputs *x*\n--");
+        assert!(json.contains("\"name\":\"listing\""), "got: {json}");
+        assert!(
+            json.contains("\"style\":\"source\",\"attributes\":{\"language\":\"ruby\"}"),
+            "got: {json}"
+        );
+        assert!(json.contains("\"text\":\"puts *x*\""), "got: {json}");
+    }
+
+    #[test]
+    fn literal_style_on_open_serializes_as_literal() {
+        let json = render("[literal]\n--\nverbatim *not bold*\n--");
+        assert!(json.contains("\"name\":\"literal\""), "got: {json}");
+        assert!(
+            json.contains("\"text\":\"verbatim *not bold*\""),
+            "got: {json}"
+        );
+    }
+
+    #[test]
+    fn verse_style_on_open_serializes_as_verse() {
+        let json = render("[verse, Carl Sandburg, Fog]\n--\nfirst\nsecond\n--");
+        assert!(json.contains("\"name\":\"verse\""), "got: {json}");
+        assert!(
+            json.contains(
+                "\"attribution\":{\"author\":[{\"name\":\"text\",\"value\":\"Carl Sandburg\"}]"
+            ),
+            "got: {json}"
+        );
+        // Verse keeps its line break — a JSON-escaped newline in the inline text.
+        assert!(json.contains(r"first\nsecond"), "got: {json}");
+    }
 }

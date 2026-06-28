@@ -301,15 +301,23 @@ open block apart is **masquerading**: a *container* style applied to a `--` bloc
 `Sidebar`, and an uppercase admonition style (`[NOTE]`, …) → `Admonition` (unlike a
 `****` sidebar, where the admonition style is inert — on a `--` block it folds, matching
 asciidoctor). The **verbatim** masquerades (`[source]`/`[literal]`/`[verse]` on `--`) are
-**not yet wired** — they leave the block an `Open` (a regression-guarded deferral; they
-need the content-model switch at the fence that `____` already uses for Quote vs Verse).
+**also wired**, via a *content-model switch at the `--` fence* (mirroring how `____` picks
+Verse over Quote): `[source]` → `Listing` (the `source` style and folded `language` ride on
+`attrs` and drive the highlight rendering), `[literal]` → `Literal` — both verbatim with no
+inline subs — and `[verse]` → `Verse` — verbatim line breaks but inline subs applied, with
+the positional attribution (`[verse, author, work]`) folded in exactly as for `____`. Unlike
+the *container* masquerades these never reach `apply_style_fixup` as an `Open`: the fence
+produces the verbatim kind directly (a shared `capture_verbatim_body` helper does the raw
+body capture for both the `____` verse branch and the `--` masquerades), so the backends and
+tokenizer need no change — they already render `Listing`/`Literal`/`Verse`.
 The HTML backend renders a single `<div class="openblock">` wrapping the children (the
 no-wrapper convention; asciidoctor nests `openblock`/`content` divs), `adoctra.css` ships
 a minimal transparent `.openblock` rule, JSON/WASM serialize `name:"open"` with a nested
 `blocks` array, and the tokenizer emits an `open-delimiter` token for the `--` fence (the
 body keeps its normal tokens, as for `====`). Snapshotted by `golden/opens/`, with the
 masquerade rendering pinned by `open_masquerade.adoc` fixtures dropped into
-`golden/{quotes,examples,sidebars,admonitions}/` (each reuses that kind's golden test).
+`golden/{quotes,examples,sidebars,admonitions,blocks,literals,verses}/` (each reuses that
+kind's golden test — the last three for the verbatim `[source]`/`[literal]`/`[verse]` forms).
 Other styles
 are parsed and carried on `Block.attrs.style` but do not yet change a block's
 *type*. The id
@@ -346,10 +354,10 @@ attributes, `%options`, id/role folding), but most of it has nothing to render
 against yet: some **styles that change a block's type** (`[pass]` → passthrough, …)
 are unimplemented — `[source,<lang>]`, `[literal]`, `[example]`, `[sidebar]`,
 `[quote]`/`[verse]`, `[open]` and the admonition styles are wired. The **open block**
-(`--` / `[open]`) is done, including its *container* masquerades (`[quote]`/`[example]`/
-`[sidebar]`/`[NOTE]` on `--`); still deferred there are the **verbatim** masquerades
-(`[source]`/`[literal]`/`[verse]` on `--`, which leave the block an open block for now —
-they need the fence content-model switch `____` already has). Also unimplemented is
+(`--` / `[open]`) is done, including *both* its *container* masquerades (`[quote]`/
+`[example]`/`[sidebar]`/`[NOTE]` on `--`) and its **verbatim** masquerades
+(`[source]`/`[literal]`/`[verse]` on `--`, switched at the `--` fence into a
+`Listing`/`Literal`/`Verse`). Also unimplemented is
 **rendering of options** (`%hardbreaks`, `%nowrap`, …), which are captured but
 not yet acted on. For
 **admonitions**, the *paragraph* forms (`[NOTE]` style and `NOTE: ` label) and the

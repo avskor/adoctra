@@ -324,8 +324,10 @@ pub enum BlockKind {
     /// each moving the parsed `blocks` over unchanged. Like the other
     /// containers the body is parsed *as blocks* — inline substitutions, nested
     /// blocks and anchors apply inside, and the resolve pass recurses in. The
-    /// **verbatim** masquerades (`[source]`/`[literal]`/`[verse]` on `--`) are
-    /// not yet wired and leave the block an `Open`.
+    /// **verbatim** masquerades (`[source]`/`[literal]`/`[verse]` on `--`) switch
+    /// the content model at the `--` fence in `parse_block`, producing a
+    /// [`BlockKind::Listing`] / [`BlockKind::Literal`] / [`BlockKind::Verse`]
+    /// directly rather than an `Open`.
     Open { blocks: Vec<Block> },
 }
 
