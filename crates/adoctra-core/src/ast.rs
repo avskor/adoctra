@@ -262,6 +262,13 @@ pub enum BlockKind {
     /// `text` as [`BlockKind::Listing`] but rendered as a `literalblock` — no
     /// language / `<code>` handling.
     Literal { text: String },
+    /// A passthrough block: verbatim, fenced by `++++` (or produced by a `[pass]`
+    /// style on a paragraph or `--` block). Like [`BlockKind::Literal`] the body
+    /// is the raw source `text` with no inline substitutions (`*bold*`, `{attr}`
+    /// stay literal) — but unlike it, the backend emits the text **completely
+    /// raw**: no HTML escaping and no wrapper element at all (asciidoctor's
+    /// `:pass` context), so even a block id/role is dropped on output.
+    Passthrough { text: String },
     /// An unordered (`*`/`-`) or ordered (`.`) list. `ordered` selects the
     /// rendered list kind. Nesting is structural: a deeper level is a
     /// [`BlockKind::List`] held in a [`ListItem`]'s `blocks`.

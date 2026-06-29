@@ -95,6 +95,19 @@ fn write_block(block: &Block, s: &mut String) {
             escape_into(text, s);
             s.push('}');
         }
+        BlockKind::Passthrough { text } => {
+            s.push_str("{\"name\":\"pass\",");
+            write_id(&block.id, s);
+            write_roles(&block.roles, s);
+            write_style(&block.attrs.style, s);
+            write_attributes(&block.attrs.named, s);
+            write_options(&block.attrs.options, s);
+            write_title(&block.title, s);
+            write_caption(&block.caption, s);
+            s.push_str(",\"text\":");
+            escape_into(text, s);
+            s.push('}');
+        }
         BlockKind::List { ordered, items } => {
             s.push_str(&format!("{{\"name\":\"list\",\"ordered\":{ordered},"));
             write_id(&block.id, s);
@@ -746,6 +759,26 @@ mod tests {
         assert!(json.contains("\"name\":\"literal\""), "got: {json}");
         assert!(json.contains("\"style\":\"literal\""), "got: {json}");
         assert!(json.contains("\"text\":\"a *b* c\""), "got: {json}");
+    }
+
+    #[test]
+    fn delimited_passthrough_serializes_by_name() {
+        let json = render("++++\n<div>{x} *b*</div>\n++++");
+        assert!(json.contains("\"name\":\"pass\""), "got: {json}");
+        // The raw text is carried verbatim (subs not applied); `<`/`>`/`&` are
+        // JSON-string-escaped only, not HTML-escaped.
+        assert!(
+            json.contains("\"text\":\"<div>{x} *b*</div>\""),
+            "got: {json}"
+        );
+    }
+
+    #[test]
+    fn pass_style_paragraph_serializes_by_name() {
+        let json = render("[pass]\n<b>{x}</b> *c*");
+        assert!(json.contains("\"name\":\"pass\""), "got: {json}");
+        assert!(json.contains("\"style\":\"pass\""), "got: {json}");
+        assert!(json.contains("\"text\":\"<b>{x}</b> *c*\""), "got: {json}");
     }
 
     #[test]

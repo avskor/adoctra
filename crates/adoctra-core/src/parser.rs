@@ -192,6 +192,14 @@ fn apply_style_fixup(block: &mut Block, source: &str, attrs: &Attributes) {
                 let text = source[block.span.start..block.span.end].to_string();
                 block.kind = BlockKind::Literal { text };
             }
+            // `[pass]` on a paragraph: the raw source slice, like `[literal]` but
+            // emitted unescaped and unwrapped by the backend (the inlines are
+            // discarded). The delimited `++++` and `--` masquerade forms are built
+            // directly at their fences in `parse_block`.
+            "pass" => {
+                let text = source[block.span.start..block.span.end].to_string();
+                block.kind = BlockKind::Passthrough { text };
+            }
             // `[example]` on a paragraph wraps it into a single-child example block.
             // The container keeps the block's id/roles/attrs; the child is a plain
             // paragraph carrying just its kind and span.
@@ -506,6 +514,31 @@ fn parse_block(
         ));
     }
 
+    // Passthrough block (verbatim, fenced by `++++`). Like `....`/`----` the body
+    // is captured raw with no inline substitutions; what sets it apart is the
+    // backend, which emits the text *completely raw* (no escaping, no wrapper).
+    // The whole trimmed line must be exactly `++++` — there is no inline `+`
+    // passthrough yet, so this never collides with paragraph text.
+    if trimmed.trim() == "++++" {
+        let start = off;
+        *i += 1;
+        let (body_start, body_end, end) = capture_verbatim_body(
+            lines,
+            i,
+            start,
+            "++++",
+            "passthrough",
+            off + line.len(),
+            diagnostics,
+        );
+        return Some(Block::new(
+            Span::new(start, end),
+            BlockKind::Passthrough {
+                text: source[body_start..body_end].to_string(),
+            },
+        ));
+    }
+
     // Example block (a parsed container, fenced by `====`). Unlike the verbatim
     // `----`/`....` blocks above, the body is parsed *as blocks* via the shared
     // `collect_blocks` (so nested blocks, inline subs and anchors all apply). A
@@ -642,7 +675,7 @@ fn parse_block(
         // not later in `apply_style_fixup`, which only ever sees an already-parsed
         // body. (The `language` for `[source,lang]` and the verse attribution ride
         // on `attrs`, applied to the block after this returns.)
-        if matches!(pending_style, Some("source" | "literal" | "verse")) {
+        if matches!(pending_style, Some("source" | "literal" | "verse" | "pass")) {
             *i += 1;
             let (body_start, body_end, end) =
                 capture_verbatim_body(lines, i, start, "--", "open", off + line.len(), diagnostics);
@@ -662,6 +695,11 @@ fn parse_block(
                     text: body.to_string(),
                 },
                 Some("source") => BlockKind::Listing {
+                    text: body.to_string(),
+                },
+                // `[pass]` on `--`: raw passthrough, emitted unescaped and
+                // unwrapped by the backend (no inline subs), like the `++++` fence.
+                Some("pass") => BlockKind::Passthrough {
                     text: body.to_string(),
                 },
                 _ => unreachable!(),
@@ -2078,6 +2116,65 @@ mod tests {
         assert!(matches!(
             r.document.blocks[0].kind,
             BlockKind::Literal { .. }
+        ));
+    }
+
+    #[test]
+    fn delimited_passthrough_block_parses_verbatim() {
+        // `++++` captures its body raw: no inline subs, so `{author}` and `*b*`
+        // stay literal (the backend later emits the text completely unescaped).
+        let src = "++++\n<div>{author} *b*</div>\n++++";
+        let r = parse(src);
+        assert!(r.diagnostics.is_empty());
+        let b = &r.document.blocks[0];
+        match &b.kind {
+            BlockKind::Passthrough { text } => assert_eq!(text, "<div>{author} *b*</div>"),
+            other => panic!("expected passthrough, got {other:?}"),
+        }
+        // Span covers the whole block, opening through closing delimiter.
+        assert_eq!(b.span, Span::new(0, src.len()));
+    }
+
+    #[test]
+    fn pass_style_turns_paragraph_into_passthrough() {
+        // `[pass]` makes the following paragraph a raw passthrough: its text is the
+        // raw source (markup like `*b*` and `{x}` is NOT processed).
+        let src = "[pass]\n<b>{x}</b> *b*";
+        let b = &parse(src).document.blocks[0];
+        match &b.kind {
+            BlockKind::Passthrough { text } => assert_eq!(text, "<b>{x}</b> *b*"),
+            other => panic!("expected passthrough, got {other:?}"),
+        }
+        assert_eq!(b.attrs.style.as_deref(), Some("pass"));
+        // The attribute line is excluded from the block span, as elsewhere.
+        assert_eq!(b.span, Span::new("[pass]\n".len(), src.len()));
+    }
+
+    #[test]
+    fn pass_style_on_open_masquerades_to_passthrough() {
+        // `[pass]` on a `--` block switches its content model to a verbatim
+        // passthrough at the fence (like `[literal]`/`[source]`), body kept raw.
+        let src = "[pass]\n--\n<i>raw</i> {x}\n--";
+        let r = parse(src);
+        assert!(r.diagnostics.is_empty());
+        let b = &r.document.blocks[0];
+        match &b.kind {
+            BlockKind::Passthrough { text } => assert_eq!(text, "<i>raw</i> {x}"),
+            other => panic!("expected passthrough, got {other:?}"),
+        }
+        let fence = src.find("--").unwrap();
+        assert_eq!(b.span, Span::new(fence, src.len()));
+    }
+
+    #[test]
+    fn unterminated_passthrough_is_a_diagnostic_not_a_failure() {
+        let r = parse("++++\nverbatim");
+        assert_eq!(r.document.blocks.len(), 1);
+        assert_eq!(r.diagnostics.len(), 1);
+        assert_eq!(r.diagnostics[0].severity, Severity::Error);
+        assert!(matches!(
+            r.document.blocks[0].kind,
+            BlockKind::Passthrough { .. }
         ));
     }
 

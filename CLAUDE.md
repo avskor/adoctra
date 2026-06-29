@@ -318,7 +318,22 @@ body keeps its normal tokens, as for `====`). Snapshotted by `golden/opens/`, wi
 masquerade rendering pinned by `open_masquerade.adoc` fixtures dropped into
 `golden/{quotes,examples,sidebars,admonitions,blocks,literals,verses}/` (each reuses that
 kind's golden test — the last three for the verbatim `[source]`/`[literal]`/`[verse]` forms).
-Other styles
+**Passthrough blocks** complete the delimited-block family and are the first
+*truly raw* block: a `++++` delimited block (and the `[pass]` style on a paragraph,
+plus `[pass]` as a fourth **verbatim** masquerade on `--`, switched at the `--`
+fence beside `[source]`/`[literal]`/`[verse]`) yields `BlockKind::Passthrough {
+text }` — verbatim like `Literal`/`Listing` (raw `text`, no inline subs, so
+`*bold*` and `{attr}` stay literal) but rendered **completely raw** by the HTML
+backend: `out.push_str(text)` with **no escaping and no wrapper element at all**
+(asciidoctor's `:pass` context), so even a block id/role is dropped on output —
+the *only* block where id/roles do not surface. The body capture reuses the shared
+`capture_verbatim_body` helper; the `[pass]` paragraph form mirrors `[literal]`
+(raw source slice in `apply_style_fixup`). JSON/WASM serialize `name:"pass"` with
+the raw `text` (id/roles kept in the model for completeness — only the HTML render
+drops them), and the tokenizer emits a `pass-delimiter`/`pass-text` pair, treating
+`++++` as a verbatim region like `----`/`....` (a `----`/`....` line inside a
+passthrough is passthrough text). Snapshotted by `golden/passthrough/` (the
+`masquerade.adoc` fixture pins `[pass]` on `--`). Other styles
 are parsed and carried on `Block.attrs.style` but do not yet change a block's
 *type*. The id
 lives on the block (`Block.id`, `None` for the level-0 doctitle and plain blocks)
@@ -341,8 +356,8 @@ char); HTML and JSON backends; editor layer
 fixtures under `golden/blocks/`, literal-block fixtures under `golden/literals/`,
 admonition fixtures under `golden/admonitions/`, example-block fixtures under
 `golden/examples/`, block-title fixtures under `golden/titles/`, quote/verse
-fixtures under `golden/quotes/` and `golden/verses/`, and open-block fixtures under
-`golden/opens/`).
+fixtures under `golden/quotes/` and `golden/verses/`, open-block fixtures under
+`golden/opens/`, and passthrough fixtures under `golden/passthrough/`).
 
 Scaffold only: DOCX backend; the extension API exists but `parse`/`convert` do
 not invoke it yet.
@@ -351,13 +366,15 @@ Not yet implemented (common asks — treat as roadmap, do not assume present):
 broader language coverage (tables, footnotes, includes, conditionals,
 block/inline macros). The full block-attribute list is now *parsed* (style, named
 attributes, `%options`, id/role folding), but most of it has nothing to render
-against yet: some **styles that change a block's type** (`[pass]` → passthrough, …)
-are unimplemented — `[source,<lang>]`, `[literal]`, `[example]`, `[sidebar]`,
-`[quote]`/`[verse]`, `[open]` and the admonition styles are wired. The **open block**
-(`--` / `[open]`) is done, including *both* its *container* masquerades (`[quote]`/
-`[example]`/`[sidebar]`/`[NOTE]` on `--`) and its **verbatim** masquerades
-(`[source]`/`[literal]`/`[verse]` on `--`, switched at the `--` fence into a
-`Listing`/`Literal`/`Verse`). Also unimplemented is
+against yet: a few **styles that change a block's type** (`[stem]`/`[latexmath]` →
+math, …) remain unimplemented — `[source,<lang>]`, `[literal]`, `[pass]`,
+`[example]`, `[sidebar]`, `[quote]`/`[verse]`, `[open]` and the admonition styles
+are wired. The **passthrough block** (`++++` / `[pass]`) is done — verbatim and
+emitted *completely raw* (no escaping, no wrapper, id/roles dropped). The **open
+block** (`--` / `[open]`) is done, including *both* its *container* masquerades
+(`[quote]`/`[example]`/`[sidebar]`/`[NOTE]` on `--`) and its **verbatim**
+masquerades (`[source]`/`[literal]`/`[verse]`/`[pass]` on `--`, switched at the
+`--` fence into a `Listing`/`Literal`/`Verse`/`Passthrough`). Also unimplemented is
 **rendering of options** (`%hardbreaks`, `%nowrap`, …), which are captured but
 not yet acted on. For
 **admonitions**, the *paragraph* forms (`[NOTE]` style and `NOTE: ` label) and the

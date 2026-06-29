@@ -104,6 +104,16 @@ fn render_block(block: &Block, out: &mut String) {
             out.push_str(&escape(text));
             out.push_str("</pre>\n");
         }
+        BlockKind::Passthrough { text } => {
+            // Passthrough: the body is emitted *completely raw* — no escaping and
+            // no wrapper element at all (asciidoctor's `:pass` context). Unlike
+            // every other block, the id/roles are dropped: there is no element to
+            // hang them on, matching asciidoctor. A `.Title`, if present, still
+            // renders before the raw content.
+            render_title(&block.title, &block.caption, out);
+            out.push_str(text);
+            out.push('\n');
+        }
         BlockKind::List { ordered, items } => {
             let tag = if *ordered { "ol" } else { "ul" };
             let class = class_attr(&[], &block.roles);
@@ -863,6 +873,32 @@ mod tests {
             html.contains("<pre class=\"literalblock special\" id=\"lit\">verbatim</pre>"),
             "got: {html}"
         );
+    }
+
+    #[test]
+    fn delimited_passthrough_renders_raw_unescaped_unwrapped() {
+        // `++++` emits its body completely raw: no escaping (`<`/`&` survive), no
+        // inline subs (`*c*` stays literal) and no wrapper element (no `<pre>`).
+        let html = render("++++\n<div>a < b & *c*</div>\n++++");
+        assert!(html.contains("<div>a < b & *c*</div>"), "got: {html}");
+        // No verbatim `<pre>` wrapper was emitted for the passthrough body.
+        assert!(!html.contains("<pre"), "got: {html}");
+    }
+
+    #[test]
+    fn pass_style_paragraph_renders_raw() {
+        let html = render("[pass]\n<em>a</em> & b *c*");
+        assert!(html.contains("<em>a</em> & b *c*"), "got: {html}");
+    }
+
+    #[test]
+    fn passthrough_drops_id_and_roles() {
+        // asciidoctor's `:pass` context has no element to hang id/roles on, so they
+        // are dropped on output — unlike every other block.
+        let html = render("[#myid.myrole]\n++++\n<p>raw</p>\n++++");
+        assert!(html.contains("<p>raw</p>"), "got: {html}");
+        assert!(!html.contains("myid"), "id leaked: {html}");
+        assert!(!html.contains("myrole"), "role leaked: {html}");
     }
 
     #[test]

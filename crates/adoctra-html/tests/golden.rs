@@ -290,6 +290,18 @@ fn quote_verse_body(html: &str) -> String {
     normalize_container(&body[open..], true)
 }
 
+/// Normalise a passthrough block's raw output. asciidoctor's `:pass` context and
+/// adoctra both emit the body *completely raw* — no escaping and no wrapper
+/// element at all — so unlike the container helpers this strips *nothing*: the
+/// literal tags and text are the content and must match verbatim. We restrict to
+/// <body> (adoctra inlines a stylesheet in <head>; asciidoctor's `-s` fragment
+/// has no <body> and falls through unchanged) and only collapse whitespace.
+fn passthrough_body(html: &str) -> String {
+    let body = html.split("<body>").nth(1).unwrap_or(html);
+    let body = body.split("</body>").next().unwrap_or(body);
+    body.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
 #[test]
 fn html_inline_markup_matches_asciidoctor() {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden");
@@ -410,6 +422,36 @@ fn html_literal_blocks_match_asciidoctor() {
             pre_inner(&ours),
             pre_inner(&expected),
             "HTML literal-block content diverges from asciidoctor for `{name}`"
+        );
+    }
+}
+
+#[test]
+fn html_passthrough_blocks_match_asciidoctor() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/passthrough");
+
+    for entry in fs::read_dir(&dir).expect("golden/passthrough dir is missing") {
+        let path = entry.unwrap().path();
+        if path.extension().and_then(|e| e.to_str()) != Some("adoc") {
+            continue;
+        }
+        let expected_path = path.with_extension("expected.html");
+        if !expected_path.exists() {
+            // No reference yet (asciidoctor unavailable) — skip, don't fail.
+            continue;
+        }
+
+        let name = path.file_stem().unwrap().to_string_lossy().into_owned();
+        let adoc = fs::read_to_string(&path).unwrap();
+        let expected = fs::read_to_string(&expected_path).unwrap();
+
+        let doc = adoctra_core::parse(&adoc).document;
+        let ours = String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap();
+
+        assert_eq!(
+            passthrough_body(&ours),
+            passthrough_body(&expected),
+            "HTML passthrough-block output diverges from asciidoctor for `{name}`"
         );
     }
 }

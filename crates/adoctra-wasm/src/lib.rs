@@ -127,6 +127,18 @@ fn write_block(b: &Block, s: &mut String) {
             s.push_str(",\"text\":");
             write_str(text, s);
         }
+        BlockKind::Passthrough { text } => {
+            s.push_str("\"name\":\"pass\",");
+            write_id(&b.id, s);
+            write_roles(&b.roles, s);
+            write_style(&b.attrs.style, s);
+            write_attributes(&b.attrs.named, s);
+            write_options(&b.attrs.options, s);
+            write_title(&b.title, s);
+            write_caption(&b.caption, s);
+            s.push_str(",\"text\":");
+            write_str(text, s);
+        }
         BlockKind::List { ordered, items } => {
             s.push_str(&format!("\"name\":\"list\",\"ordered\":{ordered},"));
             write_id(&b.id, s);
@@ -895,6 +907,23 @@ mod tests {
         assert!(json.contains("\"name\":\"literal\""), "got: {json}");
         assert!(json.contains("\"style\":\"literal\""), "got: {json}");
         assert!(json.contains("\"text\":\"a *b* c\""), "got: {json}");
+    }
+
+    #[test]
+    fn passthrough_block_is_exposed_to_the_editor() {
+        // The `++++` delimiter and the `[pass]` style both surface a pass node with
+        // verbatim text (no inline subs — `{x}` / `*b*` stay literal).
+        let json = parse_json("++++\n<div>{x} *b*</div>\n++++");
+        assert!(json.contains("\"name\":\"pass\""), "got: {json}");
+        assert!(
+            json.contains("\"text\":\"<div>{x} *b*</div>\""),
+            "got: {json}"
+        );
+
+        let json = parse_json("[pass]\n<b>raw</b> *c*");
+        assert!(json.contains("\"name\":\"pass\""), "got: {json}");
+        assert!(json.contains("\"style\":\"pass\""), "got: {json}");
+        assert!(json.contains("\"text\":\"<b>raw</b> *c*\""), "got: {json}");
     }
 
     #[test]

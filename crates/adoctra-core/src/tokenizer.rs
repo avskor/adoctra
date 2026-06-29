@@ -34,6 +34,8 @@ pub enum TokenKind {
     ListingText,
     LiteralDelimiter,
     LiteralText,
+    PassthroughDelimiter,
+    PassthroughText,
     ExampleDelimiter,
     QuoteDelimiter,
     SidebarDelimiter,
@@ -63,6 +65,8 @@ impl TokenKind {
             TokenKind::ListingText => "listing-text",
             TokenKind::LiteralDelimiter => "literal-delimiter",
             TokenKind::LiteralText => "literal-text",
+            TokenKind::PassthroughDelimiter => "pass-delimiter",
+            TokenKind::PassthroughText => "pass-text",
             TokenKind::ExampleDelimiter => "example-delimiter",
             TokenKind::QuoteDelimiter => "quote-delimiter",
             TokenKind::SidebarDelimiter => "sidebar-delimiter",
@@ -90,6 +94,7 @@ pub fn tokens(source: &str) -> Vec<Token> {
     let mut out = Vec::new();
     let mut in_listing = false;
     let mut in_literal = false;
+    let mut in_passthrough = false;
     // Whether we're inside a list (started by a column-0 marker, ended by a
     // blank line — mirroring the parser). While set, indented markers are
     // recognised; this is the tokenizer's share of "indented nested markers".
@@ -108,6 +113,26 @@ pub fn tokens(source: &str) -> Vec<Token> {
         // back to `true`.
         mid_paragraph = false;
 
+        // `++++` passthrough is a verbatim region, like `----`/`....`. Checked
+        // first so that once it is open, *every* line — including a `----`/`....`
+        // delimiter — is passthrough text until the matching `++++` (the toggle
+        // only opens when no other verbatim region is active, mirroring how the
+        // `----`/`....` toggles guard against each other).
+        if !in_listing && !in_literal && line.trim() == "++++" {
+            out.push(Token {
+                span: line_span,
+                kind: TokenKind::PassthroughDelimiter,
+            });
+            in_passthrough = !in_passthrough;
+            continue;
+        }
+        if in_passthrough {
+            out.push(Token {
+                span: line_span,
+                kind: TokenKind::PassthroughText,
+            });
+            continue;
+        }
         // `----` listing and `....` literal are verbatim regions. Each opens and
         // closes only its own kind, and inside one the other delimiter is just
         // verbatim text — so a `....` inside a `----` block (and vice versa) is
@@ -634,6 +659,43 @@ mod tests {
                 TokenKind::LiteralDelimiter,
                 TokenKind::LiteralText,
                 TokenKind::LiteralDelimiter,
+            ]
+        );
+    }
+
+    #[test]
+    fn passthrough_block_is_tokenized() {
+        let kinds: Vec<_> = tokens("++++\n<div>*y* {z}</div>\n++++")
+            .iter()
+            .map(|t| t.kind)
+            .collect();
+        // Like `....`, the delimiters bracket the verbatim body; no inline markup
+        // tokens leak out of it (`*y*` / `{z}` stay passthrough text).
+        assert_eq!(
+            kinds,
+            [
+                TokenKind::PassthroughDelimiter,
+                TokenKind::PassthroughText,
+                TokenKind::PassthroughDelimiter,
+            ]
+        );
+    }
+
+    #[test]
+    fn passthrough_body_swallows_other_delimiters() {
+        // Once `++++` is open, a `----`/`....` line inside is passthrough text, not
+        // a nested fence — mirroring the parser's verbatim capture.
+        let kinds: Vec<_> = tokens("++++\n----\n....\n++++")
+            .iter()
+            .map(|t| t.kind)
+            .collect();
+        assert_eq!(
+            kinds,
+            [
+                TokenKind::PassthroughDelimiter,
+                TokenKind::PassthroughText,
+                TokenKind::PassthroughText,
+                TokenKind::PassthroughDelimiter,
             ]
         );
     }

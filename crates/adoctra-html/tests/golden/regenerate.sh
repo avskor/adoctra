@@ -21,8 +21,8 @@ echo "using $(asciidoctor --version | head -1)"
 # fixtures (e.g. source listings) under blocks/, literal blocks under literals/,
 # admonitions under admonitions/, example blocks under examples/, sidebar blocks
 # under sidebars/, block titles under titles/, quote/verse blocks under quotes/
-# and verses/, and open blocks under opens/.
-for adoc in *.adoc lists/*.adoc blocks/*.adoc literals/*.adoc admonitions/*.adoc examples/*.adoc sidebars/*.adoc titles/*.adoc quotes/*.adoc verses/*.adoc opens/*.adoc; do
+# and verses/, open blocks under opens/, and passthrough blocks under passthrough/.
+for adoc in *.adoc lists/*.adoc blocks/*.adoc literals/*.adoc admonitions/*.adoc examples/*.adoc sidebars/*.adoc titles/*.adoc quotes/*.adoc verses/*.adoc opens/*.adoc passthrough/*.adoc; do
   [ -e "$adoc" ] || continue
   name="${adoc%.adoc}"
   asciidoctor -s -o - "$adoc" >"${name}.expected.html"

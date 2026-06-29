@@ -78,6 +78,7 @@ fn assign_captions(blocks: &mut [Block], prefix: &str, counter: &mut u32) {
             | BlockKind::Paragraph { .. }
             | BlockKind::Listing { .. }
             | BlockKind::Literal { .. }
+            | BlockKind::Passthrough { .. }
             | BlockKind::Verse { .. } => {}
         }
     }
@@ -134,7 +135,9 @@ fn assign_ids(blocks: &mut [Block], registry: &mut Registry, diagnostics: &mut V
             | BlockKind::Quote { blocks, .. }
             | BlockKind::Sidebar { blocks }
             | BlockKind::Open { blocks } => assign_ids(blocks, registry, diagnostics),
-            BlockKind::Listing { .. } | BlockKind::Literal { .. } => {}
+            BlockKind::Listing { .. }
+            | BlockKind::Literal { .. }
+            | BlockKind::Passthrough { .. } => {}
         }
     }
 }
@@ -310,7 +313,9 @@ fn resolve_xrefs(blocks: &mut [Block], registry: &Registry, diagnostics: &mut Ve
             | BlockKind::Quote { blocks, .. }
             | BlockKind::Sidebar { blocks }
             | BlockKind::Open { blocks } => resolve_xrefs(blocks, registry, diagnostics),
-            BlockKind::Listing { .. } | BlockKind::Literal { .. } => {}
+            BlockKind::Listing { .. }
+            | BlockKind::Literal { .. }
+            | BlockKind::Passthrough { .. } => {}
         }
     }
 }
