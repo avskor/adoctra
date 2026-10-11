@@ -1447,3 +1447,196 @@ fn incomplete_and_long_parameter_lists_remain_tolerant() {
     assert_eq!(paragraphs(&result), ["two"]);
     check_spans(&result, &sources);
 }
+
+#[test]
+fn target_substitutions_share_reference_grammar_and_do_not_rescan_values() {
+    for (target, filename) in [
+        ("{NAME}.adoc", "part.adoc"),
+        (r"\{name}.adoc", "{name}.adoc"),
+        (r"{name\}.adoc", "{name}.adoc"),
+        ("{raw}.adoc", "{name}.adoc"),
+        ("{amp}.adoc", "&.adoc"),
+        ("{QUOT}.adoc", "&#34;.adoc"),
+        ("{sp}part.adoc", " part.adoc"),
+        ("{blank}part.adoc", "part.adoc"),
+        ("{-bad}.adoc", "{-bad}.adoc"),
+        ("{bad.name}.adoc", "{bad.name}.adoc"),
+        ("{{name}}.adoc", "{part}.adoc"),
+    ] {
+        let root = format!("include::{target}[lines=2;4,indent=0]");
+        let child = "\u{feff}omitted\r\n  *Я*\r\nomitted\r\n  _🙂_\r\n";
+        let (mut sources, mut resources, mut options) =
+            setup(&root, &[(&format!("docs/{filename}"), child)]);
+        options.attributes.set("name", "part");
+        options.attributes.set("raw", "{name}");
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        assert!(result.diagnostics.is_empty(), "{target}: {result:?}");
+        let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+            panic!("{result:?}")
+        };
+        let tokens = tokens_resource(&mut sources, &options, &resources).unwrap();
+        for markup in ["*Я*", "_🙂_"] {
+            let start = child.find(markup).unwrap();
+            let span = Span::in_source(SourceId(1), start, start + markup.len());
+            assert!(inlines.iter().any(|inline| inline.span() == span));
+            assert!(tokens.iter().any(|token| token.span == span));
+        }
+        assert!(result.document.blocks[0].span.provenance.is_some());
+        resources
+            .insert(&format!("docs/{filename}"), "updated")
+            .unwrap();
+        parse_resource(&mut sources, &options, &resources).unwrap();
+        assert_eq!(sources.get(SourceId(1)).unwrap().text(), child);
+        check_spans(&result, &sources);
+    }
+}
+
+#[test]
+fn target_missing_policies_control_loading_and_preserve_physical_warnings() {
+    let child = "\u{feff}omitted\r\n  include::{MISSING}leaf.adoc[]\r\n";
+    for (policy, expected, warnings) in [
+        ("skip", "literal", 0),
+        ("unknown-policy", "literal", 0),
+        ("drop", "resolved", 0),
+        ("drop-line", "", 0),
+        ("warn", "", 1),
+    ] {
+        let root = format!(":attribute-missing: {policy}\n\ninclude::part.adoc[lines=2,indent=0]");
+        let (mut sources, resources, options) = setup(
+            &root,
+            &[
+                ("docs/part.adoc", child),
+                ("docs/{MISSING}leaf.adoc", "literal"),
+                ("docs/leaf.adoc", "resolved"),
+            ],
+        );
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        assert_eq!(result.diagnostics.len(), warnings, "{policy}: {result:?}");
+        if policy != "warn" {
+            assert_eq!(paragraphs(&result).join(" "), expected, "{policy}");
+        }
+        let start = child.find("include::").unwrap();
+        let span = Span::in_source(SourceId(1), start, child.len() - 2);
+        assert_eq!(result.include_directives[1], span);
+        let tokens = tokens_resource(&mut sources, &options, &resources).unwrap();
+        assert!(tokens
+            .iter()
+            .any(|t| t.kind == TokenKind::IncludeDirective && t.span == span));
+        if warnings > 0 {
+            assert_eq!(result.diagnostics[0].span, span);
+            assert_eq!(
+                result.diagnostics[0].severity,
+                adoctra_core::Severity::Warning
+            );
+            assert!(result.diagnostics[0]
+                .message
+                .contains("due to missing attribute"));
+        }
+        check_spans(&result, &sources);
+    }
+}
+
+#[test]
+fn blank_and_missing_targets_stop_before_provider_and_option_validation() {
+    struct NoLoads;
+    impl ResourceProvider for NoLoads {
+        fn load(&self, request: ResourceRequest<'_>) -> ResourceResult<Resource> {
+            panic!("unexpected load: {}", request.target)
+        }
+    }
+    for (policy, target, params, warning) in [
+        (
+            "drop-line",
+            "{missing}part.adoc",
+            "encoding=UTF-16,other={missing}",
+            None,
+        ),
+        (
+            "warn",
+            "{missing}part.adoc",
+            "opts=optional,encoding=UTF-16",
+            None,
+        ),
+        ("drop", "{missing}", "opts=optional,encoding=UTF-16", None),
+        ("skip", "{empty}", "opts=optional,encoding=UTF-16", None),
+        ("drop-line", "{empty}", "", Some("resolved target is blank")),
+        ("drop", "{missing}", "", Some("resolved target is blank")),
+        ("skip", "{empty}", "", Some("resolved target is blank")),
+        (
+            "warn",
+            "{missing}part.adoc",
+            "encoding=UTF-16",
+            Some("due to missing attribute"),
+        ),
+        ("warn", "{empty}", "", Some("resolved target is blank")),
+    ] {
+        let root =
+            format!(":attribute-missing: {policy}\n\nbefore\ninclude::{target}[{params}]\n\nafter");
+        let (mut sources, _, mut options) = setup(&root, &[]);
+        options.includes.max_depth = 0;
+        let result = parse_resource(&mut sources, &options, &NoLoads).unwrap();
+        assert_eq!(
+            result.diagnostics.len(),
+            usize::from(warning.is_some()),
+            "{root}: {result:?}"
+        );
+        if let Some(message) = warning {
+            assert!(
+                result.diagnostics[0].message.contains(message),
+                "{result:?}"
+            );
+            assert_eq!(
+                result.diagnostics[0].severity,
+                adoctra_core::Severity::Warning
+            );
+            assert_eq!(
+                sources.slice(result.diagnostics[0].span),
+                Some(root.lines().nth(3).unwrap())
+            );
+        }
+        assert!(matches!(&result.document.blocks.last().unwrap().kind,
+            BlockKind::Paragraph { inlines } if matches!(inlines.as_slice(),
+                [Inline::Text { value, .. }] if value == "after")));
+        assert_eq!(result.include_directives.len(), 1);
+        check_spans(&result, &sources);
+    }
+}
+
+#[test]
+fn missing_target_does_not_suppress_parameter_warnings_unless_drop_line_skips_them() {
+    let root =
+        ":attribute-missing: warn\n\ninclude::{missing}[opts=optional,other={absent}]\n\nafter";
+    let (mut sources, resources, options) = setup(root, &[]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(paragraphs(&result), ["after"]);
+    assert_eq!(result.diagnostics.len(), 1);
+    assert_eq!(
+        result.diagnostics[0].message,
+        "skipping reference to missing attribute: absent"
+    );
+    check_spans(&result, &sources);
+}
+
+#[test]
+fn incomplete_and_long_target_substitutions_remain_tolerant() {
+    for target in ["{", "{name", "{name\\", "\\{", "{{", "{missing}", "{name}["] {
+        for close in ["", "[", "[]"] {
+            let root = format!("include::{target}{close}\n\nafter");
+            let (mut sources, resources, options) = setup(&root, &[]);
+            let result = parse_resource(&mut sources, &options, &resources).unwrap();
+            assert!(matches!(&result.document.blocks.last().unwrap().kind,
+            BlockKind::Paragraph { inlines } if matches!(inlines.as_slice(),
+                [Inline::Text { value, .. }] if value == "after")));
+            check_spans(&result, &sources);
+        }
+    }
+    let root = format!(
+        ":attribute-missing: drop-line\n\ninclude::{}[]\n\nafter",
+        "{missing}".repeat(10_000)
+    );
+    let (mut sources, resources, options) = setup(&root, &[]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty());
+    assert_eq!(paragraphs(&result), ["after"]);
+    check_spans(&result, &sources);
+}

@@ -487,3 +487,46 @@ mod include_attribute_list_tests {
         assert_eq!(workspace.source(child_id).unwrap().text(), child);
     }
 }
+
+#[cfg(test)]
+mod include_target_tests {
+    use super::ResourceWorkspace;
+
+    #[test]
+    fn target_policies_export_physical_warnings_tokens_and_selected_content() {
+        let mut workspace = ResourceWorkspace::new();
+        let main = ":attribute-missing: warn\n\ninclude::part.adoc[lines=2,indent=0]";
+        let child = "\u{feff}omitted\r\n  include::{missing}leaf.adoc[]\r\n";
+        workspace.set("main.adoc", main).unwrap();
+        workspace.set("part.adoc", child).unwrap();
+        workspace.set("leaf.adoc", "*Я*").unwrap();
+        let main_id = workspace.load("main.adoc", None).unwrap();
+        let parsed = workspace.parse_json(main_id).unwrap();
+        let child_id = workspace.load("part.adoc", Some(main_id)).unwrap();
+        assert!(
+            parsed.contains("include dropped due to missing attribute"),
+            "{parsed}"
+        );
+        assert!(!parsed.contains("Я"), "{parsed}");
+        let start = child.find("include::").unwrap();
+        let end = child.len() - 2;
+        let span = format!(r#""source_id":{child_id},"start":{start},"end":{end}"#);
+        assert!(parsed.contains(&span), "{parsed}");
+        let tokens = workspace.tokens_json(main_id).unwrap();
+        assert!(tokens.contains(&span), "{tokens}");
+        assert!(tokens.contains("include-directive"), "{tokens}");
+        workspace
+            .set("main.adoc", &main.replace("warn", "drop"))
+            .unwrap();
+        let edited_id = workspace.load("main.adoc", None).unwrap();
+        let edited = workspace.parse_json(edited_id).unwrap();
+        assert!(edited.contains("Я"), "{edited}");
+        assert!(!edited.contains("include dropped"), "{edited}");
+        assert_eq!(workspace.source(main_id).unwrap().text(), main);
+        assert_eq!(workspace.source(child_id).unwrap().text(), child);
+        assert!(workspace
+            .parse_json(main_id)
+            .unwrap()
+            .contains("include dropped"));
+    }
+}

@@ -5,6 +5,26 @@ use adoctra_json::JsonBackend;
 fn include_options_render_the_resolved_content() {
     for (source, child, expected) in [
         (
+            ":attribute-missing: drop\n\ninclude::{missing}part.adoc[]",
+            "*Я*",
+            "*Я*",
+        ),
+        (
+            ":attribute-missing: drop-line\n\nbefore\ninclude::{missing}part.adoc[]\nafter",
+            "unused",
+            "before\nafter",
+        ),
+        (
+            ":attribute-missing: warn\n\nbefore\ninclude::{missing}part.adoc[opts=optional]\nafter",
+            "unused",
+            "before\nafter",
+        ),
+        (
+            "include::{empty}part.adoc[lines=2;4,indent=0]",
+            "omitted\n  *Я*\nomitted\n  _🙂_",
+            "*Я*\n_🙂_",
+        ),
+        (
             "include::part.adoc[ignored,unknown=value,lines=\"2\"suffix]",
             "omitted\n*Я*",
             "*Я*",

@@ -3096,6 +3096,344 @@
       "resources": {
         "part.adoc": "= Child\n\nbody"
       }
+    },
+    {
+      "id": "include-target-case",
+      "category": "includes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":name: part\n:raw: \\{name}\n\ninclude::{NAME}.adoc[]",
+      "resources": {
+        "part.adoc": "*selected*"
+      }
+    },
+    {
+      "id": "include-target-escape-prefix",
+      "category": "includes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":name: part\n:raw: \\{name}\n\ninclude::\\{name}.adoc[]",
+      "resources": {
+        "{name}.adoc": "*selected*"
+      }
+    },
+    {
+      "id": "include-target-escape-suffix",
+      "category": "includes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":name: part\n:raw: \\{name}\n\ninclude::{name\\}.adoc[]",
+      "resources": {
+        "{name}.adoc": "*selected*"
+      }
+    },
+    {
+      "id": "include-target-single-pass",
+      "category": "includes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":name: part\n:raw: \\{name}\n\ninclude::{raw}.adoc[]",
+      "resources": {
+        "{name}.adoc": "*selected*"
+      }
+    },
+    {
+      "id": "include-target-intrinsic-amp",
+      "category": "includes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":name: part\n:raw: \\{name}\n\ninclude::{amp}.adoc[]",
+      "resources": {
+        "&.adoc": "*selected*"
+      }
+    },
+    {
+      "id": "include-target-intrinsic-entity",
+      "category": "includes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":name: part\n:raw: \\{name}\n\ninclude::{QUOT}.adoc[]",
+      "resources": {
+        "&#34;.adoc": "*selected*"
+      }
+    },
+    {
+      "id": "include-target-intrinsic-space",
+      "category": "includes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":name: part\n:raw: \\{name}\n\ninclude::{sp}part.adoc[]",
+      "resources": {
+        " part.adoc": "*selected*"
+      }
+    },
+    {
+      "id": "include-target-intrinsic-blank",
+      "category": "includes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":name: part\n:raw: \\{name}\n\ninclude::{blank}part.adoc[]",
+      "resources": {
+        "part.adoc": "*selected*"
+      }
+    },
+    {
+      "id": "include-target-invalid-name",
+      "category": "includes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":name: part\n:raw: \\{name}\n\ninclude::{-bad}.adoc[]",
+      "resources": {
+        "{-bad}.adoc": "*selected*"
+      }
+    },
+    {
+      "id": "include-target-invalid-dot",
+      "category": "includes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":name: part\n:raw: \\{name}\n\ninclude::{bad.name}.adoc[]",
+      "resources": {
+        "{bad.name}.adoc": "*selected*"
+      }
+    },
+    {
+      "id": "include-target-nested-brace",
+      "category": "includes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":name: part\n:raw: \\{name}\n\ninclude::{{name}}.adoc[]",
+      "resources": {
+        "{part}.adoc": "*selected*"
+      }
+    },
+    {
+      "id": "include-target-missing-skip",
+      "category": "includes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":attribute-missing: skip\n\nbefore\ninclude::{missing}part.adoc[]\nafter",
+      "resources": {
+        "{missing}part.adoc": "literal",
+        "part.adoc": "resolved"
+      }
+    },
+    {
+      "id": "include-target-missing-drop",
+      "category": "includes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":attribute-missing: drop\n\nbefore\ninclude::{missing}part.adoc[]\nafter",
+      "resources": {
+        "{missing}part.adoc": "literal",
+        "part.adoc": "resolved"
+      }
+    },
+    {
+      "id": "include-target-missing-drop-line",
+      "category": "includes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":attribute-missing: drop-line\n\nbefore\ninclude::{missing}part.adoc[]\nafter",
+      "resources": {
+        "{missing}part.adoc": "literal",
+        "part.adoc": "resolved"
+      }
+    },
+    {
+      "id": "include-target-missing-unknown-policy",
+      "category": "includes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":attribute-missing: unknown-policy\n\nbefore\ninclude::{missing}part.adoc[]\nafter",
+      "resources": {
+        "{missing}part.adoc": "literal",
+        "part.adoc": "resolved"
+      }
+    },
+    {
+      "id": "include-target-missing-optional-skip",
+      "category": "includes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":attribute-missing: skip\n\nbefore\ninclude::{missing}part.adoc[opts=optional]\nafter",
+      "resources": {}
+    },
+    {
+      "id": "include-target-blank-optional-skip",
+      "category": "includes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":attribute-missing: skip\n\nbefore\ninclude::{empty}[opts=optional,encoding=UTF-16]\nafter",
+      "resources": {}
+    },
+    {
+      "id": "include-target-missing-optional-drop",
+      "category": "includes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":attribute-missing: drop\n\nbefore\ninclude::{missing}part.adoc[opts=optional]\nafter",
+      "resources": {}
+    },
+    {
+      "id": "include-target-blank-optional-drop",
+      "category": "includes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":attribute-missing: drop\n\nbefore\ninclude::{empty}[opts=optional,encoding=UTF-16]\nafter",
+      "resources": {}
+    },
+    {
+      "id": "include-target-missing-optional-drop-line",
+      "category": "includes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":attribute-missing: drop-line\n\nbefore\ninclude::{missing}part.adoc[opts=optional]\nafter",
+      "resources": {}
+    },
+    {
+      "id": "include-target-blank-optional-drop-line",
+      "category": "includes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":attribute-missing: drop-line\n\nbefore\ninclude::{empty}[opts=optional,encoding=UTF-16]\nafter",
+      "resources": {}
+    },
+    {
+      "id": "include-target-missing-optional-warn",
+      "category": "includes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":attribute-missing: warn\n\nbefore\ninclude::{missing}part.adoc[opts=optional]\nafter",
+      "resources": {}
+    },
+    {
+      "id": "include-target-blank-optional-warn",
+      "category": "includes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":attribute-missing: warn\n\nbefore\ninclude::{empty}[opts=optional,encoding=UTF-16]\nafter",
+      "resources": {}
+    },
+    {
+      "id": "include-target-drop-before-params",
+      "category": "includes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":attribute-missing: drop-line\n\nbefore\ninclude::{missing}[encoding=UTF-16,other={absent}]\nafter",
+      "resources": {}
+    },
+    {
+      "id": "include-target-warn-optional-params",
+      "category": "includes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":attribute-missing: warn\n\nbefore\ninclude::{missing}[opts=optional,other={absent}]\nafter",
+      "resources": {}
+    },
+    {
+      "id": "include-target-header",
+      "category": "includes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":name: part\ninclude::{NAME}.adoc[]",
+      "resources": {
+        "part.adoc": "= Title\nJane Doe\n\nbody"
+      }
+    },
+    {
+      "id": "include-target-list",
+      "category": "includes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":attribute-missing: drop\n\n* item\n+\ninclude::{missing}part.adoc[]",
+      "resources": {
+        "part.adoc": "*selected*"
+      }
+    },
+    {
+      "id": "include-target-container",
+      "category": "includes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":attribute-missing: drop-line\n\n====\nbefore\ninclude::{missing}part.adoc[]\nafter\n====",
+      "resources": {}
+    },
+    {
+      "id": "include-target-verbatim",
+      "category": "includes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":attribute-missing: drop-line\n\n----\nbefore\ninclude::{missing}part.adoc[]\nafter\n----",
+      "resources": {}
+    },
+    {
+      "id": "include-target-nested",
+      "category": "includes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":name: part\n\ninclude::{name}.adoc[]",
+      "resources": {
+        "part.adoc": ":attribute-missing: drop\n\ninclude::{missing}leaf.adoc[]",
+        "leaf.adoc": "*selected*"
+      }
+    },
+    {
+      "id": "include-target-body-update",
+      "category": "includes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":name: first\n\ninclude::{name}.adoc[]\n\n:name: second\n\ninclude::{name}.adoc[]",
+      "resources": {
+        "first.adoc": "first",
+        "second.adoc": "second"
+      }
+    },
+    {
+      "id": "include-target-selection-unicode-crlf",
+      "category": "includes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": "﻿:name: часть\r\n\r\ninclude::{NAME}.adoc[lines=2;4,indent=0]",
+      "resources": {
+        "часть.adoc": "﻿omitted\r\n  *Я*\r\nomitted\r\n  _🙂_\r\n"
+      }
+    },
+    {
+      "id": "include-target-leveloffset",
+      "category": "includes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":name: part\n\n= Main\n\ninclude::{name}.adoc[leveloffset=+1]",
+      "resources": {
+        "part.adoc": "= Child\n\nbody"
+      }
+    },
+    {
+      "id": "include-target-intrinsic-override",
+      "category": "includes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":amp: part\n\ninclude::{AMP}.adoc[]",
+      "resources": {
+        "part.adoc": "selected"
+      }
+    },
+    {
+      "id": "include-target-inactive",
+      "category": "includes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": "ifdef::missing[]\ninclude::{missing}[]\nendif::[]\n\nafter",
+      "resources": {}
+    },
+    {
+      "id": "include-target-escaped-directive",
+      "category": "includes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":name: part\n\n\\include::{name}.adoc[]",
+      "resources": {}
     }
   ]
 }

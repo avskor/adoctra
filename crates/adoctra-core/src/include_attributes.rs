@@ -8,7 +8,11 @@ pub(crate) fn parse(
     input: &str,
     attributes: &Attributes,
 ) -> (BTreeMap<String, String>, Vec<String>) {
-    let (input, warnings) = substitute(input, attributes);
+    let (input, warnings) = substitute(
+        input,
+        attributes,
+        attributes.get("attribute-missing").unwrap_or("skip"),
+    );
     let mut rest = input.as_str();
     let mut named = BTreeMap::new();
     while !rest.is_empty() {
@@ -95,11 +99,16 @@ fn value(rest: &mut &str) -> String {
     }
 }
 
-fn substitute(input: &str, attributes: &Attributes) -> (String, Vec<String>) {
+/// Shared, single-pass include substitutions. Targets override `warn` with
+/// `drop-line`; parameter lists use the document policy unchanged.
+pub(crate) fn substitute(
+    input: &str,
+    attributes: &Attributes,
+    policy: &str,
+) -> (String, Vec<String>) {
     let mut output = String::new();
     let mut warnings = Vec::new();
     let mut dropped = Vec::new();
-    let policy = attributes.get("attribute-missing").unwrap_or("skip");
     let mut chars = input.char_indices().peekable();
     while let Some((index, c)) = chars.next() {
         let escaped = c == '\\' && chars.peek().is_some_and(|(_, c)| *c == '{');

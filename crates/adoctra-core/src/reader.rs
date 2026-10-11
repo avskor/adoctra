@@ -458,6 +458,29 @@ impl<'a> Reader<'a> {
         span: Span,
         attributes: &Attributes,
     ) -> bool {
+        let policy = attributes.get("attribute-missing").unwrap_or("skip");
+        let target_policy = if policy == "warn" {
+            "drop-line"
+        } else {
+            policy
+        };
+        let (expanded_target, _) =
+            crate::include_attributes::substitute(target, attributes, target_policy);
+        let blank_target = target.contains('{') && expanded_target.is_empty();
+        // The extra space distinguishes a missing reference that drops its line
+        // from a defined attribute whose value is empty (also for multiline values).
+        let missing_target = blank_target
+            && matches!(policy, "drop-line" | "warn")
+            && crate::include_attributes::substitute(
+                &format!("{target} "),
+                attributes,
+                "drop-line",
+            )
+            .0
+            .is_empty();
+        if missing_target && policy == "drop-line" {
+            return true;
+        }
         let (attrs, warnings) = crate::include_attributes::parse(attrs, attributes);
         self.diagnostics
             .extend(warnings.into_iter().map(|message| Diagnostic {
@@ -465,6 +488,27 @@ impl<'a> Reader<'a> {
                 severity: Severity::Warning,
                 message,
             }));
+        let optional = attrs.contains_key("optional-option");
+        if blank_target {
+            if optional {
+                return true;
+            }
+            self.diagnostics.push(Diagnostic {
+                span,
+                severity: Severity::Warning,
+                message: format!(
+                    "include dropped {}: {target}",
+                    if missing_target {
+                        "due to missing attribute"
+                    } else {
+                        "because resolved target is blank"
+                    }
+                ),
+            });
+            // Keep the physical directive for partial output, as for provider
+            // failures. Ruby's path-bearing fallback is outside this profile.
+            return false;
+        }
         // Resources are immutable UTF-8 snapshots supplied by the host. Keep
         // rejecting transcoding requests until the provider contract defines it.
         if attrs.contains_key("encoding") {
@@ -472,8 +516,7 @@ impl<'a> Reader<'a> {
             return false;
         }
         let selection = crate::include_selection::Selection::parse(&attrs);
-        let optional = attrs.contains_key("optional-option");
-        let target = crate::context::substitute_attribute_value(target, attributes);
+        let target = expanded_target;
         if optional && target.is_empty() {
             return true;
         }
