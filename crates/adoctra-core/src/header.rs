@@ -2,7 +2,7 @@
 //! and process_authors. Kept separate from block parsing so the tokenizer uses
 //! exactly the same line boundaries and attribute transitions.
 use crate::comments::skip_comment;
-use crate::context::{parse_attribute_entry, AttributeEntry, ParseContext};
+use crate::context::{consume_attribute_entry, AttributeEntry, ParseContext};
 use crate::parser::parse_heading;
 use crate::reader::Reader;
 use crate::{Author, DocumentHeader, Revision, Span};
@@ -21,8 +21,8 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
         if skip_comment(lines, &mut i, context) {
             continue;
         }
-        if let Some(entry) = parse_attribute_entry(&lines[i].1) {
-            context.apply(entry);
+        if consume_attribute_entry(lines, &mut i, context) {
+            continue;
         } else if !lines[i].1.trim().is_empty() {
             break;
         }
@@ -123,16 +123,12 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
 
 fn consume_attributes(lines: &mut Reader<'_>, i: &mut usize, context: &mut ParseContext) {
     while lines.has(*i, context) {
-        let (_, line_buffer) = lines.line(*i);
-        let line = line_buffer.as_ref();
         if skip_comment(lines, i, context) {
             continue;
         }
-        let Some(entry) = parse_attribute_entry(line) else {
+        if !consume_attribute_entry(lines, i, context) {
             break;
-        };
-        context.apply(entry);
-        *i += 1;
+        }
     }
 }
 

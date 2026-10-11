@@ -2222,6 +2222,249 @@
       "expect": "xfail",
       "reason": "Verbatim tabsize substitution outside include indent is not implemented; reader normalization preserves internal tabs.",
       "source": ":tabsize: 8\n\n----\n\tЯ\tX\n----"
+    },
+    {
+      "id": "attribute-multiline-soft",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: one \\\n  two \\\n\tthree\n\nValue: {x}."
+    },
+    {
+      "id": "attribute-multiline-legacy",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: one +\n  two +\n three\n\nValue: {x}."
+    },
+    {
+      "id": "attribute-multiline-mixed",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: one \\\n two +\n\nValue: {x}."
+    },
+    {
+      "id": "attribute-multiline-mixed-legacy",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: one +\n two \\\n\nValue: {x}."
+    },
+    {
+      "id": "attribute-multiline-blank",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: one \\\n\nValue: {x}."
+    },
+    {
+      "id": "attribute-multiline-eof",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: one \\\n two \\"
+    },
+    {
+      "id": "attribute-multiline-header",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "= Title\n:x: one \\\n two\nJane Doe\n:y: three +\n four\nv1.0, 2026-01-01\n:z: five \\\n six\n\n{x}; {y}; {z}; {author}; {revnumber}"
+    },
+    {
+      "id": "attribute-multiline-body",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: initial\n\nBefore {x}.\n\n:x: one \\\n two\n\nAfter {x}."
+    },
+    {
+      "id": "attribute-multiline-substitution",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":old: before\n:x: {old} \\\n {old}\n:old: after\n\n{x} / {old}"
+    },
+    {
+      "id": "attribute-multiline-self-reference",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: old\n:x: {x} \\\n {x}\n\n{x}"
+    },
+    {
+      "id": "attribute-multiline-unset",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: old\n:x!: ignored \\\n swallowed\n\n{x}"
+    },
+    {
+      "id": "attribute-multiline-unset-prefix",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: old\n:!x: ignored +\n swallowed\n\n{x}"
+    },
+    {
+      "id": "attribute-multiline-comment-text",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: one \\\n// retained\n\n{x}"
+    },
+    {
+      "id": "attribute-multiline-attribute-text",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: one \\\n:y: retained\n\n{x} / {y}"
+    },
+    {
+      "id": "attribute-multiline-condition",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":enabled:\n:x: one \\\nifdef::enabled[]\n two \\\nendif::[]\n three\n\n{x}"
+    },
+    {
+      "id": "attribute-multiline-old-context",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: old\n:x: new \\\nifeval::[\"{x}\" == \"old\"]\n two\nendif::[]\n\n{x}"
+    },
+    {
+      "id": "attribute-multiline-inactive",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "ifdef::missing[]\n:x: hidden \\\n value\nendif::[]\n\n{x}"
+    },
+    {
+      "id": "attribute-multiline-container",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "====\n:x: one \\\n two\n\n{x}\n====\n\nAfter {x}."
+    },
+    {
+      "id": "attribute-multiline-container-boundary",
+      "category": "attributes",
+      "expect": "xfail",
+      "source": "====\n:x: one \\\n====\n\nAfter {x}.",
+      "reason": "Existing attribute replay difference: an assignment in an empty container affects following paragraphs."
+    },
+    {
+      "id": "attribute-multiline-listing",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "----\n:x: one \\\n two\n----\n\n{x}"
+    },
+    {
+      "id": "attribute-multiline-paragraph",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "Text\n:x: one \\\ncontinuation\n\n{x}"
+    },
+    {
+      "id": "attribute-multiline-list",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "* Item\n:x: one \\\ncontinuation\n\n{x}"
+    },
+    {
+      "id": "attribute-multiline-list-attached",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "* Item\n+\n--\n:x: one \\\n two\n\n{x}\n--\n\nAfter {x}."
+    },
+    {
+      "id": "attribute-multiline-unicode-crlf",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "﻿:x: Я \\ \t\r\n  🙂 \\ \t\r\n\tконец\r\n\r\n{x}"
+    },
+    {
+      "id": "attribute-multiline-unicode-indent",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: one \\\n two\n\n{x}"
+    },
+    {
+      "id": "attribute-multiline-no-space",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: one\\\n\n{x}"
+    },
+    {
+      "id": "attribute-multiline-only-marker",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: \\\n\n{x}"
+    },
+    {
+      "id": "attribute-multiline-blank-header",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "= Title\n:x: one \\\n\nJane Doe\n\n{x} / {author}"
+    },
+    {
+      "id": "attribute-multiline-include-value",
+      "category": "attributes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":x: one \\\ninclude::part.adoc[]\n\n{x}",
+      "resources": {
+        "part.adoc": " two \\\n three"
+      }
+    },
+    {
+      "id": "attribute-multiline-include-return",
+      "category": "attributes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": "include::part.adoc[]\n two\n\n{x}",
+      "resources": {
+        "part.adoc": ":x: one \\"
+      }
+    },
+    {
+      "id": "attribute-multiline-include-selection",
+      "category": "attributes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":x: one \\\ninclude::part.adoc[lines=2;4]\n\n{x}",
+      "resources": {
+        "part.adoc": "omitted\n two \\\nomitted\n three"
+      }
+    },
+    {
+      "id": "attribute-multiline-include-target",
+      "category": "attributes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": "include::part.adoc[]\n file.adoc\n\ninclude::{target}[]",
+      "resources": {
+        "part.adoc": ":target: leaf \\",
+        "leaf file.adoc": "*Loaded*"
+      }
+    },
+    {
+      "id": "attribute-multiline-include-condition",
+      "category": "attributes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":x: old\n:x: new \\\ninclude::part.adoc[]\n\n{x}",
+      "resources": {
+        "part.adoc": "ifeval::[\"{x}\" == \"old\"]\n two\nendif::[]"
+      }
+    },
+    {
+      "id": "attribute-multiline-hard-break",
+      "category": "attributes",
+      "expect": "xfail",
+      "reason": "Hard line break substitution after attribute expansion is not implemented.",
+      "source": ":x: one + \\\n two\n\n{x}"
+    },
+    {
+      "id": "attribute-multiline-unicode-suffix",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: one \\ \n\n{x}"
+    },
+    {
+      "id": "attribute-multiline-raw-suffix",
+      "category": "attributes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":x: one \\\ninclude::part.rs[]\n\n{x}",
+      "resources": {
+        "part.rs": " two \\ \t"
+      }
     }
   ]
 }

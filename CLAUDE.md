@@ -198,9 +198,16 @@ only chomp. Unicode spaces and internal tabs survive this stage. Only primary in
 condenses final empty lines; includes preserve block boundaries. Removed suffixes
 and retained line endings have separate physical fragments; the tokenizer's plain
 reader must not normalize processed raw content again. Verbatim tabsize substitution
-outside include indentation remains an explicit XFAIL. Multiline attributes, full
-attribute-list substitutions and safe-mode compatibility are follow-up work; see
-the implementation plan and parser API.
+outside include indentation remains an explicit XFAIL. Multiline attributes now use
+one parser-owned collector for header/body: space-backslash and legacy space-plus,
+marker consistency, blank/EOF termination, locked/unset consumption, and cross-source
+continuations. Preprocessing sees the old context until collection finishes. Reader
+records consumed attribute lines and values for tokenizer classification; preserve
+physical spans and avoid independently interpreting continuation text as syntax.
+Hard-break substitution after attribute expansion and empty-container attribute replay
+remain explicit XFAILs (the latter also affects single-line entries). Built-in path
+attributes, full attribute-list substitutions and safe-mode compatibility are follow-up
+work; see the implementation plan and parser API.
 
 Working: parser for header attributes, headings, listing blocks, literal blocks
 (`....` and `[literal]`), admonitions (paragraph form), paragraphs,

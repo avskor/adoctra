@@ -1159,3 +1159,107 @@ fn inline_tokens_after_expanded_tabs_keep_exact_unicode_offsets() {
         .any(|t| t.span == expected));
     check_spans(&result, &sources);
 }
+
+#[test]
+fn multiline_attributes_cross_selected_sources_and_preserve_snapshots() {
+    let root = "\u{feff}:x: Я \\\r\ninclude::part.adoc[lines=2;4,indent=0]\r\n last\r\n\r\n{x} <<missing>>";
+    let child = "omitted\r\n  🙂 \\ \t\r\nomitted\r\n  middle \\ \t\r\n";
+    let (mut sources, mut resources, options) = setup(root, &[("docs/part.adoc", child)]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(
+        result.document.attributes.get("x"),
+        Some("Я 🙂 middle last")
+    );
+    let child_id = sources.load("docs/part.adoc", None, &resources).unwrap();
+    let highlighted = tokens_resource(&mut sources, &options, &resources).unwrap();
+    let entries: Vec<_> = highlighted
+        .iter()
+        .filter(|t| t.kind == TokenKind::AttributeEntry)
+        .collect();
+    assert_eq!(entries.len(), 4, "{highlighted:?}");
+    for text in ["🙂 \\", "middle \\"] {
+        let start = child.find(text).unwrap();
+        assert!(
+            entries
+                .iter()
+                .any(|t| t.span == Span::in_source(child_id, start, start + text.len())),
+            "{entries:?}"
+        );
+    }
+    let start = root.find("{x}").unwrap();
+    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+        panic!("{result:?}")
+    };
+    assert!(
+        matches!(&inlines[0], Inline::AttributeRef { value: Some(value), span, .. }
+        if value == "Я 🙂 middle last" && *span == Span::in_source(options.source_id, start, start + 3))
+    );
+    assert_eq!(
+        result.diagnostics[0].span.start,
+        root.find("<<missing>>").unwrap()
+    );
+    resources
+        .insert(
+            "docs/part.adoc",
+            "ignored\n  changed \\\nignored\n  value \\",
+        )
+        .unwrap();
+    let edited = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(
+        edited.document.attributes.get("x"),
+        Some("Я changed value last")
+    );
+    assert_eq!(sources.get(child_id).unwrap().text(), child);
+    assert_eq!(sources.get(options.source_id).unwrap().text(), root);
+    assert_eq!(
+        result.document.attributes.get("x"),
+        Some("Я 🙂 middle last")
+    );
+}
+
+#[test]
+fn multiline_attributes_can_end_in_parent_and_use_current_values_for_later_includes() {
+    let (mut sources, resources, options) = setup(
+        "include::part.adoc[]\n file.adoc\n\ninclude::{target}[]",
+        &[
+            ("docs/part.adoc", ":target: leaf \\"),
+            ("docs/leaf file.adoc", "*Loaded*"),
+        ],
+    );
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty(), "{result:?}");
+    assert_eq!(
+        result.document.attributes.get("target"),
+        Some("leaf file.adoc")
+    );
+    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+        panic!("{result:?}")
+    };
+    assert!(matches!(&inlines[0], Inline::Strong { .. }));
+    let tokens = tokens_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(
+        tokens
+            .iter()
+            .filter(|t| t.kind == TokenKind::AttributeEntry)
+            .count(),
+        2
+    );
+    assert_eq!(
+        tokens
+            .iter()
+            .filter(|t| t.kind == TokenKind::IncludeDirective)
+            .count(),
+        2
+    );
+}
+
+#[test]
+fn raw_include_suffix_does_not_open_attribute_continuation() {
+    let (mut sources, resources, options) = setup(
+        ":x: one \\\ninclude::part.rs[]\n\n{x}",
+        &[("docs/part.rs", " two \\ \t")],
+    );
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(result.document.attributes.get("x"), Some("one two \\ \t"));
+    assert_eq!(result.document.blocks.len(), 1);
+}

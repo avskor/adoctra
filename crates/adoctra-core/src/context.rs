@@ -84,10 +84,71 @@ impl ParseContext {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) enum AttributeEntry {
     Set(String, String),
     Unset(String),
+}
+
+/// Consume an entry at a parser-approved block/header boundary. Preprocessing
+/// sees the old context until the entire value has been collected, as in the
+/// pinned Parser.process_attribute_entry. Record each physical reader line so
+/// highlighting does not have to guess continuation or container boundaries.
+pub(crate) fn consume_attribute_entry(
+    lines: &mut crate::reader::Reader<'_>,
+    i: &mut usize,
+    context: &mut ParseContext,
+) -> bool {
+    let Some(mut entry) = parse_attribute_entry(&lines[*i].1) else {
+        return false;
+    };
+    let first = lines.attribute_entries.len();
+    let mut value = lines[*i].1[1..]
+        .split_once(':')
+        .unwrap()
+        .1
+        .trim_start_matches([' ', '\t'])
+        .to_owned();
+    let continuation = [" \\", " +"].into_iter().find(|con| value.ends_with(con));
+    loop {
+        let (off, line) = lines.line(*i);
+        lines
+            .attribute_entries
+            .push((crate::Span::new(off, off + line.len()), None));
+        *i += 1;
+        let Some(con) = continuation else { break };
+        value.truncate(value.len() - con.len());
+        value.truncate(value.trim_end_matches(ruby_space).len());
+        if !lines.has(*i, context) {
+            break;
+        }
+        if lines[*i].1.is_empty() {
+            // Ruby advances past the blank line that terminated continuation.
+            *i += 1;
+            break;
+        }
+        let next = lines[*i].1.trim_start_matches(ruby_space);
+        value.push(if value.ends_with(" +") { '\n' } else { ' ' });
+        value.push_str(next);
+        if !next.ends_with(con) {
+            let (off, line) = lines.line(*i);
+            lines
+                .attribute_entries
+                .push((crate::Span::new(off, off + line.len()), None));
+            *i += 1;
+            break;
+        }
+    }
+    if let AttributeEntry::Set(_, ref mut current) = entry {
+        *current = value;
+    }
+    lines.attribute_entries[first].1 = Some(entry.clone());
+    context.apply(entry);
+    true
+}
+
+fn ruby_space(c: char) -> bool {
+    matches!(c, '\0' | '\t'..='\r' | ' ')
 }
 
 pub(crate) fn parse_attribute_entry(line: &str) -> Option<AttributeEntry> {

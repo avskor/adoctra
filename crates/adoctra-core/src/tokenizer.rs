@@ -15,8 +15,7 @@ use crate::context::{ParseContext, ParseOptions};
 use crate::header::collect_header;
 use crate::inline::scan_inlines;
 use crate::parser::{
-    parse_attribute_entry, parse_block_anchor, parse_block_attr_list, parse_block_title,
-    parse_heading, parse_list_marker,
+    parse_block_anchor, parse_block_attr_list, parse_block_title, parse_heading, parse_list_marker,
 };
 use crate::scanner::lines_with_offsets;
 
@@ -116,7 +115,12 @@ pub(crate) fn tokens_reader<'a>(
         .iter()
         .map(|span| processed.transformed_span(*span))
         .collect();
-    let mut out: Vec<_> = tokens_processed(&processed.text, options, &comments)
+    let entries: Vec<_> = reader
+        .attribute_entries
+        .iter()
+        .map(|(span, entry)| (processed.transformed_span(*span), entry.clone()))
+        .collect();
+    let mut out: Vec<_> = tokens_processed(&processed.text, options, &comments, &entries)
         .into_iter()
         .flat_map(|token| {
             reader
@@ -143,10 +147,16 @@ pub(crate) fn tokens_reader<'a>(
     out
 }
 
-fn tokens_processed(source: &str, options: &ParseOptions, comments: &[Span]) -> Vec<Token> {
+fn tokens_processed(
+    source: &str,
+    options: &ParseOptions,
+    comments: &[Span],
+    entries: &[(Span, Option<crate::context::AttributeEntry>)],
+) -> Vec<Token> {
     // Comment classification is owned by the structural parser, including
     // verbatim styles and list continuations. Do not duplicate those rules here.
     let mut comment_index = 0;
+    let mut entry_index = 0;
     let lines = lines_with_offsets(source);
     // Resolve `{attr}` against the same header table the parser uses.
     let mut context = ParseContext::new(options);
@@ -167,6 +177,25 @@ fn tokens_processed(source: &str, options: &ParseOptions, comments: &[Span]) -> 
 
     for (line_index, (off, line)) in lines.into_iter().enumerate() {
         let line_span = Span::new(off, off + line.len());
+        while entry_index < entries.len() && entries[entry_index].0.end <= off {
+            entry_index += 1;
+        }
+        if let Some((span, entry)) = entries
+            .get(entry_index)
+            .filter(|(span, _)| span.start == off)
+        {
+            if line_index >= header.body_start {
+                if let Some(entry) = entry {
+                    context.apply(entry.clone());
+                }
+            }
+            out.push(Token {
+                span: *span,
+                kind: TokenKind::AttributeEntry,
+            });
+            mid_paragraph = false;
+            continue;
+        }
         while comment_index < comments.len() && comments[comment_index].end <= off {
             comment_index += 1;
         }
@@ -300,18 +329,6 @@ fn tokens_processed(source: &str, options: &ParseOptions, comments: &[Span]) -> 
         }
         if line.trim().is_empty() {
             in_list = false; // a blank line ends a list (mirrors the parser)
-            continue;
-        }
-        if let Some(entry) =
-            parse_attribute_entry(line).filter(|_| at_para_start || line_index < header.body_start)
-        {
-            if line_index >= header.body_start {
-                context.apply(entry);
-            }
-            out.push(Token {
-                span: line_span,
-                kind: TokenKind::AttributeEntry,
-            });
             continue;
         }
         if parse_heading(line.trim_end()).is_some() {

@@ -10,8 +10,7 @@ use crate::ast::{
 };
 use crate::attributes::Attributes;
 use crate::comments::{comment_fence, is_line_comment, skip_comment};
-pub(crate) use crate::context::parse_attribute_entry;
-use crate::context::{ParseContext, ParseOptions};
+use crate::context::{consume_attribute_entry, ParseContext, ParseOptions};
 use crate::diagnostic::{Diagnostic, ParseResult, Severity};
 use crate::header::collect_header;
 use crate::inline::scan_inlines;
@@ -160,9 +159,7 @@ fn collect_blocks(
         if skip_comment(lines, i, context) {
             continue;
         }
-        if let Some(entry) = parse_attribute_entry(line) {
-            context.apply(entry);
-            *i += 1;
+        if consume_attribute_entry(lines, i, context) {
             continue;
         }
         if let Some((id, reftext)) = parse_block_anchor(line) {

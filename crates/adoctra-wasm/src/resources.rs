@@ -374,3 +374,39 @@ mod indent_depth_tests {
         assert_eq!(workspace.source(child).unwrap().text(), text);
     }
 }
+
+#[cfg(test)]
+mod multiline_attribute_tests {
+    use super::ResourceWorkspace;
+
+    #[test]
+    fn expanded_values_and_attribute_tokens_keep_physical_sources() {
+        let mut workspace = ResourceWorkspace::new();
+        workspace
+            .set("main.adoc", ":x: Я \\\ninclude::part.adoc[]\n\n{x}")
+            .unwrap();
+        let child = "\u{feff}  🙂 \\ \t\r\n  конец";
+        workspace.set("part.adoc", child).unwrap();
+        let main_id = workspace.load("main.adoc", None).unwrap();
+        let parsed = workspace.parse_json(main_id).unwrap();
+        let child_id = workspace.load("part.adoc", Some(main_id)).unwrap();
+        assert!(
+            parsed.contains(r#""attribute":"x","value":"Я 🙂 конец""#),
+            "{parsed}"
+        );
+        assert!(parsed.contains(r#""diagnostics":[]"#), "{parsed}");
+        let tokens = workspace.tokens_json(main_id).unwrap();
+        for text in ["  🙂 \\", "  конец"] {
+            let start = child.find(text).unwrap();
+            let end = start + text.len();
+            let token = format!(
+                r#""source_id":{child_id},"start":{start},"end":{end}}},"kind":"attribute-entry""#
+            );
+            assert!(tokens.contains(&token), "{tokens}");
+        }
+        workspace.set("part.adoc", "  edited").unwrap();
+        let edited = workspace.parse_json(main_id).unwrap();
+        assert!(edited.contains(r#""value":"Я edited""#), "{edited}");
+        assert_eq!(workspace.source(child_id).unwrap().text(), child);
+    }
+}
