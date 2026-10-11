@@ -9,6 +9,7 @@ pub mod ast;
 pub mod attributes;
 pub mod backend;
 mod comments;
+mod conditional_expression;
 mod context;
 pub mod diagnostic;
 pub mod error;

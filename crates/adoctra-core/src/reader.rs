@@ -134,6 +134,41 @@ impl<'a> Reader<'a> {
             }
             return None;
         }
+        if keyword == "ifeval" {
+            self.directives.push(span);
+            let include = if !active {
+                // Skipped branches still balance every ifeval, even malformed ones.
+                false
+            } else if !target.is_empty() {
+                self.error(
+                    span,
+                    "malformed ifeval directive: target is not permitted".into(),
+                );
+                return None;
+            } else if let Some(include) = crate::conditional_expression::evaluate(text, attributes)
+            {
+                include
+            } else {
+                self.error(
+                    span,
+                    format!(
+                        "malformed ifeval directive: {} expression",
+                        if text.is_empty() {
+                            "missing"
+                        } else {
+                            "invalid"
+                        }
+                    ),
+                );
+                return None;
+            };
+            self.stack.push(Conditional {
+                target,
+                active: include,
+                span,
+            });
+            return None;
+        }
         if target.is_empty() && active {
             self.directives.push(span);
             self.error(
@@ -276,7 +311,7 @@ impl<'a> Index<usize> for Reader<'a> {
 
 fn directive(line: &str) -> Option<(&str, &str, &str)> {
     let (keyword, rest) = line.split_once("::")?;
-    if !matches!(keyword, "ifdef" | "ifndef" | "endif") {
+    if !matches!(keyword, "ifdef" | "ifndef" | "ifeval" | "endif") {
         return None;
     }
     let rest = rest.strip_suffix(']')?;

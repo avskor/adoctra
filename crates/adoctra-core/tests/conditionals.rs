@@ -265,3 +265,247 @@ fn comments_generated_by_single_line_conditions_share_parser_and_token_ranges() 
         assert_eq!(result.comments, comments, "{source}");
     }
 }
+
+#[test]
+fn ifeval_comparisons_follow_the_pinned_ruby_coercions() {
+    for (expression, include) in [
+        ("2 > 1", true),
+        ("2 >= 2", true),
+        ("1 < 2", true),
+        ("2 <= 2", true),
+        ("2 == 2.0", true),
+        ("2 != 3", true),
+        ("true == true", true),
+        ("false != true", true),
+        ("false < true", false),
+        ("{missing} == {other}", true),
+        ("{missing} == 0", false),
+        ("{missing} >= {other}", false),
+        ("{sp} == {sp}{sp}", true),
+        ("\"{missing}\" == \"\"", true),
+        ("{missing} == \"\"", false),
+        ("\"10\" < \"2\"", true),
+        ("'a' == 'a'", true),
+        // 2.0.23 retains the closing quote when coercing strings.
+        ("\"a\" == 'a'", false),
+        ("\"1\" == 1", false),
+        ("\"1\" != 1", true),
+        ("\"abc\" > 0", false),
+        ("nonsense == 0", true),
+        ("12tail == 12", true),
+        ("1_000 == 1000", true),
+        ("1__0 == 1", true),
+        ("1.2.3 == 1.2", true),
+        ("1e3 == 1", true),
+        ("1.0e3 == 1000", true),
+        ("1.e2 == 1", true),
+        ("-.5 < 0", true),
+        ("9007199254740993 > 9007199254740992", true),
+        ("9007199254740993 > 9007199254740992.0", true),
+        ("-9007199254740993 < -9007199254740992.0", true),
+        (
+            "9999999999999999999999999999999999999999 > 9999999999999999999999999999999999999998",
+            true,
+        ),
+        ("0 == -0.0", true),
+        ("-1 > -1.5", true),
+        ("1 < 1.5", true),
+        ("1.0e999 > 9999999999999999999999999999999999999999", true),
+        ("\"{plus}\" == \"&#43;\"", true),
+        (" 1  ==  1 ", true),
+        ("1\t==\t1", true),
+        ("\"a > b\" == \"a > b\"", false),
+        ("1 === 1", false),
+        ("1 >=", true),
+        ("1 <=", false),
+        ("1 == 1 == 1", true),
+    ] {
+        let source = format!("ifeval::[{expression}]\nyes\nendif::[]");
+        assert_eq!(
+            paragraph(&source),
+            if include { "yes" } else { "" },
+            "{expression}"
+        );
+    }
+}
+
+#[test]
+fn ifeval_substitutes_attributes_once_and_respects_escaping_and_overrides() {
+    let mut options = ParseOptions::default();
+    options.attributes.set("name", "Мир");
+    options.attributes.set("number", "2");
+    options.attributes.set("raw", "{name}");
+    for expression in [
+        "{NUMBER} == 2",
+        "\"{name}\" == \"Мир\"",
+        "\"{raw}\" == \"\\{name}\"",
+        "\"{name\\}\" == \"\\{name}\"",
+        "\"{bad name}\" != \"\"",
+        "\"{name}{name}\" == \"МирМир\"",
+    ] {
+        let source = format!(":number: 3\n\nifeval::[{expression}]\nyes\nendif::[]");
+        let result = parse_with_options(&source, &options);
+        assert!(
+            result.diagnostics.is_empty(),
+            "{expression}: {:?}",
+            result.diagnostics
+        );
+        assert_eq!(result.document.blocks.len(), 1, "{expression}");
+        let block = &result.document.blocks[0];
+        assert!(
+            matches!(&block.kind, BlockKind::Paragraph { inlines } if matches!(&inlines[0], Inline::Text { value, .. } if value == "yes"))
+        );
+        assert_eq!(&source[block.span.start..block.span.end], "yes");
+    }
+    assert_eq!(paragraph(":n: 1\n\nifeval::[{n} == 1]\none\nendif::[]\n\n:n: 2\n\nifeval::[{n} == 2]\ntwo\nendif::[]\n\n:n!:\n\nifeval::[\"{n}\" == \"\"]\nunset\nendif::[]"), "one|two|unset");
+}
+
+#[test]
+fn ifeval_malformed_and_skipped_expressions_balance_like_the_reference() {
+    for (source, messages) in [
+        (
+            "ifeval::[]\nshown\nendif::[]",
+            vec!["missing expression", "unmatched"],
+        ),
+        ("ifeval::[bad]\nshown", vec!["invalid expression"]),
+        (
+            "ifeval::name[1 == 1]\nshown",
+            vec!["target is not permitted"],
+        ),
+        (
+            "ifeval::[1 == 1]\nshown\nendif::name[]\nendif::[text]\nendif::[]",
+            vec!["mismatched", "text is not permitted"],
+        ),
+        ("ifeval::[1 == 1]\nshown", vec!["unterminated"]),
+    ] {
+        let options = ParseOptions {
+            source_id: SourceId(21),
+            ..Default::default()
+        };
+        let result = parse_with_options(source, &options);
+        assert_eq!(
+            result.diagnostics.len(),
+            messages.len(),
+            "{source}: {:?}",
+            result.diagnostics
+        );
+        assert_eq!(result.document.blocks.len(), 1);
+        for (diagnostic, expected) in result.diagnostics.iter().zip(messages) {
+            assert!(diagnostic.message.contains(expected), "{diagnostic:?}");
+            assert_eq!(diagnostic.span.source_id, SourceId(21));
+            assert!(source[diagnostic.span.start..diagnostic.span.end].contains("::"));
+        }
+    }
+    assert_eq!(paragraph("ifeval::[1 == 2]\nifeval::bad[invalid]\n:no-leak:\nendif::bad[]\nifeval::[]\nhidden\nendif::[]\nendif::[]\nifndef::no-leak[clean]"), "clean");
+}
+
+#[test]
+fn ifeval_preserves_unicode_crlf_inline_diagnostic_and_token_positions() {
+    let source = "Я *до\r\n// комментарий\r\nifeval::[1 == 2]\r\n*скрыто*\r\nendif::[]\r\nifeval::[1 == 1]\r\nпосле* <<unknown>>\r\nendif::[]";
+    let options = ParseOptions {
+        source_id: SourceId(23),
+        ..Default::default()
+    };
+    let result = parse_with_options(source, &options);
+    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+        panic!()
+    };
+    let Inline::Strong { span, children } = &inlines[1] else {
+        panic!("{inlines:?}")
+    };
+    assert_eq!(
+        *span,
+        Span::in_source(
+            SourceId(23),
+            source.find('*').unwrap(),
+            source.find("после*").unwrap() + "после*".len()
+        )
+    );
+    assert!(
+        matches!(&children[0], Inline::Text { value, .. } if value.contains("до") && value.contains("после") && !value.contains("скрыто"))
+    );
+    assert_eq!(result.diagnostics.len(), 1);
+    let d = &result.diagnostics[0];
+    assert_eq!(&source[d.span.start..d.span.end], "<<unknown>>");
+    assert_eq!(d.span.source_id, SourceId(23));
+    assert_eq!(result.conditional_directives.len(), 4);
+    assert_eq!(
+        &source[result.inactive[0].start..result.inactive[0].end],
+        "*скрыто*"
+    );
+    let tokens = tokens_with_options(source, &options);
+    for (kind, spans) in [
+        (
+            TokenKind::ConditionalDirective,
+            &result.conditional_directives,
+        ),
+        (TokenKind::Inactive, &result.inactive),
+        (TokenKind::Comment, &result.comments),
+    ] {
+        assert_eq!(
+            tokens
+                .iter()
+                .filter(|t| t.kind == kind)
+                .map(|t| t.span)
+                .collect::<Vec<_>>(),
+            *spans
+        );
+    }
+    assert!(tokens.iter().all(
+        |t| t.span.source_id == SourceId(23) && source.get(t.span.start..t.span.end).is_some()
+    ));
+}
+
+#[test]
+fn ifeval_header_container_and_verbatim_share_the_lazy_reader() {
+    let source = "ifeval::[1 == 1]\n= Title\nendif::[]\nifeval::[2 > 1]\nJane Doe\nendif::[]\nifeval::[\"{author}\" == \"Jane Doe\"]\nv2, 2026-10-11: Draft\nendif::[]\n\nbody";
+    let result = parse(source);
+    assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+    let header = result.document.header.unwrap();
+    assert_eq!(
+        &source[header.authors[0].span.start..header.authors[0].span.end],
+        "Jane Doe"
+    );
+    assert_eq!(result.document.attributes.get("revnumber"), Some("2"));
+    let result = parse("====\n:n: 2\n\nifeval::[{n} == 2]\nhidden\nendif::[]\nifeval::[\"{n}\" == \"\"]\ninside\nendif::[]\n====\n\nifeval::[{n} == 2]\nafter\nendif::[]");
+    assert!(result.diagnostics.is_empty());
+    let BlockKind::Example { blocks } = &result.document.blocks[0].kind else {
+        panic!()
+    };
+    assert_eq!(blocks.len(), 1);
+    assert!(
+        matches!(&blocks[0].kind, BlockKind::Paragraph { inlines } if matches!(&inlines[0], Inline::Text {value, ..} if value == "inside"))
+    );
+    assert_eq!(result.document.blocks.len(), 2);
+    let result = parse("////\nifeval::[bad]\nendif::[]\n////\n\n----\nifeval::[1 == 1]\n  kept\nendif::[]\n\\ifeval::[1 == 1]\n----");
+    assert!(result.diagnostics.is_empty());
+    assert_eq!(result.comments.len(), 1);
+    assert_eq!(result.conditional_directives.len(), 2);
+    assert!(
+        matches!(&result.document.blocks[0].kind, BlockKind::Listing { text } if text == "  kept\nifeval::[1 == 1]")
+    );
+}
+
+#[test]
+fn ifeval_incomplete_and_deep_input_is_safe_for_the_editor() {
+    let source = "ifeval::[\"Я {name}\" != \"\"]\r\n*текст*\r\nendif::[]";
+    for end in (0..=source.len()).filter(|&i| source.is_char_boundary(i)) {
+        let partial = &source[..end];
+        let result = parse(partial);
+        assert!(result
+            .diagnostics
+            .iter()
+            .all(|d| partial.get(d.span.start..d.span.end).is_some()));
+        assert!(adoctra_core::tokens(partial)
+            .iter()
+            .all(|t| partial.get(t.span.start..t.span.end).is_some()));
+    }
+    assert_eq!(
+        paragraph(&format!(
+            "{}yes\n{}",
+            "ifeval::[1 == 1]\n".repeat(2048),
+            "endif::[]\n".repeat(2048)
+        )),
+        "yes"
+    );
+}

@@ -653,6 +653,120 @@
       "expect": "xfail",
       "source": ":a:\n\nifdef::a[[#kept]]\nifdef::a[.Caption]\nshown\n\nifdef::missing[]\n[[hidden]]\nHidden\nendif::[]\nSee <<kept>>.",
       "reason": "A textless reference to a titled paragraph uses the id instead of the caption, also without conditional preprocessing."
+    },
+    {
+      "id": "ifeval-numbers",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": "ifeval::[2 > 1]\ngreater\nendif::[]\nifeval::[2 >= 2]\ngreater-equal\nendif::[]\nifeval::[1 < 2]\nless\nendif::[]\nifeval::[2 <= 2]\nless-equal\nendif::[]\nifeval::[2 == 2.0]\nequal\nendif::[]\nifeval::[2 != 3]\nunequal\nendif::[]\nifeval::[2 < 1]\nhidden\nendif::[]"
+    },
+    {
+      "id": "ifeval-strings",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": "ifeval::[\"alpha\" < \"beta\"]\nlexical\nendif::[]\nifeval::['same' == 'same']\nsingle\nendif::[]\nifeval::[\"same\" == 'same']\nmixed-hidden\nendif::[]\nifeval::[\"10\" < \"2\"]\nlexical-numbers\nendif::[]\nifeval::[\"abc\" > 0]\ntype-hidden\nendif::[]\nifeval::[\"1\" != 1]\ndifferent-types\nendif::[]"
+    },
+    {
+      "id": "ifeval-coercion",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": "ifeval::[true == true]\ncase-0\nendif::[]\nifeval::[false != true]\ncase-1\nendif::[]\nifeval::[false < true]\ncase-2\nendif::[]\nifeval::[{missing} == {other}]\ncase-3\nendif::[]\nifeval::[{empty} == \"\"]\ncase-4\nendif::[]\nifeval::[{sp} == {sp}{sp}]\ncase-5\nendif::[]\nifeval::[nonsense == 0]\ncase-6\nendif::[]\nifeval::[12tail == 12]\ncase-7\nendif::[]\nifeval::[1_000 == 1000]\ncase-8\nendif::[]\nifeval::[1.2.3 == 1.2]\ncase-9\nendif::[]\nifeval::[1e3 == 1]\ncase-10\nendif::[]\nifeval::[1.0e3 == 1000]\ncase-11\nendif::[]\nifeval::[-.5 < 0]\ncase-12\nendif::[]\nifeval::[1.e2 == 100]\ncase-13\nendif::[]\nifeval::[1__0 == 1]\ncase-14\nendif::[]"
+    },
+    {
+      "id": "ifeval-large-numbers",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": "ifeval::[9007199254740993 > 9007199254740992]\ncase-0\nendif::[]\nifeval::[9007199254740993 > 9007199254740992.0]\ncase-1\nendif::[]\nifeval::[-9007199254740993 < -9007199254740992.0]\ncase-2\nendif::[]\nifeval::[9999999999999999999999999999999999999999 > 9999999999999999999999999999999999999998]\ncase-3\nendif::[]\nifeval::[0 == -0.0]\ncase-4\nendif::[]\nifeval::[-1 > -1.5]\ncase-5\nendif::[]\nifeval::[1 < 1.5]\ncase-6\nendif::[]\nifeval::[1.0e999 > 9999999999999999999999999999999999999999]\ncase-7\nendif::[]"
+    },
+    {
+      "id": "ifeval-attributes",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": ":level: 2\n:name: Мир\n\nifeval::[{LEVEL} == 2]\nfirst\nendif::[]\n\n:level: 3\n\nifeval::[{level} == 3]\nsecond\nendif::[]\nifeval::[\"{name}\" == \"Мир\"]\nunicode\nendif::[]\n\n:level!:\n\nifeval::[\"{level}\" == \"\"]\nunset\nendif::[]"
+    },
+    {
+      "id": "ifeval-substitution",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": ":x: value\n\nifeval::[\"{x}\" == \"value\"]\ncase-0\nendif::[]\nifeval::[\"{missing}\" == \"\"]\ncase-1\nendif::[]\nifeval::[\"\\{x}\" != \"value\"]\ncase-2\nendif::[]\nifeval::[\"{x\\}\" != \"value\"]\ncase-3\nendif::[]\nifeval::[{sp} == {sp}{sp}]\ncase-4\nendif::[]\nifeval::[\"{plus}\" == \"&#43;\"]\ncase-5\nendif::[]\nifeval::[\"{bad name}\" != \"\"]\ncase-6\nendif::[]\nifeval::[\"{x}{x}\" == \"valuevalue\"]\ncase-7\nendif::[]"
+    },
+    {
+      "id": "ifeval-nested",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": ":a:\n\nifdef::a[]\nifeval::[2 > 1]\nyes\nifeval::[false == true]\n:no-leak:\nifeval::invalid[bad]\nhidden\nendif::[]\nendif::[]\nendif::[]\nendif::a[]\nifndef::no-leak[clean]"
+    },
+    {
+      "id": "ifeval-header",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": "ifeval::[1 == 1]\n= Title\nendif::[]\nifeval::[2 > 1]\nJane Doe\nendif::[]\nifeval::[\"{author}\" == \"Jane Doe\"]\nv2, 2026-10-11: Draft\nendif::[]\n\n{author} {revnumber}"
+    },
+    {
+      "id": "ifeval-container",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": "====\n:inside: 2\n\nifeval::[{inside} == 2]\nhidden\nendif::[]\nifeval::[\"{inside}\" == \"\"]\nvisible\nendif::[]\n====\n\nifeval::[{inside} == 2]\nafter\nendif::[]"
+    },
+    {
+      "id": "ifeval-paragraph",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": "before\nifeval::[1 > 2]\nhidden\nendif::[]\nifeval::[1 < 2]\nafter\nendif::[]"
+    },
+    {
+      "id": "ifeval-list",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": "* first\nifeval::[1 == 1]\n* second\nendif::[]\nifeval::[1 != 1]\n* hidden\nendif::[]\n* third"
+    },
+    {
+      "id": "ifeval-verbatim",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": "----\nifeval::[1 == 1]\n  yes\nendif::[]\nifeval::[1 != 1]\nhidden\nendif::[]\n\\ifeval::[1 == 1]\n----\n\n++++\nifeval::[1 == 1]\n<b>pass</b>\nendif::[]\n++++"
+    },
+    {
+      "id": "ifeval-comments",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": "////\nifeval::[bad]\nendif::[]\n////\n\n[comment]\nifeval::[bad]\nhidden\n\nifeval::[1 == 1]\n// hidden\nshown\nendif::[]"
+    },
+    {
+      "id": "ifeval-malformed",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": "ifeval::[]\none\nifeval::[bad]\ntwo\nifeval::target[1 == 1]\nthree\nendif::[]\nafter"
+    },
+    {
+      "id": "ifeval-mismatched",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": "ifeval::[1 == 1]\none\nendif::target[]\ntwo\nendif::[1 == 1]\nthree\nendif::[]"
+    },
+    {
+      "id": "ifeval-unterminated",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": "ifeval::[1 == 1]\nshown\nifeval::[1 == 2]\nhidden"
+    },
+    {
+      "id": "ifeval-escaped",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": "\\ifeval::[1 == 1]\n\nifeval::[1 == 2]\n\\ifeval::[2 == 2]\nhidden\nendif::[]"
+    },
+    {
+      "id": "ifeval-grammar",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": "ifeval::[ 1  ==  1 ]\ncase-0\nendif::[]\nifeval::[1\t==\t1]\ncase-1\nendif::[]\nifeval::[\"a > b\" == \"a > b\"]\ncase-2\nendif::[]\nifeval::[1 === 1]\ncase-3\nendif::[]\nifeval::[1 == 1 == 1]\ncase-4\nendif::[]\nifeval::[\" == \"]\ncase-5\nendif::[]\nifeval::[1 > {missing}]\ncase-6\nendif::[]\nifeval::[{missing} != 0]\ncase-7\nendif::[]\nifeval::[1 >=]\nfallback-greater\nendif::[]\nifeval::[1 <=]\nfallback-less-hidden\nendif::[]"
+    },
+    {
+      "id": "ifeval-unicode-crlf",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": ":имя: Мир\r\n\r\nЯ *до\r\n// скрытый комментарий\r\nifeval::[\"{имя}\" != \"Мир\"]\r\nскрыто\r\nendif::[]\r\nifeval::[\"{имя}\" == \"Мир\"]\r\nпосле*\r\nendif::[]"
     }
   ]
 }

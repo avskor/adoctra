@@ -12,3 +12,15 @@ fn conditional_trivia_is_absent_from_the_semantic_backend() {
     );
     assert!(json.contains("strong") && json.contains("shown"), "{json}");
 }
+
+#[test]
+fn ifeval_selected_content_is_serialized_without_hidden_attributes_or_nodes() {
+    let source = ":n: 3\n\nifeval::[{n} < 2]\n:leaked:\n[[hidden]]\nHidden\nendif::[]\nifeval::[{n} >= 3]\n*shown*\nendif::[]";
+    let result = parse(source);
+    assert!(result.diagnostics.is_empty());
+    let json = String::from_utf8(JsonBackend.convert(&result.document).unwrap()).unwrap();
+    assert!(json.contains("strong") && json.contains("shown"), "{json}");
+    for hidden in ["leaked", "hidden", "Hidden", "ifeval", "endif"] {
+        assert!(!json.contains(hidden), "{json}");
+    }
+}

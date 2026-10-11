@@ -1342,3 +1342,39 @@ mod conditional_tests {
         assert!(tokens.contains(r#""kind":"conditional-directive""#));
     }
 }
+
+#[cfg(test)]
+mod ifeval_tests {
+    #[test]
+    fn selected_content_trivia_and_errors_keep_editor_source_ranges() {
+        let src = "ifeval::[1 > 2]\r\nскрыто\r\nendif::[]\r\nifeval::[2 > 1]\r\n*Привет*\r\nendif::[]\r\nifeval::[bad]";
+        let json = super::parse_json_with_source(src, 29);
+        let tokens = super::tokens_json_with_source(src, 29);
+        assert!(!json.contains("скрыто"), "{json}");
+        assert!(json.contains("Привет"), "{json}");
+        for (text, kind) in [
+            ("ifeval::[1 > 2]", "conditional-directive"),
+            ("скрыто", "inactive"),
+            ("*Привет*", "strong"),
+            ("ifeval::[bad]", "conditional-directive"),
+        ] {
+            let start = src.find(text).unwrap();
+            let end = start + text.len();
+            assert!(
+                tokens.contains(&format!(
+                    r#"{{"span":{{"source_id":29,"start":{start},"end":{end}}},"kind":"{kind}"}}"#
+                )),
+                "{tokens}"
+            );
+        }
+        assert!(json.contains("invalid expression"), "{json}");
+        let start = src.find("ifeval::[bad]").unwrap();
+        let end = src.len();
+        assert!(
+            json.contains(&format!(
+                r#""span":{{"source_id":29,"start":{start},"end":{end}}},"severity":"error""#
+            )),
+            "{json}"
+        );
+    }
+}
