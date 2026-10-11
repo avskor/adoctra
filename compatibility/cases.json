@@ -2016,6 +2016,212 @@
         "nested.adoc": "hidden"
       },
       "expect": "pass"
+    },
+    {
+      "id": "reader-normalization-listing",
+      "category": "reader-normalization",
+      "expect": "pass",
+      "source": "---- \t\n\tЯ\tX \t\u000b\f\u0000\n \t\nZ   \t\n---- \t"
+    },
+    {
+      "id": "reader-normalization-literal",
+      "category": "reader-normalization",
+      "expect": "pass",
+      "source": ".... \t\n\tЯ\tX \t\u000b\f\u0000\n \t\nZ   \t\n.... \t"
+    },
+    {
+      "id": "reader-normalization-source-open",
+      "category": "reader-normalization",
+      "expect": "pass",
+      "source": "[source]\n-- \t\n\tЯ\tX \t\u000b\f\u0000\n \t\nZ   \t\n-- \t"
+    },
+    {
+      "id": "reader-normalization-literal-open",
+      "category": "reader-normalization",
+      "expect": "pass",
+      "source": "[literal]\n-- \t\n\tЯ\tX \t\u000b\f\u0000\n \t\nZ   \t\n-- \t"
+    },
+    {
+      "id": "reader-normalization-passthrough",
+      "category": "reader-normalization",
+      "expect": "pass",
+      "source": "++++ \t\n<pre>Я \t\nX</pre> \t\n++++ \t"
+    },
+    {
+      "id": "reader-normalization-paragraph",
+      "category": "reader-normalization",
+      "expect": "pass",
+      "source": "*Я* \t\u0000\n_🙂_ \t\u0000\n\nnext"
+    },
+    {
+      "id": "reader-normalization-header",
+      "category": "reader-normalization",
+      "expect": "pass",
+      "source": "= Title \t\u0000\nJane Doe \t\u0000\nv1.2, 2026-10-11: Note \t\u0000\n\n{author} / {revnumber} / {revremark}"
+    },
+    {
+      "id": "reader-normalization-attributes",
+      "category": "reader-normalization",
+      "expect": "pass",
+      "source": ":value: first \t\u0000\n\n{value}\n\n:value: second \t\u0000\n\n{value}"
+    },
+    {
+      "id": "reader-normalization-comments",
+      "category": "reader-normalization",
+      "expect": "pass",
+      "source": "before \t\u0000\n// omitted \t\u0000\nafter\n\n//// \t\u0000\nhidden\n//// \t\u0000\n\nend"
+    },
+    {
+      "id": "reader-normalization-conditional",
+      "category": "reader-normalization",
+      "expect": "pass",
+      "source": ":enabled: \t\u0000\n\nifdef::enabled[] \t\u0000\nvisible \t\u0000\nendif::[] \t\u0000\n\nifeval::[1 == 1] \t\u0000\nsecond\nendif::[] \t\u0000"
+    },
+    {
+      "id": "reader-normalization-incomplete",
+      "category": "reader-normalization",
+      "expect": "pass",
+      "source": "----\nX \t\u0000\n\n \t\n"
+    },
+    {
+      "id": "reader-normalization-empty",
+      "category": "reader-normalization",
+      "expect": "pass",
+      "source": "﻿ \t\u0000\r\n\r\n"
+    },
+    {
+      "id": "reader-normalization-crlf",
+      "category": "reader-normalization",
+      "expect": "pass",
+      "source": "﻿---- \t\r\nЯ\rinside \t\r\nZ \t\r\n---- \t\r\n"
+    },
+    {
+      "id": "reader-normalization-include-adoc",
+      "category": "reader-normalization",
+      "expect": "pass",
+      "source": "----\ninclude::part.adoc[]\n----",
+      "profile": "include-body-dom-v1",
+      "resources": {
+        "part.adoc": "﻿\tЯ\tX \t\u0000\r\n \t\r\nZ  \t\r\n"
+      }
+    },
+    {
+      "id": "reader-normalization-include-txt",
+      "category": "reader-normalization",
+      "expect": "pass",
+      "source": "----\ninclude::part.txt[]\n----",
+      "profile": "include-body-dom-v1",
+      "resources": {
+        "part.txt": "﻿\tЯ\tX \t\u0000\r\n \t\r\nZ  \t\r\n"
+      }
+    },
+    {
+      "id": "reader-normalization-include-rs",
+      "category": "reader-normalization",
+      "expect": "pass",
+      "source": "----\ninclude::part.rs[]\n----",
+      "profile": "include-body-dom-v1",
+      "resources": {
+        "part.rs": "﻿\tЯ\tX \t\u0000\r\n \t\r\nZ  \t\r\n"
+      }
+    },
+    {
+      "id": "reader-normalization-lines",
+      "category": "reader-normalization",
+      "expect": "pass",
+      "source": "----\ninclude::part.adoc[lines=2;4]\n----",
+      "profile": "include-body-dom-v1",
+      "resources": {
+        "part.adoc": "ignored\n  Я \t\u0000\nignored\n  X \t\u0000\n"
+      }
+    },
+    {
+      "id": "reader-normalization-tags",
+      "category": "reader-normalization",
+      "expect": "pass",
+      "source": "----\ninclude::part.adoc[tag=a]\n----",
+      "profile": "include-body-dom-v1",
+      "resources": {
+        "part.adoc": "ignored\n// tag::a[] \t\n  Я \t\u0000\n// end::a[] \t\nignored"
+      }
+    },
+    {
+      "id": "reader-normalization-raw-lines",
+      "category": "reader-normalization",
+      "expect": "pass",
+      "source": "----\ninclude::part.rs[lines=2;4]\n----",
+      "profile": "include-body-dom-v1",
+      "resources": {
+        "part.rs": "ignored\n  Я \t\nignored\n  X \t\n"
+      }
+    },
+    {
+      "id": "reader-normalization-include-boundary",
+      "category": "reader-normalization",
+      "expect": "pass",
+      "source": "before\ninclude::part.adoc[]\nafter",
+      "profile": "include-body-dom-v1",
+      "resources": {
+        "part.adoc": "middle \t\u0000\n \t\n"
+      }
+    },
+    {
+      "id": "reader-normalization-empty-include-boundary",
+      "category": "reader-normalization",
+      "expect": "pass",
+      "source": "before\ninclude::part.adoc[]\nafter",
+      "profile": "include-body-dom-v1",
+      "resources": {
+        "part.adoc": " \t\u0000\n"
+      }
+    },
+    {
+      "id": "reader-normalization-nested",
+      "category": "reader-normalization",
+      "expect": "pass",
+      "source": "include::part.adoc[]",
+      "profile": "include-body-dom-v1",
+      "resources": {
+        "part.adoc": ":value: child \t\u0000\n\ninclude::sub.adoc[] \t\u0000\n",
+        "sub.adoc": "{value} \t\u0000\n"
+      }
+    },
+    {
+      "id": "reader-normalization-indent",
+      "category": "reader-normalization",
+      "expect": "pass",
+      "source": "----\ninclude::part.adoc[indent=2]\n----",
+      "profile": "include-body-dom-v1",
+      "resources": {
+        "part.adoc": "    Я \t\u0000\n      X \t\u0000\n"
+      }
+    },
+    {
+      "id": "reader-normalization-leveloffset",
+      "category": "reader-normalization",
+      "expect": "pass",
+      "source": "= Main\n\ninclude::part.adoc[leveloffset=+1]\n\n== After",
+      "profile": "include-body-dom-v1",
+      "resources": {
+        "part.adoc": "= Part \t\u0000\n\ntext \t\u0000\n"
+      }
+    },
+    {
+      "id": "reader-normalization-include-comments",
+      "category": "reader-normalization",
+      "expect": "pass",
+      "source": "include::part.adoc[]",
+      "profile": "include-body-dom-v1",
+      "resources": {
+        "part.adoc": "//// \t\u0000\nhidden\n//// \t\u0000\n\nvisible \t\u0000\n"
+      }
+    },
+    {
+      "id": "reader-normalization-tabsize-substitution",
+      "category": "substitutions",
+      "expect": "xfail",
+      "reason": "Verbatim tabsize substitution outside include indent is not implemented; reader normalization preserves internal tabs.",
+      "source": ":tabsize: 8\n\n----\n\tЯ\tX\n----"
     }
   ]
 }

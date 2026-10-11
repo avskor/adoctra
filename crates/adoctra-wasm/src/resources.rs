@@ -188,6 +188,35 @@ mod include_tests {
     use super::ResourceWorkspace;
 
     #[test]
+    fn normalized_content_exports_physical_positions_and_keeps_raw_spaces() {
+        let mut workspace = ResourceWorkspace::new();
+        workspace
+            .set(
+                "main.adoc",
+                "include::part.adoc[]\n\n----\ninclude::raw.rs[]\n----",
+            )
+            .unwrap();
+        let text = "\u{feff}*Я* \t\r\n_🙂_ \t\0\r\n";
+        workspace.set("part.adoc", text).unwrap();
+        workspace.set("raw.rs", "X \t\r\n").unwrap();
+        let main = workspace.load("main.adoc", None).unwrap();
+        let parsed = workspace.parse_json(main).unwrap();
+        let tokens = workspace.tokens_json(main).unwrap();
+        let child = workspace.load("part.adoc", None).unwrap();
+        for value in ["*Я*", "_🙂_"] {
+            let start = text.find(value).unwrap();
+            let end = start + value.len();
+            let span = format!(r#""source_id":{child},"start":{start},"end":{end}"#);
+            assert!(parsed.contains(&span), "{parsed}");
+            assert!(tokens.contains(&span), "{tokens}");
+        }
+        assert!(parsed.contains(r#""text":"X \t""#), "{parsed}");
+        assert!(parsed.contains("\"provenance\":[["), "{parsed}");
+        assert!(!parsed.contains("\\u0000"), "{parsed}");
+        assert_eq!(workspace.source(child).unwrap().text(), text);
+    }
+
+    #[test]
     fn included_spans_provenance_tokens_and_buffer_versions_are_exported() {
         let mut workspace = ResourceWorkspace::new();
         workspace

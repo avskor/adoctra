@@ -5,6 +5,11 @@ use adoctra_json::JsonBackend;
 fn include_options_render_the_resolved_content() {
     for (source, child, expected) in [
         (
+            "---- \t\r\ninclude::part.adoc[] \t\r\n---- \t",
+            "\u{feff}  Я <&> \t\0\r\n \t\r\n\tX \t",
+            "----\n  Я <&>\n\n\tX\n----",
+        ),
+        (
             "----\ninclude::part.adoc[indent=2]\n----",
             "    alpha\n      beta",
             "----\n  alpha\n    beta\n----",

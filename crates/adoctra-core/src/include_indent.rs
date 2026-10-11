@@ -1,4 +1,4 @@
-//! Indentation is a reader transformation, never a mutation of a source snapshot.
+//! Line normalization and indentation never mutate a source snapshot.
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -55,6 +55,40 @@ impl Line {
             eol: "\n".into(),
             fragments: Vec::new(),
         }
+    }
+
+    /// Ruby's rstrip removes ASCII whitespace and NUL, but keeps Unicode spaces.
+    /// Split the newline from the retained text so subsequent lines and inline
+    /// ranges continue to point at their physical bytes after removing a suffix.
+    pub fn normalize(&mut self) {
+        let retained = self.text.trim_end_matches(whitespace);
+        if retained.len() == self.text.len() {
+            return;
+        }
+        let original = self.original.expect("physical source line");
+        let original_eol = original + self.text.len();
+        let original_end = self.fragments.last().unwrap().original_end;
+        let len = retained.len();
+        self.text = Arc::from(retained);
+        self.fragments.clear();
+        if len > 0 {
+            self.fragments.push(Fragment {
+                start: 0,
+                end: len,
+                original_start: original,
+                original_end: original + len,
+                exact: true,
+                generated: false,
+            });
+        }
+        self.fragments.push(Fragment {
+            start: len,
+            end: len + self.eol.len(),
+            original_start: original_eol,
+            original_end,
+            exact: true,
+            generated: false,
+        });
     }
 }
 

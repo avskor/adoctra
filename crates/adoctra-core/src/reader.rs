@@ -74,8 +74,25 @@ pub(crate) struct Reader<'a> {
 
 impl<'a> Reader<'a> {
     pub fn new(source: &str) -> Self {
+        let mut reader = Self::plain(source);
+        let input = &mut reader.inputs[0];
+        input.preprocess = true;
+        for line in &mut input.lines {
+            line.normalize();
+        }
+        // Only the primary reader condenses trailing blank lines. Included
+        // files retain them, since they can separate content in the parent.
+        while input.lines.last().is_some_and(|line| line.text.is_empty()) {
+            input.lines.pop();
+        }
+        reader
+    }
+
+    /// Already processed content must not be normalized again: it can contain
+    /// raw includes whose trailing whitespace is significant.
+    pub fn plain(source: &str) -> Self {
         Self {
-            inputs: vec![Input::new(source, crate::SourceId::default(), true, 0)],
+            inputs: vec![Input::new(source, crate::SourceId::default(), false, 0)],
             resources: None,
             origins: Vec::new(),
             next_offset: 0,
@@ -91,12 +108,6 @@ impl<'a> Reader<'a> {
             diagnostics: Vec::new(),
             resource_diagnostics: Vec::new(),
         }
-    }
-
-    pub fn plain(source: &str) -> Self {
-        let mut reader = Self::new(source);
-        reader.inputs[0].preprocess = false;
-        reader
     }
 
     pub fn with_resources(
@@ -548,6 +559,10 @@ impl<'a> Reader<'a> {
                     );
                     return false;
                 }
+            }
+        } else if preprocess {
+            for line in &mut input.lines {
+                line.normalize();
             }
         }
         if let Some(offset) = attrs.get("leveloffset").filter(|_| !input.lines.is_empty()) {

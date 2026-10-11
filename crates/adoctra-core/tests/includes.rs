@@ -46,6 +46,71 @@ fn paragraphs(result: &ParseResult) -> Vec<String> {
         .collect()
 }
 
+#[test]
+fn normalization_depends_on_resource_type_and_keeps_include_boundaries() {
+    for (name, expected) in [
+        ("part.adoc", "\tЯ\tX\n\nZ\u{a0}"),
+        ("part.txt", "\tЯ\tX\n\nZ\u{a0}"),
+        ("part.rs", "\tЯ\tX \t\0\n \t\nZ\u{a0} \t"),
+    ] {
+        let child = "\u{feff}\tЯ\tX \t\0\r\n \t\r\nZ\u{a0} \t\r\n";
+        let (mut sources, resources, options) = setup(
+            &format!(":tabsize: 8\n\n---- \t\ninclude::{name}[] \t\n---- \t"),
+            &[(&format!("docs/{name}"), child)],
+        );
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        assert!(result.diagnostics.is_empty(), "{result:?}");
+        let BlockKind::Listing { text } = &result.document.blocks[0].kind else {
+            panic!("{result:?}")
+        };
+        assert_eq!(text, expected, "{name}");
+        assert_eq!(sources.get(SourceId(1)).unwrap().text(), child);
+        check_spans(&result, &sources);
+    }
+    let (mut sources, resources, options) = setup(
+        "before\ninclude::part.adoc[]\nafter",
+        &[("docs/part.adoc", "middle \t\n \t\n")],
+    );
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(paragraphs(&result), ["before middle", "after"]);
+    check_spans(&result, &sources);
+}
+
+#[test]
+fn selected_normalized_lines_preserve_physical_markup_and_snapshot_versions() {
+    let child = "\u{feff}ignored\r\n*Я* \t\r\nignored\r\n_🙂_ \t\0\r\n";
+    let (mut sources, mut resources, options) = setup(
+        "include::part.adoc[lines=2;4]",
+        &[("docs/part.adoc", child)],
+    );
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty());
+    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+        panic!("{result:?}")
+    };
+    let highlighted = tokens_resource(&mut sources, &options, &resources).unwrap();
+    for text in ["*Я*", "_🙂_"] {
+        let start = child.find(text).unwrap();
+        let span = Span::in_source(SourceId(1), start, start + text.len());
+        assert!(inlines.iter().any(|inline| inline.span() == span));
+        assert!(highlighted.iter().any(|token| token.span == span));
+    }
+    assert!(result.document.blocks[0].span.provenance.is_some());
+    for token in highlighted
+        .iter()
+        .filter(|t| t.span.source_id == SourceId(1))
+    {
+        let text = sources.slice(token.span).unwrap();
+        assert!(!text.contains('\t') && !text.contains('\0'));
+    }
+    resources.insert("docs/part.adoc", "skip\nnew \t").unwrap();
+    let edited = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(paragraphs(&edited), ["new"]);
+    assert_eq!(sources.get(SourceId(1)).unwrap().text(), child);
+    check_spans(&result, &sources);
+    check_spans(&edited, &sources);
+}
+
 fn check_spans(result: &ParseResult, sources: &SourceMap) {
     struct Check<'a>(&'a SourceMap, &'a [Vec<Span>]);
     impl adoctra_core::visit::VisitorMut for Check<'_> {

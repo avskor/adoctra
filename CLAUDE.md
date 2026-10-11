@@ -192,7 +192,13 @@ expanded tabs to their physical byte and exclude synthetic padding from highligh
 Physical snapshots never change. Indentation growth (including intermediate tab
 expansion) is preflighted and charged to the include byte budget. Depth is scoped to
 an input: a child override can extend an inherited limit but never the host maximum;
-returning to a parent restores its limit. Remaining reader normalization, full
+returning to a parent restores its limit. Reader normalization also runs without
+indent: primary and AsciiDoc inputs rstrip ASCII whitespace/NUL, while raw includes
+only chomp. Unicode spaces and internal tabs survive this stage. Only primary input
+condenses final empty lines; includes preserve block boundaries. Removed suffixes
+and retained line endings have separate physical fragments; the tokenizer's plain
+reader must not normalize processed raw content again. Verbatim tabsize substitution
+outside include indentation remains an explicit XFAIL. Multiline attributes, full
 attribute-list substitutions and safe-mode compatibility are follow-up work; see
 the implementation plan and parser API.
 
