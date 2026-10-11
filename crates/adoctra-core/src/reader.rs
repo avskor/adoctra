@@ -76,6 +76,7 @@ pub(crate) struct Reader<'a> {
     pub includes: Vec<Span>,
     pub inactive: Vec<Span>,
     pub diagnostics: Vec<Diagnostic>,
+    pub resource_diagnostics: Vec<Diagnostic>,
 }
 
 impl<'a> Reader<'a> {
@@ -95,6 +96,7 @@ impl<'a> Reader<'a> {
             includes: Vec::new(),
             inactive: Vec::new(),
             diagnostics: Vec::new(),
+            resource_diagnostics: Vec::new(),
         }
     }
 
@@ -203,7 +205,11 @@ impl<'a> Reader<'a> {
             let end =
                 origin.span.start + span.end.saturating_sub(origin.start).min(origin.span.len());
             let mapped = Span::in_source(origin.span.source_id, start, end);
-            if occurrence == Some(origin.occurrence) {
+            if occurrence == Some(origin.occurrence)
+                && out
+                    .last()
+                    .is_some_and(|previous| previous.end == mapped.start)
+            {
                 let previous = out.last_mut().expect("same occurrence has a range");
                 previous.end = mapped.end;
             } else {
@@ -396,10 +402,14 @@ impl<'a> Reader<'a> {
         span: Span,
         attributes: &Attributes,
     ) -> bool {
-        if !attrs.trim().is_empty() {
-            self.error(span, "include options are not supported yet".into());
-            return false;
-        }
+        let attrs = crate::context::substitute_attribute_value(attrs, attributes);
+        let selection = match crate::include_selection::Selection::parse(&attrs) {
+            Ok(selection) => selection,
+            Err(message) => {
+                self.error(span, message);
+                return false;
+            }
+        };
         let target = crate::context::substitute_attribute_value(target, attributes);
         let current = self.inputs.last().expect("current input").source_id;
         let resources = self.resources.as_mut().expect("explicit resource provider");
@@ -436,12 +446,25 @@ impl<'a> Reader<'a> {
         let preprocess = [".adoc", ".asciidoc", ".asc", ".ad", ".txt"]
             .iter()
             .any(|ext| file.name().ends_with(ext));
-        self.inputs.push(Input::new(
-            file.text(),
+        let mut input = Input::new(file.text(), id, preprocess, self.next_occurrence);
+        let selected = selection.select(
+            input
+                .lines
+                .iter()
+                .map(|(off, line, _)| (*off, line.as_ref())),
             id,
-            preprocess,
-            self.next_occurrence,
-        ));
+        );
+        self.resource_diagnostics.extend(selected.diagnostics);
+        for tag in selected.missing {
+            self.diagnostics.push(Diagnostic {
+                span,
+                severity: Severity::Warning,
+                message: format!("tag '{tag}' not found in include: {target}"),
+            });
+        }
+        let mut keep = selected.keep.into_iter();
+        input.lines.retain(|_| keep.next().unwrap_or(false));
+        self.inputs.push(input);
         self.next_occurrence += 1;
         true
     }

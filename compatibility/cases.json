@@ -958,6 +958,397 @@
         "some file.adoc": "shown"
       },
       "expect": "pass"
+    },
+    {
+      "id": "include-lines-one",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[lines=2]\n----",
+      "resources": {
+        "part.rs": "one\ntwo\nthree\nfour\nfive"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-lines-ranges",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[lines=4;2;2;3..4]\n----",
+      "resources": {
+        "part.rs": "one\ntwo\nthree\nfour\nfive"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-lines-quoted",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[lines=\"1,3..4\"]\n----",
+      "resources": {
+        "part.rs": "one\ntwo\nthree\nfour\nfive"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-lines-open",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[lines=3..]\n----",
+      "resources": {
+        "part.rs": "one\ntwo\nthree\nfour\nfive"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-lines-negative-end",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[lines=3..-1]\n----",
+      "resources": {
+        "part.rs": "one\ntwo\nthree\nfour\nfive"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-lines-empty",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[lines=]\n----",
+      "resources": {
+        "part.rs": "one\ntwo\nthree\nfour\nfive"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-lines-outside",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[lines=20..30]\n----",
+      "resources": {
+        "part.rs": "one\ntwo\nthree\nfour\nfive"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-lines-invalid",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[lines=0;2]\n----",
+      "resources": {
+        "part.rs": "one\ntwo\nthree\nfour\nfive"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-lines-reversed",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[lines=4..2]\n----",
+      "resources": {
+        "part.rs": "one\ntwo\nthree\nfour\nfive"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-lines-prefix",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[lines=2tail]\n----",
+      "resources": {
+        "part.rs": "one\ntwo\nthree\nfour\nfive"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-lines-open-union",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[lines=2..;4]\n----",
+      "resources": {
+        "part.rs": "one\ntwo\nthree\nfour\nfive"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-lines-precedence",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[lines=2,tag=absent]\n----",
+      "resources": {
+        "part.rs": "one\ntwo\nthree\nfour\nfive"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-lines-empty-precedence",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[lines=,tag=absent]\n----",
+      "resources": {
+        "part.rs": "one\ntwo\nthree\nfour\nfive"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-tag-nested",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[tag=a]\n----",
+      "resources": {
+        "part.rs": "outside\n// tag::a[]\na\n// tag::b[]\nb\n// end::b[]\nafter-b\n// end::a[]\nend"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-tags-union",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[tags=\"b,a\"]\n----",
+      "resources": {
+        "part.rs": "outside\n// tag::a[]\na\n// tag::b[]\nb\n// end::b[]\nafter-b\n// end::a[]\nend"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-tags-exclusion",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[tags=a;!b]\n----",
+      "resources": {
+        "part.rs": "outside\n// tag::a[]\na\n// tag::b[]\nb\n// end::b[]\nafter-b\n// end::a[]\nend"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-tag-exclusion",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[tag=!b]\n----",
+      "resources": {
+        "part.rs": "outside\n// tag::a[]\na\n// tag::b[]\nb\n// end::b[]\nafter-b\n// end::a[]\nend"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-tags-all",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[tag=**]\n----",
+      "resources": {
+        "part.rs": "outside\n// tag::a[]\na\n// tag::b[]\nb\n// end::b[]\nafter-b\n// end::a[]\nend"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-tags-wildcard",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[tag=*]\n----",
+      "resources": {
+        "part.rs": "outside\n// tag::a[]\na\n// tag::b[]\nb\n// end::b[]\nafter-b\n// end::a[]\nend"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-tags-outside",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[tag=!*]\n----",
+      "resources": {
+        "part.rs": "outside\n// tag::a[]\na\n// tag::b[]\nb\n// end::b[]\nafter-b\n// end::a[]\nend"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-tags-base-exclusion",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[tags=**;!b]\n----",
+      "resources": {
+        "part.rs": "outside\n// tag::a[]\na\n// tag::b[]\nb\n// end::b[]\nafter-b\n// end::a[]\nend"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-tags-wildcard-exclusion",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[tags=*;!b]\n----",
+      "resources": {
+        "part.rs": "outside\n// tag::a[]\na\n// tag::b[]\nb\n// end::b[]\nafter-b\n// end::a[]\nend"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-tags-ordered-inside",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[tags=a;!*]\n----",
+      "resources": {
+        "part.rs": "outside\n// tag::a[]\na\n// tag::b[]\nb\n// end::b[]\nafter-b\n// end::a[]\nend"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-tags-ordered-outside",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[tags=!*;a]\n----",
+      "resources": {
+        "part.rs": "outside\n// tag::a[]\na\n// tag::b[]\nb\n// end::b[]\nafter-b\n// end::a[]\nend"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-tags-negated-base",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[tags=!**;!b]\n----",
+      "resources": {
+        "part.rs": "outside\n// tag::a[]\na\n// tag::b[]\nb\n// end::b[]\nafter-b\n// end::a[]\nend"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-tags-explicit-reentry",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[tags=**;!*;b]\n----",
+      "resources": {
+        "part.rs": "outside\n// tag::a[]\na\n// tag::b[]\nb\n// end::b[]\nafter-b\n// end::a[]\nend"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-tags-last-wins",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[tags=a;!a]\n----",
+      "resources": {
+        "part.rs": "outside\n// tag::a[]\na\n// tag::b[]\nb\n// end::b[]\nafter-b\n// end::a[]\nend"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-tag-precedence",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[tag=b,tags=a]\n----",
+      "resources": {
+        "part.rs": "outside\n// tag::a[]\na\n// tag::b[]\nb\n// end::b[]\nafter-b\n// end::a[]\nend"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-tag-empty-precedence",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[tag=,tags=absent]\n----",
+      "resources": {
+        "part.rs": "outside\n// tag::a[]\na\n// tag::b[]\nb\n// end::b[]\nafter-b\n// end::a[]\nend"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-tag-bang-precedence",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[tag=!,tags=absent]\n----",
+      "resources": {
+        "part.rs": "outside\n// tag::a[]\na\n// tag::b[]\nb\n// end::b[]\nafter-b\n// end::a[]\nend"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-tag-repeated",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::part.adoc[tag=a]",
+      "resources": {
+        "part.adoc": "// tag::a[]\nfirst\n// end::a[]\nomitted\n// tag::a[]\nsecond\n// end::a[]"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-tags-diagnostics",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::part.adoc[tags=a;b;missing]",
+      "resources": {
+        "part.adoc": "// end::a[]\n// tag::a[]\none\n// tag::b[]\n// end::a[]\ntwo"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-tags-boundaries",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[tag=a]\n----",
+      "resources": {
+        "part.rs": "before\n<!-- tag::a[] -->\nkept\nnotag::b[]\n// tag::bad name[]\n// tag::bad[]\t\n// tag::other[]\ninside\n// end::other[]\n<!-- end::a[] -->\nafter"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-selection-attributes",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": ":filter: chosen\n:range: 2\n\ninclude::part.adoc[tag={filter}]\n\n{flag}",
+      "resources": {
+        "part.adoc": "include::missing.adoc[]\n:flag: bad\n// tag::chosen[]\n:flag: yes\n\nifdef::flag[shown]\ninclude::nested.adoc[lines={range}]\n// end::chosen[]",
+        "nested.adoc": "include::missing.adoc[]\ninside"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-selection-header",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::part.adoc[lines=2..4]\n\n{author}",
+      "resources": {
+        "part.adoc": "omitted\n= Title\nJane Doe\n:flag: yes\nomitted"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-selection-list",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "* first\ninclude::part.adoc[tag=items]\n* last",
+      "resources": {
+        "part.adoc": "omitted\n// tag::items[]\n* middle\n// end::items[]\nomitted"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-selection-markup",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::part.adoc[lines=2;4]",
+      "resources": {
+        "part.adoc": "omitted\n*first\nomitted\nlast*"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-selection-unicode-crlf",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[lines=2;4]\n----",
+      "resources": {
+        "part.rs": "﻿omitted\r\n  Я\r\nomitted\r\n\tты\r\n"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-selection-container",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "====\ninclude::part.adoc[tag=a]\nifdef::flag[hidden]\n====\n\nifdef::flag[after]",
+      "resources": {
+        "part.adoc": "// tag::a[]\n:flag:\n\ninside\n// end::a[]\nomitted"
+      },
+      "expect": "pass"
     }
   ]
 }

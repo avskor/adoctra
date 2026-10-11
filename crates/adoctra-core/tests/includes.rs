@@ -295,7 +295,7 @@ fn cycles_limits_missing_files_and_unsupported_options_leave_partial_output() {
             "NotFound",
         ),
         (
-            "include::part.adoc[lines=1]\n\nafter",
+            "include::part.adoc[leveloffset=1]\n\nafter",
             IncludeLimits::default(),
             "options",
         ),
@@ -425,6 +425,210 @@ fn partial_unicode_input_never_panics_or_produces_invalid_ranges() {
         assert!(
             tokens.iter().all(|t| sources.slice(t.span).is_some()),
             "{end}: {tokens:?}"
+        );
+    }
+}
+
+#[test]
+fn line_filters_preserve_order_precedence_and_reference_numeric_rules() {
+    for (filter, expected) in [
+        ("lines=2", "two"),
+        ("lines=4;2;2;3..4", "two three four"),
+        ("lines=\"1,3..4\"", "one three four"),
+        ("lines='2..3'", "two three"),
+        ("lines=3..-1", "three four five"),
+        ("lines=3..", "three four five"),
+        ("lines=3..-2", "three four five"),
+        ("lines=2..;4", "two four five"),
+        ("lines=20..30", ""),
+        ("lines=0;2", ""),
+        ("lines=nonsense", ""),
+        ("lines=2tail", "two"),
+        ("lines=4..2", "one two three four five"),
+        ("lines=,tag=absent", "one two three four five"),
+        ("lines=None,lines=2", "two"),
+        ("lines=2,lines=None", "two"),
+        ("lines=2,tag=absent", "two"),
+        ("lines=2,lines=3", "three"),
+        (
+            "lines=2..99999999999999999999999999999999999999999999999",
+            "two three four five",
+        ),
+    ] {
+        let root = format!("include::part.adoc[{filter}]");
+        let (mut sources, resources, options) =
+            setup(&root, &[("docs/part.adoc", "one\ntwo\nthree\nfour\nfive")]);
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        assert!(
+            result.diagnostics.is_empty(),
+            "{filter}: {:?}",
+            result.diagnostics
+        );
+        assert_eq!(paragraphs(&result).join(" "), expected, "{filter}");
+        check_spans(&result, &sources);
+    }
+}
+
+#[test]
+fn tag_filters_preserve_nested_order_wildcards_and_exclusions() {
+    let child = "outside\n// tag::a[]\na\n// tag::b[]\nb\n// end::b[]\nafter-b\n// end::a[]\nend";
+    for (filter, expected) in [
+        ("tag=a", "a b after-b"),
+        ("tags=b;a", "a b after-b"),
+        ("tags=\"b,a\"", "a b after-b"),
+        ("tag=!b", "outside a after-b end"),
+        ("tags=a;!b", "a after-b"),
+        ("tag=*", "a b after-b"),
+        ("tag=**", "outside a b after-b end"),
+        ("tag=!*", "outside end"),
+        ("tags=**;!b", "outside a after-b end"),
+        ("tags=*;!b", "a after-b"),
+        ("tags=a;!*", "a after-b"),
+        ("tags=!*;a", "outside a after-b end"),
+        ("tags=!**;!b", "a after-b"),
+        ("tags=!**;b", "b"),
+        ("tags=**;!*;b", "outside b end"),
+        ("tags=a;!a", "outside end"),
+        ("tags=!a;a", "a b after-b"),
+        ("tag=b,tags=a", "b"),
+        ("tag=,tags=absent", "outside a b after-b end"),
+        ("tag=!,tags=absent", "outside a b after-b end"),
+    ] {
+        let root = format!("include::part.adoc[{filter}]");
+        let (mut sources, resources, options) = setup(&root, &[("docs/part.adoc", child)]);
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        assert!(
+            result.diagnostics.is_empty(),
+            "{filter}: {:?}",
+            result.diagnostics
+        );
+        assert_eq!(paragraphs(&result).join(" "), expected, "{filter}");
+        check_spans(&result, &sources);
+    }
+}
+
+#[test]
+fn selected_unicode_crlf_lines_have_exact_fragments_and_tokens() {
+    let child = "\u{feff}excluded\r\n*Я*\r\nexcluded\r\n_ты_\r\n";
+    let (mut sources, resources, options) = setup(
+        "include::part.adoc[lines=2;4]",
+        &[("docs/part.adoc", child)],
+    );
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    let block = &result.document.blocks[0];
+    let fragments = &result.provenance[block.span.provenance.unwrap()];
+    assert_eq!(
+        fragments
+            .iter()
+            .map(|s| sources.slice(*s).unwrap())
+            .collect::<Vec<_>>(),
+        ["*Я*\r\n", "_ты_"]
+    );
+    let BlockKind::Paragraph { inlines } = &block.kind else {
+        panic!()
+    };
+    assert!(
+        matches!(&inlines[0], Inline::Strong { span, .. } if sources.slice(*span) == Some("*Я*"))
+    );
+    assert!(inlines.iter().any(
+        |i| matches!(i, Inline::Emphasis { span, .. } if sources.slice(*span) == Some("_ты_"))
+    ));
+    let tokens = tokens_resource(&mut sources, &options, &resources).unwrap();
+    assert!(tokens
+        .iter()
+        .any(|t| t.kind == TokenKind::Strong && sources.slice(t.span) == Some("*Я*")));
+    assert!(tokens.iter().all(|t| t.span.source_id == options.source_id
+        || !sources.slice(t.span).unwrap().contains("excluded")));
+    check_spans(&result, &sources);
+}
+
+#[test]
+fn tag_warnings_point_to_original_markers_and_missing_tags_to_include() {
+    let child =
+        "\u{feff}ignored\r\n// end::a[]\r\n// tag::a[]\r\nЯ\n// tag::b[]\r\n// end::a[]\r\nlast";
+    let root = "include::part.adoc[tags=a;b;missing]";
+    let (mut sources, resources, options) = setup(root, &[("docs/part.adoc", child)]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(paragraphs(&result), ["Я last"]);
+    assert_eq!(result.diagnostics.len(), 4, "{:?}", result.diagnostics);
+    for (message, text) in [
+        ("unexpected", "// end::a[]"),
+        ("mismatched", "// end::a[]"),
+        ("unclosed", "// tag::b[]"),
+        ("not found", root),
+    ] {
+        let diagnostic = result
+            .diagnostics
+            .iter()
+            .find(|d| d.message.contains(message))
+            .unwrap();
+        assert_eq!(diagnostic.severity, adoctra_core::Severity::Warning);
+        assert_eq!(sources.slice(diagnostic.span), Some(text));
+        assert_eq!(
+            diagnostic.span.source_id,
+            if message == "not found" {
+                SourceId(0)
+            } else {
+                SourceId(1)
+            }
+        );
+    }
+    check_spans(&result, &sources);
+}
+
+#[test]
+fn selection_precedes_preprocessing_and_does_not_load_excluded_resources() {
+    let child = "include::missing.adoc[]\n:flag: bad\n// tag::chosen[]\n:flag: yes\n\nifdef::flag[shown]\ninclude::nested.adoc[lines=2]\n// end::chosen[]";
+    let (mut sources, resources, options) = setup(
+        ":filter: chosen\n\ninclude::part.adoc[tag={filter}]\n\n{flag}",
+        &[
+            ("docs/part.adoc", child),
+            ("docs/nested.adoc", "include::missing.adoc[]\ninside"),
+        ],
+    );
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+    assert_eq!(paragraphs(&result), ["shown inside", "yes"]);
+    assert_eq!(result.include_directives.len(), 2);
+    check_spans(&result, &sources);
+}
+
+#[test]
+fn raw_tag_markers_obey_boundaries_and_are_not_required_to_be_comments() {
+    let child = "before\n<!-- tag::a[] -->\nkept\nnotag::b[]\n// tag::bad name[]\n// tag::bad[]\t\n// tag::other[]\ninside\n// end::other[]\n<!-- end::a[] -->\nafter";
+    let (mut sources, resources, options) = setup(
+        "----\ninclude::part.rs[tag=a]\n----",
+        &[("docs/part.rs", child)],
+    );
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty());
+    assert!(
+        matches!(&result.document.blocks[0].kind, BlockKind::Listing { text } if text == "kept\nnotag::b[]\n// tag::bad name[]\n// tag::bad[]\t\ninside")
+    );
+    check_spans(&result, &sources);
+}
+
+#[test]
+fn tag_selection_and_partial_directives_remain_tolerant() {
+    let child = "\u{feff}// tag::я[]\r\n*текст*\r\n// tag::nested[]\r\nmore\r\n// end::nested[]\r\n// end::я[]";
+    for end in child.char_indices().map(|(i, _)| i).chain([child.len()]) {
+        let (mut sources, resources, options) = setup(
+            "include::part.adoc[tags=*;я]",
+            &[("docs/part.adoc", &child[..end])],
+        );
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        check_spans(&result, &sources);
+        assert!(tokens_resource(&mut sources, &options, &resources)
+            .unwrap()
+            .iter()
+            .all(|t| sources.slice(t.span).is_some()));
+    }
+    let root = "include::part.adoc[tags=\"я;nested\"]";
+    for end in root.char_indices().map(|(i, _)| i).chain([root.len()]) {
+        let (mut sources, resources, options) = setup(&root[..end], &[("docs/part.adoc", child)]);
+        check_spans(
+            &parse_resource(&mut sources, &options, &resources).unwrap(),
+            &sources,
         );
     }
 }

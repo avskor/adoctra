@@ -175,8 +175,12 @@ physical fragment. Preserve this table with the AST for editor positions. WASM
 exports provenance/include_directives; tokens use individual physical spans.
 Includes have depth/byte limits and cycle diagnostics. CLI file input expands
 includes within its existing root; stdin and string APIs have no provider.
-Options such as lines/tags/leveloffset/optional and full safe-mode compatibility
-remain follow-up work; see the implementation plan and parser API.
+Includes support lines/tag/tags selection before preprocessing, including ordered
+wildcards/exclusions and physical warnings for malformed tag nesting. Preserve
+separate provenance fragments for disjoint retained lines, even within one source
+occurrence. Resource byte limits count the entire loaded snapshot before filtering.
+Options such as leveloffset/optional, full attribute-list substitutions and safe-mode
+compatibility remain follow-up work; see the implementation plan and parser API.
 
 Working: parser for header attributes, headings, listing blocks, literal blocks
 (`....` and `[literal]`), admonitions (paragraph form), paragraphs,

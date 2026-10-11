@@ -97,6 +97,8 @@ pub(crate) fn parse_reader<'a>(
     for diagnostic in &mut diagnostics {
         diagnostic.span = lines.map_span(diagnostic.span, &mut provenance);
     }
+    // Selection warnings already refer to physical lines, including omitted tags.
+    diagnostics.append(&mut lines.resource_diagnostics);
     crate::resolve::resolve(&mut doc, &mut diagnostics);
     let physical = |spans: &[Span]| {
         spans

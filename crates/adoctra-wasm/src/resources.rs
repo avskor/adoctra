@@ -225,3 +225,48 @@ mod include_tests {
         assert_eq!(workspace.source(new).unwrap().text(), "edited");
     }
 }
+
+#[cfg(test)]
+mod selection_tests {
+    use super::ResourceWorkspace;
+
+    #[test]
+    fn selected_fragments_warnings_and_edited_snapshots_retain_physical_positions() {
+        let mut workspace = ResourceWorkspace::new();
+        workspace
+            .set("main.adoc", "include::part.adoc[tag=a]")
+            .unwrap();
+        let text = "\u{feff}omitted\r\n// tag::a[]\r\n*Я*\r\n// end::a[]\r\nomitted\r\n// tag::a[]\r\n_ты_";
+        workspace.set("part.adoc", text).unwrap();
+        let main = workspace.load("main.adoc", None).unwrap();
+        let parsed = workspace.parse_json(main).unwrap();
+        let child = workspace.load("part.adoc", Some(main)).unwrap();
+        let tokens = workspace.tokens_json(main).unwrap();
+        assert!(parsed.contains("\"provenance\":[["), "{parsed}");
+        assert!(parsed.contains("unclosed tag 'a'"), "{parsed}");
+        assert!(!parsed.contains("omitted"), "{parsed}");
+        assert!(tokens.contains("include-directive"), "{tokens}");
+        for marker in ["*Я*", "_ты_"] {
+            let start = text.find(marker).unwrap();
+            let end = start + marker.len();
+            let span = format!(r#""source_id":{child},"start":{start},"end":{end}"#);
+            assert!(parsed.contains(&span), "{parsed}");
+            assert!(tokens.contains(&span), "{tokens}");
+        }
+        let start = text.rfind("// tag::a[]").unwrap();
+        let end = start + "// tag::a[]".len();
+        assert!(
+            parsed.contains(&format!(
+                r#""source_id":{child},"start":{start},"end":{end}"#
+            )),
+            "{parsed}"
+        );
+        workspace
+            .set("part.adoc", "// tag::a[]\nedited\n// end::a[]")
+            .unwrap();
+        assert!(workspace.parse_json(main).unwrap().contains("edited"));
+        let edited = workspace.load("part.adoc", Some(main)).unwrap();
+        assert_ne!(child, edited);
+        assert_eq!(workspace.source(child).unwrap().text(), text);
+    }
+}
