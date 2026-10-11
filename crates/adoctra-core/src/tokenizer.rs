@@ -11,10 +11,12 @@
 //! starts. There is no second grammar.
 
 use crate::ast::{AdmonitionKind, Inline, Span};
+use crate::context::{ParseContext, ParseOptions};
+use crate::header::collect_header;
 use crate::inline::scan_inlines;
 use crate::parser::{
-    collect_header, parse_attribute_entry, parse_block_anchor, parse_block_attr_list,
-    parse_block_title, parse_heading, parse_list_marker,
+    parse_attribute_entry, parse_block_anchor, parse_block_attr_list, parse_block_title,
+    parse_heading, parse_list_marker,
 };
 use crate::scanner::lines_with_offsets;
 
@@ -27,6 +29,8 @@ pub struct Token {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TokenKind {
     Heading,
+    Author,
+    Revision,
     Anchor,
     BlockAttributeList,
     AttributeEntry,
@@ -58,6 +62,8 @@ impl TokenKind {
     pub fn as_str(self) -> &'static str {
         match self {
             TokenKind::Heading => "heading",
+            TokenKind::Author => "author",
+            TokenKind::Revision => "revision",
             TokenKind::Anchor => "anchor",
             TokenKind::BlockAttributeList => "block-attribute-list",
             TokenKind::AttributeEntry => "attribute-entry",
@@ -87,10 +93,11 @@ impl TokenKind {
     }
 }
 
-pub fn tokens(source: &str) -> Vec<Token> {
+pub fn tokens_with_options(source: &str, options: &ParseOptions) -> Vec<Token> {
     let lines = lines_with_offsets(source);
     // Resolve `{attr}` against the same header table the parser uses.
-    let (attrs, _) = collect_header(&lines);
+    let mut context = ParseContext::new(options);
+    let header = collect_header(&lines, &mut context);
     let mut out = Vec::new();
     let mut in_listing = false;
     let mut in_literal = false;
@@ -105,8 +112,19 @@ pub fn tokens(source: &str) -> Vec<Token> {
     // folded into a running paragraph is plain text.
     let mut mid_paragraph = false;
 
-    for (off, line) in lines {
+    for (line_index, (off, line)) in lines.into_iter().enumerate() {
         let line_span = Span::new(off, off + line.len());
+        if header.author_line == Some(line_index) || header.revision_line == Some(line_index) {
+            out.push(Token {
+                span: line_span,
+                kind: if header.author_line == Some(line_index) {
+                    TokenKind::Author
+                } else {
+                    TokenKind::Revision
+                },
+            });
+            continue;
+        }
         let at_para_start = !mid_paragraph;
         // Default: structural / blank lines (all of which `continue` below) leave
         // the next line a fresh block. The body-text and list-item branches set it
@@ -213,7 +231,12 @@ pub fn tokens(source: &str) -> Vec<Token> {
             in_list = false; // a blank line ends a list (mirrors the parser)
             continue;
         }
-        if parse_attribute_entry(line).is_some() {
+        if let Some(entry) =
+            parse_attribute_entry(line).filter(|_| at_para_start || line_index < header.body_start)
+        {
+            if line_index >= header.body_start {
+                context.apply(entry);
+            }
             out.push(Token {
                 span: line_span,
                 kind: TokenKind::AttributeEntry,
@@ -281,7 +304,11 @@ pub fn tokens(source: &str) -> Vec<Token> {
                 kind: TokenKind::ListMarker,
             });
             flatten_inlines(
-                &scan_inlines(&line[indent + mlen..], off + indent + mlen, &attrs),
+                &scan_inlines(
+                    &line[indent + mlen..],
+                    off + indent + mlen,
+                    &context.attributes,
+                ),
                 &mut out,
             );
             continue;
@@ -299,17 +326,20 @@ pub fn tokens(source: &str) -> Vec<Token> {
                     kind: TokenKind::AdmonitionLabel,
                 });
                 flatten_inlines(
-                    &scan_inlines(&line[prefix_len..], off + prefix_len, &attrs),
+                    &scan_inlines(&line[prefix_len..], off + prefix_len, &context.attributes),
                     &mut out,
                 );
                 mid_paragraph = true;
                 continue;
             }
         }
-        flatten_inlines(&scan_inlines(line, off, &attrs), &mut out);
+        flatten_inlines(&scan_inlines(line, off, &context.attributes), &mut out);
         mid_paragraph = true;
     }
 
+    for token in &mut out {
+        token.span.source_id = options.source_id;
+    }
     out
 }
 
@@ -403,6 +433,7 @@ fn flatten_inlines(inlines: &[Inline], out: &mut Vec<Token>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tokens;
 
     #[test]
     fn classifies_lines() {
@@ -515,7 +546,7 @@ mod tests {
         // inline scan the parser uses, so their spans must coincide.
         let src = "lead *bold* and _it_ tail";
         let toks = tokens(src);
-        let blocks = crate::parser::parse(src).document.blocks;
+        let blocks = crate::parse(src).document.blocks;
         let inlines = match &blocks[0].kind {
             crate::ast::BlockKind::Paragraph { inlines } => inlines.clone(),
             _ => unreachable!(),

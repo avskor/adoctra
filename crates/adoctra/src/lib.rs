@@ -13,8 +13,10 @@
 //! ```
 
 pub use adoctra_core::{
-    parse, tokens, Backend, Block, BlockKind, Diagnostic, Document, Error, Inline, ParseResult,
-    Registry, Result, Severity, Span, Token, TokenKind, TreeProcessor,
+    parse, parse_with_options, tokens, tokens_with_options, Attributes, Author, Backend, Block,
+    BlockKind, Diagnostic, Document, DocumentHeader, Error, Inline, ParseOptions, ParseResult,
+    Registry, Result, Revision, Severity, SourceFile, SourceId, SourceMap, SourcePosition, Span,
+    Token, TokenKind, TreeProcessor,
 };
 
 #[cfg(feature = "html")]

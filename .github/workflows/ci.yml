@@ -1,0 +1,27 @@
+name: checks
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rust toolchain
+        run: rustup show
+      - name: Formatting
+        run: cargo fmt --all -- --check
+      - name: Lints
+        run: cargo clippy --workspace --all-features -- -D warnings
+      - name: Rust tests
+        run: cargo test --workspace --all-features
+      - name: Build CLI
+        run: cargo build -p adoctra-cli
+      - name: Test compatibility harness
+        run: python3 -m unittest discover -s scripts -p 'test_*.py'
+      - name: Offline compatibility corpus
+        run: python3 scripts/compatibility.py
+      - name: Install pinned Ruby reference
+        run: gem install --user-install asciidoctor --version "$(cat compatibility/asciidoctor-version)" --no-document
+      - name: Verify reference fixtures and compatibility
+        run: python3 scripts/compatibility.py --verify-reference

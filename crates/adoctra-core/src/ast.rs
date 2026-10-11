@@ -14,18 +14,29 @@
 //! the shared model stays format-neutral.
 
 use crate::attributes::Attributes;
+use crate::source::SourceId;
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 /// A byte range `[start, end)` in the original source.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Span {
+    pub source_id: SourceId,
     pub start: usize,
     pub end: usize,
 }
 
 impl Span {
     pub fn new(start: usize, end: usize) -> Self {
-        Self { start, end }
+        Self::in_source(SourceId::default(), start, end)
+    }
+
+    pub fn in_source(source_id: SourceId, start: usize, end: usize) -> Self {
+        Self {
+            source_id,
+            start,
+            end,
+        }
     }
 
     /// Length of the source range in bytes.
@@ -43,7 +54,38 @@ impl Span {
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Document {
     pub attributes: Attributes,
+    pub header: Option<DocumentHeader>,
     pub blocks: Vec<Block>,
+}
+
+/// Source declarations in a document header. Effective (possibly overridden)
+/// metadata lives in `Document.attributes`. The title remains the first level-0
+/// heading in `blocks`, avoiding a second mutable copy of its inline tree.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DocumentHeader {
+    pub span: Span,
+    pub title_span: Span,
+    pub authors: Vec<Author>,
+    pub revision: Option<Revision>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Author {
+    pub span: Span,
+    pub name: String,
+    pub firstname: String,
+    pub middlename: Option<String>,
+    pub lastname: Option<String>,
+    pub initials: String,
+    pub email: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Revision {
+    pub span: Span,
+    pub number: Option<String>,
+    pub date: Option<String>,
+    pub remark: Option<String>,
 }
 
 /// A block node: its source span, an optional id, and its kind.
@@ -73,6 +115,12 @@ pub struct Document {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Block {
     pub span: Span,
+    /// Immutable snapshot of attributes when this block finished parsing.
+    /// A container sees assignments made while parsing its children; an already
+    /// completed block keeps its own snapshot. Inline values retain the context
+    /// in which they were scanned.
+    /// Shared until an attribute assignment changes the parse context.
+    pub attribute_context: Arc<Attributes>,
     pub id: Option<String>,
     pub reftext: Option<Vec<Inline>>,
     pub roles: Vec<String>,
@@ -111,6 +159,7 @@ impl Block {
     pub fn new(span: Span, kind: BlockKind) -> Self {
         Self {
             span,
+            attribute_context: Arc::new(Attributes::new()),
             id: None,
             reftext: None,
             roles: Vec::new(),
@@ -431,6 +480,22 @@ pub enum Inline {
 }
 
 impl Inline {
+    pub fn span_mut(&mut self) -> &mut Span {
+        match self {
+            Inline::Text { span, .. }
+            | Inline::Strong { span, .. }
+            | Inline::Emphasis { span, .. }
+            | Inline::Monospace { span, .. }
+            | Inline::Mark { span, .. }
+            | Inline::Superscript { span, .. }
+            | Inline::Subscript { span, .. }
+            | Inline::AttributeRef { span, .. }
+            | Inline::Link { span, .. }
+            | Inline::CrossReference { span, .. }
+            | Inline::Anchor { span, .. } => span,
+        }
+    }
+
     /// The source span of this inline node.
     pub fn span(&self) -> Span {
         match self {

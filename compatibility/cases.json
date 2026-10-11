@@ -1,0 +1,297 @@
+{
+  "asciidoctor": "2.0.23",
+  "profile": "body-dom-v1",
+  "provenance": "Original minimal cases from the adoctra architecture audit; not the upstream test suite.",
+  "cases": [
+    {
+      "id": "paragraphs",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "First *bold* paragraph.\n\nSecond _italic_ paragraph."
+    },
+    {
+      "id": "attribute-simple",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":who: World\n\nHello {who}."
+    },
+    {
+      "id": "links",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "link:https://example.org[Site] and https://example.org"
+    },
+    {
+      "id": "verbatim-whitespace",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "----\n  a  b\n\tc\n\nd\n----\n\n....\nx  y\n z\n...."
+    },
+    {
+      "id": "list-nested",
+      "category": "lists",
+      "expect": "pass",
+      "source": "* one\n** two\n* three"
+    },
+    {
+      "id": "list-continuation",
+      "category": "lists",
+      "expect": "pass",
+      "source": "* one\n+\n----\n  a  b\n----"
+    },
+    {
+      "id": "paragraph-metadata",
+      "category": "metadata",
+      "expect": "pass",
+      "source": "[#intro.custom]\nHello."
+    },
+    {
+      "id": "forward-xref",
+      "category": "references",
+      "expect": "pass",
+      "source": "See <<_target>>.\n\n== Target\n\nBody."
+    },
+    {
+      "id": "word-boundary",
+      "category": "inlines",
+      "expect": "xfail",
+      "reason": "Constrained emphasis is incorrectly recognized inside a word.",
+      "source": "foo_bar_baz"
+    },
+    {
+      "id": "escaped-strong",
+      "category": "inlines",
+      "expect": "xfail",
+      "reason": "Escaped formatting markers are still parsed as formatting.",
+      "source": "\\*bold*"
+    },
+    {
+      "id": "double-strong",
+      "category": "inlines",
+      "expect": "xfail",
+      "reason": "Unconstrained double markers create empty strong nodes.",
+      "source": "**bold**"
+    },
+    {
+      "id": "attribute-link",
+      "category": "substitutions",
+      "expect": "xfail",
+      "reason": "Macros introduced by attribute substitution are not recognized.",
+      "source": ":site: https://example.org\n\n{site}[Site]"
+    },
+    {
+      "id": "header-after-title",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "= Doc\n:who: World\n\nHello {who}"
+    },
+    {
+      "id": "attribute-change",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":who: first\n\n{who}\n\n:who: second\n\n{who}"
+    },
+    {
+      "id": "subs-none",
+      "category": "substitutions",
+      "expect": "xfail",
+      "reason": "The subs attribute is stored but not applied.",
+      "source": "[subs=none]\n*bold* {missing}"
+    },
+    {
+      "id": "comment",
+      "category": "preprocessing",
+      "expect": "xfail",
+      "reason": "Line comments are rendered as paragraphs.",
+      "source": "// hidden\n\nVisible"
+    },
+    {
+      "id": "list-blank",
+      "category": "lists",
+      "expect": "xfail",
+      "reason": "A blank line incorrectly splits a list into two lists.",
+      "source": "* one\n\n* two"
+    },
+    {
+      "id": "title-xref",
+      "category": "references",
+      "expect": "pass",
+      "source": "== Target\n\n.See <<_target>>\n----\ncode\n----"
+    },
+    {
+      "id": "title-xref-forward",
+      "category": "references",
+      "expect": "pass",
+      "source": ".See <<_target>>\n----\ncode\n----\n\n== Target\n\nBody."
+    },
+    {
+      "id": "title-xref-missing",
+      "category": "references",
+      "expect": "pass",
+      "source": ".See <<missing>>\n----\nx\n----"
+    },
+    {
+      "id": "header-title-attribute",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "= Hello {who}\n:who: World\n\nText."
+    },
+    {
+      "id": "attribute-unset-prefix",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":who: first\n\n{who}\n\n:!who:\n\n{who}"
+    },
+    {
+      "id": "attribute-unset-suffix",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":who: first\n\n{who}\n\n:who!:\n\n{who}"
+    },
+    {
+      "id": "attribute-case",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":WHO: World\n\n{WHO} {who}"
+    },
+    {
+      "id": "attribute-value-reference",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":one: first\n:two: {one} *second*\n:escaped: \\{one}\n:one: changed\n\n{two} {escaped}"
+    },
+    {
+      "id": "attribute-in-paragraph",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":who: first\n\n{who}\n:who: second\n{who}"
+    },
+    {
+      "id": "attribute-in-verbatim",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":who: first\n\n----\n:who: second\n----\n\n{who}"
+    },
+    {
+      "id": "attribute-in-container",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":who: first\n\n====\n:who: inside\n\n{who}\n====\n\n{who}"
+    },
+    {
+      "id": "attribute-invalid-value-separator",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":who:World\n\n{who}"
+    },
+    {
+      "id": "caption-attribute-changes",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ".A\n====\na\n====\n\n:!example-caption:\n\n.B\n====\nb\n====\n\n:example-caption: Eg\n\n.C\n====\nc\n===="
+    },
+    {
+      "id": "caption-nested-context",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ".Outer\n====\n:example-caption: Inner\n\n.Child\n[example]\n--\nchild\n--\n===="
+    },
+    {
+      "id": "attribute-in-list-continuation",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":who: first\n\n* {who}\n+\n--\n:who: second\n\nbody\n--\n* {who}"
+    },
+    {
+      "id": "header-author-revision",
+      "category": "header",
+      "expect": "pass",
+      "source": "= Doc\nJane Doe <jane@example.org>\nv2.1, 2026-10-11: Draft\n\n{author} | {firstname} | {lastname} | {authorinitials} | {revnumber} | {revdate} | {revremark}"
+    },
+    {
+      "id": "header-multiple-authors",
+      "category": "header",
+      "expect": "pass",
+      "source": "= Doc\nJohn Doe <j@example.org>; Mary_Jane Q Public <m@example.org>\n\n{authors} | {authorcount} | {author_1} | {author_2} | {firstname_2} | {middlename_2} | {lastname_2} | {authorinitials_2}"
+    },
+    {
+      "id": "header-interleaved-attributes",
+      "category": "header",
+      "expect": "pass",
+      "source": "= Doc\n:domain: example.org\nJohn Doe <john@{domain}>\n:revdate: explicit date\nv2, today: Release\n:extra: {author} {revnumber}\n\n{revdate} | {extra}"
+    },
+    {
+      "id": "header-explicit-author",
+      "category": "header",
+      "expect": "pass",
+      "source": "= Doc\nJohn Doe\n:author: Jane Smith\n\n{author} | {firstname} | {lastname} | {authorinitials}"
+    },
+    {
+      "id": "header-authors-attribute",
+      "category": "header",
+      "expect": "pass",
+      "source": ":authors: Jane Smith; Иван Петров\n\n{authors} | {authorcount} | {authorinitials_2}"
+    },
+    {
+      "id": "header-blank-before-author",
+      "category": "header",
+      "expect": "pass",
+      "source": "= Doc\n\nJohn Doe\nv1.0"
+    },
+    {
+      "id": "header-blank-before-revision",
+      "category": "header",
+      "expect": "pass",
+      "source": "= Doc\nJohn Doe\n\nv1.0"
+    },
+    {
+      "id": "header-version-only",
+      "category": "header",
+      "expect": "pass",
+      "source": "= Doc\nJohn Doe\nv1.0\n\n{revnumber}"
+    },
+    {
+      "id": "header-date-only",
+      "category": "header",
+      "expect": "pass",
+      "source": "= Doc\nJohn Doe\n2026-10-11\n\n{revdate}"
+    },
+    {
+      "id": "header-version-remark",
+      "category": "header",
+      "expect": "pass",
+      "source": "= Doc\nJohn Doe\nv1.0: Draft\n\n{revnumber} | {revremark}"
+    },
+    {
+      "id": "header-date-commas",
+      "category": "header",
+      "expect": "pass",
+      "source": "= Doc\nJohn Doe\n1.0, Jan 01, 2026\n\n{revnumber} | {revdate}"
+    },
+    {
+      "id": "header-unconventional-author",
+      "category": "header",
+      "expect": "pass",
+      "source": "= Doc\nResearch Team of Four\n\n{author} | {firstname} | {authorinitials}"
+    },
+    {
+      "id": "header-unicode-crlf",
+      "category": "header",
+      "expect": "pass",
+      "source": "= Документ\r\nИван Петров\r\nv1: Выпуск\r\n\r\n{author} | {authorinitials} | {revremark}"
+    },
+    {
+      "id": "header-email-link",
+      "category": "substitutions",
+      "expect": "xfail",
+      "reason": "Email resolved from a header attribute is not rescanned as an automatic mailto link.",
+      "source": "= Doc\nJane Doe <jane@example.org>\n\n{email}"
+    },
+    {
+      "id": "header-explicit-initials",
+      "category": "header",
+      "expect": "pass",
+      "source": ":author: Jane Smith\n:authorinitials: custom\n\n{author} | {authorinitials}"
+    }
+  ]
+}

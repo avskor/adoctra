@@ -6,7 +6,7 @@
 //! defined later, so the registry of section ids must be complete before any
 //! reference resolves.
 //!
-//! Two phases over the block tree:
+//! Three phases over the block tree:
 //!   1. give every section (`level >= 1`) an auto-generated id and record
 //!      `id -> title inlines` in a registry (asciidoctor's `sectids`);
 //!   2. walk every inline and, for each [`Inline::CrossReference`], substitute
@@ -14,11 +14,13 @@
 //!      keep an explicit reftext, and — for an unknown id — emit a diagnostic
 //!      and fall back to the `[id]` text asciidoctor renders for unresolved
 //!      references.
+//!   3. number titled example blocks in document order.
 
 use std::collections::{btree_map::Entry, BTreeMap};
 
 use crate::ast::{Block, BlockKind, Document, Inline, Span};
 use crate::diagnostic::{Diagnostic, Severity};
+use crate::visit::{self, InlineContext, VisitorMut};
 
 /// A registry of anchor ids → the inlines a *textless* reference displays. The
 /// value is `Some(text)` for a section (its title) or an explicit
@@ -36,110 +38,87 @@ pub(crate) fn resolve(doc: &mut Document, diagnostics: &mut Vec<Diagnostic>) {
     assign_ids(&mut doc.blocks, &mut registry, diagnostics);
     resolve_xrefs(&mut doc.blocks, &registry, diagnostics);
 
-    // Caption numbering is independent of the id/xref passes, so it runs last. The
-    // prefix is read once here (default `Example`, matching asciidoctor's built-in
-    // `example-caption`) and a single counter walks the whole document in order.
-    let prefix = doc
-        .attributes
-        .get("example-caption")
-        .unwrap_or("Example")
-        .to_owned();
-    assign_captions(&mut doc.blocks, &prefix, &mut 0u32);
+    // Use the attribute snapshot at each block, not the final document state.
+    assign_captions(&mut doc.blocks, &mut 0u32);
 }
 
 /// Phase 3: number titled example blocks. asciidoctor's caption counter applies
 /// to an example block *only when it has a title*: such a block gets the next
 /// number and a `"<prefix> <n>. "` caption; an untitled example is left alone and
 /// does **not** advance the counter. The counter is document-wide and runs in
-/// source order, so it recurses into containers (an example/admonition body, list
-/// items) after numbering the block itself — depth-first, top-down. Other block
+/// parse-completion order: children are numbered before their containing example,
+/// using each block's attribute snapshot, matching Ruby's caption assignment.
+/// Other block
 /// kinds carry no caption (asciidoctor's `listing-caption` etc. are unset), so a
 /// titled listing or paragraph keeps its bare title.
-fn assign_captions(blocks: &mut [Block], prefix: &str, counter: &mut u32) {
-    for block in blocks {
-        if matches!(block.kind, BlockKind::Example { .. }) && block.title.is_some() {
-            *counter += 1;
-            block.caption = Some(format!("{prefix} {counter}. "));
-        }
-        match &mut block.kind {
-            BlockKind::Example { blocks }
-            | BlockKind::Admonition { blocks, .. }
-            | BlockKind::Quote { blocks, .. }
-            | BlockKind::Sidebar { blocks }
-            | BlockKind::Open { blocks } => {
-                assign_captions(blocks, prefix, counter);
-            }
-            BlockKind::List { items, .. } => {
-                for item in items {
-                    assign_captions(&mut item.blocks, prefix, counter);
+fn assign_captions(blocks: &mut [Block], counter: &mut u32) {
+    struct Captions<'a> {
+        counter: &'a mut u32,
+    }
+    impl VisitorMut for Captions<'_> {
+        fn visit_block(&mut self, block: &mut Block) {
+            visit::walk_block_mut(self, block);
+            if matches!(block.kind, BlockKind::Example { .. }) && block.title.is_some() {
+                if let Some(prefix) = block.attribute_context.get("example-caption") {
+                    *self.counter += 1;
+                    block.caption = Some(format!("{} {}. ", prefix, self.counter));
                 }
             }
-            BlockKind::Heading { .. }
-            | BlockKind::Paragraph { .. }
-            | BlockKind::Listing { .. }
-            | BlockKind::Literal { .. }
-            | BlockKind::Passthrough { .. }
-            | BlockKind::Verse { .. } => {}
         }
+        fn visit_inlines(&mut self, _inlines: &mut [Inline], _context: InlineContext) {}
     }
+    visit::walk_blocks_mut(&mut Captions { counter }, blocks);
 }
 
-/// Phase 1: walk the block tree, register every anchor id (explicit `[[id]]` and
-/// auto-generated section ids), and record each id's reference text.
+/// Register block ids and body anchors before resolving forward references.
 fn assign_ids(blocks: &mut [Block], registry: &mut Registry, diagnostics: &mut Vec<Diagnostic>) {
-    for block in blocks {
-        // A section's title doubles as a reference-text source and the seed for
-        // its auto-generated id; `None` for non-sections and the level-0 doctitle.
-        let heading_title = match &block.kind {
-            BlockKind::Heading { level, inlines } if *level >= 1 => Some(inlines.clone()),
-            _ => None,
-        };
-
-        // `block.id.clone()` ends the borrow before we may write `block.id` below.
-        if let Some(id) = block.id.clone() {
-            // Explicit `[[id]]` anchor: registered verbatim, never renamed. Its
-            // reference text is the anchor's reftext, else the section title (so
-            // `[[s]]\n== Title` still shows "Title"), else none.
-            let reftext = block.reftext.clone().or(heading_title);
-            register_id(registry, id, reftext, block.span, diagnostics);
-        } else if let Some(title) = heading_title {
-            // No explicit anchor: a section gets an auto-generated, deduplicated id.
-            let unique = dedup(generate_id(&inline_text(&title)), registry);
-            registry.insert(unique.clone(), Some(title));
-            block.id = Some(unique);
+    struct Ids<'a> {
+        registry: &'a mut Registry,
+        diagnostics: &'a mut Vec<Diagnostic>,
+    }
+    impl VisitorMut for Ids<'_> {
+        fn visit_block(&mut self, block: &mut Block) {
+            let heading_title = match &block.kind {
+                BlockKind::Heading { level, inlines } if *level >= 1 => Some(inlines.clone()),
+                _ => None,
+            };
+            if let Some(id) = block.id.clone() {
+                let reftext = block.reftext.clone().or(heading_title);
+                register_id(self.registry, id, reftext, block.span, self.diagnostics);
+            } else if let Some(title) = heading_title {
+                let unique = dedup(generate_id(&inline_text(&title)), self.registry);
+                self.registry.insert(unique.clone(), Some(title));
+                block.id = Some(unique);
+            }
+            visit::walk_block_mut(self, block);
         }
-
-        // Register inline anchors found in this block's own content, so a `<<id>>`
-        // can target an inline `[[id]]` exactly like a block anchor. (Verbatim
-        // listing text carries no inline markup.) Done in document order, after
-        // the block's own id, so duplicate diagnostics read left-to-right.
-        match &mut block.kind {
-            // A verse carries inline content too, so its inline anchors register
-            // like a paragraph's (the attribution is metadata, not anchor-bearing).
-            BlockKind::Heading { inlines, .. }
-            | BlockKind::Paragraph { inlines }
-            | BlockKind::Verse { inlines, .. } => {
-                register_inline_anchors(inlines, registry, diagnostics);
+        fn visit_inlines(&mut self, inlines: &mut [Inline], context: InlineContext) {
+            // Metadata follows different substitution/registration rules in Ruby.
+            // Preserve the existing body-anchor semantics until those are ported.
+            if context == InlineContext::Body {
+                visit::walk_inlines_mut(self, inlines);
             }
-            BlockKind::List { items, .. } => {
-                for item in items {
-                    register_inline_anchors(&item.inlines, registry, diagnostics);
-                    assign_ids(&mut item.blocks, registry, diagnostics);
-                }
+        }
+        fn visit_inline(&mut self, inline: &mut Inline) {
+            if let Inline::Anchor { id, reftext, span } = inline {
+                register_id(
+                    self.registry,
+                    id.clone(),
+                    reftext.clone(),
+                    *span,
+                    self.diagnostics,
+                );
             }
-            // An example/quote block (and a delimited admonition) is a parsed
-            // container: descend so anchors and section ids inside it join the
-            // registry.
-            BlockKind::Example { blocks }
-            | BlockKind::Admonition { blocks, .. }
-            | BlockKind::Quote { blocks, .. }
-            | BlockKind::Sidebar { blocks }
-            | BlockKind::Open { blocks } => assign_ids(blocks, registry, diagnostics),
-            BlockKind::Listing { .. }
-            | BlockKind::Literal { .. }
-            | BlockKind::Passthrough { .. } => {}
+            visit::walk_inline_mut(self, inline);
         }
     }
+    visit::walk_blocks_mut(
+        &mut Ids {
+            registry,
+            diagnostics,
+        },
+        blocks,
+    );
 }
 
 /// Register `id -> reftext` in the registry, warning (at `span`) on a duplicate
@@ -161,38 +140,6 @@ fn register_id(
         }),
         Entry::Vacant(e) => {
             e.insert(reftext);
-        }
-    }
-}
-
-/// Register every inline anchor (`[[id]]` / `anchor:id[]`) in `inlines`, recursing
-/// through formatting and link/xref children so an anchor nested inside markup is
-/// still found. Each contributes `id -> reftext` like a block anchor (a textless
-/// `<<id>>` then displays that reftext, or `[id]` when there is none).
-fn register_inline_anchors(
-    inlines: &[Inline],
-    registry: &mut Registry,
-    diagnostics: &mut Vec<Diagnostic>,
-) {
-    for inline in inlines {
-        match inline {
-            Inline::Anchor { id, reftext, span } => {
-                register_id(registry, id.clone(), reftext.clone(), *span, diagnostics);
-                if let Some(rt) = reftext {
-                    register_inline_anchors(rt, registry, diagnostics);
-                }
-            }
-            Inline::Strong { children, .. }
-            | Inline::Emphasis { children, .. }
-            | Inline::Monospace { children, .. }
-            | Inline::Mark { children, .. }
-            | Inline::Superscript { children, .. }
-            | Inline::Subscript { children, .. }
-            | Inline::Link { children, .. }
-            | Inline::CrossReference { children, .. } => {
-                register_inline_anchors(children, registry, diagnostics);
-            }
-            Inline::Text { .. } | Inline::AttributeRef { .. } => {}
         }
     }
 }
@@ -293,98 +240,56 @@ fn push_text(inlines: &[Inline], s: &mut String) {
 /// Phase 2: walk the block tree and resolve every cross-reference's display
 /// text against the registry.
 fn resolve_xrefs(blocks: &mut [Block], registry: &Registry, diagnostics: &mut Vec<Diagnostic>) {
-    for block in blocks {
-        match &mut block.kind {
-            BlockKind::Heading { inlines, .. }
-            | BlockKind::Paragraph { inlines }
-            | BlockKind::Verse { inlines, .. } => {
-                resolve_inlines(inlines, registry, diagnostics);
-            }
-            BlockKind::List { items, .. } => {
-                for item in items {
-                    resolve_inlines(&mut item.inlines, registry, diagnostics);
-                    resolve_xrefs(&mut item.blocks, registry, diagnostics);
-                }
-            }
-            // Descend into an example/quote block (and a delimited admonition) so
-            // references inside it resolve against the whole-document registry.
-            BlockKind::Example { blocks }
-            | BlockKind::Admonition { blocks, .. }
-            | BlockKind::Quote { blocks, .. }
-            | BlockKind::Sidebar { blocks }
-            | BlockKind::Open { blocks } => resolve_xrefs(blocks, registry, diagnostics),
-            BlockKind::Listing { .. }
-            | BlockKind::Literal { .. }
-            | BlockKind::Passthrough { .. } => {}
-        }
+    struct References<'a> {
+        registry: &'a Registry,
+        diagnostics: &'a mut Vec<Diagnostic>,
     }
-}
-
-fn resolve_inlines(inlines: &mut [Inline], registry: &Registry, diagnostics: &mut Vec<Diagnostic>) {
-    for inline in inlines {
-        match inline {
-            Inline::CrossReference {
+    impl VisitorMut for References<'_> {
+        fn visit_inlines(&mut self, inlines: &mut [Inline], context: InlineContext) {
+            // Titles use normal substitutions. Reftext and attribution have their
+            // own rules; the traversal exposes them without treating them as body.
+            if matches!(context, InlineContext::Body | InlineContext::Title) {
+                visit::walk_inlines_mut(self, inlines);
+            }
+        }
+        fn visit_inline(&mut self, inline: &mut Inline) {
+            if let Inline::CrossReference {
                 target,
                 children,
                 span,
-            } => match registry.get(target.as_str()) {
-                // Known id. A textless reference borrows the id's reference text
-                // (a section title or explicit reftext); if the id has none (a
-                // plain paragraph anchor), fall back to `[id]` *without* a
-                // diagnostic — the id is valid, only its display text is unknown,
-                // matching asciidoctor. An explicit reftext is kept (and still
-                // scanned for nested references the author may have written).
-                Some(reftext) => {
-                    if children.is_empty() {
-                        *children = match reftext {
-                            Some(text) => text.clone(),
-                            None => vec![Inline::Text {
-                                value: format!("[{target}]"),
-                                span: *span,
-                            }],
-                        };
-                    } else {
-                        resolve_inlines(children, registry, diagnostics);
-                    }
-                }
-                // Unknown id: warn, and for a textless reference fall back to the
-                // `[id]` text asciidoctor renders for an unresolved reference.
-                None => {
-                    diagnostics.push(Diagnostic {
+            } = inline
+            {
+                let reftext = self.registry.get(target.as_str());
+                if reftext.is_none() {
+                    self.diagnostics.push(Diagnostic {
                         span: *span,
                         severity: Severity::Warning,
                         message: format!("unresolved cross reference: '{target}'"),
                     });
-                    if children.is_empty() {
-                        *children = vec![Inline::Text {
+                }
+                if children.is_empty() {
+                    *children = match reftext {
+                        Some(Some(text)) => text.clone(),
+                        _ => vec![Inline::Text {
                             value: format!("[{target}]"),
                             span: *span,
-                        }];
-                    } else {
-                        resolve_inlines(children, registry, diagnostics);
-                    }
-                }
-            },
-            Inline::Strong { children, .. }
-            | Inline::Emphasis { children, .. }
-            | Inline::Monospace { children, .. }
-            | Inline::Mark { children, .. }
-            | Inline::Superscript { children, .. }
-            | Inline::Subscript { children, .. }
-            | Inline::Link { children, .. } => {
-                resolve_inlines(children, registry, diagnostics);
-            }
-            // Resolve any cross-references the author wrote inside an anchor's
-            // reftext, in place (so a textless `<<id>>` borrowing this reftext gets
-            // already-resolved children).
-            Inline::Anchor { reftext, .. } => {
-                if let Some(rt) = reftext {
-                    resolve_inlines(rt, registry, diagnostics);
+                        }],
+                    };
+                    // Borrowed display text can itself contain a reference to this
+                    // target. Do not recursively expand generated children.
+                    return;
                 }
             }
-            Inline::Text { .. } | Inline::AttributeRef { .. } => {}
+            visit::walk_inline_mut(self, inline);
         }
     }
+    visit::walk_blocks_mut(
+        &mut References {
+            registry,
+            diagnostics,
+        },
+        blocks,
+    );
 }
 
 #[cfg(test)]

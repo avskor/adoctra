@@ -37,13 +37,27 @@ fn run() -> adoctra::Result<()> {
         }
     };
 
-    let source = read_source(&args.input)?;
+    let mut sources = adoctra::SourceMap::new();
+    let source_id = sources.add(&args.input, read_source(&args.input)?);
+    let source = sources.get(source_id).expect("just registered source");
 
     // Parsing never fails on syntax; surface diagnostics, then keep going.
-    let result = adoctra::parse(&source);
+    let options = adoctra::ParseOptions {
+        source_id,
+        ..Default::default()
+    };
+    let result = adoctra::parse_with_options(source.text(), &options);
     for d in &result.diagnostics {
+        let file = sources
+            .get(d.span.source_id)
+            .expect("parser source is registered");
+        let position = file.position(d.span.start);
+        let location = match position {
+            Some(p) => format!("{}:{}:{}", file.name(), p.line, p.column),
+            None => file.name().to_owned(),
+        };
         eprintln!(
-            "adoctra: {} at {}..{}: {}",
+            "adoctra: {location}: {} at {}..{}: {}",
             d.severity.as_str(),
             d.span.start,
             d.span.end,

@@ -9,9 +9,13 @@ use crate::ast::{
     AdmonitionKind, Attribution, Block, BlockAttrs, BlockKind, Document, Inline, ListItem, Span,
 };
 use crate::attributes::Attributes;
+pub(crate) use crate::context::parse_attribute_entry;
+use crate::context::{ParseContext, ParseOptions};
 use crate::diagnostic::{Diagnostic, ParseResult, Severity};
+use crate::header::collect_header;
 use crate::inline::{scan_inlines, scan_inlines_with};
 use crate::scanner::lines_with_offsets;
+use std::sync::Arc;
 
 /// Metadata accumulated from `[[id]]` anchor and `[style, #id.role, name=value]`
 /// attribute lines that precede a block, transferred onto that block once it is
@@ -27,33 +31,53 @@ struct PendingMeta {
     attrs: BlockAttrs,
 }
 
-pub fn parse(source: &str) -> ParseResult {
+pub fn parse_with_options(source: &str, options: &ParseOptions) -> ParseResult {
     let lines = lines_with_offsets(source);
-    let mut doc = Document::default();
+    let mut context = ParseContext::new(options);
+    let header = collect_header(&lines, &mut context);
+    let mut doc = Document {
+        attributes: (*context.attributes).clone(),
+        header: header.metadata,
+        blocks: Vec::new(),
+    };
     let mut diagnostics = Vec::new();
-
-    // --- header: leading `:key: value` entries and blank lines ---
-    let (attributes, mut i) = collect_header(&lines);
-    doc.attributes = attributes;
-
-    // --- body blocks ---
-    // Collect blocks to end-of-input (the never-true `stop`). The same collector
-    // drives a delimited container's body (an example block stops at `====`).
-    let blocks = collect_blocks(
+    if let Some(mut title_line) = header.title_line {
+        if let Some(title) = parse_block(
+            source,
+            &lines,
+            &mut title_line,
+            &mut context,
+            &mut diagnostics,
+            BlockCtx::TopLevel,
+            None,
+        ) {
+            doc.blocks.push(title);
+        }
+    }
+    let mut i = header.body_start;
+    doc.blocks.extend(collect_blocks(
         source,
         &lines,
         &mut i,
-        &doc.attributes,
+        &mut context,
         &mut diagnostics,
         |_| false,
-    );
-    doc.blocks = blocks;
+    ));
 
-    // Post-parse pass over the whole document: assign section ids and resolve
-    // cross-references against them (forward references need every id known
-    // first, so this cannot happen during the block-local inline scan).
+    // This parser invocation reads exactly one original source. Stamp every
+    // locally created range before resolution can copy display text or diagnose
+    // references. Future include fragments must retain their individual ids.
+    struct Origin(crate::SourceId);
+    impl crate::visit::VisitorMut for Origin {
+        fn visit_span(&mut self, span: &mut Span) {
+            span.source_id = self.0;
+        }
+    }
+    crate::visit::walk_document_mut(&mut Origin(options.source_id), &mut doc);
+    for diagnostic in &mut diagnostics {
+        diagnostic.span.source_id = options.source_id;
+    }
     crate::resolve::resolve(&mut doc, &mut diagnostics);
-
     ParseResult {
         document: doc,
         diagnostics,
@@ -75,7 +99,7 @@ fn collect_blocks(
     source: &str,
     lines: &[(usize, &str)],
     i: &mut usize,
-    attrs: &Attributes,
+    context: &mut ParseContext,
     diagnostics: &mut Vec<Diagnostic>,
     stop: impl Fn(&str) -> bool,
 ) -> Vec<Block> {
@@ -92,9 +116,15 @@ fn collect_blocks(
         if stop(line) {
             break;
         }
+        if let Some(entry) = parse_attribute_entry(line) {
+            context.apply(entry);
+            *i += 1;
+            continue;
+        }
         if let Some((id, reftext)) = parse_block_anchor(line) {
             pending.id = Some(id.to_string());
-            pending.reftext = reftext.map(|rt| scan_inlines(rt, abs_offset(source, rt), attrs));
+            pending.reftext =
+                reftext.map(|rt| scan_inlines(rt, abs_offset(source, rt), &context.attributes));
             *i += 1;
             continue;
         }
@@ -119,7 +149,11 @@ fn collect_blocks(
         // apply. A second `.Title` overrides the first (last-wins, matching
         // asciidoctor).
         if let Some(title) = parse_block_title(line) {
-            pending.title = Some(scan_inlines(title, abs_offset(source, title), attrs));
+            pending.title = Some(scan_inlines(
+                title,
+                abs_offset(source, title),
+                &context.attributes,
+            ));
             *i += 1;
             continue;
         }
@@ -127,7 +161,7 @@ fn collect_blocks(
             source,
             lines,
             i,
-            attrs,
+            context,
             diagnostics,
             BlockCtx::TopLevel,
             pending.attrs.style.as_deref(),
@@ -138,7 +172,8 @@ fn collect_blocks(
             block.roles = pending.roles;
             block.title = pending.title;
             block.attrs = pending.attrs;
-            apply_style_fixup(&mut block, source, attrs);
+            let attributes = Arc::clone(&block.attribute_context);
+            apply_style_fixup(&mut block, source, &attributes);
             blocks.push(block);
         }
     }
@@ -149,6 +184,12 @@ fn collect_blocks(
 /// `[example]` or admonition (`[NOTE]`, …) style on a *paragraph* rewrites its
 /// kind; on any other block kind these styles are inert (left on `attrs.style`).
 fn apply_style_fixup(block: &mut Block, source: &str, attrs: &Attributes) {
+    let child_attributes = Arc::clone(&block.attribute_context);
+    let new_child = |span, kind| {
+        let mut child = Block::new(span, kind);
+        child.attribute_context = Arc::clone(&child_attributes);
+        child
+    };
     let Some(style) = block.attrs.style.as_deref() else {
         return;
     };
@@ -161,7 +202,7 @@ fn apply_style_fixup(block: &mut Block, source: &str, attrs: &Attributes) {
         match &mut block.kind {
             BlockKind::Paragraph { inlines } => {
                 let inlines = std::mem::take(inlines);
-                let child = Block::new(block.span, BlockKind::Paragraph { inlines });
+                let child = new_child(block.span, BlockKind::Paragraph { inlines });
                 block.kind = BlockKind::Admonition {
                     kind,
                     blocks: vec![child],
@@ -204,7 +245,7 @@ fn apply_style_fixup(block: &mut Block, source: &str, attrs: &Attributes) {
             // The container keeps the block's id/roles/attrs; the child is a plain
             // paragraph carrying just its kind and span.
             "example" => {
-                let para = Block::new(
+                let para = new_child(
                     block.span,
                     std::mem::replace(&mut block.kind, BlockKind::Example { blocks: Vec::new() }),
                 );
@@ -215,7 +256,7 @@ fn apply_style_fixup(block: &mut Block, source: &str, attrs: &Attributes) {
             // `[sidebar]` on a paragraph wraps it the same single-child way as
             // `[example]`; the `****` fence form is built directly in `parse_block`.
             "sidebar" => {
-                let para = Block::new(
+                let para = new_child(
                     block.span,
                     std::mem::replace(&mut block.kind, BlockKind::Sidebar { blocks: Vec::new() }),
                 );
@@ -226,7 +267,7 @@ fn apply_style_fixup(block: &mut Block, source: &str, attrs: &Attributes) {
             // `[quote]` on a paragraph wraps it like `[example]` — a single-child
             // quote container (attribution folded in below).
             "quote" => {
-                let para = Block::new(
+                let para = new_child(
                     block.span,
                     std::mem::replace(
                         &mut block.kind,
@@ -255,7 +296,7 @@ fn apply_style_fixup(block: &mut Block, source: &str, attrs: &Attributes) {
             // `[open]` on a paragraph wraps it the same single-child way as
             // `[example]`/`[sidebar]`; the `--` fence form is built in `parse_block`.
             "open" => {
-                let para = Block::new(
+                let para = new_child(
                     block.span,
                     std::mem::replace(&mut block.kind, BlockKind::Open { blocks: Vec::new() }),
                 );
@@ -410,7 +451,22 @@ fn parse_block(
     source: &str,
     lines: &[(usize, &str)],
     i: &mut usize,
-    attrs: &Attributes,
+    context: &mut ParseContext,
+    diagnostics: &mut Vec<Diagnostic>,
+    ctx: BlockCtx,
+    pending_style: Option<&str>,
+) -> Option<Block> {
+    let mut block =
+        parse_block_content(source, lines, i, context, diagnostics, ctx, pending_style)?;
+    block.attribute_context = Arc::clone(&context.attributes);
+    Some(block)
+}
+
+fn parse_block_content(
+    source: &str,
+    lines: &[(usize, &str)],
+    i: &mut usize,
+    context: &mut ParseContext,
     diagnostics: &mut Vec<Diagnostic>,
     ctx: BlockCtx,
     // The *pending* block style (from a preceding `[verse]` / `[quote]` attribute
@@ -419,6 +475,7 @@ fn parse_block(
     // a parsed `quote` container (like `====`).
     pending_style: Option<&str>,
 ) -> Option<Block> {
+    let attrs = Arc::clone(&context.attributes);
     let (off, line) = lines[*i];
     let trimmed = line.trim_end();
 
@@ -432,7 +489,7 @@ fn parse_block(
         // `title` is a subslice of `source`, so its absolute offset gives an
         // exact base for inline spans.
         let base = abs_offset(source, title);
-        let inlines = scan_inlines(title, base, attrs);
+        let inlines = scan_inlines(title, base, &attrs);
         *i += 1;
         // `Block.id` is assigned later, by the resolve pass, once the whole
         // document is known (it deduplicates ids across all sections) — unless an
@@ -547,7 +604,9 @@ fn parse_block(
     if trimmed.trim() == "====" {
         let start = off;
         *i += 1;
-        let blocks = collect_blocks(source, lines, i, attrs, diagnostics, |l| l.trim() == "====");
+        let blocks = collect_blocks(source, lines, i, context, diagnostics, |l| {
+            l.trim() == "===="
+        });
         let end;
         if *i < lines.len() && lines[*i].1.trim() == "====" {
             let (loff, lline) = lines[*i];
@@ -593,7 +652,7 @@ fn parse_block(
             );
             // Verse keeps its line breaks — scan without folding newlines.
             let inlines =
-                scan_inlines_with(&source[body_start..body_end], body_start, attrs, false);
+                scan_inlines_with(&source[body_start..body_end], body_start, &attrs, false);
             return Some(Block::new(
                 Span::new(start, end),
                 BlockKind::Verse {
@@ -604,7 +663,9 @@ fn parse_block(
         }
         // Quote (default): a parsed container, mirror of the `====` example block.
         *i += 1;
-        let blocks = collect_blocks(source, lines, i, attrs, diagnostics, |l| l.trim() == "____");
+        let blocks = collect_blocks(source, lines, i, context, diagnostics, |l| {
+            l.trim() == "____"
+        });
         let end;
         if *i < lines.len() && lines[*i].1.trim() == "____" {
             let (loff, lline) = lines[*i];
@@ -636,7 +697,9 @@ fn parse_block(
     if trimmed.trim() == "****" {
         let start = off;
         *i += 1;
-        let blocks = collect_blocks(source, lines, i, attrs, diagnostics, |l| l.trim() == "****");
+        let blocks = collect_blocks(source, lines, i, context, diagnostics, |l| {
+            l.trim() == "****"
+        });
         let end;
         if *i < lines.len() && lines[*i].1.trim() == "****" {
             let (loff, lline) = lines[*i];
@@ -686,7 +749,7 @@ fn parse_block(
                 // afterwards by `apply_style_fixup`, exactly like the `____` form.
                 Some("verse") => BlockKind::Verse {
                     attribution: None,
-                    inlines: scan_inlines_with(body, body_start, attrs, false),
+                    inlines: scan_inlines_with(body, body_start, &attrs, false),
                 },
                 // Literal / source keep the body raw (no inline subs). For
                 // `[source,lang]` the `source` style and `language` attribute ride
@@ -707,7 +770,7 @@ fn parse_block(
             return Some(Block::new(Span::new(start, end), kind));
         }
         *i += 1;
-        let blocks = collect_blocks(source, lines, i, attrs, diagnostics, |l| l.trim() == "--");
+        let blocks = collect_blocks(source, lines, i, context, diagnostics, |l| l.trim() == "--");
         let end;
         if *i < lines.len() && lines[*i].1.trim() == "--" {
             let (loff, lline) = lines[*i];
@@ -734,7 +797,7 @@ fn parse_block(
     // ordinary text); deeper levels may be indented, handled inside `parse_list`,
     // which consumes the whole (possibly nested) list.
     if parse_list_marker(trimmed).is_some() {
-        return Some(parse_list(source, lines, i, attrs, diagnostics, &[]));
+        return Some(parse_list(source, lines, i, context, diagnostics, &[]));
     }
 
     // Paragraph: accumulate contiguous lines until this context's terminator.
@@ -767,13 +830,14 @@ fn parse_block(
     // `[NOTE]` *style* form is handled later, in the pending-attrs fixup.
     if let Some((kind, prefix_len)) = AdmonitionKind::from_label_prefix(line) {
         let content_start = start + prefix_len;
-        let inlines = scan_inlines(&source[content_start..end], content_start, attrs);
+        let inlines = scan_inlines(&source[content_start..end], content_start, &attrs);
         // The body is a single child paragraph spanning the text after the prefix;
         // the admonition block still spans the whole paragraph (label included).
-        let child = Block::new(
+        let mut child = Block::new(
             Span::new(content_start, end),
             BlockKind::Paragraph { inlines },
         );
+        child.attribute_context = Arc::clone(&attrs);
         return Some(Block::new(
             Span::new(start, end),
             BlockKind::Admonition {
@@ -784,7 +848,7 @@ fn parse_block(
     }
     // Scan inlines over the original source slice (newlines and all), so every
     // inline span maps back to real bytes — no re-joined string.
-    let inlines = scan_inlines(&source[start..end], start, attrs);
+    let inlines = scan_inlines(&source[start..end], start, &attrs);
     Some(Block::new(
         Span::new(start, end),
         BlockKind::Paragraph { inlines },
@@ -846,7 +910,7 @@ fn parse_list(
     source: &str,
     lines: &[(usize, &str)],
     i: &mut usize,
-    attrs: &Attributes,
+    context: &mut ParseContext,
     diagnostics: &mut Vec<Diagnostic>,
     ancestors: &[MarkerId],
 ) -> Block {
@@ -875,7 +939,11 @@ fn parse_list(
             principal_end = toff + tline.len();
             *i += 1;
         }
-        let inlines = scan_inlines(&source[content_start..principal_end], content_start, attrs);
+        let inlines = scan_inlines(
+            &source[content_start..principal_end],
+            content_start,
+            &context.attributes,
+        );
 
         // Attached blocks (`+` continuations) and nested sublists, in source
         // order, all collected into `item.blocks`.
@@ -890,7 +958,7 @@ fn parse_list(
                             source,
                             lines,
                             i,
-                            attrs,
+                            context,
                             diagnostics,
                             BlockCtx::InListItem,
                             None,
@@ -903,7 +971,7 @@ fn parse_list(
                 LineRole::Nested => {
                     let mut child_anc = ancestors.to_vec();
                     child_anc.push(marker);
-                    let child = parse_list(source, lines, i, attrs, diagnostics, &child_anc);
+                    let child = parse_list(source, lines, i, context, diagnostics, &child_anc);
                     item_end = child.span.end;
                     blocks.push(child);
                 }
@@ -919,45 +987,15 @@ fn parse_list(
         });
     }
 
-    Block::new(Span::new(start, end), BlockKind::List { ordered, items })
-}
-
-/// Read leading `:key: value` entries and blank lines. Returns the collected
-/// attributes and the index of the first body line. Shared by the parser and
-/// the tokenizer so both resolve `{attr}` against the same table.
-pub(crate) fn collect_header(lines: &[(usize, &str)]) -> (Attributes, usize) {
-    let mut attributes = Attributes::new();
-    let mut i = 0usize;
-    while i < lines.len() {
-        let (_, line) = lines[i];
-        if let Some((key, value)) = parse_attribute_entry(line) {
-            attributes.set(key, value);
-            i += 1;
-        } else if line.trim().is_empty() {
-            i += 1;
-        } else {
-            break;
-        }
-    }
-    (attributes, i)
+    let mut block = Block::new(Span::new(start, end), BlockKind::List { ordered, items });
+    block.attribute_context = Arc::clone(&context.attributes);
+    block
 }
 
 /// Byte offset of subslice `sub` within `source`. `sub` must be a slice that
 /// points into `source` (e.g. produced by `trim`/`strip_prefix` on a line).
 fn abs_offset(source: &str, sub: &str) -> usize {
     sub.as_ptr() as usize - source.as_ptr() as usize
-}
-
-pub(crate) fn parse_attribute_entry(line: &str) -> Option<(String, String)> {
-    let line = line.trim();
-    let rest = line.strip_prefix(':')?;
-    let end = rest.find(':')?;
-    let key = &rest[..end];
-    if key.is_empty() || key.contains(char::is_whitespace) {
-        return None;
-    }
-    let value = rest[end + 1..].trim().to_string();
-    Some((key.to_string(), value))
 }
 
 /// Identity of a list marker. Two markers open distinct nesting levels iff they
@@ -1291,6 +1329,7 @@ fn is_valid_role(role: &str) -> bool {
 mod tests {
     use super::*;
     use crate::ast::{Inline, Span};
+    use crate::parse;
 
     #[test]
     fn parses_title_and_paragraph() {

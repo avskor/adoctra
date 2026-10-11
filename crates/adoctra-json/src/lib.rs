@@ -36,9 +36,79 @@ impl Backend for JsonBackend {
             }
             write_block(block, &mut s);
         }
-        s.push_str("]}");
+        s.push(']');
+        if let Some(header) = &doc.header {
+            s.push_str(",\"header\":");
+            write_header(header, &mut s);
+        }
+        s.push('}');
         Ok(s.into_bytes())
     }
+}
+
+// Header declarations share the core model; effective overrides remain attributes.
+fn write_header(header: &adoctra_core::DocumentHeader, s: &mut String) {
+    s.push('{');
+
+    s.push_str("\"authors\":[");
+    for (i, author) in header.authors.iter().enumerate() {
+        if i > 0 {
+            s.push(',');
+        }
+        s.push('{');
+
+        for (j, (key, value)) in [
+            ("name", Some(author.name.as_str())),
+            ("firstname", Some(author.firstname.as_str())),
+            ("middlename", author.middlename.as_deref()),
+            ("lastname", author.lastname.as_deref()),
+            ("initials", Some(author.initials.as_str())),
+            ("email", author.email.as_deref()),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            if j > 0 {
+                s.push(',');
+            }
+            escape_into(key, s);
+            s.push(':');
+            if let Some(value) = value {
+                escape_into(value, s);
+            } else {
+                s.push_str("null");
+            }
+        }
+        s.push('}');
+    }
+    s.push_str("],\"revision\":");
+    if let Some(revision) = &header.revision {
+        s.push('{');
+
+        for (i, (key, value)) in [
+            ("number", &revision.number),
+            ("date", &revision.date),
+            ("remark", &revision.remark),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            if i > 0 {
+                s.push(',');
+            }
+            escape_into(key, s);
+            s.push(':');
+            if let Some(value) = value {
+                escape_into(value, s);
+            } else {
+                s.push_str("null");
+            }
+        }
+        s.push('}');
+    } else {
+        s.push_str("null");
+    }
+    s.push('}');
 }
 
 fn write_block(block: &Block, s: &mut String) {

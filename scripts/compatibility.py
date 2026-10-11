@@ -1,0 +1,291 @@
+#!/usr/bin/env python3
+"""Compare the complete rendered body with pinned Asciidoctor fixtures.
+
+body-dom-v1 is an explicit HTML projection, not an ASG or exact-HTML oracle.
+Only known presentation wrappers are reconciled; unknown markup survives.
+"""
+
+import argparse
+from collections import Counter
+from dataclasses import dataclass, field
+import difflib
+from html.parser import HTMLParser
+import json
+from pathlib import Path
+import re
+import subprocess
+import sys
+
+
+ROOT = Path(__file__).resolve().parents[1]
+CORPUS = ROOT / "compatibility"
+VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"}
+INLINE = {"p", "a", "strong", "em", "code", "mark", "sup", "sub", "span", "cite", "h1", "h2", "h3", "h4", "h5", "h6"}
+LIST_BLOCKS = {"ul", "ol", "p", "listing", "literal", "pre", "div", "aside", "figure", "blockquote", "table"}
+
+
+@dataclass
+class Element:
+    tag: str
+    attrs: dict = field(default_factory=dict)
+    children: list = field(default_factory=list)
+
+
+class BodyParser(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.root = Element("root")
+        self.stack = [self.root]
+
+    def handle_starttag(self, tag, attrs):
+        node = Element(tag, dict(attrs))
+        self.stack[-1].children.append(node)
+        if tag not in VOID:
+            self.stack.append(node)
+
+    def handle_startendtag(self, tag, attrs):
+        self.handle_starttag(tag, attrs)
+        if tag not in VOID:
+            self.handle_endtag(tag)
+
+    def handle_endtag(self, tag):
+        if len(self.stack) == 1 or self.stack[-1].tag != tag:
+            raise ValueError(f"unbalanced HTML closing tag: {tag}")
+        self.stack.pop()
+
+    def handle_data(self, data):
+        self.stack[-1].children.append(data)
+
+    def handle_comment(self, data):
+        # Raw comments in passthrough content are observable output too.
+        self.stack[-1].children.append(Element("#comment", {"text": data}))
+
+
+def compact(children, prose=False, preserve=False):
+    result = []
+    for child in children:
+        if isinstance(child, str):
+            if not preserve:
+                child = re.sub(r"[ \t\r\n\f]+", " ", child)
+            if not child or (not prose and not preserve and child == " "):
+                continue
+            if result and isinstance(result[-1], str):
+                result[-1] += child
+            else:
+                result.append(child)
+        else:
+            result.append(child)
+    return result
+
+
+def trim_edges(children):
+    if children and isinstance(children[0], str):
+        children[0] = children[0].lstrip(" ")
+    if children and isinstance(children[-1], str):
+        children[-1] = children[-1].rstrip(" ")
+    return [child for child in children if child != ""]
+
+
+def element(tag, attrs, children):
+    return {"tag": tag, "attrs": dict(sorted(attrs.items())), "children": children}
+
+
+def normalize(node, verbatim=False, block_kind=None):
+    if isinstance(node, str):
+        return [node]
+    tag, attrs = node.tag, dict(node.attrs)
+    classes = attrs.get("class", "").split()
+    wrapper = None
+    if tag == "div":
+        wrapper = next((c for c in classes if c in {
+            "paragraph", "ulist", "olist", "listingblock", "literalblock",
+            "content", "sectionbody", "preamble",
+        } or re.fullmatch(r"sect[1-6]", c)), None)
+        if wrapper in {"listingblock", "literalblock"}:
+            block_kind = "listing" if wrapper == "listingblock" else "literal"
+
+    if tag == "pre":
+        if "literalblock" in classes:
+            block_kind = "literal"
+            classes.remove("literalblock")
+        elif "listing" in classes:
+            block_kind = "listing"
+            classes.remove("listing")
+        elif "highlight" in classes:
+            block_kind = "listing"
+        tag = block_kind or "pre"
+        verbatim = True
+        if classes:
+            attrs["class"] = " ".join(classes)
+        else:
+            attrs.pop("class", None)
+
+    children = []
+    for child in node.children:
+        children.extend(normalize(child, verbatim, block_kind))
+
+    if node.tag == "li":
+        # Ruby wraps the principal item text in <p>; adoctra writes it directly.
+        children = [c for i, c in enumerate(children) if not (
+            isinstance(c, str) and not c.strip() and (
+                i == 0 or i == len(children) - 1
+                or isinstance(children[i - 1], dict) and children[i - 1]["tag"] in LIST_BLOCKS
+                or isinstance(children[i + 1], dict) and children[i + 1]["tag"] in LIST_BLOCKS
+            )
+        )]
+        if children and isinstance(children[0], dict) and children[0]["tag"] == "p" and not children[0]["attrs"]:
+            children = children[0]["children"] + children[1:]
+
+    is_prose = tag in INLINE or tag == "li" or "title" in classes
+    children = compact(children, is_prose, verbatim)
+    if tag == "li":
+        # A line break before an attached block is layout, not item text.
+        for i, child in enumerate(children):
+            if isinstance(child, dict) and child["tag"] in LIST_BLOCKS:
+                if i and isinstance(children[i - 1], str):
+                    children[i - 1] = children[i - 1].rstrip(" ")
+    if tag in {"p", "li", "h1", "h2", "h3", "h4", "h5", "h6"} or "title" in classes:
+        children = trim_edges(children)
+
+    if wrapper:
+        classes.remove(wrapper)
+        # Asciidoctor's default ordered-list style is presentation metadata.
+        if wrapper == "olist" and "arabic" in classes:
+            classes.remove("arabic")
+        attrs.pop("class", None)
+        if classes:
+            attrs["class"] = " ".join(classes)
+        if attrs:
+            # Transfer wrapper id/roles only if its principal element is unambiguous.
+            targets = [c for c in children if isinstance(c, dict) and c["attrs"].get("class") != "title"]
+            if len(targets) != 1:
+                return [element(node.tag, node.attrs, children)]
+            target = targets[0]
+            for key, value in attrs.items():
+                if key == "class" and key in target["attrs"]:
+                    target["attrs"][key] += " " + value
+                elif key in target["attrs"]:
+                    raise ValueError(f"ambiguous wrapper attribute {key}")
+                else:
+                    target["attrs"][key] = value
+        return children
+    if tag == "ol" and attrs.get("class") == "arabic":
+        attrs.pop("class")
+    return [element(tag, attrs, children)]
+
+
+def projection(html):
+    parser = BodyParser()
+    parser.feed(html)
+    parser.close()
+    if len(parser.stack) != 1:
+        raise ValueError("unclosed HTML element")
+    roots = parser.root.children
+    documents = [n for n in roots if isinstance(n, Element) and n.tag == "html"]
+    if documents:
+        bodies = [n for n in documents[0].children if isinstance(n, Element) and n.tag == "body"]
+        if len(bodies) != 1:
+            raise ValueError("expected exactly one body")
+        roots = bodies[0].children
+    return compact([result for node in roots for result in normalize(node)])
+
+
+def run(command, source):
+    result = subprocess.run(command, input=source, text=True, encoding="utf-8", capture_output=True, timeout=30)
+    if result.returncode:
+        raise RuntimeError(f"{' '.join(map(str, command))}: {result.stderr.strip()}")
+    return result.stdout
+
+
+def load_manifest():
+    manifest = json.loads((CORPUS / "cases.json").read_text(encoding="utf-8"))
+    version = (CORPUS / "asciidoctor-version").read_text().strip()
+    if manifest["asciidoctor"] != version or manifest["profile"] != "body-dom-v1":
+        raise ValueError("manifest reference version/profile mismatch")
+    ids = set()
+    if not manifest["cases"]:
+        raise ValueError("empty compatibility corpus")
+    for case in manifest["cases"]:
+        if not re.fullmatch(r"[a-z0-9_-]+", case["id"]) or case["id"] in ids:
+            raise ValueError(f"invalid or duplicate case id: {case['id']}")
+        ids.add(case["id"])
+        if case["expect"] not in {"pass", "xfail"} or not isinstance(case["source"], str):
+            raise ValueError(f"invalid case: {case['id']}")
+        if case["expect"] == "xfail" and not case.get("reason"):
+            raise ValueError(f"xfail needs a reason: {case['id']}")
+    return manifest
+
+
+def classify(case, actual, expected, baseline=None):
+    if actual == expected:
+        return "PASS" if case["expect"] == "pass" else "XPASS"
+    if case["expect"] == "xfail" and actual == baseline:
+        return "XFAIL"
+    return "FAIL"
+
+
+def pretty(value):
+    return json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--binary", type=Path, default=ROOT / "target/debug/adoctra")
+    actions = parser.add_mutually_exclusive_group()
+    actions.add_argument("--verify-reference", action="store_true")
+    actions.add_argument("--update-reference", action="store_true")
+    actions.add_argument("--record-known-differences", action="store_true",
+                         help="explicitly accept current output of documented xfails; review the diff")
+    parser.add_argument("--json-report", type=Path)
+    args = parser.parse_args()
+    manifest = load_manifest()
+    results = []
+    for case in manifest["cases"]:
+        reference_path = CORPUS / "reference" / (case["id"] + ".html")
+        baseline_path = CORPUS / "baseline" / (case["id"] + ".json")
+        if args.verify_reference or args.update_reference:
+            reference = run(["ruby", str(ROOT / "scripts/asciidoctor-reference.rb"), "--showtitle"], case["source"])
+            if args.update_reference:
+                projection(reference)  # Reject malformed fixtures before storing them.
+                reference_path.parent.mkdir(exist_ok=True)
+                reference_path.write_text(reference, encoding="utf-8")
+            elif reference != reference_path.read_text(encoding="utf-8"):
+                raise ValueError(f"reference drift: {case['id']}; review before --update-reference")
+        if args.update_reference:
+            continue
+        expected = projection(reference_path.read_text(encoding="utf-8"))
+        actual = projection(run([str(args.binary.resolve()), "-", "--to", "html", "--stdout"], case["source"]))
+        baseline = None
+        if case["expect"] == "xfail":
+            if args.record_known_differences:
+                if actual == expected:
+                    raise ValueError(f"{case['id']} is fixed; change its expectation to pass")
+                baseline_path.parent.mkdir(exist_ok=True)
+                baseline_path.write_text(pretty(actual), encoding="utf-8")
+            baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
+        status = classify(case, actual, expected, baseline)
+        results.append({"id": case["id"], "category": case["category"], "status": status,
+                        "reason": case.get("reason")})
+        print(f"{status:5} {case['id']}" + (f" — {case['reason']}" if case.get("reason") else ""))
+        if status == "FAIL":
+            comparison = baseline if baseline is not None else expected
+            print("".join(difflib.unified_diff(pretty(comparison).splitlines(True), pretty(actual).splitlines(True),
+                                            fromfile="baseline" if baseline is not None else "asciidoctor",
+                                            tofile="adoctra")))
+    if args.update_reference:
+        print(f"Updated {len(manifest['cases'])} references using Asciidoctor {manifest['asciidoctor']}.")
+        return 0
+    counts = dict(Counter(r["status"] for r in results))
+    print(json.dumps(counts, sort_keys=True))
+    if args.json_report:
+        args.json_report.write_text(pretty({"profile": manifest["profile"], "asciidoctor": manifest["asciidoctor"],
+                                           "counts": counts, "cases": results}), encoding="utf-8")
+    return int(any(r["status"] in {"FAIL", "XPASS"} for r in results))
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except (OSError, ValueError, RuntimeError, KeyError, subprocess.TimeoutExpired) as error:
+        print(f"compatibility harness error: {error}", file=sys.stderr)
+        sys.exit(2)

@@ -49,7 +49,7 @@ The model serves three audiences; keep their needs in mind when changing core:
 - `parse(&str) -> ParseResult` must **never panic and never return `Err`** for
   malformed input. Syntax problems are `Diagnostic`s (data), not failures.
   `Error`/`Result` are reserved for real failures (I/O in backends).
-- Every block node keeps a `Span { start, end }` of **byte** offsets into the
+- Every block node keeps a `Span { source_id, start, end }` of **byte** offsets into the
   original source. Add spans to any new node types too.
 - Keep output deterministic (e.g. `Attributes` is a `BTreeMap`) so snapshot and
   TCK tests stay stable.
@@ -119,6 +119,26 @@ later".
   change is considered done.
 
 ## Current state (so you don't assume more than exists)
+
+The accepted compatibility roadmap and continuation status live in
+`docs/implementation-plan.adoc`; the reference contract is in
+`docs/compatibility.adoc`. Read these before compatibility work and update their
+status when completing a step. The machine-readable Asciidoctor version is
+`compatibility/asciidoctor-version`. Keep known differences explicit; an expected
+failure is not evidence of conformance. Preserve the std-only core and existing
+crate boundaries while implementing the roadmap incrementally.
+
+The source/context API is documented in `docs/parser-api.adoc`. `Span` now also
+contains `source_id`; keep it on blocks, inline nodes, list items, tokens and
+diagnostics. `Document.attributes` is the header snapshot; block
+`attribute_context` snapshots use copy-on-write storage and reflect block
+completion. Caption numbering follows child-before-parent completion order.
+Header/body attribute assignment and both unset forms are implemented.
+Document.header stores source declarations (authors/revision and spans); effective
+metadata stays in Document.attributes. The title remains the first level-0
+Heading, with only its span referenced by the header. Header parsing is shared
+with the tokenizer (author/revision tokens). JSON and WASM expose header metadata;
+WASM includes source spans. See parser-api.adoc for remaining header limitations.
 
 Working: parser for header attributes, headings, listing blocks, literal blocks
 (`....` and `[literal]`), admonitions (paragraph form), paragraphs,
@@ -228,12 +248,13 @@ rule; JSON/WASM serialize a `title` field (the inlines, or `null`); the tokenize
 emits one `block-title` token per `.Title` line (its inline markup *not*
 sub-tokenized, like the block anchor's reftext). Building on titles, asciidoctor's
 **caption numbering** is wired for example blocks: a third resolve phase
-(`assign_captions`, in `resolve.rs`, walking the whole document in source order)
+(`assign_captions`, in `resolve.rs`, walking in block-completion order, children first)
 numbers every **titled** `Example` block — an untitled example is skipped and does
 *not* advance the counter, matching asciidoctor — and stores the resolved prefix on
 `Block.caption` (`Option<String>`, a ready-to-render `"Example 1. "` like
 asciidoctor's `@caption`). The prefix word comes from the `example-caption`
-attribute (default `Example`, overridable with `:example-caption: …`). The HTML
+attribute in the block's completion snapshot (default `Example`, overridable with
+`:example-caption: …`). An unset prefix suppresses the caption and counter increment. The HTML
 backend prepends it inside the `<div class="title">` (`#{caption}#{title}`), and
 JSON/WASM serialize a `caption` field (the string, or `null`). Only example blocks
 are numbered: `listing-caption` stays unset (a titled listing/literal keeps its bare
@@ -382,9 +403,9 @@ not yet acted on. For
 (`.Title`) are parsed and rendered on every block (on `Block.title`); still missing
 here: admonitions on list items. **Caption numbering** is done for **example
 blocks** (`Example N.` via the `example-caption` attribute, on `Block.caption`); the
-`Figure N.` / `Table N.` counters await image/table blocks, the unset form
-`:!example-caption:` awaits **attribute-unset** support (`parse_attribute_entry`
-does not yet parse `:!name:`), and there is no custom per-block `caption=` attribute
+`Figure N.` / `Table N.` counters await image/table blocks. The unset forms
+`:!example-caption:` / `:example-caption!:` disable example captions and their
+counter increments; there is still no custom per-block `caption=` attribute
 override. Also: **indented/offset
 literal** (leading-space lines) and delimiters longer than four chars (the same
 single-length limitation applies to `====`/`____`: a nested same-length `====` /

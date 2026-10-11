@@ -14,8 +14,9 @@
 //! ```
 //!
 //! On the JS side: `JSON.parse(parse_json(src))` gives `{ document, diagnostics }`,
-//! and diagnostics/tokens carry byte spans (`{ start, end }`) that map directly
-//! onto CodeMirror/Monaco ranges.
+//! and diagnostics/tokens carry byte spans (`{ source_id, start, end }`). The
+//! host maps source ids to buffers and converts UTF-8 byte offsets into its
+//! editor's coordinate system (for example UTF-16 positions).
 
 use adoctra_core::ast::{Attribution, Block, BlockKind, Inline, Span};
 use adoctra_core::diagnostic::{Diagnostic, ParseResult};
@@ -25,13 +26,30 @@ use std::collections::BTreeMap;
 
 /// Parse `src` and return JSON `{ "document": {...}, "diagnostics": [...] }`.
 pub fn parse_json(src: &str) -> String {
-    let result = adoctra_core::parse(src);
+    parse_json_with_source(src, 0)
+}
+
+/// Parse an editor buffer using the source id assigned by the host application.
+pub fn parse_json_with_source(src: &str, source_id: usize) -> String {
+    let options = adoctra_core::ParseOptions {
+        source_id: adoctra_core::SourceId(source_id),
+        ..Default::default()
+    };
+    let result = adoctra_core::parse_with_options(src, &options);
     serialize_parse_result(&result)
 }
 
 /// Tokenize `src` and return a JSON array of `{ "span": {...}, "kind": "..." }`.
 pub fn tokens_json(src: &str) -> String {
-    let toks = adoctra_core::tokens(src);
+    tokens_json_with_source(src, 0)
+}
+
+pub fn tokens_json_with_source(src: &str, source_id: usize) -> String {
+    let options = adoctra_core::ParseOptions {
+        source_id: adoctra_core::SourceId(source_id),
+        ..Default::default()
+    };
+    let toks = adoctra_core::tokens_with_options(src, &options);
     serialize_tokens(&toks)
 }
 
@@ -68,7 +86,83 @@ fn write_document(doc: &adoctra_core::Document, s: &mut String) {
         }
         write_block(b, s);
     }
-    s.push_str("]}");
+    s.push(']');
+    if let Some(header) = &doc.header {
+        s.push_str(",\"header\":");
+        write_header(header, s);
+    }
+    s.push('}');
+}
+
+// Header declarations share the core model; effective overrides remain attributes.
+fn write_header(header: &adoctra_core::DocumentHeader, s: &mut String) {
+    s.push('{');
+    write_span_field(&header.span, s);
+    s.push_str(&format!(
+        ",\"title_span\":{{\"source_id\":{},\"start\":{},\"end\":{}}},",
+        header.title_span.source_id.0, header.title_span.start, header.title_span.end
+    ));
+    s.push_str("\"authors\":[");
+    for (i, author) in header.authors.iter().enumerate() {
+        if i > 0 {
+            s.push(',');
+        }
+        s.push('{');
+        write_span_field(&author.span, s);
+        s.push(',');
+        for (j, (key, value)) in [
+            ("name", Some(author.name.as_str())),
+            ("firstname", Some(author.firstname.as_str())),
+            ("middlename", author.middlename.as_deref()),
+            ("lastname", author.lastname.as_deref()),
+            ("initials", Some(author.initials.as_str())),
+            ("email", author.email.as_deref()),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            if j > 0 {
+                s.push(',');
+            }
+            write_str(key, s);
+            s.push(':');
+            if let Some(value) = value {
+                write_str(value, s);
+            } else {
+                s.push_str("null");
+            }
+        }
+        s.push('}');
+    }
+    s.push_str("],\"revision\":");
+    if let Some(revision) = &header.revision {
+        s.push('{');
+        write_span_field(&revision.span, s);
+        s.push(',');
+        for (i, (key, value)) in [
+            ("number", &revision.number),
+            ("date", &revision.date),
+            ("remark", &revision.remark),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            if i > 0 {
+                s.push(',');
+            }
+            write_str(key, s);
+            s.push(':');
+            if let Some(value) = value {
+                write_str(value, s);
+            } else {
+                s.push_str("null");
+            }
+        }
+        s.push('}');
+    } else {
+        s.push_str("null");
+    }
+    s.push('}');
 }
 
 fn write_block(b: &Block, s: &mut String) {
@@ -525,8 +619,8 @@ fn kind_str(k: TokenKind) -> &'static str {
 
 fn write_span_field(span: &Span, s: &mut String) {
     s.push_str(&format!(
-        "\"span\":{{\"start\":{},\"end\":{}}}",
-        span.start, span.end
+        "\"span\":{{\"source_id\":{},\"start\":{},\"end\":{}}}",
+        span.source_id.0, span.start, span.end
     ));
 }
 
@@ -552,6 +646,16 @@ mod wasm {
     pub fn tokens_json(src: &str) -> String {
         super::tokens_json(src)
     }
+
+    #[wasm_bindgen]
+    pub fn parse_json_with_source(src: &str, source_id: usize) -> String {
+        super::parse_json_with_source(src, source_id)
+    }
+
+    #[wasm_bindgen]
+    pub fn tokens_json_with_source(src: &str, source_id: usize) -> String {
+        super::tokens_json_with_source(src, source_id)
+    }
 }
 
 #[cfg(test)]
@@ -559,12 +663,46 @@ mod tests {
     use super::*;
 
     #[test]
+    fn host_source_id_reaches_nodes_diagnostics_and_tokens() {
+        let src = "= Doc\n:who: first\n\n{who}\n\n:who: second\n\n{who} <<missing>>";
+        let json = parse_json_with_source(src, 42);
+        assert!(!json.contains(r#""source_id":0"#), "{json}");
+        assert!(
+            json.contains(r#""attribute":"who","value":"first""#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""attribute":"who","value":"second""#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""diagnostics":[{"span":{"source_id":42"#),
+            "{json}"
+        );
+        let tokens = tokens_json_with_source(src, 42);
+        assert!(tokens.contains(r#""source_id":42"#));
+        assert!(!tokens.contains(r#""source_id":0"#));
+    }
+
+    #[test]
+    fn missing_reference_in_title_exposes_fallback_and_diagnostic_span() {
+        let json = parse_json(".See <<missing>>\n----\nx\n----");
+        assert!(json.contains(r#"{"span":{"source_id":0,"start":5,"end":16},"name":"xref","target":"missing","inlines":[{"span":{"source_id":0,"start":5,"end":16},"name":"text","value":"[missing]"}]}"#), "{json}");
+        assert!(
+            json.contains(
+                r#""diagnostics":[{"span":{"source_id":0,"start":5,"end":16},"severity":"warning""#
+            ),
+            "{json}"
+        );
+    }
+
+    #[test]
     fn parse_json_has_document_and_diagnostics() {
         let json = parse_json("= Title\n\ntext");
         assert!(json.contains("\"document\""));
         assert!(json.contains("\"diagnostics\":[]"));
         assert!(json.contains("\"heading\""));
-        assert!(json.contains("\"span\":{\"start\":0,\"end\":7}"));
+        assert!(json.contains("\"span\":{\"source_id\":0,\"start\":0,\"end\":7}"));
     }
 
     #[test]
@@ -604,7 +742,7 @@ mod tests {
         let json = parse_json("ab *cd*");
         // the strong runs from byte 3 to byte 7 ("*cd*")
         assert!(
-            json.contains("\"span\":{\"start\":3,\"end\":7},\"name\":\"strong\""),
+            json.contains("\"span\":{\"source_id\":0,\"start\":3,\"end\":7},\"name\":\"strong\""),
             "got: {json}"
         );
     }
@@ -614,7 +752,9 @@ mod tests {
         let json = parse_json("ab `cd`");
         // the monospace span runs from byte 3 to byte 7 ("`cd`")
         assert!(
-            json.contains("\"span\":{\"start\":3,\"end\":7},\"name\":\"monospace\""),
+            json.contains(
+                "\"span\":{\"source_id\":0,\"start\":3,\"end\":7},\"name\":\"monospace\""
+            ),
             "got: {json}"
         );
     }
@@ -635,7 +775,7 @@ mod tests {
         let json = parse_json("See link:https://h[the site]");
         // The link runs from byte 4 ("link:") through the closing bracket (28).
         assert!(
-            json.contains("\"span\":{\"start\":4,\"end\":28},\"name\":\"link\""),
+            json.contains("\"span\":{\"source_id\":0,\"start\":4,\"end\":28},\"name\":\"link\""),
             "got: {json}"
         );
         assert!(json.contains("\"target\":\"https://h\""), "got: {json}");
@@ -658,7 +798,7 @@ mod tests {
         // "<<sec,Two>>" spans bytes 0..11; the editor gets the raw `target`.
         let json = parse_json("<<sec,Two>>");
         assert!(
-            json.contains("\"span\":{\"start\":0,\"end\":11},\"name\":\"xref\""),
+            json.contains("\"span\":{\"source_id\":0,\"start\":0,\"end\":11},\"name\":\"xref\""),
             "got: {json}"
         );
         assert!(json.contains("\"target\":\"sec\""), "got: {json}");
@@ -698,11 +838,11 @@ mod tests {
         assert!(json.contains("\"ordered\":false"), "got: {json}");
         // Each item carries its own span (the whole item line).
         assert!(
-            json.contains("\"span\":{\"start\":0,\"end\":5}"),
+            json.contains("\"span\":{\"source_id\":0,\"start\":0,\"end\":5}"),
             "got: {json}"
         );
         assert!(
-            json.contains("\"span\":{\"start\":6,\"end\":11}"),
+            json.contains("\"span\":{\"source_id\":0,\"start\":6,\"end\":11}"),
             "got: {json}"
         );
     }
@@ -720,7 +860,7 @@ mod tests {
         assert!(json.contains("\"ordered\":true"), "got: {json}");
         // Item content "a" sits at bytes 3..4 of "1. a".
         assert!(
-            json.contains("\"span\":{\"start\":3,\"end\":4},\"name\":\"text\""),
+            json.contains("\"span\":{\"source_id\":0,\"start\":3,\"end\":4},\"name\":\"text\""),
             "got: {json}"
         );
     }
@@ -730,7 +870,7 @@ mod tests {
         // The item content "one" sits at bytes 2..5 of "* one".
         let json = parse_json("* one");
         assert!(
-            json.contains("\"span\":{\"start\":2,\"end\":5},\"name\":\"text\""),
+            json.contains("\"span\":{\"source_id\":0,\"start\":2,\"end\":5},\"name\":\"text\""),
             "got: {json}"
         );
     }
@@ -747,12 +887,14 @@ mod tests {
         // (span 6..10) in its "blocks"; the editor can map every level.
         let json = parse_json("* one\n** a");
         assert!(
-            json.contains("\"blocks\":[{\"span\":{\"start\":6,\"end\":10},\"name\":\"list\""),
+            json.contains(
+                "\"blocks\":[{\"span\":{\"source_id\":0,\"start\":6,\"end\":10},\"name\":\"list\""
+            ),
             "got: {json}"
         );
         // The nested item's principal text sits at bytes 9..10.
         assert!(
-            json.contains("\"span\":{\"start\":9,\"end\":10},\"name\":\"text\""),
+            json.contains("\"span\":{\"source_id\":0,\"start\":9,\"end\":10},\"name\":\"text\""),
             "got: {json}"
         );
     }
@@ -775,7 +917,7 @@ mod tests {
         // editor maps the whole item even though its text folds to one line.
         let json = parse_json("* one\n  two");
         assert!(
-            json.contains("\"span\":{\"start\":0,\"end\":11}"),
+            json.contains("\"span\":{\"source_id\":0,\"start\":0,\"end\":11}"),
             "got: {json}"
         );
     }
@@ -790,7 +932,7 @@ mod tests {
             "got: {json}"
         );
         assert!(
-            json.contains("\"span\":{\"start\":0,\"end\":8}"),
+            json.contains("\"span\":{\"source_id\":0,\"start\":0,\"end\":8}"),
             "got: {json}"
         );
     }
@@ -819,7 +961,7 @@ mod tests {
         let json = tokens_json("[[pa]]\nHi.");
         assert!(json.contains("\"kind\":\"anchor\""), "got: {json}");
         assert!(
-            json.contains("\"span\":{\"start\":0,\"end\":6},\"kind\":\"anchor\""),
+            json.contains("\"span\":{\"source_id\":0,\"start\":0,\"end\":6},\"kind\":\"anchor\""),
             "got: {json}"
         );
     }
@@ -829,7 +971,7 @@ mod tests {
         // "[[point]]" spans bytes 2..11 here; the editor gets the anchor id.
         let json = parse_json("x [[point]]y");
         assert!(
-            json.contains("\"span\":{\"start\":2,\"end\":11},\"name\":\"anchor\""),
+            json.contains("\"span\":{\"source_id\":0,\"start\":2,\"end\":11},\"name\":\"anchor\""),
             "got: {json}"
         );
         assert!(json.contains("\"id\":\"point\""), "got: {json}");
@@ -850,7 +992,7 @@ mod tests {
         // A mid-line `[[id]]` is one anchor token over the whole construct.
         let json = tokens_json("x [[point]]y");
         assert!(
-            json.contains("\"span\":{\"start\":2,\"end\":11},\"kind\":\"anchor\""),
+            json.contains("\"span\":{\"source_id\":0,\"start\":2,\"end\":11},\"kind\":\"anchor\""),
             "got: {json}"
         );
     }
@@ -942,7 +1084,7 @@ mod tests {
         let json = parse_json("NOTE: be *bold*");
         assert!(json.contains("\"admonition-type\":\"note\""), "got: {json}");
         assert!(
-            json.contains("\"span\":{\"start\":9,\"end\":15},\"name\":\"strong\""),
+            json.contains("\"span\":{\"source_id\":0,\"start\":9,\"end\":15},\"name\":\"strong\""),
             "got: {json}"
         );
     }
@@ -966,7 +1108,7 @@ mod tests {
         assert!(json.contains("\"blocks\":["), "got: {json}");
         // The example block carries its own span (opening through closing fence).
         assert!(
-            json.contains("\"span\":{\"start\":0,\"end\":13},\"name\":\"example\""),
+            json.contains("\"span\":{\"source_id\":0,\"start\":0,\"end\":13},\"name\":\"example\""),
             "got: {json}"
         );
         // The nested paragraph carries its own span too.
@@ -978,7 +1120,9 @@ mod tests {
         // The editor gets the title as parsed inlines, each carrying its span.
         let json = parse_json(".A *bold* caption\nBody.");
         assert!(
-            json.contains("\"title\":[{\"span\":{\"start\":1,\"end\":3},\"name\":\"text\""),
+            json.contains(
+                "\"title\":[{\"span\":{\"source_id\":0,\"start\":1,\"end\":3},\"name\":\"text\""
+            ),
             "got: {json}"
         );
         assert!(json.contains("\"name\":\"strong\""), "got: {json}");
@@ -1020,7 +1164,7 @@ mod tests {
         assert!(json.contains("\"blocks\":["), "got: {json}");
         // The sidebar block carries its own span (opening through closing fence).
         assert!(
-            json.contains("\"span\":{\"start\":0,\"end\":13},\"name\":\"sidebar\""),
+            json.contains("\"span\":{\"source_id\":0,\"start\":0,\"end\":13},\"name\":\"sidebar\""),
             "got: {json}"
         );
         // The nested paragraph carries its own span too.
@@ -1036,7 +1180,7 @@ mod tests {
         assert!(json.contains("\"blocks\":["), "got: {json}");
         // The open block carries its own span (opening through closing fence).
         assert!(
-            json.contains("\"span\":{\"start\":0,\"end\":9},\"name\":\"open\""),
+            json.contains("\"span\":{\"source_id\":0,\"start\":0,\"end\":9},\"name\":\"open\""),
             "got: {json}"
         );
         // The nested paragraph carries its own span too.
@@ -1052,7 +1196,7 @@ mod tests {
         assert!(json.contains("\"blocks\":["), "got: {json}");
         // The quote block carries its own span (opening through closing fence).
         assert!(
-            json.contains("\"span\":{\"start\":0,\"end\":13},\"name\":\"quote\""),
+            json.contains("\"span\":{\"source_id\":0,\"start\":0,\"end\":13},\"name\":\"quote\""),
             "got: {json}"
         );
         assert!(json.contains("\"attribution\":null"), "got: {json}");
@@ -1106,5 +1250,26 @@ mod tests {
         assert!(json.contains("\"value\":\"Carl Sandburg\""), "got: {json}");
         // Verse keeps its line break — a JSON-escaped newline in the inline text.
         assert!(json.contains(r"first\nsecond"), "got: {json}");
+    }
+}
+
+#[cfg(test)]
+mod header_tests {
+    #[test]
+    fn header_metadata_and_tokens_keep_source_coordinates() {
+        let json =
+            super::parse_json_with_source("= Doc\nJane Doe <j@example.org>\nv2\n\n{author}", 7);
+        assert!(json.contains(r#""header":{"span":{"source_id":7,"start":0,"end":33},"title_span":{"source_id":7,"start":0,"end":5},"authors":[{"span":{"source_id":7,"start":6,"end":30},"name":"Jane Doe""#), "{json}");
+        assert!(json.contains(r#""revision":{"span":{"source_id":7,"start":31,"end":33},"number":"2","date":null,"remark":null}"#), "{json}");
+        assert!(json.contains(r#""author":"Jane Doe""#), "{json}");
+        let tokens = super::tokens_json_with_source("= Doc\nJane Doe <j@example.org>\nv2", 7);
+        assert!(
+            tokens.contains(r#"{"span":{"source_id":7,"start":6,"end":30},"kind":"author"}"#),
+            "{tokens}"
+        );
+        assert!(
+            tokens.contains(r#"{"span":{"source_id":7,"start":31,"end":33},"kind":"revision"}"#),
+            "{tokens}"
+        );
     }
 }

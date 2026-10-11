@@ -6,17 +6,16 @@
 # The golden test (../golden.rs) compares our HTML backend against them after
 # normalizing whitespace and unwrapping asciidoctor's `<div class="paragraph">`.
 #
-# Requires `asciidoctor` on PATH (developed against 2.0.23). Re-run after
+# Requires Ruby and the pinned asciidoctor gem. Re-run after
 # changing the inputs or when bumping the reference asciidoctor version.
 set -euo pipefail
 cd "$(dirname "$0")"
 
-if ! command -v asciidoctor >/dev/null 2>&1; then
-  echo "asciidoctor not found on PATH; cannot regenerate fixtures" >&2
-  exit 1
-fi
-
-echo "using $(asciidoctor --version | head -1)"
+reference=../../../../scripts/asciidoctor-reference.rb
+# Check activation before opening any output files, so a missing gem cannot
+# truncate a committed reference.
+ruby "$reference" </dev/null >/dev/null
+echo "using Asciidoctor $(cat ../../../../compatibility/asciidoctor-version)"
 # Top-level inline fixtures, flat-list fixtures under lists/, block-level
 # fixtures (e.g. source listings) under blocks/, literal blocks under literals/,
 # admonitions under admonitions/, example blocks under examples/, sidebar blocks
@@ -25,6 +24,6 @@ echo "using $(asciidoctor --version | head -1)"
 for adoc in *.adoc lists/*.adoc blocks/*.adoc literals/*.adoc admonitions/*.adoc examples/*.adoc sidebars/*.adoc titles/*.adoc quotes/*.adoc verses/*.adoc opens/*.adoc passthrough/*.adoc; do
   [ -e "$adoc" ] || continue
   name="${adoc%.adoc}"
-  asciidoctor -s -o - "$adoc" >"${name}.expected.html"
+  ruby "$reference" <"$adoc" >"${name}.expected.html"
   echo "  ${name}.expected.html"
 done

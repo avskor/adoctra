@@ -15,11 +15,15 @@ impl Attributes {
     }
 
     pub fn set(&mut self, key: impl Into<String>, value: impl Into<String>) {
-        self.map.insert(key.into(), value.into());
+        self.map.insert(key.into().to_lowercase(), value.into());
     }
 
     pub fn get(&self, key: &str) -> Option<&str> {
-        self.map.get(key).map(String::as_str)
+        self.map.get(&key.to_lowercase()).map(String::as_str)
+    }
+
+    pub fn remove(&mut self, key: &str) -> Option<String> {
+        self.map.remove(&key.to_lowercase())
     }
 
     pub fn iter(&self) -> impl Iterator<Item = (&str, &str)> {
