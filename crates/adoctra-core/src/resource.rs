@@ -24,7 +24,7 @@ pub struct Resource {
 
 pub trait ResourceProvider {
     /// Load one snapshot. Missing and denied resources must be distinguished,
-    /// so future optional includes can suppress only the appropriate failures.
+    /// so optional includes can suppress only the appropriate failures.
     /// Providers own access policy; the parser must not fall back to ambient I/O.
     fn load(&self, request: ResourceRequest<'_>) -> ResourceResult<Resource>;
 }

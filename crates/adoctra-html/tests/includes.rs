@@ -2,7 +2,7 @@ use adoctra_core::{parse, parse_resource, Backend, MemoryResources, ParseOptions
 use adoctra_html::HtmlBackend;
 
 #[test]
-fn include_selection_renders_only_retained_content() {
+fn include_options_render_the_resolved_content() {
     for (source, child, expected) in [
         (
             "include::part.adoc[lines=2;4]",
@@ -18,6 +18,21 @@ fn include_selection_renders_only_retained_content() {
             "include::part.adoc[tag=a]",
             "// tag::a[]\n= Title\nJane Doe\n\n* item\n// end::a[]\nomitted",
             "= Title\nJane Doe\n\n* item",
+        ),
+        (
+            "= Main\n\ninclude::part.adoc[leveloffset=+1]\n\n== After",
+            "= Chapter\n\n== Section\n\ntext",
+            "= Main\n\n== Chapter\n\n=== Section\n\ntext\n\n== After",
+        ),
+        (
+            "before\ninclude::missing.adoc[opts=optional]\nafter",
+            "unused",
+            "before\nafter",
+        ),
+        (
+            "----\ninclude::part.adoc[leveloffset=+1]\n----",
+            "== Literal",
+            "----\n:leveloffset: +1\n\n== Literal\n\n:leveloffset!:\n----",
         ),
     ] {
         let mut resources = MemoryResources::new();
@@ -37,4 +52,12 @@ fn include_selection_renders_only_retained_content() {
             "{source}",
         );
     }
+}
+
+#[test]
+fn extreme_heading_levels_render_without_overflow() {
+    let result = parse(":leveloffset: 9999999999999999999999999999999999999999999\n\n== Huge");
+    assert_eq!(result.diagnostics.len(), 1);
+    let html = String::from_utf8(HtmlBackend.convert(&result.document).unwrap()).unwrap();
+    assert!(html.contains("<h6 id=\"_huge\">Huge</h6>"), "{html}");
 }

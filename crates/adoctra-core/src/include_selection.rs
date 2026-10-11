@@ -20,8 +20,7 @@ pub(crate) struct Selected {
 }
 
 impl Selection {
-    pub fn parse(attrs: &str) -> Result<Self, String> {
-        let attrs = named_attributes(attrs)?;
+    pub fn parse(attrs: &BTreeMap<String, String>) -> Self {
         if let Some(value) = attrs.get("lines") {
             let mut ranges = Vec::new();
             let mut tail = false;
@@ -41,7 +40,7 @@ impl Selection {
                 }
             }
             if ranges.is_empty() {
-                return Ok(Self::All);
+                return Self::All;
             }
             ranges.sort_unstable();
             let mut merged: Vec<(i128, i128)> = Vec::new();
@@ -55,17 +54,17 @@ impl Selection {
                     merged.push((start, end));
                 }
             }
-            return Ok(Self::Lines {
+            return Self::Lines {
                 ranges: merged,
                 tail,
-            });
+            };
         }
         let definitions = if let Some(value) = attrs.get("tag") {
             vec![value.as_str()]
         } else if let Some(value) = attrs.get("tags") {
             split_value(value)
         } else {
-            return Ok(Self::All);
+            return Self::All;
         };
         let mut tags: Vec<(String, bool)> = Vec::new();
         for definition in definitions {
@@ -81,11 +80,11 @@ impl Selection {
                 tags.push((name.into(), selected));
             }
         }
-        Ok(if tags.is_empty() {
+        if tags.is_empty() {
             Self::All
         } else {
             Self::Tags(tags)
-        })
+        }
     }
 
     pub fn select<'a>(
@@ -212,7 +211,7 @@ fn split_value(value: &str) -> Vec<&str> {
     }
 }
 
-fn integer_prefix(value: &str) -> i128 {
+pub(crate) fn integer_prefix(value: &str) -> i128 {
     let value = value.trim_start();
     let negative = value.starts_with('-');
     let value = value.strip_prefix(['-', '+']).unwrap_or(value);
@@ -243,7 +242,7 @@ fn integer_prefix(value: &str) -> i128 {
     }
 }
 
-fn named_attributes(input: &str) -> Result<BTreeMap<String, String>, String> {
+pub(crate) fn named_attributes(input: &str) -> Result<BTreeMap<String, String>, String> {
     let mut attrs = BTreeMap::new();
     let mut rest = input.trim();
     while !rest.is_empty() {
@@ -253,10 +252,13 @@ fn named_attributes(input: &str) -> Result<BTreeMap<String, String>, String> {
         }
         let end = rest.find(['=', ',']).unwrap_or(rest.len());
         if rest.as_bytes().get(end) != Some(&b'=') {
-            return Err("unsupported include options: expected lines, tag or tags".into());
+            return Err("unsupported include options: expected a named attribute".into());
         }
         let name = rest[..end].trim();
-        if !matches!(name, "lines" | "tag" | "tags") {
+        if !matches!(
+            name,
+            "lines" | "tag" | "tags" | "leveloffset" | "opts" | "options" | "optional-option"
+        ) {
             return Err(format!("unsupported include options: {name}"));
         }
         rest = rest[end + 1..].trim_start();
@@ -289,7 +291,16 @@ fn named_attributes(input: &str) -> Result<BTreeMap<String, String>, String> {
             (value, false)
         };
         if quoted || value != "None" {
-            attrs.insert(name.to_owned(), value);
+            if matches!(name, "opts" | "options") {
+                for option in value.split(',').map(str::trim).filter(|s| !s.is_empty()) {
+                    if option != "optional" {
+                        return Err(format!("unsupported include options: {option}"));
+                    }
+                    attrs.insert("optional-option".into(), String::new());
+                }
+            } else {
+                attrs.insert(name.to_owned(), value);
+            }
         }
         rest = rest.trim_start();
         if !rest.is_empty() && !rest.starts_with(',') {

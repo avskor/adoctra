@@ -270,3 +270,41 @@ mod selection_tests {
         assert_eq!(workspace.source(child).unwrap().text(), text);
     }
 }
+
+#[cfg(test)]
+mod offset_tests {
+    use super::ResourceWorkspace;
+
+    #[test]
+    fn optional_and_offset_export_levels_physical_positions_and_immutable_snapshots() {
+        let mut workspace = ResourceWorkspace::new();
+        workspace.set("main.adoc", "= Main\n\ninclude::missing.adoc[opts=optional]\ninclude::part.adoc[leveloffset=+1]\n\n== After").unwrap();
+        let text = "\u{feff}= Глава\r\n\r\n== Раздел";
+        workspace.set("part.adoc", text).unwrap();
+        let main = workspace.load("main.adoc", None).unwrap();
+        let parsed = workspace.parse_json(main).unwrap();
+        let child = workspace.load("part.adoc", Some(main)).unwrap();
+        let tokens = workspace.tokens_json(main).unwrap();
+        let span = format!(r#""source_id":{child},"start":3,"end":15"#);
+        assert!(parsed.contains(&span), "{parsed}");
+        assert!(tokens.contains(&span), "{tokens}");
+        assert!(
+            parsed.contains(r#""name":"heading","level":1,"id":"_глава""#),
+            "{parsed}"
+        );
+        assert!(
+            parsed.contains(r#""name":"heading","level":2,"id":"_раздел""#),
+            "{parsed}"
+        );
+        assert!(parsed.contains(r#""diagnostics":[]"#), "{parsed}");
+        assert_eq!(tokens.matches("include-directive").count(), 2);
+        assert!(!tokens.contains("attribute-entry"), "{tokens}");
+        workspace.set("part.adoc", "== Edited").unwrap();
+        let edited = workspace.parse_json(main).unwrap();
+        assert!(
+            edited.contains(r#""name":"heading","level":2,"id":"_edited""#),
+            "{edited}"
+        );
+        assert_eq!(workspace.source(child).unwrap().text(), text);
+    }
+}

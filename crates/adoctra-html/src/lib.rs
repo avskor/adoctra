@@ -50,7 +50,7 @@ fn render_block(block: &Block, out: &mut String) {
     let id = id_attr(&block.id);
     match &block.kind {
         BlockKind::Heading { level, inlines } => {
-            let h = (level + 1).min(6);
+            let h = level.saturating_add(1).min(6);
             let class = class_attr(&[], &block.roles);
             render_title(&block.title, &block.caption, out);
             out.push_str(&format!("<h{h}{id}{class}>"));

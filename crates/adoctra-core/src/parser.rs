@@ -49,17 +49,20 @@ pub(crate) fn parse_reader<'a>(
         blocks: Vec::new(),
     };
     let mut diagnostics = Vec::new();
-    if let Some(mut title_line) = header.title_line {
-        if let Some(title) = parse_block(
-            &mut lines,
-            &mut title_line,
-            &mut context,
-            &mut diagnostics,
-            BlockCtx::TopLevel,
-            None,
-        ) {
-            doc.blocks.push(title);
-        }
+    if let Some(title_line) = header.title_line {
+        let (off, line) = lines.line(title_line);
+        let (_, text) = parse_heading(&line).expect("header identified a title");
+        // Resolve title text against the complete header, but retain the level
+        // identified before subsequent header attributes changed leveloffset.
+        let mut title = Block::new(
+            Span::new(off, off + line.len()),
+            BlockKind::Heading {
+                level: 0,
+                inlines: scan_inlines(text, off + abs_offset(&line, text), &context.attributes),
+            },
+        );
+        title.attribute_context = Arc::clone(&context.attributes);
+        doc.blocks.push(title);
     }
     let mut i = header.body_start;
     doc.blocks.extend(collect_blocks(
@@ -537,6 +540,15 @@ fn parse_block_content(
 
     // Heading.
     if let Some((level, title)) = parse_heading(trimmed) {
+        let adjusted = context.section_level(level);
+        if adjusted > u8::MAX as i128 {
+            diagnostics.push(Diagnostic {
+                span: Span::new(off, off + line.len()),
+                severity: Severity::Warning,
+                message: "section level exceeds the supported maximum of 255".into(),
+            });
+        }
+        let level = adjusted.clamp(0, u8::MAX as i128) as u8;
         // `title` is a subslice of this detached reader line.
         let base = lines[*i].0 + abs_offset(line, title);
         let inlines = scan_inlines(title, base, &attrs);

@@ -1349,6 +1349,275 @@
         "part.adoc": "// tag::a[]\n:flag:\n\ninside\n// end::a[]\nomitted"
       },
       "expect": "pass"
+    },
+    {
+      "id": "include-optional-opts",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "before\ninclude::missing.adoc[opts=optional]\nafter",
+      "resources": {},
+      "expect": "pass"
+    },
+    {
+      "id": "include-optional-options",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "before\ninclude::missing.adoc[options=\"optional\"]\nafter",
+      "resources": {},
+      "expect": "pass"
+    },
+    {
+      "id": "include-optional-attribute",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "before\ninclude::missing.adoc[optional-option=]\nafter",
+      "resources": {},
+      "expect": "pass"
+    },
+    {
+      "id": "include-optional-list",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "before\ninclude::missing.adoc[opts=\"optional, optional\"]\nafter",
+      "resources": {},
+      "expect": "pass"
+    },
+    {
+      "id": "include-optional-existing",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::part.adoc[opts=optional,tag=a]",
+      "resources": {
+        "part.adoc": "// tag::a[]\ncontent\n// end::a[]"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-optional-blank-target",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": ":empty:\n\ninclude::{empty}[opts=optional]\n\nafter",
+      "resources": {},
+      "expect": "pass"
+    },
+    {
+      "id": "include-optional-unset-target",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::{missing}/part.adoc[opts=optional]\n\nafter",
+      "resources": {},
+      "expect": "pass"
+    },
+    {
+      "id": "include-optional-nested",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::part.adoc[]",
+      "resources": {
+        "part.adoc": "before\ninclude::missing.adoc[options=optional,leveloffset=+1]\nafter"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-offset-relative",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "= Main\n\ninclude::part.adoc[leveloffset=+1]\n\n== After",
+      "resources": {
+        "part.adoc": "= Chapter\n\n== Section\n\ntext"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-offset-absolute",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": ":leveloffset: 1\n\ninclude::part.adoc[leveloffset=1]\n\n= After",
+      "resources": {
+        "part.adoc": "= Chapter\n\n== Section"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-offset-nested",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "= Main\n\ninclude::part.adoc[leveloffset=+1]\n\n== After",
+      "resources": {
+        "part.adoc": "= Chapter\n\ninclude::nested.adoc[leveloffset=+1]\n\n== Back",
+        "nested.adoc": "= Nested\n\n== Deep"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-offset-negative",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "= Main\n\ninclude::part.adoc[leveloffset=-1]\n\n== After",
+      "resources": {
+        "part.adoc": "=== Chapter\n\n==== Section"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-offset-document-attribute",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "= Main\n\n:leveloffset: +1\n\ninclude::part.adoc[]\n\n:leveloffset: -1\n\n== After",
+      "resources": {
+        "part.adoc": "= Chapter\n\n== Section"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-offset-header",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::part.adoc[leveloffset=-1]",
+      "resources": {
+        "part.adoc": "== Main\nJane Doe\nv2, 2026-01-01\n\n=== Section"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-offset-selection",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "= Main\n\ninclude::part.adoc[lines=2..3,leveloffset=+1]\n\n== After",
+      "resources": {
+        "part.adoc": "omitted\n= Chapter\n\nomitted"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-offset-tag",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "= Main\n\ninclude::part.adoc[tag=a,leveloffset=+1]\n\n== After",
+      "resources": {
+        "part.adoc": "// tag::a[]\n= Chapter\n\ntext\n// end::a[]"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-offset-empty",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "= Main\n\ninclude::part.adoc[leveloffset=+1]\n\n== After",
+      "resources": {
+        "part.adoc": ""
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-offset-empty-selection",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "= Main\n\ninclude::part.adoc[lines=99,leveloffset=+1]\n\n== After",
+      "resources": {
+        "part.adoc": "= Omitted"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-offset-conditions",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "= Main\n\ninclude::part.adoc[leveloffset=+1]\n\nifndef::leveloffset[restored]",
+      "resources": {
+        "part.adoc": "ifdef::leveloffset[]\n= Chapter\n\nvalue {leveloffset}\nendif::[]"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-offset-listing",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.adoc[leveloffset=+1]\n----",
+      "resources": {
+        "part.adoc": "== Literal\n\ntext"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-offset-raw",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[leveloffset=+1]\n----",
+      "resources": {
+        "part.rs": "fn main() {}"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-offset-paragraph-boundaries",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "before\ninclude::part.adoc[leveloffset=+1]\nafter",
+      "resources": {
+        "part.adoc": "middle"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-offset-container",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": ":leveloffset: 1\n\n====\ninclude::part.adoc[leveloffset=+1]\n\nvalue {leveloffset}\n====\n\n= After",
+      "resources": {
+        "part.adoc": "inside {leveloffset}"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-offset-attribute-substitution",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": ":offset: +1\n\ninclude::part.adoc[leveloffset={offset}]",
+      "resources": {
+        "part.adoc": "= Chapter\n\ntext"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-offset-numeric-prefix",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::part.adoc[leveloffset=+1suffix]",
+      "resources": {
+        "part.adoc": "= Chapter\n\ntext"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-offset-invalid-number",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::part.adoc[leveloffset=invalid]",
+      "resources": {
+        "part.adoc": "== Chapter\n\ntext"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-offset-restoration",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": ":leveloffset: 1\n\ninclude::part.adoc[leveloffset=+1]\n\n= After\n\nvalue {leveloffset}",
+      "resources": {
+        "part.adoc": "= Chapter\n\n:leveloffset: +1\n\n= Deep"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-offset-unicode-crlf",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "= Основной\r\n\r\ninclude::part.adoc[leveloffset=+1]\r\n\r\n== После",
+      "resources": {
+        "part.adoc": "﻿= Глава\r\n\r\n== Раздел\r\n\r\nТекст"
+      },
+      "expect": "pass"
     }
   ]
 }

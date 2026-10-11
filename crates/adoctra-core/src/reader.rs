@@ -13,11 +13,12 @@ struct Conditional {
 
 struct Input {
     source_id: crate::SourceId,
-    lines: Vec<(usize, Arc<str>, String)>,
+    lines: Vec<(Option<usize>, Arc<str>, String)>,
     next: usize,
     preprocess: bool,
     occurrence: usize,
     source_len: usize,
+    generated_at: Option<Span>,
 }
 
 impl Input {
@@ -33,7 +34,7 @@ impl Input {
                 } else {
                     "\n"
                 };
-                (off, Arc::from(line), eol.to_owned())
+                (Some(off), Arc::from(line), eol.to_owned())
             })
             .collect();
         Self {
@@ -43,6 +44,7 @@ impl Input {
             preprocess,
             occurrence,
             source_len: source.len(),
+            generated_at: None,
         }
     }
 }
@@ -59,6 +61,7 @@ struct Origin {
     end: usize,
     span: Span,
     occurrence: usize,
+    generated: bool,
 }
 
 pub(crate) struct Reader<'a> {
@@ -164,12 +167,26 @@ impl<'a> Reader<'a> {
             let source_id = input.source_id;
             let preprocess = input.preprocess;
             // Synthetic EOF newlines map to the original EOF, never past it.
-            let original_end = (original + line.len() + eol.len()).min(input.source_len);
+            let physical = original.map_or_else(
+                || {
+                    input
+                        .generated_at
+                        .expect("generated include line has an origin")
+                },
+                |original| {
+                    Span::in_source(
+                        source_id,
+                        original,
+                        (original + line.len() + eol.len()).min(input.source_len),
+                    )
+                },
+            );
             self.origins.push(Origin {
                 start: off,
                 end: self.next_offset,
-                span: Span::in_source(source_id, original, original_end),
+                span: physical,
                 occurrence: input.occurrence,
+                generated: original.is_none(),
             });
             if preprocess {
                 if let Some(attributes) = attributes {
@@ -193,9 +210,15 @@ impl<'a> Reader<'a> {
         let first = self.origins.partition_point(|o| o.end <= span.start);
         let mut out: Vec<Span> = Vec::new();
         let mut occurrence = None;
+        let mut generated_at = None;
         for origin in &self.origins[first..] {
             if origin.start >= span.end && !(span.is_empty() && origin.start == span.start) {
                 break;
+            }
+            if origin.generated {
+                generated_at = Some(origin.span);
+                occurrence = None;
+                continue;
             }
             let start = origin.span.start
                 + span
@@ -218,7 +241,9 @@ impl<'a> Reader<'a> {
             }
         }
         if out.is_empty() {
-            if let Some(origin) = self.origins.last() {
+            if let Some(origin) = generated_at {
+                out.push(origin);
+            } else if let Some(origin) = self.origins.last() {
                 out.push(Span::in_source(
                     origin.span.source_id,
                     origin.span.end,
@@ -229,6 +254,21 @@ impl<'a> Reader<'a> {
             }
         }
         out
+    }
+
+    /// Generated leveloffset entries participate in parsing, but have no text
+    /// to highlight. Mixed tokens retain only their physical source fragments.
+    pub fn token_spans(&self, span: Span) -> Vec<Span> {
+        let first = self.origins.partition_point(|o| o.end <= span.start);
+        if self.origins[first..]
+            .iter()
+            .take_while(|o| o.start < span.end)
+            .all(|o| o.generated)
+        {
+            Vec::new()
+        } else {
+            self.original_spans(span)
+        }
     }
 
     pub fn map_span(&self, span: Span, provenance: &mut Vec<Vec<Span>>) -> Span {
@@ -403,14 +443,19 @@ impl<'a> Reader<'a> {
         attributes: &Attributes,
     ) -> bool {
         let attrs = crate::context::substitute_attribute_value(attrs, attributes);
-        let selection = match crate::include_selection::Selection::parse(&attrs) {
-            Ok(selection) => selection,
+        let attrs = match crate::include_selection::named_attributes(&attrs) {
+            Ok(attrs) => attrs,
             Err(message) => {
                 self.error(span, message);
                 return false;
             }
         };
+        let selection = crate::include_selection::Selection::parse(&attrs);
+        let optional = attrs.contains_key("optional-option");
         let target = crate::context::substitute_attribute_value(target, attributes);
+        if optional && target.is_empty() {
+            return true;
+        }
         let current = self.inputs.last().expect("current input").source_id;
         let resources = self.resources.as_mut().expect("explicit resource provider");
         if self.inputs.len() > resources.limits.max_depth {
@@ -422,6 +467,9 @@ impl<'a> Reader<'a> {
             .load(&target, Some(current), resources.provider)
         {
             Ok(id) => id,
+            Err(error) if optional && error.kind == crate::ResourceErrorKind::NotFound => {
+                return true;
+            }
             Err(error) => {
                 self.error(span, format!("include failed ({:?}): {error}", error.kind));
                 return false;
@@ -451,7 +499,7 @@ impl<'a> Reader<'a> {
             input
                 .lines
                 .iter()
-                .map(|(off, line, _)| (*off, line.as_ref())),
+                .map(|(off, line, _)| (off.expect("physical selection line"), line.as_ref())),
             id,
         );
         self.resource_diagnostics.extend(selected.diagnostics);
@@ -464,6 +512,27 @@ impl<'a> Reader<'a> {
         }
         let mut keep = selected.keep.into_iter();
         input.lines.retain(|_| keep.next().unwrap_or(false));
+        if let Some(offset) = attrs.get("leveloffset").filter(|_| !input.lines.is_empty()) {
+            // Ruby injects these entries even in raw/verbatim input. They must
+            // be parsed in context (or kept as literal text), not applied here:
+            // containers may be captured before their attributes are processed.
+            input.generated_at = Some(self.original_spans(span)[0]);
+            let restore = attributes.get("leveloffset").map_or_else(
+                || ":leveloffset!:".to_owned(),
+                |value| format!(":leveloffset: {value}"),
+            );
+            input.lines.insert(0, (None, Arc::from(""), "\n".into()));
+            input.lines.insert(
+                0,
+                (
+                    None,
+                    Arc::from(format!(":leveloffset: {offset}")),
+                    "\n".into(),
+                ),
+            );
+            input.lines.push((None, Arc::from(""), "\n".into()));
+            input.lines.push((None, Arc::from(restore), "\n".into()));
+        }
         self.inputs.push(input);
         self.next_occurrence += 1;
         true

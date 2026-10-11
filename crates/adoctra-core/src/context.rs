@@ -47,7 +47,26 @@ impl ParseContext {
         if self.locked.contains(&key) {
             return;
         }
-        let value = value.map(|v| substitute_attribute_value(&v, &self.attributes));
+        let value = value.map(|v| {
+            let value = substitute_attribute_value(&v, &self.attributes);
+            if key == "leveloffset" {
+                let current = self
+                    .attributes
+                    .get("leveloffset")
+                    .map_or(0, crate::include_selection::integer_prefix);
+                if let Some(relative) = value.strip_prefix('+') {
+                    return current
+                        .saturating_add(crate::include_selection::integer_prefix(relative))
+                        .to_string();
+                }
+                if let Some(relative) = value.strip_prefix('-') {
+                    return current
+                        .saturating_sub(crate::include_selection::integer_prefix(relative))
+                        .to_string();
+                }
+            }
+            value
+        });
         let attributes = Arc::make_mut(&mut self.attributes);
         match value {
             Some(value) => attributes.set(key, value),
@@ -55,6 +74,13 @@ impl ParseContext {
                 attributes.remove(&key);
             }
         }
+    }
+
+    pub fn section_level(&self, level: u8) -> i128 {
+        self.attributes
+            .get("leveloffset")
+            .map_or(0, crate::include_selection::integer_prefix)
+            .saturating_add(i128::from(level))
     }
 }
 

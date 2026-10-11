@@ -295,7 +295,7 @@ fn cycles_limits_missing_files_and_unsupported_options_leave_partial_output() {
             "NotFound",
         ),
         (
-            "include::part.adoc[leveloffset=1]\n\nafter",
+            "include::part.adoc[indent=1]\n\nafter",
             IncludeLimits::default(),
             "options",
         ),
@@ -630,5 +630,257 @@ fn tag_selection_and_partial_directives_remain_tolerant() {
             &parse_resource(&mut sources, &options, &resources).unwrap(),
             &sources,
         );
+    }
+}
+
+#[test]
+fn optional_includes_suppress_missing_resources_only() {
+    struct Failure(ResourceErrorKind);
+    impl ResourceProvider for Failure {
+        fn load(&self, request: ResourceRequest<'_>) -> ResourceResult<Resource> {
+            Err(ResourceError::new(self.0, request.target, "test failure"))
+        }
+    }
+    for option in ["opts=optional", "options=\"optional\"", "optional-option="] {
+        let root = format!("before\ninclude::missing.adoc[{option}]\nafter");
+        for kind in [
+            ResourceErrorKind::NotFound,
+            ResourceErrorKind::AccessDenied,
+            ResourceErrorKind::InvalidEncoding,
+            ResourceErrorKind::InvalidTarget,
+            ResourceErrorKind::Io,
+        ] {
+            let (mut sources, _, options) = setup(&root, &[]);
+            let result = parse_resource(&mut sources, &options, &Failure(kind)).unwrap();
+            assert_eq!(
+                result.diagnostics.len(),
+                usize::from(kind != ResourceErrorKind::NotFound)
+            );
+            if kind == ResourceErrorKind::NotFound {
+                assert_eq!(paragraphs(&result), ["before after"]);
+            } else {
+                assert_eq!(
+                    sources.slice(result.diagnostics[0].span),
+                    Some(root.lines().nth(1).unwrap())
+                );
+            }
+            assert_eq!(result.include_directives.len(), 1);
+            check_spans(&result, &sources);
+        }
+    }
+}
+
+#[test]
+fn optional_does_not_disable_cycles_limits_or_option_validation() {
+    for (root, limits, message) in [
+        (
+            "include::main.adoc[opts=optional]",
+            IncludeLimits::default(),
+            "cyclic",
+        ),
+        (
+            "include::part.adoc[opts=optional]",
+            IncludeLimits {
+                max_depth: 0,
+                ..Default::default()
+            },
+            "depth",
+        ),
+        (
+            "include::part.adoc[opts=optional]",
+            IncludeLimits {
+                max_bytes: 0,
+                ..Default::default()
+            },
+            "byte count",
+        ),
+        (
+            "include::missing.adoc[opts=optional,indent=1]",
+            IncludeLimits::default(),
+            "options",
+        ),
+    ] {
+        let (mut sources, resources, mut options) = setup(root, &[("docs/part.adoc", "text")]);
+        options.includes = limits;
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        assert_eq!(result.diagnostics.len(), 1);
+        assert!(
+            result.diagnostics[0].message.contains(message),
+            "{result:?}"
+        );
+        check_spans(&result, &sources);
+    }
+}
+
+fn levels(result: &ParseResult) -> Vec<u8> {
+    result
+        .document
+        .blocks
+        .iter()
+        .filter_map(|block| match block.kind {
+            BlockKind::Heading { level, .. } => Some(level),
+            _ => None,
+        })
+        .collect()
+}
+
+#[test]
+fn nested_offsets_restore_attributes_and_keep_unicode_heading_positions() {
+    let root = "= Main\n\ninclude::part.adoc[leveloffset=+1]\n\n== After";
+    let child = "\u{feff}= Глава\r\n\r\ninclude::nested.adoc[leveloffset=+1]\r\n\r\n== Назад";
+    let nested = "= Вложенный\n\n== Раздел";
+    let (mut sources, resources, options) = setup(
+        root,
+        &[("docs/part.adoc", child), ("docs/nested.adoc", nested)],
+    );
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+    assert_eq!(levels(&result), [0, 1, 2, 3, 2, 1]);
+    assert_eq!(
+        result.document.blocks[1]
+            .attribute_context
+            .get("leveloffset"),
+        Some("1")
+    );
+    assert_eq!(
+        result.document.blocks[2]
+            .attribute_context
+            .get("leveloffset"),
+        Some("2")
+    );
+    assert_eq!(
+        result.document.blocks[4]
+            .attribute_context
+            .get("leveloffset"),
+        Some("1")
+    );
+    assert_eq!(
+        result.document.blocks[5]
+            .attribute_context
+            .get("leveloffset"),
+        None
+    );
+    assert_eq!(
+        sources.slice(result.document.blocks[1].span),
+        Some("= Глава")
+    );
+    assert_eq!(
+        result.document.blocks[1].span,
+        Span::in_source(SourceId(1), 3, 3 + "= Глава".len())
+    );
+    let BlockKind::Heading { inlines, .. } = &result.document.blocks[1].kind else {
+        panic!()
+    };
+    assert_eq!(sources.slice(inlines[0].span()), Some("Глава"));
+    let tokens = tokens_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(
+        tokens
+            .iter()
+            .filter(|t| t.kind == TokenKind::Heading)
+            .count(),
+        6
+    );
+    assert!(!tokens.iter().any(|t| t.kind == TokenKind::AttributeEntry));
+    assert_eq!(
+        tokens
+            .iter()
+            .filter(|t| t.kind == TokenKind::IncludeDirective)
+            .count(),
+        2
+    );
+    for token in tokens {
+        assert!(sources.slice(token.span).is_some(), "{token:?}");
+        assert!(!token.span.is_empty(), "{token:?}");
+    }
+    check_spans(&result, &sources);
+}
+
+#[test]
+fn offset_header_and_selected_lines_keep_physical_metadata() {
+    let child =
+        "omitted\r\n== Заголовок\r\nJane Doe\r\nv2, 2026-01-01\r\n\r\n=== Раздел\r\nomitted";
+    let (mut sources, resources, options) = setup(
+        "include::part.adoc[lines=2..6,leveloffset=-1]",
+        &[("docs/part.adoc", child)],
+    );
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty());
+    assert_eq!(levels(&result), [0, 1]);
+    let header = result.document.header.as_ref().unwrap();
+    assert_eq!(sources.slice(header.title_span), Some("== Заголовок"));
+    assert_eq!(sources.slice(header.authors[0].span), Some("Jane Doe"));
+    assert_eq!(header.span.source_id, SourceId(1));
+    assert_eq!(header.span.start, child.find("==").unwrap());
+    let tokens = tokens_resource(&mut sources, &options, &resources).unwrap();
+    assert!(tokens
+        .iter()
+        .any(|t| t.kind == TokenKind::Author && sources.slice(t.span) == Some("Jane Doe")));
+    assert!(!tokens.iter().any(|t| t.kind == TokenKind::AttributeEntry));
+    check_spans(&result, &sources);
+}
+
+#[test]
+fn offsets_in_verbatim_remain_literal_without_synthetic_highlighting() {
+    let root = "----\ninclude::part.rs[leveloffset=+1]\n----\n\n== After";
+    let (mut sources, resources, options) = setup(root, &[("docs/part.rs", "== Literal")]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty());
+    let BlockKind::Listing { text } = &result.document.blocks[0].kind else {
+        panic!()
+    };
+    assert_eq!(text, ":leveloffset: +1\n\n== Literal\n\n:leveloffset!:");
+    assert_eq!(levels(&result), [1]);
+    let tokens = tokens_resource(&mut sources, &options, &resources).unwrap();
+    let child_tokens: Vec<_> = tokens
+        .iter()
+        .filter(|t| t.span.source_id == SourceId(1))
+        .collect();
+    assert_eq!(child_tokens.len(), 1);
+    assert_eq!(child_tokens[0].kind, TokenKind::ListingText);
+    assert_eq!(sources.slice(child_tokens[0].span), Some("== Literal"));
+    assert!(!tokens.iter().any(|t| t.kind == TokenKind::AttributeEntry));
+    check_spans(&result, &sources);
+}
+
+#[test]
+fn offsets_empty_selections_locked_values_and_partial_input_are_tolerant() {
+    let source = "include::part.adoc[lines=2,leveloffset=+1]\n\n== After";
+    let (mut sources, resources, mut options) = setup(source, &[("docs/part.adoc", "= Omitted")]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(levels(&result), [1]);
+    assert_eq!(result.document.attributes.get("leveloffset"), None);
+    options.attributes.set("leveloffset", "2");
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(levels(&result), [3]);
+    let (mut sources, resources, mut options) = setup(
+        "include::part.adoc[leveloffset=+1]\n\n== After",
+        &[("docs/part.adoc", "= Child")],
+    );
+    options.attributes.set("leveloffset", "2");
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty());
+    assert_eq!(levels(&result), [2, 3]);
+    assert!(result
+        .document
+        .blocks
+        .iter()
+        .all(|b| b.attribute_context.get("leveloffset") == Some("2")));
+    check_spans(&result, &sources);
+    for root in [
+        "include::part.adoc[leveloffset=+1]",
+        "include::missing.adoc[opts=optional]",
+    ] {
+        for (end, _) in root
+            .char_indices()
+            .chain(std::iter::once((root.len(), '\0')))
+        {
+            let (mut sources, resources, options) =
+                setup(&root[..end], &[("docs/part.adoc", "= Я\n\ntext")]);
+            let result = parse_resource(&mut sources, &options, &resources).unwrap();
+            check_spans(&result, &sources);
+            for token in tokens_resource(&mut sources, &options, &resources).unwrap() {
+                assert!(sources.slice(token.span).is_some());
+            }
+        }
     }
 }

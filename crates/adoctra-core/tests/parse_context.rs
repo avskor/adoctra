@@ -213,3 +213,62 @@ fn syntax_diagnostics_use_the_configured_source_too() {
         Span::in_source(SourceId(7), 0, 4)
     );
 }
+
+#[test]
+fn leveloffset_attributes_use_relative_arithmetic_and_header_detection() {
+    for (source, expected) in [
+        (
+            "= Main\n:leveloffset: +1\n\n= Chapter\n\n:leveloffset: -1\n\n== After",
+            vec![0, 1, 1],
+        ),
+        (
+            ":leveloffset: -1\n\n== Main\nJane Doe\n\n=== Chapter",
+            vec![0, 1],
+        ),
+        (":leveloffset: +1\n\n= Chapter", vec![1]),
+        (":leveloffset: invalid\n\n== Chapter", vec![1]),
+        (
+            ":leveloffset: 1\n\n:leveloffset: +2suffix\n\n= Chapter\n\n:leveloffset!:\n\n== After",
+            vec![3, 1],
+        ),
+        (":leveloffset: -4\n\n== Clamped", vec![0]),
+    ] {
+        let result = parse(source);
+        assert!(result.diagnostics.is_empty(), "{result:?}");
+        let actual: Vec<_> = result
+            .document
+            .blocks
+            .iter()
+            .filter_map(|block| match block.kind {
+                BlockKind::Heading { level, .. } => Some(level),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(actual, expected, "{source}");
+        for block in &result.document.blocks {
+            assert!(source[block.span.start..block.span.end].starts_with('='));
+        }
+    }
+}
+
+#[test]
+fn extreme_leveloffset_is_bounded_with_a_physical_diagnostic() {
+    let header = parse("= Title\n:leveloffset: 99999999999999999999999999999999999999999999");
+    assert!(header.diagnostics.is_empty());
+    assert!(matches!(
+        header.document.blocks[0].kind,
+        BlockKind::Heading { level: 0, .. }
+    ));
+    let source = ":leveloffset: +99999999999999999999999999999999999999999999999999999\n\n== Huge";
+    let result = parse(source);
+    assert!(matches!(
+        result.document.blocks[0].kind,
+        BlockKind::Heading { level: 255, .. }
+    ));
+    assert_eq!(result.diagnostics.len(), 1);
+    assert_eq!(
+        &source[result.diagnostics[0].span.start..result.diagnostics[0].span.end],
+        "== Huge"
+    );
+    assert!(result.diagnostics[0].message.contains("maximum of 255"));
+}

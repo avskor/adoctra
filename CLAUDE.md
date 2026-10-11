@@ -179,8 +179,15 @@ Includes support lines/tag/tags selection before preprocessing, including ordere
 wildcards/exclusions and physical warnings for malformed tag nesting. Preserve
 separate provenance fragments for disjoint retained lines, even within one source
 occurrence. Resource byte limits count the entire loaded snapshot before filtering.
-Options such as leveloffset/optional, full attribute-list substitutions and safe-mode
-compatibility remain follow-up work; see the implementation plan and parser API.
+Includes support opts/options=optional (suppress only NotFound, not access/encoding
+errors or limits) and leveloffset. Relative/absolute leveloffset entries follow the
+pinned reader's generated attribute lines and blank boundaries, including literal
+retention in verbatim; generated lines have directive origins but no highlight tokens.
+Heading levels and doctitle detection use the effective offset; levels above u8::MAX
+clamp with a warning, and HTML uses saturating arithmetic. Preserve physical spans,
+attribute snapshots and restoration semantics when extending this path.
+Indent/depth, full attribute-list substitutions and safe-mode compatibility remain
+follow-up work; see the implementation plan and parser API.
 
 Working: parser for header attributes, headings, listing blocks, literal blocks
 (`....` and `[literal]`), admonitions (paragraph form), paragraphs,

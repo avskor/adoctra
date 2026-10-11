@@ -665,3 +665,24 @@ fn html_verse_blocks_match_asciidoctor() {
         );
     }
 }
+
+#[test]
+fn offset_heading_levels_match_asciidoctor() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden");
+    let source = fs::read_to_string(dir.join("leveloffset-attributes.adoc")).unwrap();
+    let expected = fs::read_to_string(dir.join("leveloffset-attributes.expected.html")).unwrap();
+    let result = adoctra_core::parse(&source);
+    assert!(result.diagnostics.is_empty());
+    let ours = String::from_utf8(HtmlBackend.convert(&result.document).unwrap()).unwrap();
+    let headings = |html: &str| -> Vec<String> {
+        html.lines()
+            .map(str::trim)
+            .filter(|line| {
+                line.starts_with("<h") && line.as_bytes().get(2).is_some_and(u8::is_ascii_digit)
+            })
+            .map(str::to_owned)
+            .collect()
+    };
+    assert_eq!(headings(&ours), headings(&expected));
+    assert_eq!(headings(&ours).len(), 3);
+}

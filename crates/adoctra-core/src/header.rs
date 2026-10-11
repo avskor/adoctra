@@ -38,7 +38,9 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
     let mut implicit_author = None;
     let mut implicit_authors = None;
     let mut implicit_initials = None;
-    if lines.has(i, context) && matches!(parse_heading(&lines[i].1), Some((0, _))) {
+    if lines.has(i, context)
+        && parse_heading(&lines[i].1).is_some_and(|(level, _)| context.section_level(level) == 0)
+    {
         result.title_line = Some(i);
         let title_span = line_span((lines[i].0, &lines[i].1));
         i += 1;

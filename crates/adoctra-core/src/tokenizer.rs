@@ -120,7 +120,7 @@ pub(crate) fn tokens_reader<'a>(
         .into_iter()
         .flat_map(|token| {
             reader
-                .original_spans(processed.original_span(token.span))
+                .token_spans(processed.original_span(token.span))
                 .into_iter()
                 .map(move |span| Token {
                     span,
