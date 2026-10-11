@@ -458,14 +458,19 @@ impl<'a> Reader<'a> {
         span: Span,
         attributes: &Attributes,
     ) -> bool {
-        let attrs = crate::context::substitute_attribute_value(attrs, attributes);
-        let attrs = match crate::include_selection::named_attributes(&attrs) {
-            Ok(attrs) => attrs,
-            Err(message) => {
-                self.error(span, message);
-                return false;
-            }
-        };
+        let (attrs, warnings) = crate::include_attributes::parse(attrs, attributes);
+        self.diagnostics
+            .extend(warnings.into_iter().map(|message| Diagnostic {
+                span,
+                severity: Severity::Warning,
+                message,
+            }));
+        // Resources are immutable UTF-8 snapshots supplied by the host. Keep
+        // rejecting transcoding requests until the provider contract defines it.
+        if attrs.contains_key("encoding") {
+            self.error(span, "unsupported include options: encoding".into());
+            return false;
+        }
         let selection = crate::include_selection::Selection::parse(&attrs);
         let optional = attrs.contains_key("optional-option");
         let target = crate::context::substitute_attribute_value(target, attributes);

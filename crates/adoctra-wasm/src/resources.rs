@@ -448,3 +448,42 @@ mod multiline_attribute_tests {
         assert_eq!(workspace.source(child_id).unwrap().text(), child);
     }
 }
+
+#[cfg(test)]
+mod include_attribute_list_tests {
+    use super::ResourceWorkspace;
+
+    #[test]
+    fn grammar_and_substitution_export_selected_nodes_and_physical_warnings() {
+        let mut workspace = ResourceWorkspace::new();
+        let main = "\u{feff}:selection: lines=\"2,4\"\r\n:attribute-missing: warn\r\n\r\ninclude::part.adoc[ignored,{selection},indent=0,other={missing}]";
+        let child = "\u{feff}omitted\r\n  *Я*\r\nomitted\r\n  _🙂_\r\n";
+        workspace.set("main.adoc", main).unwrap();
+        workspace.set("part.adoc", child).unwrap();
+        let main_id = workspace.load("main.adoc", None).unwrap();
+        let parsed = workspace.parse_json(main_id).unwrap();
+        let child_id = workspace.load("part.adoc", Some(main_id)).unwrap();
+        let tokens = workspace.tokens_json(main_id).unwrap();
+        assert!(
+            parsed.contains("skipping reference to missing attribute: missing"),
+            "{parsed}"
+        );
+        assert!(!parsed.contains("omitted"), "{parsed}");
+        assert!(parsed.contains("provenance"), "{parsed}");
+        for marker in ["*Я*", "_🙂_"] {
+            let start = child.find(marker).unwrap();
+            let end = start + marker.len();
+            let span = format!(r#""source_id":{child_id},"start":{start},"end":{end}"#);
+            assert!(parsed.contains(&span), "{parsed}");
+            assert!(tokens.contains(&span), "{tokens}");
+        }
+        let start = main.find("include::").unwrap();
+        let end = main.len();
+        let directive_span = format!(r#""source_id":{main_id},"start":{start},"end":{end}"#);
+        assert!(parsed.contains(&directive_span), "{parsed}");
+        assert!(tokens.contains(&directive_span), "{tokens}");
+        workspace.set("part.adoc", "omit\n  edited").unwrap();
+        assert!(workspace.parse_json(main_id).unwrap().contains("edited"));
+        assert_eq!(workspace.source(child_id).unwrap().text(), child);
+    }
+}

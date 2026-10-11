@@ -212,8 +212,16 @@ and CLI opt in; opaque providers default to None. Resource parsing/highlighting
 locks these attributes before the header, overriding caller values and preserving
 them across includes. Keep metadata separate from canonical referrers, never reload
 the primary snapshot, and do not infer cwd or paths in string APIs. Full
-attribute-list substitutions and safe-mode compatibility are follow-up work;
-see the implementation plan and parser API.
+target substitutions and safe-mode compatibility are follow-up work; see the
+implementation plan and parser API. Include parameter lists now follow the pinned
+AttributeList grammar, including ignored positional/unknown fields, quote recovery,
+duplicate/None rules and options merging/spacing. Encoding remains unsupported by
+the UTF-8 provider contract. Ordinary/intrinsic attribute substitution runs once
+before parsing the list, with both reference escapes and attribute-missing policies.
+Single quotes do not run inline substitutions here: the pinned reader omits
+sub_result. Missing-attribute warnings map to physical include directives; preserve
+this mapping through selection/indentation. Target missing-attribute policies and
+set/counter side effects remain follow-up work.
 
 Working: parser for header attributes, headings, listing blocks, literal blocks
 (`....` and `[literal]`), admonitions (paragraph form), paragraphs,

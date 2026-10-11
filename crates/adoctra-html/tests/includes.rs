@@ -5,6 +5,26 @@ use adoctra_html::HtmlBackend;
 fn include_options_render_the_resolved_content() {
     for (source, child, expected) in [
         (
+            "include::part.adoc[ignored,unknown=value,lines=\"2\"suffix]",
+            "omitted\n*Я*",
+            "*Я*",
+        ),
+        (
+            ":selection: lines=\"2,4\"\n\ninclude::part.adoc[ignored,{selection},indent=0]",
+            "omitted\n  *Я*\nomitted\n  _🙂_",
+            "*Я*\n_🙂_",
+        ),
+        (
+            "include::part.adoc[tag='{amp}']",
+            "// tag::&[]\n*selected*\n// end::&[]\nomitted",
+            "*selected*",
+        ),
+        (
+            ":attribute-missing: drop-line\n\ninclude::part.adoc[lines=2,ignored={missing}]",
+            "one\ntwo",
+            "one\ntwo",
+        ),
+        (
             ":x: Я \\\ninclude::part.adoc[]\n last\n\n{x}",
             "  🙂 \\\n  middle \\",
             ":x: Я 🙂 middle last\n\n{x}",

@@ -1263,3 +1263,187 @@ fn raw_include_suffix_does_not_open_attribute_continuation() {
     assert_eq!(result.document.attributes.get("x"), Some("one two \\ \t"));
     assert_eq!(result.document.blocks.len(), 1);
 }
+
+#[test]
+fn attribute_lists_accept_positional_unknown_and_recoverable_fields() {
+    for (params, expected) in [
+        ("ignored,lines=2", "two"),
+        ("\"ignored,too\",lines=2", "two"),
+        (",,lines=2,,,", "two"),
+        ("unknown=anything,lines=2", "two"),
+        ("LINES=1,lines=2", "two"),
+        ("=lines=1,lines=2", "two"),
+        ("lines=\"1\"lines=2", "two"),
+        ("lines=\"2\"suffix", "two"),
+        ("lines=\"2,indent=0", ""),
+        ("lines='2,indent=0", ""),
+        ("lines=2,lines=None", "two"),
+        ("lines=2,lines=\"None\"", ""),
+        ("lines=2,lines=''", "one two three"),
+        ("\t lines \t=\t\"2,3\" \t", "two three"),
+        ("encoding=None,lines=2", "two"),
+        ("optional,opts=unknown,lines=2", "two"),
+    ] {
+        let root = format!("include::part.adoc[{params}]");
+        let (mut sources, resources, options) =
+            setup(&root, &[("docs/part.adoc", "one\ntwo\nthree")]);
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        assert!(result.diagnostics.is_empty(), "{params}: {result:?}");
+        assert_eq!(paragraphs(&result).join(" "), expected, "{params}");
+        assert_eq!(
+            result.include_directives,
+            [Span::in_source(options.source_id, 0, root.len())]
+        );
+        check_spans(&result, &sources);
+    }
+}
+
+#[test]
+fn include_options_follow_reference_spacing_merging_and_none_rules() {
+    for (params, optional) in [
+        ("opts=\"other, op tional\"", true),
+        ("opts=optional,options=other", true),
+        ("opts=optional,opts=None", true),
+        ("optional-option='',unknown=value", true),
+        ("optional-option=None", false),
+        ("optional", false),
+        ("opts=' optional '", false),
+        ("opts=\"other,\toptional\"", false),
+        ("opts=\"op tional\"", false),
+        ("OPTS=optional", false),
+    ] {
+        let root = format!("include::missing.adoc[{params}]\n\nafter");
+        let (mut sources, resources, options) = setup(&root, &[]);
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        assert_eq!(
+            result.diagnostics.is_empty(),
+            optional,
+            "{params}: {result:?}"
+        );
+        assert_eq!(paragraphs(&result).last().unwrap(), "after");
+        if !optional {
+            assert!(result.diagnostics[0].message.contains("NotFound"));
+        }
+        check_spans(&result, &sources);
+    }
+}
+
+#[test]
+fn include_parameter_substitutions_precede_parsing_without_rescanning_values() {
+    for (params, tag) in [
+        ("{selection}", "chosen"),
+        ("tag={injection}", "chosen"),
+        ("tag='{raw}'", "{name}"),
+        (r"tag='\{name}'", "{name}"),
+        (r"tag={name\}", "{name}"),
+        ("tag={-bad}", "{-bad}"),
+        ("tag='*bold*'", "*bold*"),
+        (r#"tag="a\"b""#, "a\"b"),
+        (r"tag='a\'b'", "a'b"),
+        ("tag='{QUOT}'", "&#34;"),
+        ("tag={amp}", "&"),
+    ] {
+        let root = format!("include::part.adoc[{params}]");
+        let child = format!("omitted\n// tag::{tag}[]\nЯ\n// end::{tag}[]\nomitted");
+        let (mut sources, resources, mut options) = setup(&root, &[("docs/part.adoc", &child)]);
+        options.attributes.set("selection", "ignored,tag=chosen");
+        options.attributes.set("injection", "ignored,tag=chosen");
+        options.attributes.set("name", "replaced");
+        options.attributes.set("raw", "{name}");
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        assert!(result.diagnostics.is_empty(), "{params}: {result:?}");
+        assert_eq!(paragraphs(&result), ["Я"], "{params}");
+        let start = child.find('Я').unwrap();
+        assert_eq!(
+            result.document.blocks[0].span,
+            Span::in_source(SourceId(1), start, start + "Я".len())
+        );
+        check_spans(&result, &sources);
+    }
+}
+
+#[test]
+fn missing_parameter_attributes_obey_policy_and_keep_physical_warning_spans() {
+    let child = "\u{feff}ignored\r\n  include::leaf.adoc[ignored,lines=2,other={MISSING}]\r\n";
+    for (policy, expected, warnings) in [
+        ("skip", "two", 0),
+        ("drop", "two", 0),
+        ("drop-line", "one two three", 0),
+        ("warn", "two", 1),
+        ("unknown-policy", "two", 0),
+    ] {
+        let root = format!(":attribute-missing: {policy}\n\ninclude::part.adoc[lines=2,indent=0]");
+        let (mut sources, resources, options) = setup(
+            &root,
+            &[
+                ("docs/part.adoc", child),
+                ("docs/leaf.adoc", "one\ntwo\nthree"),
+            ],
+        );
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        assert_eq!(paragraphs(&result), [expected], "{policy}");
+        assert_eq!(result.diagnostics.len(), warnings, "{policy}: {result:?}");
+        let tokens = tokens_resource(&mut sources, &options, &resources).unwrap();
+        let start = child.find("include::").unwrap();
+        let span = Span::in_source(SourceId(1), start, child.len() - 2);
+        if warnings > 0 {
+            assert_eq!(
+                result.diagnostics[0].severity,
+                adoctra_core::Severity::Warning
+            );
+            assert_eq!(result.diagnostics[0].span, span);
+            assert!(result.diagnostics[0].message.ends_with(": missing"));
+        }
+        assert!(tokens
+            .iter()
+            .any(|token| token.kind == TokenKind::IncludeDirective && token.span == span));
+        check_spans(&result, &sources);
+    }
+}
+
+#[test]
+fn parameter_grammar_keeps_unicode_selection_provenance_and_snapshots() {
+    let root =
+        "\u{feff}:selection: lines=\"2,4\"\r\n\r\ninclude::part.adoc[ignored,{selection},indent=0]";
+    let child = "\u{feff}omitted\r\n  *Я*\r\nomitted\r\n  _🙂_\r\n";
+    let (mut sources, mut resources, options) = setup(root, &[("docs/part.adoc", child)]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty(), "{result:?}");
+    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+        panic!("{result:?}")
+    };
+    let tokens = tokens_resource(&mut sources, &options, &resources).unwrap();
+    for markup in ["*Я*", "_🙂_"] {
+        let start = child.find(markup).unwrap();
+        let span = Span::in_source(SourceId(1), start, start + markup.len());
+        assert!(inlines.iter().any(|inline| inline.span() == span));
+        assert!(tokens.iter().any(|token| token.span == span));
+    }
+    assert!(result.document.blocks[0].span.provenance.is_some());
+    resources.insert("docs/part.adoc", "replacement").unwrap();
+    parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(sources.get(SourceId(1)).unwrap().text(), child);
+    check_spans(&result, &sources);
+}
+
+#[test]
+fn incomplete_and_long_parameter_lists_remain_tolerant() {
+    let text = "include::часть.adoc[,,ignored,tag='Я\\'🙂',lines=\"2\"suffix,encoding=None]";
+    for end in text.char_indices().map(|(i, _)| i).chain([text.len()]) {
+        let (mut sources, resources, options) =
+            setup(&text[..end], &[("docs/часть.adoc", "one\nЯ🙂")]);
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        check_spans(&result, &sources);
+        let tokens = tokens_resource(&mut sources, &options, &resources).unwrap();
+        assert!(tokens.iter().all(|t| sources.slice(t.span).is_some()));
+    }
+    let root = format!(
+        "include::part.adoc[{}lines=2]",
+        "\"ignored\"suffix,,".repeat(5000)
+    );
+    let (mut sources, resources, options) = setup(&root, &[("docs/part.adoc", "one\ntwo")]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty());
+    assert_eq!(paragraphs(&result), ["two"]);
+    check_spans(&result, &sources);
+}

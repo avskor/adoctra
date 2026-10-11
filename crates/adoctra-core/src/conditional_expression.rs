@@ -220,7 +220,7 @@ fn substitute(raw: &str, attributes: &Attributes) -> String {
             output.push_str(
                 attributes
                     .get(name)
-                    .or_else(|| intrinsic(&name.to_lowercase()))
+                    .or_else(|| crate::context::intrinsic(&name.to_lowercase()))
                     .unwrap_or(""),
             );
         }
@@ -229,39 +229,4 @@ fn substitute(raw: &str, attributes: &Attributes) -> String {
         }
     }
     output
-}
-
-fn intrinsic(name: &str) -> Option<&'static str> {
-    Some(match name {
-        "startsb" => "[",
-        "endsb" => "]",
-        "vbar" => "|",
-        "caret" => "^",
-        "asterisk" => "*",
-        "tilde" => "~",
-        "plus" => "&#43;",
-        "backslash" => "\\",
-        "backtick" => "`",
-        "blank" | "empty" => "",
-        "sp" => " ",
-        "two-colons" => "::",
-        "two-semicolons" => ";;",
-        "nbsp" => "&#160;",
-        "deg" => "&#176;",
-        "zwsp" => "&#8203;",
-        "quot" => "&#34;",
-        "apos" => "&#39;",
-        "lsquo" => "&#8216;",
-        "rsquo" => "&#8217;",
-        "ldquo" => "&#8220;",
-        "rdquo" => "&#8221;",
-        "wj" => "&#8288;",
-        "brvbar" => "&#166;",
-        "pp" => "&#43;&#43;",
-        "cpp" => "C&#43;&#43;",
-        "amp" => "&",
-        "lt" => "<",
-        "gt" => ">",
-        _ => return None,
-    })
 }
