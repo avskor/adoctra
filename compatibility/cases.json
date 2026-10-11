@@ -441,6 +441,218 @@
       "category": "comments",
       "expect": "pass",
       "source": "* // visible\n// hidden\n* next"
+    },
+    {
+      "id": "conditional-basic",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": ":enabled:\n\nifdef::enabled[]\nshown\nendif::[]\nifdef::missing[]\nhidden\nendif::missing[]\nifndef::missing[also shown]"
+    },
+    {
+      "id": "conditional-nested",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": ":a:\n\nifdef::a[]\nfirst\nifndef::b[]\nsecond\nendif::b[]\nendif::a[]\nifdef::missing[]\nifdef::a[]\nhidden\nendif::[]\nendif::[]\nlast"
+    },
+    {
+      "id": "conditional-operators",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": ":a:\n:b:\n\nifdef::a,b[or]\nifdef::a+b[and]\nifdef::a+missing[hidden]\nifndef::a,missing[hidden]\nifndef::a+missing[unless all]\nifndef::missing,other[unless any]"
+    },
+    {
+      "id": "conditional-case",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": ":ENABLED:\n\nifdef::EnAbLeD[shown]\nifndef::ENABLED[hidden]"
+    },
+    {
+      "id": "conditional-body-attributes",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": ":enabled:\n\nifdef::enabled[first]\n\n:enabled!:\n\nifdef::enabled[hidden]\nifndef::enabled[second]\n\n:enabled:\n\nifdef::enabled[third]"
+    },
+    {
+      "id": "conditional-hidden-attributes",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": "ifdef::missing[]\n:enabled:\nendif::[]\nifdef::enabled[hidden]\nifndef::enabled[shown]"
+    },
+    {
+      "id": "conditional-paragraph-attributes",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": "body\n:enabled:\nifdef::enabled[hidden]\nifndef::enabled[shown]"
+    },
+    {
+      "id": "conditional-header",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": ":enabled:\nifdef::enabled[= Title]\nifdef::enabled[Jane Doe]\nifdef::author[v1.2, 2026-10-11: Draft]\nifdef::revnumber[:status: ready]\n\n{author} {revnumber} {status}"
+    },
+    {
+      "id": "conditional-paragraph",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": ":enabled:\n\nstart *bold\nifdef::missing[]\nhidden\n\nendif::[]\nifdef::enabled[end*]\nfinish"
+    },
+    {
+      "id": "conditional-list",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": ":enabled:\n\n* first\nifdef::missing[]\n* hidden\nendif::[]\nifdef::enabled[* second]\n+\n----\nifndef::missing[attached]\n----"
+    },
+    {
+      "id": "conditional-listing",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": ":enabled:\n\n----\nbefore\nifdef::enabled[shown]\nifdef::missing[]\nhidden\nendif::[]\nafter\n----"
+    },
+    {
+      "id": "conditional-literal",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": ":enabled:\n\n....\nifdef::enabled[shown]\nifdef::missing[hidden]\n...."
+    },
+    {
+      "id": "conditional-passthrough",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": ":enabled:\n\n++++\nifdef::enabled[<b>shown</b>]\nifdef::missing[hidden]\n++++"
+    },
+    {
+      "id": "conditional-verse",
+      "category": "conditionals",
+      "expect": "xfail",
+      "source": ":enabled:\n\n[verse]\n____\nbefore\nifdef::enabled[*shown*]\nifdef::missing[hidden]\nafter\n____",
+      "reason": "Verse HTML uses figure/pre.verse instead of div/pre.content; this profile does not normalize those backend differences."
+    },
+    {
+      "id": "conditional-open",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": ":enabled:\n\n--\nifdef::enabled[shown]\nifdef::missing[hidden]\n--"
+    },
+    {
+      "id": "conditional-open-verbatim",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": ":enabled:\n\n[source]\n--\nifdef::enabled[shown]\nifdef::missing[hidden]\n--"
+    },
+    {
+      "id": "conditional-container-attributes",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": "====\n:enabled:\n\nifdef::enabled[hidden]\nifndef::enabled[shown]\n====\n\nifdef::enabled[after]"
+    },
+    {
+      "id": "conditional-comment",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": ":enabled:\n\n////\nendif::[]\nifdef::enabled[]\n////\nifdef::enabled[shown]"
+    },
+    {
+      "id": "conditional-comment-style",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": ":enabled:\n\n[comment]\nhidden\nendif::[]\nifdef::missing[]\n\nifdef::enabled[shown]"
+    },
+    {
+      "id": "conditional-comment-open",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": ":enabled:\n\n[comment]\n--\nendif::[]\nifdef::missing[]\n--\nifdef::enabled[shown]"
+    },
+    {
+      "id": "conditional-comment-container",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": ":enabled:\n\n====\n////\nifdef::missing[]\n////\nhidden\nendif::[]\n////\nshown\n===="
+    },
+    {
+      "id": "conditional-escaped",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": ":enabled:\n\n\\ifdef::enabled[plain]\n\\endif::[]"
+    },
+    {
+      "id": "conditional-escaped-listing",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": ":enabled:\n\n----\n\\ifdef::enabled[plain]\n----"
+    },
+    {
+      "id": "conditional-mismatched",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": ":a:\n\nifdef::a[]\nshown\nendif::b[]\nstill shown\nendif::a[]"
+    },
+    {
+      "id": "conditional-unmatched",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": "endif::[]\nshown"
+    },
+    {
+      "id": "conditional-unterminated",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": "ifndef::missing[]\nshown"
+    },
+    {
+      "id": "conditional-missing-target",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": "ifdef::[hidden]\nshown"
+    },
+    {
+      "id": "conditional-endif-text",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": "ifndef::missing[]\nshown\nendif::[invalid]\nmore\nendif::[]"
+    },
+    {
+      "id": "conditional-single-line-trailing-space",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": ":a:\n\nifdef::a[shown   ]"
+    },
+    {
+      "id": "conditional-directive-trailing-space",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": ":a:\n\nifdef::a[shown]   \nifndef::a[hidden]\t"
+    },
+    {
+      "id": "conditional-false-fence",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": ":a:\n\n----\nifdef::missing[]\n----\nendif::[]\nshown\n----"
+    },
+    {
+      "id": "conditional-comment-and-unicode",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": ":a:\r\n\r\nЯ *до\r\n// удалено\r\nifdef::missing[]\r\nскрыто\r\nendif::[]\r\nifdef::a[после*]\r\n"
+    },
+    {
+      "id": "conditional-generated-attribute",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": "ifndef::missing[:enabled:]\n\nifdef::enabled[shown]"
+    },
+    {
+      "id": "conditional-generated-condition",
+      "category": "conditionals",
+      "expect": "pass",
+      "source": ":a:\n\nifdef::a[ifdef::missing[plain]]"
+    },
+    {
+      "id": "conditional-metadata",
+      "category": "conditionals",
+      "expect": "xfail",
+      "source": ":a:\n\nifdef::a[[#kept]]\nifdef::a[.Caption]\nshown\n\nifdef::missing[]\n[[hidden]]\nHidden\nendif::[]\nSee <<kept>>.",
+      "reason": "A textless reference to a titled paragraph uses the id instead of the caption, also without conditional preprocessing."
     }
   ]
 }

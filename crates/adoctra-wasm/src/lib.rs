@@ -66,9 +66,18 @@ fn serialize_parse_result(r: &ParseResult) -> String {
         write_diagnostic(d, &mut s);
     }
     s.push(']');
-    if !r.comments.is_empty() {
-        s.push_str(",\"comments\":[");
-        for (i, span) in r.comments.iter().enumerate() {
+    for (name, spans) in [
+        ("comments", &r.comments),
+        ("conditional_directives", &r.conditional_directives),
+        ("inactive", &r.inactive),
+    ] {
+        if spans.is_empty() {
+            continue;
+        }
+        s.push(',');
+        write_str(name, &mut s);
+        s.push_str(":[");
+        for (i, span) in spans.iter().enumerate() {
             if i > 0 {
                 s.push(',');
             }
@@ -1300,5 +1309,36 @@ mod comment_tests {
             tokens,
             r#"[{"span":{"source_id":12,"start":0,"end":9},"kind":"comment"},{"span":{"source_id":12,"start":16,"end":32},"kind":"comment"}]"#
         );
+    }
+}
+
+#[cfg(test)]
+mod conditional_tests {
+    #[test]
+    fn conditional_trivia_and_selected_content_use_original_editor_ranges() {
+        let src = "ifdef::missing[]\nhidden\nendif::[]\nifndef::missing[*yes*]";
+        let json = super::parse_json_with_source(src, 12);
+        assert!(
+            json.contains(
+                r#""conditional_directives":[{"span":{"source_id":12,"start":0,"end":16}}"#
+            ),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""inactive":[{"span":{"source_id":12,"start":17,"end":23}}]"#),
+            "{json}"
+        );
+        assert!(!json.contains("hidden"), "{json}");
+        let tokens = super::tokens_json_with_source(src, 12);
+        let start = src.find("*yes*").unwrap();
+        assert!(
+            tokens.contains(&format!(
+                r#"{{"span":{{"source_id":12,"start":{start},"end":{}}},"kind":"strong"}}"#,
+                start + 5
+            )),
+            "{tokens}"
+        );
+        assert!(tokens.contains(r#""kind":"inactive""#));
+        assert!(tokens.contains(r#""kind":"conditional-directive""#));
     }
 }

@@ -4,6 +4,7 @@
 use crate::comments::skip_comment;
 use crate::context::{parse_attribute_entry, AttributeEntry, ParseContext};
 use crate::parser::parse_heading;
+use crate::reader::Reader;
 use crate::{Author, DocumentHeader, Revision, Span};
 
 pub(crate) struct Header {
@@ -14,9 +15,9 @@ pub(crate) struct Header {
     pub metadata: Option<DocumentHeader>,
 }
 
-pub(crate) fn collect_header(lines: &[(usize, &str)], context: &mut ParseContext) -> Header {
+pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext) -> Header {
     let mut i = 0;
-    while i < lines.len() {
+    while lines.has(i, context) {
         if skip_comment(lines, &mut i, context) {
             continue;
         }
@@ -37,14 +38,14 @@ pub(crate) fn collect_header(lines: &[(usize, &str)], context: &mut ParseContext
     let mut implicit_author = None;
     let mut implicit_authors = None;
     let mut implicit_initials = None;
-    if i < lines.len() && matches!(parse_heading(lines[i].1), Some((0, _))) {
+    if lines.has(i, context) && matches!(parse_heading(lines[i].1), Some((0, _))) {
         result.title_line = Some(i);
         let title_span = line_span(lines[i]);
         i += 1;
         consume_attributes(lines, &mut i, context);
         let mut authors = Vec::new();
         let mut revision = None;
-        if i < lines.len() && !lines[i].1.trim().is_empty() {
+        if lines.has(i, context) && !lines[i].1.trim().is_empty() {
             result.author_line = Some(i);
             authors = parse_authors(lines[i].1, lines[i].0, false);
             install_authors(&authors, context, false);
@@ -53,7 +54,7 @@ pub(crate) fn collect_header(lines: &[(usize, &str)], context: &mut ParseContext
             implicit_initials = context.attributes.get("authorinitials").map(str::to_owned);
             i += 1;
             consume_attributes(lines, &mut i, context);
-            if i < lines.len() && !lines[i].1.trim().is_empty() {
+            if lines.has(i, context) && !lines[i].1.trim().is_empty() {
                 revision = parse_revision(lines[i]);
                 if let Some(rev) = &revision {
                     result.revision_line = Some(i);
@@ -73,6 +74,7 @@ pub(crate) fn collect_header(lines: &[(usize, &str)], context: &mut ParseContext
         }
         let end = lines[i - 1].0 + lines[i - 1].1.len();
         let start = lines
+            .loaded
             .iter()
             .find(|(_, line)| !line.trim().is_empty())
             .map_or(title_span.start, |(off, _)| *off);
@@ -117,8 +119,9 @@ pub(crate) fn collect_header(lines: &[(usize, &str)], context: &mut ParseContext
     result
 }
 
-fn consume_attributes(lines: &[(usize, &str)], i: &mut usize, context: &mut ParseContext) {
-    while let Some((_, line)) = lines.get(*i) {
+fn consume_attributes(lines: &mut Reader<'_>, i: &mut usize, context: &mut ParseContext) {
+    while lines.has(*i, context) {
+        let line = lines[*i].1;
         if skip_comment(lines, i, context) {
             continue;
         }

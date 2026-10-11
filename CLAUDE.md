@@ -145,8 +145,17 @@ ranges, exported to WASM and comment tokens. Inline scanning across removed
 comment lines restores spans through a fragment map. Verbatim regions preserve
 comment-looking text. The tokenizer currently parses first to reuse comment
 classification; consolidating the remaining structural pass is still roadmap work.
-Container bodies are bounded by their raw closing fence before inner parsing,
+Container bodies are bounded by their preprocessed closing fence before inner parsing,
 as in the Ruby reader (a nested comment cannot hide the parent's closing fence).
+Conditional preprocessing (`ifdef`/`ifndef`/`endif`, nested and single-line forms,
+`,`/`+`, escaping and diagnostics) uses a lazy Reader shared with header/block parsing.
+The parser owns attribute mutations; conditions use attributes at read time. A container
+is captured before its children are parsed, so its internal assignments do not affect
+conditions in that captured body. Top-level comment bodies bypass preprocessing;
+verbatim bodies do not. Reader fragments map retained text back to original offsets,
+composing with the comment map. ParseResult and WASM expose `conditional_directives`
+and `inactive`; tokenizer uses the parser's processed lines and trivia, with corresponding
+`conditional-directive`/`inactive` kinds. `ifeval` and include remain unimplemented.
 
 Working: parser for header attributes, headings, listing blocks, literal blocks
 (`....` and `[literal]`), admonitions (paragraph form), paragraphs,
@@ -392,7 +401,7 @@ Scaffold only: DOCX backend; the extension API exists but `parse`/`convert` do
 not invoke it yet.
 
 Not yet implemented (common asks — treat as roadmap, do not assume present):
-broader language coverage (tables, footnotes, includes, conditionals,
+broader language coverage (tables, footnotes, includes, ifeval,
 block/inline macros). The full block-attribute list is now *parsed* (style, named
 attributes, `%options`, id/role folding), but most of it has nothing to render
 against yet: a few **styles that change a block's type** (`[stem]`/`[latexmath]` →

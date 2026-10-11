@@ -9,13 +9,13 @@ use crate::ast::{
     AdmonitionKind, Attribution, Block, BlockAttrs, BlockKind, Document, Inline, ListItem, Span,
 };
 use crate::attributes::Attributes;
-use crate::comments::{comment_fence, is_line_comment, scan_content, skip_comment};
+use crate::comments::{comment_fence, is_line_comment, skip_comment};
 pub(crate) use crate::context::parse_attribute_entry;
 use crate::context::{ParseContext, ParseOptions};
 use crate::diagnostic::{Diagnostic, ParseResult, Severity};
 use crate::header::collect_header;
-use crate::inline::{scan_inlines, scan_inlines_with};
-use crate::scanner::lines_with_offsets;
+use crate::inline::scan_inlines;
+use crate::reader::Reader;
 use std::sync::Arc;
 
 /// Metadata accumulated from `[[id]]` anchor and `[style, #id.role, name=value]`
@@ -33,9 +33,16 @@ struct PendingMeta {
 }
 
 pub fn parse_with_options(source: &str, options: &ParseOptions) -> ParseResult {
-    let lines = lines_with_offsets(source);
+    parse_reader(source, options, Reader::new(source)).0
+}
+
+pub(crate) fn parse_reader<'a>(
+    source: &'a str,
+    options: &ParseOptions,
+    mut lines: Reader<'a>,
+) -> (ParseResult, Reader<'a>) {
     let mut context = ParseContext::new(options);
-    let header = collect_header(&lines, &mut context);
+    let header = collect_header(&mut lines, &mut context);
     let mut doc = Document {
         attributes: (*context.attributes).clone(),
         header: header.metadata,
@@ -45,7 +52,7 @@ pub fn parse_with_options(source: &str, options: &ParseOptions) -> ParseResult {
     if let Some(mut title_line) = header.title_line {
         if let Some(title) = parse_block(
             source,
-            &lines,
+            &mut lines,
             &mut title_line,
             &mut context,
             &mut diagnostics,
@@ -58,11 +65,11 @@ pub fn parse_with_options(source: &str, options: &ParseOptions) -> ParseResult {
     let mut i = header.body_start;
     doc.blocks.extend(collect_blocks(
         source,
-        &lines,
+        &mut lines,
         &mut i,
         &mut context,
         &mut diagnostics,
-        |_| false,
+        None,
     ));
 
     // This parser invocation reads exactly one original source. Stamp every
@@ -75,6 +82,8 @@ pub fn parse_with_options(source: &str, options: &ParseOptions) -> ParseResult {
         }
     }
     crate::visit::walk_document_mut(&mut Origin(options.source_id), &mut doc);
+    lines.finish();
+    diagnostics.append(&mut lines.diagnostics);
     diagnostics.append(&mut context.comment_diagnostics);
     for span in &mut context.comments {
         span.source_id = options.source_id;
@@ -84,11 +93,19 @@ pub fn parse_with_options(source: &str, options: &ParseOptions) -> ParseResult {
         diagnostic.span.source_id = options.source_id;
     }
     crate::resolve::resolve(&mut doc, &mut diagnostics);
-    ParseResult {
-        document: doc,
-        diagnostics,
-        comments: context.comments,
+    for span in lines.directives.iter_mut().chain(lines.inactive.iter_mut()) {
+        span.source_id = options.source_id;
     }
+    (
+        ParseResult {
+            document: doc,
+            diagnostics,
+            comments: context.comments,
+            conditional_directives: lines.directives.clone(),
+            inactive: lines.inactive.clone(),
+        },
+        lines,
+    )
 }
 
 /// Collect a run of blocks, draining `lines` from `*i` until `stop` matches a
@@ -104,22 +121,18 @@ pub fn parse_with_options(source: &str, options: &ParseOptions) -> ParseResult {
 /// accumulate in source order across consecutive lines.
 fn collect_blocks(
     source: &str,
-    lines: &[(usize, &str)],
+    lines: &mut Reader<'_>,
     i: &mut usize,
     context: &mut ParseContext,
     diagnostics: &mut Vec<Diagnostic>,
-    stop: impl Fn(&str) -> bool,
+    stop: Option<&str>,
 ) -> Vec<Block> {
-    // Ruby first captures a container's raw lines up to its closing fence, then
-    // parses the body. A nested comment/verbatim region cannot hide that fence.
-    let limit = lines[*i..]
-        .iter()
-        .position(|(_, line)| stop(line))
-        .map_or(lines.len(), |relative| *i + relative);
-    let lines = &lines[..limit];
+    // Ruby first preprocesses and captures a container up to its closing fence,
+    // then parses the body. A nested comment/verbatim region cannot hide that fence.
+    let previous_limit = stop.map(|fence| lines.bound(*i, context, |line| line.trim() == fence));
     let mut blocks = Vec::new();
     let mut pending = PendingMeta::default();
-    while *i < lines.len() {
+    while lines.has(*i, context) {
         let line = lines[*i].1;
         if line.trim().is_empty() {
             *i += 1;
@@ -186,9 +199,12 @@ fn collect_blocks(
             block.title = pending.title;
             block.attrs = pending.attrs;
             let attributes = Arc::clone(&block.attribute_context);
-            apply_style_fixup(&mut block, source, &attributes);
+            apply_style_fixup(&mut block, lines, &attributes);
             blocks.push(block);
         }
+    }
+    if let Some(limit) = previous_limit {
+        lines.limit = limit;
     }
     blocks
 }
@@ -196,7 +212,7 @@ fn collect_blocks(
 /// Apply a type-changing block *style* to a freshly parsed block. A `[literal]`,
 /// `[example]` or admonition (`[NOTE]`, …) style on a *paragraph* rewrites its
 /// kind; on any other block kind these styles are inert (left on `attrs.style`).
-fn apply_style_fixup(block: &mut Block, source: &str, attrs: &Attributes) {
+fn apply_style_fixup(block: &mut Block, lines: &Reader<'_>, attrs: &Attributes) {
     let child_attributes = Arc::clone(&block.attribute_context);
     let new_child = |span, kind| {
         let mut child = Block::new(span, kind);
@@ -240,10 +256,10 @@ fn apply_style_fixup(block: &mut Block, source: &str, attrs: &Attributes) {
     // block kind the style is inert (left on `attrs.style`).
     if matches!(block.kind, BlockKind::Paragraph { .. }) {
         match style {
-            // The literal body is the *raw* source slice, not the already-scanned
+            // The literal body is the reader text, not the already-scanned
             // inlines (which are discarded).
             "literal" => {
-                let text = source[block.span.start..block.span.end].to_string();
+                let text = lines.content(block.span.start, block.span.end).text;
                 block.kind = BlockKind::Literal { text };
             }
             // `[pass]` on a paragraph: the raw source slice, like `[literal]` but
@@ -252,8 +268,8 @@ fn apply_style_fixup(block: &mut Block, source: &str, attrs: &Attributes) {
             // directly at their fences in `parse_block`.
             "pass" => {
                 let text = crate::comments::filtered_text(
-                    &source[block.span.start..block.span.end],
-                    block.span.start,
+                    &lines.content(block.span.start, block.span.end).text,
+                    0,
                 )
                 .text;
                 block.kind = BlockKind::Passthrough { text };
@@ -303,8 +319,7 @@ fn apply_style_fixup(block: &mut Block, source: &str, attrs: &Attributes) {
             // paragraph must keep its breaks). The already-scanned (folded) inlines
             // are discarded.
             "verse" => {
-                let text = &source[block.span.start..block.span.end];
-                let inlines = scan_inlines_with(text, block.span.start, attrs, false);
+                let inlines = lines.scan(block.span.start, block.span.end, attrs, false);
                 block.kind = BlockKind::Verse {
                     attribution: None,
                     inlines,
@@ -410,23 +425,23 @@ fn build_attribution(
 /// unterminated block pushes a `block_name` diagnostic but is never a failure.
 /// Shared by the `____` verse branch and the `--` verbatim masquerades.
 fn capture_verbatim_body(
-    lines: &[(usize, &str)],
+    lines: &mut Reader<'_>,
     i: &mut usize,
-    fence_start: usize,
+    opening: Span,
     fence: &str,
     block_name: &str,
-    fallback_end: usize,
+    context: &ParseContext,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> (usize, usize, usize) {
-    let body_start = if *i < lines.len() {
+    let body_start = if lines.has(*i, context) {
         lines[*i].0
     } else {
-        fallback_end
+        opening.end
     };
     let mut body_end = body_start;
-    let mut end = fallback_end;
+    let mut end = opening.end;
     let mut closed = false;
-    while *i < lines.len() {
+    while lines.has(*i, context) {
         let (loff, lline) = lines[*i];
         if lline.trim() == fence {
             end = loff + lline.len();
@@ -440,7 +455,7 @@ fn capture_verbatim_body(
     }
     if !closed {
         diagnostics.push(Diagnostic {
-            span: Span::new(fence_start, fence_start + fence.len()),
+            span: Span::new(opening.start, opening.start + fence.len()),
             severity: Severity::Error,
             message: format!("unterminated {block_name} block (missing closing `{fence}`)"),
         });
@@ -466,7 +481,7 @@ enum BlockCtx {
 /// same block grammar.
 fn parse_block(
     source: &str,
-    lines: &[(usize, &str)],
+    lines: &mut Reader<'_>,
     i: &mut usize,
     context: &mut ParseContext,
     diagnostics: &mut Vec<Diagnostic>,
@@ -481,7 +496,7 @@ fn parse_block(
 
 fn parse_block_content(
     source: &str,
-    lines: &[(usize, &str)],
+    lines: &mut Reader<'_>,
     i: &mut usize,
     context: &mut ParseContext,
     diagnostics: &mut Vec<Diagnostic>,
@@ -528,7 +543,7 @@ fn parse_block_content(
         *i += 1;
         let mut text = String::new();
         let mut closed = false;
-        while *i < lines.len() {
+        while lines.has(*i, context) {
             let (loff, lline) = lines[*i];
             if lline.trim() == "----" {
                 end = loff + lline.len();
@@ -564,7 +579,7 @@ fn parse_block_content(
         *i += 1;
         let mut text = String::new();
         let mut closed = false;
-        while *i < lines.len() {
+        while lines.has(*i, context) {
             let (loff, lline) = lines[*i];
             if lline.trim() == "...." {
                 end = loff + lline.len();
@@ -603,16 +618,16 @@ fn parse_block_content(
         let (body_start, body_end, end) = capture_verbatim_body(
             lines,
             i,
-            start,
+            Span::new(start, off + line.len()),
             "++++",
             "passthrough",
-            off + line.len(),
+            context,
             diagnostics,
         );
         return Some(Block::new(
             Span::new(start, end),
             BlockKind::Passthrough {
-                text: source[body_start..body_end].to_string(),
+                text: lines.content(body_start, body_end).text,
             },
         ));
     }
@@ -625,11 +640,9 @@ fn parse_block_content(
     if trimmed.trim() == "====" {
         let start = off;
         *i += 1;
-        let blocks = collect_blocks(source, lines, i, context, diagnostics, |l| {
-            l.trim() == "===="
-        });
+        let blocks = collect_blocks(source, lines, i, context, diagnostics, Some("===="));
         let end;
-        if *i < lines.len() && lines[*i].1.trim() == "====" {
+        if lines.has(*i, context) && lines[*i].1.trim() == "====" {
             let (loff, lline) = lines[*i];
             end = loff + lline.len();
             *i += 1;
@@ -665,15 +678,14 @@ fn parse_block_content(
             let (body_start, body_end, end) = capture_verbatim_body(
                 lines,
                 i,
-                start,
+                Span::new(start, off + line.len()),
                 "____",
                 "verse",
-                off + line.len(),
+                context,
                 diagnostics,
             );
             // Verse keeps its line breaks — scan without folding newlines.
-            let inlines =
-                scan_inlines_with(&source[body_start..body_end], body_start, &attrs, false);
+            let inlines = lines.scan(body_start, body_end, &attrs, false);
             return Some(Block::new(
                 Span::new(start, end),
                 BlockKind::Verse {
@@ -684,11 +696,9 @@ fn parse_block_content(
         }
         // Quote (default): a parsed container, mirror of the `====` example block.
         *i += 1;
-        let blocks = collect_blocks(source, lines, i, context, diagnostics, |l| {
-            l.trim() == "____"
-        });
+        let blocks = collect_blocks(source, lines, i, context, diagnostics, Some("____"));
         let end;
-        if *i < lines.len() && lines[*i].1.trim() == "____" {
+        if lines.has(*i, context) && lines[*i].1.trim() == "____" {
             let (loff, lline) = lines[*i];
             end = loff + lline.len();
             *i += 1;
@@ -718,11 +728,9 @@ fn parse_block_content(
     if trimmed.trim() == "****" {
         let start = off;
         *i += 1;
-        let blocks = collect_blocks(source, lines, i, context, diagnostics, |l| {
-            l.trim() == "****"
-        });
+        let blocks = collect_blocks(source, lines, i, context, diagnostics, Some("****"));
         let end;
-        if *i < lines.len() && lines[*i].1.trim() == "****" {
+        if lines.has(*i, context) && lines[*i].1.trim() == "****" {
             let (loff, lline) = lines[*i];
             end = loff + lline.len();
             *i += 1;
@@ -765,39 +773,40 @@ fn parse_block_content(
         // on `attrs`, applied to the block after this returns.)
         if matches!(pending_style, Some("source" | "literal" | "verse" | "pass")) {
             *i += 1;
-            let (body_start, body_end, end) =
-                capture_verbatim_body(lines, i, start, "--", "open", off + line.len(), diagnostics);
-            let body = &source[body_start..body_end];
+            let (body_start, body_end, end) = capture_verbatim_body(
+                lines,
+                i,
+                Span::new(start, off + line.len()),
+                "--",
+                "open",
+                context,
+                diagnostics,
+            );
+            let body = lines.content(body_start, body_end);
             let kind = match pending_style {
                 // Verse keeps its line breaks but still applies inline subs; the
                 // positional attribution (`[verse, author, work]`) is folded in
                 // afterwards by `apply_style_fixup`, exactly like the `____` form.
                 Some("verse") => BlockKind::Verse {
                     attribution: None,
-                    inlines: scan_inlines_with(body, body_start, &attrs, false),
+                    inlines: lines.scan(body_start, body_end, &attrs, false),
                 },
                 // Literal / source keep the body raw (no inline subs). For
                 // `[source,lang]` the `source` style and `language` attribute ride
                 // on `attrs` and drive the HTML backend's highlight rendering.
-                Some("literal") => BlockKind::Literal {
-                    text: body.to_string(),
-                },
-                Some("source") => BlockKind::Listing {
-                    text: body.to_string(),
-                },
+                Some("literal") => BlockKind::Literal { text: body.text },
+                Some("source") => BlockKind::Listing { text: body.text },
                 // `[pass]` on `--`: raw passthrough, emitted unescaped and
                 // unwrapped by the backend (no inline subs), like the `++++` fence.
-                Some("pass") => BlockKind::Passthrough {
-                    text: body.to_string(),
-                },
+                Some("pass") => BlockKind::Passthrough { text: body.text },
                 _ => unreachable!(),
             };
             return Some(Block::new(Span::new(start, end), kind));
         }
         *i += 1;
-        let blocks = collect_blocks(source, lines, i, context, diagnostics, |l| l.trim() == "--");
+        let blocks = collect_blocks(source, lines, i, context, diagnostics, Some("--"));
         let end;
-        if *i < lines.len() && lines[*i].1.trim() == "--" {
+        if lines.has(*i, context) && lines[*i].1.trim() == "--" {
             let (loff, lline) = lines[*i];
             end = loff + lline.len();
             *i += 1;
@@ -832,7 +841,11 @@ fn parse_block_content(
     let start = off;
     let mut end = off + line.len();
     *i += 1;
-    while *i < lines.len() {
+    while if pending_style == Some("comment") {
+        lines.raw_has(*i)
+    } else {
+        lines.has(*i, context)
+    } {
         let (loff, lline) = lines[*i];
         let t = lline.trim_end();
         // A paragraph also ends at any block delimiter line, so it never spans
@@ -863,7 +876,7 @@ fn parse_block_content(
     // `[NOTE]` *style* form is handled later, in the pending-attrs fixup.
     if let Some((kind, prefix_len)) = AdmonitionKind::from_label_prefix(line) {
         let content_start = start + prefix_len;
-        let inlines = scan_content(&source[content_start..end], content_start, &attrs, context);
+        let inlines = lines.scan_content(content_start, end, &attrs, context);
         // The body is a single child paragraph spanning the text after the prefix;
         // the admonition block still spans the whole paragraph (label included).
         let mut child = Block::new(
@@ -879,12 +892,12 @@ fn parse_block_content(
             },
         ));
     }
-    // Parsed text uses a fragment map across deleted comment lines. Verbatim
-    // styles retain their original slice. Both paths return original byte spans.
+    // Parsed text also removes comment lines; verbatim styles keep them.
+    // Both paths map the preprocessed reader text to original byte spans.
     let inlines = if verbatim {
-        scan_inlines(&source[start..end], start, &attrs)
+        lines.scan(start, end, &attrs, true)
     } else {
-        scan_content(&source[start..end], start, &attrs, context)
+        lines.scan_content(start, end, &attrs, context)
     };
     Some(Block::new(
         Span::new(start, end),
@@ -945,7 +958,7 @@ fn classify(line: &str, marker: MarkerId, ancestors: &[MarkerId]) -> LineRole {
 /// live in `item.blocks`, in source order.
 fn parse_list(
     source: &str,
-    lines: &[(usize, &str)],
+    lines: &mut Reader<'_>,
     i: &mut usize,
     context: &mut ParseContext,
     diagnostics: &mut Vec<Diagnostic>,
@@ -960,7 +973,7 @@ fn parse_list(
     // Only a sibling marker begins another item; everything else (a blank line,
     // an ancestor's marker) ends this list. Deeper markers and `+` lines are
     // folded into the item below, so they never reach this guard.
-    while *i < lines.len() && classify(lines[*i].1, marker, ancestors) == LineRole::Sibling {
+    while lines.has(*i, context) && classify(lines[*i].1, marker, ancestors) == LineRole::Sibling {
         let (loff, lline) = lines[*i];
         let content_off = list_marker_indented(lline.trim_end())
             .map(|(_, _, off)| off)
@@ -971,24 +984,19 @@ fn parse_list(
         *i += 1;
 
         // Multi-line principal text: fold following plain lines into this item.
-        while *i < lines.len() && classify(lines[*i].1, marker, ancestors) == LineRole::Text {
+        while lines.has(*i, context) && classify(lines[*i].1, marker, ancestors) == LineRole::Text {
             let (toff, tline) = lines[*i];
             principal_end = toff + tline.len();
             *i += 1;
         }
         let attrs = Arc::clone(&context.attributes);
-        let inlines = scan_content(
-            &source[content_start..principal_end],
-            content_start,
-            &attrs,
-            context,
-        );
+        let inlines = lines.scan_content(content_start, principal_end, &attrs, context);
 
         // Attached blocks (`+` continuations) and nested sublists, in source
         // order, all collected into `item.blocks`.
         let mut blocks = Vec::new();
         let mut item_end = principal_end;
-        while *i < lines.len() {
+        while lines.has(*i, context) {
             if is_line_comment(lines[*i].1) {
                 skip_comment(lines, i, context);
                 continue;
@@ -996,11 +1004,11 @@ fn parse_list(
             match classify(lines[*i].1, marker, ancestors) {
                 LineRole::Continuation => {
                     *i += 1; // consume the `+`
-                    if *i < lines.len() && is_line_comment(lines[*i].1) {
+                    if lines.has(*i, context) && is_line_comment(lines[*i].1) {
                         while skip_comment(lines, i, context) {}
                         break;
                     }
-                    if *i < lines.len() && !lines[*i].1.trim().is_empty() {
+                    if lines.has(*i, context) && !lines[*i].1.trim().is_empty() {
                         if let Some(b) = parse_block(
                             source,
                             lines,

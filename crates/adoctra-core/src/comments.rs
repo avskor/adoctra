@@ -3,6 +3,7 @@
 use crate::context::ParseContext;
 use crate::diagnostic::{Diagnostic, Severity};
 use crate::inline::scan_inlines;
+use crate::reader::Reader;
 use crate::scanner::FilteredSource;
 use crate::{Attributes, Inline, Span};
 
@@ -18,13 +19,14 @@ pub(crate) fn comment_fence(line: &str) -> Option<&str> {
 /// Consume a comment at a block/header boundary, including a matching fence of
 /// the same length. Hidden attributes, delimiters and blank lines have no effect.
 pub(crate) fn skip_comment(
-    lines: &[(usize, &str)],
+    lines: &mut Reader<'_>,
     i: &mut usize,
     context: &mut ParseContext,
 ) -> bool {
-    let Some(&(start, line)) = lines.get(*i) else {
+    if !lines.has(*i, context) {
         return false;
-    };
+    }
+    let (start, line) = lines[*i];
     if is_line_comment(line) {
         context.comments.push(Span::new(start, start + line.len()));
         *i += 1;
@@ -38,7 +40,7 @@ pub(crate) fn skip_comment(
 }
 
 pub(crate) fn consume_delimited_comment(
-    lines: &[(usize, &str)],
+    lines: &mut Reader<'_>,
     i: &mut usize,
     context: &mut ParseContext,
     fence: &str,
@@ -47,7 +49,8 @@ pub(crate) fn consume_delimited_comment(
     let mut end = start + line.len();
     *i += 1;
     let mut closed = false;
-    while let Some(&(off, line)) = lines.get(*i) {
+    while lines.raw_has(*i) {
+        let (off, line) = lines[*i];
         end = off + line.len();
         *i += 1;
         if line.trim_end() == fence {

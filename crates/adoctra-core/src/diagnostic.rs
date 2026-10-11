@@ -37,4 +37,8 @@ pub struct ParseResult {
     pub diagnostics: Vec<Diagnostic>,
     /// Source trivia omitted from the semantic tree, in source order.
     pub comments: Vec<Span>,
+    /// Recognized conditional syntax (single-line content is excluded).
+    pub conditional_directives: Vec<Span>,
+    /// Lines omitted by inactive conditional branches.
+    pub inactive: Vec<Span>,
 }

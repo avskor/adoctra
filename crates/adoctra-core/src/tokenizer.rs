@@ -29,6 +29,8 @@ pub struct Token {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TokenKind {
     Comment,
+    ConditionalDirective,
+    Inactive,
     Heading,
     Author,
     Revision,
@@ -63,6 +65,8 @@ impl TokenKind {
     pub fn as_str(self) -> &'static str {
         match self {
             TokenKind::Comment => "comment",
+            TokenKind::ConditionalDirective => "conditional-directive",
+            TokenKind::Inactive => "inactive",
             TokenKind::Heading => "heading",
             TokenKind::Author => "author",
             TokenKind::Revision => "revision",
@@ -96,14 +100,39 @@ impl TokenKind {
 }
 
 pub fn tokens_with_options(source: &str, options: &ParseOptions) -> Vec<Token> {
+    let (result, reader) =
+        crate::parser::parse_reader(source, options, crate::reader::Reader::new(source));
+    let processed = reader.content(0, source.len());
+    let comments: Vec<_> = result
+        .comments
+        .iter()
+        .map(|span| processed.transformed_span(*span))
+        .collect();
+    let mut out = tokens_processed(&processed.text, options, &comments);
+    for token in &mut out {
+        token.span = processed.original_span(token.span);
+        token.span.source_id = options.source_id;
+    }
+    out.extend(result.conditional_directives.into_iter().map(|span| Token {
+        span,
+        kind: TokenKind::ConditionalDirective,
+    }));
+    out.extend(result.inactive.into_iter().map(|span| Token {
+        span,
+        kind: TokenKind::Inactive,
+    }));
+    out.sort_by_key(|token| (token.span.start, token.span.end));
+    out
+}
+
+fn tokens_processed(source: &str, options: &ParseOptions, comments: &[Span]) -> Vec<Token> {
     // Comment classification is owned by the structural parser, including
     // verbatim styles and list continuations. Do not duplicate those rules here.
-    let comments = crate::parser::parse_with_options(source, options).comments;
     let mut comment_index = 0;
     let lines = lines_with_offsets(source);
     // Resolve `{attr}` against the same header table the parser uses.
     let mut context = ParseContext::new(options);
-    let header = collect_header(&lines, &mut context);
+    let header = collect_header(&mut crate::reader::Reader::plain(source), &mut context);
     let mut out = Vec::new();
     let mut in_listing = false;
     let mut in_literal = false;

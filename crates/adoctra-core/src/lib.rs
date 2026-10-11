@@ -17,6 +17,7 @@ mod header;
 mod inline;
 pub mod json;
 mod parser;
+mod reader;
 mod replacements;
 mod resolve;
 mod scanner;
