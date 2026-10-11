@@ -9,6 +9,7 @@ use crate::ast::{
     AdmonitionKind, Attribution, Block, BlockAttrs, BlockKind, Document, Inline, ListItem, Span,
 };
 use crate::attributes::Attributes;
+use crate::comments::{comment_fence, is_line_comment, scan_content, skip_comment};
 pub(crate) use crate::context::parse_attribute_entry;
 use crate::context::{ParseContext, ParseOptions};
 use crate::diagnostic::{Diagnostic, ParseResult, Severity};
@@ -74,6 +75,11 @@ pub fn parse_with_options(source: &str, options: &ParseOptions) -> ParseResult {
         }
     }
     crate::visit::walk_document_mut(&mut Origin(options.source_id), &mut doc);
+    diagnostics.append(&mut context.comment_diagnostics);
+    for span in &mut context.comments {
+        span.source_id = options.source_id;
+    }
+    context.comments.sort_by_key(|span| span.start);
     for diagnostic in &mut diagnostics {
         diagnostic.span.source_id = options.source_id;
     }
@@ -81,6 +87,7 @@ pub fn parse_with_options(source: &str, options: &ParseOptions) -> ParseResult {
     ParseResult {
         document: doc,
         diagnostics,
+        comments: context.comments,
     }
 }
 
@@ -103,6 +110,13 @@ fn collect_blocks(
     diagnostics: &mut Vec<Diagnostic>,
     stop: impl Fn(&str) -> bool,
 ) -> Vec<Block> {
+    // Ruby first captures a container's raw lines up to its closing fence, then
+    // parses the body. A nested comment/verbatim region cannot hide that fence.
+    let limit = lines[*i..]
+        .iter()
+        .position(|(_, line)| stop(line))
+        .map_or(lines.len(), |relative| *i + relative);
+    let lines = &lines[..limit];
     let mut blocks = Vec::new();
     let mut pending = PendingMeta::default();
     while *i < lines.len() {
@@ -111,10 +125,8 @@ fn collect_blocks(
             *i += 1;
             continue;
         }
-        // A delimited container's closing fence ends the run; the caller consumes
-        // the fence line itself.
-        if stop(line) {
-            break;
+        if skip_comment(lines, i, context) {
+            continue;
         }
         if let Some(entry) = parse_attribute_entry(line) {
             context.apply(entry);
@@ -157,6 +169,7 @@ fn collect_blocks(
             *i += 1;
             continue;
         }
+        let metadata = std::mem::take(&mut pending);
         if let Some(mut block) = parse_block(
             source,
             lines,
@@ -164,9 +177,9 @@ fn collect_blocks(
             context,
             diagnostics,
             BlockCtx::TopLevel,
-            pending.attrs.style.as_deref(),
+            metadata.attrs.style.as_deref(),
         ) {
-            let pending = std::mem::take(&mut pending);
+            let pending = metadata;
             block.id = pending.id;
             block.reftext = pending.reftext;
             block.roles = pending.roles;
@@ -238,7 +251,11 @@ fn apply_style_fixup(block: &mut Block, source: &str, attrs: &Attributes) {
             // discarded). The delimited `++++` and `--` masquerade forms are built
             // directly at their fences in `parse_block`.
             "pass" => {
-                let text = source[block.span.start..block.span.end].to_string();
+                let text = crate::comments::filtered_text(
+                    &source[block.span.start..block.span.end],
+                    block.span.start,
+                )
+                .text;
                 block.kind = BlockKind::Passthrough { text };
             }
             // `[example]` on a paragraph wraps it into a single-child example block.
@@ -481,6 +498,10 @@ fn parse_block_content(
 
     if trimmed.trim().is_empty() {
         *i += 1;
+        return None;
+    }
+
+    if skip_comment(lines, i, context) {
         return None;
     }
 
@@ -730,6 +751,10 @@ fn parse_block_content(
     // `--` (em dash) never reaches here — it lives inside paragraph text, scanned
     // after block detection. A same-length `--` inside closes the outer block.
     if trimmed.trim() == "--" {
+        if pending_style == Some("comment") {
+            crate::comments::consume_delimited_comment(lines, i, context, "--");
+            return None;
+        }
         let start = off;
         // Verbatim masquerades: a `[source]` / `[literal]` / `[verse]` style
         // switches the open block's content model from "parsed blocks" to
@@ -800,6 +825,9 @@ fn parse_block_content(
         return Some(parse_list(source, lines, i, context, diagnostics, &[]));
     }
 
+    // Verbatim paragraph styles retain comment-looking lines.
+    let verbatim = matches!(pending_style, Some("literal" | "source" | "verse"));
+
     // Paragraph: accumulate contiguous lines until this context's terminator.
     let start = off;
     let mut end = off + line.len();
@@ -811,7 +839,8 @@ fn parse_block_content(
         // into a `----`/`....`/`====`/`____`/`****`/`--` block (notably the closing
         // fence of an enclosing container, which would otherwise be folded in as
         // text).
-        let ends = t.trim().is_empty()
+        let ends = (!verbatim && comment_fence(t).is_some())
+            || t.trim().is_empty()
             || parse_heading(t).is_some()
             || matches!(t.trim(), "----" | "...." | "====" | "____" | "****" | "--")
             || match ctx {
@@ -824,13 +853,17 @@ fn parse_block_content(
         end = loff + lline.len();
         *i += 1;
     }
+    if pending_style == Some("comment") {
+        context.comments.push(Span::new(start, end));
+        return None;
+    }
     // An admonition label prefix (`NOTE: `, …) on the first line turns the whole
     // paragraph into an admonition: the prefix is stripped and the rest (incl. any
     // folded lines) is the body. The block span stays the whole paragraph. The
     // `[NOTE]` *style* form is handled later, in the pending-attrs fixup.
     if let Some((kind, prefix_len)) = AdmonitionKind::from_label_prefix(line) {
         let content_start = start + prefix_len;
-        let inlines = scan_inlines(&source[content_start..end], content_start, &attrs);
+        let inlines = scan_content(&source[content_start..end], content_start, &attrs, context);
         // The body is a single child paragraph spanning the text after the prefix;
         // the admonition block still spans the whole paragraph (label included).
         let mut child = Block::new(
@@ -846,9 +879,13 @@ fn parse_block_content(
             },
         ));
     }
-    // Scan inlines over the original source slice (newlines and all), so every
-    // inline span maps back to real bytes — no re-joined string.
-    let inlines = scan_inlines(&source[start..end], start, &attrs);
+    // Parsed text uses a fragment map across deleted comment lines. Verbatim
+    // styles retain their original slice. Both paths return original byte spans.
+    let inlines = if verbatim {
+        scan_inlines(&source[start..end], start, &attrs)
+    } else {
+        scan_content(&source[start..end], start, &attrs, context)
+    };
     Some(Block::new(
         Span::new(start, end),
         BlockKind::Paragraph { inlines },
@@ -882,7 +919,7 @@ enum LineRole {
 /// `*` list is a sibling, while `**` opens a deeper level regardless of indent.
 fn classify(line: &str, marker: MarkerId, ancestors: &[MarkerId]) -> LineRole {
     let t = line.trim_end();
-    if t.trim().is_empty() {
+    if t.trim().is_empty() || comment_fence(t).is_some() {
         return LineRole::Blank;
     }
     if t.trim() == "+" {
@@ -939,10 +976,12 @@ fn parse_list(
             principal_end = toff + tline.len();
             *i += 1;
         }
-        let inlines = scan_inlines(
+        let attrs = Arc::clone(&context.attributes);
+        let inlines = scan_content(
             &source[content_start..principal_end],
             content_start,
-            &context.attributes,
+            &attrs,
+            context,
         );
 
         // Attached blocks (`+` continuations) and nested sublists, in source
@@ -950,9 +989,17 @@ fn parse_list(
         let mut blocks = Vec::new();
         let mut item_end = principal_end;
         while *i < lines.len() {
+            if is_line_comment(lines[*i].1) {
+                skip_comment(lines, i, context);
+                continue;
+            }
             match classify(lines[*i].1, marker, ancestors) {
                 LineRole::Continuation => {
                     *i += 1; // consume the `+`
+                    if *i < lines.len() && is_line_comment(lines[*i].1) {
+                        while skip_comment(lines, i, context) {}
+                        break;
+                    }
                     if *i < lines.len() && !lines[*i].1.trim().is_empty() {
                         if let Some(b) = parse_block(
                             source,

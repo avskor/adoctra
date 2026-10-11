@@ -16,6 +16,8 @@ pub struct ParseOptions {
 pub(crate) struct ParseContext {
     pub attributes: Arc<Attributes>,
     locked: BTreeSet<String>,
+    pub comments: Vec<crate::Span>,
+    pub comment_diagnostics: Vec<crate::Diagnostic>,
 }
 
 impl ParseContext {
@@ -30,6 +32,8 @@ impl ParseContext {
         Self {
             attributes: Arc::new(attributes),
             locked,
+            comments: Vec::new(),
+            comment_diagnostics: Vec::new(),
         }
     }
 

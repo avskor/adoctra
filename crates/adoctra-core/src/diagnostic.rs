@@ -35,4 +35,6 @@ pub struct Diagnostic {
 pub struct ParseResult {
     pub document: Document,
     pub diagnostics: Vec<Diagnostic>,
+    /// Source trivia omitted from the semantic tree, in source order.
+    pub comments: Vec<Span>,
 }

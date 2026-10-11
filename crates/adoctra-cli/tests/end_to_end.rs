@@ -144,3 +144,33 @@ fn header_declarations_and_resolved_values_reach_backends() {
     assert!(json.contains(r#""header":{"authors":[{"name":"Jane Doe","firstname":"Jane","middlename":null,"lastname":"Doe","initials":"JD","email":"jane@example.org"}],"revision":{"number":"2","date":"today","remark":"Draft"}}"#), "{json}");
     assert!(json.contains(r#""value":"Jane Doe""#), "{json}");
 }
+
+#[test]
+fn comments_are_omitted_in_html_and_json_but_verbatim_is_preserved() {
+    let source = "= Doc\n// hidden author note\nJane Doe\n\none\n// secret\n*two*\n\n////\n<<missing>>\n////\n\n----\n// visible\n----";
+    let result = adoctra::parse(source);
+    assert!(result.diagnostics.is_empty());
+    let html = String::from_utf8(
+        adoctra::html::HtmlBackend::new()
+            .convert(&result.document)
+            .unwrap(),
+    )
+    .unwrap();
+    assert!(html.contains("<p>one <strong>two</strong></p>"), "{html}");
+    assert!(html.contains("// visible"));
+    let json = String::from_utf8(
+        adoctra::json::JsonBackend::new()
+            .convert(&result.document)
+            .unwrap(),
+    )
+    .unwrap();
+    assert!(json.contains(r#""text":"// visible""#), "{json}");
+    for output in [html, json] {
+        assert!(
+            !output.contains("secret")
+                && !output.contains("hidden author")
+                && !output.contains("missing"),
+            "{output}"
+        );
+    }
+}

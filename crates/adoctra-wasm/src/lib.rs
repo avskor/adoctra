@@ -65,7 +65,20 @@ fn serialize_parse_result(r: &ParseResult) -> String {
         }
         write_diagnostic(d, &mut s);
     }
-    s.push_str("]}");
+    s.push(']');
+    if !r.comments.is_empty() {
+        s.push_str(",\"comments\":[");
+        for (i, span) in r.comments.iter().enumerate() {
+            if i > 0 {
+                s.push(',');
+            }
+            s.push('{');
+            write_span_field(span, &mut s);
+            s.push('}');
+        }
+        s.push(']');
+    }
+    s.push('}');
     s
 }
 
@@ -1270,6 +1283,22 @@ mod header_tests {
         assert!(
             tokens.contains(r#"{"span":{"source_id":7,"start":31,"end":33},"kind":"revision"}"#),
             "{tokens}"
+        );
+    }
+}
+
+#[cfg(test)]
+mod comment_tests {
+    #[test]
+    fn omitted_comments_are_available_as_editor_ranges() {
+        let src = "// hidden\n\nbody\n////\nhidden\n////";
+        let json = super::parse_json_with_source(src, 12);
+        assert!(json.contains(r#""comments":[{"span":{"source_id":12,"start":0,"end":9}},{"span":{"source_id":12,"start":16,"end":32}}]"#), "{json}");
+        assert!(!json.contains("hidden"), "{json}");
+        let tokens = super::tokens_json_with_source(src, 12);
+        assert_eq!(
+            tokens,
+            r#"[{"span":{"source_id":12,"start":0,"end":9},"kind":"comment"},{"span":{"source_id":12,"start":16,"end":32},"kind":"comment"}]"#
         );
     }
 }

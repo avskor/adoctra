@@ -139,6 +139,14 @@ metadata stays in Document.attributes. The title remains the first level-0
 Heading, with only its span referenced by the header. Header parsing is shared
 with the tokenizer (author/revision tokens). JSON and WASM expose header metadata;
 WASM includes source spans. See parser-api.adoc for remaining header limitations.
+Comments (`//`, matching slash fences of length >= 4, and `[comment]` paragraphs
+or open blocks) are omitted contextually. ParseResult.comments retains source
+ranges, exported to WASM and comment tokens. Inline scanning across removed
+comment lines restores spans through a fragment map. Verbatim regions preserve
+comment-looking text. The tokenizer currently parses first to reuse comment
+classification; consolidating the remaining structural pass is still roadmap work.
+Container bodies are bounded by their raw closing fence before inner parsing,
+as in the Ruby reader (a nested comment cannot hide the parent's closing fence).
 
 Working: parser for header attributes, headings, listing blocks, literal blocks
 (`....` and `[literal]`), admonitions (paragraph form), paragraphs,

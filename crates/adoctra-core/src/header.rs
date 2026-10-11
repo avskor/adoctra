@@ -1,6 +1,7 @@
 //! Header metadata, following Asciidoctor 2.0.23 Parser.parse_header_metadata
 //! and process_authors. Kept separate from block parsing so the tokenizer uses
 //! exactly the same line boundaries and attribute transitions.
+use crate::comments::skip_comment;
 use crate::context::{parse_attribute_entry, AttributeEntry, ParseContext};
 use crate::parser::parse_heading;
 use crate::{Author, DocumentHeader, Revision, Span};
@@ -16,6 +17,9 @@ pub(crate) struct Header {
 pub(crate) fn collect_header(lines: &[(usize, &str)], context: &mut ParseContext) -> Header {
     let mut i = 0;
     while i < lines.len() {
+        if skip_comment(lines, &mut i, context) {
+            continue;
+        }
         if let Some(entry) = parse_attribute_entry(lines[i].1) {
             context.apply(entry);
         } else if !lines[i].1.trim().is_empty() {
@@ -115,6 +119,9 @@ pub(crate) fn collect_header(lines: &[(usize, &str)], context: &mut ParseContext
 
 fn consume_attributes(lines: &[(usize, &str)], i: &mut usize, context: &mut ParseContext) {
     while let Some((_, line)) = lines.get(*i) {
+        if skip_comment(lines, i, context) {
+            continue;
+        }
         let Some(entry) = parse_attribute_entry(line) else {
             break;
         };

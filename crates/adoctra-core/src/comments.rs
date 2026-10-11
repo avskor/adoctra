@@ -1,0 +1,91 @@
+//! Context-sensitive comments. Callers decide whether a region is parsed text
+//! or verbatim; this is deliberately not a global deletion pass.
+use crate::context::ParseContext;
+use crate::diagnostic::{Diagnostic, Severity};
+use crate::inline::scan_inlines;
+use crate::scanner::FilteredSource;
+use crate::{Attributes, Inline, Span};
+
+pub(crate) fn is_line_comment(line: &str) -> bool {
+    line.starts_with("//") && !line.starts_with("///")
+}
+
+pub(crate) fn comment_fence(line: &str) -> Option<&str> {
+    let line = line.trim_end();
+    (line.len() >= 4 && line.bytes().all(|b| b == b'/')).then_some(line)
+}
+
+/// Consume a comment at a block/header boundary, including a matching fence of
+/// the same length. Hidden attributes, delimiters and blank lines have no effect.
+pub(crate) fn skip_comment(
+    lines: &[(usize, &str)],
+    i: &mut usize,
+    context: &mut ParseContext,
+) -> bool {
+    let Some(&(start, line)) = lines.get(*i) else {
+        return false;
+    };
+    if is_line_comment(line) {
+        context.comments.push(Span::new(start, start + line.len()));
+        *i += 1;
+        return true;
+    }
+    let Some(fence) = comment_fence(line) else {
+        return false;
+    };
+    consume_delimited_comment(lines, i, context, fence);
+    true
+}
+
+pub(crate) fn consume_delimited_comment(
+    lines: &[(usize, &str)],
+    i: &mut usize,
+    context: &mut ParseContext,
+    fence: &str,
+) {
+    let (start, line) = lines[*i];
+    let mut end = start + line.len();
+    *i += 1;
+    let mut closed = false;
+    while let Some(&(off, line)) = lines.get(*i) {
+        end = off + line.len();
+        *i += 1;
+        if line.trim_end() == fence {
+            closed = true;
+            break;
+        }
+    }
+    context.comments.push(Span::new(start, end));
+    if !closed {
+        context.comment_diagnostics.push(Diagnostic {
+            span: Span::new(start, start + fence.len()),
+            severity: Severity::Warning,
+            message: format!("unterminated comment block (missing closing `{fence}`)"),
+        });
+    }
+}
+
+pub(crate) fn filtered_text(src: &str, base: usize) -> FilteredSource {
+    FilteredSource::without_lines(src, base, is_line_comment)
+}
+
+/// Scan one logical paragraph across deleted line comments, retaining original
+/// byte positions even for nested formatting spanning the removed text.
+pub(crate) fn scan_content(
+    src: &str,
+    base: usize,
+    attrs: &Attributes,
+    context: &mut ParseContext,
+) -> Vec<Inline> {
+    let filtered = filtered_text(src, base);
+    context.comments.extend_from_slice(&filtered.removed);
+    let mut inlines = scan_inlines(&filtered.text, 0, attrs);
+    struct Restore<'a>(&'a FilteredSource);
+    impl crate::visit::VisitorMut for Restore<'_> {
+        fn visit_span(&mut self, span: &mut Span) {
+            *span = self.0.original_span(*span);
+        }
+    }
+    crate::visit::walk_inlines_mut(&mut Restore(&filtered), &mut inlines);
+    inlines
+}

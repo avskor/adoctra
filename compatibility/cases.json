@@ -101,8 +101,7 @@
     {
       "id": "comment",
       "category": "preprocessing",
-      "expect": "xfail",
-      "reason": "Line comments are rendered as paragraphs.",
+      "expect": "pass",
       "source": "// hidden\n\nVisible"
     },
     {
@@ -292,6 +291,156 @@
       "category": "header",
       "expect": "pass",
       "source": ":author: Jane Smith\n:authorinitials: custom\n\n{author} | {authorinitials}"
+    },
+    {
+      "id": "comment-paragraph",
+      "category": "comments",
+      "expect": "pass",
+      "source": "one\n// hidden\ntwo"
+    },
+    {
+      "id": "comment-trailing",
+      "category": "comments",
+      "expect": "pass",
+      "source": "one\n// hidden"
+    },
+    {
+      "id": "comment-formatting",
+      "category": "comments",
+      "expect": "pass",
+      "source": "*bold\n// hidden\n_italic_* after"
+    },
+    {
+      "id": "comment-block-adjacent",
+      "category": "comments",
+      "expect": "pass",
+      "source": "one\n////\nhidden\n////\ntwo"
+    },
+    {
+      "id": "comment-long-fence",
+      "category": "comments",
+      "expect": "pass",
+      "source": "/////\nhidden\n////\nalso hidden\n/////\nVisible"
+    },
+    {
+      "id": "comment-fence-spaces",
+      "category": "comments",
+      "expect": "pass",
+      "source": "////  \nhidden\n////\nVisible"
+    },
+    {
+      "id": "comment-unclosed",
+      "category": "comments",
+      "expect": "pass",
+      "source": "Visible\n\n/////\nhidden\n////"
+    },
+    {
+      "id": "comment-header",
+      "category": "comments",
+      "expect": "pass",
+      "source": "// lead\n= Doc\n// before author\nJane Doe\n////\n:author: hidden\n\n= Hidden\n////\nv1\n// end\n\n{author} {revnumber}"
+    },
+    {
+      "id": "comment-metadata",
+      "category": "comments",
+      "expect": "pass",
+      "source": "== Target\n\n.See <<_target>>\n// note\n////\nhidden\n////\n----\nx\n----"
+    },
+    {
+      "id": "comment-container",
+      "category": "comments",
+      "expect": "pass",
+      "source": "====\n////\n====\n:who: hidden\n////\n// ignored\nvisible\n===="
+    },
+    {
+      "id": "comment-list",
+      "category": "comments",
+      "expect": "pass",
+      "source": "* one\n// hidden\nwrapped\n** nested\n// second\n* two"
+    },
+    {
+      "id": "comment-list-break",
+      "category": "comments",
+      "expect": "pass",
+      "source": "* one\n////\nhidden\n////\n* two"
+    },
+    {
+      "id": "comment-list-attached",
+      "category": "comments",
+      "expect": "pass",
+      "source": "* one\n+\n////\nhidden\n////\n* two"
+    },
+    {
+      "id": "comment-list-cancel-continuation",
+      "category": "comments",
+      "expect": "pass",
+      "source": "* one\n+\n// hidden\n----\nx\n----"
+    },
+    {
+      "id": "comment-verbatim",
+      "category": "comments",
+      "expect": "pass",
+      "source": "----\n// visible\n////\ntext\n////\n----\n\n....\n// visible\n////\ntext\n////\n...."
+    },
+    {
+      "id": "comment-literal-style",
+      "category": "comments",
+      "expect": "pass",
+      "source": "[literal]\none\n// visible\n////\ntwo\n////"
+    },
+    {
+      "id": "comment-pass-paragraph",
+      "category": "comments",
+      "expect": "pass",
+      "source": "[pass]\n<span>one\n// hidden\ntwo</span>"
+    },
+    {
+      "id": "comment-pass-delimited",
+      "category": "comments",
+      "expect": "pass",
+      "source": "++++\n<span>one\n// visible\ntwo</span>\n++++"
+    },
+    {
+      "id": "comment-open-verbatim",
+      "category": "comments",
+      "expect": "pass",
+      "source": "[source]\n--\n// visible\n////\ntext\n////\n--"
+    },
+    {
+      "id": "comment-slash-text",
+      "category": "comments",
+      "expect": "pass",
+      "source": "text // visible\n/// visible\n//// x\n // visible"
+    },
+    {
+      "id": "comment-style-paragraph",
+      "category": "comments",
+      "expect": "pass",
+      "source": ".Hidden\n[#secret]\n[comment]\nsecret <<missing>>\n:who: hidden\n\nVisible"
+    },
+    {
+      "id": "comment-style-open",
+      "category": "comments",
+      "expect": "pass",
+      "source": "[comment]\n--\nsecret\n\n:who: hidden\n--\n\nVisible"
+    },
+    {
+      "id": "comment-style-inert",
+      "category": "comments",
+      "expect": "pass",
+      "source": "[comment]\n====\nvisible\n===="
+    },
+    {
+      "id": "comment-style-open-unclosed",
+      "category": "comments",
+      "expect": "pass",
+      "source": "[comment]\n--\nsecret"
+    },
+    {
+      "id": "comment-after-inline-prefix",
+      "category": "comments",
+      "expect": "pass",
+      "source": "* // visible\n// hidden\n* next"
     }
   ]
 }

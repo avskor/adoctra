@@ -28,6 +28,7 @@ pub struct Token {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TokenKind {
+    Comment,
     Heading,
     Author,
     Revision,
@@ -61,6 +62,7 @@ pub enum TokenKind {
 impl TokenKind {
     pub fn as_str(self) -> &'static str {
         match self {
+            TokenKind::Comment => "comment",
             TokenKind::Heading => "heading",
             TokenKind::Author => "author",
             TokenKind::Revision => "revision",
@@ -94,6 +96,10 @@ impl TokenKind {
 }
 
 pub fn tokens_with_options(source: &str, options: &ParseOptions) -> Vec<Token> {
+    // Comment classification is owned by the structural parser, including
+    // verbatim styles and list continuations. Do not duplicate those rules here.
+    let comments = crate::parser::parse_with_options(source, options).comments;
+    let mut comment_index = 0;
     let lines = lines_with_offsets(source);
     // Resolve `{attr}` against the same header table the parser uses.
     let mut context = ParseContext::new(options);
@@ -114,6 +120,24 @@ pub fn tokens_with_options(source: &str, options: &ParseOptions) -> Vec<Token> {
 
     for (line_index, (off, line)) in lines.into_iter().enumerate() {
         let line_span = Span::new(off, off + line.len());
+        while comment_index < comments.len() && comments[comment_index].end <= off {
+            comment_index += 1;
+        }
+        if let Some(span) = comments
+            .get(comment_index)
+            .filter(|span| span.start <= off && off < span.end)
+        {
+            if span.start == off {
+                out.push(Token {
+                    span: *span,
+                    kind: TokenKind::Comment,
+                });
+            }
+            if !crate::comments::is_line_comment(line) {
+                mid_paragraph = false;
+            }
+            continue;
+        }
         if header.author_line == Some(line_index) || header.revision_line == Some(line_index) {
             out.push(Token {
                 span: line_span,

@@ -8,6 +8,7 @@
 pub mod ast;
 pub mod attributes;
 pub mod backend;
+mod comments;
 mod context;
 pub mod diagnostic;
 pub mod error;
