@@ -160,15 +160,23 @@ and coercion rules (including arbitrary-length integers, first-operator splittin
 and the retained closing quote in string values). It always opens a block; malformed
 active expressions diagnose without pushing, skipped expressions only balance nesting.
 Ordinary/intrinsic attributes and escaped references are supported; set/counter side
-effects and include expansion remain unimplemented.
+effects remain unimplemented; basic include expansion is available with an explicit provider.
 ResourceProvider/ResourceRequest/Resource and typed ResourceError now define host
 resource loading. SourceMap::load resolves through an explicit provider, reuses an
 identical canonical-name/text snapshot, and preserves older ids after edits. Core's
 MemoryResources uses virtual slash paths; CLI owns the rooted filesystem adapter
 and loads its primary file through it. WASM exports ResourceWorkspace for host
 buffers and parsing/highlighting immutable snapshots by id. Neither parser nor
-core loads ambient files or URLs. Includes still require a multi-source reader and
-provenance mapping; do not implement them by parsing included documents separately.
+core loads ambient files or URLs. parse_resource/tokens_resource expand basic
+include::target[] lazily through that provider, retaining one parser/attribute
+context across files. Span.provenance optionally indexes ParseResult.provenance
+for ranges spanning source occurrences; ordinary coordinates identify the first
+physical fragment. Preserve this table with the AST for editor positions. WASM
+exports provenance/include_directives; tokens use individual physical spans.
+Includes have depth/byte limits and cycle diagnostics. CLI file input expands
+includes within its existing root; stdin and string APIs have no provider.
+Options such as lines/tags/leveloffset/optional and full safe-mode compatibility
+remain follow-up work; see the implementation plan and parser API.
 
 Working: parser for header attributes, headings, listing blocks, literal blocks
 (`....` and `[literal]`), admonitions (paragraph form), paragraphs,

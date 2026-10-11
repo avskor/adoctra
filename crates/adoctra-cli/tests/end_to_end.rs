@@ -196,3 +196,84 @@ fn cli_file_resource_reports_canonical_source_name_and_renders_content() {
     );
     assert!(String::from_utf8(output.stdout).unwrap().contains("Привет"));
 }
+
+#[test]
+fn cli_expands_nested_includes_and_reports_child_locations_and_denied_paths() {
+    use std::process::Command;
+    let root = std::env::temp_dir().join(format!("adoctra-cli-includes-{}", std::process::id()));
+    std::fs::create_dir_all(root.join("sub")).unwrap();
+    std::fs::write(
+        root.join("main.adoc"),
+        "include::sub/child.adoc[]\n\ninclude::../outside.adoc[]\n\nafter",
+    )
+    .unwrap();
+    std::fs::write(root.join("sub/child.adoc"), "Я *текст* <<missing>>").unwrap();
+    // An existing resource outside the root must still be denied.
+    let outside = root.with_file_name(format!("adoctra-outside-{}.adoc", std::process::id()));
+    std::fs::write(&outside, "must not leak").unwrap();
+    let target = format!("../{}", outside.file_name().unwrap().to_str().unwrap());
+    std::fs::write(
+        root.join("main.adoc"),
+        format!("include::sub/child.adoc[]\n\ninclude::{target}[]\n\nafter"),
+    )
+    .unwrap();
+    let output = Command::new(env!("CARGO_BIN_EXE_adoctra"))
+        .arg(root.join("main.adoc"))
+        .arg("--stdout")
+        .output()
+        .unwrap();
+    let child = root.join("sub/child.adoc").canonicalize().unwrap();
+    std::fs::remove_dir_all(&root).unwrap();
+    std::fs::remove_file(outside).unwrap();
+    assert!(output.status.success());
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(
+        stderr.contains(&format!("{}:1:11: warning", child.display())),
+        "{stderr}"
+    );
+    assert!(stderr.contains("AccessDenied"), "{stderr}");
+    let html = String::from_utf8(output.stdout).unwrap();
+    assert!(
+        html.contains("<strong>текст</strong>") && html.contains("<p>after</p>"),
+        "{html}"
+    );
+    assert!(!html.contains("must not leak"));
+}
+
+#[test]
+fn included_document_has_the_same_html_and_json_as_a_single_logical_stream() {
+    use adoctra::{parse_resource, MemoryResources, ParseOptions, SourceMap};
+    let mut resources = MemoryResources::new();
+    resources
+        .insert("main.adoc", "= Doc\n\ninclude::part.adoc[]\n\n== Target")
+        .unwrap();
+    resources
+        .insert(
+            "part.adoc",
+            ".See <<_target>>\n====\n* first\n* second\n====",
+        )
+        .unwrap();
+    let mut sources = SourceMap::new();
+    let source_id = sources.load("main.adoc", None, &resources).unwrap();
+    let result = parse_resource(
+        &mut sources,
+        &ParseOptions {
+            source_id,
+            ..Default::default()
+        },
+        &resources,
+    )
+    .unwrap();
+    let expected =
+        adoctra::parse("= Doc\n\n.See <<_target>>\n====\n* first\n* second\n====\n\n== Target");
+    assert!(result.diagnostics.is_empty());
+    for backend in [
+        Box::new(adoctra::html::HtmlBackend::new()) as Box<dyn adoctra::Backend>,
+        Box::new(adoctra::json::JsonBackend::new()),
+    ] {
+        assert_eq!(
+            backend.convert(&result.document).unwrap(),
+            backend.convert(&expected.document).unwrap()
+        );
+    }
+}

@@ -1,6 +1,7 @@
 import unittest
+from pathlib import Path
 
-from compatibility import classify, projection
+from compatibility import case_commands, classify, projection, validate_resources
 
 
 class ProjectionTests(unittest.TestCase):
@@ -58,6 +59,26 @@ class ExpectationTests(unittest.TestCase):
         self.assertEqual(classify({'expect': 'xfail'}, 'known', 'right', 'known'), 'XFAIL')
         self.assertEqual(classify({'expect': 'xfail'}, 'new regression', 'right', 'known'), 'FAIL')
         self.assertEqual(classify({'expect': 'xfail'}, 'right', 'right', 'known'), 'XPASS')
+
+
+class ResourceFixtureTests(unittest.TestCase):
+    def test_invalid_resource_paths_and_profiles_are_rejected(self):
+        for name in ["/absolute", "../escape", "a/../b", "a//b", "main.adoc", "a\\b", "x:y", ""]:
+            with self.assertRaises(ValueError):
+                validate_resources({"profile": "include-body-dom-v1", "resources": {name: "x"}})
+        for case in [{"resources": {}}, {"profile": "include-body-dom-v1"}]:
+            with self.assertRaises(ValueError):
+                validate_resources(case)
+
+    def test_both_renderers_use_the_same_isolated_utf8_tree(self):
+        case = {"profile": "include-body-dom-v1", "source": "include::sub/я.adoc[]\r\n",
+                "resources": {"sub/я.adoc": "Я\r\n"}}
+        with case_commands(case, Path("adoctra")) as (reference, actual):
+            root = Path(reference[-1])
+            self.assertEqual(reference[-2], "--include-root")
+            self.assertEqual(Path(actual[1]), root / "main.adoc")
+            self.assertEqual((root / "sub/я.adoc").read_bytes(), "Я\r\n".encode())
+        self.assertFalse(root.exists())
 
 
 if __name__ == '__main__':

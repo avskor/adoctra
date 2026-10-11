@@ -7,6 +7,7 @@ Only known presentation wrappers are reconciled; unknown markup survives.
 
 import argparse
 from collections import Counter
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 import difflib
 from html.parser import HTMLParser
@@ -15,6 +16,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import tempfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -197,6 +199,40 @@ def run(command, source):
     return result.stdout
 
 
+def validate_resources(case):
+    if "resources" not in case:
+        if case.get("profile", "body-dom-v1") != "body-dom-v1":
+            raise ValueError("include profile requires resources")
+        return
+    if case.get("profile") != "include-body-dom-v1" or not isinstance(case["resources"], dict):
+        raise ValueError("resources require include-body-dom-v1")
+    for name, text in case["resources"].items():
+        if (not isinstance(name, str) or not name or name == "main.adoc"
+                or name.startswith("/") or any(part in {"", ".", ".."} for part in name.split("/"))
+                or any(char in name for char in "\\:\0") or not isinstance(text, str)):
+            raise ValueError(f"invalid fixture resource: {name!r}")
+
+
+@contextmanager
+def case_commands(case, binary):
+    validate_resources(case)
+    reference = ["ruby", str(ROOT / "scripts/asciidoctor-reference.rb"), "--showtitle"]
+    actual = [str(binary.resolve()), "-", "--to", "html", "--stdout"]
+    if "resources" not in case:
+        yield reference, actual
+        return
+    with tempfile.TemporaryDirectory(prefix="adoctra-include-") as directory:
+        root = Path(directory)
+        (root / "main.adoc").write_text(case["source"], encoding="utf-8", newline="")
+        for name, text in case["resources"].items():
+            path = root / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8", newline="")
+        reference += ["--include-root", directory]
+        actual[1] = str(root / "main.adoc")
+        yield reference, actual
+
+
 def load_manifest():
     manifest = json.loads((CORPUS / "cases.json").read_text(encoding="utf-8"))
     version = (CORPUS / "asciidoctor-version").read_text().strip()
@@ -209,6 +245,7 @@ def load_manifest():
         if not re.fullmatch(r"[a-z0-9_-]+", case["id"]) or case["id"] in ids:
             raise ValueError(f"invalid or duplicate case id: {case['id']}")
         ids.add(case["id"])
+        validate_resources(case)
         if case["expect"] not in {"pass", "xfail"} or not isinstance(case["source"], str):
             raise ValueError(f"invalid case: {case['id']}")
         if case["expect"] == "xfail" and not case.get("reason"):
@@ -243,18 +280,19 @@ def main():
     for case in manifest["cases"]:
         reference_path = CORPUS / "reference" / (case["id"] + ".html")
         baseline_path = CORPUS / "baseline" / (case["id"] + ".json")
-        if args.verify_reference or args.update_reference:
-            reference = run(["ruby", str(ROOT / "scripts/asciidoctor-reference.rb"), "--showtitle"], case["source"])
+        with case_commands(case, args.binary) as (reference_command, actual_command):
+            if args.verify_reference or args.update_reference:
+                reference = run(reference_command, case["source"])
+                if args.update_reference:
+                    projection(reference)  # Reject malformed fixtures before storing them.
+                    reference_path.parent.mkdir(exist_ok=True)
+                    reference_path.write_text(reference, encoding="utf-8")
+                elif reference != reference_path.read_text(encoding="utf-8"):
+                    raise ValueError(f"reference drift: {case['id']}; review before --update-reference")
             if args.update_reference:
-                projection(reference)  # Reject malformed fixtures before storing them.
-                reference_path.parent.mkdir(exist_ok=True)
-                reference_path.write_text(reference, encoding="utf-8")
-            elif reference != reference_path.read_text(encoding="utf-8"):
-                raise ValueError(f"reference drift: {case['id']}; review before --update-reference")
-        if args.update_reference:
-            continue
-        expected = projection(reference_path.read_text(encoding="utf-8"))
-        actual = projection(run([str(args.binary.resolve()), "-", "--to", "html", "--stdout"], case["source"]))
+                continue
+            expected = projection(reference_path.read_text(encoding="utf-8"))
+            actual = projection(run(actual_command, case["source"]))
         baseline = None
         if case["expect"] == "xfail":
             if args.record_known_differences:

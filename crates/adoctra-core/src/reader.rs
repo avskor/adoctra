@@ -1,9 +1,9 @@
-//! Lazy, source-preserving conditional preprocessing. Attribute mutations belong
+//! Lazy, source-preserving conditional and include preprocessing. Attribute mutations belong
 //! to the parser; each line is evaluated once, when that parser requests it.
 use crate::context::ParseContext;
 use crate::scanner::{lines_with_offsets, FilteredSource};
 use crate::{Attributes, Diagnostic, Inline, Severity, Span};
-use std::ops::Index;
+use std::{ops::Index, sync::Arc};
 
 struct Conditional {
     target: String,
@@ -11,40 +11,129 @@ struct Conditional {
     span: Span,
 }
 
-pub(crate) struct Reader<'a> {
-    source: &'a str,
-    raw: Vec<(usize, &'a str)>,
+struct Input {
+    source_id: crate::SourceId,
+    lines: Vec<(usize, Arc<str>, String)>,
     next: usize,
-    pub loaded: Vec<(usize, &'a str)>,
+    preprocess: bool,
+    occurrence: usize,
+    source_len: usize,
+}
+
+impl Input {
+    fn new(source: &str, source_id: crate::SourceId, preprocess: bool, occurrence: usize) -> Self {
+        let bom = if source.starts_with('\u{feff}') { 3 } else { 0 };
+        let lines = lines_with_offsets(&source[bom..])
+            .into_iter()
+            .map(|(off, line)| {
+                let off = off + bom;
+                let rest = &source[off + line.len()..];
+                let eol = if rest.starts_with("\r\n") {
+                    "\r\n"
+                } else {
+                    "\n"
+                };
+                (off, Arc::from(line), eol.to_owned())
+            })
+            .collect();
+        Self {
+            source_id,
+            lines,
+            next: 0,
+            preprocess,
+            occurrence,
+            source_len: source.len(),
+        }
+    }
+}
+
+struct Resources<'a> {
+    sources: &'a mut crate::SourceMap,
+    provider: &'a dyn crate::ResourceProvider,
+    limits: crate::IncludeLimits,
+    bytes: usize,
+}
+
+struct Origin {
+    start: usize,
+    end: usize,
+    span: Span,
+    occurrence: usize,
+}
+
+pub(crate) struct Reader<'a> {
+    inputs: Vec<Input>,
+    resources: Option<Resources<'a>>,
+    origins: Vec<Origin>,
+    next_offset: usize,
+    next_occurrence: usize,
+    pub loaded: Vec<(usize, Arc<str>)>,
+    endings: Vec<(usize, String)>,
     pub limit: usize,
     stack: Vec<Conditional>,
+    pub comments: Vec<Span>,
     pub directives: Vec<Span>,
+    pub includes: Vec<Span>,
     pub inactive: Vec<Span>,
     pub diagnostics: Vec<Diagnostic>,
-    preprocess: bool,
 }
 
 impl<'a> Reader<'a> {
-    pub fn new(source: &'a str) -> Self {
+    pub fn new(source: &str) -> Self {
         Self {
-            source,
-            raw: lines_with_offsets(source),
-            next: 0,
+            inputs: vec![Input::new(source, crate::SourceId::default(), true, 0)],
+            resources: None,
+            origins: Vec::new(),
+            next_offset: 0,
+            next_occurrence: 1,
             loaded: Vec::new(),
+            endings: Vec::new(),
             limit: usize::MAX,
             stack: Vec::new(),
+            comments: Vec::new(),
             directives: Vec::new(),
+            includes: Vec::new(),
             inactive: Vec::new(),
             diagnostics: Vec::new(),
-            preprocess: true,
         }
     }
 
-    pub fn plain(source: &'a str) -> Self {
-        Self {
-            preprocess: false,
-            ..Self::new(source)
-        }
+    pub fn plain(source: &str) -> Self {
+        let mut reader = Self::new(source);
+        reader.inputs[0].preprocess = false;
+        reader
+    }
+
+    pub fn with_resources(
+        sources: &'a mut crate::SourceMap,
+        options: &crate::ParseOptions,
+        provider: &'a dyn crate::ResourceProvider,
+    ) -> crate::ResourceResult<Self> {
+        let source = sources.get(options.source_id).ok_or_else(|| {
+            crate::ResourceError::new(
+                crate::ResourceErrorKind::InvalidTarget,
+                options.source_id.0.to_string(),
+                "unknown source id",
+            )
+        })?;
+        let mut reader = Self::new(source.text());
+        reader.inputs[0].source_id = options.source_id;
+        reader.resources = Some(Resources {
+            sources,
+            provider,
+            limits: options.includes,
+            bytes: 0,
+        });
+        Ok(reader)
+    }
+
+    pub fn set_primary_id(&mut self, id: crate::SourceId) {
+        self.inputs[0].source_id = id;
+    }
+
+    /// Clone the shared line so callers may advance the reader while using it.
+    pub fn line(&self, index: usize) -> (usize, Arc<str>) {
+        self.loaded[index].clone()
     }
 
     pub fn has(&mut self, index: usize, context: &ParseContext) -> bool {
@@ -60,21 +149,96 @@ impl<'a> Reader<'a> {
             return false;
         }
         while self.loaded.len() <= index {
-            let Some(&(off, line)) = self.raw.get(self.next) else {
+            let Some(input) = self.inputs.last_mut() else {
                 return false;
             };
-            self.next += 1;
-            if self.preprocess {
+            let Some((original, line, eol)) = input.lines.get(input.next).cloned() else {
+                self.inputs.pop();
+                continue;
+            };
+            input.next += 1;
+            let off = self.next_offset;
+            self.next_offset += line.len() + eol.len();
+            let source_id = input.source_id;
+            let preprocess = input.preprocess;
+            // Synthetic EOF newlines map to the original EOF, never past it.
+            let original_end = (original + line.len() + eol.len()).min(input.source_len);
+            self.origins.push(Origin {
+                start: off,
+                end: self.next_offset,
+                span: Span::in_source(source_id, original, original_end),
+                occurrence: input.occurrence,
+            });
+            if preprocess {
                 if let Some(attributes) = attributes {
+                    let eol_start = off + line.len();
                     if let Some(emitted) = self.process(off, line, attributes) {
+                        self.endings.push((eol_start, eol));
                         self.loaded.push(emitted);
                     }
                     continue;
                 }
             }
+            self.endings.push((off + line.len(), eol));
             self.loaded.push((off, line));
         }
         true
+    }
+
+    /// Physical ranges in reading order. A return to the same file or a repeated
+    /// inclusion remains a separate occurrence, even if the offsets coincide.
+    pub fn original_spans(&self, span: Span) -> Vec<Span> {
+        let first = self.origins.partition_point(|o| o.end <= span.start);
+        let mut out: Vec<Span> = Vec::new();
+        let mut occurrence = None;
+        for origin in &self.origins[first..] {
+            if origin.start >= span.end && !(span.is_empty() && origin.start == span.start) {
+                break;
+            }
+            let start = origin.span.start
+                + span
+                    .start
+                    .saturating_sub(origin.start)
+                    .min(origin.span.len());
+            let end =
+                origin.span.start + span.end.saturating_sub(origin.start).min(origin.span.len());
+            let mapped = Span::in_source(origin.span.source_id, start, end);
+            if occurrence == Some(origin.occurrence) {
+                let previous = out.last_mut().expect("same occurrence has a range");
+                previous.end = mapped.end;
+            } else {
+                out.push(mapped);
+                occurrence = Some(origin.occurrence);
+            }
+        }
+        if out.is_empty() {
+            if let Some(origin) = self.origins.last() {
+                out.push(Span::in_source(
+                    origin.span.source_id,
+                    origin.span.end,
+                    origin.span.end,
+                ));
+            } else {
+                out.push(span);
+            }
+        }
+        out
+    }
+
+    pub fn map_span(&self, span: Span, provenance: &mut Vec<Vec<Span>>) -> Span {
+        let fragments = self.original_spans(span);
+        let mut primary = fragments[0];
+        if fragments.len() > 1 {
+            let index = provenance
+                .iter()
+                .position(|p| *p == fragments)
+                .unwrap_or_else(|| {
+                    provenance.push(fragments);
+                    provenance.len() - 1
+                });
+            primary.provenance = Some(index);
+        }
+        primary
     }
 
     fn error(&mut self, span: Span, message: String) {
@@ -88,9 +252,9 @@ impl<'a> Reader<'a> {
     fn process(
         &mut self,
         off: usize,
-        line: &'a str,
+        line: Arc<str>,
         attributes: &Attributes,
-    ) -> Option<(usize, &'a str)> {
+    ) -> Option<(usize, Arc<str>)> {
         let active = self.stack.last().map_or(true, |c| c.active);
         let span = Span::new(off, off + line.len());
         let directive_line = line.trim_end();
@@ -107,7 +271,21 @@ impl<'a> Reader<'a> {
         if escaped {
             // The reference reader unescapes a recognized directive even while
             // skipping a branch. Preserve that observable reader behavior.
-            return Some((off + 1, candidate));
+            return Some((off + 1, Arc::from(candidate)));
+        }
+        if keyword == "include" {
+            if !active {
+                self.inactive.push(span);
+                return None;
+            }
+            if self.resources.is_none() {
+                return Some((off, line));
+            }
+            self.includes.push(span);
+            if self.expand_include(target, text, span, attributes) {
+                return None;
+            }
+            return Some((off, line));
         }
         let target = target.to_lowercase();
         if keyword == "endif" {
@@ -204,11 +382,68 @@ impl<'a> Reader<'a> {
             self.directives.push(Span::new(off, start));
             self.directives
                 .push(Span::new(start + text.len(), span.end));
-            Some((start, text))
+            Some((start, Arc::from(text)))
         } else {
             self.directives.push(span);
             None
         }
+    }
+
+    fn expand_include(
+        &mut self,
+        target: &str,
+        attrs: &str,
+        span: Span,
+        attributes: &Attributes,
+    ) -> bool {
+        if !attrs.trim().is_empty() {
+            self.error(span, "include options are not supported yet".into());
+            return false;
+        }
+        let target = crate::context::substitute_attribute_value(target, attributes);
+        let current = self.inputs.last().expect("current input").source_id;
+        let resources = self.resources.as_mut().expect("explicit resource provider");
+        if self.inputs.len() > resources.limits.max_depth {
+            self.error(span, "maximum include depth exceeded".into());
+            return false;
+        }
+        let id = match resources
+            .sources
+            .load(&target, Some(current), resources.provider)
+        {
+            Ok(id) => id,
+            Err(error) => {
+                self.error(span, format!("include failed ({:?}): {error}", error.kind));
+                return false;
+            }
+        };
+        let file = resources.sources.get(id).expect("loaded source");
+        if self.inputs.iter().any(|input| {
+            resources
+                .sources
+                .get(input.source_id)
+                .is_some_and(|s| s.name() == file.name())
+        }) {
+            self.error(span, format!("cyclic include: {target}"));
+            return false;
+        }
+        if file.text().len() > resources.limits.max_bytes.saturating_sub(resources.bytes) {
+            self.error(span, "maximum included byte count exceeded".into());
+            return false;
+        }
+        resources.bytes += file.text().len();
+        // The reference preprocesses directives only in AsciiDoc resources.
+        let preprocess = [".adoc", ".asciidoc", ".asc", ".ad", ".txt"]
+            .iter()
+            .any(|ext| file.name().ends_with(ext));
+        self.inputs.push(Input::new(
+            file.text(),
+            id,
+            preprocess,
+            self.next_occurrence,
+        ));
+        self.next_occurrence += 1;
+        true
     }
 
     pub fn finish(&mut self) {
@@ -234,7 +469,7 @@ impl<'a> Reader<'a> {
         let old = self.limit;
         let mut end = start;
         while self.has(end, context) {
-            if stop(self[end].1) {
+            if stop(&self[end].1) {
                 break;
             }
             end += 1;
@@ -248,7 +483,8 @@ impl<'a> Reader<'a> {
         let first = self
             .loaded
             .partition_point(|(off, line)| off + line.len() < start);
-        for &(off, line) in &self.loaded[first..] {
+        for (index, (off, line)) in self.loaded.iter().enumerate().skip(first) {
+            let off = *off;
             if off >= end {
                 break;
             }
@@ -258,19 +494,9 @@ impl<'a> Reader<'a> {
                 fragments.push((off + left, &line[left..right]));
             }
             if off + line.len() < end {
-                // An inline conditional's closing bracket is replaced by its
-                // physical line ending, never included in semantic text.
-                let rest = &self.source[off + line.len()..];
-                if let Some(nl) = rest.find('\n') {
-                    let eol = off + line.len() + nl;
-                    let eol_start = if eol > 0 && self.source.as_bytes()[eol - 1] == b'\r' {
-                        eol - 1
-                    } else {
-                        eol
-                    };
-                    if eol < end {
-                        fragments.push((eol_start, &self.source[eol_start..eol + 1]));
-                    }
+                let (eol_start, eol) = &self.endings[index];
+                if *eol_start < end {
+                    fragments.push((*eol_start, eol.as_str()));
                 }
             }
         }
@@ -303,7 +529,7 @@ impl<'a> Reader<'a> {
 }
 
 impl<'a> Index<usize> for Reader<'a> {
-    type Output = (usize, &'a str);
+    type Output = (usize, Arc<str>);
     fn index(&self, index: usize) -> &Self::Output {
         &self.loaded[index]
     }
@@ -311,12 +537,12 @@ impl<'a> Index<usize> for Reader<'a> {
 
 fn directive(line: &str) -> Option<(&str, &str, &str)> {
     let (keyword, rest) = line.split_once("::")?;
-    if !matches!(keyword, "ifdef" | "ifndef" | "ifeval" | "endif") {
+    if !matches!(keyword, "ifdef" | "ifndef" | "ifeval" | "endif" | "include") {
         return None;
     }
     let rest = rest.strip_suffix(']')?;
     let (target, text) = rest.split_once('[')?;
-    if target.chars().any(char::is_whitespace) {
+    if keyword != "include" && target.chars().any(char::is_whitespace) {
         return None;
     }
     Some((keyword, target, text))

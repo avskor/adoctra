@@ -26,7 +26,8 @@ pub(crate) fn skip_comment(
     if !lines.has(*i, context) {
         return false;
     }
-    let (start, line) = lines[*i];
+    let (start, line_buffer) = lines.line(*i);
+    let line = line_buffer.as_ref();
     if is_line_comment(line) {
         context.comments.push(Span::new(start, start + line.len()));
         *i += 1;
@@ -45,12 +46,14 @@ pub(crate) fn consume_delimited_comment(
     context: &mut ParseContext,
     fence: &str,
 ) {
-    let (start, line) = lines[*i];
+    let (start, line_buffer) = lines.line(*i);
+    let line = line_buffer.as_ref();
     let mut end = start + line.len();
     *i += 1;
     let mut closed = false;
     while lines.raw_has(*i) {
-        let (off, line) = lines[*i];
+        let (off, line_buffer) = lines.line(*i);
+        let line = line_buffer.as_ref();
         end = off + line.len();
         *i += 1;
         if line.trim_end() == fence {

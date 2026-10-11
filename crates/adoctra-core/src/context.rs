@@ -11,6 +11,8 @@ pub struct ParseOptions {
     /// This initial API supports set overrides; soft defaults and locked unsets
     /// will be added alongside the remaining Asciidoctor option semantics.
     pub attributes: Attributes,
+    /// Limits for explicit resource parsing; ordinary string parsing performs no loads.
+    pub includes: IncludeLimits,
 }
 
 pub(crate) struct ParseContext {
@@ -94,7 +96,7 @@ pub(crate) fn parse_attribute_entry(line: &str) -> Option<AttributeEntry> {
 
 /// Header attribute values substitute attribute references, not inline markup.
 /// Substituted strings are not rescanned, which also bounds self references.
-fn substitute_attribute_value(value: &str, attributes: &Attributes) -> String {
+pub(crate) fn substitute_attribute_value(value: &str, attributes: &Attributes) -> String {
     let mut result = String::new();
     let mut rest = value;
     while let Some(open) = rest.find('{') {
@@ -113,4 +115,20 @@ fn substitute_attribute_value(value: &str, attributes: &Attributes) -> String {
     }
     result.push_str(rest);
     result
+}
+
+/// Bounds for recursive resource expansion (the primary source is excluded).
+#[derive(Debug, Clone, Copy)]
+pub struct IncludeLimits {
+    pub max_depth: usize,
+    pub max_bytes: usize,
+}
+
+impl Default for IncludeLimits {
+    fn default() -> Self {
+        Self {
+            max_depth: 64,
+            max_bytes: 16 * 1024 * 1024,
+        }
+    }
 }

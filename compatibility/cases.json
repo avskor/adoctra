@@ -767,6 +767,197 @@
       "category": "conditionals",
       "expect": "pass",
       "source": ":имя: Мир\r\n\r\nЯ *до\r\n// скрытый комментарий\r\nifeval::[\"{имя}\" != \"Мир\"]\r\nскрыто\r\nendif::[]\r\nifeval::[\"{имя}\" == \"Мир\"]\r\nпосле*\r\nendif::[]"
+    },
+    {
+      "id": "include-basic",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "before\n\ninclude::part.adoc[]\n\nafter",
+      "resources": {
+        "part.adoc": "included *bold*"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-nested",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::sub/part.adoc[]",
+      "resources": {
+        "sub/part.adoc": "include::../shared.adoc[]",
+        "shared.adoc": "nested"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-attributes",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": ":part: part.adoc\n\ninclude::{part}[]\n\n{from-child}",
+      "resources": {
+        "part.adoc": ":from-child: yes\n\ninside"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-paragraph",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "before\ninclude::part.adoc[]\nafter",
+      "resources": {
+        "part.adoc": "middle"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-markup",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "*before\ninclude::part.adoc[]\nafter*",
+      "resources": {
+        "part.adoc": "middle"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-header",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::header.adoc[]\n\n{author} {revnumber}",
+      "resources": {
+        "header.adoc": "= Title\nИван Иванов\nv1.0, 2026-10-11"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-list",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "* first\ninclude::part.adoc[]\n* last",
+      "resources": {
+        "part.adoc": "* middle"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-container",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "====\ninclude::part.adoc[]\n\nafter",
+      "resources": {
+        "part.adoc": "inside\n===="
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-conditional",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "ifdef::missing[]\ninclude::absent.adoc[]\nendif::[]\ninclude::part.adoc[]",
+      "resources": {
+        "part.adoc": "ifndef::missing[shown]"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-comments",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "////\ninclude::absent.adoc[]\n////\ninclude::part.adoc[]",
+      "resources": {
+        "part.adoc": "// comment\nshown"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-listing",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.adoc[]\n----",
+      "resources": {
+        "part.adoc": "ifdef::missing[]\nhidden\nendif::[]\n  shown\n\tend"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-raw",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[]\n----",
+      "resources": {
+        "part.rs": "ifdef::missing[]\nraw\nendif::[]\ninclude::missing[]"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-repeat",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::part.adoc[]\ninclude::part.adoc[]",
+      "resources": {
+        "part.adoc": "same"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-empty",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "before\ninclude::empty.adoc[]\nafter",
+      "resources": {
+        "empty.adoc": ""
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-escaped",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "\\include::absent.adoc[]\n\ninclude::part.adoc[]",
+      "resources": {
+        "part.adoc": "shown"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-unicode-crlf",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::часть.adoc[]\r\n",
+      "resources": {
+        "часть.adoc": "﻿Я *текст*\r\n"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-forward-xref",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::part.adoc[]\n\n== Target",
+      "resources": {
+        "part.adoc": "See <<_target>>."
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-capture",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "====\ninclude::part.adoc[]\nifdef::flag[hidden]\nifndef::flag[inside]\n====\n\nifdef::flag[after]",
+      "resources": {
+        "part.adoc": ":flag:\n\n"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-space-path",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::some file.adoc[]",
+      "resources": {
+        "some file.adoc": "shown"
+      },
+      "expect": "pass"
     }
   ]
 }

@@ -24,6 +24,9 @@ pub struct Span {
     pub source_id: SourceId,
     pub start: usize,
     pub end: usize,
+    /// Index into ParseResult.provenance for a range crossing source occurrences.
+    /// The ordinary coordinates identify its first physical fragment.
+    pub provenance: Option<usize>,
 }
 
 impl Span {
@@ -36,6 +39,7 @@ impl Span {
             source_id,
             start,
             end,
+            provenance: None,
         }
     }
 

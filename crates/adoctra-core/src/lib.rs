@@ -30,7 +30,7 @@ pub mod visit;
 pub use ast::{Author, Block, BlockKind, Document, DocumentHeader, Inline, Revision, Span};
 pub use attributes::Attributes;
 pub use backend::Backend;
-pub use context::ParseOptions;
+pub use context::{IncludeLimits, ParseOptions};
 pub use diagnostic::{Diagnostic, ParseResult, Severity};
 pub use error::{Error, Result};
 pub use extension::{Registry, TreeProcessor};
@@ -60,4 +60,26 @@ pub fn tokens(source: &str) -> Vec<Token> {
 /// Highlight one source using the same source identity and attribute options.
 pub fn tokens_with_options(source: &str, options: &ParseOptions) -> Vec<Token> {
     tokenizer::tokens_with_options(source, options)
+}
+
+/// Parse a registered snapshot, expanding includes through the supplied provider.
+/// Only an invalid primary id returns Err; include failures are diagnostics.
+pub fn parse_resource(
+    sources: &mut SourceMap,
+    options: &ParseOptions,
+    provider: &dyn ResourceProvider,
+) -> ResourceResult<ParseResult> {
+    let reader = reader::Reader::with_resources(sources, options, provider)?;
+    Ok(parser::parse_reader(options, reader).0)
+}
+
+/// Highlight a registered document and its includes. Each token belongs to one
+/// original source; tokens crossing source boundaries are split into fragments.
+pub fn tokens_resource(
+    sources: &mut SourceMap,
+    options: &ParseOptions,
+    provider: &dyn ResourceProvider,
+) -> ResourceResult<Vec<Token>> {
+    let reader = reader::Reader::with_resources(sources, options, provider)?;
+    Ok(tokenizer::tokens_reader(options, reader))
 }

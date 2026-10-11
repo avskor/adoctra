@@ -30,6 +30,7 @@ pub struct Token {
 pub enum TokenKind {
     Comment,
     ConditionalDirective,
+    IncludeDirective,
     Inactive,
     Heading,
     Author,
@@ -66,6 +67,7 @@ impl TokenKind {
         match self {
             TokenKind::Comment => "comment",
             TokenKind::ConditionalDirective => "conditional-directive",
+            TokenKind::IncludeDirective => "include-directive",
             TokenKind::Inactive => "inactive",
             TokenKind::Heading => "heading",
             TokenKind::Author => "author",
@@ -100,28 +102,44 @@ impl TokenKind {
 }
 
 pub fn tokens_with_options(source: &str, options: &ParseOptions) -> Vec<Token> {
-    let (result, reader) =
-        crate::parser::parse_reader(source, options, crate::reader::Reader::new(source));
-    let processed = reader.content(0, source.len());
-    let comments: Vec<_> = result
+    tokens_reader(options, crate::reader::Reader::new(source))
+}
+
+pub(crate) fn tokens_reader<'a>(
+    options: &ParseOptions,
+    reader: crate::reader::Reader<'a>,
+) -> Vec<Token> {
+    let (result, reader) = crate::parser::parse_reader(options, reader);
+    let processed = reader.content(0, usize::MAX);
+    let comments: Vec<_> = reader
         .comments
         .iter()
         .map(|span| processed.transformed_span(*span))
         .collect();
-    let mut out = tokens_processed(&processed.text, options, &comments);
-    for token in &mut out {
-        token.span = processed.original_span(token.span);
-        token.span.source_id = options.source_id;
+    let mut out: Vec<_> = tokens_processed(&processed.text, options, &comments)
+        .into_iter()
+        .flat_map(|token| {
+            reader
+                .original_spans(processed.original_span(token.span))
+                .into_iter()
+                .map(move |span| Token {
+                    span,
+                    kind: token.kind,
+                })
+        })
+        .collect();
+    for (spans, kind) in [
+        (
+            result.conditional_directives,
+            TokenKind::ConditionalDirective,
+        ),
+        (result.include_directives, TokenKind::IncludeDirective),
+        (result.inactive, TokenKind::Inactive),
+    ] {
+        out.extend(spans.into_iter().map(|span| Token { span, kind }));
     }
-    out.extend(result.conditional_directives.into_iter().map(|span| Token {
-        span,
-        kind: TokenKind::ConditionalDirective,
-    }));
-    out.extend(result.inactive.into_iter().map(|span| Token {
-        span,
-        kind: TokenKind::Inactive,
-    }));
-    out.sort_by_key(|token| (token.span.start, token.span.end));
+    out.sort_by_key(|token| (token.span.source_id, token.span.start, token.span.end));
+    out.dedup();
     out
 }
 

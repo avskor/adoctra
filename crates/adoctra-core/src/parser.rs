@@ -33,14 +33,14 @@ struct PendingMeta {
 }
 
 pub fn parse_with_options(source: &str, options: &ParseOptions) -> ParseResult {
-    parse_reader(source, options, Reader::new(source)).0
+    parse_reader(options, Reader::new(source)).0
 }
 
 pub(crate) fn parse_reader<'a>(
-    source: &'a str,
     options: &ParseOptions,
     mut lines: Reader<'a>,
 ) -> (ParseResult, Reader<'a>) {
+    lines.set_primary_id(options.source_id);
     let mut context = ParseContext::new(options);
     let header = collect_header(&mut lines, &mut context);
     let mut doc = Document {
@@ -51,7 +51,6 @@ pub(crate) fn parse_reader<'a>(
     let mut diagnostics = Vec::new();
     if let Some(mut title_line) = header.title_line {
         if let Some(title) = parse_block(
-            source,
             &mut lines,
             &mut title_line,
             &mut context,
@@ -64,7 +63,6 @@ pub(crate) fn parse_reader<'a>(
     }
     let mut i = header.body_start;
     doc.blocks.extend(collect_blocks(
-        source,
         &mut lines,
         &mut i,
         &mut context,
@@ -72,37 +70,53 @@ pub(crate) fn parse_reader<'a>(
         None,
     ));
 
-    // This parser invocation reads exactly one original source. Stamp every
-    // locally created range before resolution can copy display text or diagnose
-    // references. Future include fragments must retain their individual ids.
-    struct Origin(crate::SourceId);
-    impl crate::visit::VisitorMut for Origin {
+    // All grammar operates on monotonically increasing reader coordinates.
+    // Restore physical source ranges before resolution copies metadata spans.
+    struct Origin<'a, 'b> {
+        reader: &'a Reader<'b>,
+        provenance: &'a mut Vec<Vec<Span>>,
+    }
+    impl crate::visit::VisitorMut for Origin<'_, '_> {
         fn visit_span(&mut self, span: &mut Span) {
-            span.source_id = self.0;
+            *span = self.reader.map_span(*span, self.provenance);
         }
     }
-    crate::visit::walk_document_mut(&mut Origin(options.source_id), &mut doc);
+    let mut provenance = Vec::new();
+    crate::visit::walk_document_mut(
+        &mut Origin {
+            reader: &lines,
+            provenance: &mut provenance,
+        },
+        &mut doc,
+    );
     lines.finish();
     diagnostics.append(&mut lines.diagnostics);
     diagnostics.append(&mut context.comment_diagnostics);
-    for span in &mut context.comments {
-        span.source_id = options.source_id;
-    }
     context.comments.sort_by_key(|span| span.start);
+    lines.comments = context.comments.clone();
     for diagnostic in &mut diagnostics {
-        diagnostic.span.source_id = options.source_id;
+        diagnostic.span = lines.map_span(diagnostic.span, &mut provenance);
     }
     crate::resolve::resolve(&mut doc, &mut diagnostics);
-    for span in lines.directives.iter_mut().chain(lines.inactive.iter_mut()) {
-        span.source_id = options.source_id;
-    }
+    let physical = |spans: &[Span]| {
+        spans
+            .iter()
+            .flat_map(|span| lines.original_spans(*span))
+            .collect()
+    };
+    let comments = physical(&context.comments);
+    let conditional_directives = physical(&lines.directives);
+    let inactive = physical(&lines.inactive);
+    let include_directives = physical(&lines.includes);
     (
         ParseResult {
             document: doc,
             diagnostics,
-            comments: context.comments,
-            conditional_directives: lines.directives.clone(),
-            inactive: lines.inactive.clone(),
+            comments,
+            conditional_directives,
+            inactive,
+            include_directives,
+            provenance,
         },
         lines,
     )
@@ -120,7 +134,6 @@ pub(crate) fn parse_reader<'a>(
 /// and let the loop skip blanks. The id is last-wins across both forms; roles
 /// accumulate in source order across consecutive lines.
 fn collect_blocks(
-    source: &str,
     lines: &mut Reader<'_>,
     i: &mut usize,
     context: &mut ParseContext,
@@ -133,7 +146,8 @@ fn collect_blocks(
     let mut blocks = Vec::new();
     let mut pending = PendingMeta::default();
     while lines.has(*i, context) {
-        let line = lines[*i].1;
+        let (_, line_buffer) = lines.line(*i);
+        let line = line_buffer.as_ref();
         if line.trim().is_empty() {
             *i += 1;
             continue;
@@ -148,8 +162,9 @@ fn collect_blocks(
         }
         if let Some((id, reftext)) = parse_block_anchor(line) {
             pending.id = Some(id.to_string());
-            pending.reftext =
-                reftext.map(|rt| scan_inlines(rt, abs_offset(source, rt), &context.attributes));
+            pending.reftext = reftext.map(|rt| {
+                scan_inlines(rt, lines[*i].0 + abs_offset(line, rt), &context.attributes)
+            });
             *i += 1;
             continue;
         }
@@ -176,7 +191,7 @@ fn collect_blocks(
         if let Some(title) = parse_block_title(line) {
             pending.title = Some(scan_inlines(
                 title,
-                abs_offset(source, title),
+                lines[*i].0 + abs_offset(line, title),
                 &context.attributes,
             ));
             *i += 1;
@@ -184,7 +199,6 @@ fn collect_blocks(
         }
         let metadata = std::mem::take(&mut pending);
         if let Some(mut block) = parse_block(
-            source,
             lines,
             i,
             context,
@@ -442,7 +456,8 @@ fn capture_verbatim_body(
     let mut end = opening.end;
     let mut closed = false;
     while lines.has(*i, context) {
-        let (loff, lline) = lines[*i];
+        let (loff, lline_buffer) = lines.line(*i);
+        let lline = lline_buffer.as_ref();
         if lline.trim() == fence {
             end = loff + lline.len();
             *i += 1;
@@ -480,7 +495,6 @@ enum BlockCtx {
 /// loop and by list-item `+` continuations, so attached blocks reuse the very
 /// same block grammar.
 fn parse_block(
-    source: &str,
     lines: &mut Reader<'_>,
     i: &mut usize,
     context: &mut ParseContext,
@@ -488,14 +502,12 @@ fn parse_block(
     ctx: BlockCtx,
     pending_style: Option<&str>,
 ) -> Option<Block> {
-    let mut block =
-        parse_block_content(source, lines, i, context, diagnostics, ctx, pending_style)?;
+    let mut block = parse_block_content(lines, i, context, diagnostics, ctx, pending_style)?;
     block.attribute_context = Arc::clone(&context.attributes);
     Some(block)
 }
 
 fn parse_block_content(
-    source: &str,
     lines: &mut Reader<'_>,
     i: &mut usize,
     context: &mut ParseContext,
@@ -508,7 +520,8 @@ fn parse_block_content(
     pending_style: Option<&str>,
 ) -> Option<Block> {
     let attrs = Arc::clone(&context.attributes);
-    let (off, line) = lines[*i];
+    let (off, line_buffer) = lines.line(*i);
+    let line = line_buffer.as_ref();
     let trimmed = line.trim_end();
 
     if trimmed.trim().is_empty() {
@@ -522,9 +535,8 @@ fn parse_block_content(
 
     // Heading.
     if let Some((level, title)) = parse_heading(trimmed) {
-        // `title` is a subslice of `source`, so its absolute offset gives an
-        // exact base for inline spans.
-        let base = abs_offset(source, title);
+        // `title` is a subslice of this detached reader line.
+        let base = lines[*i].0 + abs_offset(line, title);
         let inlines = scan_inlines(title, base, &attrs);
         *i += 1;
         // `Block.id` is assigned later, by the resolve pass, once the whole
@@ -544,7 +556,8 @@ fn parse_block_content(
         let mut text = String::new();
         let mut closed = false;
         while lines.has(*i, context) {
-            let (loff, lline) = lines[*i];
+            let (loff, lline_buffer) = lines.line(*i);
+            let lline = lline_buffer.as_ref();
             if lline.trim() == "----" {
                 end = loff + lline.len();
                 *i += 1;
@@ -580,7 +593,8 @@ fn parse_block_content(
         let mut text = String::new();
         let mut closed = false;
         while lines.has(*i, context) {
-            let (loff, lline) = lines[*i];
+            let (loff, lline_buffer) = lines.line(*i);
+            let lline = lline_buffer.as_ref();
             if lline.trim() == "...." {
                 end = loff + lline.len();
                 *i += 1;
@@ -640,10 +654,11 @@ fn parse_block_content(
     if trimmed.trim() == "====" {
         let start = off;
         *i += 1;
-        let blocks = collect_blocks(source, lines, i, context, diagnostics, Some("===="));
+        let blocks = collect_blocks(lines, i, context, diagnostics, Some("===="));
         let end;
         if lines.has(*i, context) && lines[*i].1.trim() == "====" {
-            let (loff, lline) = lines[*i];
+            let (loff, lline_buffer) = lines.line(*i);
+            let lline = lline_buffer.as_ref();
             end = loff + lline.len();
             *i += 1;
         } else {
@@ -696,10 +711,11 @@ fn parse_block_content(
         }
         // Quote (default): a parsed container, mirror of the `====` example block.
         *i += 1;
-        let blocks = collect_blocks(source, lines, i, context, diagnostics, Some("____"));
+        let blocks = collect_blocks(lines, i, context, diagnostics, Some("____"));
         let end;
         if lines.has(*i, context) && lines[*i].1.trim() == "____" {
-            let (loff, lline) = lines[*i];
+            let (loff, lline_buffer) = lines.line(*i);
+            let lline = lline_buffer.as_ref();
             end = loff + lline.len();
             *i += 1;
         } else {
@@ -728,10 +744,11 @@ fn parse_block_content(
     if trimmed.trim() == "****" {
         let start = off;
         *i += 1;
-        let blocks = collect_blocks(source, lines, i, context, diagnostics, Some("****"));
+        let blocks = collect_blocks(lines, i, context, diagnostics, Some("****"));
         let end;
         if lines.has(*i, context) && lines[*i].1.trim() == "****" {
-            let (loff, lline) = lines[*i];
+            let (loff, lline_buffer) = lines.line(*i);
+            let lline = lline_buffer.as_ref();
             end = loff + lline.len();
             *i += 1;
         } else {
@@ -804,10 +821,11 @@ fn parse_block_content(
             return Some(Block::new(Span::new(start, end), kind));
         }
         *i += 1;
-        let blocks = collect_blocks(source, lines, i, context, diagnostics, Some("--"));
+        let blocks = collect_blocks(lines, i, context, diagnostics, Some("--"));
         let end;
         if lines.has(*i, context) && lines[*i].1.trim() == "--" {
-            let (loff, lline) = lines[*i];
+            let (loff, lline_buffer) = lines.line(*i);
+            let lline = lline_buffer.as_ref();
             end = loff + lline.len();
             *i += 1;
         } else {
@@ -831,7 +849,7 @@ fn parse_block_content(
     // ordinary text); deeper levels may be indented, handled inside `parse_list`,
     // which consumes the whole (possibly nested) list.
     if parse_list_marker(trimmed).is_some() {
-        return Some(parse_list(source, lines, i, context, diagnostics, &[]));
+        return Some(parse_list(lines, i, context, diagnostics, &[]));
     }
 
     // Verbatim paragraph styles retain comment-looking lines.
@@ -846,7 +864,8 @@ fn parse_block_content(
     } else {
         lines.has(*i, context)
     } {
-        let (loff, lline) = lines[*i];
+        let (loff, lline_buffer) = lines.line(*i);
+        let lline = lline_buffer.as_ref();
         let t = lline.trim_end();
         // A paragraph also ends at any block delimiter line, so it never spans
         // into a `----`/`....`/`====`/`____`/`****`/`--` block (notably the closing
@@ -957,7 +976,6 @@ fn classify(line: &str, marker: MarkerId, ancestors: &[MarkerId]) -> LineRole {
 /// (paragraph, listing) to the item; both nested sublists and attached blocks
 /// live in `item.blocks`, in source order.
 fn parse_list(
-    source: &str,
     lines: &mut Reader<'_>,
     i: &mut usize,
     context: &mut ParseContext,
@@ -973,8 +991,9 @@ fn parse_list(
     // Only a sibling marker begins another item; everything else (a blank line,
     // an ancestor's marker) ends this list. Deeper markers and `+` lines are
     // folded into the item below, so they never reach this guard.
-    while lines.has(*i, context) && classify(lines[*i].1, marker, ancestors) == LineRole::Sibling {
-        let (loff, lline) = lines[*i];
+    while lines.has(*i, context) && classify(&lines[*i].1, marker, ancestors) == LineRole::Sibling {
+        let (loff, lline_buffer) = lines.line(*i);
+        let lline = lline_buffer.as_ref();
         let content_off = list_marker_indented(lline.trim_end())
             .map(|(_, _, off)| off)
             .expect("a sibling line carries a marker");
@@ -984,8 +1003,10 @@ fn parse_list(
         *i += 1;
 
         // Multi-line principal text: fold following plain lines into this item.
-        while lines.has(*i, context) && classify(lines[*i].1, marker, ancestors) == LineRole::Text {
-            let (toff, tline) = lines[*i];
+        while lines.has(*i, context) && classify(&lines[*i].1, marker, ancestors) == LineRole::Text
+        {
+            let (toff, tline_buffer) = lines.line(*i);
+            let tline = tline_buffer.as_ref();
             principal_end = toff + tline.len();
             *i += 1;
         }
@@ -997,27 +1018,21 @@ fn parse_list(
         let mut blocks = Vec::new();
         let mut item_end = principal_end;
         while lines.has(*i, context) {
-            if is_line_comment(lines[*i].1) {
+            if is_line_comment(&lines[*i].1) {
                 skip_comment(lines, i, context);
                 continue;
             }
-            match classify(lines[*i].1, marker, ancestors) {
+            match classify(&lines[*i].1, marker, ancestors) {
                 LineRole::Continuation => {
                     *i += 1; // consume the `+`
-                    if lines.has(*i, context) && is_line_comment(lines[*i].1) {
+                    if lines.has(*i, context) && is_line_comment(&lines[*i].1) {
                         while skip_comment(lines, i, context) {}
                         break;
                     }
                     if lines.has(*i, context) && !lines[*i].1.trim().is_empty() {
-                        if let Some(b) = parse_block(
-                            source,
-                            lines,
-                            i,
-                            context,
-                            diagnostics,
-                            BlockCtx::InListItem,
-                            None,
-                        ) {
+                        if let Some(b) =
+                            parse_block(lines, i, context, diagnostics, BlockCtx::InListItem, None)
+                        {
                             item_end = b.span.end;
                             blocks.push(b);
                         }
@@ -1026,7 +1041,7 @@ fn parse_list(
                 LineRole::Nested => {
                     let mut child_anc = ancestors.to_vec();
                     child_anc.push(marker);
-                    let child = parse_list(source, lines, i, context, diagnostics, &child_anc);
+                    let child = parse_list(lines, i, context, diagnostics, &child_anc);
                     item_end = child.span.end;
                     blocks.push(child);
                 }

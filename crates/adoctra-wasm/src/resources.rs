@@ -6,8 +6,8 @@ use adoctra_core::{
 
 /// Buffers are registered by the host. Loading captures a snapshot with a stable
 /// source id; replacing/removing a buffer never invalidates previously loaded
-/// snapshots. This API prepares resources for includes; parsing still reads only
-/// the selected source and does not expand include directives yet.
+/// snapshots. Includes load the current host buffers; every parse reports the
+/// ids of the immutable snapshots it actually read.
 #[derive(Default)]
 pub struct ResourceWorkspace {
     resources: MemoryResources,
@@ -44,18 +44,24 @@ impl ResourceWorkspace {
         })
     }
 
-    pub fn parse_json(&self, source_id: usize) -> ResourceResult<String> {
-        Ok(crate::parse_json_with_source(
-            self.source(source_id)?.text(),
-            source_id,
-        ))
+    pub fn parse_json(&mut self, source_id: usize) -> ResourceResult<String> {
+        self.source(source_id)?;
+        let options = adoctra_core::ParseOptions {
+            source_id: SourceId(source_id),
+            ..Default::default()
+        };
+        let result = adoctra_core::parse_resource(&mut self.sources, &options, &self.resources)?;
+        Ok(crate::serialize_parse_result(&result))
     }
 
-    pub fn tokens_json(&self, source_id: usize) -> ResourceResult<String> {
-        Ok(crate::tokens_json_with_source(
-            self.source(source_id)?.text(),
-            source_id,
-        ))
+    pub fn tokens_json(&mut self, source_id: usize) -> ResourceResult<String> {
+        self.source(source_id)?;
+        let options = adoctra_core::ParseOptions {
+            source_id: SourceId(source_id),
+            ..Default::default()
+        };
+        let tokens = adoctra_core::tokens_resource(&mut self.sources, &options, &self.resources)?;
+        Ok(crate::serialize_tokens(&tokens))
     }
 }
 
@@ -99,11 +105,11 @@ mod wasm {
                 .map_err(js_error)
         }
 
-        pub fn parse_json(&self, source_id: usize) -> Result<String, JsValue> {
+        pub fn parse_json(&mut self, source_id: usize) -> Result<String, JsValue> {
             self.0.parse_json(source_id).map_err(js_error)
         }
 
-        pub fn tokens_json(&self, source_id: usize) -> Result<String, JsValue> {
+        pub fn tokens_json(&mut self, source_id: usize) -> Result<String, JsValue> {
             self.0.tokens_json(source_id).map_err(js_error)
         }
     }
@@ -174,5 +180,48 @@ mod tests {
             workspace.tokens_json(999).unwrap_err().kind,
             ResourceErrorKind::NotFound
         );
+    }
+}
+
+#[cfg(test)]
+mod include_tests {
+    use super::ResourceWorkspace;
+
+    #[test]
+    fn included_spans_provenance_tokens_and_buffer_versions_are_exported() {
+        let mut workspace = ResourceWorkspace::new();
+        workspace
+            .set(
+                "main.adoc",
+                "*before\ninclude::part.adoc[]\nafter*\n\ninclude::diagnostic.adoc[]",
+            )
+            .unwrap();
+        workspace.set("part.adoc", "_Я_").unwrap();
+        workspace.set("diagnostic.adoc", "<<missing>>").unwrap();
+        let main = workspace.load("main.adoc", None).unwrap();
+        let parsed = workspace.parse_json(main).unwrap();
+        assert!(parsed.contains("\"include_directives\":"), "{parsed}");
+        assert!(parsed.contains("\"provenance\":[["), "{parsed}");
+        assert!(parsed.contains("\"provenance\":0"), "{parsed}");
+        let child = workspace.load("part.adoc", Some(main)).unwrap();
+        let diagnostic = workspace.load("diagnostic.adoc", Some(main)).unwrap();
+        assert!(
+            parsed.contains(&format!(r#""source_id":{diagnostic},"start":0,"end":11"#)),
+            "{parsed}"
+        );
+        let tokens = workspace.tokens_json(main).unwrap();
+        assert!(tokens.contains("include-directive"), "{tokens}");
+        assert!(
+            tokens.contains(&format!(r#""source_id":{child}"#)),
+            "{tokens}"
+        );
+        assert!(!tokens.contains("provenance"), "{tokens}");
+        workspace.set("part.adoc", "edited").unwrap();
+        let edited = workspace.parse_json(main).unwrap();
+        let new = workspace.load("part.adoc", Some(main)).unwrap();
+        assert_ne!(child, new);
+        assert!(edited.contains("edited"));
+        assert_eq!(workspace.source(child).unwrap().text(), "_Я_");
+        assert_eq!(workspace.source(new).unwrap().text(), "edited");
     }
 }

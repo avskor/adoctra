@@ -40,15 +40,21 @@ fn run() -> adoctra::Result<()> {
     };
 
     let mut sources = adoctra::SourceMap::new();
-    let source_id = load_source(&args.input, &mut sources)?;
-    let source = sources.get(source_id).expect("just registered source");
+    let (source_id, provider) = load_source(&args.input, &mut sources)?;
 
     // Parsing never fails on syntax; surface diagnostics, then keep going.
     let options = adoctra::ParseOptions {
         source_id,
         ..Default::default()
     };
-    let result = adoctra::parse_with_options(source.text(), &options);
+    let result = if let Some(provider) = provider {
+        adoctra::parse_resource(&mut sources, &options, &provider)?
+    } else {
+        adoctra::parse_with_options(
+            sources.get(source_id).expect("registered stdin").text(),
+            &options,
+        )
+    };
     for d in &result.diagnostics {
         let file = sources
             .get(d.span.source_id)
@@ -116,11 +122,11 @@ fn parse_args() -> Option<Args> {
 fn load_source(
     input: &str,
     sources: &mut adoctra::SourceMap,
-) -> adoctra::Result<adoctra::SourceId> {
+) -> adoctra::Result<(adoctra::SourceId, Option<resources::FileResources>)> {
     if input == "-" {
         let mut s = String::new();
         std::io::stdin().read_to_string(&mut s)?;
-        Ok(sources.add(input, s))
+        Ok((sources.add(input, s), None))
     } else {
         // The explicitly requested primary file establishes the resource root.
         let path = std::fs::canonicalize(input)?;
@@ -140,7 +146,7 @@ fn load_source(
                 )
             })?;
         let provider = resources::FileResources::new(parent)?;
-        Ok(sources.load(name, None, &provider)?)
+        Ok((sources.load(name, None, &provider)?, Some(provider)))
     }
 }
 

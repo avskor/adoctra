@@ -73,6 +73,7 @@ fn serialize_parse_result(r: &ParseResult) -> String {
         ("comments", &r.comments),
         ("conditional_directives", &r.conditional_directives),
         ("inactive", &r.inactive),
+        ("include_directives", &r.include_directives),
     ] {
         if spans.is_empty() {
             continue;
@@ -87,6 +88,23 @@ fn serialize_parse_result(r: &ParseResult) -> String {
             s.push('{');
             write_span_field(span, &mut s);
             s.push('}');
+        }
+        s.push(']');
+    }
+    if !r.provenance.is_empty() {
+        s.push_str(",\"provenance\":[");
+        for (i, fragments) in r.provenance.iter().enumerate() {
+            if i > 0 {
+                s.push(',');
+            }
+            s.push('[');
+            for (j, span) in fragments.iter().enumerate() {
+                if j > 0 {
+                    s.push(',');
+                }
+                write_span(span, &mut s);
+            }
+            s.push(']');
         }
         s.push(']');
     }
@@ -123,10 +141,9 @@ fn write_document(doc: &adoctra_core::Document, s: &mut String) {
 fn write_header(header: &adoctra_core::DocumentHeader, s: &mut String) {
     s.push('{');
     write_span_field(&header.span, s);
-    s.push_str(&format!(
-        ",\"title_span\":{{\"source_id\":{},\"start\":{},\"end\":{}}},",
-        header.title_span.source_id.0, header.title_span.start, header.title_span.end
-    ));
+    s.push_str(",\"title_span\":");
+    write_span(&header.title_span, s);
+    s.push(',');
     s.push_str("\"authors\":[");
     for (i, author) in header.authors.iter().enumerate() {
         if i > 0 {
@@ -643,10 +660,19 @@ fn kind_str(k: TokenKind) -> &'static str {
 }
 
 fn write_span_field(span: &Span, s: &mut String) {
+    s.push_str("\"span\":");
+    write_span(span, s);
+}
+
+fn write_span(span: &Span, s: &mut String) {
     s.push_str(&format!(
-        "\"span\":{{\"source_id\":{},\"start\":{},\"end\":{}}}",
+        "{{\"source_id\":{},\"start\":{},\"end\":{}",
         span.source_id.0, span.start, span.end
     ));
+    if let Some(index) = span.provenance {
+        s.push_str(&format!(",\"provenance\":{index}"));
+    }
+    s.push('}');
 }
 
 // ---- wasm glue (only compiled for wasm32) ---------------------------------

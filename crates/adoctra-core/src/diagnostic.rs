@@ -41,4 +41,8 @@ pub struct ParseResult {
     pub conditional_directives: Vec<Span>,
     /// Lines omitted by inactive conditional branches.
     pub inactive: Vec<Span>,
+    /// Include directives processed through an explicit provider.
+    pub include_directives: Vec<Span>,
+    /// Ordered original fragments for spans carrying a provenance index.
+    pub provenance: Vec<Vec<Span>>,
 }
