@@ -5,6 +5,17 @@ use adoctra_html::HtmlBackend;
 fn include_options_render_the_resolved_content() {
     for (source, child, expected) in [
         (
+            "----\ninclude::part.adoc[indent=2]\n----",
+            "    alpha\n      beta",
+            "----\n  alpha\n    beta\n----",
+        ),
+        (
+            ":tabsize: 4\n\n----\ninclude::part.adoc[indent=0]\n----",
+            "\tЯ🙂\tX",
+            ":tabsize: 4\n\n----\nЯ🙂  X\n----",
+        ),
+        ("include::part.adoc[indent=0,depth=0]", "  *Я*", "*Я*"),
+        (
             "include::part.adoc[lines=2;4]",
             "omitted\n*first\nomitted\nlast*",
             "*first\nlast*",

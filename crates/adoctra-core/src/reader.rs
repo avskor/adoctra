@@ -1,7 +1,8 @@
 //! Lazy, source-preserving conditional and include preprocessing. Attribute mutations belong
 //! to the parser; each line is evaluated once, when that parser requests it.
 use crate::context::ParseContext;
-use crate::scanner::{lines_with_offsets, FilteredSource};
+use crate::include_indent::Line;
+use crate::scanner::FilteredSource;
 use crate::{Attributes, Diagnostic, Inline, Severity, Span};
 use std::{ops::Index, sync::Arc};
 
@@ -13,37 +14,24 @@ struct Conditional {
 
 struct Input {
     source_id: crate::SourceId,
-    lines: Vec<(Option<usize>, Arc<str>, String)>,
+    lines: Vec<Line>,
+    max_depth: usize,
     next: usize,
     preprocess: bool,
     occurrence: usize,
-    source_len: usize,
     generated_at: Option<Span>,
 }
 
 impl Input {
     fn new(source: &str, source_id: crate::SourceId, preprocess: bool, occurrence: usize) -> Self {
-        let bom = if source.starts_with('\u{feff}') { 3 } else { 0 };
-        let lines = lines_with_offsets(&source[bom..])
-            .into_iter()
-            .map(|(off, line)| {
-                let off = off + bom;
-                let rest = &source[off + line.len()..];
-                let eol = if rest.starts_with("\r\n") {
-                    "\r\n"
-                } else {
-                    "\n"
-                };
-                (Some(off), Arc::from(line), eol.to_owned())
-            })
-            .collect();
+        let lines = Line::from_source(source);
         Self {
             source_id,
             lines,
+            max_depth: usize::MAX,
             next: 0,
             preprocess,
             occurrence,
-            source_len: source.len(),
             generated_at: None,
         }
     }
@@ -62,6 +50,8 @@ struct Origin {
     span: Span,
     occurrence: usize,
     generated: bool,
+    // Expanded tabs map as a unit; unchanged text maps byte for byte.
+    exact: bool,
 }
 
 pub(crate) struct Reader<'a> {
@@ -123,6 +113,7 @@ impl<'a> Reader<'a> {
         })?;
         let mut reader = Self::new(source.text());
         reader.inputs[0].source_id = options.source_id;
+        reader.inputs[0].max_depth = options.includes.max_depth;
         reader.resources = Some(Resources {
             sources,
             provider,
@@ -157,37 +148,43 @@ impl<'a> Reader<'a> {
             let Some(input) = self.inputs.last_mut() else {
                 return false;
             };
-            let Some((original, line, eol)) = input.lines.get(input.next).cloned() else {
+            let Some(source_line) = input.lines.get(input.next) else {
                 self.inputs.pop();
                 continue;
             };
             input.next += 1;
+            let line = source_line.text.clone();
+            let eol = source_line.eol.clone();
             let off = self.next_offset;
             self.next_offset += line.len() + eol.len();
             let source_id = input.source_id;
             let preprocess = input.preprocess;
-            // Synthetic EOF newlines map to the original EOF, never past it.
-            let physical = original.map_or_else(
-                || {
-                    input
-                        .generated_at
-                        .expect("generated include line has an origin")
-                },
-                |original| {
-                    Span::in_source(
+            for fragment in &source_line.fragments {
+                self.origins.push(Origin {
+                    start: off + fragment.start,
+                    end: off + fragment.end,
+                    span: Span::in_source(
                         source_id,
-                        original,
-                        (original + line.len() + eol.len()).min(input.source_len),
-                    )
-                },
-            );
-            self.origins.push(Origin {
-                start: off,
-                end: self.next_offset,
-                span: physical,
-                occurrence: input.occurrence,
-                generated: original.is_none(),
-            });
+                        fragment.original_start,
+                        fragment.original_end,
+                    ),
+                    occurrence: input.occurrence,
+                    generated: fragment.generated,
+                    exact: fragment.exact,
+                });
+            }
+            if source_line.original.is_none() {
+                self.origins.push(Origin {
+                    start: off,
+                    end: self.next_offset,
+                    span: input
+                        .generated_at
+                        .expect("generated include line has an origin"),
+                    occurrence: input.occurrence,
+                    generated: true,
+                    exact: false,
+                });
+            }
             if preprocess {
                 if let Some(attributes) = attributes {
                     let eol_start = off + line.len();
@@ -220,13 +217,19 @@ impl<'a> Reader<'a> {
                 occurrence = None;
                 continue;
             }
-            let start = origin.span.start
-                + span
-                    .start
-                    .saturating_sub(origin.start)
-                    .min(origin.span.len());
-            let end =
-                origin.span.start + span.end.saturating_sub(origin.start).min(origin.span.len());
+            let (start, end) = if origin.exact {
+                (
+                    origin.span.start
+                        + span
+                            .start
+                            .saturating_sub(origin.start)
+                            .min(origin.span.len()),
+                    origin.span.start
+                        + span.end.saturating_sub(origin.start).min(origin.span.len()),
+                )
+            } else {
+                (origin.span.start, origin.span.end)
+            };
             let mapped = Span::in_source(origin.span.source_id, start, end);
             if occurrence == Some(origin.occurrence)
                 && out
@@ -256,8 +259,8 @@ impl<'a> Reader<'a> {
         out
     }
 
-    /// Generated leveloffset entries participate in parsing, but have no text
-    /// to highlight. Mixed tokens retain only their physical source fragments.
+    /// Generated leveloffset entries and indent padding participate in parsing,
+    /// but have no physical text to highlight. Mixed tokens retain only their physical source fragments.
     pub fn token_spans(&self, span: Span) -> Vec<Span> {
         let first = self.origins.partition_point(|o| o.end <= span.start);
         if self.origins[first..]
@@ -456,9 +459,11 @@ impl<'a> Reader<'a> {
         if optional && target.is_empty() {
             return true;
         }
-        let current = self.inputs.last().expect("current input").source_id;
+        let parent = self.inputs.last().expect("current input");
+        let current = parent.source_id;
+        let inherited_depth = parent.max_depth;
         let resources = self.resources.as_mut().expect("explicit resource provider");
-        if self.inputs.len() > resources.limits.max_depth {
+        if self.inputs.len() > inherited_depth {
             self.error(span, "maximum include depth exceeded".into());
             return false;
         }
@@ -495,11 +500,21 @@ impl<'a> Reader<'a> {
             .iter()
             .any(|ext| file.name().ends_with(ext));
         let mut input = Input::new(file.text(), id, preprocess, self.next_occurrence);
+        input.max_depth = attrs.get("depth").map_or(inherited_depth, |value| {
+            let relative = crate::include_selection::integer_prefix(value).max(0);
+            let relative = usize::try_from(relative).unwrap_or(usize::MAX);
+            self.inputs
+                .len()
+                .saturating_add(relative)
+                .min(resources.limits.max_depth)
+        });
         let selected = selection.select(
-            input
-                .lines
-                .iter()
-                .map(|(off, line, _)| (off.expect("physical selection line"), line.as_ref())),
+            input.lines.iter().map(|line| {
+                (
+                    line.original.expect("physical selection line"),
+                    line.text.as_ref(),
+                )
+            }),
             id,
         );
         self.resource_diagnostics.extend(selected.diagnostics);
@@ -512,6 +527,29 @@ impl<'a> Reader<'a> {
         }
         let mut keep = selected.keep.into_iter();
         input.lines.retain(|_| keep.next().unwrap_or(false));
+        if let Some(indent) = attrs.get("indent") {
+            let indent = crate::include_selection::integer_prefix(indent);
+            let tabsize = attributes
+                .get("tabsize")
+                .map_or(0, crate::include_selection::integer_prefix);
+            let resources = self.resources.as_mut().expect("explicit resource provider");
+            match crate::include_indent::adjust(
+                &mut input.lines,
+                indent,
+                tabsize,
+                resources.limits.max_bytes.saturating_sub(resources.bytes),
+                preprocess,
+            ) {
+                Ok(growth) => resources.bytes += growth,
+                Err(()) => {
+                    self.error(
+                        span,
+                        "maximum included byte count exceeded by indentation".into(),
+                    );
+                    return false;
+                }
+            }
+        }
         if let Some(offset) = attrs.get("leveloffset").filter(|_| !input.lines.is_empty()) {
             // Ruby injects these entries even in raw/verbatim input. They must
             // be parsed in context (or kept as literal text), not applied here:
@@ -521,17 +559,12 @@ impl<'a> Reader<'a> {
                 || ":leveloffset!:".to_owned(),
                 |value| format!(":leveloffset: {value}"),
             );
-            input.lines.insert(0, (None, Arc::from(""), "\n".into()));
-            input.lines.insert(
-                0,
-                (
-                    None,
-                    Arc::from(format!(":leveloffset: {offset}")),
-                    "\n".into(),
-                ),
-            );
-            input.lines.push((None, Arc::from(""), "\n".into()));
-            input.lines.push((None, Arc::from(restore), "\n".into()));
+            input.lines.insert(0, Line::generated(String::new()));
+            input
+                .lines
+                .insert(0, Line::generated(format!(":leveloffset: {offset}")));
+            input.lines.push(Line::generated(String::new()));
+            input.lines.push(Line::generated(restore));
         }
         self.inputs.push(input);
         self.next_occurrence += 1;

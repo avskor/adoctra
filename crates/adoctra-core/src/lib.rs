@@ -15,6 +15,7 @@ pub mod diagnostic;
 pub mod error;
 pub mod extension;
 mod header;
+mod include_indent;
 mod include_selection;
 mod inline;
 pub mod json;

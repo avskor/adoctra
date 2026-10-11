@@ -1618,6 +1618,404 @@
         "part.adoc": "﻿= Глава\r\n\r\n== Раздел\r\n\r\nТекст"
       },
       "expect": "pass"
+    },
+    {
+      "id": "include-indent-zero",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[indent=0]\n----",
+      "resources": {
+        "part.rs": "    alpha\n      beta\n\n    gamma"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-indent-positive",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[indent=3]\n----",
+      "resources": {
+        "part.rs": "    alpha\n      beta\n\n    gamma"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-indent-negative",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[indent=-1]\n----",
+      "resources": {
+        "part.rs": "    alpha\n      beta\n\n    gamma"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-indent-invalid",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[indent=wrong]\n----",
+      "resources": {
+        "part.rs": "    alpha\n      beta\n\n    gamma"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-indent-numeric-prefix",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[indent=2suffix]\n----",
+      "resources": {
+        "part.rs": "    alpha\n      beta\n\n    gamma"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-indent-empty",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[indent=]\n----",
+      "resources": {
+        "part.rs": "    alpha\n      beta\n\n    gamma"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-indent-unindented",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[indent=2]\n----",
+      "resources": {
+        "part.rs": "alpha\n  beta"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-indent-blank-lines",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[indent=2]\n----",
+      "resources": {
+        "part.rs": "\n    alpha\n\n    beta\n"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-indent-raw-whitespace",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[indent=0]\n----",
+      "resources": {
+        "part.rs": "    alpha\n  \n    beta"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-indent-adoc-whitespace",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.adoc[indent=0]\n----",
+      "resources": {
+        "part.adoc": "    alpha\n  \n    beta"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-indent-raw-trailing",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[indent=0]\n----",
+      "resources": {
+        "part.rs": "  alpha  \n  beta\t"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-indent-tabs-default",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[indent=0]\n----",
+      "resources": {
+        "part.rs": "\talpha\n\t\tbeta\n\tЯ\tX"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-indent-tabs-four",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": ":tabsize: 4\n\n----\ninclude::part.rs[indent=1]\n----",
+      "resources": {
+        "part.rs": "\talpha\n\t\tbeta\n\tЯ\tX"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-indent-tabs-negative",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": ":tabsize: 4\n\n----\ninclude::part.rs[indent=-1]\n----",
+      "resources": {
+        "part.rs": "\tЯ🙂\tX\n \tZ"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-indent-tabs-zero",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": ":tabsize: 0\n\n----\ninclude::part.rs[indent=0]\n----",
+      "resources": {
+        "part.rs": "\talpha\n\t\tbeta"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-indent-selection",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[lines=2;4,indent=0]\n----",
+      "resources": {
+        "part.rs": "ignore\n    alpha\nignore\n      beta"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-indent-tags",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[tag=a,indent=2]\n----",
+      "resources": {
+        "part.rs": "// tag::a[]\n    alpha\n      beta\n// end::a[]"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-indent-attribute",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": ":amount: 2\n\n----\ninclude::part.rs[indent={amount}]\n----",
+      "resources": {
+        "part.rs": "    alpha"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-indent-unicode-crlf",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[indent=0]\n----",
+      "resources": {
+        "part.rs": "﻿    Я\r\n      🙂\r\n    End\r\n"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-indent-empty-resource",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[indent=3]\n----",
+      "resources": {
+        "part.rs": ""
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-indent-empty-selection",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[lines=99,indent=3]\n----",
+      "resources": {
+        "part.rs": "  absent"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-indent-header",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::part.adoc[indent=0]",
+      "resources": {
+        "part.adoc": "  = Main\n  Jane Doe\n\n  Text"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-indent-preprocessing",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::part.adoc[indent=0]",
+      "resources": {
+        "part.adoc": "  ifndef::missing[]\n  include::nested.adoc[]\n  endif::[]",
+        "nested.adoc": "shown"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-indent-offset",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::part.adoc[indent=0,leveloffset=+1]",
+      "resources": {
+        "part.adoc": "  = Chapter\n\n  Text"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-indent-list",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::part.adoc[indent=0]",
+      "resources": {
+        "part.adoc": "  * one\n  * two"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-indent-comments",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::part.adoc[indent=0]",
+      "resources": {
+        "part.adoc": "  before\n  // comment\n  after"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-indent-nested",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.adoc[indent=0]\n----",
+      "resources": {
+        "part.adoc": "  before\n  include::nested.rs[indent=2]\n  after",
+        "nested.rs": "    middle\n      end"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-depth-zero",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::part.adoc[depth=0]\n\nafter",
+      "resources": {
+        "part.adoc": "include::nested.adoc[]",
+        "nested.adoc": "include::leaf.adoc[]",
+        "leaf.adoc": "leaf"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-depth-one",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::part.adoc[depth=1]\n\nafter",
+      "resources": {
+        "part.adoc": "include::nested.adoc[]",
+        "nested.adoc": "include::leaf.adoc[]",
+        "leaf.adoc": "leaf"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-depth-negative",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::part.adoc[depth=-1]\n\nafter",
+      "resources": {
+        "part.adoc": "include::nested.adoc[]",
+        "nested.adoc": "include::leaf.adoc[]",
+        "leaf.adoc": "leaf"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-depth-invalid",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::part.adoc[depth=wrong]\n\nafter",
+      "resources": {
+        "part.adoc": "include::nested.adoc[]",
+        "nested.adoc": "include::leaf.adoc[]",
+        "leaf.adoc": "leaf"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-depth-numeric-prefix",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::part.adoc[depth=1suffix]\n\nafter",
+      "resources": {
+        "part.adoc": "include::nested.adoc[]",
+        "nested.adoc": "include::leaf.adoc[]",
+        "leaf.adoc": "leaf"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-depth-huge",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::part.adoc[depth=999999999999999999999999999999999]\n\nafter",
+      "resources": {
+        "part.adoc": "include::nested.adoc[]",
+        "nested.adoc": "include::leaf.adoc[]",
+        "leaf.adoc": "leaf"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-depth-restore",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::part.adoc[depth=0]\n\ninclude::part.adoc[]",
+      "resources": {
+        "part.adoc": "include::nested.adoc[]",
+        "nested.adoc": "shown"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-depth-child-override",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::part.adoc[depth=1]",
+      "resources": {
+        "part.adoc": "include::nested.adoc[depth=2]",
+        "nested.adoc": "include::leaf.adoc[]",
+        "leaf.adoc": "leaf"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-depth-optional",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::part.adoc[depth=0]",
+      "resources": {
+        "part.adoc": "include::missing.adoc[opts=optional]"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-depth-raw",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\ninclude::part.rs[depth=0]\n----",
+      "resources": {
+        "part.rs": "include::missing.adoc[]"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-depth-attribute",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": ":amount: 0\n\ninclude::part.adoc[depth={amount}]",
+      "resources": {
+        "part.adoc": "include::nested.adoc[]",
+        "nested.adoc": "hidden"
+      },
+      "expect": "pass"
     }
   ]
 }

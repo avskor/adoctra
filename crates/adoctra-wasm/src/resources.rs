@@ -308,3 +308,40 @@ mod offset_tests {
         assert_eq!(workspace.source(child).unwrap().text(), text);
     }
 }
+
+#[cfg(test)]
+mod indent_depth_tests {
+    use super::ResourceWorkspace;
+
+    #[test]
+    fn transformed_text_exports_original_spans_and_scoped_depth_diagnostics() {
+        let mut workspace = ResourceWorkspace::new();
+        workspace
+            .set("main.adoc", "include::part.adoc[indent=0,depth=0]")
+            .unwrap();
+        let text = "\u{feff}  *Я*\r\n\r\n  include::leaf.adoc[]";
+        workspace.set("part.adoc", text).unwrap();
+        workspace.set("leaf.adoc", "unreachable").unwrap();
+        let main = workspace.load("main.adoc", None).unwrap();
+        let parsed = workspace.parse_json(main).unwrap();
+        let child = workspace.load("part.adoc", Some(main)).unwrap();
+        let tokens = workspace.tokens_json(main).unwrap();
+        assert!(
+            parsed.contains("maximum include depth exceeded"),
+            "{parsed}"
+        );
+        assert!(!parsed.contains("unreachable"), "{parsed}");
+        for marker in ["*Я*", "include::leaf.adoc[]"] {
+            let start = text.find(marker).unwrap();
+            let end = start + marker.len();
+            let span = format!(r#""source_id":{child},"start":{start},"end":{end}"#);
+            assert!(parsed.contains(&span), "{parsed}");
+            assert!(tokens.contains(&span), "{tokens}");
+        }
+        workspace.set("part.adoc", "  _Edited_").unwrap();
+        let edited = workspace.parse_json(main).unwrap();
+        assert!(edited.contains("Edited"), "{edited}");
+        assert!(edited.contains(r#""diagnostics":[]"#), "{edited}");
+        assert_eq!(workspace.source(child).unwrap().text(), text);
+    }
+}

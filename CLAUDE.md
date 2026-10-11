@@ -186,8 +186,15 @@ retention in verbatim; generated lines have directive origins but no highlight t
 Heading levels and doctitle detection use the effective offset; levels above u8::MAX
 clamp with a warning, and HTML uses saturating arithmetic. Preserve physical spans,
 attribute snapshots and restoration semantics when extending this path.
-Indent/depth, full attribute-list substitutions and safe-mode compatibility remain
-follow-up work; see the implementation plan and parser API.
+Includes also support indent and depth. Indent runs after selection and before
+preprocessing, with optional tab expansion from tabsize. Reader line fragments map
+expanded tabs to their physical byte and exclude synthetic padding from highlighting.
+Physical snapshots never change. Indentation growth (including intermediate tab
+expansion) is preflighted and charged to the include byte budget. Depth is scoped to
+an input: a child override can extend an inherited limit but never the host maximum;
+returning to a parent restores its limit. Remaining reader normalization, full
+attribute-list substitutions and safe-mode compatibility are follow-up work; see
+the implementation plan and parser API.
 
 Working: parser for header attributes, headings, listing blocks, literal blocks
 (`....` and `[literal]`), admonitions (paragraph form), paragraphs,

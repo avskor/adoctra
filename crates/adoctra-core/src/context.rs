@@ -147,6 +147,7 @@ pub(crate) fn substitute_attribute_value(value: &str, attributes: &Attributes) -
 #[derive(Debug, Clone, Copy)]
 pub struct IncludeLimits {
     pub max_depth: usize,
+    /// Loaded snapshots plus indentation/tab expansion growth, counted per include.
     pub max_bytes: usize,
 }
 

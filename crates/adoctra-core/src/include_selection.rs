@@ -257,7 +257,15 @@ pub(crate) fn named_attributes(input: &str) -> Result<BTreeMap<String, String>, 
         let name = rest[..end].trim();
         if !matches!(
             name,
-            "lines" | "tag" | "tags" | "leveloffset" | "opts" | "options" | "optional-option"
+            "lines"
+                | "tag"
+                | "tags"
+                | "leveloffset"
+                | "opts"
+                | "options"
+                | "optional-option"
+                | "indent"
+                | "depth"
         ) {
             return Err(format!("unsupported include options: {name}"));
         }

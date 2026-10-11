@@ -295,7 +295,7 @@ fn cycles_limits_missing_files_and_unsupported_options_leave_partial_output() {
             "NotFound",
         ),
         (
-            "include::part.adoc[indent=1]\n\nafter",
+            "include::part.adoc[encoding=UTF-16]\n\nafter",
             IncludeLimits::default(),
             "options",
         ),
@@ -695,7 +695,7 @@ fn optional_does_not_disable_cycles_limits_or_option_validation() {
             "byte count",
         ),
         (
-            "include::missing.adoc[opts=optional,indent=1]",
+            "include::missing.adoc[opts=optional,encoding=UTF-16]",
             IncludeLimits::default(),
             "options",
         ),
@@ -883,4 +883,214 @@ fn offsets_empty_selections_locked_values_and_partial_input_are_tolerant() {
             }
         }
     }
+}
+
+#[test]
+fn indentation_preserves_unicode_markup_tokens_and_old_snapshots() {
+    let root = "include::part.adoc[lines=2;4,indent=0]";
+    let child = "\u{feff}ignored\r\n  *Я*\r\nignored\r\n  _🙂_";
+    let (mut sources, mut resources, options) = setup(root, &[("docs/part.adoc", child)]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty());
+    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+        panic!("{result:?}")
+    };
+    assert!(matches!(inlines[0], Inline::Strong { .. }));
+    assert!(result.document.blocks[0].span.provenance.is_some());
+    let tokens = tokens_resource(&mut sources, &options, &resources).unwrap();
+    for text in ["*Я*", "_🙂_"] {
+        let off = child.find(text).unwrap();
+        let expected = Span::in_source(SourceId(1), off, off + text.len());
+        assert!(inlines.iter().any(|inline| inline.span() == expected));
+        assert!(
+            tokens.iter().any(|token| token.span == expected),
+            "{tokens:?}"
+        );
+    }
+    check_spans(&result, &sources);
+    resources
+        .insert("docs/part.adoc", "ignored\n  edited")
+        .unwrap();
+    let edited = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(paragraphs(&edited), ["edited"]);
+    assert_eq!(sources.get(SourceId(1)).unwrap().text(), child);
+    check_spans(&result, &sources);
+}
+
+#[test]
+fn indentation_and_tab_expansion_map_to_physical_characters() {
+    let child = "\u{feff}\tЯ🙂\tX\r\n\tZ";
+    let (mut sources, resources, options) = setup(
+        ":tabsize: 4\n\n----\ninclude::part.rs[indent=2]\n----",
+        &[("docs/part.rs", child)],
+    );
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty());
+    let BlockKind::Listing { text } = &result.document.blocks[0].kind else {
+        panic!("{result:?}")
+    };
+    assert_eq!(text, "  Я🙂  X\n  Z");
+    check_spans(&result, &sources);
+    let tokens = tokens_resource(&mut sources, &options, &resources).unwrap();
+    let retained: String = tokens
+        .iter()
+        .filter(|t| t.span.source_id == SourceId(1))
+        .map(|t| sources.slice(t.span).unwrap())
+        .collect();
+    assert!(retained.contains("Я🙂\tX"), "{tokens:?}");
+    assert!(!tokens
+        .iter()
+        .any(|t| t.span.source_id == SourceId(1) && t.span.start < 4));
+}
+
+#[test]
+fn dedented_directives_comments_and_diagnostics_have_exact_physical_spans() {
+    let child = "  // omitted\r\n  include::nested.adoc[depth=0]\r\n  ifdef::missing[]\r\n  hidden\r\n  endif::[]";
+    let nested = "include::leaf.adoc[]";
+    let (mut sources, resources, options) = setup(
+        "include::part.adoc[indent=0]",
+        &[("docs/part.adoc", child), ("docs/nested.adoc", nested)],
+    );
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(result.diagnostics.len(), 1);
+    assert!(result.diagnostics[0].message.contains("depth"));
+    assert_eq!(sources.slice(result.diagnostics[0].span), Some(nested));
+    assert_eq!(sources.slice(result.comments[0]), Some("// omitted"));
+    assert_eq!(
+        sources.slice(result.include_directives[1]),
+        Some("include::nested.adoc[depth=0]")
+    );
+    assert_eq!(sources.slice(result.inactive[0]), Some("hidden"));
+    check_spans(&result, &sources);
+}
+
+#[test]
+fn depth_is_scoped_overridable_and_bounded_by_the_host() {
+    for (root_depth, nested_depth, limit, expected, failures) in [
+        ("0", "99", 64, false, 1),
+        ("1", "0", 64, false, 1),
+        ("1", "1", 64, true, 0),
+        ("1", "999999999999999999999999999", 2, false, 1),
+        ("wrong", "1", 64, false, 1),
+        ("-3", "1", 64, false, 1),
+    ] {
+        let root = format!("include::part.adoc[depth={root_depth}]\n\ninclude::leaf.adoc[]");
+        let child = format!("include::nested.adoc[depth={nested_depth}]");
+        let (mut sources, resources, mut options) = setup(
+            &root,
+            &[
+                ("docs/part.adoc", &child),
+                ("docs/nested.adoc", "include::leaf.adoc[]"),
+                ("docs/leaf.adoc", "leaf"),
+            ],
+        );
+        options.includes.max_depth = limit;
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        assert_eq!(result.diagnostics.len(), failures, "{result:?}");
+        assert_eq!(
+            paragraphs(&result).iter().filter(|p| *p == "leaf").count(),
+            if expected { 2 } else { 1 }
+        );
+        assert_eq!(paragraphs(&result).last().unwrap(), "leaf");
+        check_spans(&result, &sources);
+    }
+}
+
+#[test]
+fn rejected_depth_does_not_load_the_nested_resource() {
+    struct NoLoads;
+    impl ResourceProvider for NoLoads {
+        fn load(&self, _: ResourceRequest<'_>) -> ResourceResult<Resource> {
+            panic!("depth must be checked before loading")
+        }
+    }
+    let mut sources = SourceMap::new();
+    let id = sources.add(
+        "main.adoc",
+        "include::missing.adoc[depth=999,opts=optional]",
+    );
+    let options = ParseOptions {
+        source_id: id,
+        includes: IncludeLimits {
+            max_depth: 0,
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    let result = parse_resource(&mut sources, &options, &NoLoads).unwrap();
+    assert_eq!(result.diagnostics.len(), 1);
+    assert!(result.diagnostics[0].message.contains("depth"));
+}
+
+#[test]
+fn indentation_growth_and_huge_values_are_bounded_without_panics() {
+    for (source, child) in [
+        (
+            "include::part.rs[indent=9999999999999999999999999999999999999999999]",
+            "X",
+        ),
+        (
+            ":tabsize: 99999999999999999999999999999999999999999999\n\ninclude::part.rs[indent=-1]",
+            "\tX",
+        ),
+        ("include::part.rs[indent=8]", "X\nX\nX"),
+        (
+            "include::part.rs[indent=8]\ninclude::part.rs[indent=8]",
+            "X",
+        ),
+    ] {
+        let (mut sources, resources, mut options) = setup(source, &[("docs/part.rs", child)]);
+        options.includes.max_bytes = 16;
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        assert_eq!(result.diagnostics.len(), 1, "{result:?}");
+        assert!(result.diagnostics[0].message.contains("byte count"));
+        check_spans(&result, &sources);
+    }
+}
+
+#[test]
+fn partial_indentation_and_depth_input_keeps_all_spans_valid() {
+    let root = ":tabsize: 4\n\ninclude::part.adoc[indent=0,depth=1]";
+    let child = "\u{feff}\t*Я*\r\n\tinclude::missing.adoc[depth=0]\r\n\tifdef::x[]\r\n\t🙂";
+    for end in child
+        .char_indices()
+        .map(|(off, _)| off)
+        .chain(std::iter::once(child.len()))
+    {
+        let (mut sources, resources, options) = setup(root, &[("docs/part.adoc", &child[..end])]);
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        check_spans(&result, &sources);
+        for token in tokens_resource(&mut sources, &options, &resources).unwrap() {
+            assert!(sources.slice(token.span).is_some(), "{token:?}");
+        }
+    }
+    for end in 0..=root.len() {
+        let (mut sources, resources, options) = setup(&root[..end], &[("docs/part.adoc", child)]);
+        check_spans(
+            &parse_resource(&mut sources, &options, &resources).unwrap(),
+            &sources,
+        );
+    }
+}
+
+#[test]
+fn inline_tokens_after_expanded_tabs_keep_exact_unicode_offsets() {
+    let child = "Я\t*🙂*";
+    let (mut sources, resources, options) = setup(
+        ":tabsize: 4\n\ninclude::part.adoc[indent=-1]",
+        &[("docs/part.adoc", child)],
+    );
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+        panic!("{result:?}")
+    };
+    let expected = Span::in_source(SourceId(1), 3, child.len());
+    assert!(inlines
+        .iter()
+        .any(|inline| matches!(inline, Inline::Strong { .. }) && inline.span() == expected));
+    assert!(tokens_resource(&mut sources, &options, &resources)
+        .unwrap()
+        .iter()
+        .any(|t| t.span == expected));
+    check_spans(&result, &sources);
 }
