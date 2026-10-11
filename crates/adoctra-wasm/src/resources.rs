@@ -1,0 +1,178 @@
+//! An editor-owned virtual filesystem and immutable source snapshots.
+use adoctra_core::{
+    MemoryResources, ResourceError, ResourceErrorKind, ResourceResult, SourceFile, SourceId,
+    SourceMap,
+};
+
+/// Buffers are registered by the host. Loading captures a snapshot with a stable
+/// source id; replacing/removing a buffer never invalidates previously loaded
+/// snapshots. This API prepares resources for includes; parsing still reads only
+/// the selected source and does not expand include directives yet.
+#[derive(Default)]
+pub struct ResourceWorkspace {
+    resources: MemoryResources,
+    sources: SourceMap,
+}
+
+impl ResourceWorkspace {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn set(&mut self, name: &str, text: &str) -> ResourceResult<()> {
+        self.resources.insert(name, text)?;
+        Ok(())
+    }
+
+    pub fn remove(&mut self, name: &str) -> ResourceResult<bool> {
+        Ok(self.resources.remove(name)?.is_some())
+    }
+
+    pub fn load(&mut self, target: &str, relative_to: Option<usize>) -> ResourceResult<usize> {
+        self.sources
+            .load(target, relative_to.map(SourceId), &self.resources)
+            .map(|id| id.0)
+    }
+
+    pub fn source(&self, source_id: usize) -> ResourceResult<&SourceFile> {
+        self.sources.get(SourceId(source_id)).ok_or_else(|| {
+            ResourceError::new(
+                ResourceErrorKind::NotFound,
+                source_id.to_string(),
+                "source id is not registered",
+            )
+        })
+    }
+
+    pub fn parse_json(&self, source_id: usize) -> ResourceResult<String> {
+        Ok(crate::parse_json_with_source(
+            self.source(source_id)?.text(),
+            source_id,
+        ))
+    }
+
+    pub fn tokens_json(&self, source_id: usize) -> ResourceResult<String> {
+        Ok(crate::tokens_json_with_source(
+            self.source(source_id)?.text(),
+            source_id,
+        ))
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+mod wasm {
+    use wasm_bindgen::prelude::*;
+
+    #[wasm_bindgen(js_name = ResourceWorkspace)]
+    pub struct Workspace(super::ResourceWorkspace);
+
+    #[wasm_bindgen(js_class = ResourceWorkspace)]
+    impl Workspace {
+        #[wasm_bindgen(constructor)]
+        pub fn new() -> Self {
+            Self(super::ResourceWorkspace::new())
+        }
+
+        pub fn set(&mut self, name: &str, text: &str) -> Result<(), JsValue> {
+            self.0.set(name, text).map_err(js_error)
+        }
+
+        pub fn remove(&mut self, name: &str) -> Result<bool, JsValue> {
+            self.0.remove(name).map_err(js_error)
+        }
+
+        pub fn load(&mut self, target: &str, relative_to: Option<usize>) -> Result<usize, JsValue> {
+            self.0.load(target, relative_to).map_err(js_error)
+        }
+
+        pub fn source_name(&self, source_id: usize) -> Result<String, JsValue> {
+            self.0
+                .source(source_id)
+                .map(|source| source.name().to_owned())
+                .map_err(js_error)
+        }
+
+        pub fn source_text(&self, source_id: usize) -> Result<String, JsValue> {
+            self.0
+                .source(source_id)
+                .map(|source| source.text().to_owned())
+                .map_err(js_error)
+        }
+
+        pub fn parse_json(&self, source_id: usize) -> Result<String, JsValue> {
+            self.0.parse_json(source_id).map_err(js_error)
+        }
+
+        pub fn tokens_json(&self, source_id: usize) -> Result<String, JsValue> {
+            self.0.tokens_json(source_id).map_err(js_error)
+        }
+    }
+
+    fn js_error(error: adoctra_core::ResourceError) -> JsValue {
+        JsValue::from_str(&error.to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn editor_buffers_resolve_relative_paths_and_export_source_aware_json() {
+        let mut workspace = ResourceWorkspace::new();
+        workspace.set("docs/main.adoc", "= Main\n\nbody").unwrap();
+        workspace
+            .set("docs/часть.adoc", "Я *текст* <<missing>>\r\n")
+            .unwrap();
+        let main = workspace.load("/docs/main.adoc", None).unwrap();
+        let child = workspace.load("часть.adoc", Some(main)).unwrap();
+        assert_eq!(workspace.source(child).unwrap().name(), "/docs/часть.adoc");
+        assert_eq!(
+            workspace.source(child).unwrap().text(),
+            "Я *текст* <<missing>>\r\n"
+        );
+        let parsed = workspace.parse_json(child).unwrap();
+        let tokens = workspace.tokens_json(child).unwrap();
+        let expected_span = format!(r#""span":{{"source_id":{child},"start":3,"end":15}}"#);
+        assert!(parsed.contains(&expected_span), "{parsed}");
+        assert!(tokens.contains(&expected_span), "{tokens}");
+        assert!(parsed.contains("missing"));
+        assert_eq!(
+            workspace
+                .source(child)
+                .unwrap()
+                .position(16)
+                .unwrap()
+                .column,
+            11
+        );
+        assert_eq!(workspace.load("./часть.adoc", Some(main)).unwrap(), child);
+    }
+
+    #[test]
+    fn buffer_edits_and_deletion_preserve_previously_loaded_snapshots() {
+        let mut workspace = ResourceWorkspace::new();
+        workspace.set("doc.adoc", "old").unwrap();
+        let old = workspace.load("doc.adoc", None).unwrap();
+        workspace.set("doc.adoc", "new").unwrap();
+        let new = workspace.load("doc.adoc", None).unwrap();
+        assert_ne!(old, new);
+        assert!(workspace.parse_json(old).unwrap().contains("old"));
+        assert!(workspace.parse_json(new).unwrap().contains("new"));
+        assert!(workspace.remove("/doc.adoc").unwrap());
+        assert!(!workspace.remove("/doc.adoc").unwrap());
+        assert_eq!(
+            workspace.load("doc.adoc", None).unwrap_err().kind,
+            ResourceErrorKind::NotFound
+        );
+        assert_eq!(workspace.source(new).unwrap().text(), "new");
+        assert_eq!(
+            workspace.parse_json(999).unwrap_err().kind,
+            ResourceErrorKind::NotFound
+        );
+        assert_eq!(
+            workspace.tokens_json(999).unwrap_err().kind,
+            ResourceErrorKind::NotFound
+        );
+    }
+}

@@ -21,6 +21,7 @@ mod parser;
 mod reader;
 mod replacements;
 mod resolve;
+pub mod resource;
 mod scanner;
 pub mod source;
 mod tokenizer;
@@ -33,6 +34,10 @@ pub use context::ParseOptions;
 pub use diagnostic::{Diagnostic, ParseResult, Severity};
 pub use error::{Error, Result};
 pub use extension::{Registry, TreeProcessor};
+pub use resource::{
+    MemoryResources, Resource, ResourceError, ResourceErrorKind, ResourceProvider, ResourceRequest,
+    ResourceResult,
+};
 pub use source::{SourceFile, SourceId, SourceMap, SourcePosition};
 pub use tokenizer::{Token, TokenKind};
 

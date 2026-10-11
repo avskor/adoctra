@@ -11,6 +11,8 @@ use std::process::ExitCode;
 
 use adoctra::Backend;
 
+mod resources;
+
 fn main() -> ExitCode {
     match run() {
         Ok(()) => ExitCode::SUCCESS,
@@ -38,7 +40,7 @@ fn run() -> adoctra::Result<()> {
     };
 
     let mut sources = adoctra::SourceMap::new();
-    let source_id = sources.add(&args.input, read_source(&args.input)?);
+    let source_id = load_source(&args.input, &mut sources)?;
     let source = sources.get(source_id).expect("just registered source");
 
     // Parsing never fails on syntax; surface diagnostics, then keep going.
@@ -111,13 +113,34 @@ fn parse_args() -> Option<Args> {
     })
 }
 
-fn read_source(input: &str) -> adoctra::Result<String> {
+fn load_source(
+    input: &str,
+    sources: &mut adoctra::SourceMap,
+) -> adoctra::Result<adoctra::SourceId> {
     if input == "-" {
         let mut s = String::new();
         std::io::stdin().read_to_string(&mut s)?;
-        Ok(s)
+        Ok(sources.add(input, s))
     } else {
-        Ok(std::fs::read_to_string(input)?)
+        // The explicitly requested primary file establishes the resource root.
+        let path = std::fs::canonicalize(input)?;
+        let parent = path.parent().ok_or_else(|| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "input has no parent directory",
+            )
+        })?;
+        let name = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .ok_or_else(|| {
+                std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    "input file name is not UTF-8",
+                )
+            })?;
+        let provider = resources::FileResources::new(parent)?;
+        Ok(sources.load(name, None, &provider)?)
     }
 }
 

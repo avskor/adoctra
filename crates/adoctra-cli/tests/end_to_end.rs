@@ -174,3 +174,25 @@ fn comments_are_omitted_in_html_and_json_but_verbatim_is_preserved() {
         );
     }
 }
+
+#[test]
+fn cli_file_resource_reports_canonical_source_name_and_renders_content() {
+    use std::process::Command;
+    let path =
+        std::env::temp_dir().join(format!("adoctra-cli-resource-{}.adoc", std::process::id()));
+    std::fs::write(&path, "Привет <<missing>>").unwrap();
+    let output = Command::new(env!("CARGO_BIN_EXE_adoctra"))
+        .arg(&path)
+        .arg("--stdout")
+        .output()
+        .unwrap();
+    let canonical = path.canonicalize().unwrap();
+    std::fs::remove_file(&path).unwrap();
+    assert!(output.status.success(), "{:?}", output.stderr);
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(
+        stderr.contains(&format!("{}:1:8: warning", canonical.display())),
+        "{stderr}"
+    );
+    assert!(String::from_utf8(output.stdout).unwrap().contains("Привет"));
+}

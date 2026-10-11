@@ -18,6 +18,9 @@
 //! host maps source ids to buffers and converts UTF-8 byte offsets into its
 //! editor's coordinate system (for example UTF-16 positions).
 
+mod resources;
+pub use resources::ResourceWorkspace;
+
 use adoctra_core::ast::{Attribution, Block, BlockKind, Inline, Span};
 use adoctra_core::diagnostic::{Diagnostic, ParseResult};
 use adoctra_core::json::escape_into as write_str;

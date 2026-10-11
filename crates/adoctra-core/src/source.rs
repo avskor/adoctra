@@ -1,7 +1,6 @@
 //! Source identity and checked byte ranges. A caller owns one map per document
 //! set and passes the registered id through `ParseOptions` when parsing a file.
-//! Registration performs no I/O; includes and transformed-source mappings will
-//! build on this layer rather than opening files in the parser.
+//! Registration performs no I/O; explicit loading delegates to a host provider.
 
 use crate::Span;
 
@@ -66,6 +65,38 @@ impl SourceMap {
 
     pub fn get(&self, id: SourceId) -> Option<&SourceFile> {
         self.files.get(id.0)
+    }
+
+    /// Load through an explicitly supplied provider, resolving relative to a
+    /// registered source when given. Reuse an identical named snapshot; changed
+    /// contents receive a new id, preserving all previously issued spans.
+    /// A failed load never modifies the map. No implicit I/O fallback exists.
+    pub fn load(
+        &mut self,
+        target: &str,
+        relative_to: Option<SourceId>,
+        provider: &dyn crate::ResourceProvider,
+    ) -> crate::ResourceResult<SourceId> {
+        let referrer = relative_to
+            .map(|id| {
+                self.get(id).map(SourceFile::name).ok_or_else(|| {
+                    crate::ResourceError::new(
+                        crate::ResourceErrorKind::InvalidTarget,
+                        target,
+                        format!("unknown referring source id {}", id.0),
+                    )
+                })
+            })
+            .transpose()?;
+        let resource = provider.load(crate::ResourceRequest { target, referrer })?;
+        if let Some(index) = self
+            .files
+            .iter()
+            .position(|file| file.name == resource.name && file.text == resource.text)
+        {
+            return Ok(SourceId(index));
+        }
+        Ok(self.add(resource.name, resource.text))
     }
 
     /// Invalid ids, reversed ranges and non-UTF-8 boundaries return None.

@@ -160,7 +160,15 @@ and coercion rules (including arbitrary-length integers, first-operator splittin
 and the retained closing quote in string values). It always opens a block; malformed
 active expressions diagnose without pushing, skipped expressions only balance nesting.
 Ordinary/intrinsic attributes and escaped references are supported; set/counter side
-effects and include remain unimplemented.
+effects and include expansion remain unimplemented.
+ResourceProvider/ResourceRequest/Resource and typed ResourceError now define host
+resource loading. SourceMap::load resolves through an explicit provider, reuses an
+identical canonical-name/text snapshot, and preserves older ids after edits. Core's
+MemoryResources uses virtual slash paths; CLI owns the rooted filesystem adapter
+and loads its primary file through it. WASM exports ResourceWorkspace for host
+buffers and parsing/highlighting immutable snapshots by id. Neither parser nor
+core loads ambient files or URLs. Includes still require a multi-source reader and
+provenance mapping; do not implement them by parsing included documents separately.
 
 Working: parser for header attributes, headings, listing blocks, literal blocks
 (`....` and `[literal]`), admonitions (paragraph form), paragraphs,

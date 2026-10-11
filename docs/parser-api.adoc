@@ -39,6 +39,81 @@ CLI использует карту для сообщений `файл:стро
 удаления строк комментариев уже восстанавливает исходные диапазоны inline-узлов. Существующие
 приблизительные позиции positional attribution также предстоит уточнить.
 
+== Ресурсы приложения и CLI
+
+`ResourceProvider::load(ResourceRequest)` — явный интерфейс загрузки UTF-8-текста.
+Запрос содержит `target` и необязательный `referrer`: каноническое имя текущего
+источника, ранее возвращённое тем же provider. Результат `Resource { name, text }`
+содержит каноническую идентичность и исходный текст без нормализации BOM/CRLF.
+Разрешение путей и правила доступа принадлежат provider. Подстановка атрибутов,
+выбор строк/тегов, нормализация и рекурсивное раскрытие include будут задачами reader.
+Сам parser не выполняет I/O и не ищет ресурс через неявный fallback.
+
+`SourceMap::load(target, relative_to, provider)` загружает и регистрирует источник.
+`relative_to: Option<SourceId>` задаёт текущий исходный файл; неизвестный id даёт
+ошибку до вызова provider. Одинаковые каноническое имя и текст используют прежний
+id; изменённый текст получает новый id, а старые диапазоны остаются действительными.
+Неудачная загрузка не меняет карту. В одной карте имена provider должны находиться
+в общей области идентичности: независимые provider с разными файлами не должны
+выдавать одинаковые канонические имена.
+
+[source,rust]
+----
+use adoctra::{MemoryResources, SourceMap, ParseOptions, parse_with_options};
+
+let mut resources = MemoryResources::new();
+resources.insert("docs/main.adoc", "= Main\n\nBody").unwrap();
+resources.insert("docs/parts/one.adoc", "See <<missing>>.").unwrap();
+let mut sources = SourceMap::new();
+let root = sources.load("docs/main.adoc", None, &resources).unwrap();
+let part = sources.load("parts/one.adoc", Some(root), &resources).unwrap();
+let options = ParseOptions { source_id: part, ..Default::default() };
+let parsed = parse_with_options(sources.get(part).unwrap().text(), &options);
+assert_eq!(sources.slice(parsed.diagnostics[0].span), Some("<<missing>>"));
+----
+
+`MemoryResources` хранит буферы приложения и не обращается к диску или сети.
+Имена — виртуальные пути с `/` на всех платформах. Начальный `/` означает корень,
+`.` и `..` нормализуются; выход выше корня запрещён. Пустые имена, имена директорий,
+NUL, backslash и colon не принимаются; URL/OS-пути не интерпретируются.
+`insert` заменяет буфер, `remove` удаляет его. Уже зарегистрированные снимки в
+`SourceMap` не меняются при редактировании или удалении буфера.
+
+Файловый adapter находится в CLI. Основной файл загружается через него; канонический
+родитель этого явно заданного файла становится корнем ресурсов. Относительные
+запросы разрешаются от текущего файла, alias через symlink получает каноническое
+имя, а путь за пределами корня отклоняется. Поддержаны обычные UTF-8-файлы;
+перекодировка и URI-загрузка не реализованы. Это контракт adapter, ещё не реализация
+режимов безопасности и разрешения путей Asciidoctor.
+
+`ResourceError` содержит `kind`, `target` и `message`. Виды: `NotFound`,
+`AccessDenied`, `InvalidTarget`, `InvalidEncoding` и `Io`. Ошибки явной загрузки
+возвращаются как `Result`; семантика будущих optional includes будет решаться в
+reader, а синтаксические ошибки parser по-прежнему возвращаются как диагностики.
+
+WASM экспортирует `ResourceWorkspace` с методами `set`, `remove`, `load`,
+`source_name`, `source_text`, `parse_json` и `tokens_json`. `load` возвращает id
+снимка; повторная загрузка изменённого буфера даёт новый id. Методы разбора и
+подсветки принимают id и сохраняют его во всех диапазонах. Неизвестные id и ошибки
+загрузки передаются JS как исключения со строковым сообщением. В native Rust
+доступен тот же класс с типизированными ошибками и методом `source`.
+
+[source,javascript]
+----
+const workspace = new ResourceWorkspace();
+workspace.set('docs/main.adoc', '= Main\n\nBody');
+workspace.set('docs/part.adoc', 'Hello *world*');
+const main = workspace.load('docs/main.adoc');
+const part = workspace.load('part.adoc', main);
+const ast = JSON.parse(workspace.parse_json(part));
+const tokens = JSON.parse(workspace.tokens_json(part));
+----
+
+Каждый вызов разбора пока читает только выбранный снимок: `include::…[]` ещё не
+раскрывается. Для этого предстоит добавить reader нескольких источников и карту
+происхождения узлов, охватывающих границы файлов. Ресурсный API не подменяет этот
+шаг разбором включённых файлов как независимых документов.
+
 == Атрибуты
 
 Внешние `ParseOptions.attributes` имеют приоритет над присваиваниями и удалениями

@@ -14,9 +14,10 @@
 
 pub use adoctra_core::{
     parse, parse_with_options, tokens, tokens_with_options, Attributes, Author, Backend, Block,
-    BlockKind, Diagnostic, Document, DocumentHeader, Error, Inline, ParseOptions, ParseResult,
-    Registry, Result, Revision, Severity, SourceFile, SourceId, SourceMap, SourcePosition, Span,
-    Token, TokenKind, TreeProcessor,
+    BlockKind, Diagnostic, Document, DocumentHeader, Error, Inline, MemoryResources, ParseOptions,
+    ParseResult, Registry, Resource, ResourceError, ResourceErrorKind, ResourceProvider,
+    ResourceRequest, ResourceResult, Result, Revision, Severity, SourceFile, SourceId, SourceMap,
+    SourcePosition, Span, Token, TokenKind, TreeProcessor,
 };
 
 #[cfg(feature = "html")]

@@ -14,6 +14,8 @@ pub enum Error {
     Unsupported(String),
     /// Wrapped I/O error from a backend or the CLI.
     Io(std::io::Error),
+    /// A host resource could not be loaded.
+    Resource(crate::ResourceError),
 }
 
 impl fmt::Display for Error {
@@ -24,6 +26,7 @@ impl fmt::Display for Error {
             }
             Error::Unsupported(what) => write!(f, "unsupported: {what}"),
             Error::Io(e) => write!(f, "io error: {e}"),
+            Error::Resource(e) => write!(f, "resource error: {e}"),
         }
     }
 }
@@ -32,6 +35,7 @@ impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             Error::Io(e) => Some(e),
+            Error::Resource(e) => Some(e),
             _ => None,
         }
     }
@@ -40,6 +44,12 @@ impl std::error::Error for Error {
 impl From<std::io::Error> for Error {
     fn from(e: std::io::Error) -> Self {
         Error::Io(e)
+    }
+}
+
+impl From<crate::ResourceError> for Error {
+    fn from(e: crate::ResourceError) -> Self {
+        Error::Resource(e)
     }
 }
 
