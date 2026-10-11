@@ -66,13 +66,17 @@ pub fn tokens_with_options(source: &str, options: &ParseOptions) -> Vec<Token> {
 
 /// Parse a registered snapshot, expanding includes through the supplied provider.
 /// Only an invalid primary id returns Err; include failures are diagnostics.
+/// If the provider supplies a [`ResourceProvider::document_path`], it determines
+/// locked `docfile`, `docdir`, `docname` and `docfilesuffix` attributes for the
+/// primary document, overriding those keys in `options.attributes`.
 pub fn parse_resource(
     sources: &mut SourceMap,
     options: &ParseOptions,
     provider: &dyn ResourceProvider,
 ) -> ResourceResult<ParseResult> {
-    let reader = reader::Reader::with_resources(sources, options, provider)?;
-    Ok(parser::parse_reader(options, reader).0)
+    let options = options.for_resource(sources, provider);
+    let reader = reader::Reader::with_resources(sources, &options, provider)?;
+    Ok(parser::parse_reader(&options, reader).0)
 }
 
 /// Highlight a registered document and its includes. Each token belongs to one
@@ -82,6 +86,7 @@ pub fn tokens_resource(
     options: &ParseOptions,
     provider: &dyn ResourceProvider,
 ) -> ResourceResult<Vec<Token>> {
-    let reader = reader::Reader::with_resources(sources, options, provider)?;
-    Ok(tokenizer::tokens_reader(options, reader))
+    let options = options.for_resource(sources, provider);
+    let reader = reader::Reader::with_resources(sources, &options, provider)?;
+    Ok(tokenizer::tokens_reader(&options, reader))
 }

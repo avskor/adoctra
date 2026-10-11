@@ -205,9 +205,15 @@ continuations. Preprocessing sees the old context until collection finishes. Rea
 records consumed attribute lines and values for tokenizer classification; preserve
 physical spans and avoid independently interpreting continuation text as syntax.
 Hard-break substitution after attribute expansion and empty-container attribute replay
-remain explicit XFAILs (the latter also affects single-line entries). Built-in path
-attributes, full attribute-list substitutions and safe-mode compatibility are follow-up
-work; see the implementation plan and parser API.
+remain explicit XFAILs (the latter also affects single-line entries).
+ResourceProvider::document_path optionally supplies a slash-separated absolute
+path for primary docfile/docdir/docname/docfilesuffix attributes. MemoryResources
+and CLI opt in; opaque providers default to None. Resource parsing/highlighting
+locks these attributes before the header, overriding caller values and preserving
+them across includes. Keep metadata separate from canonical referrers, never reload
+the primary snapshot, and do not infer cwd or paths in string APIs. Full
+attribute-list substitutions and safe-mode compatibility are follow-up work;
+see the implementation plan and parser API.
 
 Working: parser for header attributes, headings, listing blocks, literal blocks
 (`....` and `[literal]`), admonitions (paragraph form), paragraphs,

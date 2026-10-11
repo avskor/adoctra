@@ -15,6 +15,45 @@ pub struct ParseOptions {
     pub includes: IncludeLimits,
 }
 
+impl ParseOptions {
+    /// File-derived attributes are hard overrides, including over caller
+    /// attributes, matching the pinned reference's file loading entry point.
+    pub(crate) fn for_resource(
+        &self,
+        sources: &crate::SourceMap,
+        provider: &dyn crate::ResourceProvider,
+    ) -> Self {
+        let mut options = self.clone();
+        if let Some(path) = sources
+            .get(self.source_id)
+            .and_then(|source| provider.document_path(source.name()))
+        {
+            if let Some((directory, basename)) = path.rsplit_once('/') {
+                let dot = basename.rfind('.');
+                let suffix = dot.map_or("", |i| &basename[i..]);
+                // Helpers.extname treats a dotfile as an extension, whereas
+                // File.basename refuses to strip the entire filename.
+                let name = dot.filter(|&i| i != 0).map_or(basename, |i| &basename[..i]);
+                // Keep the separator for both POSIX and Windows drive roots.
+                let directory = if directory.is_empty()
+                    || (directory.len() == 2
+                        && directory.as_bytes()[0].is_ascii_alphabetic()
+                        && directory.ends_with(':'))
+                {
+                    &path[..directory.len() + 1]
+                } else {
+                    directory
+                };
+                options.attributes.set("docdir", directory);
+                options.attributes.set("docname", name);
+                options.attributes.set("docfilesuffix", suffix);
+                options.attributes.set("docfile", path);
+            }
+        }
+        options
+    }
+}
+
 pub(crate) struct ParseContext {
     pub attributes: Arc<Attributes>,
     locked: BTreeSet<String>,

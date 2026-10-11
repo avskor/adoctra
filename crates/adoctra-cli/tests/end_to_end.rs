@@ -3,6 +3,58 @@
 use adoctra::Backend;
 
 #[test]
+fn cli_document_paths_resolve_nested_includes_and_render_in_html_and_json() {
+    use std::process::Command;
+    let root = std::env::temp_dir().join(format!("adoctra-cli-paths-{}", std::process::id()));
+    std::fs::create_dir_all(root.join("nested")).unwrap();
+    std::fs::write(
+        root.join("guide.adoc"),
+        "= {docname}\n\ninclude::{docdir}/nested/part.adoc[]",
+    )
+    .unwrap();
+    std::fs::write(
+        root.join("nested/part.adoc"),
+        "include::{docdir}/{docname}.txt[]",
+    )
+    .unwrap();
+    std::fs::write(
+        root.join("guide.txt"),
+        "{docname} {docfilesuffix} {docfile}",
+    )
+    .unwrap();
+    let canonical = root.join("guide.adoc").canonicalize().unwrap();
+    let display_path = canonical
+        .to_str()
+        .unwrap()
+        .replace(std::path::MAIN_SEPARATOR, "/");
+    for format in ["html", "json"] {
+        let output = Command::new(env!("CARGO_BIN_EXE_adoctra"))
+            .arg(root.join("guide.adoc"))
+            .args(["--to", format, "--stdout"])
+            .output()
+            .unwrap();
+        assert!(output.status.success(), "{:?}", output.stderr);
+        assert!(output.stderr.is_empty(), "{:?}", output.stderr);
+        let rendered = String::from_utf8(output.stdout).unwrap();
+        if format == "html" {
+            assert!(rendered.contains("<h1>guide</h1>"), "{rendered}");
+            assert!(
+                rendered.contains(&format!("<p>guide .adoc {display_path}</p>")),
+                "{rendered}"
+            );
+        } else {
+            for value in ["guide", ".adoc", display_path.as_str()] {
+                assert!(
+                    rendered.contains(&format!(r#""value":"{value}""#)),
+                    "{rendered}"
+                );
+            }
+        }
+    }
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn parse_then_render_html() {
     let doc = adoctra::parse("= Title\n\nHello *world*").document;
     let html = String::from_utf8(adoctra::html::HtmlBackend::new().convert(&doc).unwrap()).unwrap();

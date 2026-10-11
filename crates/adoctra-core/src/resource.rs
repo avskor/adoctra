@@ -27,6 +27,15 @@ pub trait ResourceProvider {
     /// so optional includes can suppress only the appropriate failures.
     /// Providers own access policy; the parser must not fall back to ambient I/O.
     fn load(&self, request: ResourceRequest<'_>) -> ResourceResult<Resource>;
+
+    /// Opt into document path attributes for a registered canonical name.
+    /// Return an absolute, slash-separated file path in this provider's
+    /// namespace (which may be virtual). This must not load the resource again.
+    /// The default leaves opaque identities alone. The path is metadata only;
+    /// include resolution still uses the original canonical name as referrer.
+    fn document_path(&self, _name: &str) -> Option<String> {
+        None
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -107,6 +116,10 @@ impl MemoryResources {
 }
 
 impl ResourceProvider for MemoryResources {
+    fn document_path(&self, name: &str) -> Option<String> {
+        Some(name.to_owned())
+    }
+
     fn load(&self, request: ResourceRequest<'_>) -> ResourceResult<Resource> {
         let name = virtual_name(request)?;
         match self.files.get(&name) {

@@ -26,6 +26,14 @@ impl FileResources {
 }
 
 impl ResourceProvider for FileResources {
+    fn document_path(&self, name: &str) -> Option<String> {
+        Some(if std::path::MAIN_SEPARATOR == '/' {
+            name.to_owned()
+        } else {
+            name.replace(std::path::MAIN_SEPARATOR, "/")
+        })
+    }
+
     fn load(&self, request: ResourceRequest<'_>) -> ResourceResult<Resource> {
         let target = request.target;
         if target.is_empty()

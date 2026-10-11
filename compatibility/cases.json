@@ -2465,6 +2465,172 @@
       "resources": {
         "part.rs": " two \\ \t"
       }
+    },
+    {
+      "id": "path-attributes-basic",
+      "category": "attributes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": "{docname} / {docfilesuffix}",
+      "resources": {}
+    },
+    {
+      "id": "path-attributes-header",
+      "category": "attributes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": "= {docname}\n:identity: {docname}{docfilesuffix}\n\nDocument {identity}.",
+      "resources": {}
+    },
+    {
+      "id": "path-attributes-locked-header",
+      "category": "attributes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":docname: changed\n:docfilesuffix: .other\n:docdir!: ignored\n:!docfile: ignored\n\n{docname} / {docfilesuffix}\n\nifeval::[\"{docfile}\" == \"{docdir}/main.adoc\"]\npaths preserved\nendif::[]",
+      "resources": {}
+    },
+    {
+      "id": "path-attributes-locked-body",
+      "category": "attributes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": "Before {docname}.\n\n:docname!: ignored\n:docfilesuffix: .other\n\nAfter {docname} {docfilesuffix}.",
+      "resources": {}
+    },
+    {
+      "id": "path-attributes-locked-multiline",
+      "category": "attributes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":docname: changed \\\n swallowed\n\n{docname}",
+      "resources": {}
+    },
+    {
+      "id": "path-attributes-nested",
+      "category": "attributes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": "{docname}\n\ninclude::parts/child.adoc[]\n\n{docname}",
+      "resources": {
+        "parts/child.adoc": ":docname: child\n\n{docname} {docfilesuffix}\n\ninclude::leaf.adoc[]",
+        "parts/leaf.adoc": "{docname} {docfilesuffix}"
+      }
+    },
+    {
+      "id": "path-attributes-docdir-target",
+      "category": "attributes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": "include::{docdir}/parts/child.adoc[]",
+      "resources": {
+        "parts/child.adoc": "include::{docdir}/leaf.adoc[]",
+        "leaf.adoc": "Root {docname}."
+      }
+    },
+    {
+      "id": "path-attributes-docname-target",
+      "category": "attributes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": "include::{docname}.txt[]",
+      "resources": {
+        "main.txt": "*{docname}* {docfilesuffix}"
+      }
+    },
+    {
+      "id": "path-attributes-suffix-target",
+      "category": "attributes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": "include::child{docfilesuffix}[]",
+      "resources": {
+        "child.adoc": "Suffix {docfilesuffix}."
+      }
+    },
+    {
+      "id": "path-attributes-selection",
+      "category": "attributes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": "include::child.adoc[tag={docname},indent=0]",
+      "resources": {
+        "child.adoc": "omitted\n// tag::main[]\n  Selected {docname}.\n// end::main[]\nomitted"
+      }
+    },
+    {
+      "id": "path-attributes-conditions",
+      "category": "attributes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": "ifdef::docname,docfile[]\nall paths\nendif::[]\n\nifdef::docdir+docfilesuffix[]\nmore paths\nendif::[]\n\nifeval::[\"{docfile}\" == \"{docdir}/{docname}{docfilesuffix}\"]\nconsistent paths\nendif::[]",
+      "resources": {}
+    },
+    {
+      "id": "path-attributes-multiline",
+      "category": "attributes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":identity: {docname} \\\n {docfilesuffix}\n\n{identity}",
+      "resources": {}
+    },
+    {
+      "id": "path-attributes-container",
+      "category": "attributes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": "====\n{docname}\n\ninclude::child.adoc[]\n====",
+      "resources": {
+        "child.adoc": ":docname: child\n\nFrom {docname}."
+      }
+    },
+    {
+      "id": "path-attributes-list",
+      "category": "attributes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": "* {docname}\n+\ninclude::child.adoc[]",
+      "resources": {
+        "child.adoc": "{docname} {docfilesuffix}"
+      }
+    },
+    {
+      "id": "path-attributes-verbatim",
+      "category": "attributes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": "----\n{docname}\ninclude::{docname}.txt[]\n----",
+      "resources": {
+        "main.txt": "{docfile} {docdir}"
+      }
+    },
+    {
+      "id": "path-attributes-unicode-crlf",
+      "category": "attributes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": "﻿= {docname}\r\n\r\ninclude::{docdir}/часть.adoc[]",
+      "resources": {
+        "часть.adoc": "﻿Я *{docname}* {docfilesuffix}\r\n"
+      }
+    },
+    {
+      "id": "path-attributes-optional",
+      "category": "attributes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": "include::{docdir}/missing{docfilesuffix}[opts=optional]\n{docname}",
+      "resources": {}
+    },
+    {
+      "id": "path-attributes-leveloffset",
+      "category": "attributes",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": "= {docname}\n\ninclude::child.adoc[leveloffset=+1]",
+      "resources": {
+        "child.adoc": "= {docname}\n\n{docfilesuffix}"
+      }
     }
   ]
 }

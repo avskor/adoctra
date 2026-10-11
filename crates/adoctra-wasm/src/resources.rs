@@ -124,6 +124,44 @@ mod tests {
     use super::*;
 
     #[test]
+    fn virtual_document_paths_reach_includes_json_and_original_reference_spans() {
+        let mut workspace = ResourceWorkspace::new();
+        workspace
+            .set("docs/главная.adoc", "include::{docdir}/part.adoc[]")
+            .unwrap();
+        let text = "\u{feff}Я {docname} {docfilesuffix}\r\n";
+        workspace.set("docs/part.adoc", text).unwrap();
+        let main = workspace.load("docs/главная.adoc", None).unwrap();
+        let parsed = workspace.parse_json(main).unwrap();
+        assert!(
+            parsed.contains(r#""attribute":"docname","value":"главная""#),
+            "{parsed}"
+        );
+        assert!(
+            parsed.contains(r#""attribute":"docfilesuffix","value":".adoc""#),
+            "{parsed}"
+        );
+        assert!(parsed.contains(r#""diagnostics":[]"#), "{parsed}");
+        let child = workspace.load("part.adoc", Some(main)).unwrap();
+        let tokens = workspace.tokens_json(main).unwrap();
+        for reference in ["{docname}", "{docfilesuffix}"] {
+            let start = text.find(reference).unwrap();
+            let end = start + reference.len();
+            let span = format!(r#""source_id":{child},"start":{start},"end":{end}"#);
+            assert!(parsed.contains(&span), "{parsed}");
+            assert!(tokens.contains(&span), "{tokens}");
+        }
+        // Parsing the child as the primary document derives its own paths.
+        assert!(workspace
+            .parse_json(child)
+            .unwrap()
+            .contains(r#""attribute":"docname","value":"part""#));
+        workspace.remove("docs/главная.adoc").unwrap();
+        assert_eq!(workspace.parse_json(main).unwrap(), parsed);
+        assert_eq!(workspace.source(child).unwrap().text(), text);
+    }
+
+    #[test]
     fn editor_buffers_resolve_relative_paths_and_export_source_aware_json() {
         let mut workspace = ResourceWorkspace::new();
         workspace.set("docs/main.adoc", "= Main\n\nbody").unwrap();
