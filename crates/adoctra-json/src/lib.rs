@@ -108,6 +108,8 @@ fn write_header(header: &adoctra_core::DocumentHeader, s: &mut String) {
     } else {
         s.push_str("null");
     }
+    s.push_str(",\"title\":");
+    escape_into(&header.title, s);
     s.push('}');
 }
 
@@ -528,6 +530,17 @@ mod tests {
         let json = render("= Title");
         assert!(json.starts_with("{\"name\":\"document\""));
         assert!(json.contains("\"heading\""));
+    }
+
+    #[test]
+    fn doctitle_override_exports_effective_heading_and_source_declaration() {
+        let json = render("= Original\n:doctitle: *Effective*\n\n{doctitle}");
+        assert!(json.contains(r#""title":"Original""#), "{json}");
+        assert!(json.contains(r#""value":"Effective""#), "{json}");
+        assert_eq!(json.matches(r#""name":"heading""#).count(), 1);
+        let json = render(":doctitle: Only\n\nBody");
+        assert!(!json.contains(r#""header":"#), "{json}");
+        assert!(json.contains(r#""level":0"#), "{json}");
     }
 
     #[test]

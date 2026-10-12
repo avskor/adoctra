@@ -56,6 +56,8 @@ impl ParseOptions {
 
 pub(crate) struct ParseContext {
     pub attributes: Arc<Attributes>,
+    /// Reader range of the last accepted doctitle entry; None for host values.
+    pub doctitle_span: Option<crate::Span>,
     locked: BTreeSet<String>,
     pub comments: Vec<crate::Span>,
     pub comment_diagnostics: Vec<crate::Diagnostic>,
@@ -72,6 +74,7 @@ impl ParseContext {
         }
         Self {
             attributes: Arc::new(attributes),
+            doctitle_span: None,
             locked,
             comments: Vec::new(),
             comment_diagnostics: Vec::new(),
@@ -182,6 +185,14 @@ pub(crate) fn consume_attribute_entry(
         *current = value;
     }
     lines.attribute_entries[first].1 = Some(entry.clone());
+    if matches!(&entry, AttributeEntry::Set(key, _) | AttributeEntry::Unset(key) if key == "doctitle")
+        && !context.locked.contains("doctitle")
+    {
+        context.doctitle_span = Some(crate::Span::new(
+            lines.attribute_entries[first].0.start,
+            lines.attribute_entries.last().unwrap().0.end,
+        ));
+    }
     context.apply(entry);
     true
 }

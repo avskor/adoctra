@@ -204,6 +204,8 @@ fn write_header(header: &adoctra_core::DocumentHeader, s: &mut String) {
     } else {
         s.push_str("null");
     }
+    s.push_str(",\"title\":");
+    write_str(&header.title, s);
     s.push('}');
 }
 
@@ -1306,6 +1308,22 @@ mod tests {
 
 #[cfg(test)]
 mod header_tests {
+    #[test]
+    fn doctitle_override_exports_declaration_and_replacement_source() {
+        let source = "= Original\n:doctitle: *Effective*\n\nBody";
+        let json = super::parse_json_with_source(source, 7);
+        assert!(json.contains(r#""title":"Original""#), "{json}");
+        assert!(json.contains(r#""value":"Effective""#), "{json}");
+        assert!(
+            json.contains(r#""span":{"source_id":7,"start":11,"end":33},"name":"strong""#),
+            "{json}"
+        );
+        assert_eq!(json.matches(r#""name":"heading""#).count(), 1);
+        let tokens = super::tokens_json_with_source(source, 7);
+        assert_eq!(tokens.matches(r#""kind":"heading""#).count(), 1);
+        assert!(tokens.contains(r#""kind":"attribute-entry""#), "{tokens}");
+    }
+
     #[test]
     fn setext_header_exports_both_title_lines_and_physical_heading_tokens() {
         let source = "*Я*\r\n===\r\nJane Doe\r\nv2\r\n\r\n{author}";

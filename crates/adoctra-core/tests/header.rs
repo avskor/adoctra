@@ -358,3 +358,181 @@ fn setext_preprocessing_preserves_unicode_normalization_and_inline_spans() {
         }
     }
 }
+
+fn heading_inlines(doc: &adoctra_core::Document) -> &[adoctra_core::Inline] {
+    let BlockKind::Heading { level: 0, inlines } = &doc.blocks[0].kind else {
+        panic!("expected document title: {:?}", doc.blocks[0]);
+    };
+    inlines
+}
+
+#[test]
+fn doctitle_overrides_restore_initial_value_and_preserve_declarations() {
+    for (prefix, entries, expected) in [
+        ("", "", "Source"),
+        ("", ":doctitle: After\n", "After"),
+        ("", ":doctitle:\n", "Source"),
+        ("", ":doctitle!:\n", "Source"),
+        ("", ":!doctitle:\n", "Source"),
+        (":doctitle: Before\n", "", "Before"),
+        (":doctitle: Before\n", ":doctitle: After\n", "After"),
+        (
+            ":doctitle: Before\n",
+            ":doctitle: After\n:doctitle!:\n",
+            "Before",
+        ),
+        (":doctitle:\n", "", "Source"),
+    ] {
+        for title in ["= Source", "Source\n======"] {
+            let source = format!("{prefix}{title}\n{entries}\n{{doctitle}}");
+            let result = parse(&source);
+            assert!(result.diagnostics.is_empty(), "{source}");
+            let doc = result.document;
+            assert_eq!(doc.attributes.get("doctitle"), Some(expected), "{source}");
+            assert_eq!(doc.header.as_ref().unwrap().title, "Source");
+            let span = doc.header.as_ref().unwrap().title_span;
+            assert_eq!(&source[span.start..span.end], title);
+            assert_eq!(doc.blocks[0].span, span);
+            assert!(
+                matches!(&heading_inlines(&doc)[0], adoctra_core::Inline::Text { value, .. } if value == expected)
+            );
+        }
+    }
+}
+
+#[test]
+fn doctitle_hard_overrides_include_empty_values_and_no_source_title() {
+    for host in ["Locked", ""] {
+        let mut attributes = Attributes::new();
+        attributes.set("doctitle", host);
+        let options = ParseOptions {
+            source_id: adoctra_core::SourceId(9),
+            attributes,
+            ..Default::default()
+        };
+        for source in [
+            "= Source\n:doctitle: Changed\n\n{doctitle}",
+            "= Source\n:doctitle!:\n\n{doctitle}",
+        ] {
+            let doc = parse_with_options(source, &options).document;
+            let expected = if host.is_empty() { "Source" } else { host };
+            assert_eq!(doc.attributes.get("doctitle"), Some(expected));
+            assert!(
+                matches!(&heading_inlines(&doc)[0], adoctra_core::Inline::Text { value, .. } if value == expected)
+            );
+            let span = heading_inlines(&doc)[0].span();
+            assert_eq!(span.source_id, options.source_id);
+            if !host.is_empty() {
+                assert!(span.is_empty());
+            }
+        }
+        let doc = parse_with_options("Body", &options).document;
+        assert!(doc.header.is_none());
+        assert_eq!(doc.blocks.len(), if host.is_empty() { 1 } else { 2 });
+        if !host.is_empty() {
+            assert!(doc.blocks[0].span.is_empty());
+            assert!(heading_inlines(&doc)[0].span().is_empty());
+        }
+    }
+    let source = ":doctitle: *Only*\n\nBody";
+    let doc = parse(source).document;
+    assert!(doc.header.is_none());
+    assert_eq!(
+        &source[doc.blocks[0].span.start..doc.blocks[0].span.end],
+        ":doctitle: *Only*"
+    );
+    assert!(matches!(
+        heading_inlines(&doc)[0],
+        adoctra_core::Inline::Strong { .. }
+    ));
+    assert!(!adoctra_core::tokens(source)
+        .iter()
+        .any(|t| t.kind == TokenKind::Heading));
+}
+
+#[test]
+fn doctitle_early_snapshot_and_body_changes_do_not_rewrite_the_heading() {
+    // A title consisting of a marker must point at its text, not the ATX prefix.
+    let doc = parse("= =").document;
+    assert_eq!(
+        heading_inlines(&doc)[0].span(),
+        adoctra_core::Span::new(2, 3)
+    );
+    let source = ":word: Early\n= {word}\n:copy: {doctitle}\n:word: Late\n\nBefore {doctitle}\n\n:doctitle: Body\n\nAfter {doctitle}";
+    let doc = parse(source).document;
+    assert_eq!(doc.attributes.get("doctitle"), Some("Early"));
+    assert_eq!(doc.attributes.get("copy"), Some("Early"));
+    assert_eq!(doc.header.as_ref().unwrap().title, "{word}");
+    assert!(
+        matches!(&heading_inlines(&doc)[0], adoctra_core::Inline::AttributeRef { value: Some(value), .. } if value == "Late")
+    );
+    assert_eq!(
+        doc.blocks[1].attribute_context.get("doctitle"),
+        Some("Early")
+    );
+    assert_eq!(
+        doc.blocks[2].attribute_context.get("doctitle"),
+        Some("Body")
+    );
+    let doc = parse("= {later}\n:doctitle: {doctitle}\n:later: Known\n\n{doctitle}").document;
+    assert_eq!(doc.attributes.get("doctitle"), Some("{later}"));
+    assert!(
+        matches!(&heading_inlines(&doc)[0], adoctra_core::Inline::AttributeRef { value: Some(value), .. } if value == "Known")
+    );
+}
+
+#[test]
+fn doctitle_replacement_ranges_cover_real_entries_and_nested_inlines() {
+    use adoctra_core::visit::{walk_document_mut, VisitorMut};
+    let source = "\u{feff}= Исходный \t\r\n:doctitle: *Новое🙂* \\\r\n  <<missing>>\r\n\r\nBody";
+    let mut sources = SourceMap::new();
+    sources.add("unused", "");
+    let id = sources.add("doc.adoc", source);
+    let options = ParseOptions {
+        source_id: id,
+        ..Default::default()
+    };
+    let result = parse_with_options(source, &options);
+    let origin = heading_inlines(&result.document)[0].span();
+    assert_eq!(
+        sources.slice(origin),
+        Some(":doctitle: *Новое🙂* \\\r\n  <<missing>>")
+    );
+    assert_eq!(result.document.header.as_ref().unwrap().title, "Исходный");
+    assert_eq!(result.diagnostics.len(), 1);
+    assert_eq!(result.diagnostics[0].span, origin);
+    let adoctra_core::Inline::Strong { children, .. } = &heading_inlines(&result.document)[0]
+    else {
+        panic!()
+    };
+    assert_eq!(children[0].span(), origin);
+    let tokens = tokens_with_options(source, &options);
+    assert_eq!(
+        tokens
+            .iter()
+            .filter(|t| t.kind == TokenKind::Heading)
+            .count(),
+        1
+    );
+    assert_eq!(
+        tokens
+            .iter()
+            .filter(|t| t.kind == TokenKind::AttributeEntry)
+            .count(),
+        2
+    );
+    struct ValidRanges<'a>(&'a str);
+    impl VisitorMut for ValidRanges<'_> {
+        fn visit_span(&mut self, span: &mut adoctra_core::Span) {
+            assert!(self.0.get(span.start..span.end).is_some(), "{span:?}");
+        }
+    }
+    for end in (0..=source.len()).filter(|&i| source.is_char_boundary(i)) {
+        let partial = &source[..end];
+        let mut result = parse(partial);
+        walk_document_mut(&mut ValidRanges(partial), &mut result.document);
+        for token in adoctra_core::tokens(partial) {
+            assert!(partial.get(token.span.start..token.span.end).is_some());
+        }
+    }
+}

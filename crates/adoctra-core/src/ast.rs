@@ -69,6 +69,9 @@ pub struct Document {
 pub struct DocumentHeader {
     pub span: Span,
     pub title_span: Span,
+    /// Declared title text before substitutions or doctitle overrides.
+    /// The effective inline tree remains in the first level-0 heading.
+    pub title: String,
     pub authors: Vec<Author>,
     pub revision: Option<Revision>,
 }

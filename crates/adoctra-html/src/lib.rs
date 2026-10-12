@@ -582,6 +582,19 @@ mod tests {
     }
 
     #[test]
+    fn doctitle_override_renders_once_and_resolves_forward_references() {
+        let html = render("= Original\n:doctitle: See <<_target>>\n\n== Target");
+        assert!(
+            html.contains("<h1>See <a href=\"#_target\">Target</a></h1>"),
+            "{html}"
+        );
+        assert_eq!(html.matches("<h1>").count(), 1);
+        assert!(!html.contains("Original"));
+        let html = render(":doctitle: *Only*\n\nBody");
+        assert!(html.contains("<h1><strong>Only</strong></h1>"), "{html}");
+    }
+
+    #[test]
     fn doctitle_has_no_id() {
         // The level-0 document title is not a section, so it carries no id.
         let html = render("= Doc Title\n\nbody");

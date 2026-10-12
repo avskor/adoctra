@@ -1673,3 +1673,63 @@ fn setext_title_crosses_selected_indented_include_sources() {
     assert_eq!(sources.get(SourceId(1)).unwrap().text(), child);
     assert_eq!(sources.slice(inlines[0].span()), Some("*Я🙂*"));
 }
+
+#[test]
+fn doctitle_override_keeps_selected_multisource_origins_and_snapshots() {
+    let main =
+        "\u{feff}= Исходный\r\ninclude::override.adoc[lines=2..3,indent=0]\r\n\r\n{doctitle}";
+    let included = "skip\r\n  :doctitle: *Я🙂* \\\r\n    <<missing>>\r\nskip\r\n";
+    let (mut sources, mut resources, options) = setup(main, &[("/docs/override.adoc", included)]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    check_spans(&result, &sources);
+    let header = result.document.header.as_ref().unwrap();
+    assert_eq!(header.title, "Исходный");
+    assert_eq!(sources.slice(header.title_span), Some("= Исходный"));
+    let BlockKind::Heading { inlines, .. } = &result.document.blocks[0].kind else {
+        panic!()
+    };
+    let origin = inlines[0].span();
+    assert_ne!(origin.source_id, options.source_id);
+    assert_eq!(sources.get(origin.source_id).unwrap().text(), included);
+    assert_eq!(result.diagnostics.len(), 1);
+    assert_eq!(result.diagnostics[0].span, origin);
+    let tokens = tokens_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(
+        tokens
+            .iter()
+            .filter(|t| t.kind == TokenKind::Heading)
+            .count(),
+        1
+    );
+    assert_eq!(
+        tokens
+            .iter()
+            .filter(|t| t.kind == TokenKind::AttributeEntry)
+            .count(),
+        2
+    );
+    resources
+        .insert("/docs/override.adoc", ":doctitle: Changed\n")
+        .unwrap();
+    let _new = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(sources.get(origin.source_id).unwrap().text(), included);
+    check_spans(&result, &sources);
+
+    let (mut sources, resources, options) = setup(
+        "= Source\n:doctitle: *First* \\\ninclude::rest.txt[]\n\n{doctitle}",
+        &[("/docs/rest.txt", "second\n")],
+    );
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    let BlockKind::Heading { inlines, .. } = &result.document.blocks[0].kind else {
+        panic!()
+    };
+    let origin = inlines[0].span();
+    let parts = &result.provenance[origin.provenance.expect("entry crosses files")];
+    assert_eq!(
+        sources.slice(parts[0]),
+        Some(":doctitle: *First* \\\ninclude::rest.txt[]\n")
+    );
+    assert_eq!(sources.slice(*parts.last().unwrap()), Some("second"));
+    assert_ne!(parts[0].source_id, parts.last().unwrap().source_id);
+    check_spans(&result, &sources);
+}

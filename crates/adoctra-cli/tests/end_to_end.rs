@@ -193,7 +193,7 @@ fn header_declarations_and_resolved_values_reach_backends() {
             .unwrap(),
     )
     .unwrap();
-    assert!(json.contains(r#""header":{"authors":[{"name":"Jane Doe","firstname":"Jane","middlename":null,"lastname":"Doe","initials":"JD","email":"jane@example.org"}],"revision":{"number":"2","date":"today","remark":"Draft"}}"#), "{json}");
+    assert!(json.contains(r#""header":{"authors":[{"name":"Jane Doe","firstname":"Jane","middlename":null,"lastname":"Doe","initials":"JD","email":"jane@example.org"}],"revision":{"number":"2","date":"today","remark":"Draft"},"title":"Doc"}"#), "{json}");
     assert!(json.contains(r#""value":"Jane Doe""#), "{json}");
 }
 

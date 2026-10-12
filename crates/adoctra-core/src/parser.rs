@@ -48,24 +48,24 @@ pub(crate) fn parse_reader<'a>(
         blocks: Vec::new(),
     };
     let mut diagnostics = Vec::new();
-    if let Some(title_line) = header.title_line {
-        let (off, line) = lines.line(title_line);
-        let text = if header.title_underline.is_some() {
-            line.as_ref()
-        } else {
-            parse_heading(&line).expect("header identified a title").1
-        };
+    if let Some(effective) = header.effective_title {
+        let mut inlines = scan_inlines(&effective.text, effective.span.start, &context.attributes);
+        if effective.replacement {
+            struct ReplacementOrigin(Span);
+            impl crate::visit::VisitorMut for ReplacementOrigin {
+                fn visit_span(&mut self, span: &mut Span) {
+                    *span = self.0;
+                }
+            }
+            crate::visit::walk_inlines_mut(&mut ReplacementOrigin(effective.span), &mut inlines);
+        }
         // Resolve title text against the complete header, but retain the level
         // identified before subsequent header attributes changed leveloffset.
         let mut title = Block::new(
             doc.header
                 .as_ref()
-                .expect("header identified a title")
-                .title_span,
-            BlockKind::Heading {
-                level: 0,
-                inlines: scan_inlines(text, off + abs_offset(&line, text), &context.attributes),
-            },
+                .map_or(effective.span, |header| header.title_span),
+            BlockKind::Heading { level: 0, inlines },
         );
         title.attribute_context = Arc::clone(&context.attributes);
         doc.blocks.push(title);

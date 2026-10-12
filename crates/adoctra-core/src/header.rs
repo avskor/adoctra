@@ -2,10 +2,21 @@
 //! and process_authors. Kept separate from block parsing so the tokenizer uses
 //! exactly the same line boundaries and attribute transitions.
 use crate::comments::skip_comment;
-use crate::context::{consume_attribute_entry, AttributeEntry, ParseContext};
+use crate::context::{
+    consume_attribute_entry, substitute_attribute_value, AttributeEntry, ParseContext,
+};
 use crate::parser::parse_heading;
 use crate::reader::Reader;
 use crate::{Author, DocumentHeader, Revision, Span};
+use std::sync::Arc;
+
+pub(crate) struct HeaderTitle {
+    pub text: String,
+    pub span: Span,
+    /// A replacement is attributed to its whole entry, not invented offsets
+    /// into the transformed value. Host values use an empty insertion anchor.
+    pub replacement: bool,
+}
 
 pub(crate) struct Header {
     pub title_line: Option<usize>,
@@ -14,6 +25,7 @@ pub(crate) struct Header {
     pub revision_line: Option<usize>,
     pub body_start: usize,
     pub metadata: Option<DocumentHeader>,
+    pub effective_title: Option<HeaderTitle>,
 }
 
 pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext) -> Header {
@@ -36,14 +48,26 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
         revision_line: None,
         body_start: i,
         metadata: None,
+        effective_title: context
+            .attributes
+            .get("doctitle")
+            .filter(|s| !s.is_empty())
+            .map(|s| HeaderTitle {
+                text: s.to_owned(),
+                span: context.doctitle_span.unwrap_or_else(|| Span::new(0, 0)),
+                replacement: true,
+            }),
     };
     let mut implicit_author = None;
     let mut implicit_authors = None;
     let mut implicit_initials = None;
     let title = if lines.has(i, context) {
+        // Ruby peeks two processed lines even for ATX. Directives immediately
+        // following it therefore see the context before the implicit doctitle.
+        let has_next = lines.has(i + 1, context);
         if let Some((level, _)) = parse_heading(&lines[i].1) {
             Some((level, false))
-        } else if lines.has(i + 1, context) {
+        } else if has_next {
             setext_level(&lines[i].1, &lines[i + 1].1).map(|level| (level, true))
         } else {
             None
@@ -54,6 +78,25 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
     if let Some((_, setext)) = title.filter(|(level, _)| context.section_level(*level) == 0) {
         result.title_line = Some(i);
         let mut title_span = line_span((lines[i].0, &lines[i].1));
+        let declared = if setext {
+            lines[i].1.as_ref()
+        } else {
+            parse_heading(&lines[i].1).unwrap().1
+        };
+        let text_start = lines[i].0 + (declared.as_ptr() as usize - lines[i].1.as_ptr() as usize);
+        let declared_title = declared.to_owned();
+        if result.effective_title.is_none() {
+            result.effective_title = Some(HeaderTitle {
+                text: declared_title.clone(),
+                span: Span::new(text_start, text_start + declared_title.len()),
+                replacement: false,
+            });
+            let value = substitute_attribute_value(&declared_title, &context.attributes);
+            // The implicit title also replaces a locked empty host value.
+            Arc::make_mut(&mut context.attributes).set("doctitle", value);
+        }
+        let initial_doctitle = context.attributes.get("doctitle").unwrap().to_owned();
+        let initial_span = context.doctitle_span;
         if setext {
             i += 1;
             result.title_underline = Some(i);
@@ -100,10 +143,25 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
         result.metadata = Some(DocumentHeader {
             span: Span::new(start, end),
             title_span,
+            title: declared_title,
             authors,
             revision,
         });
         result.body_start = i;
+        match context.attributes.get("doctitle") {
+            None | Some("") => {
+                Arc::make_mut(&mut context.attributes).set("doctitle", initial_doctitle);
+                context.doctitle_span = initial_span;
+            }
+            Some(value) if value != initial_doctitle => {
+                result.effective_title = Some(HeaderTitle {
+                    text: value.to_owned(),
+                    span: context.doctitle_span.unwrap_or_else(|| Span::new(0, 0)),
+                    replacement: true,
+                });
+            }
+            _ => {}
+        }
     }
     // Explicit name attributes replace derived name fields; emails are separate
     // attributes in this form. Indexed author_N overrides remain follow-up work.
