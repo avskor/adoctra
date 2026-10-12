@@ -250,7 +250,7 @@ pub(crate) fn substitute_attribute_value(value: &str, attributes: &Attributes) -
 }
 
 /// A whole-value pass macro can select literal protection and attribute
-/// substitution independently. Quote/macro/replacement stages are follow-up work.
+/// substitution and replacements independently. Quote/macro stages are follow-up work.
 fn attribute_entry_parts(value: &str, attributes: &Attributes) -> Vec<AttributePart> {
     if let Some((subs, body)) = value
         .strip_prefix("pass:")
@@ -265,12 +265,19 @@ fn attribute_entry_parts(value: &str, attributes: &Attributes) -> Vec<AttributeP
         if stages.iter().all(|s| {
             matches!(
                 *s,
-                "a" | "attributes" | "c" | "specialcharacters" | "specialchars" | "none"
+                "a" | "attributes"
+                    | "c"
+                    | "specialcharacters"
+                    | "specialchars"
+                    | "none"
+                    | "r"
+                    | "replacements"
             )
         }) {
             let mut parts = vec![AttributePart::Raw(body.to_owned())];
             let mut applied_specials = false;
             let mut applied_attributes = false;
+            let mut applied_replacements = false;
             for stage in stages {
                 if matches!(stage, "c" | "specialcharacters" | "specialchars") {
                     if applied_specials {
@@ -303,6 +310,9 @@ fn attribute_entry_parts(value: &str, attributes: &Attributes) -> Vec<AttributeP
                         }
                     }
                     parts = expanded;
+                } else if matches!(stage, "r" | "replacements") && !applied_replacements {
+                    applied_replacements = true;
+                    parts = crate::replacements::apply_parts(parts);
                 }
             }
             return parts;

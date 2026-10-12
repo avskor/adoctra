@@ -150,8 +150,11 @@ Text/Raw parts through substitutions and copy-on-write snapshots; get/iter remai
 flat string APIs, raw_parts exposes boundaries. AttributeRef.parts and optional
 JSON/WASM parts preserve these boundaries; WASM also exports attribute_parts.
 HTML escapes Text and emits Raw unchanged. Host values are already substituted;
-source whole-value pass supports none, a/attributes and c/specialcharacters/
-specialchars, with ordered unique stages. A shared lexical replacement stream
+source whole-value pass supports none, a/attributes, c/specialcharacters/
+specialchars and r/replacements, with ordered unique stages. Pass replacements
+reuse the lexical stream but preserve generated entity spellings as Raw, so a
+later c stage can protect them. Plain inline replacements still use Unicode.
+A shared lexical replacement stream
 (replacements.rs / substitution_text.rs) processes adjacent Text/AttributeRef
 nodes after expansion, preserving protection, ownership and source spans. It
 applies the pinned replacement stages in order, with entity restoration last;
@@ -160,9 +163,11 @@ even if an earlier node consumes their entire value (Some("")). Replacements
 starting in Text span the consumed source construct. Inline::Raw carries restored
 source entity syntax; HTML emits it directly and JSON/WASM expose name:"raw".
 Definitions and attribute snapshots remain untouched. Formatting/macro nodes bound
-runs and their children are processed separately. Whole-value pass replacements,
-quotes/macros, general inline attribute escapes/intrinsics, macro target stages
+runs and their children are processed separately. Whole-value pass quotes/macros,
+general inline attribute escapes/intrinsics, macro target stages
 and raw whole-doctitle replacement remain work.
+Automatic section IDs still retain digits from raw entities; a dedicated XFAIL
+covers this pre-existing limitation, also reproducible with pass:[] values.
 The tokenizer shares header parsing (author/revision tokens). Setext document titles use adjacent
 processed lines, Unicode character lengths (difference <= 1), uniform =/-/~/^/+
 underlines and effective level zero. ATX takes precedence. The Heading/header

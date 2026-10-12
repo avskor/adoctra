@@ -559,6 +559,12 @@ mod tests {
     }
 
     #[test]
+    fn pass_replacements_export_raw_entities_and_literal_parts() {
+        let json = render(":v: pass:c,r[<b>(C)</b>]\n\n{v}");
+        assert!(json.contains(r#""value":"<b>&#169;</b>","parts":[{"kind":"text","value":"<b>"},{"kind":"raw","value":"&#169;"},{"kind":"text","value":"</b>"}]"#), "{json}");
+    }
+
+    #[test]
     fn shared_replacements_export_raw_source_entities_and_consumed_references() {
         let json = render(":v: C\n:name: copy\n\n({v}) &{name}; \\&copy;");
         assert!(json.contains(r#"{"name":"text","value":"©"}"#), "{json}");

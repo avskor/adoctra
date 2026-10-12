@@ -1891,3 +1891,39 @@ fn shared_replacements_keep_selected_source_spans_and_old_snapshots() {
     assert_eq!(sources.slice(raw.span()), Some("&{name};"));
     assert_eq!(sources.get(raw.span().source_id).unwrap().text(), part);
 }
+
+#[test]
+fn pass_replacements_keep_include_selection_positions_and_snapshots() {
+    let root = "include::part.adoc[tags=body,indent=0]";
+    let part =
+        "\u{feff}// tag::body[]\r\n  :v: pass:c,r[До (C) &copy;]\r\n\r\n  {v}\r\n// end::body[]";
+    let (mut sources, mut resources, options) = setup(root, &[("/docs/part.adoc", part)]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty());
+    assert_eq!(
+        result.document.attributes.get("v"),
+        Some("До &#169; &copy;")
+    );
+    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+        panic!()
+    };
+    let Inline::AttributeRef { span, parts, .. } = &inlines[0] else {
+        panic!()
+    };
+    assert_eq!(sources.slice(*span), Some("{v}"));
+    assert_eq!(parts, result.document.attributes.raw_parts("v").unwrap());
+    assert!(tokens_resource(&mut sources, &options, &resources)
+        .unwrap()
+        .iter()
+        .any(|t| t.kind == TokenKind::AttributeRef && t.span == *span));
+    resources
+        .insert("/docs/part.adoc", part.replace("(C)", "(R)"))
+        .unwrap();
+    let new = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(new.document.attributes.get("v"), Some("До &#174; &copy;"));
+    assert_eq!(
+        result.document.attributes.get("v"),
+        Some("До &#169; &copy;")
+    );
+    assert_eq!(sources.get(span.source_id).unwrap().text(), part);
+}

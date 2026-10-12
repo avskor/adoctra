@@ -1318,6 +1318,19 @@ mod tests {
 #[cfg(test)]
 mod header_tests {
     #[test]
+    fn pass_replacements_export_definition_parts_and_reference_coordinates() {
+        let source = ":v: pass:c,r[<b>(C)</b>]\n\n{v}";
+        let json = super::parse_json_with_source(source, 7);
+        assert!(json.contains(r#""v":"<b>&#169;</b>""#), "{json}");
+        let start = source.find("{v}").unwrap();
+        assert!(json.contains(&format!(r#""span":{{"source_id":7,"start":{start},"end":{}}},"name":"attribute-ref","attribute":"v","value":"<b>&#169;</b>","parts":[{{"kind":"text","value":"<b>"}},{{"kind":"raw","value":"&#169;"}},{{"kind":"text","value":"</b>"}}]"#, source.len())), "{json}");
+        assert!(json.contains(r#""attribute_parts":{"v":[{"kind":"text","value":"<b>"},{"kind":"raw","value":"&#169;"},{"kind":"text","value":"</b>"}]}"#), "{json}");
+        let tokens = super::tokens_json_with_source(source, 7);
+        assert_eq!(tokens.matches(r#""kind":"attribute-entry""#).count(), 1);
+        assert_eq!(tokens.matches(r#""kind":"attribute-ref""#).count(), 1);
+    }
+
+    #[test]
     fn shared_replacements_export_raw_spans_and_keep_consumed_attribute_tokens() {
         let source = ":v: C\n:name: copy\n\n({v}) &{name};";
         let json = super::parse_json_with_source(source, 8);

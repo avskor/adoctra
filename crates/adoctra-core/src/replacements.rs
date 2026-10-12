@@ -1,13 +1,35 @@
 //! Ordered replacements over the lexical view after attribute expansion.
 //! The order and escape rules follow Asciidoctor 2.0.23 REPLACEMENTS.
 use crate::substitution_text::{self, Text};
-use crate::Inline;
+use crate::{AttributePart, Inline, Span};
 use std::borrow::Cow;
 
 /// Formatting and macros bound runs; adjacent Text and AttributeRef values share
 /// a stream. Children have markup on both sides, not artificial line boundaries.
 pub(crate) fn apply_inlines(nodes: &mut Vec<Inline>, fold_newlines: bool) {
     process(nodes, fold_newlines, true);
+}
+
+/// Attribute entries may apply specialcharacters after replacements. Keep the
+/// generated entity spelling raw so that a later stage can protect it, instead
+/// of decoding it to the Unicode form used by ordinary inline replacements.
+pub(crate) fn apply_parts(parts: Vec<AttributePart>) -> Vec<AttributePart> {
+    let mut text = Text::default();
+    for part in parts {
+        text.append(part.text(), part.is_raw(), 0, Span::new(0, 0), false);
+    }
+    for stage in 0..13 {
+        text = replace_stage(text, stage, true, true, false);
+    }
+    let mut parts = Vec::new();
+    for (_, fragment) in text.fragments {
+        crate::attributes::push_part(
+            &mut parts,
+            fragment.decoded.as_deref().unwrap_or(&fragment.text),
+            fragment.raw,
+        );
+    }
+    parts
 }
 
 fn process(nodes: &mut Vec<Inline>, fold_newlines: bool, edges: bool) {
@@ -74,7 +96,7 @@ fn flush(pending: &mut Vec<Inline>, output: &mut Vec<Inline>, fold: bool, left: 
         }
     }
     for stage in 0..13 {
-        text = replace_stage(text, stage, left, right);
+        text = replace_stage(text, stage, left, right, true);
     }
     output.extend(substitution_text::write_back(
         std::mem::take(pending),
@@ -90,7 +112,7 @@ struct Match<'a> {
     decoded: Option<&'a str>,
 }
 
-fn replace_stage(text: Text, stage: usize, left: bool, right: bool) -> Text {
+fn replace_stage(text: Text, stage: usize, left: bool, right: bool, decode: bool) -> Text {
     const TRIGGERS: &[u8; 13] = b"(((--.`'-=&&&";
     if !text.text.as_bytes().contains(&TRIGGERS[stage]) {
         return text;
@@ -105,7 +127,12 @@ fn replace_stage(text: Text, stage: usize, left: bool, right: bool) -> Text {
                 text.copy(offset..escape, &mut output);
                 text.copy(escape + 1..m.end, &mut output);
             } else {
-                text.replacement(offset..m.end, &m.lexical, m.decoded, &mut output);
+                text.replacement(
+                    offset..m.end,
+                    &m.lexical,
+                    if decode { m.decoded } else { None },
+                    &mut output,
+                );
             }
             copied = m.end;
             offset = m.end;
