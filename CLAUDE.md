@@ -152,7 +152,8 @@ all boundaries. AttributeRef.parts and optional
 JSON/WASM parts preserve these boundaries; WASM also exports attribute_parts.
 HTML escapes Text and emits Raw unchanged. Host values are already substituted;
 source whole-value pass supports none, a/attributes, c/specialcharacters/
-specialchars, r/replacements and q/quotes with roles/id, with ordered unique stages. Pass replacements
+specialchars, r/replacements, q/quotes with roles/id and link m/macros, with
+ordered unique stages. Pass replacements
 reuse the lexical stream but preserve generated entity spellings as Raw, so a
 later c stage can protect them. Plain inline replacements still use Unicode.
 A shared lexical replacement stream
@@ -176,9 +177,18 @@ JSON/WASM export optional id/role fields on open parts. Late a/r stages preserve
 metadata; c protects the whole lexical representation. Replacements reconstruct
 only tracked generated boundaries, never arbitrary raw tags. Quote attribute lists
 expand references eagerly; general a-stage intrinsics and trailing reference escapes
-remain unsupported outside that list. Macros,
-general inline attribute escapes/intrinsics, macro target stages
-and raw whole-doctitle replacement remain work.
+remain unsupported outside that list. Whole-value m/macros supports link:,
+mailto:, URL and email through attribute_macros.rs. OpenLink(AttributeLink) /
+CloseLink preserve semantic targets, id/role/title/window/rel and label parts;
+JSON/WASM use open-link/close-link. Fields keep lexical entity protection just
+like quote metadata. Link params support AttributeList, URI-encoded mail subject/body,
+windows and relation options; single-quoted params rerun substitutions with a
+32-level macro recursion bound for cyclic host values. Late a/r/c stages, author
+derivation and snapshots retain their semantics. Implicit xref labels strip
+generated attribute link boundaries from the clone without mutating headings.
+The general post-attribute macro pass and non-link pass macros remain work, as do
+general inline attribute escapes/intrinsics, ordinary macro target substitutions
+and raw whole-doctitle replacement.
 The quote compat-mode is cached from host overrides at context creation and from
 attributes at header completion; header entries and body assignments do not
 eagerly change this cache. This does not yet change the ordinary inline scanner.

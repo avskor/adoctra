@@ -67,6 +67,30 @@ fn write_parts_array(parts: &[crate::AttributePart], out: &mut String) {
         if i > 0 {
             out.push(',');
         }
+        if let crate::AttributePart::OpenLink(link) = part {
+            out.push_str("{\"kind\":\"open-link\",\"target\":");
+            escape_into(&link.target, out);
+            for (key, value) in [
+                ("id", &link.id),
+                ("role", &link.role),
+                ("title", &link.title),
+                ("window", &link.window),
+                ("rel", &link.rel),
+            ] {
+                if let Some(value) = value {
+                    out.push(',');
+                    escape_into(key, out);
+                    out.push(':');
+                    escape_into(value, out);
+                }
+            }
+            out.push('}');
+            continue;
+        }
+        if matches!(part, crate::AttributePart::CloseLink) {
+            out.push_str("{\"kind\":\"close-link\"}");
+            continue;
+        }
         if let crate::AttributePart::Open(format)
         | crate::AttributePart::Close(format)
         | crate::AttributePart::OpenWithAttributes { format, .. } = part

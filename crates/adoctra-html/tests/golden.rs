@@ -841,3 +841,17 @@ fn quote_attributes_match_reference_and_ordered_protection() {
     assert!(ours.contains("<span class=\"\">empty role</span>"));
     assert!(ours.contains("&lt;strong id=\"id\" class=\"red\"&gt;literal&lt;/strong&gt;"));
 }
+
+#[test]
+fn pass_link_macros_match_reference_and_preserve_ordered_protection() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden");
+    let source = fs::read_to_string(dir.join("pass-link-macros.adoc")).unwrap();
+    let expected = fs::read_to_string(dir.join("pass-link-macros.expected.html")).unwrap();
+    let result = adoctra_core::parse(&source);
+    assert!(result.diagnostics.is_empty());
+    let ours = String::from_utf8(HtmlBackend.convert(&result.document).unwrap()).unwrap();
+    assert_eq!(paragraph_inner(&ours), paragraph_inner(&expected));
+    assert!(ours.contains("<a href=\"page\" id=\"anchor\" class=\"red\" title=\"Title\" target=\"_blank\" rel=\"nofollow noopener\"><strong>Ж&amp;</strong></a>"));
+    assert!(ours.contains("<a href=\"#_alpha\">Alpha</a>"));
+    assert!(ours.contains("<h2 id=\"_alpha\"><a href=\"page\">Alpha</a></h2>"));
+}

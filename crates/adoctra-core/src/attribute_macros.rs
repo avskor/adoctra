@@ -1,0 +1,619 @@
+//! Link substitutions for whole-value pass attributes. Syntax is matched over
+//! the shared lexical stream; generated links remain backend-neutral boundaries.
+use crate::substitution_text::Text;
+use crate::{AttributeLink, AttributePart as Part, Attributes, Span};
+use std::collections::BTreeMap;
+use std::ops::Range;
+
+const SCHEMES: [&str; 5] = ["https://", "http://", "file://", "ftp://", "irc://"];
+
+pub(crate) fn apply(parts: Vec<Part>, attributes: &Attributes, compat: bool) -> Vec<Part> {
+    apply_inner(parts, attributes, compat, 0)
+}
+
+fn apply_inner(parts: Vec<Part>, attributes: &Attributes, compat: bool, depth: usize) -> Vec<Part> {
+    let mut text = Text::from_parts(&parts);
+    for stage in 0..3 {
+        text = apply_stage(text, stage, attributes, compat, depth);
+    }
+    text.into_parts()
+}
+
+fn space(ch: char) -> bool {
+    matches!(ch, ' ' | '\t'..='\r')
+}
+fn word(ch: char) -> bool {
+    crate::unicode_word::is_alphanumeric(ch) || crate::unicode_word::is_mark_or_connector(ch)
+}
+
+struct LinkMatch {
+    start: usize,
+    end: usize,
+    target: Range<usize>,
+    label: Option<Range<usize>>,
+    mailto: bool,
+    escaped: Option<usize>,
+    ignored: bool,
+}
+
+/// Index closers once so incomplete macro runs cannot repeatedly scan a suffix.
+struct Index {
+    closes: Vec<usize>,
+    target_ends: Vec<usize>,
+    url_ends: Vec<usize>,
+    angle_ends: Vec<usize>,
+}
+impl Index {
+    fn new(src: &str) -> Self {
+        Self {
+            closes: src
+                .match_indices(']')
+                .filter_map(|(i, _)| (i == 0 || src.as_bytes()[i - 1] != b'\\').then_some(i))
+                .collect(),
+            target_ends: src
+                .char_indices()
+                .filter_map(|(i, c)| (space(c) || c == '[').then_some(i))
+                .collect(),
+            url_ends: src
+                .char_indices()
+                .filter_map(|(i, c)| (space(c) || matches!(c, '[' | ']' | '<')).then_some(i))
+                .collect(),
+            angle_ends: src.match_indices("&gt;").map(|(i, _)| i).collect(),
+        }
+    }
+    fn next(positions: &[usize], at: usize, fallback: usize) -> usize {
+        positions
+            .get(positions.partition_point(|&i| i < at))
+            .copied()
+            .unwrap_or(fallback)
+    }
+    fn label(&self, src: &str, bracket: usize) -> Option<Range<usize>> {
+        if src.as_bytes().get(bracket) != Some(&b'[') {
+            return None;
+        }
+        let close = Self::next(&self.closes, bracket + 1, src.len());
+        (close < src.len()).then_some(bracket + 1..close)
+    }
+}
+
+fn apply_stage(
+    text: Text,
+    stage: usize,
+    attributes: &Attributes,
+    compat: bool,
+    depth: usize,
+) -> Text {
+    let src = &text.text;
+    let index = Index::new(src);
+    let mut output = Text::default();
+    let mut copied = 0;
+    let mut at = 0;
+    while at < src.len() {
+        let found = match stage {
+            0 => url(src, at, copied, &index),
+            1 => explicit(src, at, &index),
+            _ => email(src, at),
+        };
+        let Some(m) = found else {
+            at += src[at..].chars().next().unwrap().len_utf8();
+            continue;
+        };
+        if m.ignored {
+            at = m.end;
+            continue;
+        }
+        text.copy(copied..m.start, &mut output);
+        if let Some(escape) = m.escaped {
+            text.copy(m.start..escape, &mut output);
+            text.copy(escape + 1..m.end, &mut output);
+        } else {
+            let target = &src[m.target.clone()];
+            let (link, label) = link_parts(&text, &m, target, attributes, compat, depth);
+            output.append_part(&Part::OpenLink(link), 0, Span::new(0, 0));
+            for part in label {
+                output.append_part(&part, 0, Span::new(0, 0));
+            }
+            output.append_part(&Part::CloseLink, 0, Span::new(0, 0));
+        }
+        copied = m.end;
+        at = m.end;
+    }
+    text.copy(copied..src.len(), &mut output);
+    output
+}
+
+fn explicit(src: &str, at: usize, index: &Index) -> Option<LinkMatch> {
+    let escaped = src.as_bytes()[at] == b'\\';
+    let start = at + usize::from(escaped);
+    let prefix = if src[start..].starts_with("link:") {
+        "link:"
+    } else if src[start..].starts_with("mailto:") {
+        "mailto:"
+    } else {
+        return None;
+    };
+    let target = start + prefix.len();
+    let bracket = Index::next(&index.target_ends, target, src.len());
+    if src[target..bracket].starts_with(':') {
+        return None;
+    }
+    let label = index.label(src, bracket)?;
+    Some(LinkMatch {
+        start: at,
+        end: label.end + 1,
+        target: target..bracket,
+        label: Some(label),
+        mailto: prefix == "mailto:",
+        escaped: escaped.then_some(at),
+        ignored: false,
+    })
+}
+
+fn url(src: &str, at: usize, copied: usize, index: &Index) -> Option<LinkMatch> {
+    let mut start = at;
+    let mut prefix_escape = None;
+    let explicit = src[at..].starts_with("link:");
+    let angle = src[at..].starts_with("&lt;") || src[at..].starts_with("\\&lt;");
+    if explicit {
+        start += 5;
+    } else if angle {
+        if src.as_bytes()[start] == b'\\' {
+            prefix_escape = Some(start);
+            start += 1;
+        }
+        start += 4;
+    } else if at > 0 {
+        let (prev_at, prev) = src[..at].char_indices().next_back()?;
+        if prev_at < copied
+            || !(prev.is_whitespace()
+                || matches!(prev, '>' | '(' | ')' | '[' | ']' | ';' | '"' | '\''))
+        {
+            return None;
+        }
+    }
+    let escape = (src.as_bytes().get(start) == Some(&b'\\')).then_some(start);
+    let target = start + usize::from(escape.is_some());
+    let scheme = SCHEMES
+        .iter()
+        .find(|scheme| src[target..].starts_with(**scheme))?;
+    let run_end = Index::next(&index.url_ends, target, src.len());
+    // The URL form disallows brackets in its target, while explicit link:
+    // has its own later grammar. Bracketed URL macros take precedence over <>.
+    let label = (run_end > target + scheme.len())
+        .then(|| index.label(src, run_end))
+        .flatten();
+    if let Some(label) = label {
+        return Some(LinkMatch {
+            start: if explicit { at } else { start },
+            end: label.end + 1,
+            target: target..run_end,
+            label: Some(label),
+            mailto: false,
+            escaped: escape,
+            ignored: false,
+        });
+    }
+    if angle {
+        let end = Index::next(&index.angle_ends, target + scheme.len(), src.len());
+        if end > target + scheme.len() && end < src.len() && !src[target..end].contains(space) {
+            return Some(LinkMatch {
+                start: at,
+                end: end + 4,
+                target: target..end,
+                label: None,
+                mailto: false,
+                escaped: prefix_escape.or(escape),
+                ignored: false,
+            });
+        }
+        // The reference consumes an unmatched angle-prefixed URL unchanged;
+        // its trailing semicolon cannot donate a boundary to another match.
+        return Some(LinkMatch {
+            start: at,
+            end: run_end,
+            target: target..run_end,
+            label: None,
+            mailto: false,
+            escaped: prefix_escape.or(escape),
+            ignored: prefix_escape.is_none() && escape.is_none(),
+        });
+    }
+    let mut end = run_end;
+    while end > target + scheme.len() && src[..end].ends_with([',', '.', '?', '!', ')']) {
+        end -= 1;
+    }
+    if escape.is_some() && end > target + scheme.len() {
+        return Some(LinkMatch {
+            start: at,
+            end,
+            target: target..end,
+            label: None,
+            mailto: false,
+            escaped: escape,
+            ignored: false,
+        });
+    }
+    if end > target + scheme.len() && src[..end].ends_with([';', ':']) {
+        end -= 1;
+        if src[..end].ends_with(')') {
+            end -= 1;
+        }
+    }
+    if end <= target + scheme.len() {
+        return None;
+    }
+    let ignored = explicit || (escape.is_none() && src[..at].ends_with(['"', '\'']));
+    Some(LinkMatch {
+        start: at,
+        end,
+        target: target..end,
+        label: None,
+        mailto: false,
+        escaped: escape,
+        ignored,
+    })
+}
+
+fn email(src: &str, at: usize) -> Option<LinkMatch> {
+    let escaped = src.as_bytes()[at] == b'\\';
+    let start = at + usize::from(escaped);
+    let first = src[start..].chars().next()?;
+    if !word(first) {
+        return None;
+    }
+    let mut i = start + first.len_utf8();
+    while i < src.len() {
+        if src[i..].starts_with("&amp;") {
+            i += 5;
+            continue;
+        }
+        let c = src[i..].chars().next()?;
+        if word(c) || matches!(c, '-' | '.' | '%' | '+') {
+            i += c.len_utf8();
+        } else {
+            break;
+        }
+    }
+    let no_match = LinkMatch {
+        start: at,
+        end: i,
+        target: start..i,
+        label: None,
+        mailto: true,
+        escaped: None,
+        ignored: true,
+    };
+    if src.as_bytes().get(i) != Some(&b'@') {
+        return Some(no_match);
+    }
+    i += 1;
+    if !src[i..]
+        .chars()
+        .next()
+        .is_some_and(crate::unicode_word::is_alphanumeric)
+    {
+        return Some(no_match);
+    }
+    let domain = i;
+    while i < src.len() {
+        let c = src[i..].chars().next()?;
+        if crate::unicode_word::is_alphanumeric(c) || matches!(c, '_' | '-' | '.') {
+            i += c.len_utf8();
+        } else {
+            break;
+        }
+    }
+    // Ruby greedily scans the domain, then backtracks to a 2–5 letter suffix
+    // ending at a word boundary (which may precede a dash or another dot).
+    let end = src[domain..i].rmatch_indices('.').find_map(|(dot, _)| {
+        let start = domain + dot + 1;
+        let len = src[start..]
+            .bytes()
+            .take(5)
+            .take_while(u8::is_ascii_alphabetic)
+            .count();
+        (len >= 2 && !src[start + len..].chars().next().is_some_and(word)).then_some(start + len)
+    });
+    let Some(end) = end else {
+        return Some(no_match);
+    };
+    let ignored = !escaped && src[..at].ends_with(['>', ':', '/']);
+    Some(LinkMatch {
+        start: at,
+        end,
+        target: start..end,
+        label: None,
+        mailto: true,
+        escaped: escaped.then_some(at),
+        ignored,
+    })
+}
+
+fn slice(text: &Text, range: Range<usize>, unescape: Option<char>) -> Vec<Part> {
+    let mut out = Text::default();
+    let mut copied = range.start;
+    let mut chars = text.text[range.clone()].char_indices().peekable();
+    while let Some((i, c)) = chars.next() {
+        if c == '\\'
+            && chars
+                .peek()
+                .is_some_and(|(_, c)| *c == ']' || Some(*c) == unescape)
+        {
+            text.copy(copied..range.start + i, &mut out);
+            copied = range.start + i + 1;
+            chars.next();
+        }
+    }
+    text.copy(copied..range.end, &mut out);
+    out.into_parts()
+}
+
+fn link_parts(
+    text: &Text,
+    m: &LinkMatch,
+    target: &str,
+    attributes: &Attributes,
+    compat: bool,
+    depth: usize,
+) -> (AttributeLink, Vec<Part>) {
+    let mut link = AttributeLink {
+        target: if m.mailto {
+            format!("mailto:{target}")
+        } else {
+            target.into()
+        },
+        ..Default::default()
+    };
+    let mut label = m
+        .label
+        .clone()
+        .map_or_else(Vec::new, |r| slice(text, r, None));
+    let mut lexical = crate::attributes::reference_text(&label);
+    let mut attrs = BTreeMap::new();
+    if !compat && ((!m.mailto && lexical.contains('=')) || (m.mailto && lexical.contains(','))) {
+        let (first, parsed, positional) = parse_label(&label, attributes, compat, depth);
+        label = first;
+        attrs = parsed;
+        lexical = crate::attributes::reference_text(&label);
+        if m.mailto {
+            if let Some(subject) = positional.get(&2) {
+                link.target.push_str("?subject=");
+                link.target.push_str(&encode_uri(subject));
+                if let Some(body) = positional.get(&3) {
+                    link.target.push_str("&amp;body=");
+                    link.target.push_str(&encode_uri(body));
+                }
+            }
+        }
+    }
+    if lexical.ends_with('^') {
+        let text = Text::from_parts(&label);
+        label = slice(&text, 0..text.text.len() - 1, None);
+        attrs
+            .entry("window".into())
+            .or_insert_with(|| "_blank".into());
+        lexical.pop();
+    }
+    if lexical.is_empty() {
+        let display = if !m.mailto && attributes.get("hide-uri-scheme").is_some() {
+            strip_scheme(target)
+        } else {
+            target
+        };
+        let display = if display.is_empty() { target } else { display };
+        // Keep semantic/literal fragments in the fallback target too.
+        let offset = target.len() - display.len();
+        label = slice(text, m.target.start + offset..m.target.end, None);
+        if !m.mailto {
+            attrs
+                .entry("role".into())
+                .and_modify(|role| *role = format!("bare {role}"))
+                .or_insert_with(|| "bare".into());
+        }
+    }
+    link.id = attrs.remove("id");
+    link.role = attrs.remove("role");
+    link.title = attrs.remove("title");
+    link.window = attrs.remove("window");
+    let nofollow = attrs.contains_key("nofollow-option");
+    let noopener =
+        link.window.as_deref() == Some("_blank") || attrs.contains_key("noopener-option");
+    link.rel = if link.window.is_some() {
+        noopener.then(|| {
+            if nofollow {
+                "nofollow noopener"
+            } else {
+                "noopener"
+            }
+            .into()
+        })
+    } else {
+        nofollow.then(|| "nofollow".into())
+    };
+    (link, label)
+}
+
+fn strip_scheme(target: &str) -> &str {
+    let Some(colon) = target.find(':') else {
+        return target;
+    };
+    let scheme = &target[..colon];
+    if scheme.len() < 2
+        || !scheme.as_bytes()[0].is_ascii_alphabetic()
+        || !scheme
+            .bytes()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, b'.' | b'+' | b'-'))
+    {
+        return target;
+    }
+    let rest = &target[colon + 1..];
+    rest.strip_prefix("//")
+        .or_else(|| rest.strip_prefix('/'))
+        .unwrap_or(rest)
+}
+
+fn encode_uri(value: &str) -> String {
+    let mut out = String::new();
+    for byte in value.bytes() {
+        if byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.' | b'~') {
+            out.push(byte as char);
+        } else {
+            out.push_str(&format!("%{byte:02X}"));
+        }
+    }
+    out
+}
+
+/// AttributeList's positional label and named link properties. The first
+/// positional field retains the original semantic fragments instead of parsing
+/// the generated reference tags back into a tree.
+fn parse_label(
+    parts: &[Part],
+    attributes: &Attributes,
+    compat: bool,
+    depth: usize,
+) -> (Vec<Part>, BTreeMap<String, String>, BTreeMap<usize, String>) {
+    let mut text = Text::from_parts(parts);
+    // AttributeList folds physical newlines before parsing mixed text/attrs.
+    let ranges: Vec<_> = text.text.match_indices('\n').map(|(i, _)| i).collect();
+    if !ranges.is_empty() {
+        let mut out = Text::default();
+        let mut copied = 0;
+        for i in ranges {
+            text.copy(copied..i, &mut out);
+            text.replacement(i..i + 1, " ", None, &mut out);
+            copied = i + 1;
+        }
+        text.copy(copied..text.text.len(), &mut out);
+        text = out;
+    }
+    let src = &text.text;
+    let mut at = 0;
+    let mut first = None;
+    let mut positional = BTreeMap::new();
+    let mut field_index = 1;
+    let mut named = BTreeMap::new();
+    while at < src.len() {
+        while src
+            .as_bytes()
+            .get(at)
+            .is_some_and(|c| matches!(c, b' ' | b'\t'))
+        {
+            at += 1;
+        }
+        if at == src.len() {
+            break;
+        }
+        let field = at;
+        let name_end = src[at..]
+            .char_indices()
+            .find(|(i, c)| !word(*c) && !(*i > 0 && matches!(c, '-' | '.')))
+            .map_or(src.len(), |(i, _)| at + i);
+        let mut eq = name_end;
+        while src
+            .as_bytes()
+            .get(eq)
+            .is_some_and(|c| matches!(c, b' ' | b'\t'))
+        {
+            eq += 1;
+        }
+        let name = if name_end > at && src.as_bytes().get(eq) == Some(&b'=') {
+            at = eq + 1;
+            while src
+                .as_bytes()
+                .get(at)
+                .is_some_and(|c| matches!(c, b' ' | b'\t'))
+            {
+                at += 1;
+            }
+            Some(&src[field..name_end])
+        } else {
+            None
+        };
+        let quote = src
+            .as_bytes()
+            .get(at)
+            .copied()
+            .filter(|c| matches!(c, b'\'' | b'"'));
+        let close = quote.and_then(|q| {
+            src[at + 1..]
+                .char_indices()
+                .find(|(i, c)| *c == q as char && (*i == 0 || src.as_bytes()[at + *i] != b'\\'))
+                .map(|(i, _)| at + 1 + i)
+        });
+        let range = if let Some(close) = close {
+            let range = at + 1..close;
+            at = close + 1;
+            range
+        } else {
+            let end = src[at..].find(',').map_or(src.len(), |i| at + i);
+            let trimmed = src[at..end].trim_end_matches([' ', '\t']).len();
+            let range = at..at + trimmed;
+            at = end;
+            range
+        };
+        let mut value = slice(&text, range, close.and(quote).map(char::from));
+        if quote == Some(b'\'') && close.is_some() {
+            // Single-quoted attribute values run a fresh normal substitution
+            // sequence, including protection of any previously generated tags.
+            value = vec![Part::Text(crate::attributes::reference_text(&value))];
+            value = crate::attribute_quotes::apply(value, compat, attributes);
+            let mut expanded = Vec::new();
+            for part in value {
+                if part.is_boundary() {
+                    expanded.push(part);
+                } else {
+                    for part in crate::context::substitute_attribute_parts(
+                        part.text(),
+                        attributes,
+                        part.is_raw(),
+                    ) {
+                        crate::attributes::push_value(&mut expanded, part);
+                    }
+                }
+            }
+            value = crate::replacements::apply_parts(expanded);
+            if depth < 32 {
+                value = apply_inner(value, attributes, compat, depth + 1);
+            }
+        }
+        let lexical = crate::attributes::reference_text(&value);
+        if let Some(name) = name {
+            if close.is_some() || lexical != "None" {
+                if matches!(name, "opts" | "options") {
+                    let options = if lexical.contains(',') {
+                        lexical.replace(' ', "")
+                    } else {
+                        lexical
+                    };
+                    for option in options.split(',').filter(|s| !s.is_empty()) {
+                        named.insert(format!("{option}-option"), String::new());
+                    }
+                } else {
+                    named.insert(name.into(), lexical);
+                }
+            }
+        } else {
+            if field_index == 1 {
+                first = Some(value);
+            }
+            positional.insert(field_index, lexical);
+        }
+        while src
+            .as_bytes()
+            .get(at)
+            .is_some_and(|c| matches!(c, b' ' | b'\t'))
+        {
+            at += 1;
+        }
+        if src.as_bytes().get(at) == Some(&b',') {
+            at += 1;
+        }
+        field_index += 1;
+    }
+    let first = first.unwrap_or_default();
+    if positional.get(&1).is_some_and(|s| s == src) {
+        return (parts.to_vec(), BTreeMap::new(), BTreeMap::new());
+    }
+    (first, named, positional)
+}

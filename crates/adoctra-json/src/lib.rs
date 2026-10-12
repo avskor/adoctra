@@ -559,6 +559,24 @@ mod tests {
     }
 
     #[test]
+    fn attribute_links_export_neutral_targets_properties_and_label_parts() {
+        let json = render(":v: pass:c,q,m[link:page[*Ж&*,id=anchor,role=red,title=Title,window=_blank,opts=nofollow]]\n\n{v}");
+        assert!(json.contains(r#""value":"Ж&","parts":[{"kind":"open-link","target":"page","id":"anchor","role":"red","title":"Title","window":"_blank","rel":"nofollow noopener"},{"kind":"open","format":"strong"},{"kind":"text","value":"Ж&"},{"kind":"close","format":"strong"},{"kind":"close-link"}]"#), "{json}");
+        assert!(!json.contains("<a href"), "{json}");
+        let json = render(":v: pass:m[mailto:a@example.org[Mail,Subject,Body]]\n\n{v}");
+        assert!(
+            json.contains(r#""target":"mailto:a@example.org?subject=Subject&amp;body=Body""#),
+            "{json}"
+        );
+        let json = render(":v: pass:m[link:page[Alpha]]\n\n<<_alpha>>\n\n== {v}");
+        assert_eq!(
+            json.matches(r#""kind":"open-link","target":"page""#)
+                .count(),
+            1
+        );
+    }
+
+    #[test]
     fn quote_attributes_export_neutral_metadata_and_preserve_empty_roles() {
         let source = ":v: pass:c,q[[#якорь.роль]*Ж&* [..]#span#]\n\n{v}";
         let json = render(source);

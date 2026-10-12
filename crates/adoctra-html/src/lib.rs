@@ -368,6 +368,28 @@ fn render_inlines(inlines: &[Inline], out: &mut String) {
                     match part {
                         adoctra_core::AttributePart::Text(text) => out.push_str(&escape_text(text)),
                         adoctra_core::AttributePart::Raw(text) => out.push_str(text),
+                        adoctra_core::AttributePart::OpenLink(link) => {
+                            out.push_str("<a href=\"");
+                            out.push_str(&link.target);
+                            out.push('"');
+                            for (key, value) in [
+                                ("id", &link.id),
+                                ("class", &link.role),
+                                ("title", &link.title),
+                                ("target", &link.window),
+                                ("rel", &link.rel),
+                            ] {
+                                if let Some(value) = value {
+                                    out.push(' ');
+                                    out.push_str(key);
+                                    out.push_str("=\"");
+                                    out.push_str(value);
+                                    out.push('"');
+                                }
+                            }
+                            out.push('>');
+                        }
+                        adoctra_core::AttributePart::CloseLink => out.push_str("</a>"),
                         adoctra_core::AttributePart::Open(format) => {
                             out.push('<');
                             out.push_str(attribute_format_tag(*format));

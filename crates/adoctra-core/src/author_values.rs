@@ -240,13 +240,7 @@ fn derive_author(value: &[AttributePart]) -> Attributes {
             .map(|p| match p {
                 AttributePart::Text(text) => AttributePart::Text(text.replace('_', " ")),
                 AttributePart::Raw(text) => AttributePart::Raw(text.replace('_', " ")),
-                AttributePart::OpenWithAttributes { format, id, role } => {
-                    AttributePart::OpenWithAttributes {
-                        format: *format,
-                        id: id.as_ref().map(|s| s.replace('_', " ")),
-                        role: role.as_ref().map(|s| s.replace('_', " ")),
-                    }
-                }
+                part if part.is_boundary() => part.clone().map_metadata(|s| s.replace('_', " ")),
                 _ => p.clone(),
             })
             .collect();

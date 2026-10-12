@@ -48,11 +48,14 @@ impl Text {
     pub fn append_part(&mut self, part: &AttributePart, owner: usize, span: Span) {
         if part.is_boundary() {
             let lexical = part.lexical().into_owned();
-            let boundary =
-                matches!(part, AttributePart::OpenWithAttributes { .. }).then(|| Boundary {
-                    original: Arc::new(part.clone()),
-                    range: 0..lexical.len(),
-                });
+            let boundary = matches!(
+                part,
+                AttributePart::OpenWithAttributes { .. } | AttributePart::OpenLink(_)
+            )
+            .then(|| Boundary {
+                original: Arc::new(part.clone()),
+                range: 0..lexical.len(),
+            });
             self.push(Fragment {
                 text: lexical,
                 decoded: None,

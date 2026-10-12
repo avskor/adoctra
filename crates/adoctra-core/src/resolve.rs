@@ -321,7 +321,11 @@ fn resolve_xrefs(blocks: &mut [Block], registry: &Registry, diagnostics: &mut Ve
                 }
                 if children.is_empty() {
                     *children = match reftext {
-                        Some(Some(text)) => text.clone(),
+                        Some(Some(text)) => {
+                            let mut label = text.clone();
+                            strip_attribute_links(&mut label);
+                            label
+                        }
                         _ => vec![Inline::Text {
                             value: format!("[{target}]"),
                             span: *span,
@@ -342,6 +346,26 @@ fn resolve_xrefs(blocks: &mut [Block], registry: &Registry, diagnostics: &mut Ve
         },
         blocks,
     );
+}
+
+/// Implicit xref labels retain formatting but drop generated link boundaries.
+/// The original heading and source reference positions remain unchanged.
+fn strip_attribute_links(inlines: &mut [Inline]) {
+    struct Strip;
+    impl VisitorMut for Strip {
+        fn visit_inline(&mut self, inline: &mut Inline) {
+            if let Inline::AttributeRef { parts, .. } = inline {
+                parts.retain(|part| {
+                    !matches!(
+                        part,
+                        crate::AttributePart::OpenLink(_) | crate::AttributePart::CloseLink
+                    )
+                });
+            }
+            visit::walk_inline_mut(self, inline);
+        }
+    }
+    visit::walk_inlines_mut(&mut Strip, inlines);
 }
 
 #[cfg(test)]

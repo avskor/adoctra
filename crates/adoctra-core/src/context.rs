@@ -57,7 +57,7 @@ impl ParseOptions {
 
 pub(crate) struct ParseContext {
     pub attributes: Arc<Attributes>,
-    /// Quote mode is cached at document creation/header completion in Ruby;
+    /// Quote/link mode is cached at document creation/header completion in Ruby;
     /// entries in the header and later body mutations do not update it eagerly.
     pub quote_compat: bool,
     /// Reader range of the last accepted doctitle entry; None for host values.
@@ -254,7 +254,7 @@ pub(crate) fn substitute_attribute_value(value: &str, attributes: &Attributes) -
 }
 
 /// A whole-value pass macro can select literal protection and attribute
-/// substitution, quotes and replacements independently. Macros remain follow-up work.
+/// substitution, quotes, replacements and link macros independently.
 fn attribute_entry_parts(value: &str, attributes: &Attributes, compat: bool) -> Vec<AttributePart> {
     if let Some((subs, body)) = value
         .strip_prefix("pass:")
@@ -278,6 +278,8 @@ fn attribute_entry_parts(value: &str, attributes: &Attributes, compat: bool) -> 
                     | "replacements"
                     | "q"
                     | "quotes"
+                    | "m"
+                    | "macros"
             )
         }) {
             let mut parts = vec![AttributePart::Raw(body.to_owned())];
@@ -285,6 +287,7 @@ fn attribute_entry_parts(value: &str, attributes: &Attributes, compat: bool) -> 
             let mut applied_attributes = false;
             let mut applied_replacements = false;
             let mut applied_quotes = false;
+            let mut applied_macros = false;
             for stage in stages {
                 if matches!(stage, "c" | "specialcharacters" | "specialchars") {
                     if applied_specials {
@@ -301,21 +304,12 @@ fn attribute_entry_parts(value: &str, attributes: &Attributes, compat: bool) -> 
                     applied_attributes = true;
                     let mut expanded = Vec::new();
                     for part in parts {
-                        if let AttributePart::OpenWithAttributes { format, id, role } = part {
-                            let expand = |value: String| {
-                                crate::attributes::reference_text(&substitute_attribute_parts(
-                                    &value, attributes, true,
-                                ))
-                            };
-                            expanded.push(AttributePart::OpenWithAttributes {
-                                format,
-                                id: id.map(expand),
-                                role: role.map(expand),
-                            });
-                            continue;
-                        }
                         if part.is_boundary() {
-                            expanded.push(part);
+                            expanded.push(part.map_metadata(|value| {
+                                crate::attributes::reference_text(&substitute_attribute_parts(
+                                    value, attributes, true,
+                                ))
+                            }));
                             continue;
                         }
                         for new in
@@ -331,6 +325,9 @@ fn attribute_entry_parts(value: &str, attributes: &Attributes, compat: bool) -> 
                 } else if matches!(stage, "q" | "quotes") && !applied_quotes {
                     applied_quotes = true;
                     parts = crate::attribute_quotes::apply(parts, compat, attributes);
+                } else if matches!(stage, "m" | "macros") && !applied_macros {
+                    applied_macros = true;
+                    parts = crate::attribute_macros::apply(parts, attributes, compat);
                 }
             }
             return parts;

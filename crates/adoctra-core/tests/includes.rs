@@ -2050,3 +2050,42 @@ fn quote_attributes_keep_selected_include_positions_and_old_snapshots() {
     );
     assert_eq!(sources.get(span.source_id).unwrap().text(), part);
 }
+
+#[test]
+fn attribute_macro_links_keep_include_provenance_and_immutable_host_updates() {
+    use adoctra_core::AttributePart;
+    let root = "include::part.adoc[tags=body,indent=0]";
+    let part = "\u{feff}// tag::body[]\r\n  :v: pass:c,q,m[link:страница[*Ж&*,role=роль]]\r\n\r\n  {v}\r\n// end::body[]";
+    let (mut sources, mut resources, options) = setup(root, &[("/docs/part.adoc", part)]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty());
+    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+        panic!()
+    };
+    let Inline::AttributeRef {
+        span, parts, value, ..
+    } = &inlines[0]
+    else {
+        panic!()
+    };
+    assert!(
+        matches!(&parts[0],AttributePart::OpenLink(l) if l.target=="страница" && l.role.as_deref()==Some("роль"))
+    );
+    assert_eq!(value.as_deref(), Some("Ж&"));
+    assert_eq!(sources.slice(*span), Some("{v}"));
+    assert!(tokens_resource(&mut sources, &options, &resources)
+        .unwrap()
+        .iter()
+        .any(|t| t.kind == TokenKind::AttributeRef && t.span == *span));
+    resources
+        .insert("/docs/part.adoc", part.replace("страница", "другая"))
+        .unwrap();
+    let new = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(
+        matches!(&new.document.attributes.raw_parts("v").unwrap()[0],AttributePart::OpenLink(l) if l.target=="другая")
+    );
+    assert!(
+        matches!(&result.document.attributes.raw_parts("v").unwrap()[0],AttributePart::OpenLink(l) if l.target=="страница")
+    );
+    assert_eq!(sources.get(span.source_id).unwrap().text(), part);
+}
