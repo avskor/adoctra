@@ -5370,6 +5370,358 @@
       "resources": {
         "part.adoc": "ignored\n  == {v}\n  \nignored"
       }
+    },
+    {
+      "id": "pass-quotes-basic",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":v: pass:q[*bold* _em_ `code` #mark# ^sup^ ~sub~]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-double-markers",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":v: pass:q[x**bold**y x__em__y x``code``y x##mark##y]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-nested",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":v: pass:q[*a _b_ c* _a *b* c_]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-escaped",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":v: pass:q[\\*a* \\**b** \\\\_c_ \\^2^]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-adjacent",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":v: pass:q[*a**b* **a**b *one* *two*]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-whitespace",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":v: pass:q[a*b*c * a* *a * ** ** ^a b^]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-unicode",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":v: pass:q[Ж*д*я é_à_é é*x*y ½*x* *Жёлтый*]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-punctuation",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":v: pass:q[:*a* ;*a* }*a* (*a*) &amp;#a#]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-typographic",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":v: pass:q[\"`double`\" and '`single`']\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-typographic-protection",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":v: pass:q,c[\"`double`\"]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-aliases",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":v: pass:q,quotes,none[\\*Ada* _Bob_]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-raw-markup",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":v: pass:q[*<b>&copy;</b> (C) ->*]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-protected-markup",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":v: pass:c,q[*<b>&copy;</b> (C) ->*]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-restore-entities",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":v: pass:c,q,r[*<b>&copy;</b> (C) ->*]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-protection-after",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":v: pass:q,c[*<b>&copy;</b> (C) ->*]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-structured-expansion",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":name: pass:q[*Ada*]\n:v: pass:a[{name}]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-structured-protection",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":name: pass:q[*Ada*]\n:v: pass:a,c[{name}]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-parts-boundaries",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":left: pass:[*]\n:right: Ada*\n:v: pass:a,q[{left}{right}]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-duplicate-protection",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":v: pass:c,q,specialcharacters,quotes[*<b>*]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-multiline",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":v: pass:c,q[*Alpha \\\n Beta* _Gamma_]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-empty",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":v: pass:q[]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-unclosed",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":v: pass:q[*Alpha _Beta]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-header-compat",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":compat-mode:\n:v: pass:q[++code++ +code+ 'em' ``double'' `single']\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-body-compat",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":compat-mode:\n\nText\n\n:v: pass:q[++code++ +code+ 'em' ``double'' `single']\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-setext-compat",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "Doc\n===\n:v: pass:q[+Header+]\n\n{v}\n\n:v: pass:q[+Body+]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-body-compat-toggle",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "= Doc\n\n:compat-mode:\n:v: pass:q[+code+]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-author",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "= Doc\nJohn Doe\n:author: pass:c,q[*Анна_Мария* _Смирнова_]\n\n{author} | {firstname} | {lastname} | {authorinitials}"
+    },
+    {
+      "id": "pass-quotes-authors",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "= Doc\n:authors: pass:q[*Ada* Lovelace; _Grace_ Hopper]\n\n{authors} | {firstname_2}"
+    },
+    {
+      "id": "pass-quotes-indexed-author",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "= Doc\nJohn Doe; Mary Roe\n:author_2: pass:q[*Ada* Lovelace]\n\n{authors} | {firstname_2}"
+    },
+    {
+      "id": "pass-quotes-section-id",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":v: pass:c,q[*Alpha* _Beta_]\n\n<<_alpha_beta>>\n\n== {v}"
+    },
+    {
+      "id": "pass-quotes-contexts",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":v: pass:c,q[*Alpha*]\n\n.{v}\n----\n{v}\n----\n\n* {v}\n\nlink:target[{v}]"
+    },
+    {
+      "id": "pass-quotes-body-snapshot",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":v: pass:q[*Alpha*]\n\n{v}\n\n:v: pass:q[_Beta_]\n\n{v}\n\n:v!:\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-unicode-crlf",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "﻿:v: pass:c,q[*Жёлтый* _café_]\r\n\r\nДо {v}"
+    },
+    {
+      "id": "pass-quotes-include",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "include::part.adoc[tags=body,indent=0]",
+      "profile": "include-body-dom-v1",
+      "resources": {
+        "part.adoc": "﻿// tag::body[]\r\n  :v: pass:c,q[*Жёлтый* _café_]\r\n\r\n  {v}\r\n// end::body[]"
+      }
+    },
+    {
+      "id": "pass-quotes-order-c-q-r-a",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":name: _Ada_ &copy;\n:v: pass:c,q,r,a[*{name} (C) ->*]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-order-c-q-a-r",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":name: _Ada_ &copy;\n:v: pass:c,q,a,r[*{name} (C) ->*]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-order-c-r-q-a",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":name: _Ada_ &copy;\n:v: pass:c,r,q,a[*{name} (C) ->*]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-order-c-r-a-q",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":name: _Ada_ &copy;\n:v: pass:c,r,a,q[*{name} (C) ->*]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-order-c-a-q-r",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":name: _Ada_ &copy;\n:v: pass:c,a,q,r[*{name} (C) ->*]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-order-c-a-r-q",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":name: _Ada_ &copy;\n:v: pass:c,a,r,q[*{name} (C) ->*]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-order-q-c-r-a",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":name: _Ada_ &copy;\n:v: pass:q,c,r,a[*{name} (C) ->*]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-order-q-c-a-r",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":name: _Ada_ &copy;\n:v: pass:q,c,a,r[*{name} (C) ->*]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-order-q-r-c-a",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":name: _Ada_ &copy;\n:v: pass:q,r,c,a[*{name} (C) ->*]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-order-q-r-a-c",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":name: _Ada_ &copy;\n:v: pass:q,r,a,c[*{name} (C) ->*]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-order-q-a-c-r",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":name: _Ada_ &copy;\n:v: pass:q,a,c,r[*{name} (C) ->*]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-order-q-a-r-c",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":name: _Ada_ &copy;\n:v: pass:q,a,r,c[*{name} (C) ->*]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-order-r-c-q-a",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":name: _Ada_ &copy;\n:v: pass:r,c,q,a[*{name} (C) ->*]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-order-r-c-a-q",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":name: _Ada_ &copy;\n:v: pass:r,c,a,q[*{name} (C) ->*]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-order-r-q-c-a",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":name: _Ada_ &copy;\n:v: pass:r,q,c,a[*{name} (C) ->*]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-order-r-q-a-c",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":name: _Ada_ &copy;\n:v: pass:r,q,a,c[*{name} (C) ->*]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-order-r-a-c-q",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":name: _Ada_ &copy;\n:v: pass:r,a,c,q[*{name} (C) ->*]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-order-r-a-q-c",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":name: _Ada_ &copy;\n:v: pass:r,a,q,c[*{name} (C) ->*]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-order-a-c-q-r",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":name: _Ada_ &copy;\n:v: pass:a,c,q,r[*{name} (C) ->*]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-order-a-c-r-q",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":name: _Ada_ &copy;\n:v: pass:a,c,r,q[*{name} (C) ->*]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-order-a-q-c-r",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":name: _Ada_ &copy;\n:v: pass:a,q,c,r[*{name} (C) ->*]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-order-a-q-r-c",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":name: _Ada_ &copy;\n:v: pass:a,q,r,c[*{name} (C) ->*]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-order-a-r-c-q",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":name: _Ada_ &copy;\n:v: pass:a,r,c,q[*{name} (C) ->*]\n\n{v}"
+    },
+    {
+      "id": "pass-quotes-order-a-r-q-c",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":name: _Ada_ &copy;\n:v: pass:a,r,q,c[*{name} (C) ->*]\n\n{v}"
     }
   ]
 }

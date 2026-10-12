@@ -559,6 +559,28 @@ mod tests {
     }
 
     #[test]
+    fn pass_quotes_export_semantic_boundaries_without_backend_tags() {
+        let json = render(":v: pass:c,q[*Ж&* _é_]\n\n{v}");
+        assert!(json.contains(r#""value":"Ж& é","parts":[{"kind":"open","format":"strong"},{"kind":"text","value":"Ж&"},{"kind":"close","format":"strong"},{"kind":"text","value":" "},{"kind":"open","format":"emphasis"},{"kind":"text","value":"é"},{"kind":"close","format":"emphasis"}]"#), "{json}");
+        for (marker, kind) in [
+            ("`", "monospace"),
+            ("#", "mark"),
+            ("^", "superscript"),
+            ("~", "subscript"),
+        ] {
+            let json = render(&format!(":v: pass:q[{marker}x{marker}]\n\n{{v}}"));
+            assert!(
+                json.contains(&format!(r#"{{"kind":"open","format":"{kind}"}}"#)),
+                "{json}"
+            );
+            assert!(
+                json.contains(&format!(r#"{{"kind":"close","format":"{kind}"}}"#)),
+                "{json}"
+            );
+        }
+    }
+
+    #[test]
     fn pass_replacements_export_raw_entities_and_literal_parts() {
         let json = render(":v: pass:c,r[<b>(C)</b>]\n\n{v}");
         assert!(json.contains(r#""value":"<b>&#169;</b>","parts":[{"kind":"text","value":"<b>"},{"kind":"raw","value":"&#169;"},{"kind":"text","value":"</b>"}]"#), "{json}");

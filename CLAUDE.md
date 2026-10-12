@@ -146,12 +146,13 @@ document entries. Body author_N assignments do not recompute name fields.
 Original Author records and physical spans remain unchanged. Effective author
 derivation in author_values.rs removes raw XML tags
 from name components while preserving formatted author values. Attributes retain
-Text/Raw parts through substitutions and copy-on-write snapshots; get/iter remain
-flat string APIs, raw_parts exposes boundaries. AttributeRef.parts and optional
+Text/Raw and Open/Close(AttributeFormat) parts through substitutions and copy-on-write
+snapshots; get/iter remain flat text APIs without semantic markers, raw_parts exposes
+all boundaries. AttributeRef.parts and optional
 JSON/WASM parts preserve these boundaries; WASM also exports attribute_parts.
 HTML escapes Text and emits Raw unchanged. Host values are already substituted;
 source whole-value pass supports none, a/attributes, c/specialcharacters/
-specialchars and r/replacements, with ordered unique stages. Pass replacements
+specialchars, r/replacements and basic q/quotes, with ordered unique stages. Pass replacements
 reuse the lexical stream but preserve generated entity spellings as Raw, so a
 later c stage can protect them. Plain inline replacements still use Unicode.
 A shared lexical replacement stream
@@ -163,9 +164,17 @@ even if an earlier node consumes their entire value (Some("")). Replacements
 starting in Text span the consumed source construct. Inline::Raw carries restored
 source entity syntax; HTML emits it directly and JSON/WASM expose name:"raw".
 Definitions and attribute snapshots remain untouched. Formatting/macro nodes bound
-runs and their children are processed separately. Whole-value pass quotes/macros,
+runs and their children are processed separately. Whole-value pass quotes use
+attribute_quotes.rs and semantic boundaries for strong/emphasis/monospace/mark/
+superscript/subscript. Their temporary reference spelling preserves later c/a/r
+stages without storing generated tags as Raw. JSON/WASM parts use kind:open/close
+and a format name; HTML chooses the tags. Quotes handle single/double markers,
+escapes and typographic quotation marks; formatting attributes (roles/id) and macros,
 general inline attribute escapes/intrinsics, macro target stages
 and raw whole-doctitle replacement remain work.
+The quote compat-mode is cached from host overrides at context creation and from
+attributes at header completion; header entries and body assignments do not
+eagerly change this cache. This does not yet change the ordinary inline scanner.
 Automatic section IDs sanitize a temporary lexical title: raw XML tags and
 references matching the pinned entity grammar are removed, not decoded.
 Literal protection and structural inline boundaries remain distinct; title

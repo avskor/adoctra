@@ -248,13 +248,7 @@ fn push_text(inlines: &[Inline], s: &mut String) {
             } => match value {
                 Some(v) if parts.is_empty() => push_protected(v, s),
                 Some(_) => {
-                    for part in parts {
-                        if part.is_raw() {
-                            s.push_str(part.text());
-                        } else {
-                            push_protected(part.text(), s);
-                        }
-                    }
+                    s.push_str(&crate::attributes::reference_text(parts));
                 }
                 None => {
                     s.push('{');

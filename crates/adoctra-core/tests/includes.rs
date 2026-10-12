@@ -1965,3 +1965,47 @@ fn pass_replacements_keep_include_selection_positions_and_snapshots() {
     );
     assert_eq!(sources.get(span.source_id).unwrap().text(), part);
 }
+
+#[test]
+fn pass_quotes_keep_include_selection_positions_and_immutable_formatting() {
+    use adoctra_core::{AttributeFormat, AttributePart};
+    let root = "include::part.adoc[tags=body,indent=0]";
+    let part = "\u{feff}// tag::body[]\r\n  :v: pass:c,q[*Жёлтый*]\r\n\r\n  {v}\r\n// end::body[]";
+    let (mut sources, mut resources, options) = setup(root, &[("/docs/part.adoc", part)]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty());
+    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+        panic!()
+    };
+    let Inline::AttributeRef {
+        span, parts, value, ..
+    } = &inlines[0]
+    else {
+        panic!()
+    };
+    assert_eq!(sources.slice(*span), Some("{v}"));
+    assert_eq!(value.as_deref(), Some("Жёлтый"));
+    assert!(parts.contains(&AttributePart::Open(AttributeFormat::Strong)));
+    assert_eq!(parts, result.document.attributes.raw_parts("v").unwrap());
+    assert!(tokens_resource(&mut sources, &options, &resources)
+        .unwrap()
+        .iter()
+        .any(|t| t.kind == TokenKind::AttributeRef && t.span == *span));
+    resources
+        .insert("/docs/part.adoc", part.replace('*', "_"))
+        .unwrap();
+    let new = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(new
+        .document
+        .attributes
+        .raw_parts("v")
+        .unwrap()
+        .contains(&AttributePart::Open(AttributeFormat::Emphasis)));
+    assert!(result
+        .document
+        .attributes
+        .raw_parts("v")
+        .unwrap()
+        .contains(&AttributePart::Open(AttributeFormat::Strong)));
+    assert_eq!(sources.get(span.source_id).unwrap().text(), part);
+}

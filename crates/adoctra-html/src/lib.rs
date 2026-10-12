@@ -365,10 +365,19 @@ fn render_inlines(inlines: &[Inline], out: &mut String) {
             // `{name}` for a missing attribute (asciidoctor's default).
             Inline::AttributeRef { value, parts, .. } if !parts.is_empty() && value.is_some() => {
                 for part in parts {
-                    if part.is_raw() {
-                        out.push_str(part.text());
-                    } else {
-                        out.push_str(&escape_text(part.text()));
+                    match part {
+                        adoctra_core::AttributePart::Text(text) => out.push_str(&escape_text(text)),
+                        adoctra_core::AttributePart::Raw(text) => out.push_str(text),
+                        adoctra_core::AttributePart::Open(format) => {
+                            out.push('<');
+                            out.push_str(attribute_format_tag(*format));
+                            out.push('>');
+                        }
+                        adoctra_core::AttributePart::Close(format) => {
+                            out.push_str("</");
+                            out.push_str(attribute_format_tag(*format));
+                            out.push('>');
+                        }
                     }
                 }
             }
@@ -377,6 +386,18 @@ fn render_inlines(inlines: &[Inline], out: &mut String) {
                 None => out.push_str(&escape(&format!("{{{name}}}"))),
             },
         }
+    }
+}
+
+fn attribute_format_tag(format: adoctra_core::AttributeFormat) -> &'static str {
+    use adoctra_core::AttributeFormat::*;
+    match format {
+        Strong => "strong",
+        Emphasis => "em",
+        Monospace => "code",
+        Mark => "mark",
+        Superscript => "sup",
+        Subscript => "sub",
     }
 }
 

@@ -780,6 +780,20 @@ fn shared_replacements_match_reference_including_raw_and_escaped_entities() {
 }
 
 #[test]
+fn pass_quotes_preserve_semantic_formatting_and_ordered_substitutions() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden");
+    let source = fs::read_to_string(dir.join("pass-quotes.adoc")).unwrap();
+    let expected = fs::read_to_string(dir.join("pass-quotes.expected.html")).unwrap();
+    let result = adoctra_core::parse(&source);
+    assert!(result.diagnostics.is_empty());
+    let ours = String::from_utf8(HtmlBackend.convert(&result.document).unwrap()).unwrap();
+    assert_eq!(paragraph_inner(&ours), paragraph_inner(&expected));
+    assert!(ours.contains("<strong><em>Ada</em></strong>"));
+    assert!(ours.contains("<strong>_Ada_</strong>"));
+    assert!(ours.contains("&lt;strong&gt;A &amp; B&lt;/strong&gt;"));
+}
+
+#[test]
 fn pass_replacements_match_reference_with_ordered_protection_and_expansion() {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden");
     let source = fs::read_to_string(dir.join("pass-replacements.adoc")).unwrap();

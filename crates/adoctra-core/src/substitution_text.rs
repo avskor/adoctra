@@ -1,6 +1,6 @@
 //! Temporary lexical text for ordered substitutions. Protection, node ownership
 //! and source ranges travel with fragments; HTML escaping stays in the backend.
-use crate::{Inline, Span};
+use crate::{AttributePart, Inline, Span};
 use std::ops::Range;
 
 pub(crate) struct Fragment {
@@ -9,6 +9,7 @@ pub(crate) struct Fragment {
     pub raw: bool,
     pub owner: usize,
     pub span: Span,
+    pub part: Option<AttributePart>,
     exact: bool,
     extend_span: bool,
 }
@@ -20,6 +21,47 @@ pub(crate) struct Text {
 }
 
 impl Text {
+    pub fn append_part(&mut self, part: &AttributePart, owner: usize, span: Span) {
+        if matches!(part, AttributePart::Open(_) | AttributePart::Close(_)) {
+            self.push(Fragment {
+                text: part.lexical().into(),
+                decoded: None,
+                raw: true,
+                owner,
+                span,
+                part: Some(part.clone()),
+                exact: false,
+                extend_span: false,
+            });
+        } else {
+            self.append(part.text(), part.is_raw(), owner, span, false);
+        }
+    }
+
+    pub fn from_parts(parts: &[AttributePart]) -> Self {
+        let mut result = Self::default();
+        for part in parts {
+            result.append_part(part, 0, Span::new(0, 0));
+        }
+        result
+    }
+
+    pub fn into_parts(self) -> Vec<AttributePart> {
+        let mut parts = Vec::new();
+        for (_, fragment) in self.fragments {
+            if let Some(part) = fragment.part {
+                crate::attributes::push_value(&mut parts, part);
+            } else {
+                crate::attributes::push_part(
+                    &mut parts,
+                    fragment.decoded.as_deref().unwrap_or(&fragment.text),
+                    fragment.raw,
+                );
+            }
+        }
+        parts
+    }
+
     pub fn push(&mut self, fragment: Fragment) {
         if fragment.text.is_empty() {
             return;
@@ -51,6 +93,7 @@ impl Text {
                 raw,
                 owner,
                 span: slice_span(span, offset..offset + ch.len_utf8(), exact),
+                part: None,
                 exact: false,
                 extend_span: exact,
             });
@@ -72,6 +115,7 @@ impl Text {
             raw,
             owner,
             span,
+            part: None,
             exact,
             extend_span: exact,
         });
@@ -99,6 +143,11 @@ impl Text {
                 raw: f.raw,
                 owner: f.owner,
                 span: slice_span(f.span, start..end, f.exact),
+                part: if start == 0 && end == f.text.len() {
+                    f.part.clone()
+                } else {
+                    None
+                },
                 exact: f.exact,
                 extend_span: f.extend_span,
             });
@@ -138,6 +187,7 @@ impl Text {
             raw: decoded.is_none(),
             owner: f.owner,
             span,
+            part: None,
             exact: false,
             extend_span: f.extend_span,
         });
@@ -179,10 +229,14 @@ pub(crate) fn write_back(nodes: Vec<Inline>, text: Text, fold_newlines: bool) ->
             } => {
                 parts.clear();
                 for f in pieces {
-                    crate::attributes::push_part(parts, &f.text, f.raw);
+                    if let Some(part) = f.part {
+                        crate::attributes::push_value(parts, part);
+                    } else {
+                        crate::attributes::push_part(parts, &f.text, f.raw);
+                    }
                 }
                 *value = crate::attributes::parts_text(parts);
-                if !parts.iter().any(crate::AttributePart::is_raw) {
+                if !parts.iter().any(crate::AttributePart::is_special) {
                     parts.clear();
                 }
                 result.push(node);

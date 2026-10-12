@@ -1,6 +1,6 @@
 //! Parse configuration and attribute state shared by recursive block parsing.
 
-use crate::attributes::{parts_text, push_part};
+use crate::attributes::{parts_text, push_part, push_value};
 use crate::{AttributePart, Attributes, SourceId};
 use std::{collections::BTreeSet, sync::Arc};
 
@@ -57,6 +57,9 @@ impl ParseOptions {
 
 pub(crate) struct ParseContext {
     pub attributes: Arc<Attributes>,
+    /// Quote mode is cached at document creation/header completion in Ruby;
+    /// entries in the header and later body mutations do not update it eagerly.
+    pub quote_compat: bool,
     /// Reader range of the last accepted doctitle entry; None for host values.
     pub doctitle_span: Option<crate::Span>,
     locked: BTreeSet<String>,
@@ -80,6 +83,7 @@ impl ParseContext {
             locked.insert(key.to_string());
         }
         Self {
+            quote_compat: options.attributes.get("compat-mode").is_some(),
             attributes: Arc::new(attributes),
             doctitle_span: None,
             locked,
@@ -97,7 +101,7 @@ impl ParseContext {
             return;
         }
         let value = value.map(|v| {
-            let parts = attribute_entry_parts(&v, &self.attributes);
+            let parts = attribute_entry_parts(&v, &self.attributes, self.quote_compat);
             let value = parts_text(&parts);
             if key == "leveloffset" {
                 let current = self
@@ -250,8 +254,8 @@ pub(crate) fn substitute_attribute_value(value: &str, attributes: &Attributes) -
 }
 
 /// A whole-value pass macro can select literal protection and attribute
-/// substitution and replacements independently. Quote/macro stages are follow-up work.
-fn attribute_entry_parts(value: &str, attributes: &Attributes) -> Vec<AttributePart> {
+/// substitution, quotes and replacements independently. Macros remain follow-up work.
+fn attribute_entry_parts(value: &str, attributes: &Attributes, compat: bool) -> Vec<AttributePart> {
     if let Some((subs, body)) = value
         .strip_prefix("pass:")
         .and_then(|v| v.split_once('['))
@@ -272,12 +276,15 @@ fn attribute_entry_parts(value: &str, attributes: &Attributes) -> Vec<AttributeP
                     | "none"
                     | "r"
                     | "replacements"
+                    | "q"
+                    | "quotes"
             )
         }) {
             let mut parts = vec![AttributePart::Raw(body.to_owned())];
             let mut applied_specials = false;
             let mut applied_attributes = false;
             let mut applied_replacements = false;
+            let mut applied_quotes = false;
             for stage in stages {
                 if matches!(stage, "c" | "specialcharacters" | "specialchars") {
                     if applied_specials {
@@ -285,16 +292,7 @@ fn attribute_entry_parts(value: &str, attributes: &Attributes) -> Vec<AttributeP
                     }
                     applied_specials = true;
                     // Protect the entire current value, including prior expansions.
-                    let text = parts
-                        .iter()
-                        .map(|p| {
-                            if p.is_raw() {
-                                p.text().to_owned()
-                            } else {
-                                crate::attributes::reference_text(std::slice::from_ref(p))
-                            }
-                        })
-                        .collect();
+                    let text = crate::attributes::reference_text(&parts);
                     parts = vec![AttributePart::Text(text)];
                 } else if matches!(stage, "a" | "attributes") {
                     if applied_attributes {
@@ -303,16 +301,23 @@ fn attribute_entry_parts(value: &str, attributes: &Attributes) -> Vec<AttributeP
                     applied_attributes = true;
                     let mut expanded = Vec::new();
                     for part in parts {
+                        if matches!(part, AttributePart::Open(_) | AttributePart::Close(_)) {
+                            expanded.push(part);
+                            continue;
+                        }
                         for new in
                             substitute_attribute_parts(part.text(), attributes, part.is_raw())
                         {
-                            push_part(&mut expanded, new.text(), new.is_raw());
+                            push_value(&mut expanded, new);
                         }
                     }
                     parts = expanded;
                 } else if matches!(stage, "r" | "replacements") && !applied_replacements {
                     applied_replacements = true;
                     parts = crate::replacements::apply_parts(parts);
+                } else if matches!(stage, "q" | "quotes") && !applied_quotes {
+                    applied_quotes = true;
+                    parts = crate::attribute_quotes::apply(parts, compat);
                 }
             }
             return parts;
@@ -340,7 +345,7 @@ pub(crate) fn substitute_attribute_parts(
             let name = &rest[open + 1..close];
             if let Some(parts) = attributes.value_parts(name) {
                 for part in parts {
-                    push_part(&mut result, part.text(), part.is_raw());
+                    push_value(&mut result, part);
                 }
             } else {
                 push_part(&mut result, &rest[open..=close], raw);

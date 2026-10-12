@@ -30,7 +30,7 @@ pub fn escape(value: &str) -> String {
     s
 }
 
-/// Append optional literal/raw attribute fragments to an inline JSON object.
+/// Append optional literal/raw/formatting fragments to an inline JSON object.
 pub fn write_attribute_parts(parts: &[crate::AttributePart], out: &mut String) {
     if parts.is_empty() {
         return;
@@ -39,7 +39,7 @@ pub fn write_attribute_parts(parts: &[crate::AttributePart], out: &mut String) {
     write_parts_array(parts, out);
 }
 
-/// Optional raw boundaries for an exported document attribute snapshot.
+/// Optional raw/formatting boundaries for an exported attribute snapshot.
 pub fn write_attribute_parts_map(attributes: &crate::Attributes, out: &mut String) {
     let mut first = true;
     for (key, _) in attributes.iter() {
@@ -66,6 +66,16 @@ fn write_parts_array(parts: &[crate::AttributePart], out: &mut String) {
     for (i, part) in parts.iter().enumerate() {
         if i > 0 {
             out.push(',');
+        }
+        if let crate::AttributePart::Open(format) | crate::AttributePart::Close(format) = part {
+            out.push_str(if matches!(part, crate::AttributePart::Open(_)) {
+                "{\"kind\":\"open\",\"format\":"
+            } else {
+                "{\"kind\":\"close\",\"format\":"
+            });
+            escape_into(format.name(), out);
+            out.push('}');
+            continue;
         }
         out.push_str(if part.is_raw() {
             "{\"kind\":\"raw\",\"value\":"

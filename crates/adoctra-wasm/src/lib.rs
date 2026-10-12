@@ -1338,6 +1338,36 @@ mod header_tests {
     }
 
     #[test]
+    fn pass_quotes_export_semantics_and_physical_reference_coordinates() {
+        let source = "\u{feff}:v: pass:c,q[*Ж&*]\r\n\r\n{v}";
+        let json = super::parse_json_with_source(source, 7);
+        assert!(json.contains(r#""v":"Ж&""#), "{json}");
+        assert!(json.contains(r#""attribute_parts":{"v":[{"kind":"open","format":"strong"},{"kind":"text","value":"Ж&"},{"kind":"close","format":"strong"}]}"#), "{json}");
+        let start = source.rfind("{v}").unwrap();
+        assert!(json.contains(&format!(r#""span":{{"source_id":7,"start":{start},"end":{}}},"name":"attribute-ref","attribute":"v","value":"Ж&","parts":[{{"kind":"open","format":"strong"}}"#, source.len())), "{json}");
+        let tokens = super::tokens_json_with_source(source, 7);
+        assert_eq!(tokens.matches(r#""kind":"attribute-entry""#).count(), 1);
+        assert_eq!(tokens.matches(r#""kind":"attribute-ref""#).count(), 1);
+        for (marker, kind) in [
+            ("_", "emphasis"),
+            ("`", "monospace"),
+            ("#", "mark"),
+            ("^", "superscript"),
+            ("~", "subscript"),
+        ] {
+            let json = super::parse_json(&format!(":v: pass:q[{marker}x{marker}]\n\n{{v}}"));
+            assert!(
+                json.contains(&format!(r#"{{"kind":"open","format":"{kind}"}}"#)),
+                "{json}"
+            );
+            assert!(
+                json.contains(&format!(r#"{{"kind":"close","format":"{kind}"}}"#)),
+                "{json}"
+            );
+        }
+    }
+
+    #[test]
     fn pass_replacements_export_definition_parts_and_reference_coordinates() {
         let source = ":v: pass:c,r[<b>(C)</b>]\n\n{v}";
         let json = super::parse_json_with_source(source, 7);

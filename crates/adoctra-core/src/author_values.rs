@@ -1,20 +1,30 @@
 //! Effective author fields. Source declarations remain in header::parse_authors.
 //! Literal characters and passthrough markup must stay distinct during derivation.
-use crate::attributes::{parts_text, push_part};
-use crate::{AttributePart, Attributes};
+use crate::attributes::{parts_text, push_part, push_value};
+use crate::{AttributeFormat, AttributePart, Attributes};
 
 #[derive(Clone, Copy)]
 struct NameChar {
     ch: char,
     raw: bool,
     escaped: Option<(char, usize, usize)>,
+    boundary: Option<(AttributeFormat, bool, usize, usize)>,
 }
 
 fn chars(parts: &[AttributePart]) -> Vec<NameChar> {
     let mut result = Vec::new();
     for part in parts {
-        for ch in part.text().chars() {
-            let entity = if part.is_raw() {
+        for (position, ch) in part.lexical().chars().enumerate() {
+            let boundary = match part {
+                AttributePart::Open(format) => {
+                    Some((*format, true, position, part.lexical().len()))
+                }
+                AttributePart::Close(format) => {
+                    Some((*format, false, position, part.lexical().len()))
+                }
+                _ => None,
+            };
+            let entity = if part.is_special() {
                 None
             } else {
                 match ch {
@@ -30,13 +40,15 @@ fn chars(parts: &[AttributePart]) -> Vec<NameChar> {
                         ch: encoded,
                         raw: false,
                         escaped: Some((ch, index, entity.len())),
+                        boundary: None,
                     });
                 }
             } else {
                 result.push(NameChar {
                     ch,
-                    raw: part.is_raw(),
+                    raw: part.is_special(),
                     escaped: None,
+                    boundary,
                 });
             }
         }
@@ -49,6 +61,21 @@ fn parts(chars: &[NameChar]) -> Vec<AttributePart> {
     let mut i = 0;
     while i < chars.len() {
         let c = chars[i];
+        if let Some((format, open, 0, len)) = c.boundary {
+            if chars.get(i..i + len).is_some_and(|seq| {
+                seq.iter()
+                    .enumerate()
+                    .all(|(index, c)| c.boundary == Some((format, open, index, len)))
+            }) {
+                result.push(if open {
+                    AttributePart::Open(format)
+                } else {
+                    AttributePart::Close(format)
+                });
+                i += len;
+                continue;
+            }
+        }
         if let Some((original, 0, len)) = c.escaped {
             if chars.get(i..i + len).is_some_and(|seq| {
                 seq.iter()
@@ -104,7 +131,7 @@ pub(crate) fn derive_authors(entries: Vec<Vec<AttributePart>>) -> Attributes {
             push_part(&mut names, ", ", false);
         }
         for part in fields.value_parts("author").unwrap() {
-            push_part(&mut names, part.text(), part.is_raw());
+            push_value(&mut names, part);
         }
         if count == 2 {
             for key in [
@@ -218,12 +245,10 @@ fn derive_author(value: &[AttributePart]) -> Attributes {
     if markup {
         name = value
             .iter()
-            .map(|p| {
-                if p.is_raw() {
-                    AttributePart::Raw(p.text().replace('_', " "))
-                } else {
-                    AttributePart::Text(p.text().replace('_', " "))
-                }
+            .map(|p| match p {
+                AttributePart::Text(text) => AttributePart::Text(text.replace('_', " ")),
+                AttributePart::Raw(text) => AttributePart::Raw(text.replace('_', " ")),
+                _ => p.clone(),
             })
             .collect();
     }

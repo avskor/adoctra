@@ -259,6 +259,7 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
     } else if !has_declarations {
         Arc::make_mut(&mut context.attributes).set("authorcount", "0");
     }
+    context.quote_compat = context.attributes.get("compat-mode").is_some();
     result
 }
 
