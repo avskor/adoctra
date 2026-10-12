@@ -1640,3 +1640,36 @@ fn incomplete_and_long_target_substitutions_remain_tolerant() {
     assert_eq!(paragraphs(&result), ["after"]);
     check_spans(&result, &sources);
 }
+
+#[test]
+fn setext_title_crosses_selected_indented_include_sources() {
+    let child = "\u{feff}ignored\r\n  *Я🙂* \t\r\nignored\r\n";
+    let root = "include::part.adoc[lines=2,indent=0]\n====\nJane Doe\nv2\n\nBody";
+    let (mut sources, mut resources, options) = setup(root, &[("docs/part.adoc", child)]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty());
+    let header = result.document.header.as_ref().unwrap();
+    let fragments = &result.provenance[header.title_span.provenance.unwrap()];
+    assert_eq!(fragments.first().unwrap().source_id, SourceId(1));
+    assert_eq!(fragments.last().unwrap().source_id, options.source_id);
+    assert_eq!(
+        fragments.last().unwrap().end,
+        root.find("====").unwrap() + 4
+    );
+    assert_eq!(header.authors[0].name, "Jane Doe");
+    let BlockKind::Heading { inlines, .. } = &result.document.blocks[0].kind else {
+        panic!()
+    };
+    assert_eq!(sources.slice(inlines[0].span()), Some("*Я🙂*"));
+    let highlighted = tokens_resource(&mut sources, &options, &resources).unwrap();
+    let titles: Vec<_> = highlighted
+        .iter()
+        .filter(|t| t.kind == TokenKind::Heading)
+        .map(|t| sources.slice(t.span).unwrap())
+        .collect();
+    assert_eq!(titles, ["====", "*Я🙂*"]);
+    check_spans(&result, &sources);
+    resources.insert("docs/part.adoc", "Changed").unwrap();
+    assert_eq!(sources.get(SourceId(1)).unwrap().text(), child);
+    assert_eq!(sources.slice(inlines[0].span()), Some("*Я🙂*"));
+}

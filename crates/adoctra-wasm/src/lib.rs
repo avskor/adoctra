@@ -1307,6 +1307,29 @@ mod tests {
 #[cfg(test)]
 mod header_tests {
     #[test]
+    fn setext_header_exports_both_title_lines_and_physical_heading_tokens() {
+        let source = "*Я*\r\n===\r\nJane Doe\r\nv2\r\n\r\n{author}";
+        let json = super::parse_json_with_source(source, 7);
+        assert!(
+            json.contains(r#""title_span":{"source_id":7,"start":0,"end":9}"#),
+            "{json}"
+        );
+        assert!(json.contains(r#""name":"strong""#), "{json}");
+        assert!(json.contains(r#""compat-mode":"""#), "{json}");
+        assert!(json.contains(r#""name":"Jane Doe""#), "{json}");
+        let tokens = super::tokens_json_with_source(source, 7);
+        for (start, end) in [(0, 4), (6, 9)] {
+            assert!(
+                tokens.contains(&format!(
+                    r#"{{"span":{{"source_id":7,"start":{start},"end":{end}}},"kind":"heading"}}"#
+                )),
+                "{tokens}"
+            );
+        }
+        assert!(!tokens.contains("example-delimiter"), "{tokens}");
+    }
+
+    #[test]
     fn header_metadata_and_tokens_keep_source_coordinates() {
         let json =
             super::parse_json_with_source("= Doc\nJane Doe <j@example.org>\nv2\n\n{author}", 7);

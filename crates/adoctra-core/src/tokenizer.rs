@@ -214,6 +214,14 @@ fn tokens_processed(
             }
             continue;
         }
+        if header.title_line == Some(line_index) || header.title_underline == Some(line_index) {
+            out.push(Token {
+                span: line_span,
+                kind: TokenKind::Heading,
+            });
+            mid_paragraph = false;
+            continue;
+        }
         if header.author_line == Some(line_index) || header.revision_line == Some(line_index) {
             out.push(Token {
                 span: line_span,

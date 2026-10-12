@@ -181,3 +181,180 @@ fn explicit_initials_survive_author_name_derivation() {
     let doc = parse("= Doc\nJohn Doe\n:author: Jane Smith\n:!authorinitials:\n\nBody").document;
     assert!(doc.attributes.get("authorinitials").is_none());
 }
+
+#[test]
+fn setext_header_uses_character_lengths_and_retains_two_line_span() {
+    for (title, underline) in [
+        ("Doc", "=="),
+        ("Doc", "==="),
+        ("Doc", "===="),
+        ("A", "="),
+        ("١", "="),
+        ("Ⅳ", "="),
+        ("𝟡", "="),
+        ("Я🙂", "=="),
+        (" Doc", "===="),
+        ("*Doc*", "====="),
+    ] {
+        let source = format!("{title}\n{underline}\nJane Doe\nv2\n\n{{author}}");
+        let result = parse(&source);
+        assert!(result.diagnostics.is_empty(), "{result:?}");
+        let header = result.document.header.as_ref().unwrap();
+        assert_eq!(
+            header.title_span,
+            adoctra_core::Span::new(0, title.len() + 1 + underline.len())
+        );
+        assert_eq!(result.document.blocks[0].span, header.title_span);
+        assert!(matches!(
+            result.document.blocks[0].kind,
+            BlockKind::Heading { level: 0, .. }
+        ));
+        assert_eq!(header.authors[0].name, "Jane Doe");
+        assert_eq!(
+            header.revision.as_ref().unwrap().number.as_deref(),
+            Some("2")
+        );
+        assert_eq!(result.document.attributes.get("compat-mode"), Some(""));
+        let highlighted = adoctra_core::tokens(&source);
+        assert_eq!(
+            highlighted
+                .iter()
+                .filter(|t| t.kind == TokenKind::Heading)
+                .count(),
+            2
+        );
+        assert_eq!(highlighted[0].span, adoctra_core::Span::new(0, title.len()));
+        assert_eq!(
+            highlighted[1].span,
+            adoctra_core::Span::new(title.len() + 1, title.len() + 1 + underline.len())
+        );
+    }
+}
+
+#[test]
+fn setext_rejects_non_titles_and_does_not_cross_comments_or_blank_lines() {
+    for source in [
+        "Doc",
+        "Doc\n=",
+        "Doc\n=====",
+        ".Doc\n====",
+        "🙂\n=",
+        "²\n=",
+        "½\n=",
+        "***\n===",
+        "Doc\n= =",
+        "Doc\n ===",
+        "Doc\n\n===",
+        "Doc\n// comment\n===",
+        "Doc\n---",
+        "Doc\n~~~",
+        "Doc\n^^^",
+        "Doc\n+++",
+        "Before\n\nDoc\n===",
+    ] {
+        assert!(parse(source).document.header.is_none(), "{source:?}");
+    }
+    // ATX takes precedence; the underline is the author declaration here.
+    let result = parse("= Doc\n=====\n\nBody");
+    let header = result.document.header.unwrap();
+    assert_eq!(header.title_span, adoctra_core::Span::new(0, 5));
+    assert_eq!(header.authors[0].name, "=====");
+    assert!(result.document.attributes.get("compat-mode").is_none());
+}
+
+#[test]
+fn setext_leveloffset_and_compat_mode_use_header_context() {
+    for (marker, level) in [('=', 0), ('-', 1), ('~', 2), ('^', 3), ('+', 4)] {
+        let source = format!(
+            ":leveloffset: -{level}\nDoc\n{marker}{marker}{marker}\n:leveloffset: 0\n\nBody"
+        );
+        let result = parse(&source);
+        assert!(result.document.header.is_some(), "{source}");
+        assert!(matches!(
+            result.document.blocks[0].kind,
+            BlockKind::Heading { level: 0, .. }
+        ));
+        assert_eq!(
+            adoctra_core::tokens(&source)
+                .iter()
+                .filter(|t| t.kind == TokenKind::Heading)
+                .count(),
+            2
+        );
+    }
+    assert!(parse(":leveloffset: -1\nDoc\n===")
+        .document
+        .header
+        .is_none());
+    assert_eq!(
+        parse(":compat-mode: custom\nDoc\n===")
+            .document
+            .attributes
+            .get("compat-mode"),
+        Some("")
+    );
+    assert!(parse("Doc\n===\n:compat-mode!:\n\nBody")
+        .document
+        .attributes
+        .get("compat-mode")
+        .is_none());
+    let mut attributes = Attributes::new();
+    attributes.set("compat-mode", "locked");
+    assert_eq!(
+        parse_with_options(
+            "Doc\n===",
+            &ParseOptions {
+                attributes,
+                ..Default::default()
+            }
+        )
+        .document
+        .attributes
+        .get("compat-mode"),
+        Some("locked")
+    );
+}
+
+#[test]
+fn setext_preprocessing_preserves_unicode_normalization_and_inline_spans() {
+    let source = "\u{feff}*Я🙂* \t\r\nifdef::missing[]\r\nignored\r\nendif::[]\r\n==== \t\r\n:who: World\r\n\r\n{who}";
+    let result = parse(source);
+    assert!(result.diagnostics.is_empty());
+    let header = result.document.header.as_ref().unwrap();
+    let fragments = &result.provenance[header.title_span.provenance.unwrap()];
+    assert_eq!(fragments.first().unwrap().start, 3);
+    assert_eq!(
+        fragments.last().unwrap().end,
+        source.find("====").unwrap() + 4
+    );
+    let BlockKind::Heading { inlines, .. } = &result.document.blocks[0].kind else {
+        panic!()
+    };
+    assert_eq!(
+        &source[inlines[0].span().start..inlines[0].span().end],
+        "*Я🙂*"
+    );
+    let highlighted = adoctra_core::tokens(source);
+    let headings: Vec<_> = highlighted
+        .iter()
+        .filter(|t| t.kind == TokenKind::Heading)
+        .map(|t| &source[t.span.start..t.span.end])
+        .collect();
+    assert_eq!(headings, ["*Я🙂*", "===="]);
+    assert_eq!(result.document.attributes.get("who"), Some("World"));
+    for end in (0..=source.len()).filter(|&end| source.is_char_boundary(end)) {
+        let partial = &source[..end];
+        let parsed = parse(partial);
+        for span in adoctra_core::tokens(partial)
+            .into_iter()
+            .map(|t| t.span)
+            .chain(parsed.diagnostics.iter().map(|d| d.span))
+            .chain(parsed.provenance.iter().flatten().copied())
+        {
+            assert!(
+                partial.get(span.start..span.end).is_some(),
+                "{partial:?}: {span:?}"
+            );
+        }
+    }
+}

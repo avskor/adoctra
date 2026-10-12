@@ -50,11 +50,18 @@ pub(crate) fn parse_reader<'a>(
     let mut diagnostics = Vec::new();
     if let Some(title_line) = header.title_line {
         let (off, line) = lines.line(title_line);
-        let (_, text) = parse_heading(&line).expect("header identified a title");
+        let text = if header.title_underline.is_some() {
+            line.as_ref()
+        } else {
+            parse_heading(&line).expect("header identified a title").1
+        };
         // Resolve title text against the complete header, but retain the level
         // identified before subsequent header attributes changed leveloffset.
         let mut title = Block::new(
-            Span::new(off, off + line.len()),
+            doc.header
+                .as_ref()
+                .expect("header identified a title")
+                .title_span,
             BlockKind::Heading {
                 level: 0,
                 inlines: scan_inlines(text, off + abs_offset(&line, text), &context.attributes),

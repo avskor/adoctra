@@ -137,7 +137,14 @@ Header/body attribute assignment and both unset forms are implemented.
 Document.header stores source declarations (authors/revision and spans); effective
 metadata stays in Document.attributes. The title remains the first level-0
 Heading, with only its span referenced by the header. Header parsing is shared
-with the tokenizer (author/revision tokens). JSON and WASM expose header metadata;
+with the tokenizer (author/revision tokens). Setext document titles use adjacent
+processed lines, Unicode character lengths (difference <= 1), uniform =/-/~/^/+
+underlines and effective level zero. ATX takes precedence. The Heading/header
+title span includes both lines; inline spans cover title text only. Highlight
+both lines as separate heading tokens and retain physical source fragments across
+includes/selection/indent. Setext installs compat-mode before subsequent header
+metadata, respecting locked overrides; its substitution effects and body setext
+sections remain follow-up work. JSON and WASM expose header metadata;
 WASM includes source spans. See parser-api.adoc for remaining header limitations.
 Comments (`//`, matching slash fences of length >= 4, and `[comment]` paragraphs
 or open blocks) are omitted contextually. ParseResult.comments retains source

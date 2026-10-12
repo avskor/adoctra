@@ -686,3 +686,22 @@ fn offset_heading_levels_match_asciidoctor() {
     assert_eq!(headings(&ours), headings(&expected));
     assert_eq!(headings(&ours).len(), 3);
 }
+
+#[test]
+fn setext_document_title_and_metadata_match_asciidoctor() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden");
+    let source = fs::read_to_string(dir.join("header-setext.adoc")).unwrap();
+    let expected = fs::read_to_string(dir.join("header-setext.expected.html")).unwrap();
+    let result = adoctra_core::parse(&source);
+    assert!(result.diagnostics.is_empty());
+    let ours = String::from_utf8(HtmlBackend.convert(&result.document).unwrap()).unwrap();
+    let heading = |html: &str| {
+        html.lines()
+            .find(|line| line.starts_with("<h1>"))
+            .unwrap()
+            .to_owned()
+    };
+    assert_eq!(heading(&ours), heading(&expected));
+    assert_eq!(paragraph_inner(&ours), paragraph_inner(&expected));
+    assert_eq!(heading(&ours), "<h1><strong>Документ</strong></h1>");
+}
