@@ -301,7 +301,20 @@ fn attribute_entry_parts(value: &str, attributes: &Attributes, compat: bool) -> 
                     applied_attributes = true;
                     let mut expanded = Vec::new();
                     for part in parts {
-                        if matches!(part, AttributePart::Open(_) | AttributePart::Close(_)) {
+                        if let AttributePart::OpenWithAttributes { format, id, role } = part {
+                            let expand = |value: String| {
+                                crate::attributes::reference_text(&substitute_attribute_parts(
+                                    &value, attributes, true,
+                                ))
+                            };
+                            expanded.push(AttributePart::OpenWithAttributes {
+                                format,
+                                id: id.map(expand),
+                                role: role.map(expand),
+                            });
+                            continue;
+                        }
+                        if part.is_boundary() {
                             expanded.push(part);
                             continue;
                         }
@@ -317,7 +330,7 @@ fn attribute_entry_parts(value: &str, attributes: &Attributes, compat: bool) -> 
                     parts = crate::replacements::apply_parts(parts);
                 } else if matches!(stage, "q" | "quotes") && !applied_quotes {
                     applied_quotes = true;
-                    parts = crate::attribute_quotes::apply(parts, compat);
+                    parts = crate::attribute_quotes::apply(parts, compat, attributes);
                 }
             }
             return parts;

@@ -1,29 +1,23 @@
 //! Effective author fields. Source declarations remain in header::parse_authors.
 //! Literal characters and passthrough markup must stay distinct during derivation.
 use crate::attributes::{parts_text, push_part, push_value};
-use crate::{AttributeFormat, AttributePart, Attributes};
+use crate::{AttributePart, Attributes};
 
 #[derive(Clone, Copy)]
-struct NameChar {
+struct NameChar<'a> {
     ch: char,
     raw: bool,
     escaped: Option<(char, usize, usize)>,
-    boundary: Option<(AttributeFormat, bool, usize, usize)>,
+    boundary: Option<(&'a AttributePart, usize, usize)>,
 }
 
-fn chars(parts: &[AttributePart]) -> Vec<NameChar> {
+fn chars(parts: &[AttributePart]) -> Vec<NameChar<'_>> {
     let mut result = Vec::new();
     for part in parts {
-        for (position, ch) in part.lexical().chars().enumerate() {
-            let boundary = match part {
-                AttributePart::Open(format) => {
-                    Some((*format, true, position, part.lexical().len()))
-                }
-                AttributePart::Close(format) => {
-                    Some((*format, false, position, part.lexical().len()))
-                }
-                _ => None,
-            };
+        let lexical = part.lexical();
+        let length = lexical.chars().count();
+        for (position, ch) in lexical.chars().enumerate() {
+            let boundary = part.is_boundary().then_some((part, position, length));
             let entity = if part.is_special() {
                 None
             } else {
@@ -61,17 +55,15 @@ fn parts(chars: &[NameChar]) -> Vec<AttributePart> {
     let mut i = 0;
     while i < chars.len() {
         let c = chars[i];
-        if let Some((format, open, 0, len)) = c.boundary {
+        if let Some((part, 0, len)) = c.boundary {
             if chars.get(i..i + len).is_some_and(|seq| {
-                seq.iter()
-                    .enumerate()
-                    .all(|(index, c)| c.boundary == Some((format, open, index, len)))
+                seq.iter().enumerate().all(|(index, c)| {
+                    c.boundary.is_some_and(|(p, at, size)| {
+                        std::ptr::eq(p, part) && at == index && size == len
+                    })
+                })
             }) {
-                result.push(if open {
-                    AttributePart::Open(format)
-                } else {
-                    AttributePart::Close(format)
-                });
+                result.push(part.clone());
                 i += len;
                 continue;
             }
@@ -248,6 +240,13 @@ fn derive_author(value: &[AttributePart]) -> Attributes {
             .map(|p| match p {
                 AttributePart::Text(text) => AttributePart::Text(text.replace('_', " ")),
                 AttributePart::Raw(text) => AttributePart::Raw(text.replace('_', " ")),
+                AttributePart::OpenWithAttributes { format, id, role } => {
+                    AttributePart::OpenWithAttributes {
+                        format: *format,
+                        id: id.as_ref().map(|s| s.replace('_', " ")),
+                        role: role.as_ref().map(|s| s.replace('_', " ")),
+                    }
+                }
                 _ => p.clone(),
             })
             .collect();

@@ -1338,6 +1338,41 @@ mod header_tests {
     }
 
     #[test]
+    fn quote_attributes_export_neutral_metadata_and_preserve_empty_roles() {
+        let source = ":v: pass:c,q[[#якорь.роль]*Ж&* [..]#span#]\n\n{v}";
+        let json = super::parse_json(source);
+        assert!(
+            json.contains(r#""kind":"open","format":"strong","id":"якорь","role":"роль""#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""kind":"open","format":"span","role":"""#),
+            "{json}"
+        );
+        assert!(json.contains(r#""kind":"close","format":"span""#), "{json}");
+        assert!(json.contains(r#""value":"Ж& span""#), "{json}");
+        assert!(!json.contains("<strong"), "{json}");
+    }
+
+    #[test]
+    fn attributed_quote_parts_keep_editor_source_positions() {
+        let source = "\u{feff}:v: pass:c,q[[#id.red]*Ж&*]\r\n\r\n{v}";
+        let json = super::parse_json_with_source(source, 7);
+        let start = source.rfind("{v}").unwrap();
+        assert!(json.contains(r#""attribute_parts":{"v":[{"kind":"open","format":"strong","id":"id","role":"red"}"#), "{json}");
+        assert!(
+            json.contains(&format!(
+                r#""span":{{"source_id":7,"start":{start},"end":{}}},"name":"attribute-ref""#,
+                source.len()
+            )),
+            "{json}"
+        );
+        let tokens = super::tokens_json_with_source(source, 7);
+        assert_eq!(tokens.matches(r#""kind":"attribute-entry""#).count(), 1);
+        assert_eq!(tokens.matches(r#""kind":"attribute-ref""#).count(), 1);
+    }
+
+    #[test]
     fn pass_quotes_export_semantics_and_physical_reference_coordinates() {
         let source = "\u{feff}:v: pass:c,q[*Ж&*]\r\n\r\n{v}";
         let json = super::parse_json_with_source(source, 7);

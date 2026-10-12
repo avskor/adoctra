@@ -2009,3 +2009,44 @@ fn pass_quotes_keep_include_selection_positions_and_immutable_formatting() {
         .contains(&AttributePart::Open(AttributeFormat::Strong)));
     assert_eq!(sources.get(span.source_id).unwrap().text(), part);
 }
+
+#[test]
+fn quote_attributes_keep_selected_include_positions_and_old_snapshots() {
+    use adoctra_core::{AttributeFormat, AttributePart};
+    let root = "include::part.adoc[tags=body,indent=0]";
+    let part = "\u{feff}// tag::body[]\r\n  :v: pass:c,q[[#якорь.роль]*Ж&*]\r\n\r\n  {v}\r\n// end::body[]";
+    let (mut sources, mut resources, options) = setup(root, &[("/docs/part.adoc", part)]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty());
+    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+        panic!()
+    };
+    let Inline::AttributeRef {
+        span, parts, value, ..
+    } = &inlines[0]
+    else {
+        panic!()
+    };
+    let expected = AttributePart::OpenWithAttributes {
+        format: AttributeFormat::Strong,
+        id: Some("якорь".into()),
+        role: Some("роль".into()),
+    };
+    assert_eq!(parts[0], expected);
+    assert_eq!(value.as_deref(), Some("Ж&"));
+    assert_eq!(sources.slice(*span), Some("{v}"));
+    assert!(tokens_resource(&mut sources, &options, &resources)
+        .unwrap()
+        .iter()
+        .any(|t| t.kind == TokenKind::AttributeRef && t.span == *span));
+    resources
+        .insert("/docs/part.adoc", part.replace("роль", "новая"))
+        .unwrap();
+    let new = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_ne!(new.document.attributes.raw_parts("v").unwrap()[0], expected);
+    assert_eq!(
+        result.document.attributes.raw_parts("v").unwrap()[0],
+        expected
+    );
+    assert_eq!(sources.get(span.source_id).unwrap().text(), part);
+}

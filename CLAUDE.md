@@ -152,7 +152,7 @@ all boundaries. AttributeRef.parts and optional
 JSON/WASM parts preserve these boundaries; WASM also exports attribute_parts.
 HTML escapes Text and emits Raw unchanged. Host values are already substituted;
 source whole-value pass supports none, a/attributes, c/specialcharacters/
-specialchars, r/replacements and basic q/quotes, with ordered unique stages. Pass replacements
+specialchars, r/replacements and q/quotes with roles/id, with ordered unique stages. Pass replacements
 reuse the lexical stream but preserve generated entity spellings as Raw, so a
 later c stage can protect them. Plain inline replacements still use Unicode.
 A shared lexical replacement stream
@@ -169,7 +169,14 @@ attribute_quotes.rs and semantic boundaries for strong/emphasis/monospace/mark/
 superscript/subscript. Their temporary reference spelling preserves later c/a/r
 stages without storing generated tags as Raw. JSON/WASM parts use kind:open/close
 and a format name; HTML chooses the tags. Quotes handle single/double markers,
-escapes and typographic quotation marks; formatting attributes (roles/id) and macros,
+escapes, typographic quotation marks and formatting attributes (roles/id).
+OpenWithAttributes carries lexical id/role values (including entity protection);
+AttributeFormat::Span represents unquoted spans and metadata on typographic quotes.
+JSON/WASM export optional id/role fields on open parts. Late a/r stages preserve
+metadata; c protects the whole lexical representation. Replacements reconstruct
+only tracked generated boundaries, never arbitrary raw tags. Quote attribute lists
+expand references eagerly; general a-stage intrinsics and trailing reference escapes
+remain unsupported outside that list. Macros,
 general inline attribute escapes/intrinsics, macro target stages
 and raw whole-doctitle replacement remain work.
 The quote compat-mode is cached from host overrides at context creation and from

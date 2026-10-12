@@ -373,6 +373,23 @@ fn render_inlines(inlines: &[Inline], out: &mut String) {
                             out.push_str(attribute_format_tag(*format));
                             out.push('>');
                         }
+                        adoctra_core::AttributePart::OpenWithAttributes { format, id, role } => {
+                            out.push('<');
+                            out.push_str(attribute_format_tag(*format));
+                            // Quote substitution already retains lexical protection
+                            // in these values; escaping again would double entities.
+                            if let Some(id) = id {
+                                out.push_str(" id=\"");
+                                out.push_str(id);
+                                out.push('"');
+                            }
+                            if let Some(role) = role {
+                                out.push_str(" class=\"");
+                                out.push_str(role);
+                                out.push('"');
+                            }
+                            out.push('>');
+                        }
                         adoctra_core::AttributePart::Close(format) => {
                             out.push_str("</");
                             out.push_str(attribute_format_tag(*format));
@@ -398,6 +415,7 @@ fn attribute_format_tag(format: adoctra_core::AttributeFormat) -> &'static str {
         Mark => "mark",
         Superscript => "sup",
         Subscript => "sub",
+        Span => "span",
     }
 }
 

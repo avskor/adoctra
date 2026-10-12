@@ -67,13 +67,26 @@ fn write_parts_array(parts: &[crate::AttributePart], out: &mut String) {
         if i > 0 {
             out.push(',');
         }
-        if let crate::AttributePart::Open(format) | crate::AttributePart::Close(format) = part {
-            out.push_str(if matches!(part, crate::AttributePart::Open(_)) {
+        if let crate::AttributePart::Open(format)
+        | crate::AttributePart::Close(format)
+        | crate::AttributePart::OpenWithAttributes { format, .. } = part
+        {
+            out.push_str(if !matches!(part, crate::AttributePart::Close(_)) {
                 "{\"kind\":\"open\",\"format\":"
             } else {
                 "{\"kind\":\"close\",\"format\":"
             });
             escape_into(format.name(), out);
+            if let crate::AttributePart::OpenWithAttributes { id, role, .. } = part {
+                if let Some(id) = id {
+                    out.push_str(",\"id\":");
+                    escape_into(id, out);
+                }
+                if let Some(role) = role {
+                    out.push_str(",\"role\":");
+                    escape_into(role, out);
+                }
+            }
             out.push('}');
             continue;
         }

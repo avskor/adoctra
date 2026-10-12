@@ -1,7 +1,7 @@
 //! Ordered quote substitutions for whole-value pass attributes. Generated
 //! formatting is semantic; only the temporary matching view has reference tags.
 use crate::substitution_text::Text;
-use crate::{AttributeFormat as Format, AttributePart, Span};
+use crate::{AttributeFormat as Format, AttributePart, Attributes, Span};
 
 struct Stage {
     open: &'static str,
@@ -10,7 +10,11 @@ struct Stage {
     constrained: bool,
 }
 
-pub(crate) fn apply(parts: Vec<AttributePart>, compat: bool) -> Vec<AttributePart> {
+pub(crate) fn apply(
+    parts: Vec<AttributePart>,
+    compat: bool,
+    attributes: &Attributes,
+) -> Vec<AttributePart> {
     use Format::*;
     let stages = [
         ("**", "**", Some(Strong), false),
@@ -60,6 +64,7 @@ pub(crate) fn apply(parts: Vec<AttributePart>, compat: bool) -> Vec<AttributePar
                 },
                 index == 2,
                 compat,
+                attributes,
             );
         }
     }
@@ -74,7 +79,13 @@ fn space(ch: char) -> bool {
     matches!(ch, ' ' | '\t'..='\r')
 }
 
-fn apply_stage(text: Text, stage: Stage, double: bool, compat: bool) -> Text {
+fn apply_stage(
+    text: Text,
+    stage: Stage,
+    double: bool,
+    compat: bool,
+    attributes: &Attributes,
+) -> Text {
     let src = &text.text;
     // Index eligible closers once. Repeated unmatched openers ("*a *a …")
     // must not rescan the entire suffix for every marker in an editor buffer.
@@ -107,15 +118,25 @@ fn apply_stage(text: Text, stage: Stage, double: bool, compat: bool) -> Text {
     let mut output = Text::default();
     let mut copied = 0;
     let mut at = 0;
+    let brackets: Vec<_> = src.match_indices(']').map(|(i, _)| i).collect();
     while at < src.len() {
         let escaped = src.as_bytes()[at] == b'\\';
-        let open = at + usize::from(escaped);
+        let prefix = at + usize::from(escaped);
+        let attr_end = if src[prefix..].starts_with('[') {
+            brackets
+                .get(brackets.partition_point(|&i| i <= prefix))
+                .copied()
+                .filter(|&end| end > prefix + 1 && src[end + 1..].starts_with(stage.open))
+        } else {
+            None
+        };
+        let open = attr_end.map_or(prefix, |end| end + 1);
         if !src[open..].starts_with(stage.open) {
             at += src[at..].chars().next().unwrap().len_utf8();
             continue;
         }
-        if stage.constrained && !escaped && open > 0 {
-            let (prev_at, prev) = src[..open].char_indices().next_back().unwrap();
+        if stage.constrained && !escaped && prefix > 0 {
+            let (prev_at, prev) = src[..prefix].char_indices().next_back().unwrap();
             let extra = match stage.format {
                 Some(Format::Mark) => prev == '&',
                 Some(Format::Monospace) if !compat => matches!(prev, '"' | '\'' | '`'),
@@ -125,7 +146,7 @@ fn apply_stage(text: Text, stage: Stage, double: bool, compat: bool) -> Text {
             // A constrained regex consumes its preceding character; a previous
             // match cannot donate its closing marker as that character.
             if prev_at < copied || word(prev) || matches!(prev, ';' | ':' | '}') || extra {
-                at = open + stage.open.len();
+                at += src[at..].chars().next().unwrap().len_utf8();
                 continue;
             }
         }
@@ -149,12 +170,36 @@ fn apply_stage(text: Text, stage: Stage, double: bool, compat: bool) -> Text {
         }
         let end = close + stage.close.len();
         text.copy(copied..at, &mut output);
-        if escaped {
-            text.copy(open..end, &mut output);
+        if escaped && (!stage.constrained || attr_end.is_none()) {
+            text.copy(prefix..end, &mut output);
         } else {
-            if let Some(format) = stage.format {
-                output.append_part(&AttributePart::Open(format), 0, Span::new(0, 0));
+            if escaped {
+                text.copy(prefix..open, &mut output);
+            }
+            let attrs = attr_end
+                .filter(|_| !escaped)
+                .map(|end| parse_attributes(&src[prefix + 1..end], attributes));
+            let format = if stage.format == Some(Format::Mark) && attrs.is_some() {
+                Some(Format::Span)
             } else {
+                stage.format
+            };
+            let (id, role) = attrs.unwrap_or_default();
+            let decorated = id.is_some() || role.is_some();
+            let wrapper = if decorated {
+                Some(format.unwrap_or(Format::Span))
+            } else {
+                format.filter(|f| *f != Format::Span)
+            };
+            if let Some(format) = wrapper {
+                let part = if decorated {
+                    AttributePart::OpenWithAttributes { format, id, role }
+                } else {
+                    AttributePart::Open(format)
+                };
+                output.append_part(&part, 0, Span::new(0, 0));
+            }
+            if stage.format.is_none() {
                 output.append(
                     if double { "&#8220;" } else { "&#8216;" },
                     true,
@@ -164,9 +209,7 @@ fn apply_stage(text: Text, stage: Stage, double: bool, compat: bool) -> Text {
                 );
             }
             text.copy(inner..close, &mut output);
-            if let Some(format) = stage.format {
-                output.append_part(&AttributePart::Close(format), 0, Span::new(0, 0));
-            } else {
+            if stage.format.is_none() {
                 output.append(
                     if double { "&#8221;" } else { "&#8217;" },
                     true,
@@ -175,10 +218,66 @@ fn apply_stage(text: Text, stage: Stage, double: bool, compat: bool) -> Text {
                     false,
                 );
             }
+            if let Some(format) = wrapper {
+                output.append_part(&AttributePart::Close(format), 0, Span::new(0, 0));
+            }
         }
         copied = end;
         at = end;
     }
     text.copy(copied..src.len(), &mut output);
     output
+}
+
+/// Quoted text has its own attribute grammar, not the block attribute list.
+fn parse_attributes(input: &str, attributes: &Attributes) -> (Option<String>, Option<String>) {
+    let expanded;
+    let input = if input.contains('{') {
+        let mut lexical = attributes.clone();
+        for (key, _) in attributes.iter() {
+            if let Some(parts) = attributes.raw_parts(key) {
+                lexical.set(key, crate::attributes::reference_text(parts));
+            } else if let Some(value) = attributes.get(key) {
+                lexical.set(
+                    key,
+                    crate::attributes::reference_text(&[AttributePart::Text(value.into())]),
+                );
+            }
+        }
+        expanded = crate::include_attributes::substitute(
+            input,
+            &lexical,
+            attributes.get("attribute-missing").unwrap_or("skip"),
+        )
+        .0;
+        &expanded
+    } else {
+        input
+    };
+    let input = input
+        .split(',')
+        .next()
+        .unwrap()
+        .trim_matches(|c| matches!(c, ' ' | '\t'..='\r' | '\0'));
+    if input.is_empty() {
+        return (None, None);
+    }
+    if !input.starts_with(['.', '#']) {
+        return (None, Some(input.into()));
+    }
+    let (before, after) = input.split_once('#').unwrap_or((input, ""));
+    let (id, roles) = after.split_once('.').unwrap_or((after, ""));
+    let role = if roles.is_empty() {
+        (before.len() > 1).then(|| before.replace('.', " ").trim_start_matches(' ').to_owned())
+    } else if before.len() > 1 {
+        Some(
+            format!("{before}.{roles}")
+                .replace('.', " ")
+                .trim_start_matches(' ')
+                .to_owned(),
+        )
+    } else {
+        Some(roles.replace('.', " "))
+    };
+    ((!id.is_empty()).then(|| id.to_owned()), role)
 }

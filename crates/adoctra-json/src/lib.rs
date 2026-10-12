@@ -559,6 +559,23 @@ mod tests {
     }
 
     #[test]
+    fn quote_attributes_export_neutral_metadata_and_preserve_empty_roles() {
+        let source = ":v: pass:c,q[[#якорь.роль]*Ж&* [..]#span#]\n\n{v}";
+        let json = render(source);
+        assert!(
+            json.contains(r#""kind":"open","format":"strong","id":"якорь","role":"роль""#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""kind":"open","format":"span","role":"""#),
+            "{json}"
+        );
+        assert!(json.contains(r#""kind":"close","format":"span""#), "{json}");
+        assert!(json.contains(r#""value":"Ж& span""#), "{json}");
+        assert!(!json.contains("<strong"), "{json}");
+    }
+
+    #[test]
     fn pass_quotes_export_semantic_boundaries_without_backend_tags() {
         let json = render(":v: pass:c,q[*Ж&* _é_]\n\n{v}");
         assert!(json.contains(r#""value":"Ж& é","parts":[{"kind":"open","format":"strong"},{"kind":"text","value":"Ж&"},{"kind":"close","format":"strong"},{"kind":"text","value":" "},{"kind":"open","format":"emphasis"},{"kind":"text","value":"é"},{"kind":"close","format":"emphasis"}]"#), "{json}");

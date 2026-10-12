@@ -827,3 +827,17 @@ fn section_ids_strip_entities_and_raw_tags_and_preserve_heading_and_link_markup(
     assert!(ours.contains("<h2 id=\"\">&#169; &#8594;</h2>"));
     assert!(ours.contains("<a href=\"#_alpha\"><b>Alpha</b> &copy;</a>"));
 }
+
+#[test]
+fn quote_attributes_match_reference_and_ordered_protection() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden");
+    let source = fs::read_to_string(dir.join("pass-quote-attributes.adoc")).unwrap();
+    let expected = fs::read_to_string(dir.join("pass-quote-attributes.expected.html")).unwrap();
+    let result = adoctra_core::parse(&source);
+    assert!(result.diagnostics.is_empty());
+    let ours = String::from_utf8(HtmlBackend.convert(&result.document).unwrap()).unwrap();
+    assert_eq!(paragraph_inner(&ours), paragraph_inner(&expected));
+    assert!(ours.contains("<strong id=\"anchor\" class=\"red\">Ж&amp;</strong>"));
+    assert!(ours.contains("<span class=\"\">empty role</span>"));
+    assert!(ours.contains("&lt;strong id=\"id\" class=\"red\"&gt;literal&lt;/strong&gt;"));
+}

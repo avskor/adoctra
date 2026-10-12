@@ -2,6 +2,29 @@
 //! and source ranges travel with fragments; HTML escaping stays in the backend.
 use crate::{AttributePart, Inline, Span};
 use std::ops::Range;
+use std::sync::Arc;
+
+#[derive(Clone)]
+struct Boundary {
+    original: Arc<AttributePart>,
+    range: Range<usize>,
+}
+
+impl Boundary {
+    fn slice(&self, range: Range<usize>, length: usize) -> Option<Self> {
+        let selected = if range == (0..length) {
+            self.range.clone()
+        } else if self.range.len() == length {
+            self.range.start + range.start..self.range.start + range.end
+        } else {
+            return None;
+        };
+        Some(Self {
+            original: self.original.clone(),
+            range: selected,
+        })
+    }
+}
 
 pub(crate) struct Fragment {
     pub text: String,
@@ -10,6 +33,7 @@ pub(crate) struct Fragment {
     pub owner: usize,
     pub span: Span,
     pub part: Option<AttributePart>,
+    boundary: Option<Boundary>,
     exact: bool,
     extend_span: bool,
 }
@@ -22,14 +46,21 @@ pub(crate) struct Text {
 
 impl Text {
     pub fn append_part(&mut self, part: &AttributePart, owner: usize, span: Span) {
-        if matches!(part, AttributePart::Open(_) | AttributePart::Close(_)) {
+        if part.is_boundary() {
+            let lexical = part.lexical().into_owned();
+            let boundary =
+                matches!(part, AttributePart::OpenWithAttributes { .. }).then(|| Boundary {
+                    original: Arc::new(part.clone()),
+                    range: 0..lexical.len(),
+                });
             self.push(Fragment {
-                text: part.lexical().into(),
+                text: lexical,
                 decoded: None,
                 raw: true,
                 owner,
                 span,
                 part: Some(part.clone()),
+                boundary,
                 exact: false,
                 extend_span: false,
             });
@@ -46,7 +77,8 @@ impl Text {
         result
     }
 
-    pub fn into_parts(self) -> Vec<AttributePart> {
+    pub fn into_parts(mut self) -> Vec<AttributePart> {
+        self.restore_boundaries();
         let mut parts = Vec::new();
         for (_, fragment) in self.fragments {
             if let Some(part) = fragment.part {
@@ -94,6 +126,7 @@ impl Text {
                 owner,
                 span: slice_span(span, offset..offset + ch.len_utf8(), exact),
                 part: None,
+                boundary: None,
                 exact: false,
                 extend_span: exact,
             });
@@ -116,6 +149,7 @@ impl Text {
             owner,
             span,
             part: None,
+            boundary: None,
             exact,
             extend_span: exact,
         });
@@ -148,6 +182,10 @@ impl Text {
                 } else {
                     None
                 },
+                boundary: f
+                    .boundary
+                    .as_ref()
+                    .and_then(|b| b.slice(start..end, f.text.len())),
                 exact: f.exact,
                 extend_span: f.extend_span,
             });
@@ -165,6 +203,28 @@ impl Text {
             .fragments
             .partition_point(|(r, _)| r.end <= range.start);
         let (r, f) = &self.fragments[first];
+        let boundary = f.boundary.as_ref().and_then(|b| {
+            let mut selected = b.slice(
+                range.start - r.start..range.end.min(r.end) - r.start,
+                f.text.len(),
+            )?;
+            for (next_range, next) in &self.fragments[first + 1..] {
+                if next_range.start >= range.end {
+                    break;
+                }
+                let next_boundary = next.boundary.as_ref()?.slice(
+                    0..range.end.min(next_range.end) - next_range.start,
+                    next.text.len(),
+                )?;
+                if !Arc::ptr_eq(&selected.original, &next_boundary.original)
+                    || selected.range.end > next_boundary.range.start
+                {
+                    return None;
+                }
+                selected.range.end = next_boundary.range.end;
+            }
+            Some(selected)
+        });
         let mut span = slice_span(
             f.span,
             range.start - r.start..range.end.min(r.end) - r.start,
@@ -188,9 +248,55 @@ impl Text {
             owner: f.owner,
             span,
             part: None,
+            boundary,
             exact: false,
             extend_span: f.extend_span,
         });
+    }
+
+    /// Reassemble only boundaries we created, after replacements edit their
+    /// lexical id/role values. Arbitrary raw tags never become semantic nodes.
+    fn restore_boundaries(&mut self) {
+        let mut pending = std::mem::take(&mut self.fragments).into_iter().peekable();
+        while let Some((range, mut fragment)) = pending.next() {
+            if fragment.part.is_some() {
+                self.fragments.push((range, fragment));
+                continue;
+            }
+            let Some(boundary) = fragment.boundary.clone().filter(|b| b.range.start == 0) else {
+                self.fragments.push((range, fragment));
+                continue;
+            };
+            let mut group = Vec::new();
+            let mut end = boundary.range.end;
+            let mut lexical_end = range.end;
+            let mut lexical = fragment.text.clone();
+            while let Some((_, next)) = pending.peek() {
+                if !next.boundary.as_ref().is_some_and(|b| {
+                    // Escape removal can leave gaps in the original range.
+                    Arc::ptr_eq(&boundary.original, &b.original) && b.range.start >= end
+                }) {
+                    break;
+                }
+                let (r, f) = pending.next().unwrap();
+                end = f.boundary.as_ref().unwrap().range.end;
+                lexical_end = r.end;
+                lexical.push_str(&f.text);
+                group.push((r, f));
+            }
+            if end == boundary.original.lexical().len() {
+                if let Some(part) = boundary.original.with_lexical_attributes(&lexical) {
+                    fragment.text = lexical;
+                    fragment.decoded = None;
+                    fragment.part = Some(part);
+                    fragment.boundary = None;
+                    self.fragments.push((range.start..lexical_end, fragment));
+                    continue;
+                }
+            }
+            self.fragments.push((range, fragment));
+            self.fragments.extend(group);
+        }
     }
 }
 
@@ -208,7 +314,8 @@ fn slice_span(span: Span, range: Range<usize>, exact: bool) -> Span {
 
 /// Restore AST nodes, retaining attribute references even if a replacement
 /// consumed their whole value. This keeps editor tokens and provenance stable.
-pub(crate) fn write_back(nodes: Vec<Inline>, text: Text, fold_newlines: bool) -> Vec<Inline> {
+pub(crate) fn write_back(nodes: Vec<Inline>, mut text: Text, fold_newlines: bool) -> Vec<Inline> {
+    text.restore_boundaries();
     let mut fragments = text.fragments.into_iter().peekable();
     let mut result = Vec::new();
     for (owner, mut node) in nodes.into_iter().enumerate() {
