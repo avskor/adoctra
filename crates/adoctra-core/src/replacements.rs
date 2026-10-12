@@ -1,256 +1,227 @@
-//! Typographic replacements (asciidoctor's `REPLACEMENTS`), applied once in
-//! core to resolved inline text.
-//!
-//! These are *semantic* substitutions: `(C)` means the copyright sign, `--`
-//! (spaced) means an em dash, `...` means an ellipsis, and so on. Following the
-//! model's core/backend split, [`apply`] resolves each construct to its real
-//! Unicode character and stores that in the `Inline::Text` value, leaving the
-//! span pointing at the original source. *How* a character is encoded for a
-//! given output (a backend may emit `&#8212;` for `—`, or the literal char)
-//! stays a backend concern — see the HTML backend's text encoder.
-//!
-//! Behaviour is pinned against asciidoctor 2.0.23. A single left-to-right pass
-//! recognises, in precedence order:
-//!
-//! - a leading `\` escapes the following construct (it renders literally, the
-//!   backslash is dropped): `\(C)` -> `(C)`, `\--` -> `--`, `\'` -> `'`;
-//! - `(C)` / `(R)` / `(TM)` -> `©` / `®` / `™`;
-//! - `--` between blanks (or at a line boundary) -> thin space + em dash + thin
-//!   space, consuming one adjacent blank on each side; `word--word` (no spaces)
-//!   -> em dash + zero-width space;
-//! - `...` -> ellipsis + zero-width space (only the first three dots);
-//! - `'` directly between two word characters -> a right single quote (the
-//!   typographic apostrophe), e.g. `it's`;
-//! - the arrows `->` `=>` `<-` `<=` -> `→` `⇒` `←` `⇐`, where a right-pointing
-//!   arrow wins over a left one (so `<=>` is `<` + `⇒`, not `⇐` + `>`).
-
+//! Ordered replacements over the lexical view after attribute expansion.
+//! The order and escape rules follow Asciidoctor 2.0.23 REPLACEMENTS.
+use crate::substitution_text::{self, Text};
+use crate::Inline;
 use std::borrow::Cow;
 
-// Resolved characters (asciidoctor emits the matching numeric entity).
-const COPY: char = '\u{a9}'; // © &#169;
-const REG: char = '\u{ae}'; // ® &#174;
-const TRADE: char = '\u{2122}'; // ™ &#8482;
-const THIN: char = '\u{2009}'; // thin space &#8201;
-const EMDASH: char = '\u{2014}'; // — &#8212;
-const ZWSP: char = '\u{200b}'; // zero-width space &#8203;
-const ELLIPSIS: char = '\u{2026}'; // … &#8230;
-const RSQUO: char = '\u{2019}'; // ’ &#8217;
-const RARROW: char = '\u{2192}'; // → &#8594;
-const RDARROW: char = '\u{21d2}'; // ⇒ &#8658;
-const LARROW: char = '\u{2190}'; // ← &#8592;
-const LDARROW: char = '\u{21d0}'; // ⇐ &#8656;
+/// Formatting and macros bound runs; adjacent Text and AttributeRef values share
+/// a stream. Children have markup on both sides, not artificial line boundaries.
+pub(crate) fn apply_inlines(nodes: &mut Vec<Inline>, fold_newlines: bool) {
+    process(nodes, fold_newlines, true);
+}
 
-/// Apply typographic replacements to a run of resolved text. Returns the input
-/// untouched (borrowed) when it holds none of the trigger characters, so the
-/// common case allocates nothing.
-pub(crate) fn apply(src: &str) -> Cow<'_, str> {
-    if !src.bytes().any(is_trigger) {
-        return Cow::Borrowed(src);
+fn process(nodes: &mut Vec<Inline>, fold_newlines: bool, edges: bool) {
+    let old = std::mem::take(nodes);
+    let mut pending = Vec::new();
+    let mut left_edge = edges;
+    for mut node in old {
+        if matches!(
+            &node,
+            Inline::Text { .. } | Inline::AttributeRef { value: Some(_), .. }
+        ) {
+            pending.push(node);
+            continue;
+        }
+        flush(&mut pending, nodes, fold_newlines, left_edge, false);
+        match &mut node {
+            Inline::Strong { children, .. }
+            | Inline::Emphasis { children, .. }
+            | Inline::Monospace { children, .. }
+            | Inline::Mark { children, .. }
+            | Inline::Superscript { children, .. }
+            | Inline::Subscript { children, .. }
+            | Inline::CrossReference { children, .. }
+            | Inline::Link {
+                children,
+                bare: false,
+                ..
+            } => process(children, true, false),
+            Inline::Anchor {
+                reftext: Some(children),
+                ..
+            } => process(children, true, false),
+            _ => {}
+        }
+        nodes.push(node);
+        left_edge = false;
     }
-    let bytes = src.as_bytes();
-    let mut out = String::with_capacity(src.len());
-    let mut i = 0;
-    while i < bytes.len() {
-        match bytes[i] {
-            // A backslash escapes the construct that follows it.
-            b'\\' => {
-                if let Some(len) = escapable_at(src, i + 1) {
-                    out.push_str(&src[i + 1..i + 1 + len]);
-                    i += 1 + len;
+    flush(&mut pending, nodes, fold_newlines, left_edge, edges);
+}
+
+fn flush(pending: &mut Vec<Inline>, output: &mut Vec<Inline>, fold: bool, left: bool, right: bool) {
+    if pending.is_empty() {
+        return;
+    }
+    let mut text = Text::default();
+    for (owner, node) in pending.iter().enumerate() {
+        match node {
+            Inline::Text { value, span } => text.append(value, false, owner, *span, true),
+            Inline::AttributeRef {
+                value: Some(value),
+                parts,
+                span,
+                ..
+            } => {
+                if parts.is_empty() {
+                    text.append(value, false, owner, *span, false);
                 } else {
-                    out.push('\\');
-                    i += 1;
+                    for part in parts {
+                        text.append(part.text(), part.is_raw(), owner, *span, false);
+                    }
                 }
             }
-            // (C) (R) (TM)
-            b'(' => {
-                if let Some((ch, len)) = symbol_at(src, i) {
-                    out.push(ch);
-                    i += len;
-                } else {
-                    out.push('(');
-                    i += 1;
-                }
-            }
-            // `--` (em dash, two forms) or `->` (arrow).
-            b'-' => {
-                if bytes.get(i + 1) == Some(&b'-') {
-                    i = take_dash(src, i, &mut out);
-                } else if bytes.get(i + 1) == Some(&b'>') {
-                    out.push(RARROW);
-                    i += 2;
-                } else {
-                    out.push('-');
-                    i += 1;
-                }
-            }
-            // `...` ellipsis (first three dots only).
-            b'.' => {
-                if src[i..].starts_with("...") {
-                    out.push(ELLIPSIS);
-                    out.push(ZWSP);
-                    i += 3;
-                } else {
-                    out.push('.');
-                    i += 1;
-                }
-            }
-            // `'` apostrophe, only between two word characters.
-            b'\'' => {
-                if prev_is_word(bytes, i) && next_is_word(bytes, i + 1) {
-                    out.push(RSQUO);
-                } else {
-                    out.push('\'');
-                }
-                i += 1;
-            }
-            // `=>` arrow.
-            b'=' => {
-                if bytes.get(i + 1) == Some(&b'>') {
-                    out.push(RDARROW);
-                    i += 2;
-                } else {
-                    out.push('=');
-                    i += 1;
-                }
-            }
-            // `<-` / `<=` arrows — but a following `>` means the right arrow
-            // (`->` / `=>`) wins, so emit `<` and let it match next.
-            b'<' => match bytes.get(i + 1) {
-                Some(&b'-') | Some(&b'=') if bytes.get(i + 2) == Some(&b'>') => {
-                    out.push('<');
-                    i += 1;
-                }
-                Some(&b'-') => {
-                    out.push(LARROW);
-                    i += 2;
-                }
-                Some(&b'=') => {
-                    out.push(LDARROW);
-                    i += 2;
-                }
-                _ => {
-                    out.push('<');
-                    i += 1;
-                }
-            },
-            _ => {
-                let step = utf8_step(bytes, i);
-                out.push_str(&src[i..i + step]);
-                i += step;
-            }
+            _ => unreachable!(),
         }
     }
-    Cow::Owned(out)
+    for stage in 0..13 {
+        text = replace_stage(text, stage, left, right);
+    }
+    output.extend(substitution_text::write_back(
+        std::mem::take(pending),
+        text,
+        fold,
+    ));
 }
 
-/// Bytes that can begin (or escape) a replacement; the fast path skips text
-/// holding none of them.
-fn is_trigger(b: u8) -> bool {
-    matches!(b, b'(' | b'-' | b'.' | b'\'' | b'<' | b'=' | b'\\')
+struct Match<'a> {
+    end: usize,
+    escape: Option<usize>,
+    lexical: Cow<'a, str>,
+    decoded: Option<&'a str>,
 }
 
-/// If `src[at..]` starts with `(C)`/`(R)`/`(TM)`, the resolved char and its
-/// source length.
-fn symbol_at(src: &str, at: usize) -> Option<(char, usize)> {
-    let rest = &src[at..];
-    if rest.starts_with("(C)") {
-        Some((COPY, 3))
-    } else if rest.starts_with("(R)") {
-        Some((REG, 3))
-    } else if rest.starts_with("(TM)") {
-        Some((TRADE, 4))
-    } else {
-        None
+fn replace_stage(text: Text, stage: usize, left: bool, right: bool) -> Text {
+    const TRIGGERS: &[u8; 13] = b"(((--.`'-=&&&";
+    if !text.text.as_bytes().contains(&TRIGGERS[stage]) {
+        return text;
     }
-}
-
-/// Length of an escapable construct starting at `at`, or `None` for a stray
-/// backslash. Mirrors what [`apply`] otherwise replaces, plus the apostrophe.
-fn escapable_at(src: &str, at: usize) -> Option<usize> {
-    if at >= src.len() {
-        return None;
-    }
-    if let Some((_, len)) = symbol_at(src, at) {
-        return Some(len);
-    }
-    let rest = &src[at..];
-    for pat in ["--", "...", "->", "=>", "<-", "<=", "'"] {
-        if rest.starts_with(pat) {
-            return Some(pat.len());
-        }
-    }
-    None
-}
-
-/// Handle a `--` at `i`. The spaced form (blank or line boundary on both sides)
-/// becomes thin + em dash + thin, consuming one adjacent blank per side; the
-/// word form (`\w--\w`) becomes em dash + zero-width space. Anything else stays
-/// literal. Returns the index just past what was consumed.
-fn take_dash(src: &str, i: usize, out: &mut String) -> usize {
-    let bytes = src.as_bytes();
-    // `---` (a third dash) is never an em dash.
-    if bytes.get(i + 2) == Some(&b'-') {
-        out.push_str("--");
-        return i + 2;
-    }
-    if prev_is_word(bytes, i) && next_is_word(bytes, i + 2) {
-        out.push(EMDASH);
-        out.push(ZWSP);
-        return i + 2;
-    }
-    let before_ok = i == 0 || is_blank(bytes[i - 1]);
-    let after = bytes.get(i + 2).copied();
-    let after_ok = after.is_none() || is_blank(after.unwrap());
-    if before_ok && after_ok {
-        // Replace the single emitted leading blank (if any) with a thin space.
-        if out.ends_with(' ') || out.ends_with('\t') {
-            out.pop();
-        }
-        out.push(THIN);
-        out.push(EMDASH);
-        out.push(THIN);
-        // Consume one trailing blank too.
-        return if after.is_some_and(is_blank) {
-            i + 3
+    let mut output = Text::default();
+    let mut copied = 0;
+    let mut offset = 0;
+    while offset < text.text.len() {
+        if let Some(m) = match_at(&text.text, offset, stage, left, right) {
+            text.copy(copied..offset, &mut output);
+            if let Some(escape) = m.escape {
+                text.copy(offset..escape, &mut output);
+                text.copy(escape + 1..m.end, &mut output);
+            } else {
+                text.replacement(offset..m.end, &m.lexical, m.decoded, &mut output);
+            }
+            copied = m.end;
+            offset = m.end;
         } else {
-            i + 2
-        };
+            offset += text.text[offset..].chars().next().unwrap().len_utf8();
+        }
     }
-    out.push_str("--");
-    i + 2
-}
-
-fn is_blank(b: u8) -> bool {
-    b == b' ' || b == b'\t'
-}
-
-fn is_word(b: u8) -> bool {
-    b.is_ascii_alphanumeric() || b == b'_'
-}
-
-fn prev_is_word(bytes: &[u8], i: usize) -> bool {
-    i > 0 && is_word(bytes[i - 1])
-}
-
-fn next_is_word(bytes: &[u8], j: usize) -> bool {
-    bytes.get(j).is_some_and(|&b| is_word(b))
-}
-
-/// Byte width of the UTF-8 char starting at `i` (at least 1).
-fn utf8_step(bytes: &[u8], i: usize) -> usize {
-    let b = bytes[i];
-    if b < 0x80 {
-        1
-    } else if b >= 0xF0 {
-        4
-    } else if b >= 0xE0 {
-        3
-    } else if b >= 0xC0 {
-        2
-    } else {
-        1
+    if copied == 0 {
+        return text;
     }
+    text.copy(copied..text.text.len(), &mut output);
+    output
+}
+
+fn match_at(src: &str, at: usize, stage: usize, left: bool, right: bool) -> Option<Match<'_>> {
+    let bytes = src.as_bytes();
+    let escaped = bytes[at] == b'\\';
+    let start = at + usize::from(escaped);
+    let rest = &src[start..];
+    let fixed = |pattern: &str, lexical, decoded| {
+        rest.starts_with(pattern).then_some(Match {
+            end: start + pattern.len(),
+            escape: escaped.then_some(at),
+            lexical: Cow::Borrowed(lexical),
+            decoded: Some(decoded),
+        })
+    };
+    match stage {
+        0 => fixed("(C)", "&#169;", "©"),
+        1 => fixed("(R)", "&#174;", "®"),
+        2 => fixed("(TM)", "&#8482;", "™"),
+        3 => {
+            // The spaced dash consumes exactly one space/newline on each side.
+            // Tabs do not qualify. Consuming the trailing blank matters for
+            // adjacent dashes, as Ruby's gsub does not revisit that blank.
+            let dash = if matches!(bytes[at], b' ' | b'\n' | b'\\') {
+                at + 1
+            } else if at == 0 && left {
+                at
+            } else {
+                return None;
+            };
+            if !src[dash..].starts_with("--") {
+                return None;
+            }
+            let end = dash + 2;
+            let end = match bytes.get(end) {
+                Some(b' ' | b'\n') => end + 1,
+                None if right => end,
+                _ => return None,
+            };
+            Some(Match {
+                end,
+                escape: escaped.then_some(at),
+                lexical: Cow::Borrowed("&#8201;&#8212;&#8201;"),
+                decoded: Some("\u{2009}—\u{2009}"),
+            })
+        }
+        4 => {
+            if !src[..at].chars().next_back().is_some_and(is_word)
+                || !rest.starts_with("--")
+                || !rest[2..].chars().next().is_some_and(is_word)
+            {
+                return None;
+            }
+            fixed("--", "&#8212;&#8203;", "—\u{200b}")
+        }
+        5 => fixed("...", "&#8230;&#8203;", "…\u{200b}"),
+        6 => fixed("`'", "&#8217;", "’"),
+        7 => {
+            if !src[..at]
+                .chars()
+                .next_back()
+                .is_some_and(crate::unicode_word::is_alphanumeric)
+                || !rest.starts_with("'")
+                || !rest[1..].chars().next().is_some_and(char::is_alphabetic)
+            {
+                return None;
+            }
+            fixed("'", "&#8217;", "’")
+        }
+        8 => fixed("-&gt;", "&#8594;", "→"),
+        9 => fixed("=&gt;", "&#8658;", "⇒"),
+        10 => fixed("&lt;-", "&#8592;", "←"),
+        11 => fixed("&lt;=", "&#8656;", "⇐"),
+        12 => {
+            let end = crate::entity_references::entity_end(bytes, start)?;
+            Some(Match {
+                end,
+                escape: escaped.then_some(at),
+                lexical: Cow::Owned(format!("&{}", &src[start + 5..end])),
+                decoded: None,
+            })
+        }
+        _ => unreachable!(),
+    }
+}
+
+fn is_word(ch: char) -> bool {
+    crate::unicode_word::is_alphanumeric(ch) || crate::unicode_word::is_mark_or_connector(ch)
+}
+
+#[cfg(test)]
+fn apply(src: &str) -> String {
+    let mut nodes = vec![Inline::Text {
+        value: src.into(),
+        span: crate::Span::new(0, src.len()),
+    }];
+    apply_inlines(&mut nodes, false);
+    nodes
+        .into_iter()
+        .map(|n| match n {
+            Inline::Text { value, .. } | Inline::Raw { value, .. } => value,
+            _ => unreachable!(),
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -258,12 +229,12 @@ mod tests {
     use super::*;
 
     fn r(s: &str) -> String {
-        apply(s).into_owned()
+        apply(s)
     }
 
     #[test]
-    fn plain_text_is_borrowed_unchanged() {
-        assert!(matches!(apply("nothing to do here"), Cow::Borrowed(_)));
+    fn plain_text_is_unchanged() {
+        assert_eq!(apply("nothing to do here"), "nothing to do here");
     }
 
     #[test]
@@ -338,7 +309,7 @@ mod tests {
     }
 
     #[test]
-    fn replacements_compose_in_one_pass() {
+    fn replacements_compose_in_reference_order() {
         assert_eq!(
             r("(C) 2026 -- it's a test..."),
             "\u{a9} 2026\u{2009}\u{2014}\u{2009}it\u{2019}s a test\u{2026}\u{200b}"

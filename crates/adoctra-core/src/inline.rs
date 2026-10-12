@@ -36,13 +36,19 @@ pub(crate) fn scan_inlines_with(
     attrs: &Attributes,
     fold_newlines: bool,
 ) -> Vec<Inline> {
+    let mut out = scan_unprocessed(src, base, attrs);
+    crate::replacements::apply_inlines(&mut out, fold_newlines);
+    out
+}
+
+fn scan_unprocessed(src: &str, base: usize, attrs: &Attributes) -> Vec<Inline> {
     let mut out = Vec::new();
     let mut text_start = 0usize;
     let mut i = 0usize;
 
     while i < src.len() {
         if let Some((node, end)) = try_match(src, i, base, attrs) {
-            flush_text(src, text_start, i, base, fold_newlines, &mut out);
+            flush_text(src, text_start, i, base, &mut out);
             out.push(node);
             i = end;
             text_start = end;
@@ -51,7 +57,7 @@ pub(crate) fn scan_inlines_with(
             i += utf8_step(src, i);
         }
     }
-    flush_text(src, text_start, src.len(), base, fold_newlines, &mut out);
+    flush_text(src, text_start, src.len(), base, &mut out);
     out
 }
 
@@ -79,6 +85,10 @@ fn try_match(src: &str, i: usize, base: usize, attrs: &Attributes) -> Option<(In
             |children, span| Inline::Monospace { children, span },
             match_quoted(src, i, b'`', base, attrs),
         ),
+        // Special-character protection precedes quotes in the reference: an
+        // ampersand ends in `;`, which cannot open constrained mark syntax.
+        // In particular, the # in numeric entities must remain ordinary text.
+        b'#' if i > 0 && src.as_bytes()[i - 1] == b'&' => None,
         b'#' => quote(
             |children, span| Inline::Mark { children, span },
             match_quoted(src, i, b'#', base, attrs),
@@ -131,7 +141,7 @@ fn match_quoted(
     }
     let rel_close = src[inner_start..].find(marker as char)?;
     let close = inner_start + rel_close;
-    let children = scan_inlines(&src[inner_start..close], base + inner_start, attrs);
+    let children = scan_unprocessed(&src[inner_start..close], base + inner_start, attrs);
     Some((children, base + close + 1))
 }
 
@@ -154,7 +164,7 @@ fn match_unconstrained(
     if inner.is_empty() || inner.contains(char::is_whitespace) {
         return None;
     }
-    let children = scan_inlines(inner, base + inner_start, attrs);
+    let children = scan_unprocessed(inner, base + inner_start, attrs);
     Some((children, base + close + 1))
 }
 
@@ -173,19 +183,8 @@ fn match_attribute(
         return None;
     }
     let end = i + 1 + rel_close + 1;
-    let mut value = attrs.get(name).map(str::to_string);
-    let mut parts = attrs.raw_parts(name).unwrap_or_default().to_vec();
-    if let Some(restored) = value
-        .as_deref()
-        .and_then(|v| crate::entity_references::restore(v, &parts))
-    {
-        value = Some(crate::attributes::parts_text(&restored));
-        parts = if restored.iter().any(crate::AttributePart::is_raw) {
-            restored
-        } else {
-            Vec::new()
-        };
-    }
+    let value = attrs.get(name).map(str::to_string);
+    let parts = attrs.raw_parts(name).unwrap_or_default().to_vec();
     let node = Inline::AttributeRef {
         name: name.to_string(),
         value,
@@ -328,7 +327,7 @@ fn finish_bracketed_link(
             true,
         )
     } else {
-        (scan_inlines(text, base + text_start, attrs), false)
+        (scan_unprocessed(text, base + text_start, attrs), false)
     };
     Some((
         Inline::Link {
@@ -438,7 +437,7 @@ fn xref_children(
     if reftext.is_empty() {
         Vec::new()
     } else {
-        scan_inlines(reftext, base + reftext_off, attrs)
+        scan_unprocessed(reftext, base + reftext_off, attrs)
     }
 }
 
@@ -540,40 +539,19 @@ fn anchor_reftext(
     if reftext.is_empty() {
         None
     } else {
-        Some(scan_inlines(reftext, base + reftext_off, attrs))
+        Some(scan_unprocessed(reftext, base + reftext_off, attrs))
     }
 }
 
-/// Emit a `Text` node for `src[a..b]` if non-empty, folding newlines to spaces
-/// (when `fold_newlines`) and applying typographic replacements (`(C)`, `--`,
-/// `...`, `'`, arrows) in the content while the span stays anchored to the real
-/// bytes — so a `Text`'s value is what the source *means* and its span is where it
-/// *came from*.
-fn flush_text(
-    src: &str,
-    a: usize,
-    b: usize,
-    base: usize,
-    fold_newlines: bool,
-    out: &mut Vec<Inline>,
-) {
-    if a >= b {
-        return;
+/// Preserve source text until attribute expansion and the ordered replacements
+/// pass have the complete neighboring inline run available.
+fn flush_text(src: &str, a: usize, b: usize, base: usize, out: &mut Vec<Inline>) {
+    if a < b {
+        out.push(Inline::Text {
+            value: src[a..b].into(),
+            span: Span::new(base + a, base + b),
+        });
     }
-    let raw = &src[a..b];
-    let folded = if fold_newlines && raw.contains(['\n', '\r']) {
-        raw.replace(['\n', '\r'], " ")
-    } else {
-        raw.to_string()
-    };
-    let value = match crate::replacements::apply(&folded) {
-        std::borrow::Cow::Borrowed(_) => folded,
-        std::borrow::Cow::Owned(s) => s,
-    };
-    out.push(Inline::Text {
-        value,
-        span: Span::new(base + a, base + b),
-    });
 }
 
 /// Byte width of the UTF-8 char starting at `i` (at least 1).

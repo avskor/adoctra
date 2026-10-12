@@ -211,7 +211,7 @@ fn inline_text(inlines: &[Inline]) -> String {
 fn push_text(inlines: &[Inline], s: &mut String) {
     for inline in inlines {
         match inline {
-            Inline::Text { value, .. } => s.push_str(value),
+            Inline::Text { value, .. } | Inline::Raw { value, .. } => s.push_str(value),
             // A missing attribute keeps its literal `{name}`, matching how the
             // backends render it (and so the id reflects the visible text).
             Inline::AttributeRef { name, value, .. } => match value {

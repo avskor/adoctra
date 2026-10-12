@@ -554,6 +554,10 @@ fn write_inlines(inlines: &[Inline], s: &mut String) {
                 s.push_str("\"name\":\"text\",\"value\":");
                 write_str(value, s);
             }
+            Inline::Raw { value, .. } => {
+                s.push_str("\"name\":\"raw\",\"value\":");
+                write_str(value, s);
+            }
             Inline::Strong { children, .. } => {
                 s.push_str("\"name\":\"strong\",\"inlines\":");
                 write_inlines(children, s);
@@ -1313,6 +1317,18 @@ mod tests {
 
 #[cfg(test)]
 mod header_tests {
+    #[test]
+    fn shared_replacements_export_raw_spans_and_keep_consumed_attribute_tokens() {
+        let source = ":v: C\n:name: copy\n\n({v}) &{name};";
+        let json = super::parse_json_with_source(source, 8);
+        let start = source.find("&{name};").unwrap();
+        assert!(json.contains(&format!(r#""span":{{"source_id":8,"start":{start},"end":{}}},"name":"raw","value":"&copy;""#, source.len())), "{json}");
+        assert!(json.contains(r#""attribute":"v","value":"""#), "{json}");
+        assert!(json.contains(r#""value":"©""#), "{json}");
+        let tokens = super::tokens_json_with_source(source, 8);
+        assert_eq!(tokens.matches(r#""kind":"attribute-ref""#).count(), 2);
+    }
+
     #[test]
     fn restored_entities_preserve_attribute_values_and_reference_coordinates() {
         let source = ":v: pass:[&amp;copy;]\n\n{v}";

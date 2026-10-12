@@ -441,6 +441,11 @@ fn write_inlines(inlines: &[Inline], s: &mut String) {
                 escape_into(value, s);
                 s.push('}');
             }
+            Inline::Raw { value, .. } => {
+                s.push_str("{\"name\":\"raw\",\"value\":");
+                escape_into(value, s);
+                s.push('}');
+            }
             Inline::Strong { children, .. } => {
                 s.push_str("{\"name\":\"strong\",\"inlines\":");
                 write_inlines(children, s);
@@ -551,6 +556,18 @@ mod tests {
         assert!(json.contains(r#""name":"John Doe""#), "{json}");
         assert!(json.contains(r#""value":"Анна""#), "{json}");
         assert!(json.contains(r#""parts":[{"kind":"raw","value":"<b>Анна</b>"},{"kind":"text","value":" Смирнова"}]"#), "{json}");
+    }
+
+    #[test]
+    fn shared_replacements_export_raw_source_entities_and_consumed_references() {
+        let json = render(":v: C\n:name: copy\n\n({v}) &{name}; \\&copy;");
+        assert!(json.contains(r#"{"name":"text","value":"©"}"#), "{json}");
+        assert!(
+            json.contains(r#"{"name":"raw","value":"&copy;"}"#),
+            "{json}"
+        );
+        assert_eq!(json.matches(r#"{"name":"text","value":""}"#).count(), 2);
+        assert!(json.contains(r#""value":" &copy;""#), "{json}");
     }
 
     #[test]

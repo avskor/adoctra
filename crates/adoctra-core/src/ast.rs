@@ -411,6 +411,9 @@ pub enum Inline {
     /// Literal text. `value` is the resolved content; `span` is where it came
     /// from (the two may differ in length once substitutions apply).
     Text { value: String, span: Span },
+    /// Entity syntax restored by substitutions, emitted without escaping.
+    /// Unknown entity names are retained; `span` covers their source construct.
+    Raw { value: String, span: Span },
     /// `*strong*` — bold. `span` covers the whole construct incl. markers.
     Strong { children: Vec<Inline>, span: Span },
     /// `_emphasis_` — italic. `span` covers the whole construct incl. markers.
@@ -492,6 +495,7 @@ impl Inline {
     pub fn span_mut(&mut self) -> &mut Span {
         match self {
             Inline::Text { span, .. }
+            | Inline::Raw { span, .. }
             | Inline::Strong { span, .. }
             | Inline::Emphasis { span, .. }
             | Inline::Monospace { span, .. }
@@ -509,6 +513,7 @@ impl Inline {
     pub fn span(&self) -> Span {
         match self {
             Inline::Text { span, .. }
+            | Inline::Raw { span, .. }
             | Inline::Strong { span, .. }
             | Inline::Emphasis { span, .. }
             | Inline::Monospace { span, .. }

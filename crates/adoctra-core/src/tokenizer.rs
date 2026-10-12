@@ -443,7 +443,7 @@ fn tokens_processed(
 fn flatten_inlines(inlines: &[Inline], out: &mut Vec<Token>) {
     for node in inlines {
         match node {
-            Inline::Text { .. } => {}
+            Inline::Text { .. } | Inline::Raw { .. } => {}
             Inline::Strong { children, span } => {
                 out.push(Token {
                     span: *span,

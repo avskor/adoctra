@@ -293,6 +293,7 @@ fn render_inlines(inlines: &[Inline], out: &mut String) {
     for inline in inlines {
         match inline {
             Inline::Text { value, .. } => out.push_str(&escape_text(value)),
+            Inline::Raw { value, .. } => out.push_str(value),
             Inline::Strong { children, .. } => {
                 out.push_str("<strong>");
                 render_inlines(children, out);

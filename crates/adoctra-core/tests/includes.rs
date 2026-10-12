@@ -1851,3 +1851,43 @@ fn restored_entities_from_included_attributes_keep_reference_source_and_snapshot
         .unwrap();
     assert_eq!(token.span, *span);
 }
+
+#[test]
+fn shared_replacements_keep_selected_source_spans_and_old_snapshots() {
+    let root = "include::part.adoc[tags=body,indent=0]";
+    let part = "\u{feff}// tag::body[]\r\n  :v: C\r\n  :name: copy\r\n\r\n  До ({v}) &{name};\r\n// end::body[]";
+    let (mut sources, mut resources, options) = setup(root, &[("/docs/part.adoc", part)]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty());
+    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+        panic!()
+    };
+    let raw = inlines
+        .iter()
+        .find(|n| matches!(n, Inline::Raw { .. }))
+        .unwrap();
+    assert_eq!(sources.slice(raw.span()), Some("&{name};"));
+    assert_eq!(
+        sources.get(raw.span().source_id).unwrap().name(),
+        "/docs/part.adoc"
+    );
+    let refs: Vec<_> = inlines
+        .iter()
+        .filter(|n| matches!(n, Inline::AttributeRef { .. }))
+        .collect();
+    assert_eq!(refs.len(), 2);
+    let tokens = tokens_resource(&mut sources, &options, &resources).unwrap();
+    for node in refs {
+        assert!(tokens
+            .iter()
+            .any(|t| t.kind == TokenKind::AttributeRef && t.span == node.span()));
+    }
+    resources
+        .insert("/docs/part.adoc", part.replace(":v: C", ":v: R"))
+        .unwrap();
+    let new = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(result.document.attributes.get("v"), Some("C"));
+    assert_eq!(new.document.attributes.get("v"), Some("R"));
+    assert_eq!(sources.slice(raw.span()), Some("&{name};"));
+    assert_eq!(sources.get(raw.span().source_id).unwrap().text(), part);
+}

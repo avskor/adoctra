@@ -4658,6 +4658,310 @@
         "attrs.adoc": "ignored\r\n  :prefix: &\r\n  :value: {prefix}copy;\r\nignored",
         "body.adoc": "{value}"
       }
+    },
+    {
+      "id": "replacements-symbols",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: (C) (R) (TM)\n\n{v}"
+    },
+    {
+      "id": "replacements-split-symbol",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: C\n\n({v})"
+    },
+    {
+      "id": "replacements-split-symbol-attributes",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":left: (T\n:right: M)\n\n{left}{right}"
+    },
+    {
+      "id": "replacements-empty-attribute",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":empty:\n\n(C{empty}) .{empty}.."
+    },
+    {
+      "id": "replacements-ellipsis",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":dots: ..\n\nWait{dots}. and .{dots}"
+    },
+    {
+      "id": "replacements-word-dash",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":dash: -\n\nword-{dash}word {dash}- start"
+    },
+    {
+      "id": "replacements-spaced-dash",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":dash: --\n\nleft {dash} right"
+    },
+    {
+      "id": "replacements-spaces-from-attributes",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":space: pass:[ ]\n\nleft{space}--{space}right"
+    },
+    {
+      "id": "replacements-adjacent-dashes",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":dash: --\n\na {dash} {dash} b"
+    },
+    {
+      "id": "replacements-dash-boundaries",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: --\n\n{v} start\n\nend {v}\n\nx{v} y\n\nx {v}y"
+    },
+    {
+      "id": "replacements-dash-tabs",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: --\n\na\t{v}\tb"
+    },
+    {
+      "id": "replacements-dash-newline",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: --\n\na\n{v}\nb"
+    },
+    {
+      "id": "replacements-apostrophe",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":s: s\n:word: it\n\n{word}'{s} 1'{s} a'1"
+    },
+    {
+      "id": "replacements-apostrophe-unicode",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: Ж\n\né'{v} {v}'é ²'é"
+    },
+    {
+      "id": "replacements-word-unicode",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: Ж\n\né--{v} é--{v} ²--{v}"
+    },
+    {
+      "id": "replacements-word-connector",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: ‿\n\na--{v} {v}--a"
+    },
+    {
+      "id": "replacements-right-quote",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: `\n\n{v}' and `'"
+    },
+    {
+      "id": "replacements-arrows",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":gt: >\n:lt: <\n\n-{gt} ={gt} {lt}- {lt}="
+    },
+    {
+      "id": "replacements-arrow-parts",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":dash: -\n:gt: >\n\n{dash}{gt}"
+    },
+    {
+      "id": "replacements-arrow-order",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":lt: <\n:gt: >\n\n{lt}-{gt} {lt}={gt}"
+    },
+    {
+      "id": "replacements-escape-symbol",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: (C)\n:escape: pass:[\\]\n\n{escape}{v}"
+    },
+    {
+      "id": "replacements-escape-from-attribute",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":escape: pass:[\\]\n\n{escape}(C) {escape}... it{escape}'s {escape}->"
+    },
+    {
+      "id": "replacements-escape-split-symbol",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: C\n\n\\({v})"
+    },
+    {
+      "id": "replacements-escape-double",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: (C)\n:escape: pass:[\\\\]\n\n{escape}{v}"
+    },
+    {
+      "id": "replacements-escape-dash",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: --\n:escape: pass:[\\]\n\na{escape}{v}b a{escape}{v} b {escape}{v}"
+    },
+    {
+      "id": "replacements-escape-apostrophe-context",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":quote: pass:[\\']\n\na{quote}b a{quote}1 {quote}"
+    },
+    {
+      "id": "replacements-escape-arrows",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":gt: >\n:lt: <\n:escape: pass:[\\]\n\n\\-{gt} \\={gt} {escape}{lt}- {escape}{lt}="
+    },
+    {
+      "id": "replacements-entity-source",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "До &copy; &#65; &#x1F642; &unknown; &a; &ab123; после"
+    },
+    {
+      "id": "replacements-entity-split",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":name: copy\n\n&{name};"
+    },
+    {
+      "id": "replacements-entity-attributes",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":left: &co\n:right: py;\n\n{left}{right}"
+    },
+    {
+      "id": "replacements-entity-numeric-split",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":number: 65\n:hex: x1F642\n\n&#{number}; &#{hex};"
+    },
+    {
+      "id": "replacements-entity-escape-split",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: copy\n\n\\&{v};"
+    },
+    {
+      "id": "replacements-entity-escape-attribute",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":escape: pass:[\\]\n:name: copy\n\n{escape}&{name};"
+    },
+    {
+      "id": "replacements-entity-one-pass",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: amp;copy\n\n&{v};"
+    },
+    {
+      "id": "replacements-entity-before-arrow",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":gt: &gt;\n:lt: &lt;\n\n-{gt} {lt}- -&gt; &lt;-"
+    },
+    {
+      "id": "replacements-entity-after-symbol",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: copy\n\n(C)--x &{v};--x"
+    },
+    {
+      "id": "replacements-raw-arrows",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: pass:[-> => <- <=]\n\n{v}"
+    },
+    {
+      "id": "replacements-raw-protected-arrows",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: pass:[-&gt; =&gt; &lt;- &lt;=]\n\n{v}"
+    },
+    {
+      "id": "replacements-raw-markup",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: pass:[<b>(C) -- text...</b>]\n\n{v}"
+    },
+    {
+      "id": "replacements-mixed-parts",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":raw: pass:[<b>(]\n:v: {raw}C) -- done...\n:end: pass:[</b>]\n\n{v}{end}"
+    },
+    {
+      "id": "replacements-formatting-boundary",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: -\n\n*x*{v}-y a{v}-*x* *-- x* *x --*"
+    },
+    {
+      "id": "replacements-formatting-inside",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: C\n:dot: .\n\n*({v}) and {dot}..*"
+    },
+    {
+      "id": "replacements-label",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: C\n\nlink:https://example.org[({v}) &copy;]"
+    },
+    {
+      "id": "replacements-header",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "= ({v}) &copy;\n:v: C\n\n{doctitle}"
+    },
+    {
+      "id": "replacements-block-title-list",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: C\n\n.({v}) &copy;\n* ({v}) &copy;"
+    },
+    {
+      "id": "replacements-body-snapshot",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: C\n\n({v})\n\n:v: R\n\n({v})"
+    },
+    {
+      "id": "replacements-verbatim",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: C\n\n----\n({v}) &copy;\n----\n\n....\n({v}) &copy;\n....\n\n++++\n<b>(C)</b>\n++++"
+    },
+    {
+      "id": "replacements-unicode-crlf",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "﻿:v: C\r\n:name: copy\r\n\r\nДо ({v}) &{name}; после\r\n"
+    },
+    {
+      "id": "replacements-partial",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: C\n\n({v} &cop {broken ..."
+    },
+    {
+      "id": "replacements-include",
+      "category": "substitutions",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":v: C\n\ninclude::part.adoc[tags=body,indent=0]\n",
+      "resources": {
+        "part.adoc": "// tag::body[]\n  До ({v}) &copy;...\n// end::body[]\n"
+      }
     }
   ]
 }

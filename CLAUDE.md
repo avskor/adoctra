@@ -151,12 +151,18 @@ flat string APIs, raw_parts exposes boundaries. AttributeRef.parts and optional
 JSON/WASM parts preserve these boundaries; WASM also exports attribute_parts.
 HTML escapes Text and emits Raw unchanged. Host values are already substituted;
 source whole-value pass supports none, a/attributes and c/specialcharacters/
-specialchars, with ordered unique stages. Entity restoration runs inside resolved
-attribute references (entity_references.rs), including Text/Raw boundaries,
-backslash escapes and one-pass protection removal. It preserves entity syntax as
-Raw parts, the original reference span, and untouched attribute snapshots.
-Other pass stages, other post-attribute replacements, entities in source text or
-across separate inline nodes, and raw whole-doctitle replacement remain work.
+specialchars, with ordered unique stages. A shared lexical replacement stream
+(replacements.rs / substitution_text.rs) processes adjacent Text/AttributeRef
+nodes after expansion, preserving protection, ownership and source spans. It
+applies the pinned replacement stages in order, with entity restoration last;
+entities are not decoded or rescanned. Attribute references keep their token span
+even if an earlier node consumes their entire value (Some("")). Replacements
+starting in Text span the consumed source construct. Inline::Raw carries restored
+source entity syntax; HTML emits it directly and JSON/WASM expose name:"raw".
+Definitions and attribute snapshots remain untouched. Formatting/macro nodes bound
+runs and their children are processed separately. Whole-value pass replacements,
+quotes/macros, general inline attribute escapes/intrinsics, macro target stages
+and raw whole-doctitle replacement remain work.
 The tokenizer shares header parsing (author/revision tokens). Setext document titles use adjacent
 processed lines, Unicode character lengths (difference <= 1), uniform =/-/~/^/+
 underlines and effective level zero. ATX takes precedence. The Heading/header

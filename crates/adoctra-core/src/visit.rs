@@ -118,7 +118,7 @@ pub fn walk_inline_mut(visitor: &mut (impl VisitorMut + ?Sized), inline: &mut In
                 walk_inlines_mut(visitor, reftext);
             }
         }
-        Inline::Text { .. } | Inline::AttributeRef { .. } => {}
+        Inline::Text { .. } | Inline::Raw { .. } | Inline::AttributeRef { .. } => {}
     }
 }
 

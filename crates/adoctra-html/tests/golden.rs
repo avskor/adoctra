@@ -765,3 +765,16 @@ fn attribute_entities_and_escapes_match_asciidoctor() {
     assert!(ours.contains("<p>&amp;copy;</p>"));
     assert!(ours.contains("<strong>&copy;</strong>"));
 }
+
+#[test]
+fn shared_replacements_match_reference_including_raw_and_escaped_entities() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden");
+    let source = fs::read_to_string(dir.join("shared-replacements.adoc")).unwrap();
+    let expected = fs::read_to_string(dir.join("shared-replacements.expected.html")).unwrap();
+    let result = adoctra_core::parse(&source);
+    assert!(result.diagnostics.is_empty());
+    let ours = String::from_utf8(HtmlBackend.convert(&result.document).unwrap()).unwrap();
+    assert_eq!(paragraph_inner(&ours), paragraph_inner(&expected));
+    assert!(ours.contains("<h1>&#169; &copy;</h1>"));
+    assert!(ours.contains("<p>(C) &amp;copy;</p>"));
+}

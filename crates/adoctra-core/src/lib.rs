@@ -29,7 +29,9 @@ mod resolve;
 pub mod resource;
 mod scanner;
 pub mod source;
+mod substitution_text;
 mod tokenizer;
+mod unicode_word;
 pub mod visit;
 
 pub use ast::{Author, Block, BlockKind, Document, DocumentHeader, Inline, Revision, Span};
