@@ -23,6 +23,44 @@ fn setup(root: &str, files: &[(&str, &str)]) -> (SourceMap, MemoryResources, Par
     )
 }
 
+#[test]
+fn sanitized_section_ids_keep_selected_include_title_and_reference_provenance() {
+    let root =
+        ":v: pass:[<b>Жёлтый</b> &copy;]\n\n<<_жёлтый>>\n\ninclude::part.adoc[lines=2..3,indent=0]";
+    let child = "ignored\r\n  == {v}\r\n  \r\nignored";
+    let (mut sources, resources, options) = setup(root, &[("docs/part.adoc", child)]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+    let heading = &result.document.blocks[1];
+    assert_eq!(heading.id.as_deref(), Some("_жёлтый"));
+    let BlockKind::Heading { inlines, .. } = &heading.kind else {
+        panic!()
+    };
+    let span = inlines[0].span();
+    assert_eq!(sources.slice(span), Some("{v}"));
+    assert_eq!(sources.get(span.source_id).unwrap().text(), child);
+    assert_ne!(span.source_id, options.source_id);
+    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+        panic!()
+    };
+    let Inline::CrossReference {
+        target, children, ..
+    } = &inlines[0]
+    else {
+        panic!()
+    };
+    assert_eq!(target, "_жёлтый");
+    assert_eq!(children[0].span(), span);
+    assert!(tokens_resource(&mut sources, &options, &resources)
+        .unwrap()
+        .iter()
+        .any(|t| t.kind == TokenKind::Heading
+            && t.span.source_id == span.source_id
+            && t.span.start <= span.start
+            && t.span.end >= span.end));
+    check_spans(&result, &sources);
+}
+
 fn paragraphs(result: &ParseResult) -> Vec<String> {
     result
         .document

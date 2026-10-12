@@ -565,6 +565,18 @@ mod tests {
     }
 
     #[test]
+    fn section_ids_are_sanitized_without_changing_raw_titles_or_reference_targets() {
+        let json = render(":v: pass:[<b>Alpha</b> &copy;]\n\n== {v}\n\n<<_alpha>>");
+        assert!(json.contains(r#""id":"_alpha""#), "{json}");
+        assert!(json.contains(r#""target":"_alpha""#), "{json}");
+        assert_eq!(
+            json.matches(r#""value":"<b>Alpha</b> &copy;""#).count(),
+            4,
+            "{json}"
+        );
+    }
+
+    #[test]
     fn shared_replacements_export_raw_source_entities_and_consumed_references() {
         let json = render(":v: C\n:name: copy\n\n({v}) &{name}; \\&copy;");
         assert!(json.contains(r#"{"name":"text","value":"©"}"#), "{json}");

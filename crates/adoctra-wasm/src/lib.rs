@@ -1318,6 +1318,26 @@ mod tests {
 #[cfg(test)]
 mod header_tests {
     #[test]
+    fn sanitized_section_ids_preserve_raw_values_and_source_coordinates() {
+        let source = ":v: pass:[<b>Ж</b> &copy;]\r\n\r\n== {v}\r\n\r\n<<_ж>>";
+        let json = super::parse_json_with_source(source, 7);
+        assert!(json.contains(r#""id":"_ж""#), "{json}");
+        assert!(json.contains(r#""target":"_ж""#), "{json}");
+        assert!(json.contains(r#""diagnostics":[]"#), "{json}");
+        let start = source.find("{v}").unwrap();
+        assert!(json.contains(&format!(r#""span":{{"source_id":7,"start":{start},"end":{}}},"name":"attribute-ref","attribute":"v","value":"<b>Ж</b> &copy;""#, start + 3)), "{json}");
+        let tokens = super::tokens_json_with_source(source, 7);
+        let start = source.find("== {v}").unwrap();
+        assert!(
+            tokens.contains(&format!(
+                r#"{{"span":{{"source_id":7,"start":{start},"end":{}}},"kind":"heading"}}"#,
+                start + 6
+            )),
+            "{tokens}"
+        );
+    }
+
+    #[test]
     fn pass_replacements_export_definition_parts_and_reference_coordinates() {
         let source = ":v: pass:c,r[<b>(C)</b>]\n\n{v}";
         let json = super::parse_json_with_source(source, 7);

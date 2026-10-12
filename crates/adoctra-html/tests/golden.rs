@@ -792,3 +792,24 @@ fn pass_replacements_match_reference_with_ordered_protection_and_expansion() {
     assert!(ours.contains("<p>&lt;b&gt;&#174;&lt;/b&gt; &#8594;</p>"));
     assert!(ours.contains("<p>(C)</p>"));
 }
+
+#[test]
+fn section_ids_strip_entities_and_raw_tags_and_preserve_heading_and_link_markup() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden");
+    let source = fs::read_to_string(dir.join("section-id-entities.adoc")).unwrap();
+    let expected = fs::read_to_string(dir.join("section-id-entities.expected.html")).unwrap();
+    let result = adoctra_core::parse(&source);
+    assert!(result.diagnostics.is_empty());
+    let ours = String::from_utf8(HtmlBackend.convert(&result.document).unwrap()).unwrap();
+    let headings = |html: &str| -> Vec<String> {
+        html.lines()
+            .filter(|line| line.starts_with("<h2"))
+            .map(str::to_owned)
+            .collect()
+    };
+    assert_eq!(headings(&ours), headings(&expected));
+    assert_eq!(headings(&ours).len(), 5);
+    assert_eq!(paragraph_inner(&ours), paragraph_inner(&expected));
+    assert!(ours.contains("<h2 id=\"\">&#169; &#8594;</h2>"));
+    assert!(ours.contains("<a href=\"#_alpha\"><b>Alpha</b> &copy;</a>"));
+}

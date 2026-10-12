@@ -162,13 +162,41 @@ fn dedup(base: String, registry: &Registry) -> String {
 
 /// Auto-generate a section id from its (already resolved) title text, matching
 /// asciidoctor's default `idprefix=_`, `idseparator=_`: lowercase; drop every
-/// char that is not a word char, space, hyphen or dot; map runs of
+/// raw tag or entity, then characters other than word chars, spaces, hyphens
+/// and dots; map runs of
 /// space/hyphen/dot (and adjacent separators) to a single `_`; trim leading and
 /// trailing `_`; prefix `_`. An all-separator title yields an empty id, exactly
 /// as asciidoctor emits `id=""`.
 fn generate_id(title: &str) -> String {
+    // InvalidSectionIdCharsRx operates on the substituted lexical title, not
+    // decoded visible text. In particular &#65; is removed, not turned into A.
+    let title: String = title.chars().flat_map(char::to_lowercase).collect();
     let mut mapped = String::with_capacity(title.len());
-    for ch in title.chars().flat_map(char::to_lowercase) {
+    let mut offset = 0;
+    let mut unclosed_tag = false;
+    while offset < title.len() {
+        let rest = &title[offset..];
+        if rest.starts_with('<') && !unclosed_tag {
+            if let Some(end) = rest.find('>') {
+                if end > 1 {
+                    offset += end + 1;
+                    continue;
+                }
+            } else {
+                // Do not repeatedly scan an unfinished run of '<' to EOF.
+                unclosed_tag = true;
+            }
+        }
+        if rest.starts_with('&') {
+            if let Some(end) =
+                crate::entity_references::entity_name_end(title.as_bytes(), offset + 1)
+            {
+                offset = end;
+                continue;
+            }
+        }
+        let ch = rest.chars().next().unwrap();
+        offset += ch.len_utf8();
         if ch.is_alphanumeric() || ch == '_' {
             mapped.push(ch);
         } else if ch == ' ' || ch == '-' || ch == '.' {
@@ -200,8 +228,8 @@ fn generate_id(title: &str) -> String {
     }
 }
 
-/// The visible text of an inline run, with formatting flattened — used to
-/// generate a section id from its title.
+/// A lexical view for ID derivation only. Flatten semantic formatting while
+/// preserving protection of literal characters and raw attribute boundaries.
 fn inline_text(inlines: &[Inline]) -> String {
     let mut s = String::new();
     push_text(inlines, &mut s);
@@ -211,11 +239,23 @@ fn inline_text(inlines: &[Inline]) -> String {
 fn push_text(inlines: &[Inline], s: &mut String) {
     for inline in inlines {
         match inline {
-            Inline::Text { value, .. } | Inline::Raw { value, .. } => s.push_str(value),
+            Inline::Text { value, .. } => push_protected(value, s),
+            Inline::Raw { value, .. } => s.push_str(value),
             // A missing attribute keeps its literal `{name}`, matching how the
             // backends render it (and so the id reflects the visible text).
-            Inline::AttributeRef { name, value, .. } => match value {
-                Some(v) => s.push_str(v),
+            Inline::AttributeRef {
+                name, value, parts, ..
+            } => match value {
+                Some(v) if parts.is_empty() => push_protected(v, s),
+                Some(_) => {
+                    for part in parts {
+                        if part.is_raw() {
+                            s.push_str(part.text());
+                        } else {
+                            push_protected(part.text(), s);
+                        }
+                    }
+                }
                 None => {
                     s.push('{');
                     s.push_str(name);
@@ -229,10 +269,28 @@ fn push_text(inlines: &[Inline], s: &mut String) {
             | Inline::Superscript { children, .. }
             | Inline::Subscript { children, .. }
             | Inline::Link { children, .. }
-            | Inline::CrossReference { children, .. } => push_text(children, s),
-            // An inline anchor renders as an empty `<a id>` — no visible text, so
-            // it contributes nothing to a section id generated from this run.
-            Inline::Anchor { .. } => {}
+            | Inline::CrossReference { children, .. } => {
+                // Keep structural boundaries while flattening. Otherwise raw
+                // "&co", a formatted "py", and ";" would become a new entity.
+                // Empty angle delimiters contribute no ID characters and avoid
+                // introducing any backend's choice of formatting tags.
+                s.push_str("<>");
+                push_text(children, s);
+                s.push_str("<>");
+            }
+            // An anchor has no visible text but still separates lexical runs.
+            Inline::Anchor { .. } => s.push_str("<>"),
+        }
+    }
+}
+
+fn push_protected(text: &str, output: &mut String) {
+    for ch in text.chars() {
+        match ch {
+            '&' => output.push_str("&amp;"),
+            '<' => output.push_str("&lt;"),
+            '>' => output.push_str("&gt;"),
+            _ => output.push(ch),
         }
     }
 }
@@ -346,7 +404,9 @@ mod tests {
     }
 
     fn text_of(children: &[Inline]) -> String {
-        super::inline_text(children)
+        // These resolution assertions compare text, without the temporary
+        // structural boundaries used only while deriving IDs.
+        super::inline_text(children).replace("<>", "")
     }
 
     #[test]

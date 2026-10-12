@@ -166,8 +166,11 @@ Definitions and attribute snapshots remain untouched. Formatting/macro nodes bou
 runs and their children are processed separately. Whole-value pass quotes/macros,
 general inline attribute escapes/intrinsics, macro target stages
 and raw whole-doctitle replacement remain work.
-Automatic section IDs still retain digits from raw entities; a dedicated XFAIL
-covers this pre-existing limitation, also reproducible with pass:[] values.
+Automatic section IDs sanitize a temporary lexical title: raw XML tags and
+references matching the pinned entity grammar are removed, not decoded.
+Literal protection and structural inline boundaries remain distinct; title
+nodes, attribute snapshots and source spans are unchanged. Default prefix,
+separator and deduplication behavior is retained; configurable ID policy remains work.
 The tokenizer shares header parsing (author/revision tokens). Setext document titles use adjacent
 processed lines, Unicode character lengths (difference <= 1), uniform =/-/~/^/+
 underlines and effective level zero. ATX takes precedence. The Heading/header

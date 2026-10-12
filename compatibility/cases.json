@@ -5214,9 +5214,162 @@
     {
       "id": "pass-replacements-section-id",
       "category": "references",
-      "expect": "xfail",
-      "reason": "Automatic section IDs retain digits from raw entity spellings; the same limitation occurs with pass:[] values.",
+      "expect": "pass",
       "source": ":x: pass:c,r[(C) ->]\n\n== {x}"
+    },
+    {
+      "id": "section-id-named",
+      "category": "references",
+      "expect": "pass",
+      "source": ":v: pass:[A &copy; &Unknown12; B]\n\n== {v}"
+    },
+    {
+      "id": "section-id-decimal",
+      "category": "references",
+      "expect": "pass",
+      "source": ":v: pass:[A &#65; &#123456; B]\n\n== {v}"
+    },
+    {
+      "id": "section-id-hex",
+      "category": "references",
+      "expect": "pass",
+      "source": ":v: pass:[A &#x41; &#x1F642; B]\n\n== {v}"
+    },
+    {
+      "id": "section-id-uppercase",
+      "category": "references",
+      "expect": "pass",
+      "source": ":v: pass:[A &COPY; &#X41; B]\n\n== {v}"
+    },
+    {
+      "id": "section-id-invalid-entities",
+      "category": "references",
+      "expect": "pass",
+      "source": ":v: pass:[A &#1; &#1234567; &#x1; &#x123456; &a; &ab123; B]\n\n== {v}"
+    },
+    {
+      "id": "section-id-protected-entities",
+      "category": "references",
+      "expect": "pass",
+      "source": ":v: pass:[A \\&copy; \\&#65; \\&#x41; B]\n\n== {v}"
+    },
+    {
+      "id": "section-id-nested-entities",
+      "category": "references",
+      "expect": "pass",
+      "source": ":v: pass:[A &amp;amp;copy; &amp;amp;#65; B]\n\n== {v}"
+    },
+    {
+      "id": "section-id-raw-tags",
+      "category": "references",
+      "expect": "pass",
+      "source": ":v: pass:[<b>Alpha</b> <em>Beta</em>]\n\n== {v}"
+    },
+    {
+      "id": "section-id-raw-tag-attributes",
+      "category": "references",
+      "expect": "pass",
+      "source": ":v: pass:[<span class=\"red\">Alpha</span> &copy; Beta]\n\n== {v}"
+    },
+    {
+      "id": "section-id-raw-comments",
+      "category": "references",
+      "expect": "pass",
+      "source": ":v: pass:[Alpha <!-- comment --> Beta]\n\n== {v}"
+    },
+    {
+      "id": "section-id-literal-tags",
+      "category": "references",
+      "expect": "pass",
+      "source": ":v: <b>Alpha</b> &copy; Beta\n\n== {v}"
+    },
+    {
+      "id": "section-id-literal-entities",
+      "category": "references",
+      "expect": "pass",
+      "source": "== A \\&copy; \\&#65; \\&#x41; B"
+    },
+    {
+      "id": "section-id-source-entities",
+      "category": "references",
+      "expect": "pass",
+      "source": "== A &copy; &#65; &#x41; B"
+    },
+    {
+      "id": "section-id-formatted-entities",
+      "category": "references",
+      "expect": "pass",
+      "source": "== *A &copy;* _B &#65;_ `C &#x41;`"
+    },
+    {
+      "id": "section-id-mixed-parts",
+      "category": "references",
+      "expect": "pass",
+      "source": ":a: pass:[<b>]\n:b: pass:[</b>]\n:v: {a}Alpha &copy;{b}\n\n== {v}"
+    },
+    {
+      "id": "section-id-split-tags",
+      "category": "references",
+      "expect": "pass",
+      "source": ":a: pass:[<b]\n:b: pass:[>Alpha</b>]\n\n== {a}{b}"
+    },
+    {
+      "id": "section-id-split-entities",
+      "category": "references",
+      "expect": "pass",
+      "source": ":a: pass:[&co]\n:b: pass:[py;]\n\n== A {a}{b} B"
+    },
+    {
+      "id": "section-id-ordered-protection",
+      "category": "references",
+      "expect": "pass",
+      "source": ":a: pass:c,r[(C) ->]\n:b: pass:r,c[(C) ->]\n\n== {a}\n\n== {b}"
+    },
+    {
+      "id": "section-id-duplicates",
+      "category": "references",
+      "expect": "pass",
+      "source": ":v: pass:[&copy;]\n\n== A {v} B\n\n== A B\n\n<<_a_b>> <<_a_b_2>>"
+    },
+    {
+      "id": "section-id-empty-duplicates",
+      "category": "references",
+      "expect": "pass",
+      "source": ":v: pass:r[(C)]\n\n== {v}\n\n== {v}\n\n<<_2>>"
+    },
+    {
+      "id": "section-id-explicit-anchor",
+      "category": "references",
+      "expect": "pass",
+      "source": ":v: pass:r[(C)]\n\n[[custom]]\n== {v}\n\n<<custom>>"
+    },
+    {
+      "id": "section-id-forward-reference",
+      "category": "references",
+      "expect": "pass",
+      "source": ":v: pass:[<b>Alpha</b> &copy; Beta]\n\n<<_alpha_beta>>\n\n== {v}"
+    },
+    {
+      "id": "section-id-snapshots",
+      "category": "references",
+      "expect": "pass",
+      "source": ":v: pass:[Alpha &copy;]\n\n== {v}\n\n:v: pass:[Beta &#65;]\n\n== {v}\n\n<<_alpha>> <<_beta>>"
+    },
+    {
+      "id": "section-id-unicode-crlf",
+      "category": "references",
+      "expect": "pass",
+      "source": "﻿:v: pass:[<b>Жёлтый</b> &#65; café]\r\n\r\n== {v}\r\n\r\n<<_жёлтый_café>>"
+    },
+    {
+      "id": "section-id-include",
+      "category": "references",
+      "expect": "pass",
+      "source": ":v: pass:[<b>Alpha</b> &copy;]\n\n<<_alpha>>\n\ninclude::part.adoc[lines=2..3,indent=0]",
+      "profile": "include-body-dom-v1",
+      "resources": {
+        "part.adoc": "ignored\n  == {v}\n  \nignored"
+      }
     }
   ]
 }

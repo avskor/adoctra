@@ -4,7 +4,12 @@ pub(crate) fn entity_end(bytes: &[u8], start: usize) -> Option<usize> {
     if !bytes.get(start..)?.starts_with(b"&amp;") {
         return None;
     }
-    let mut end = start + 5;
+    entity_name_end(bytes, start + 5)
+}
+
+/// Shared suffix grammar for restored references and section ID sanitization.
+/// The caller supplies the byte immediately after the lexical ampersand.
+pub(crate) fn entity_name_end(bytes: &[u8], mut end: usize) -> Option<usize> {
     let (min, max, digits): (usize, usize, fn(&u8) -> bool) =
         if bytes.get(end..)?.starts_with(b"#x") {
             end += 2;
