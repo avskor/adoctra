@@ -7,7 +7,7 @@ use crate::context::{
 };
 use crate::parser::parse_heading;
 use crate::reader::Reader;
-use crate::{Author, DocumentHeader, Revision, Span};
+use crate::{Attributes, Author, DocumentHeader, Revision, Span};
 use std::sync::Arc;
 
 pub(crate) struct HeaderTitle {
@@ -110,7 +110,11 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
         if lines.has(i, context) && !lines[i].1.trim().is_empty() {
             result.author_line = Some(i);
             authors = parse_authors(&lines[i].1, lines[i].0, false);
-            install_authors(&authors, context, false);
+            let values = author_attributes(&authors);
+            Arc::make_mut(&mut context.attributes).set("authorcount", authors.len().to_string());
+            for (key, value) in values.iter().filter(|(key, _)| *key != "authorcount") {
+                set_implicit(context, key, value);
+            }
             implicit_author = context.attributes.get("author").map(str::to_owned);
             implicit_authors = context.attributes.get("authors").map(str::to_owned);
             implicit_initials = context.attributes.get("authorinitials").map(str::to_owned);
@@ -163,8 +167,9 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
             _ => {}
         }
     }
-    // Explicit name attributes replace derived name fields; emails are separate
-    // attributes in this form. Indexed author_N overrides remain follow-up work.
+    // Explicit name attributes have priority over the contiguous author_N list.
+    // Compare indexed values to source declarations, not the effective attributes
+    // captured after installing defaults (which may already contain overrides).
     let explicit = context
         .attributes
         .get("author")
@@ -177,21 +182,64 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
                 .filter(|value| Some(*value) != implicit_authors.as_deref())
                 .map(|value| (value.to_owned(), true))
         });
-    if let Some((value, multiple)) = explicit {
+    let mut derived = if let Some((value, multiple)) = explicit {
         let initials = context.attributes.get("authorinitials").map(str::to_owned);
         let preserve_initials = !multiple && initials != implicit_initials;
         let authors = if multiple {
             parse_authors(&value, 0, true)
         } else {
-            vec![parse_author(&value, 0, true)]
+            parse_author_override(&value).into_iter().collect()
         };
-        install_authors(&authors, context, true);
+        let mut values = author_attributes(&authors);
         if preserve_initials {
-            context.apply(match initials {
-                Some(value) => AttributeEntry::Set("authorinitials".to_owned(), value),
-                None => AttributeEntry::Unset("authorinitials".to_owned()),
-            });
+            values.remove("authorinitials");
         }
+        Some(values)
+    } else if let Some(header) = &result.metadata {
+        let implicit = author_attributes(&header.authors);
+        let mut authors = Vec::new();
+        let mut changed = false;
+        for index in 1.. {
+            let key = format!("author_{index}");
+            let Some(value) = context.attributes.get(&key) else {
+                break;
+            };
+            if Some(value) == implicit.get(&key) {
+                // Rebuilding unchanged names preserves compound name components.
+                let mut author = header.authors[index - 1].clone();
+                author.email = None;
+                authors.push(author);
+            } else {
+                changed = true;
+                if let Some(author) = parse_author_override(value) {
+                    authors.push(author);
+                }
+            }
+        }
+        changed.then(|| author_attributes(&authors))
+    } else {
+        None
+    };
+    let has_declarations = result.author_line.is_some();
+    // Empty overrides do not erase an implicit author line. Without one, Ruby
+    // records a zero count, including documents with no title or author fields.
+    if derived.as_ref().and_then(|a| a.get("authorcount")) == Some("0") {
+        derived = None;
+    }
+    if let Some(values) = derived {
+        // These are derived metadata, not document attribute entries: Ruby merges
+        // them even over locked host fields, without a second substitution pass.
+        let attributes = Arc::make_mut(&mut context.attributes);
+        for (key, value) in values.iter() {
+            attributes.set(key, value);
+        }
+        if result.metadata.is_some() && attributes.get("email").is_none() {
+            if let Some(email) = attributes.get("email_1").map(str::to_owned) {
+                attributes.set("email", email);
+            }
+        }
+    } else if !has_declarations {
+        Arc::make_mut(&mut context.attributes).set("authorcount", "0");
     }
     result
 }
@@ -268,18 +316,19 @@ fn set_implicit(context: &mut ParseContext, key: &str, value: &str) {
     }
 }
 
-fn install_authors(authors: &[Author], context: &mut ParseContext, replace: bool) {
-    let mut values = vec![
-        ("authorcount".to_owned(), authors.len().to_string()),
-        (
-            "authors".to_owned(),
+fn author_attributes(authors: &[Author]) -> Attributes {
+    let mut values = Attributes::new();
+    values.set("authorcount", authors.len().to_string());
+    if !authors.is_empty() {
+        values.set(
+            "authors",
             authors
                 .iter()
                 .map(|a| a.name.as_str())
                 .collect::<Vec<_>>()
                 .join(", "),
-        ),
-    ];
+        );
+    }
     for (i, author) in authors.iter().enumerate() {
         let mut suffixes = vec![if i == 0 {
             String::new()
@@ -299,18 +348,16 @@ fn install_authors(authors: &[Author], context: &mut ParseContext, replace: bool
                 ("email", author.email.as_ref()),
             ] {
                 if let Some(value) = value {
-                    values.push((format!("{key}{suffix}"), value.clone()));
+                    values.set(format!("{key}{suffix}"), value);
                 }
             }
         }
     }
-    for (key, value) in values {
-        if replace {
-            context.apply(AttributeEntry::Set(key, value));
-        } else {
-            set_implicit(context, &key, &value);
-        }
-    }
+    values
+}
+
+fn parse_author_override(value: &str) -> Option<Author> {
+    (!value.is_empty()).then(|| parse_author(value, 0, true))
 }
 
 fn parse_authors(line: &str, off: usize, names_only: bool) -> Vec<Author> {

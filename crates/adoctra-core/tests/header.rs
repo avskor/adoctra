@@ -536,3 +536,172 @@ fn doctitle_replacement_ranges_cover_real_entries_and_nested_inlines() {
         }
     }
 }
+
+#[test]
+fn indexed_authors_reconcile_names_but_retain_source_declarations() {
+    let source = "\u{feff}= Документ\r\nИван Петров <first>; Mary_Jane Q Public <second>\r\n:early: {authors}\r\n:author_2: Анна Смирнова\r\n\r\n{authors}\r\n\r\n:author_2: Later\r\n\r\n{author_2}";
+    let mut sources = SourceMap::new();
+    sources.add("unused", "");
+    let id = sources.add("authors.adoc", source);
+    let options = ParseOptions {
+        source_id: id,
+        ..Default::default()
+    };
+    let result = parse_with_options(source, &options);
+    assert!(result.diagnostics.is_empty());
+    let doc = &result.document;
+    for (key, value) in [
+        ("authors", "Иван Петров, Анна Смирнова"),
+        ("early", "Иван Петров, Mary Jane Q Public"),
+        ("authorcount", "2"),
+        ("firstname_2", "Анна"),
+        ("lastname_2", "Смирнова"),
+        ("authorinitials_2", "АС"),
+        ("middlename_2", "Q"),
+        ("email_2", "second"),
+    ] {
+        assert_eq!(doc.attributes.get(key), Some(value), "{key}");
+    }
+    let header = doc.header.as_ref().unwrap();
+    assert_eq!(header.authors[1].name, "Mary Jane Q Public");
+    assert_eq!(
+        sources.slice(header.authors[1].span),
+        Some("Mary_Jane Q Public <second>")
+    );
+    assert_eq!(
+        doc.blocks[1].attribute_context.get("author_2"),
+        Some("Анна Смирнова")
+    );
+    assert_eq!(
+        doc.blocks[2].attribute_context.get("author_2"),
+        Some("Later")
+    );
+    assert_eq!(
+        doc.blocks[2].attribute_context.get("firstname_2"),
+        Some("Анна")
+    );
+    let BlockKind::Paragraph { inlines } = &doc.blocks[1].kind else {
+        panic!()
+    };
+    assert_eq!(sources.slice(inlines[0].span()), Some("{authors}"));
+    assert!(
+        matches!(&inlines[0], adoctra_core::Inline::AttributeRef { value: Some(value), .. } if value == "Иван Петров, Анна Смирнова")
+    );
+    let tokens = tokens_with_options(source, &options);
+    let author = tokens.iter().find(|t| t.kind == TokenKind::Author).unwrap();
+    assert_eq!(
+        sources.slice(author.span),
+        Some("Иван Петров <first>; Mary_Jane Q Public <second>")
+    );
+}
+
+#[test]
+fn indexed_authors_preserve_compound_components_and_require_contiguous_keys() {
+    let doc = parse("= Doc\nMary_Jane Q Public; John Doe\n:author_2: Alice Brown\n\nBody").document;
+    assert_eq!(doc.attributes.get("firstname"), Some("Mary Jane"));
+    assert_eq!(doc.attributes.get("middlename"), Some("Q"));
+    assert_eq!(doc.attributes.get("lastname"), Some("Public"));
+    assert_eq!(doc.attributes.get("authorinitials_1"), Some("MQP"));
+    for source in [
+        ":author_1: Alice Brown\n\nBody",
+        "= Doc\n:author_2: Alice Brown\n\nBody",
+    ] {
+        let doc = parse(source).document;
+        assert_eq!(doc.attributes.get("authorcount"), Some("0"));
+        assert!(doc.attributes.get("firstname").is_none());
+    }
+    let doc =
+        parse("= Doc\nJohn Doe; Mary Roe\n:author_1!:\n:author_2: Alice Brown\n\nBody").document;
+    assert_eq!(doc.attributes.get("authors"), Some("John Doe, Mary Roe"));
+    assert_eq!(doc.attributes.get("firstname_2"), Some("Mary"));
+    let doc = parse("= Doc\n:author_1: Alice Brown\n:author_3: Bob White\n\nBody").document;
+    assert_eq!(doc.attributes.get("authors"), Some("Alice Brown"));
+    assert_eq!(doc.attributes.get("authorcount"), Some("1"));
+    assert!(doc.attributes.get("firstname_3").is_none());
+}
+
+#[test]
+fn indexed_empty_overrides_compact_names_without_deleting_old_fields() {
+    for (entries, expected, count) in [
+        (":author_1:", "Mary Roe", "1"),
+        (":author_2:", "John Doe", "1"),
+        (":author_1:\n:author_2:", "John Doe, Mary Roe", "2"),
+    ] {
+        let doc = parse(&format!("= Doc\nJohn Doe; Mary Roe\n{entries}\n\nBody")).document;
+        assert_eq!(doc.attributes.get("authors"), Some(expected));
+        assert_eq!(doc.attributes.get("authorcount"), Some(count));
+        assert_eq!(doc.attributes.get("lastname_2"), Some("Roe"));
+    }
+    let doc = parse("= Doc\n:author_1: Alice Brown\n:email_1: contact\n\nBody").document;
+    assert_eq!(doc.attributes.get("email"), Some("contact"));
+    let doc = parse(":author: Alice Brown\n:email_1: contact\n\nBody").document;
+    assert!(doc.attributes.get("email").is_none());
+}
+
+#[test]
+fn derived_author_metadata_replaces_host_fields_without_unlocking_body_entries() {
+    let mut attributes = Attributes::new();
+    for (key, value) in [
+        ("author_2", "New_Name"),
+        ("firstname_2", "LOCKED"),
+        ("authorcount", "99"),
+    ] {
+        attributes.set(key, value);
+    }
+    let doc = parse_with_options(
+        "= Doc\nJohn Doe; Mary Roe\n:author_2: Ignored\n\nFirst\n\n:firstname_2: Ignored\n\nSecond",
+        &ParseOptions {
+            attributes,
+            ..Default::default()
+        },
+    )
+    .document;
+    assert_eq!(doc.attributes.get("author_2"), Some("New Name"));
+    assert_eq!(doc.attributes.get("firstname_2"), Some("New Name"));
+    assert_eq!(doc.attributes.get("authorcount"), Some("2"));
+    assert_eq!(
+        doc.blocks
+            .last()
+            .unwrap()
+            .attribute_context
+            .get("firstname_2"),
+        Some("New Name")
+    );
+}
+
+#[test]
+fn indexed_overrides_follow_explicit_name_priority_and_preserve_partial_input() {
+    for (entry, names) in [
+        (":author: Single Name", "Single Name"),
+        (":authors: One Name; Two Names", "One Name, Two Names"),
+    ] {
+        let doc = parse(&format!(
+            "= Doc\nJohn Doe; Mary Roe\n{entry}\n:author_2: Other Name\n\nBody"
+        ))
+        .document;
+        assert_eq!(doc.attributes.get("authors"), Some(names));
+    }
+    let source =
+        "= Я\r\nИван Петров; Mary_Jane Q Public\r\n:author_2: Анна Смирнова\r\n\r\n{authors}";
+    for end in (0..=source.len()).filter(|&end| source.is_char_boundary(end)) {
+        let partial = &source[..end];
+        let parsed = parse(partial);
+        for span in adoctra_core::tokens(partial)
+            .into_iter()
+            .map(|t| t.span)
+            .chain(
+                parsed
+                    .document
+                    .header
+                    .iter()
+                    .flat_map(|h| h.authors.iter().map(|a| a.span)),
+            )
+            .chain(parsed.diagnostics.iter().map(|d| d.span))
+        {
+            assert!(
+                partial.get(span.start..span.end).is_some(),
+                "{partial:?}: {span:?}"
+            );
+        }
+    }
+}

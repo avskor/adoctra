@@ -724,3 +724,18 @@ fn doctitle_override_and_attribute_match_asciidoctor() {
     assert_eq!(heading(&ours), heading(&expected));
     assert_eq!(paragraph_inner(&ours), paragraph_inner(&expected));
 }
+
+#[test]
+fn indexed_author_names_match_asciidoctor() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden");
+    let source = fs::read_to_string(dir.join("header-indexed-authors.adoc")).unwrap();
+    let expected = fs::read_to_string(dir.join("header-indexed-authors.expected.html")).unwrap();
+    let result = adoctra_core::parse(&source);
+    assert!(result.diagnostics.is_empty());
+    let ours = String::from_utf8(HtmlBackend.convert(&result.document).unwrap()).unwrap();
+    assert_eq!(paragraph_inner(&ours), paragraph_inner(&expected));
+    assert_eq!(
+        result.document.header.unwrap().authors[1].name,
+        "Иван Петров"
+    );
+}

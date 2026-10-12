@@ -137,6 +137,13 @@ Header/body attribute assignment and both unset forms are implemented.
 Document.header stores source declarations (authors/revision and spans); effective
 metadata stays in Document.attributes. The title remains the first level-0
 Heading, with only its span referenced by the header. Header parsing is shared
+with all consumers. Indexed author_N overrides reconcile contiguous keys from
+author_1 at header completion, after explicit author/authors priority, comparing
+against source declarations. Unchanged compound names retain their components;
+empty entries are skipped, and missing derived fields/emails are not deleted.
+Derived metadata may replace locked host fields without unlocking subsequent
+document entries. Body author_N assignments do not recompute name fields.
+Original Author records and physical spans remain unchanged. Parsing is shared
 with the tokenizer (author/revision tokens). Setext document titles use adjacent
 processed lines, Unicode character lengths (difference <= 1), uniform =/-/~/^/+
 underlines and effective level zero. ATX takes precedence. The Heading/header

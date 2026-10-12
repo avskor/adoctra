@@ -1309,6 +1309,27 @@ mod tests {
 #[cfg(test)]
 mod header_tests {
     #[test]
+    fn indexed_authors_keep_declarations_and_tokens_separate_from_effective_names() {
+        let source = "= Doc\nJohn Doe; Mary Roe\n:author_2: Alice Brown\n\n{authors}";
+        let json = super::parse_json_with_source(source, 7);
+        assert!(json.contains(r#""author_2":"Alice Brown""#), "{json}");
+        assert!(
+            json.contains(r#""value":"John Doe, Alice Brown""#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""span":{"source_id":7,"start":16,"end":24},"name":"Mary Roe""#),
+            "{json}"
+        );
+        let tokens = super::tokens_json_with_source(source, 7);
+        assert!(
+            tokens.contains(r#""span":{"source_id":7,"start":6,"end":24},"kind":"author""#),
+            "{tokens}"
+        );
+        assert!(tokens.contains(r#""kind":"attribute-entry""#), "{tokens}");
+    }
+
+    #[test]
     fn doctitle_override_exports_declaration_and_replacement_source() {
         let source = "= Original\n:doctitle: *Effective*\n\nBody";
         let json = super::parse_json_with_source(source, 7);

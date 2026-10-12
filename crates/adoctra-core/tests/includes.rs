@@ -1733,3 +1733,41 @@ fn doctitle_override_keeps_selected_multisource_origins_and_snapshots() {
     assert_ne!(parts[0].source_id, parts.last().unwrap().source_id);
     check_spans(&result, &sources);
 }
+
+#[test]
+fn indexed_author_overrides_across_selected_includes_keep_original_names_and_spans() {
+    let root =
+        "= Doc\ninclude::authors.adoc[lines=2..3,indent=0]\ninclude::override.adoc[]\n\n{authors}";
+    let included = "ignored\r\n  Иван Петров; Mary_Jane Q Public\r\n  :early: {authors}\r\nignored";
+    let (mut sources, resources, options) = setup(
+        root,
+        &[
+            ("/docs/authors.adoc", included),
+            ("/docs/override.adoc", ":author_2: Анна Смирнова"),
+        ],
+    );
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty());
+    assert_eq!(
+        result.document.attributes.get("authors"),
+        Some("Иван Петров, Анна Смирнова")
+    );
+    assert_eq!(
+        result.document.attributes.get("early"),
+        Some("Иван Петров, Mary Jane Q Public")
+    );
+    let header = result.document.header.as_ref().unwrap();
+    assert_eq!(header.authors[1].name, "Mary Jane Q Public");
+    assert_eq!(
+        sources.slice(header.authors[1].span),
+        Some("Mary_Jane Q Public")
+    );
+    assert_ne!(header.authors[1].span.source_id, options.source_id);
+    assert_eq!(paragraphs(&result), ["Иван Петров, Анна Смирнова"]);
+    let tokens = tokens_resource(&mut sources, &options, &resources).unwrap();
+    let author = tokens.iter().find(|t| t.kind == TokenKind::Author).unwrap();
+    assert_eq!(
+        sources.slice(author.span),
+        Some("Иван Петров; Mary_Jane Q Public")
+    );
+}

@@ -533,6 +533,16 @@ mod tests {
     }
 
     #[test]
+    fn indexed_authors_export_effective_text_and_original_declarations() {
+        let json = render("= Doc\nJohn Doe; Mary Roe\n:author_2: Alice Brown\n\n{authors}");
+        assert!(json.contains(r#""name":"Mary Roe""#), "{json}");
+        assert!(
+            json.contains(r#""value":"John Doe, Alice Brown""#),
+            "{json}"
+        );
+    }
+
+    #[test]
     fn doctitle_override_exports_effective_heading_and_source_declaration() {
         let json = render("= Original\n:doctitle: *Effective*\n\n{doctitle}");
         assert!(json.contains(r#""title":"Original""#), "{json}");
