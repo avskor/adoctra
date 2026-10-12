@@ -186,9 +186,17 @@ windows and relation options; single-quoted params rerun substitutions with a
 32-level macro recursion bound for cyclic host values. Late a/r/c stages, author
 derivation and snapshots retain their semantics. Implicit xref labels strip
 generated attribute link boundaries from the clone without mutating headings.
-The general post-attribute macro pass and non-link pass macros remain work, as do
-general inline attribute escapes/intrinsics, ordinary macro target substitutions
-and raw whole-doctitle replacement.
+Post-attribute link macros now share the lexical matcher across adjacent
+Text/Raw/resolved AttributeRef nodes after replacements. Generated content starting
+in source text uses Inline::Substituted { value, parts, span }; parts retain neutral
+boundaries, and JSON/WASM use name:"substituted". Attribute-owned results stay in
+AttributeRef; consumed references remain empty with their original spans/tokens.
+Source-owned results cover consumed constructs, including source provenance across
+includes. Definitions/snapshots do not change. Existing syntax nodes bound runs;
+their children are visited separately, excluding already parsed bare Link labels.
+Migrating the old inline link scanner into this pipeline (including ordinary macro
+target substitutions, params and escapes), non-link pass macros, general inline
+attribute escapes/intrinsics and raw whole-doctitle replacement remain work.
 The quote compat-mode is cached from host overrides at context creation and from
 attributes at header completion; header entries and body assignments do not
 eagerly change this cache. This does not yet change the ordinary inline scanner.

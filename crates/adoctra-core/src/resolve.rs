@@ -241,6 +241,9 @@ fn push_text(inlines: &[Inline], s: &mut String) {
         match inline {
             Inline::Text { value, .. } => push_protected(value, s),
             Inline::Raw { value, .. } => s.push_str(value),
+            Inline::Substituted { parts, .. } => {
+                s.push_str(&crate::attributes::reference_text(parts))
+            }
             // A missing attribute keeps its literal `{name}`, matching how the
             // backends render it (and so the id reflects the visible text).
             Inline::AttributeRef {
@@ -354,7 +357,7 @@ fn strip_attribute_links(inlines: &mut [Inline]) {
     struct Strip;
     impl VisitorMut for Strip {
         fn visit_inline(&mut self, inline: &mut Inline) {
-            if let Inline::AttributeRef { parts, .. } = inline {
+            if let Inline::AttributeRef { parts, .. } | Inline::Substituted { parts, .. } = inline {
                 parts.retain(|part| {
                     !matches!(
                         part,

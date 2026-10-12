@@ -441,6 +441,12 @@ fn write_inlines(inlines: &[Inline], s: &mut String) {
                 escape_into(value, s);
                 s.push('}');
             }
+            Inline::Substituted { value, parts, .. } => {
+                s.push_str("{\"name\":\"substituted\",\"value\":");
+                escape_into(value, s);
+                adoctra_core::json::write_attribute_parts(parts, s);
+                s.push('}');
+            }
             Inline::Raw { value, .. } => {
                 s.push_str("{\"name\":\"raw\",\"value\":");
                 escape_into(value, s);
@@ -556,6 +562,15 @@ mod tests {
         assert!(json.contains(r#""name":"John Doe""#), "{json}");
         assert!(json.contains(r#""value":"Анна""#), "{json}");
         assert!(json.contains(r#""parts":[{"kind":"raw","value":"<b>Анна</b>"},{"kind":"text","value":" Смирнова"}]"#), "{json}");
+    }
+
+    #[test]
+    fn post_attribute_macros_export_neutral_parts_without_generated_markup() {
+        let json = render(":s: ttps\n\nh{s}://example.org");
+        assert!(json.contains(r#""name":"substituted","value":"https://example.org","parts":[{"kind":"open-link","target":"https://example.org","role":"bare"},{"kind":"text","value":"https://example.org"},{"kind":"close-link"}]"#), "{json}");
+        assert!(!json.contains("<a href"), "{json}");
+        let json = render(":v: link:page[Ж&,role=red]\n\n{v}");
+        assert!(json.contains(r#""value":"Ж&","parts":[{"kind":"open-link","target":"page","role":"red"},{"kind":"text","value":"Ж&"},{"kind":"close-link"}]"#), "{json}");
     }
 
     #[test]

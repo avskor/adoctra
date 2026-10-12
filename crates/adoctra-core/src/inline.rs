@@ -38,6 +38,7 @@ pub(crate) fn scan_inlines_with(
 ) -> Vec<Inline> {
     let mut out = scan_unprocessed(src, base, attrs);
     crate::replacements::apply_inlines(&mut out, fold_newlines);
+    crate::attribute_macros::apply_inlines(&mut out, attrs);
     out
 }
 

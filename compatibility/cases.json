@@ -75,8 +75,7 @@
     {
       "id": "attribute-link",
       "category": "substitutions",
-      "expect": "xfail",
-      "reason": "Macros introduced by attribute substitution are not recognized.",
+      "expect": "pass",
       "source": ":site: https://example.org\n\n{site}[Site]"
     },
     {
@@ -282,8 +281,7 @@
     {
       "id": "header-email-link",
       "category": "substitutions",
-      "expect": "xfail",
-      "reason": "Email resolved from a header attribute is not rescanned as an automatic mailto link.",
+      "expect": "pass",
       "source": "= Doc\nJane Doe <jane@example.org>\n\n{email}"
     },
     {
@@ -6570,22 +6568,344 @@
     {
       "id": "pass-macros-bare-url-rescan",
       "category": "attributes",
-      "expect": "xfail",
-      "source": ":v: pass:m[https://example.org]\n\n{v}",
-      "reason": "The general macro stage after attribute expansion is still missing: Ruby autolinks the visible URL again inside the generated link."
+      "expect": "pass",
+      "source": ":v: pass:m[https://example.org]\n\n{v}"
     },
     {
       "id": "pass-macros-escaped-rescan",
       "category": "attributes",
-      "expect": "xfail",
-      "source": ":v: pass:m[\\link:page[Text]]\n\n{v}",
-      "reason": "The general macro stage after attribute expansion is still missing: Ruby recognizes the link after the attribute macro stage removes its escape."
+      "expect": "pass",
+      "source": ":v: pass:m[\\link:page[Text]]\n\n{v}"
     },
     {
       "id": "pass-macros-email-domain-backtracking",
       "category": "attributes",
       "expect": "pass",
       "source": ":v: pass:m[a@b.com- a@b.com.toolong a@b.abcdef a@b.com_]\n\n{v}"
+    },
+    {
+      "id": "post-macros-url",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: https://example.org\n\n{v}"
+    },
+    {
+      "id": "post-macros-explicit",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: link:page[Text]\n\n{v}"
+    },
+    {
+      "id": "post-macros-mailto",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: mailto:a@example.org[Mail]\n\n{v}"
+    },
+    {
+      "id": "post-macros-email",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: a@example.org\n\n{v}"
+    },
+    {
+      "id": "post-macros-file",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: file:///tmp/page\n\n{v}"
+    },
+    {
+      "id": "post-macros-ftp",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: ftp://example.org/page\n\n{v}"
+    },
+    {
+      "id": "post-macros-irc",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: irc://example.org\n\n{v}"
+    },
+    {
+      "id": "post-macros-params",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: link:page[Text,id=anchor,role=red,title=Title,window=_blank,opts=nofollow]\n\n{v}"
+    },
+    {
+      "id": "post-macros-query",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: https://example.org?a=1&b=2\n\n{v}"
+    },
+    {
+      "id": "post-macros-protected",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: link:page[A&B]\n\n{v}"
+    },
+    {
+      "id": "post-macros-empty",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: link:[Empty]\n\n{v}"
+    },
+    {
+      "id": "post-macros-blank-label",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: link:page[]\n\n{v}"
+    },
+    {
+      "id": "post-macros-mail-params",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: mailto:a@example.org[Mail,Hello world,Ж&]\n\n{v}"
+    },
+    {
+      "id": "post-macros-escape",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: \\link:page[Text]\n\n{v}"
+    },
+    {
+      "id": "post-macros-escape-url",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: \\https://example.org\n\n{v}"
+    },
+    {
+      "id": "post-macros-escape-email",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: \\a@example.org\n\n{v}"
+    },
+    {
+      "id": "post-macros-punctuation",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: https://example.org/path);\n\n{v}"
+    },
+    {
+      "id": "post-macros-word-boundary",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: xhttps://example.org\n\n{v}"
+    },
+    {
+      "id": "post-macros-incomplete",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: link:page[Unclosed\n\n{v}"
+    },
+    {
+      "id": "post-macros-raw",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: pass:[link:page[A&B]]\n\n{v}"
+    },
+    {
+      "id": "post-macros-formatted-label",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: pass:q[link:page[*Bold*]]\n\n{v}"
+    },
+    {
+      "id": "post-macros-restored-label",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: link:page[&copy;]\n\n{v}"
+    },
+    {
+      "id": "post-macros-replace-label",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: link:page[Text(C)]\n\n{v}"
+    },
+    {
+      "id": "post-macros-unicode",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: link:страница[Жёлтый]\n\n{v}"
+    },
+    {
+      "id": "post-macros-split-scheme",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":scheme: https\n\n{scheme}://example.org"
+    },
+    {
+      "id": "post-macros-split-text-prefix",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":scheme: ttps\n\nh{scheme}://example.org"
+    },
+    {
+      "id": "post-macros-split-refs",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":a: link:\n:b: page[\n:c: Label]\n\n{a}{b}{c}"
+    },
+    {
+      "id": "post-macros-empty-ref",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":a: https\n:empty:\n\n{a}{empty}://example.org"
+    },
+    {
+      "id": "post-macros-split-email",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":name: a\n:domain: example.org\n\n{name}@{domain}"
+    },
+    {
+      "id": "post-macros-split-text-email",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":domain: example.org\n\na@{domain}"
+    },
+    {
+      "id": "post-macros-split-label",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":a: link:page[\n:b: pass:q[*Bold*]\n\n{a}{b}]"
+    },
+    {
+      "id": "post-macros-cross-parts",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":amp: &\n:v: pass:a[link:page[A{amp}B]]\n\n{v}"
+    },
+    {
+      "id": "post-macros-snapshot",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: https://one.example\n\n{v}\n\n:v: link:two[Two]\n\n{v}"
+    },
+    {
+      "id": "post-macros-hide-scheme",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":hide-uri-scheme:\n:v: https://example.org\n\n{v}"
+    },
+    {
+      "id": "post-macros-compat",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":compat-mode:\n:v: link:page[Text,role=red]\n\n{v}"
+    },
+    {
+      "id": "post-macros-list",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: link:page[Text]\n\n* {v}"
+    },
+    {
+      "id": "post-macros-title",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: link:page[Text]\n\n.{v}\nPara"
+    },
+    {
+      "id": "post-macros-section",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: link:page[Text]\n\n<<_text>>\n\n== {v}"
+    },
+    {
+      "id": "post-macros-text-section",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":s: ttps\n\n<<_httpsexample_org>>\n\n== h{s}://example.org"
+    },
+    {
+      "id": "post-macros-formatting",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: https://example.org\n\n*{v}*"
+    },
+    {
+      "id": "post-macros-link-label",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: https://example.org\n\nlink:outer[{v}]"
+    },
+    {
+      "id": "post-macros-verbatim",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: https://example.org\n\n----\n{v}\n----"
+    },
+    {
+      "id": "post-macros-unicode-crlf",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "﻿:v: link:страница[Ж&]\r\n\r\nДо {v}"
+    },
+    {
+      "id": "post-macros-multiline",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: link:page[Hello \\\n  world]\n\n{v}"
+    },
+    {
+      "id": "post-macros-comment-fragments",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":s: ttps\n\nh{s}://example.org\n// omitted\nTail"
+    },
+    {
+      "id": "post-macros-include",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "include::part.adoc[tags=body,indent=0]",
+      "resources": {
+        "part.adoc": "// tag::body[]\n  :s: ttps\n\n  h{s}://example.org\n// end::body[]"
+      },
+      "profile": "include-body-dom-v1"
+    },
+    {
+      "id": "post-macros-include-continuation",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "include::part.adoc[]\nhttps\n\n{s}://example.org",
+      "resources": {
+        "part.adoc": ":s: \\\n"
+      },
+      "profile": "include-body-dom-v1"
+    },
+    {
+      "id": "post-macros-email-format-boundary",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: a@example.org\n\n*{v}*"
+    },
+    {
+      "id": "post-macros-email-after-formatting",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: a@example.org\n\n*Bold*{v}"
+    },
+    {
+      "id": "post-macros-email-format-space",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: a@example.org\n\n*Email {v}*"
+    },
+    {
+      "id": "post-macros-after-replacement",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":s: ttps\n\nЖ(C) h{s}://example.org"
+    },
+    {
+      "id": "post-macros-cross-source",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":k: nk:\n\nli{k}page[First\ninclude::part.adoc[]",
+      "profile": "include-body-dom-v1",
+      "resources": {
+        "part.adoc": "Second]"
+      }
     }
   ]
 }

@@ -364,62 +364,9 @@ fn render_inlines(inlines: &[Inline], out: &mut String) {
             // Resolved in core: emit the value, or fall back to the literal
             // `{name}` for a missing attribute (asciidoctor's default).
             Inline::AttributeRef { value, parts, .. } if !parts.is_empty() && value.is_some() => {
-                for part in parts {
-                    match part {
-                        adoctra_core::AttributePart::Text(text) => out.push_str(&escape_text(text)),
-                        adoctra_core::AttributePart::Raw(text) => out.push_str(text),
-                        adoctra_core::AttributePart::OpenLink(link) => {
-                            out.push_str("<a href=\"");
-                            out.push_str(&link.target);
-                            out.push('"');
-                            for (key, value) in [
-                                ("id", &link.id),
-                                ("class", &link.role),
-                                ("title", &link.title),
-                                ("target", &link.window),
-                                ("rel", &link.rel),
-                            ] {
-                                if let Some(value) = value {
-                                    out.push(' ');
-                                    out.push_str(key);
-                                    out.push_str("=\"");
-                                    out.push_str(value);
-                                    out.push('"');
-                                }
-                            }
-                            out.push('>');
-                        }
-                        adoctra_core::AttributePart::CloseLink => out.push_str("</a>"),
-                        adoctra_core::AttributePart::Open(format) => {
-                            out.push('<');
-                            out.push_str(attribute_format_tag(*format));
-                            out.push('>');
-                        }
-                        adoctra_core::AttributePart::OpenWithAttributes { format, id, role } => {
-                            out.push('<');
-                            out.push_str(attribute_format_tag(*format));
-                            // Quote substitution already retains lexical protection
-                            // in these values; escaping again would double entities.
-                            if let Some(id) = id {
-                                out.push_str(" id=\"");
-                                out.push_str(id);
-                                out.push('"');
-                            }
-                            if let Some(role) = role {
-                                out.push_str(" class=\"");
-                                out.push_str(role);
-                                out.push('"');
-                            }
-                            out.push('>');
-                        }
-                        adoctra_core::AttributePart::Close(format) => {
-                            out.push_str("</");
-                            out.push_str(attribute_format_tag(*format));
-                            out.push('>');
-                        }
-                    }
-                }
+                render_parts(parts, out);
             }
+            Inline::Substituted { parts, .. } => render_parts(parts, out),
             Inline::AttributeRef { name, value, .. } => match value {
                 Some(v) => out.push_str(&escape_text(v)),
                 None => out.push_str(&escape(&format!("{{{name}}}"))),
@@ -506,6 +453,64 @@ fn escape_text(s: &str) -> String {
         }
     }
     out
+}
+
+fn render_parts(parts: &[adoctra_core::AttributePart], out: &mut String) {
+    for part in parts {
+        match part {
+            adoctra_core::AttributePart::Text(text) => out.push_str(&escape_text(text)),
+            adoctra_core::AttributePart::Raw(text) => out.push_str(text),
+            adoctra_core::AttributePart::OpenLink(link) => {
+                out.push_str("<a href=\"");
+                out.push_str(&link.target);
+                out.push('"');
+                for (key, value) in [
+                    ("id", &link.id),
+                    ("class", &link.role),
+                    ("title", &link.title),
+                    ("target", &link.window),
+                    ("rel", &link.rel),
+                ] {
+                    if let Some(value) = value {
+                        out.push(' ');
+                        out.push_str(key);
+                        out.push_str("=\"");
+                        out.push_str(value);
+                        out.push('"');
+                    }
+                }
+                out.push('>');
+            }
+            adoctra_core::AttributePart::CloseLink => out.push_str("</a>"),
+            adoctra_core::AttributePart::Open(format) => {
+                out.push('<');
+                out.push_str(attribute_format_tag(*format));
+                out.push('>');
+            }
+            adoctra_core::AttributePart::OpenWithAttributes { format, id, role } => {
+                out.push('<');
+                out.push_str(attribute_format_tag(*format));
+                // Quote substitution already retains lexical protection
+                // in these values; escaping again would double entities.
+                if let Some(id) = id {
+                    out.push_str(" id=\"");
+                    out.push_str(id);
+                    out.push('"');
+                }
+                if let Some(role) = role {
+                    out.push_str(" class=\"");
+                    out.push_str(role);
+                    out.push('"');
+                }
+                out.push('>');
+            }
+            adoctra_core::AttributePart::Close(format) => {
+                out.push_str("</");
+                out.push_str(attribute_format_tag(*format));
+                out.push('>');
+            }
+        }
+    }
 }
 
 #[cfg(test)]

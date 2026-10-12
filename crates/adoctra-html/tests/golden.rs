@@ -843,6 +843,19 @@ fn quote_attributes_match_reference_and_ordered_protection() {
 }
 
 #[test]
+fn post_attribute_link_macros_match_reference_across_text_and_reference_parts() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden");
+    let source = fs::read_to_string(dir.join("post-attribute-macros.adoc")).unwrap();
+    let expected = fs::read_to_string(dir.join("post-attribute-macros.expected.html")).unwrap();
+    let result = adoctra_core::parse(&source);
+    assert!(result.diagnostics.is_empty());
+    let ours = String::from_utf8(HtmlBackend.convert(&result.document).unwrap()).unwrap();
+    assert_eq!(paragraph_inner(&ours), paragraph_inner(&expected));
+    assert!(ours.contains("<a href=\"page\" class=\"red\" title=\"Title\">Ж&amp;</a>"));
+    assert!(ours.contains("<a href=\"page\"><strong>Bold</strong></a>"));
+}
+
+#[test]
 fn pass_link_macros_match_reference_and_preserve_ordered_protection() {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden");
     let source = fs::read_to_string(dir.join("pass-link-macros.adoc")).unwrap();

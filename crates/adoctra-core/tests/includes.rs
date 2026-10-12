@@ -24,6 +24,65 @@ fn setup(root: &str, files: &[(&str, &str)]) -> (SourceMap, MemoryResources, Par
 }
 
 #[test]
+fn post_attribute_macro_across_files_retains_all_source_fragments() {
+    let root = ":k: nk:\n\nli{k}page[First\ninclude::part.adoc[]";
+    let (mut sources, resources, options) = setup(root, &[("docs/part.adoc", "Second]")]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty());
+    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+        panic!()
+    };
+    let Inline::Substituted { value, span, .. } = &inlines[0] else {
+        panic!("{inlines:?}")
+    };
+    assert_eq!(value, "First Second");
+    let fragments = &result.provenance[span.provenance.unwrap()];
+    assert_eq!(fragments.first().unwrap().source_id, options.source_id);
+    assert_eq!(fragments.last().unwrap().source_id, SourceId(1));
+    assert_eq!(sources.slice(*fragments.last().unwrap()), Some("Second]"));
+    let reference = inlines
+        .iter()
+        .find(|n| matches!(n, Inline::AttributeRef { .. }))
+        .unwrap();
+    assert_eq!(sources.slice(reference.span()), Some("{k}"));
+    check_spans(&result, &sources);
+}
+
+#[test]
+fn post_attribute_macros_keep_selected_physical_spans_and_snapshot_values() {
+    let root = "include::part.adoc[tags=body,indent=0]";
+    let part = "\u{feff}// tag::body[]\r\n  :s: ttps\r\n\r\n  h{s}://example.org\r\n// end::body[]";
+    let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", part)]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty());
+    let block = &result.document.blocks[0];
+    assert_eq!(block.attribute_context.get("s"), Some("ttps"));
+    let BlockKind::Paragraph { inlines } = &block.kind else {
+        panic!()
+    };
+    let Inline::Substituted { span, parts, .. } = &inlines[0] else {
+        panic!("{inlines:?}")
+    };
+    assert_eq!(sources.slice(*span), Some("h{s}://example.org"));
+    assert_eq!(
+        sources.get(span.source_id).unwrap().name(),
+        "/docs/part.adoc"
+    );
+    assert!(
+        matches!(&parts[0], adoctra_core::AttributePart::OpenLink(l) if l.target == "https://example.org")
+    );
+    let reference = inlines
+        .iter()
+        .find(|n| matches!(n, Inline::AttributeRef { .. }))
+        .unwrap();
+    assert_eq!(sources.slice(reference.span()), Some("{s}"));
+    assert!(tokens_resource(&mut sources, &options, &resources)
+        .unwrap()
+        .iter()
+        .any(|t| t.kind == TokenKind::AttributeRef && t.span == reference.span()));
+}
+
+#[test]
 fn sanitized_section_ids_keep_selected_include_title_and_reference_provenance() {
     let root =
         ":v: pass:[<b>Жёлтый</b> &copy;]\n\n<<_жёлтый>>\n\ninclude::part.adoc[lines=2..3,indent=0]";

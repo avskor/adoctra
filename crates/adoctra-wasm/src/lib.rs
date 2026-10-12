@@ -554,6 +554,11 @@ fn write_inlines(inlines: &[Inline], s: &mut String) {
                 s.push_str("\"name\":\"text\",\"value\":");
                 write_str(value, s);
             }
+            Inline::Substituted { value, parts, .. } => {
+                s.push_str("\"name\":\"substituted\",\"value\":");
+                write_str(value, s);
+                adoctra_core::json::write_attribute_parts(parts, s);
+            }
             Inline::Raw { value, .. } => {
                 s.push_str("\"name\":\"raw\",\"value\":");
                 write_str(value, s);
@@ -1338,6 +1343,15 @@ mod header_tests {
     }
 
     #[test]
+    fn post_attribute_macros_export_neutral_parts_without_generated_markup() {
+        let json = super::parse_json(":s: ttps\n\nh{s}://example.org");
+        assert!(json.contains(r#""name":"substituted","value":"https://example.org","parts":[{"kind":"open-link","target":"https://example.org","role":"bare"},{"kind":"text","value":"https://example.org"},{"kind":"close-link"}]"#), "{json}");
+        assert!(!json.contains("<a href"), "{json}");
+        let json = super::parse_json(":v: link:page[Ж&,role=red]\n\n{v}");
+        assert!(json.contains(r#""value":"Ж&","parts":[{"kind":"open-link","target":"page","role":"red"},{"kind":"text","value":"Ж&"},{"kind":"close-link"}]"#), "{json}");
+    }
+
+    #[test]
     fn attribute_links_export_neutral_targets_properties_and_label_parts() {
         let json = super::parse_json(":v: pass:c,q,m[link:page[*Ж&*,id=anchor,role=red,title=Title,window=_blank,opts=nofollow]]\n\n{v}");
         assert!(json.contains(r#""value":"Ж&","parts":[{"kind":"open-link","target":"page","id":"anchor","role":"red","title":"Title","window":"_blank","rel":"nofollow noopener"},{"kind":"open","format":"strong"},{"kind":"text","value":"Ж&"},{"kind":"close","format":"strong"},{"kind":"close-link"}]"#), "{json}");
@@ -1349,6 +1363,30 @@ mod header_tests {
         );
         let json = super::parse_json(":v: pass:m[link:page[Alpha]]\n\n<<_alpha>>\n\n== {v}");
         assert!(json.contains(r#""target":"_alpha""#), "{json}");
+    }
+
+    #[test]
+    fn post_attribute_macros_export_physical_spans_and_consumed_references() {
+        let source = "\u{feff}:s: ttps\r\n\r\nh{s}://example.org";
+        let json = super::parse_json_with_source(source, 7);
+        let start = source.find("h{s}").unwrap();
+        assert!(
+            json.contains(&format!(
+                r#""span":{{"source_id":7,"start":{start},"end":{}}},"name":"substituted""#,
+                source.len()
+            )),
+            "{json}"
+        );
+        let start = start + 1;
+        assert!(json.contains(&format!(r#""span":{{"source_id":7,"start":{start},"end":{}}},"name":"attribute-ref","attribute":"s","value":"""#, start+3)), "{json}");
+        let tokens = super::tokens_json_with_source(source, 7);
+        assert!(
+            tokens.contains(&format!(
+                r#""span":{{"source_id":7,"start":{start},"end":{}}},"kind":"attribute-ref""#,
+                start + 3
+            )),
+            "{tokens}"
+        );
     }
 
     #[test]

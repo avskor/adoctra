@@ -45,6 +45,17 @@ pub(crate) struct Text {
 }
 
 impl Text {
+    /// A source text node may already have undergone replacements. Its byte
+    /// mapping is then coarse, but a macro starting here still covers later
+    /// source constructs it consumes.
+    pub fn append_source(&mut self, text: &str, raw: bool, owner: usize, span: Span) {
+        let first = self.fragments.len();
+        self.append(text, raw, owner, span, span.end - span.start == text.len());
+        for (_, fragment) in &mut self.fragments[first..] {
+            fragment.extend_span = true;
+        }
+    }
+
     pub fn append_part(&mut self, part: &AttributePart, owner: usize, span: Span) {
         if part.is_boundary() {
             let lexical = part.lexical().into_owned();
@@ -257,6 +268,17 @@ impl Text {
         });
     }
 
+    /// Anchor a generated semantic value to its first source owner. References
+    /// consumed later in the range are retained as empty nodes by write_back.
+    pub fn replace_parts(&self, range: Range<usize>, parts: &[AttributePart], output: &mut Self) {
+        let mut anchor = Self::default();
+        self.replacement(range, " ", None, &mut anchor);
+        let (_, fragment) = &anchor.fragments[0];
+        for part in parts {
+            output.append_part(part, fragment.owner, fragment.span);
+        }
+    }
+
     /// Reassemble only boundaries we created, after replacements edit their
     /// lexical id/role values. Arbitrary raw tags never become semantic nodes.
     fn restore_boundaries(&mut self) {
@@ -354,7 +376,31 @@ pub(crate) fn write_back(nodes: Vec<Inline>, mut text: Text, fold_newlines: bool
             Inline::Text {
                 span: original_span,
                 ..
+            }
+            | Inline::Raw {
+                span: original_span,
+                ..
             } => {
+                if pieces.iter().any(|f| f.part.is_some()) {
+                    let end = pieces.iter().map(|f| f.span.end).max().unwrap();
+                    let mut parts = Vec::new();
+                    for f in pieces {
+                        if let Some(part) = f.part {
+                            crate::attributes::push_value(&mut parts, part);
+                        } else {
+                            crate::attributes::push_part(&mut parts, &f.text, f.raw);
+                        }
+                    }
+                    result.push(Inline::Substituted {
+                        value: crate::attributes::parts_text(&parts),
+                        parts,
+                        span: Span {
+                            end: original_span.end.max(end),
+                            ..*original_span
+                        },
+                    });
+                    continue;
+                }
                 if !pieces.is_empty() && pieces.iter().all(|f| !f.raw) {
                     let end = pieces.iter().map(|f| f.span.end).max().unwrap();
                     result.push(Inline::Text {

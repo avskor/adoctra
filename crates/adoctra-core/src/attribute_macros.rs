@@ -1,7 +1,7 @@
-//! Link substitutions for whole-value pass attributes. Syntax is matched over
+//! Link substitutions for pass attributes and expanded inline text. Matched over
 //! the shared lexical stream; generated links remain backend-neutral boundaries.
 use crate::substitution_text::Text;
-use crate::{AttributeLink, AttributePart as Part, Attributes, Span};
+use crate::{AttributeLink, AttributePart as Part, Attributes, Inline};
 use std::collections::BTreeMap;
 use std::ops::Range;
 
@@ -11,10 +11,103 @@ pub(crate) fn apply(parts: Vec<Part>, attributes: &Attributes, compat: bool) -> 
     apply_inner(parts, attributes, compat, 0)
 }
 
+/// Link macros after attribute expansion and replacements. Existing syntax
+/// nodes delimit runs; newly generated links are not visited again.
+pub(crate) fn apply_inlines(nodes: &mut Vec<Inline>, attributes: &Attributes) {
+    process_inlines(nodes, attributes, true);
+}
+
+fn process_inlines(nodes: &mut Vec<Inline>, attributes: &Attributes, mut left_edge: bool) {
+    let mut pending = Vec::new();
+    let mut output = Vec::new();
+    for mut node in std::mem::take(nodes) {
+        if matches!(
+            node,
+            Inline::Text { .. } | Inline::Raw { .. } | Inline::AttributeRef { value: Some(_), .. }
+        ) {
+            pending.push(node);
+            continue;
+        }
+        flush_inlines(&mut pending, &mut output, attributes, left_edge);
+        match &mut node {
+            Inline::Strong { children, .. }
+            | Inline::Emphasis { children, .. }
+            | Inline::Monospace { children, .. }
+            | Inline::Mark { children, .. }
+            | Inline::Superscript { children, .. }
+            | Inline::Subscript { children, .. }
+            | Inline::CrossReference { children, .. }
+            | Inline::Link {
+                children,
+                bare: false,
+                ..
+            } => process_inlines(children, attributes, false),
+            Inline::Anchor {
+                reftext: Some(children),
+                ..
+            } => process_inlines(children, attributes, false),
+            _ => {}
+        }
+        output.push(node);
+        left_edge = false;
+    }
+    flush_inlines(&mut pending, &mut output, attributes, left_edge);
+    *nodes = output;
+}
+
+fn flush_inlines(
+    nodes: &mut Vec<Inline>,
+    output: &mut Vec<Inline>,
+    attributes: &Attributes,
+    left_edge: bool,
+) {
+    if nodes.is_empty() {
+        return;
+    }
+    let mut text = Text::default();
+    for (owner, node) in nodes.iter().enumerate() {
+        match node {
+            Inline::Text { value, span } | Inline::Raw { value, span } => {
+                text.append_source(value, matches!(node, Inline::Raw { .. }), owner, *span);
+            }
+            Inline::AttributeRef {
+                value: Some(value),
+                parts,
+                span,
+                ..
+            } => {
+                if parts.is_empty() {
+                    text.append(value, false, owner, *span, false);
+                } else {
+                    for part in parts {
+                        text.append_part(part, owner, *span);
+                    }
+                }
+            }
+            _ => unreachable!(),
+        }
+    }
+    for stage in 0..3 {
+        text = apply_stage(
+            text,
+            stage,
+            attributes,
+            attributes.get("compat-mode").is_some(),
+            0,
+            left_edge,
+        );
+    }
+    output.extend(crate::substitution_text::write_back(
+        std::mem::take(nodes),
+        text,
+        false,
+    ));
+}
+
 fn apply_inner(parts: Vec<Part>, attributes: &Attributes, compat: bool, depth: usize) -> Vec<Part> {
     let mut text = Text::from_parts(&parts);
     for stage in 0..3 {
-        text = apply_stage(text, stage, attributes, compat, depth);
+        text = apply_stage(text, stage, attributes, compat, depth, true);
     }
     text.into_parts()
 }
@@ -82,6 +175,7 @@ fn apply_stage(
     attributes: &Attributes,
     compat: bool,
     depth: usize,
+    left_edge: bool,
 ) -> Text {
     let src = &text.text;
     let index = Index::new(src);
@@ -94,10 +188,16 @@ fn apply_stage(
             1 => explicit(src, at, &index),
             _ => email(src, at),
         };
-        let Some(m) = found else {
+        let Some(mut m) = found else {
             at += src[at..].chars().next().unwrap().len_utf8();
             continue;
         };
+        // A child's lexical predecessor is a generated tag's `>`, not the
+        // start of the full substitution stream. Ruby suppresses bare emails
+        // here, while escaped emails still lose their escape.
+        if stage == 2 && at == 0 && !left_edge && m.escaped.is_none() {
+            m.ignored = true;
+        }
         if m.ignored {
             at = m.end;
             continue;
@@ -109,11 +209,10 @@ fn apply_stage(
         } else {
             let target = &src[m.target.clone()];
             let (link, label) = link_parts(&text, &m, target, attributes, compat, depth);
-            output.append_part(&Part::OpenLink(link), 0, Span::new(0, 0));
-            for part in label {
-                output.append_part(&part, 0, Span::new(0, 0));
-            }
-            output.append_part(&Part::CloseLink, 0, Span::new(0, 0));
+            let mut parts = vec![Part::OpenLink(link)];
+            parts.extend(label);
+            parts.push(Part::CloseLink);
+            text.replace_parts(m.start..m.end, &parts, &mut output);
         }
         copied = m.end;
         at = m.end;
