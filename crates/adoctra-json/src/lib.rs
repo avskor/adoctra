@@ -503,12 +503,15 @@ fn write_inlines(inlines: &[Inline], s: &mut String) {
             // Attribute reference resolved in core: serialize as plain text
             // (the value, or the literal `{name}` when the attribute was
             // missing), which is what the ASG carries after resolution.
-            Inline::AttributeRef { name, value, .. } => {
+            Inline::AttributeRef {
+                name, value, parts, ..
+            } => {
                 s.push_str("{\"name\":\"text\",\"value\":");
                 match value {
                     Some(v) => escape_into(v, s),
                     None => escape_into(&format!("{{{name}}}"), s),
                 }
+                adoctra_core::json::write_attribute_parts(parts, s);
                 s.push('}');
             }
         }
@@ -540,6 +543,14 @@ mod tests {
             json.contains(r#""value":"John Doe, Alice Brown""#),
             "{json}"
         );
+    }
+
+    #[test]
+    fn author_markup_exports_raw_and_literal_parts_without_rewriting_declarations() {
+        let json = render("= Doc\nJohn Doe\n:name: pass:[<b>Анна</b>]\n:author: {name} Смирнова\n\n{author}\n\n{firstname}");
+        assert!(json.contains(r#""name":"John Doe""#), "{json}");
+        assert!(json.contains(r#""value":"Анна""#), "{json}");
+        assert!(json.contains(r#""parts":[{"kind":"raw","value":"<b>Анна</b>"},{"kind":"text","value":" Смирнова"}]"#), "{json}");
     }
 
     #[test]

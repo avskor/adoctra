@@ -705,3 +705,212 @@ fn indexed_overrides_follow_explicit_name_priority_and_preserve_partial_input() 
         }
     }
 }
+
+#[test]
+fn author_markup_distinguishes_source_literals_raw_values_and_mixed_substitutions() {
+    for (entries, name, first, initials, raw) in [
+        (
+            ":author: <b>John</b> Doe",
+            "<b>John</b> Doe",
+            "<b>John</b>",
+            "&D",
+            false,
+        ),
+        (
+            ":author: pass:[<b>John</b> Doe]",
+            "<b>John</b> Doe",
+            "John",
+            "JD",
+            true,
+        ),
+        (
+            ":name: pass:[<b>John</b>]\n:author: {name} Doe",
+            "<b>John</b> Doe",
+            "John",
+            "JD",
+            true,
+        ),
+        (
+            ":name: pass:[<b>John</b>]\n:author: <i>{name}</i> Doe",
+            "<i><b>John</b></i> Doe",
+            "<i>John</i>",
+            "&D",
+            true,
+        ),
+    ] {
+        let doc = parse(&format!("{entries}\n\n{{author}}\n\n{{firstname}}")).document;
+        assert_eq!(doc.attributes.get("author"), Some(name), "{entries}");
+        assert_eq!(doc.attributes.get("firstname"), Some(first), "{entries}");
+        assert_eq!(
+            doc.attributes.get("authorinitials"),
+            Some(initials),
+            "{entries}"
+        );
+        assert_eq!(
+            doc.attributes.raw_parts("author").is_some(),
+            raw,
+            "{entries}"
+        );
+        assert!(doc.header.is_none());
+    }
+}
+
+#[test]
+fn author_host_markup_preserves_source_declarations_and_reference_ranges() {
+    let source = "\u{feff}= Я\r\nJohn Doe; Mary Roe\r\n:author_2: ignored\r\n\r\n{author_2}\r\n\r\n{firstname_2}";
+    let mut sources = SourceMap::new();
+    sources.add("unused", "");
+    let id = sources.add("doc.adoc", source);
+    let mut attributes = Attributes::new();
+    attributes.set("author_2", "<b>Анна</b> Смирнова");
+    let options = ParseOptions {
+        source_id: id,
+        attributes,
+        ..Default::default()
+    };
+    let result = parse_with_options(source, &options);
+    assert!(result.diagnostics.is_empty());
+    assert_eq!(result.document.attributes.get("firstname_2"), Some("Анна"));
+    assert_eq!(
+        result.document.attributes.get("authorinitials_2"),
+        Some("АС")
+    );
+    let declared = &result.document.header.as_ref().unwrap().authors[1];
+    assert_eq!(declared.name, "Mary Roe");
+    assert_eq!(sources.slice(declared.span), Some("Mary Roe"));
+    let BlockKind::Paragraph { inlines } = &result.document.blocks[1].kind else {
+        panic!()
+    };
+    let adoctra_core::Inline::AttributeRef { parts, span, .. } = &inlines[0] else {
+        panic!()
+    };
+    assert_eq!(sources.slice(*span), Some("{author_2}"));
+    assert_eq!(
+        parts,
+        &[adoctra_core::AttributePart::Raw(
+            "<b>Анна</b> Смирнова".to_owned()
+        )]
+    );
+    let token = tokens_with_options(source, &options)
+        .into_iter()
+        .find(|t| t.kind == TokenKind::Author)
+        .unwrap();
+    assert_eq!(sources.slice(token.span), Some("John Doe; Mary Roe"));
+}
+
+#[test]
+fn author_pass_substitution_order_and_host_values_are_not_reprocessed() {
+    for (subs, first, initials) in [
+        ("c,a", "John", "JD"),
+        ("a,c", "<b>John</b>", "&D"),
+        ("a,c,c", "<b>John</b>", "&D"),
+    ] {
+        let doc = parse(&format!(
+            ":name: pass:[<b>John</b>]\n:author: pass:{subs}[{{name}} Doe]\n\nBody"
+        ))
+        .document;
+        assert_eq!(doc.attributes.get("firstname"), Some(first), "{subs}");
+        assert_eq!(
+            doc.attributes.get("authorinitials"),
+            Some(initials),
+            "{subs}"
+        );
+    }
+    let mut attributes = Attributes::new();
+    attributes.set("author", "pass:[<b>John</b> Doe]");
+    let doc = parse_with_options(
+        "Body",
+        &ParseOptions {
+            attributes,
+            ..Default::default()
+        },
+    )
+    .document;
+    assert_eq!(doc.attributes.get("firstname"), Some("pass:[John"));
+    assert_eq!(doc.attributes.get("lastname"), Some("Doe]"));
+}
+
+#[test]
+fn author_name_splitting_preserves_ruby_whitespace_and_tag_edge_cases() {
+    for (value, first, middle, last, initials) in [
+        (
+            "One\u{a0}Two Three",
+            "One\u{a0}Two",
+            None,
+            Some("Three"),
+            "OT",
+        ),
+        (
+            "One Two Three_ Four",
+            "One",
+            Some("Two"),
+            Some("Three  Four"),
+            "OTT",
+        ),
+        (" <b>One</b> Two ", "One", Some("Two"), Some(""), "OT"),
+        ("One <> Two", "One", Some("<>"), Some("Two"), "O<T"),
+        ("One <unfinished", "One", None, Some("<unfinished"), "O<"),
+        ("<b></b>", "", None, None, ""),
+    ] {
+        let mut attributes = Attributes::new();
+        attributes.set("author", value);
+        let doc = parse_with_options(
+            "Body",
+            &ParseOptions {
+                attributes,
+                ..Default::default()
+            },
+        )
+        .document;
+        assert_eq!(doc.attributes.get("firstname"), Some(first), "{value:?}");
+        assert_eq!(doc.attributes.get("middlename"), middle, "{value:?}");
+        assert_eq!(doc.attributes.get("lastname"), last, "{value:?}");
+        assert_eq!(
+            doc.attributes.get("authorinitials"),
+            Some(initials),
+            "{value:?}"
+        );
+    }
+}
+
+#[test]
+fn raw_author_attributes_keep_snapshots_and_survive_partial_unicode_input() {
+    let source = "= Я\r\nИван Петров\r\n:name: pass:[<b>Анна</b>]\r\n:author: {name} Смирнова\r\n\r\n{author}\r\n\r\n:author: Literal\r\n\r\n{author}";
+    let result = parse(source);
+    assert!(result.document.attributes.raw_parts("author").is_some());
+    assert!(result.document.blocks[1]
+        .attribute_context
+        .raw_parts("author")
+        .is_some());
+    assert!(result.document.blocks[2]
+        .attribute_context
+        .raw_parts("author")
+        .is_none());
+    assert_eq!(
+        result.document.blocks[2].attribute_context.get("firstname"),
+        Some("Анна")
+    );
+    for end in (0..=source.len()).filter(|&end| source.is_char_boundary(end)) {
+        let partial = &source[..end];
+        let parsed = parse(partial);
+        for span in adoctra_core::tokens(partial)
+            .into_iter()
+            .map(|t| t.span)
+            .chain(parsed.diagnostics.iter().map(|d| d.span))
+        {
+            assert!(
+                partial.get(span.start..span.end).is_some(),
+                "{partial:?}: {span:?}"
+            );
+        }
+    }
+}
+
+#[test]
+fn author_override_compares_literal_protection_as_well_as_text() {
+    let source = "= Doc\n<b>John</b> Doe\n:author: pass:[<b>John</b> Doe]\n\n{firstname}";
+    let doc = parse(source).document;
+    assert_eq!(doc.attributes.get("firstname"), Some("John"));
+    assert_eq!(doc.attributes.get("authorinitials"), Some("JD"));
+    assert_eq!(doc.header.unwrap().authors[0].firstname, "<b>John</b> Doe");
+}

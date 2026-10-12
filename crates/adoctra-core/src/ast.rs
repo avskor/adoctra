@@ -435,6 +435,8 @@ pub enum Inline {
     AttributeRef {
         name: String,
         value: Option<String>,
+        /// Empty for ordinary text; otherwise preserves literal/raw boundaries.
+        parts: Vec<crate::AttributePart>,
         span: Span,
     },
     /// A link: the `link:target[text]` macro, an autolinked URL macro

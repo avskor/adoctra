@@ -1524,7 +1524,9 @@ mod tests {
             other => other,
         };
         match attr {
-            Inline::AttributeRef { name, value, span } => {
+            Inline::AttributeRef {
+                name, value, span, ..
+            } => {
                 assert_eq!(name, "v");
                 assert_eq!(value, Some("9".to_string()));
                 // span points at `{v}` in the body, not at the resolved value

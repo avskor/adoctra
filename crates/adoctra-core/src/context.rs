@@ -1,6 +1,7 @@
 //! Parse configuration and attribute state shared by recursive block parsing.
 
-use crate::{Attributes, SourceId};
+use crate::attributes::{parts_text, push_part};
+use crate::{AttributePart, Attributes, SourceId};
 use std::{collections::BTreeSet, sync::Arc};
 
 #[derive(Debug, Clone, Default)]
@@ -69,7 +70,13 @@ impl ParseContext {
         attributes.set("example-caption", "Example");
         let mut locked = BTreeSet::new();
         for (key, value) in options.attributes.iter() {
-            attributes.set(key, value);
+            attributes.set_parts(
+                key,
+                options
+                    .attributes
+                    .raw_parts(key)
+                    .map_or_else(|| vec![AttributePart::Raw(value.to_owned())], <[_]>::to_vec),
+            );
             locked.insert(key.to_string());
         }
         Self {
@@ -90,28 +97,33 @@ impl ParseContext {
             return;
         }
         let value = value.map(|v| {
-            let value = substitute_attribute_value(&v, &self.attributes);
+            let parts = attribute_entry_parts(&v, &self.attributes);
+            let value = parts_text(&parts);
             if key == "leveloffset" {
                 let current = self
                     .attributes
                     .get("leveloffset")
                     .map_or(0, crate::include_selection::integer_prefix);
                 if let Some(relative) = value.strip_prefix('+') {
-                    return current
-                        .saturating_add(crate::include_selection::integer_prefix(relative))
-                        .to_string();
+                    return vec![AttributePart::Text(
+                        current
+                            .saturating_add(crate::include_selection::integer_prefix(relative))
+                            .to_string(),
+                    )];
                 }
                 if let Some(relative) = value.strip_prefix('-') {
-                    return current
-                        .saturating_sub(crate::include_selection::integer_prefix(relative))
-                        .to_string();
+                    return vec![AttributePart::Text(
+                        current
+                            .saturating_sub(crate::include_selection::integer_prefix(relative))
+                            .to_string(),
+                    )];
                 }
             }
-            value
+            parts
         });
         let attributes = Arc::make_mut(&mut self.attributes);
         match value {
-            Some(value) => attributes.set(key, value),
+            Some(value) => attributes.set_parts(key, value),
             None => {
                 attributes.remove(&key);
             }
@@ -234,23 +246,99 @@ pub(crate) fn parse_attribute_entry(line: &str) -> Option<AttributeEntry> {
 /// Header attribute values substitute attribute references, not inline markup.
 /// Substituted strings are not rescanned, which also bounds self references.
 pub(crate) fn substitute_attribute_value(value: &str, attributes: &Attributes) -> String {
-    let mut result = String::new();
+    parts_text(&substitute_attribute_parts(value, attributes, false))
+}
+
+/// A whole-value pass macro can select literal protection and attribute
+/// substitution independently. Quote/macro/replacement stages are follow-up work.
+fn attribute_entry_parts(value: &str, attributes: &Attributes) -> Vec<AttributePart> {
+    if let Some((subs, body)) = value
+        .strip_prefix("pass:")
+        .and_then(|v| v.split_once('['))
+        .and_then(|(subs, body)| body.strip_suffix(']').map(|body| (subs, body)))
+    {
+        let stages: Vec<_> = if subs.is_empty() {
+            Vec::new()
+        } else {
+            subs.split(',').collect()
+        };
+        if stages.iter().all(|s| {
+            matches!(
+                *s,
+                "a" | "attributes" | "c" | "specialcharacters" | "specialchars" | "none"
+            )
+        }) {
+            let mut parts = vec![AttributePart::Raw(body.to_owned())];
+            let mut applied_specials = false;
+            let mut applied_attributes = false;
+            for stage in stages {
+                if matches!(stage, "c" | "specialcharacters" | "specialchars") {
+                    if applied_specials {
+                        continue;
+                    }
+                    applied_specials = true;
+                    // Protect the entire current value, including prior expansions.
+                    let text = parts
+                        .iter()
+                        .map(|p| {
+                            if p.is_raw() {
+                                p.text().to_owned()
+                            } else {
+                                crate::attributes::reference_text(std::slice::from_ref(p))
+                            }
+                        })
+                        .collect();
+                    parts = vec![AttributePart::Text(text)];
+                } else if matches!(stage, "a" | "attributes") {
+                    if applied_attributes {
+                        continue;
+                    }
+                    applied_attributes = true;
+                    let mut expanded = Vec::new();
+                    for part in parts {
+                        for new in
+                            substitute_attribute_parts(part.text(), attributes, part.is_raw())
+                        {
+                            push_part(&mut expanded, new.text(), new.is_raw());
+                        }
+                    }
+                    parts = expanded;
+                }
+            }
+            return parts;
+        }
+    }
+    substitute_attribute_parts(value, attributes, false)
+}
+
+pub(crate) fn substitute_attribute_parts(
+    value: &str,
+    attributes: &Attributes,
+    raw: bool,
+) -> Vec<AttributePart> {
+    let mut result = Vec::new();
     let mut rest = value;
     while let Some(open) = rest.find('{') {
         let Some(close) = rest[open + 1..].find('}').map(|i| open + 1 + i) else {
             break;
         };
         if rest[..open].ends_with('\\') {
-            result.push_str(&rest[..open - 1]);
-            result.push_str(&rest[open..=close]);
+            push_part(&mut result, &rest[..open - 1], raw);
+            push_part(&mut result, &rest[open..=close], raw);
         } else {
-            result.push_str(&rest[..open]);
+            push_part(&mut result, &rest[..open], raw);
             let name = &rest[open + 1..close];
-            result.push_str(attributes.get(name).unwrap_or(&rest[open..=close]));
+            if let Some(parts) = attributes.value_parts(name) {
+                for part in parts {
+                    push_part(&mut result, part.text(), part.is_raw());
+                }
+            } else {
+                push_part(&mut result, &rest[open..=close], raw);
+            }
         }
         rest = &rest[close + 1..];
     }
-    result.push_str(rest);
+    push_part(&mut result, rest, raw);
     result
 }
 

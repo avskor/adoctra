@@ -176,6 +176,7 @@ fn match_attribute(
     let node = Inline::AttributeRef {
         name: name.to_string(),
         value: attrs.get(name).map(str::to_string),
+        parts: attrs.raw_parts(name).unwrap_or_default().to_vec(),
         span: Span::new(base + i, base + end),
     };
     Some((node, end))

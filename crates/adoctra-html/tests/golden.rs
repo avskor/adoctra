@@ -739,3 +739,15 @@ fn indexed_author_names_match_asciidoctor() {
         "Иван Петров"
     );
 }
+
+#[test]
+fn author_markup_and_literal_values_match_asciidoctor() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden");
+    let source = fs::read_to_string(dir.join("header-author-markup.adoc")).unwrap();
+    let expected = fs::read_to_string(dir.join("header-author-markup.expected.html")).unwrap();
+    let result = adoctra_core::parse(&source);
+    let ours = String::from_utf8(HtmlBackend.convert(&result.document).unwrap()).unwrap();
+    assert_eq!(paragraph_inner(&ours), paragraph_inner(&expected));
+    assert!(ours.contains("<strong>Анна</strong> Смирнова"));
+    assert!(ours.contains("&lt;b&gt;Literal&lt;/b&gt; Name"));
+}

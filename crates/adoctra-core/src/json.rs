@@ -30,6 +30,54 @@ pub fn escape(value: &str) -> String {
     s
 }
 
+/// Append optional literal/raw attribute fragments to an inline JSON object.
+pub fn write_attribute_parts(parts: &[crate::AttributePart], out: &mut String) {
+    if parts.is_empty() {
+        return;
+    }
+    out.push_str(",\"parts\":");
+    write_parts_array(parts, out);
+}
+
+/// Optional raw boundaries for an exported document attribute snapshot.
+pub fn write_attribute_parts_map(attributes: &crate::Attributes, out: &mut String) {
+    let mut first = true;
+    for (key, _) in attributes.iter() {
+        let Some(parts) = attributes.raw_parts(key) else {
+            continue;
+        };
+        if first {
+            out.push_str(",\"attribute_parts\":{");
+            first = false;
+        } else {
+            out.push(',');
+        }
+        escape_into(key, out);
+        out.push(':');
+        write_parts_array(parts, out);
+    }
+    if !first {
+        out.push('}');
+    }
+}
+
+fn write_parts_array(parts: &[crate::AttributePart], out: &mut String) {
+    out.push('[');
+    for (i, part) in parts.iter().enumerate() {
+        if i > 0 {
+            out.push(',');
+        }
+        out.push_str(if part.is_raw() {
+            "{\"kind\":\"raw\",\"value\":"
+        } else {
+            "{\"kind\":\"text\",\"value\":"
+        });
+        escape_into(part.text(), out);
+        out.push('}');
+    }
+    out.push(']');
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

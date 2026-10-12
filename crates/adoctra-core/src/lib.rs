@@ -7,6 +7,7 @@
 
 pub mod ast;
 pub mod attributes;
+mod author_values;
 pub mod backend;
 mod comments;
 mod conditional_expression;
@@ -31,7 +32,7 @@ mod tokenizer;
 pub mod visit;
 
 pub use ast::{Author, Block, BlockKind, Document, DocumentHeader, Inline, Revision, Span};
-pub use attributes::Attributes;
+pub use attributes::{AttributePart, Attributes};
 pub use backend::Backend;
 pub use context::{IncludeLimits, ParseOptions};
 pub use diagnostic::{Diagnostic, ParseResult, Severity};

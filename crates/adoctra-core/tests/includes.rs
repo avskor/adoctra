@@ -1771,3 +1771,43 @@ fn indexed_author_overrides_across_selected_includes_keep_original_names_and_spa
         Some("Иван Петров; Mary_Jane Q Public")
     );
 }
+
+#[test]
+fn raw_author_substitutions_across_include_preserve_fragments_and_physical_spans() {
+    let root = "= Doc\nJohn Doe; Mary Roe\ninclude::author.adoc[lines=2..3,indent=0]\n\n{author_2}\n\n{firstname_2}";
+    let included =
+        "ignored\r\n  :name: pass:[<b>Анна</b>]\r\n  :author_2: <i>{name}</i> Смирнова\r\nignored";
+    let (mut sources, resources, options) = setup(root, &[("/docs/author.adoc", included)]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty());
+    assert_eq!(
+        result.document.attributes.get("firstname_2"),
+        Some("<i>Анна</i>")
+    );
+    assert_eq!(
+        result.document.attributes.get("authorinitials_2"),
+        Some("&С")
+    );
+    assert_eq!(
+        result.document.header.as_ref().unwrap().authors[1].name,
+        "Mary Roe"
+    );
+    let BlockKind::Paragraph { inlines } = &result.document.blocks[1].kind else {
+        panic!()
+    };
+    let Inline::AttributeRef { parts, span, .. } = &inlines[0] else {
+        panic!()
+    };
+    assert_eq!(sources.slice(*span), Some("{author_2}"));
+    assert_eq!(
+        parts,
+        &[
+            adoctra_core::AttributePart::Text("<i>".to_owned()),
+            adoctra_core::AttributePart::Raw("<b>Анна</b>".to_owned()),
+            adoctra_core::AttributePart::Text("</i> Смирнова".to_owned()),
+        ]
+    );
+    let tokens = tokens_resource(&mut sources, &options, &resources).unwrap();
+    assert!(tokens.iter().any(|t| t.kind == TokenKind::AttributeEntry
+        && sources.slice(t.span) == Some(":author_2: <i>{name}</i> Смирнова")));
+}

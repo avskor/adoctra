@@ -362,6 +362,15 @@ fn render_inlines(inlines: &[Inline], out: &mut String) {
             }
             // Resolved in core: emit the value, or fall back to the literal
             // `{name}` for a missing attribute (asciidoctor's default).
+            Inline::AttributeRef { value, parts, .. } if !parts.is_empty() && value.is_some() => {
+                for part in parts {
+                    if part.is_raw() {
+                        out.push_str(part.text());
+                    } else {
+                        out.push_str(&escape_text(part.text()));
+                    }
+                }
+            }
             Inline::AttributeRef { name, value, .. } => match value {
                 Some(v) => out.push_str(&escape_text(v)),
                 None => out.push_str(&escape(&format!("{{{name}}}"))),

@@ -143,8 +143,17 @@ against source declarations. Unchanged compound names retain their components;
 empty entries are skipped, and missing derived fields/emails are not deleted.
 Derived metadata may replace locked host fields without unlocking subsequent
 document entries. Body author_N assignments do not recompute name fields.
-Original Author records and physical spans remain unchanged. Parsing is shared
-with the tokenizer (author/revision tokens). Setext document titles use adjacent
+Original Author records and physical spans remain unchanged. Effective author
+derivation in author_values.rs removes raw XML tags
+from name components while preserving formatted author values. Attributes retain
+Text/Raw parts through substitutions and copy-on-write snapshots; get/iter remain
+flat string APIs, raw_parts exposes boundaries. AttributeRef.parts and optional
+JSON/WASM parts preserve these boundaries; WASM also exports attribute_parts.
+HTML escapes Text and emits Raw unchanged. Host values are already substituted;
+source whole-value pass supports none, a/attributes and c/specialcharacters/
+specialchars, with ordered unique stages. Other pass stages, post-attribute
+replacements/entity restoration, and raw whole-doctitle replacement remain work.
+The tokenizer shares header parsing (author/revision tokens). Setext document titles use adjacent
 processed lines, Unicode character lengths (difference <= 1), uniform =/-/~/^/+
 underlines and effective level zero. ATX takes precedence. The Heading/header
 title span includes both lines; inline spans cover title text only. Highlight

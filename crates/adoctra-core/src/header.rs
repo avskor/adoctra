@@ -1,6 +1,8 @@
 //! Header metadata, following Asciidoctor 2.0.23 Parser.parse_header_metadata
 //! and process_authors. Kept separate from block parsing so the tokenizer uses
 //! exactly the same line boundaries and attribute transitions.
+use crate::attributes::reference_text;
+use crate::author_values::{derive_authors, split_authors};
 use crate::comments::skip_comment;
 use crate::context::{
     consume_attribute_entry, substitute_attribute_value, AttributeEntry, ParseContext,
@@ -109,15 +111,24 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
         let mut revision = None;
         if lines.has(i, context) && !lines[i].1.trim().is_empty() {
             result.author_line = Some(i);
-            authors = parse_authors(&lines[i].1, lines[i].0, false);
+            authors = parse_authors(&lines[i].1, lines[i].0);
             let values = author_attributes(&authors);
             Arc::make_mut(&mut context.attributes).set("authorcount", authors.len().to_string());
             for (key, value) in values.iter().filter(|(key, _)| *key != "authorcount") {
                 set_implicit(context, key, value);
             }
-            implicit_author = context.attributes.get("author").map(str::to_owned);
-            implicit_authors = context.attributes.get("authors").map(str::to_owned);
-            implicit_initials = context.attributes.get("authorinitials").map(str::to_owned);
+            implicit_author = context
+                .attributes
+                .value_parts("author")
+                .map(|p| reference_text(&p));
+            implicit_authors = context
+                .attributes
+                .value_parts("authors")
+                .map(|p| reference_text(&p));
+            implicit_initials = context
+                .attributes
+                .value_parts("authorinitials")
+                .map(|p| reference_text(&p));
             i += 1;
             consume_attributes(lines, &mut i, context);
             if lines.has(i, context) && !lines[i].1.trim().is_empty() {
@@ -172,25 +183,24 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
     // captured after installing defaults (which may already contain overrides).
     let explicit = context
         .attributes
-        .get("author")
-        .filter(|value| Some(*value) != implicit_author.as_deref())
-        .map(|value| (value.to_owned(), false))
+        .value_parts("author")
+        .filter(|value| Some(reference_text(value)) != implicit_author)
+        .map(|_| ("author", false))
         .or_else(|| {
             context
                 .attributes
-                .get("authors")
-                .filter(|value| Some(*value) != implicit_authors.as_deref())
-                .map(|value| (value.to_owned(), true))
+                .value_parts("authors")
+                .filter(|value| Some(reference_text(value)) != implicit_authors)
+                .map(|_| ("authors", true))
         });
-    let mut derived = if let Some((value, multiple)) = explicit {
-        let initials = context.attributes.get("authorinitials").map(str::to_owned);
+    let mut derived = if let Some((key, multiple)) = explicit {
+        let initials = context
+            .attributes
+            .value_parts("authorinitials")
+            .map(|p| reference_text(&p));
         let preserve_initials = !multiple && initials != implicit_initials;
-        let authors = if multiple {
-            parse_authors(&value, 0, true)
-        } else {
-            parse_author_override(&value).into_iter().collect()
-        };
-        let mut values = author_attributes(&authors);
+        let value = context.attributes.value_parts(key).unwrap();
+        let mut values = derive_authors(split_authors(&value, multiple));
         if preserve_initials {
             values.remove("authorinitials");
         }
@@ -201,22 +211,30 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
         let mut changed = false;
         for index in 1.. {
             let key = format!("author_{index}");
-            let Some(value) = context.attributes.get(&key) else {
+            if context.attributes.get(&key).is_none() {
                 break;
-            };
-            if Some(value) == implicit.get(&key) {
+            }
+            let parts = context.attributes.value_parts(&key).unwrap();
+            if Some(reference_text(&parts).as_str()) == implicit.get(&key) {
                 // Rebuilding unchanged names preserves compound name components.
-                let mut author = header.authors[index - 1].clone();
-                author.email = None;
-                authors.push(author);
+                let author = &header.authors[index - 1];
+                let name = [
+                    Some(author.firstname.as_str()),
+                    author.middlename.as_deref(),
+                    author.lastname.as_deref(),
+                ]
+                .into_iter()
+                .flatten()
+                .map(|s| s.replace(' ', "_"))
+                .collect::<Vec<_>>()
+                .join(" ");
+                authors.push(vec![crate::AttributePart::Text(name)]);
             } else {
                 changed = true;
-                if let Some(author) = parse_author_override(value) {
-                    authors.push(author);
-                }
+                authors.push(parts);
             }
         }
-        changed.then(|| author_attributes(&authors))
+        changed.then(|| derive_authors(authors))
     } else {
         None
     };
@@ -230,12 +248,12 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
         // These are derived metadata, not document attribute entries: Ruby merges
         // them even over locked host fields, without a second substitution pass.
         let attributes = Arc::make_mut(&mut context.attributes);
-        for (key, value) in values.iter() {
-            attributes.set(key, value);
+        for (key, _) in values.iter() {
+            attributes.set_parts(key, values.value_parts(key).unwrap());
         }
         if result.metadata.is_some() && attributes.get("email").is_none() {
-            if let Some(email) = attributes.get("email_1").map(str::to_owned) {
-                attributes.set("email", email);
+            if let Some(email) = attributes.value_parts("email_1") {
+                attributes.set_parts("email", email);
             }
         }
     } else if !has_declarations {
@@ -312,7 +330,8 @@ fn line_span((off, line): (usize, &str)) -> Span {
 
 fn set_implicit(context: &mut ParseContext, key: &str, value: &str) {
     if context.attributes.get(key).is_none() {
-        context.apply(AttributeEntry::Set(key.to_owned(), value.to_owned()));
+        let parts = crate::context::substitute_attribute_parts(value, &context.attributes, false);
+        Arc::make_mut(&mut context.attributes).set_parts(key, parts);
     }
 }
 
@@ -356,29 +375,25 @@ fn author_attributes(authors: &[Author]) -> Attributes {
     values
 }
 
-fn parse_author_override(value: &str) -> Option<Author> {
-    (!value.is_empty()).then(|| parse_author(value, 0, true))
-}
-
-fn parse_authors(line: &str, off: usize, names_only: bool) -> Vec<Author> {
+fn parse_authors(line: &str, off: usize) -> Vec<Author> {
     let mut authors = Vec::new();
     let mut start = 0;
     for (pos, ch) in line.char_indices() {
         if ch == ';' && (pos + 1 == line.len() || line[pos + 1..].starts_with(' ')) {
             if pos > start {
-                authors.push(parse_author(&line[start..pos], off + start, names_only));
+                authors.push(parse_author(&line[start..pos], off + start));
             }
             start = (pos + 2).min(line.len());
         }
     }
     if start < line.len() {
-        authors.push(parse_author(&line[start..], off + start, names_only));
+        authors.push(parse_author(&line[start..], off + start));
     }
     authors
 }
 
-fn parse_author(entry: &str, off: usize, names_only: bool) -> Author {
-    let (name, email) = if !names_only && entry.ends_with('>') {
+fn parse_author(entry: &str, off: usize) -> Author {
+    let (name, email) = if entry.ends_with('>') {
         entry
             .rsplit_once(" <")
             .filter(|(_, email)| email.len() > 1 && !email[..email.len() - 1].contains('>'))
@@ -388,20 +403,15 @@ fn parse_author(entry: &str, off: usize, names_only: bool) -> Author {
     } else {
         (entry, None)
     };
-    let parts: Vec<_> = if names_only {
-        name.split_whitespace().collect()
-    } else {
-        name.split(' ').filter(|s| !s.is_empty()).collect()
-    };
-    let valid = names_only
-        || (!name.starts_with(' ')
-            && !name.ends_with(' ')
-            && !parts.is_empty()
-            && parts.len() <= 3
-            && parts.iter().all(|p| {
-                p.starts_with(|c: char| c.is_alphanumeric() || c == '_')
-                    && p.chars().all(|c| c.is_alphanumeric() || "_-'.".contains(c))
-            }));
+    let parts: Vec<_> = name.split(' ').filter(|s| !s.is_empty()).collect();
+    let valid = !name.starts_with(' ')
+        && !name.ends_with(' ')
+        && !parts.is_empty()
+        && parts.len() <= 3
+        && parts.iter().all(|p| {
+            p.starts_with(|c: char| c.is_alphanumeric() || c == '_')
+                && p.chars().all(|c| c.is_alphanumeric() || "_-'.".contains(c))
+        });
     let parts: Vec<String> = if valid && !parts.is_empty() {
         let mut result: Vec<_> = parts.iter().take(2).map(|p| p.replace('_', " ")).collect();
         if parts.len() > 2 {

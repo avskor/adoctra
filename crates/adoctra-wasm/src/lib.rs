@@ -122,7 +122,9 @@ fn write_document(doc: &adoctra_core::Document, s: &mut String) {
         s.push(':');
         write_str(v, s);
     }
-    s.push_str("},\"blocks\":[");
+    s.push('}');
+    adoctra_core::json::write_attribute_parts_map(&doc.attributes, s);
+    s.push_str(",\"blocks\":[");
     for (i, b) in doc.blocks.iter().enumerate() {
         if i > 0 {
             s.push(',');
@@ -608,7 +610,9 @@ fn write_inlines(inlines: &[Inline], s: &mut String) {
             }
             // The editor gets the structured reference (name + resolved value),
             // unlike the backends which only need the resolved text.
-            Inline::AttributeRef { name, value, .. } => {
+            Inline::AttributeRef {
+                name, value, parts, ..
+            } => {
                 s.push_str("\"name\":\"attribute-ref\",\"attribute\":");
                 write_str(name, s);
                 s.push_str(",\"value\":");
@@ -616,6 +620,7 @@ fn write_inlines(inlines: &[Inline], s: &mut String) {
                     Some(v) => write_str(v, s),
                     None => s.push_str("null"),
                 }
+                adoctra_core::json::write_attribute_parts(parts, s);
             }
         }
         s.push('}');
@@ -1308,6 +1313,25 @@ mod tests {
 
 #[cfg(test)]
 mod header_tests {
+    #[test]
+    fn author_markup_exports_attribute_boundaries_and_physical_reference_span() {
+        let source =
+            "= Doc\nJohn Doe\n:name: pass:[<b>Анна</b>]\n:author: {name} Смирнова\n\n{author}";
+        let json = super::parse_json_with_source(source, 9);
+        assert!(json.contains(r#""name":"John Doe""#), "{json}");
+        assert!(json.contains(r#""firstname":"Анна""#), "{json}");
+        assert!(json.contains(r#""attribute_parts":{"author":[{"kind":"raw","value":"<b>Анна</b>"},{"kind":"text","value":" Смирнова"}]"#), "{json}");
+        let start = source.rfind("{author}").unwrap();
+        assert!(
+            json.contains(&format!(
+                r#""span":{{"source_id":9,"start":{start},"end":{}}},"name":"attribute-ref""#,
+                source.len()
+            )),
+            "{json}"
+        );
+        assert!(json.contains(r#""parts":[{"kind":"raw","value":"<b>Анна</b>"},{"kind":"text","value":" Смирнова"}]"#), "{json}");
+    }
+
     #[test]
     fn indexed_authors_keep_declarations_and_tokens_separate_from_effective_names() {
         let source = "= Doc\nJohn Doe; Mary Roe\n:author_2: Alice Brown\n\n{authors}";
