@@ -4269,9 +4269,8 @@
     {
       "id": "header-markup-literal-entity",
       "category": "header",
-      "expect": "xfail",
-      "source": ":attribute-missing: skip\n:author: John &amp; Jane\n\nauthorcount: {authorcount}\n\nauthors: {authors}\n\nauthor: {author}\n\nfirstname: {firstname}\n\nmiddlename: {middlename}\n\nlastname: {lastname}\n\nauthorinitials: {authorinitials}\n\nauthor 1: {author_1}\n\nfirstname 1: {firstname_1}\n\nmiddlename 1: {middlename_1}\n\nlastname 1: {lastname_1}\n\nauthorinitials 1: {authorinitials_1}\n\nauthor 2: {author_2}\n\nfirstname 2: {firstname_2}\n\nmiddlename 2: {middlename_2}\n\nlastname 2: {lastname_2}\n\nauthorinitials 2: {authorinitials_2}",
-      "reason": "Entity restoration after attribute substitution is not implemented; header name fields retain the literal entity text."
+      "expect": "pass",
+      "source": ":attribute-missing: skip\n:author: John &amp; Jane\n\nauthorcount: {authorcount}\n\nauthors: {authors}\n\nauthor: {author}\n\nfirstname: {firstname}\n\nmiddlename: {middlename}\n\nlastname: {lastname}\n\nauthorinitials: {authorinitials}\n\nauthor 1: {author_1}\n\nfirstname 1: {firstname_1}\n\nmiddlename 1: {middlename_1}\n\nlastname 1: {lastname_1}\n\nauthorinitials 1: {authorinitials_1}\n\nauthor 2: {author_2}\n\nfirstname 2: {firstname_2}\n\nmiddlename 2: {middlename_2}\n\nlastname 2: {lastname_2}\n\nauthorinitials 2: {authorinitials_2}"
     },
     {
       "id": "header-markup-literal-amp-multiple",
@@ -4450,6 +4449,215 @@
       "category": "header",
       "expect": "pass",
       "source": "= Doc\n<b>John</b> Doe\n:author: pass:[<b>John</b> Doe]\n\n{author}\n\n{firstname} / {lastname} / {authorinitials}"
+    },
+    {
+      "id": "attribute-entity-named",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":value: &copy; &amp; &lt; &gt; &quot; &apos; &nbsp;\n\n{value}"
+    },
+    {
+      "id": "attribute-entity-unknown",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":value: &unknown; &ab12; &a; &a1; &ab123; &AbC99;\n\n{value}"
+    },
+    {
+      "id": "attribute-entity-decimal",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":value: &#65; &#065; &#000065; &#1; &#1234567;\n\n{value}"
+    },
+    {
+      "id": "attribute-entity-hex",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":value: &#x41; &#x041; &#x00041; &#x1; &#X41; &#x000041; &#xGG;\n\n{value}"
+    },
+    {
+      "id": "attribute-entity-unicode",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":value: До &copy; после &#x1F642; конец\n\n{value}"
+    },
+    {
+      "id": "attribute-entity-escaped",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":value: \\&copy; \\&#65; \\&#x41;\n\n{value}"
+    },
+    {
+      "id": "attribute-entity-double-escaped",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":value: \\\\&copy; \\\\&#65;\n\n{value}"
+    },
+    {
+      "id": "attribute-entity-escape-invalid",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":value: \\&a; \\&#1; \\&unknown1x;\n\n{value}"
+    },
+    {
+      "id": "attribute-entity-one-pass",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":value: &amp;copy; &amp;amp;copy; &amp;#65;\n\n{value}"
+    },
+    {
+      "id": "attribute-entity-raw-ready",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":value: pass:[&copy; &#65; &#x41;]\n\n{value}"
+    },
+    {
+      "id": "attribute-entity-raw-protected",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":value: pass:[&amp;copy; &amp;#65; &amp;#x41;]\n\n{value}"
+    },
+    {
+      "id": "attribute-entity-raw-escaped",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":value: pass:[\\&amp;copy; \\&copy;]\n\n{value}"
+    },
+    {
+      "id": "attribute-entity-raw-one-pass",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":value: pass:[&amp;amp;copy;]\n\n{value}"
+    },
+    {
+      "id": "attribute-entity-raw-tags",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":value: pass:[<strong>&amp;copy;</strong>]\n\n{value}"
+    },
+    {
+      "id": "attribute-entity-raw-tag-attribute",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":value: pass:[<span title=\"&amp;copy;\">name</span>]\n\n{value}"
+    },
+    {
+      "id": "attribute-entity-adjacent",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":value: &copy;&amp;&#65;&#x41;\n\n{value}"
+    },
+    {
+      "id": "attribute-entity-mixed-parts",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":prefix: pass:[<b>]\n:suffix: pass:[</b>]\n:value: {prefix}&copy;{suffix}\n\n{value}"
+    },
+    {
+      "id": "attribute-entity-split-parts",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":prefix: &\n:suffix: pass:[copy;]\n:value: {prefix}{suffix}\n\n{value}"
+    },
+    {
+      "id": "attribute-entity-split-raw-prefix",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":prefix: pass:[&am]\n:value: {prefix}p;copy;\n\n{value}"
+    },
+    {
+      "id": "attribute-entity-split-escape",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":prefix: pass:[\\]\n:suffix: &copy;\n:value: {prefix}{suffix}\n\n{value}"
+    },
+    {
+      "id": "attribute-entity-multiple-refs",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":entity: &copy;\n:value: {entity} / {entity}\n\n{value}"
+    },
+    {
+      "id": "attribute-entity-late-reference",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":value: &copy;\n:other: {value}\n\n{value}"
+    },
+    {
+      "id": "attribute-entity-multiline",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":value: First &copy; \\\n second &#65;\n\n{value}"
+    },
+    {
+      "id": "attribute-entity-pass-attributes",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":entity: &copy;\n:value: pass:a[{entity}]\n\n{value}"
+    },
+    {
+      "id": "attribute-entity-pass-specials",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":value: pass:c[&copy;]\n\n{value}"
+    },
+    {
+      "id": "attribute-entity-pass-order",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":entity: &copy;\n:value: pass:a,c[{entity}]\n\n{value}"
+    },
+    {
+      "id": "attribute-entity-malformed",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":value: &copy &; & copy; &copy ; &#; &#x;\n\n{value}"
+    },
+    {
+      "id": "attribute-entity-markup",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":value: &lt;strong&gt;text&lt;/strong&gt;\n\n{value}"
+    },
+    {
+      "id": "attribute-entity-contexts",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":value: &copy;\n= Title {value}\n\n.Block {value}\nParagraph *{value}*.\n\n* {value}"
+    },
+    {
+      "id": "attribute-entity-label",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":value: &copy;\n\nlink:https://example.org[{value}]"
+    },
+    {
+      "id": "attribute-entity-body",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":value: &copy;\n\n{value}\n\n:value: \\&copy;\n\n{value}"
+    },
+    {
+      "id": "attribute-entity-verbatim",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":value: &copy;\n\n----\n{value}\n----\n\n++++\n<p>{value}</p>\n++++"
+    },
+    {
+      "id": "attribute-entity-unicode-crlf",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "﻿:value: До &copy; после\r\n\r\n{value}"
+    },
+    {
+      "id": "attribute-entity-include",
+      "category": "substitutions",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": "include::attrs.adoc[lines=2..3,indent=0]\n\ninclude::body.adoc[]",
+      "resources": {
+        "attrs.adoc": "ignored\r\n  :prefix: &\r\n  :value: {prefix}copy;\r\nignored",
+        "body.adoc": "{value}"
+      }
     }
   ]
 }

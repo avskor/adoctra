@@ -151,8 +151,12 @@ flat string APIs, raw_parts exposes boundaries. AttributeRef.parts and optional
 JSON/WASM parts preserve these boundaries; WASM also exports attribute_parts.
 HTML escapes Text and emits Raw unchanged. Host values are already substituted;
 source whole-value pass supports none, a/attributes and c/specialcharacters/
-specialchars, with ordered unique stages. Other pass stages, post-attribute
-replacements/entity restoration, and raw whole-doctitle replacement remain work.
+specialchars, with ordered unique stages. Entity restoration runs inside resolved
+attribute references (entity_references.rs), including Text/Raw boundaries,
+backslash escapes and one-pass protection removal. It preserves entity syntax as
+Raw parts, the original reference span, and untouched attribute snapshots.
+Other pass stages, other post-attribute replacements, entities in source text or
+across separate inline nodes, and raw whole-doctitle replacement remain work.
 The tokenizer shares header parsing (author/revision tokens). Setext document titles use adjacent
 processed lines, Unicode character lengths (difference <= 1), uniform =/-/~/^/+
 underlines and effective level zero. ATX takes precedence. The Heading/header

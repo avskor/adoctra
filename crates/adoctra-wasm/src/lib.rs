@@ -1314,6 +1314,17 @@ mod tests {
 #[cfg(test)]
 mod header_tests {
     #[test]
+    fn restored_entities_preserve_attribute_values_and_reference_coordinates() {
+        let source = ":v: pass:[&amp;copy;]\n\n{v}";
+        let json = super::parse_json_with_source(source, 7);
+        assert!(json.contains(r#""v":"&amp;copy;""#), "{json}");
+        let start = source.find("{v}").unwrap();
+        assert!(json.contains(&format!(r#""span":{{"source_id":7,"start":{start},"end":{}}},"name":"attribute-ref","attribute":"v","value":"&copy;","parts":[{{"kind":"raw","value":"&copy;"}}]"#, source.len())), "{json}");
+        let tokens = super::tokens_json_with_source(source, 7);
+        assert_eq!(tokens.matches(r#""kind":"attribute-ref""#).count(), 1);
+    }
+
+    #[test]
     fn author_markup_exports_attribute_boundaries_and_physical_reference_span() {
         let source =
             "= Doc\nJohn Doe\n:name: pass:[<b>Анна</b>]\n:author: {name} Смирнова\n\n{author}";

@@ -13,6 +13,7 @@ mod comments;
 mod conditional_expression;
 mod context;
 pub mod diagnostic;
+mod entity_references;
 pub mod error;
 pub mod extension;
 mod header;

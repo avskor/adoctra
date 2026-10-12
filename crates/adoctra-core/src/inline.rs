@@ -173,10 +173,23 @@ fn match_attribute(
         return None;
     }
     let end = i + 1 + rel_close + 1;
+    let mut value = attrs.get(name).map(str::to_string);
+    let mut parts = attrs.raw_parts(name).unwrap_or_default().to_vec();
+    if let Some(restored) = value
+        .as_deref()
+        .and_then(|v| crate::entity_references::restore(v, &parts))
+    {
+        value = Some(crate::attributes::parts_text(&restored));
+        parts = if restored.iter().any(crate::AttributePart::is_raw) {
+            restored
+        } else {
+            Vec::new()
+        };
+    }
     let node = Inline::AttributeRef {
         name: name.to_string(),
-        value: attrs.get(name).map(str::to_string),
-        parts: attrs.raw_parts(name).unwrap_or_default().to_vec(),
+        value,
+        parts,
         span: Span::new(base + i, base + end),
     };
     Some((node, end))

@@ -1811,3 +1811,43 @@ fn raw_author_substitutions_across_include_preserve_fragments_and_physical_spans
     assert!(tokens.iter().any(|t| t.kind == TokenKind::AttributeEntry
         && sources.slice(t.span) == Some(":author_2: <i>{name}</i> Смирнова")));
 }
+
+#[test]
+fn restored_entities_from_included_attributes_keep_reference_source_and_snapshots() {
+    let root = "include::attrs.adoc[lines=2..3,indent=0]\n\ninclude::body.adoc[]";
+    let (mut sources, resources, options) = setup(
+        root,
+        &[
+            (
+                "/docs/attrs.adoc",
+                "ignored\r\n  :prefix: &\r\n  :value: {prefix}copy;\r\nignored",
+            ),
+            ("/docs/body.adoc", "{value}"),
+        ],
+    );
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty());
+    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+        panic!()
+    };
+    let Inline::AttributeRef { parts, span, .. } = &inlines[0] else {
+        panic!()
+    };
+    assert_eq!(
+        parts,
+        &[adoctra_core::AttributePart::Raw("&copy;".to_owned())]
+    );
+    assert_eq!(sources.slice(*span), Some("{value}"));
+    assert_eq!(
+        sources.get(span.source_id).unwrap().name(),
+        "/docs/body.adoc"
+    );
+    assert_eq!(result.document.attributes.get("value"), Some("&copy;"));
+    assert!(result.document.attributes.raw_parts("value").is_none());
+    let tokens = tokens_resource(&mut sources, &options, &resources).unwrap();
+    let token = tokens
+        .iter()
+        .find(|t| t.kind == TokenKind::AttributeRef)
+        .unwrap();
+    assert_eq!(token.span, *span);
+}

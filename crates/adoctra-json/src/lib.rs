@@ -554,6 +554,20 @@ mod tests {
     }
 
     #[test]
+    fn restored_attribute_entities_export_raw_syntax_and_literal_escapes() {
+        let json = render(":v: &copy;\n:e: \\&copy;\n\n{v}\n\n{e}");
+        assert!(
+            json.contains(r#""value":"&copy;","parts":[{"kind":"raw","value":"&copy;"}]"#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#"{"name":"text","value":"&copy;"}"#),
+            "{json}"
+        );
+        assert_eq!(json.matches(r#""parts":"#).count(), 1);
+    }
+
+    #[test]
     fn doctitle_override_exports_effective_heading_and_source_declaration() {
         let json = render("= Original\n:doctitle: *Effective*\n\n{doctitle}");
         assert!(json.contains(r#""title":"Original""#), "{json}");
