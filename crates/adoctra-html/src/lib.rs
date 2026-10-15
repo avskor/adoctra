@@ -527,6 +527,27 @@ mod tests {
     }
 
     #[test]
+    fn ordinary_post_replacements_render_attribute_breaks_and_local_options() {
+        let html = render(":v: one + \\\n two\n\n{v}\n\n[%hardbreaks]\nЖ\nБ +\n\nthree\nfour");
+        assert!(html.contains("<p>one<br> two</p>"), "{html}");
+        assert!(html.contains("<p>Ж<br> Б +</p>"), "{html}");
+        assert!(html.contains("<p>three four</p>"), "{html}");
+        let html = render("[verse%hardbreaks]\n____\nЖ\nБ +\n____");
+        assert!(html.contains("Ж<br>\nБ +"), "{html}");
+    }
+
+    #[test]
+    fn shared_attribute_stage_renders_ordered_protection_and_definition_escapes() {
+        let html = render(":x: Value\n:v: {cpp} \\{x} {x\\}\n:protected: pass:a,c[{cpp}]\n:raw: pass:c,a[{cpp}]\n\n{v} / {protected} / {raw} / pass:a,c[{cpp}]");
+        assert!(
+            html.contains("C&#43;&#43; {x} {x} / C&#43;&#43; / C&#43;&#43; / C&amp;#43;&amp;#43;"),
+            "{html}"
+        );
+        let html = render(":attribute-missing: drop-line\n:v: before {missing} after\n\nFirst {v} pass:a[before {missing} after] last");
+        assert!(html.contains("<p>First   last</p>"), "{html}");
+    }
+
+    #[test]
     fn ordinary_attributes_render_escapes_intrinsic_entities_and_missing_policies() {
         let html = render(r"{cpp} \{cpp} {missing} {amp}copy; {asterisk}literal{asterisk}");
         assert!(

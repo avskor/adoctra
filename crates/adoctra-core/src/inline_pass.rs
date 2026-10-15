@@ -204,7 +204,7 @@ impl Passes {
             vec![P::Raw(body)]
         };
         for &stage in stages {
-            parts = pass_subs::apply(parts, stage, attrs, compat);
+            parts = pass_subs::apply(parts, stage, attrs, compat, span, &mut self.diagnostics);
         }
         self.restore_parts(parts)
     }

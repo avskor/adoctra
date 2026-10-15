@@ -1,5 +1,5 @@
-//! The ordinary a-stage, after passthrough extraction and quotes. References
-//! retain source ownership even when a missing-value policy removes their line.
+//! Shared a-stage for ordinary inline text, definitions and selected pass
+//! substitutions. Ordinary references retain their original source ownership.
 use crate::attributes::{parts_text, push_value};
 use crate::substitution_text::Text;
 use crate::{AttributePart as P, Attributes, Diagnostic, Inline, Severity, Span};
@@ -40,10 +40,41 @@ pub(crate) fn apply(
     attrs: &Attributes,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> (Text, Vec<Reference>) {
+    apply_with_policy(
+        text,
+        attrs,
+        attrs.get("attribute-missing").unwrap_or("skip"),
+        diagnostics,
+    )
+}
+
+/// Definitions and selected stages carry an enclosing physical origin: their
+/// text may already have been joined, unescaped or rewritten by another stage.
+pub(crate) fn parts(
+    parts: &[P],
+    attrs: &Attributes,
+    span: Span,
+    policy: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> Vec<P> {
+    let mut text = Text::default();
+    for part in parts {
+        text.append_part(part, 0, span);
+    }
+    apply_with_policy(text, attrs, policy, diagnostics)
+        .0
+        .into_parts()
+}
+
+fn apply_with_policy(
+    text: Text,
+    attrs: &Attributes,
+    policy: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> (Text, Vec<Reference>) {
     let mut output = Text::default();
     let mut refs = Vec::new();
     let mut dropped = Vec::new();
-    let policy = attrs.get("attribute-missing").unwrap_or("skip");
     let mut at = 0;
     let mut copied = 0;
     while at < text.text.len() {
@@ -199,4 +230,34 @@ pub(crate) fn nodes(text: Text, refs: Vec<Reference>) -> Vec<Inline> {
     }
     nodes.sort_by_key(|n| n.span().start);
     nodes
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn shared_stage_matches_across_parts_and_drops_the_transformed_line() {
+        let mut attrs = Attributes::new();
+        attrs.set_parts("name", vec![P::Raw("first\nsecond".into())]);
+        let span = Span::new(12, 42);
+        let mut diagnostics = Vec::new();
+        let output = parts(
+            &[
+                P::Text("before {na".into()),
+                P::Raw("me} {missing}\nafter".into()),
+            ],
+            &attrs,
+            span,
+            "drop-line",
+            &mut diagnostics,
+        );
+        assert_eq!(
+            output,
+            vec![P::Text("before ".into()), P::Raw("first\nafter".into())]
+        );
+        assert_eq!(diagnostics.len(), 1);
+        assert_eq!(diagnostics[0].span, span);
+        assert_eq!(diagnostics[0].severity, Severity::Info);
+    }
 }

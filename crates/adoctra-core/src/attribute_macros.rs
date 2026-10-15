@@ -240,6 +240,7 @@ fn flush_inlines(
             links,
         );
     }
+    text = crate::post_replacements::apply(text, attributes.hardbreaks(), edges.1);
     output.extend(crate::substitution_text::write_back(
         std::mem::take(nodes),
         text,

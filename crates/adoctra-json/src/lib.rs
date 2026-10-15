@@ -565,6 +565,36 @@ mod tests {
     }
 
     #[test]
+    fn ordinary_post_replacements_export_neutral_breaks_for_both_owners() {
+        let json = render(":v: one + \\\n two\n\n{v} +\nlast");
+        assert_eq!(json.matches(r#""kind":"line-break""#).count(), 2, "{json}");
+        assert!(json.contains(r#""name":"substituted""#), "{json}");
+        assert!(json.contains(r#""value":"one two""#), "{json}");
+    }
+
+    #[test]
+    fn shared_attribute_stage_exports_raw_and_protected_intrinsic_values() {
+        let json =
+            render(":raw: {cpp}\n\n{raw} / pass:a,c[{cpp}] / pass:a,q[{asterisk}Bold{asterisk}]");
+        assert!(
+            json.contains(
+                r#""value":"C&#43;&#43;","parts":[{"kind":"raw","value":"C&#43;&#43;"}]"#
+            ),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""kind":"text","value":"C&#43;&#43;"}"#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""kind":"open","format":"strong""#),
+            "{json}"
+        );
+        let json = render(":attribute-missing: drop-line\n:v: {missing}\n\n{v}");
+        assert!(json.contains(r#""name":"text","value":"""#), "{json}");
+    }
+
+    #[test]
     fn ordinary_attributes_export_intrinsic_parts_escapes_and_missing_values() {
         let json = render(r"{cpp} \{cpp} {missing}");
         assert!(json.contains(r#""name":"text","value":"C&#43;&#43;","parts":[{"kind":"raw","value":"C&#43;&#43;"}]"#), "{json}");

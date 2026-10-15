@@ -24,6 +24,38 @@ fn setup(root: &str, files: &[(&str, &str)]) -> (SourceMap, MemoryResources, Par
 }
 
 #[test]
+fn post_replacements_keep_selected_include_break_origins_and_tokens() {
+    let root = "include::part.adoc[tags=body,indent=0]";
+    let part = "\u{feff}// tag::body[]\r\n  Ж(C) +\r\n  // removed\r\n  Б +\r\n// end::body[]";
+    let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", part)]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+        panic!()
+    };
+    let spans: Vec<_> = inlines
+        .iter()
+        .filter_map(|n| match n {
+            Inline::Substituted { parts, span, .. }
+                if parts.contains(&adoctra_core::AttributePart::LineBreak) =>
+            {
+                Some(*span)
+            }
+            _ => None,
+        })
+        .collect();
+    assert_eq!(spans.len(), 2);
+    let tokens = tokens_resource(&mut sources, &options, &resources).unwrap();
+    for span in spans {
+        assert_eq!(span.source_id, SourceId(1));
+        assert_eq!(sources.slice(span), Some(" +"));
+        assert!(tokens
+            .iter()
+            .any(|t| t.kind == TokenKind::LineBreak && t.span == span));
+    }
+    check_spans(&result, &sources);
+}
+
+#[test]
 fn source_quotes_keep_metadata_reference_tokens_in_selected_include_text() {
     let root = "include::part.adoc[tags=body,indent=0]";
     let part = "\u{feff}// tag::body[]\r\n  :role: красный\r\n\r\n  Ж(C) [{role}]*Жёлтый*\r\n// end::body[]";
@@ -2378,5 +2410,51 @@ fn inline_attribute_drop_line_keeps_surviving_cross_source_text_and_reference_to
     assert!(ts
         .iter()
         .any(|t| t.kind == TokenKind::AttributeRef && sources.slice(t.span) == Some("{missing}")));
+    check_spans(&result, &sources);
+}
+
+#[test]
+fn shared_attribute_stage_warnings_restore_selected_definition_and_pass_origins() {
+    let root = ":attribute-missing: warn\n\ninclude::part.adoc[tags=body,indent=0]";
+    let part = "\u{feff}// tag::body[]\r\n  :v: {missing}\r\n\r\n  Ж {v} pass:a[{other}]\r\n// end::body[]";
+    let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", part)]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(result.diagnostics.len(), 2, "{result:?}");
+    for (d, expected) in result
+        .diagnostics
+        .iter()
+        .zip([":v: {missing}", "pass:a[{other}]"])
+    {
+        assert_eq!(d.span.source_id, SourceId(1));
+        assert_eq!(sources.slice(d.span), Some(expected));
+        assert_eq!(d.severity, adoctra_core::Severity::Warning);
+    }
+    let ts = tokens_resource(&mut sources, &options, &resources).unwrap();
+    for (kind, text) in [
+        (TokenKind::AttributeEntry, ":v: {missing}"),
+        (TokenKind::PassthroughText, "pass:a[{other}]"),
+    ] {
+        assert!(ts
+            .iter()
+            .any(|t| t.kind == kind && sources.slice(t.span) == Some(text)));
+    }
+    check_spans(&result, &sources);
+}
+
+#[test]
+fn multiline_attribute_warning_retains_composite_include_origin() {
+    let root = ":attribute-missing: warn\n:v: before \\\ninclude::part.adoc[]\n\n{v}";
+    let part = "{missing} {cpp}";
+    let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", part)]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(result.diagnostics.len(), 1, "{result:?}");
+    let d = &result.diagnostics[0];
+    let fragments = &result.provenance[d.span.provenance.expect("composite definition origin")];
+    assert_eq!(fragments.first().unwrap().source_id, options.source_id);
+    assert_eq!(fragments.last().unwrap().source_id, SourceId(1));
+    assert_eq!(
+        result.document.attributes.get("v"),
+        Some("before {missing} C&#43;&#43;")
+    );
     check_spans(&result, &sources);
 }

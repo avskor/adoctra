@@ -2441,8 +2441,7 @@
     {
       "id": "attribute-multiline-hard-break",
       "category": "attributes",
-      "expect": "xfail",
-      "reason": "Hard line break substitution after attribute expansion is not implemented.",
+      "expect": "pass",
       "source": ":x: one + \\\n two\n\n{x}"
     },
     {
@@ -9361,6 +9360,1426 @@
       "resources": {
         "part.adoc": "// tag::body[]\n  {missing}\n  Ж {cpp}\n// end::body[]"
       }
+    },
+    {
+      "id": "shared-attrs-entry-intrinsics",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: Value\n:á: Accent\n:Ж: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n:v: {cpp} {PLUS} {nbsp} {empty}\n\nBefore {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-protected",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: Value\n:á: Accent\n:Ж: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n:v: <b>&</b> {amp} {lt}b{gt}raw{lt}/b{gt}\n\nBefore {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-escape",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: Value\n:á: Accent\n:Ж: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n:v: \\{x} {x\\} \\{x\\} \\\\{x}\n\nBefore {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-grammar",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: Value\n:á: Accent\n:Ж: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n:v: {á} {Ж} {a-b} {a.b} {-x} {{x}}\n\nBefore {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-no-rescan",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: Value\n:á: Accent\n:Ж: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n:v: {raw} {backslash}{x}\n\nBefore {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-quotes",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: Value\n:á: Accent\n:Ж: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n:v: *{x}* {asterisk}word{asterisk}\n\nBefore {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-pass-intrinsics",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: Value\n:á: Accent\n:Ж: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n:v: pass:a[{cpp} {PLUS} {nbsp} {empty}]\n\nBefore {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-pass-protected",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: Value\n:á: Accent\n:Ж: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n:v: pass:a[<b>&</b> {amp} {lt}b{gt}raw{lt}/b{gt}]\n\nBefore {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-pass-escape",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: Value\n:á: Accent\n:Ж: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n:v: pass:a[\\{x} {x\\} \\{x\\} \\\\{x}]\n\nBefore {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-pass-grammar",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: Value\n:á: Accent\n:Ж: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n:v: pass:a[{á} {Ж} {a-b} {a.b} {-x} {{x}}]\n\nBefore {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-pass-no-rescan",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: Value\n:á: Accent\n:Ж: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n:v: pass:a[{raw} {backslash}{x}]\n\nBefore {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-pass-quotes",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: Value\n:á: Accent\n:Ж: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n:v: pass:a[*{x}* {asterisk}word{asterisk}]\n\nBefore {v} after"
+    },
+    {
+      "id": "shared-attrs-inline-pass-intrinsics",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: Value\n:á: Accent\n:Ж: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n\nBefore pass:a[{cpp} {PLUS} {nbsp} {empty}] after"
+    },
+    {
+      "id": "shared-attrs-inline-pass-protected",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: Value\n:á: Accent\n:Ж: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n\nBefore pass:a[<b>&</b> {amp} {lt}b{gt}raw{lt}/b{gt}] after"
+    },
+    {
+      "id": "shared-attrs-inline-pass-escape",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: Value\n:á: Accent\n:Ж: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n\nBefore pass:a[\\{x} {x\\} \\{x\\} \\\\{x}] after"
+    },
+    {
+      "id": "shared-attrs-inline-pass-grammar",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: Value\n:á: Accent\n:Ж: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n\nBefore pass:a[{á} {Ж} {a-b} {a.b} {-x} {{x}}] after"
+    },
+    {
+      "id": "shared-attrs-inline-pass-no-rescan",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: Value\n:á: Accent\n:Ж: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n\nBefore pass:a[{raw} {backslash}{x}] after"
+    },
+    {
+      "id": "shared-attrs-inline-pass-quotes",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: Value\n:á: Accent\n:Ж: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n\nBefore pass:a[*{x}* {asterisk}word{asterisk}] after"
+    },
+    {
+      "id": "shared-attrs-entry-skip-basic",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: skip\n:v: before {missing} after\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-skip-only",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: skip\n:v: {missing}\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-skip-escaped",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: skip\n:v: \\{missing} {missing\\}\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-skip-multiple",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: skip\n:v: {missing}{missing}\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-warn-basic",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: warn\n:v: before {missing} after\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-warn-only",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: warn\n:v: {missing}\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-warn-escaped",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: warn\n:v: \\{missing} {missing\\}\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-warn-multiple",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: warn\n:v: {missing}{missing}\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-drop-basic",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop\n:v: before {missing} after\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-drop-only",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop\n:v: {missing}\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-drop-escaped",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop\n:v: \\{missing} {missing\\}\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-drop-multiple",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop\n:v: {missing}{missing}\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-drop-line-basic",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop-line\n:v: before {missing} after\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-drop-line-only",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop-line\n:v: {missing}\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-drop-line-escaped",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop-line\n:v: \\{missing} {missing\\}\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-drop-line-multiple",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop-line\n:v: {missing}{missing}\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-unknown-basic",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: unknown\n:v: before {missing} after\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-unknown-only",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: unknown\n:v: {missing}\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-unknown-escaped",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: unknown\n:v: \\{missing} {missing\\}\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-unknown-multiple",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: unknown\n:v: {missing}{missing}\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-pass-skip-basic",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: skip\n:v: pass:a[before {missing} after]\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-pass-skip-only",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: skip\n:v: pass:a[{missing}]\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-pass-skip-escaped",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: skip\n:v: pass:a[\\{missing} {missing\\}]\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-pass-skip-multiple",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: skip\n:v: pass:a[{missing}{missing}]\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-pass-warn-basic",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: warn\n:v: pass:a[before {missing} after]\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-pass-warn-only",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: warn\n:v: pass:a[{missing}]\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-pass-warn-escaped",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: warn\n:v: pass:a[\\{missing} {missing\\}]\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-pass-warn-multiple",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: warn\n:v: pass:a[{missing}{missing}]\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-pass-drop-basic",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop\n:v: pass:a[before {missing} after]\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-pass-drop-only",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop\n:v: pass:a[{missing}]\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-pass-drop-escaped",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop\n:v: pass:a[\\{missing} {missing\\}]\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-pass-drop-multiple",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop\n:v: pass:a[{missing}{missing}]\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-pass-drop-line-basic",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop-line\n:v: pass:a[before {missing} after]\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-pass-drop-line-only",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop-line\n:v: pass:a[{missing}]\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-pass-drop-line-escaped",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop-line\n:v: pass:a[\\{missing} {missing\\}]\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-pass-drop-line-multiple",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop-line\n:v: pass:a[{missing}{missing}]\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-pass-unknown-basic",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: unknown\n:v: pass:a[before {missing} after]\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-pass-unknown-only",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: unknown\n:v: pass:a[{missing}]\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-pass-unknown-escaped",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: unknown\n:v: pass:a[\\{missing} {missing\\}]\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-entry-pass-unknown-multiple",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: unknown\n:v: pass:a[{missing}{missing}]\n\nBefore {v} / {v} after"
+    },
+    {
+      "id": "shared-attrs-inline-pass-skip-basic",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: skip\n\nBefore pass:a[before {missing} after] after"
+    },
+    {
+      "id": "shared-attrs-inline-pass-skip-only",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: skip\n\nBefore pass:a[{missing}] after"
+    },
+    {
+      "id": "shared-attrs-inline-pass-skip-escaped",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: skip\n\nBefore pass:a[\\{missing} {missing\\}] after"
+    },
+    {
+      "id": "shared-attrs-inline-pass-skip-multiple",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: skip\n\nBefore pass:a[{missing}{missing}] after"
+    },
+    {
+      "id": "shared-attrs-inline-pass-warn-basic",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: warn\n\nBefore pass:a[before {missing} after] after"
+    },
+    {
+      "id": "shared-attrs-inline-pass-warn-only",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: warn\n\nBefore pass:a[{missing}] after"
+    },
+    {
+      "id": "shared-attrs-inline-pass-warn-escaped",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: warn\n\nBefore pass:a[\\{missing} {missing\\}] after"
+    },
+    {
+      "id": "shared-attrs-inline-pass-warn-multiple",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: warn\n\nBefore pass:a[{missing}{missing}] after"
+    },
+    {
+      "id": "shared-attrs-inline-pass-drop-basic",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop\n\nBefore pass:a[before {missing} after] after"
+    },
+    {
+      "id": "shared-attrs-inline-pass-drop-only",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop\n\nBefore pass:a[{missing}] after"
+    },
+    {
+      "id": "shared-attrs-inline-pass-drop-escaped",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop\n\nBefore pass:a[\\{missing} {missing\\}] after"
+    },
+    {
+      "id": "shared-attrs-inline-pass-drop-multiple",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop\n\nBefore pass:a[{missing}{missing}] after"
+    },
+    {
+      "id": "shared-attrs-inline-pass-drop-line-basic",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop-line\n\nBefore pass:a[before {missing} after] after"
+    },
+    {
+      "id": "shared-attrs-inline-pass-drop-line-only",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop-line\n\nBefore pass:a[{missing}] after"
+    },
+    {
+      "id": "shared-attrs-inline-pass-drop-line-escaped",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop-line\n\nBefore pass:a[\\{missing} {missing\\}] after"
+    },
+    {
+      "id": "shared-attrs-inline-pass-drop-line-multiple",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop-line\n\nBefore pass:a[{missing}{missing}] after"
+    },
+    {
+      "id": "shared-attrs-inline-pass-unknown-basic",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: unknown\n\nBefore pass:a[before {missing} after] after"
+    },
+    {
+      "id": "shared-attrs-inline-pass-unknown-only",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: unknown\n\nBefore pass:a[{missing}] after"
+    },
+    {
+      "id": "shared-attrs-inline-pass-unknown-escaped",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: unknown\n\nBefore pass:a[\\{missing} {missing\\}] after"
+    },
+    {
+      "id": "shared-attrs-inline-pass-unknown-multiple",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: unknown\n\nBefore pass:a[{missing}{missing}] after"
+    },
+    {
+      "id": "shared-attrs-entry-order-a-c",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: *Bold*\n:v: pass:a,c[{cpp} {amp} &amp; {lt}b{gt}Raw{lt}/b{gt} *{x}* link:https://e[{x}]]\n\n{v}"
+    },
+    {
+      "id": "shared-attrs-inline-order-a-c",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: *Bold*\n\nBefore pass:a,c[{cpp} {amp} &amp; {lt}b{gt}Raw{lt}/b{gt} *{x}* link:https://e[{x}]] after"
+    },
+    {
+      "id": "shared-attrs-entry-order-c-a",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: *Bold*\n:v: pass:c,a[{cpp} {amp} &amp; {lt}b{gt}Raw{lt}/b{gt} *{x}* link:https://e[{x}]]\n\n{v}"
+    },
+    {
+      "id": "shared-attrs-inline-order-c-a",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: *Bold*\n\nBefore pass:c,a[{cpp} {amp} &amp; {lt}b{gt}Raw{lt}/b{gt} *{x}* link:https://e[{x}]] after"
+    },
+    {
+      "id": "shared-attrs-entry-order-a-q",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: *Bold*\n:v: pass:a,q[{cpp} {amp} &amp; {lt}b{gt}Raw{lt}/b{gt} *{x}* link:https://e[{x}]]\n\n{v}"
+    },
+    {
+      "id": "shared-attrs-inline-order-a-q",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: *Bold*\n\nBefore pass:a,q[{cpp} {amp} &amp; {lt}b{gt}Raw{lt}/b{gt} *{x}* link:https://e[{x}]] after"
+    },
+    {
+      "id": "shared-attrs-entry-order-q-a",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: *Bold*\n:v: pass:q,a[{cpp} {amp} &amp; {lt}b{gt}Raw{lt}/b{gt} *{x}* link:https://e[{x}]]\n\n{v}"
+    },
+    {
+      "id": "shared-attrs-inline-order-q-a",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: *Bold*\n\nBefore pass:q,a[{cpp} {amp} &amp; {lt}b{gt}Raw{lt}/b{gt} *{x}* link:https://e[{x}]] after"
+    },
+    {
+      "id": "shared-attrs-entry-order-a-r",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: *Bold*\n:v: pass:a,r[{cpp} {amp} &amp; {lt}b{gt}Raw{lt}/b{gt} *{x}* link:https://e[{x}]]\n\n{v}"
+    },
+    {
+      "id": "shared-attrs-inline-order-a-r",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: *Bold*\n\nBefore pass:a,r[{cpp} {amp} &amp; {lt}b{gt}Raw{lt}/b{gt} *{x}* link:https://e[{x}]] after"
+    },
+    {
+      "id": "shared-attrs-entry-order-r-a",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: *Bold*\n:v: pass:r,a[{cpp} {amp} &amp; {lt}b{gt}Raw{lt}/b{gt} *{x}* link:https://e[{x}]]\n\n{v}"
+    },
+    {
+      "id": "shared-attrs-inline-order-r-a",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: *Bold*\n\nBefore pass:r,a[{cpp} {amp} &amp; {lt}b{gt}Raw{lt}/b{gt} *{x}* link:https://e[{x}]] after"
+    },
+    {
+      "id": "shared-attrs-entry-order-m-a",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: *Bold*\n:v: pass:m,a[{cpp} {amp} &amp; {lt}b{gt}Raw{lt}/b{gt} *{x}* link:https://e[{x}]]\n\n{v}"
+    },
+    {
+      "id": "shared-attrs-inline-order-m-a",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: *Bold*\n\nBefore pass:m,a[{cpp} {amp} &amp; {lt}b{gt}Raw{lt}/b{gt} *{x}* link:https://e[{x}]] after"
+    },
+    {
+      "id": "shared-attrs-entry-order-a-m",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: *Bold*\n:v: pass:a,m[{cpp} {amp} &amp; {lt}b{gt}Raw{lt}/b{gt} *{x}* link:https://e[{x}]]\n\n{v}"
+    },
+    {
+      "id": "shared-attrs-inline-order-a-m",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: *Bold*\n\nBefore pass:a,m[{cpp} {amp} &amp; {lt}b{gt}Raw{lt}/b{gt} *{x}* link:https://e[{x}]] after"
+    },
+    {
+      "id": "shared-attrs-entry-order-c-q-a-r",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: *Bold*\n:v: pass:c,q,a,r[{cpp} {amp} &amp; {lt}b{gt}Raw{lt}/b{gt} *{x}* link:https://e[{x}]]\n\n{v}"
+    },
+    {
+      "id": "shared-attrs-inline-order-c-q-a-r",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: *Bold*\n\nBefore pass:c,q,a,r[{cpp} {amp} &amp; {lt}b{gt}Raw{lt}/b{gt} *{x}* link:https://e[{x}]] after"
+    },
+    {
+      "id": "shared-attrs-entry-order-normal",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: *Bold*\n:v: pass:normal[{cpp} {amp} &amp; {lt}b{gt}Raw{lt}/b{gt} *{x}* link:https://e[{x}]]\n\n{v}"
+    },
+    {
+      "id": "shared-attrs-inline-order-normal",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: *Bold*\n\nBefore pass:normal[{cpp} {amp} &amp; {lt}b{gt}Raw{lt}/b{gt} *{x}* link:https://e[{x}]] after"
+    },
+    {
+      "id": "shared-attrs-entry-order-a-a",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: *Bold*\n:v: pass:a,a[{cpp} {amp} &amp; {lt}b{gt}Raw{lt}/b{gt} *{x}* link:https://e[{x}]]\n\n{v}"
+    },
+    {
+      "id": "shared-attrs-inline-order-a-a",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: *Bold*\n\nBefore pass:a,a[{cpp} {amp} &amp; {lt}b{gt}Raw{lt}/b{gt} *{x}* link:https://e[{x}]] after"
+    },
+    {
+      "id": "shared-attrs-entry-order-a-normal",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: *Bold*\n:v: pass:a,normal[{cpp} {amp} &amp; {lt}b{gt}Raw{lt}/b{gt} *{x}* link:https://e[{x}]]\n\n{v}"
+    },
+    {
+      "id": "shared-attrs-inline-order-a-normal",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: *Bold*\n\nBefore pass:a,normal[{cpp} {amp} &amp; {lt}b{gt}Raw{lt}/b{gt} *{x}* link:https://e[{x}]] after"
+    },
+    {
+      "id": "shared-attrs-multiline-drop-a",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop\n\nBefore pass:a[first\n{missing}\nlast {cpp}] after"
+    },
+    {
+      "id": "shared-attrs-multiline-drop-q-a",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop\n\nBefore pass:q,a[first\n{missing}\nlast {cpp}] after"
+    },
+    {
+      "id": "shared-attrs-multiline-drop-a-q",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop\n\nBefore pass:a,q[first\n{missing}\nlast {cpp}] after"
+    },
+    {
+      "id": "shared-attrs-multiline-drop-m-a",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop\n\nBefore pass:m,a[first\n{missing}\nlast {cpp}] after"
+    },
+    {
+      "id": "shared-attrs-multiline-drop-a-m",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop\n\nBefore pass:a,m[first\n{missing}\nlast {cpp}] after"
+    },
+    {
+      "id": "shared-attrs-multiline-drop-line-a",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop-line\n\nBefore pass:a[first\n{missing}\nlast {cpp}] after"
+    },
+    {
+      "id": "shared-attrs-multiline-drop-line-q-a",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop-line\n\nBefore pass:q,a[first\n{missing}\nlast {cpp}] after"
+    },
+    {
+      "id": "shared-attrs-multiline-drop-line-a-q",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop-line\n\nBefore pass:a,q[first\n{missing}\nlast {cpp}] after"
+    },
+    {
+      "id": "shared-attrs-multiline-drop-line-m-a",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop-line\n\nBefore pass:m,a[first\n{missing}\nlast {cpp}] after"
+    },
+    {
+      "id": "shared-attrs-multiline-drop-line-a-m",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop-line\n\nBefore pass:a,m[first\n{missing}\nlast {cpp}] after"
+    },
+    {
+      "id": "shared-attrs-multiline-warn-a",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: warn\n\nBefore pass:a[first\n{missing}\nlast {cpp}] after"
+    },
+    {
+      "id": "shared-attrs-multiline-warn-q-a",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: warn\n\nBefore pass:q,a[first\n{missing}\nlast {cpp}] after"
+    },
+    {
+      "id": "shared-attrs-multiline-warn-a-q",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: warn\n\nBefore pass:a,q[first\n{missing}\nlast {cpp}] after"
+    },
+    {
+      "id": "shared-attrs-multiline-warn-m-a",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: warn\n\nBefore pass:m,a[first\n{missing}\nlast {cpp}] after"
+    },
+    {
+      "id": "shared-attrs-multiline-warn-a-m",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: warn\n\nBefore pass:a,m[first\n{missing}\nlast {cpp}] after"
+    },
+    {
+      "id": "shared-attrs-metadata",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: Value\n:r: pass:[{x}]\n\npass:q,a[[.{r}]#label#]"
+    },
+    {
+      "id": "shared-attrs-link-metadata",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":x: Value\n:r: pass:[{x}]\n\npass:m,a[link:https://e/{r}[Label,role={r}]]"
+    },
+    {
+      "id": "shared-attrs-nested",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: warn\n\npass:m,a[+{missing}+ pass:a[{missing}\\]]"
+    },
+    {
+      "id": "shared-attrs-entry-body-policy",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop\n:v: {missing}\n\nBefore {v}\n\n:attribute-missing: warn\n:v: {missing}\n\nAfter {v}"
+    },
+    {
+      "id": "shared-attrs-entry-multiline",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop-line\n:v: first + \\\n{missing} + \\\nlast {cpp}\n\npass:a,p[{v}]"
+    },
+    {
+      "id": "shared-attrs-include-warning",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: warn\n\ninclude::part.adoc[lines=2..4,indent=0]",
+      "profile": "include-body-dom-v1",
+      "resources": {
+        "part.adoc": "omitted\r\n  :v: {cpp} {missing}\r\n\r\n  Ж {v} pass:a[{other}]\r\n"
+      }
+    },
+    {
+      "id": "shared-attrs-cross-source-definition",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: warn\n:v: first \\\ninclude::part.adoc[]\n\n{v}",
+      "profile": "include-body-dom-v1",
+      "resources": {
+        "part.adoc": "{missing} {cpp}"
+      }
+    },
+    {
+      "id": "shared-attrs-header-title",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "= {cpp} {v}\n:v: {cpp}\n\nBody {v}"
+    },
+    {
+      "id": "shared-attrs-body-snapshots",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":v: {cpp}\n\nBefore {v}\n\n:v: pass:a,c[{cpp}]\n\nAfter {v}\n\n:v: {cpp}\n\nFinal {v}"
+    },
+    {
+      "id": "shared-attrs-override-unset",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":cpp: Other\n:v: {CPP}\n:cpp!:\n:w: {CPP}\n\n{v} / {w}"
+    },
+    {
+      "id": "shared-attrs-post-drop-line",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop-line\n\nBefore pass:a,p[first +\n{missing}\nlast {cpp}] after"
+    },
+    {
+      "id": "ordinary-post-explicit-plain",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "one +\ntwo +"
+    },
+    {
+      "id": "ordinary-post-explicit-soft",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "one\ntwo"
+    },
+    {
+      "id": "ordinary-post-explicit-escape",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "one \\+\ntwo +"
+    },
+    {
+      "id": "ordinary-post-explicit-spaces",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "one  +\ntwo +  \nend"
+    },
+    {
+      "id": "ordinary-post-explicit-quoted",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "*one +\ntwo* +\nthree"
+    },
+    {
+      "id": "ordinary-post-explicit-end-quote",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "*one +*\ntwo"
+    },
+    {
+      "id": "ordinary-post-explicit-link",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "link:https://e[one +\ntwo] +\nend"
+    },
+    {
+      "id": "ordinary-post-explicit-xref",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "<<foo,one +\ntwo>> +\nend"
+    },
+    {
+      "id": "ordinary-post-explicit-attr-marker",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":p: +\n\none {p}\ntwo"
+    },
+    {
+      "id": "ordinary-post-explicit-attr-multiline",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":v: one + \\\n two\n\n{v}"
+    },
+    {
+      "id": "ordinary-post-explicit-split-attrs",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":s: pass:[ ]\n:p: +\n\none{s}{p}\ntwo"
+    },
+    {
+      "id": "ordinary-post-explicit-attr-edge",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":p: +\n\none {p}"
+    },
+    {
+      "id": "ordinary-post-explicit-intrinsic",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "one {plus}\ntwo"
+    },
+    {
+      "id": "ordinary-post-explicit-protected",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "pass:[one +\ntwo] +\nend"
+    },
+    {
+      "id": "ordinary-post-explicit-plus-pass",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "+one +\ntwo+ +\nend"
+    },
+    {
+      "id": "ordinary-post-explicit-nested",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "pass:normal[one +\ntwo] +\nend"
+    },
+    {
+      "id": "ordinary-post-explicit-empty",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":e:\n\none +{e}\ntwo"
+    },
+    {
+      "id": "ordinary-post-explicit-after-link",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "https://e +\ntwo"
+    },
+    {
+      "id": "ordinary-post-explicit-before-anchor",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "one +[[foo]]\ntwo"
+    },
+    {
+      "id": "ordinary-post-explicit-raw-tag",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":v: pass:[<em>one +]\n\n{v}\ntwo pass:[</em>]"
+    },
+    {
+      "id": "ordinary-post-explicit-comments",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "one +\n// hidden\ntwo"
+    },
+    {
+      "id": "ordinary-post-explicit-drop",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":attribute-missing: drop-line\n\none +\n{absent}\ntwo"
+    },
+    {
+      "id": "ordinary-post-global-plain",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks:\n\none +\ntwo +"
+    },
+    {
+      "id": "ordinary-post-global-soft",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks:\n\none\ntwo"
+    },
+    {
+      "id": "ordinary-post-global-escape",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks:\n\none \\+\ntwo +"
+    },
+    {
+      "id": "ordinary-post-global-spaces",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks:\n\none  +\ntwo +  \nend"
+    },
+    {
+      "id": "ordinary-post-global-quoted",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks:\n\n*one +\ntwo* +\nthree"
+    },
+    {
+      "id": "ordinary-post-global-end-quote",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks:\n\n*one +*\ntwo"
+    },
+    {
+      "id": "ordinary-post-global-link",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks:\n\nlink:https://e[one +\ntwo] +\nend"
+    },
+    {
+      "id": "ordinary-post-global-xref",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks:\n\n<<foo,one +\ntwo>> +\nend"
+    },
+    {
+      "id": "ordinary-post-global-attr-marker",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks:\n\n:p: +\n\none {p}\ntwo"
+    },
+    {
+      "id": "ordinary-post-global-attr-multiline",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks:\n\n:v: one + \\\n two\n\n{v}"
+    },
+    {
+      "id": "ordinary-post-global-split-attrs",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks:\n\n:s: pass:[ ]\n:p: +\n\none{s}{p}\ntwo"
+    },
+    {
+      "id": "ordinary-post-global-attr-edge",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks:\n\n:p: +\n\none {p}"
+    },
+    {
+      "id": "ordinary-post-global-intrinsic",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks:\n\none {plus}\ntwo"
+    },
+    {
+      "id": "ordinary-post-global-protected",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks:\n\npass:[one +\ntwo] +\nend"
+    },
+    {
+      "id": "ordinary-post-global-plus-pass",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks:\n\n+one +\ntwo+ +\nend"
+    },
+    {
+      "id": "ordinary-post-global-nested",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks:\n\npass:normal[one +\ntwo] +\nend"
+    },
+    {
+      "id": "ordinary-post-global-empty",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks:\n\n:e:\n\none +{e}\ntwo"
+    },
+    {
+      "id": "ordinary-post-global-after-link",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks:\n\nhttps://e +\ntwo"
+    },
+    {
+      "id": "ordinary-post-global-before-anchor",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks:\n\none +[[foo]]\ntwo"
+    },
+    {
+      "id": "ordinary-post-global-raw-tag",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks:\n\n:v: pass:[<em>one +]\n\n{v}\ntwo pass:[</em>]"
+    },
+    {
+      "id": "ordinary-post-global-comments",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks:\n\none +\n// hidden\ntwo"
+    },
+    {
+      "id": "ordinary-post-global-drop",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks:\n\n:attribute-missing: drop-line\n\none +\n{absent}\ntwo"
+    },
+    {
+      "id": "ordinary-post-canonical-plain",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks-option:\n\none +\ntwo +"
+    },
+    {
+      "id": "ordinary-post-canonical-soft",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks-option:\n\none\ntwo"
+    },
+    {
+      "id": "ordinary-post-canonical-escape",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks-option:\n\none \\+\ntwo +"
+    },
+    {
+      "id": "ordinary-post-canonical-spaces",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks-option:\n\none  +\ntwo +  \nend"
+    },
+    {
+      "id": "ordinary-post-canonical-quoted",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks-option:\n\n*one +\ntwo* +\nthree"
+    },
+    {
+      "id": "ordinary-post-canonical-end-quote",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks-option:\n\n*one +*\ntwo"
+    },
+    {
+      "id": "ordinary-post-canonical-link",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks-option:\n\nlink:https://e[one +\ntwo] +\nend"
+    },
+    {
+      "id": "ordinary-post-canonical-xref",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks-option:\n\n<<foo,one +\ntwo>> +\nend"
+    },
+    {
+      "id": "ordinary-post-canonical-attr-marker",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks-option:\n\n:p: +\n\none {p}\ntwo"
+    },
+    {
+      "id": "ordinary-post-canonical-attr-multiline",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks-option:\n\n:v: one + \\\n two\n\n{v}"
+    },
+    {
+      "id": "ordinary-post-canonical-split-attrs",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks-option:\n\n:s: pass:[ ]\n:p: +\n\none{s}{p}\ntwo"
+    },
+    {
+      "id": "ordinary-post-canonical-attr-edge",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks-option:\n\n:p: +\n\none {p}"
+    },
+    {
+      "id": "ordinary-post-canonical-intrinsic",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks-option:\n\none {plus}\ntwo"
+    },
+    {
+      "id": "ordinary-post-canonical-protected",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks-option:\n\npass:[one +\ntwo] +\nend"
+    },
+    {
+      "id": "ordinary-post-canonical-plus-pass",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks-option:\n\n+one +\ntwo+ +\nend"
+    },
+    {
+      "id": "ordinary-post-canonical-nested",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks-option:\n\npass:normal[one +\ntwo] +\nend"
+    },
+    {
+      "id": "ordinary-post-canonical-empty",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks-option:\n\n:e:\n\none +{e}\ntwo"
+    },
+    {
+      "id": "ordinary-post-canonical-after-link",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks-option:\n\nhttps://e +\ntwo"
+    },
+    {
+      "id": "ordinary-post-canonical-before-anchor",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks-option:\n\none +[[foo]]\ntwo"
+    },
+    {
+      "id": "ordinary-post-canonical-raw-tag",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks-option:\n\n:v: pass:[<em>one +]\n\n{v}\ntwo pass:[</em>]"
+    },
+    {
+      "id": "ordinary-post-canonical-comments",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks-option:\n\none +\n// hidden\ntwo"
+    },
+    {
+      "id": "ordinary-post-canonical-drop",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks-option:\n\n:attribute-missing: drop-line\n\none +\n{absent}\ntwo"
+    },
+    {
+      "id": "ordinary-post-local-plain",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "[%hardbreaks]\none +\ntwo +"
+    },
+    {
+      "id": "ordinary-post-local-soft",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "[%hardbreaks]\none\ntwo"
+    },
+    {
+      "id": "ordinary-post-local-escape",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "[%hardbreaks]\none \\+\ntwo +"
+    },
+    {
+      "id": "ordinary-post-local-spaces",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "[%hardbreaks]\none  +\ntwo +  \nend"
+    },
+    {
+      "id": "ordinary-post-local-quoted",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "[%hardbreaks]\n*one +\ntwo* +\nthree"
+    },
+    {
+      "id": "ordinary-post-local-end-quote",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "[%hardbreaks]\n*one +*\ntwo"
+    },
+    {
+      "id": "ordinary-post-local-link",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "[%hardbreaks]\nlink:https://e[one +\ntwo] +\nend"
+    },
+    {
+      "id": "ordinary-post-local-xref",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "[%hardbreaks]\n<<foo,one +\ntwo>> +\nend"
+    },
+    {
+      "id": "ordinary-post-local-attr-marker",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":p: +\n\n[%hardbreaks]\none {p}\ntwo"
+    },
+    {
+      "id": "ordinary-post-local-attr-multiline",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":v: one + \\\n two\n\n[%hardbreaks]\n{v}"
+    },
+    {
+      "id": "ordinary-post-local-split-attrs",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":s: pass:[ ]\n:p: +\n\n[%hardbreaks]\none{s}{p}\ntwo"
+    },
+    {
+      "id": "ordinary-post-local-attr-edge",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":p: +\n\n[%hardbreaks]\none {p}"
+    },
+    {
+      "id": "ordinary-post-local-intrinsic",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "[%hardbreaks]\none {plus}\ntwo"
+    },
+    {
+      "id": "ordinary-post-local-protected",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "[%hardbreaks]\npass:[one +\ntwo] +\nend"
+    },
+    {
+      "id": "ordinary-post-local-plus-pass",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "[%hardbreaks]\n+one +\ntwo+ +\nend"
+    },
+    {
+      "id": "ordinary-post-local-nested",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "[%hardbreaks]\npass:normal[one +\ntwo] +\nend"
+    },
+    {
+      "id": "ordinary-post-local-empty",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":e:\n\n[%hardbreaks]\none +{e}\ntwo"
+    },
+    {
+      "id": "ordinary-post-local-after-link",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "[%hardbreaks]\nhttps://e +\ntwo"
+    },
+    {
+      "id": "ordinary-post-local-before-anchor",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "[%hardbreaks]\none +[[foo]]\ntwo"
+    },
+    {
+      "id": "ordinary-post-local-raw-tag",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":v: pass:[<em>one +]\n\n[%hardbreaks]\n{v}\ntwo pass:[</em>]"
+    },
+    {
+      "id": "ordinary-post-local-comments",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "[%hardbreaks]\none +\n// hidden\ntwo"
+    },
+    {
+      "id": "ordinary-post-local-drop",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":attribute-missing: drop-line\n\n[%hardbreaks]\none +\n{absent}\ntwo"
+    },
+    {
+      "id": "ordinary-post-local-reset",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "[%hardbreaks]\none\ntwo\n\nthree\nfour"
+    },
+    {
+      "id": "ordinary-post-unset",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks:\n\none\ntwo\n\n:hardbreaks!:\n\nthree\nfour"
+    },
+    {
+      "id": "ordinary-post-prefix-unset",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks:\n\none\ntwo\n\n:!hardbreaks:\n\nthree\nfour"
+    },
+    {
+      "id": "ordinary-post-options",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "[options=hardbreaks]\none\ntwo"
+    },
+    {
+      "id": "ordinary-post-named",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "[hardbreaks-option=]\none\ntwo"
+    },
+    {
+      "id": "ordinary-post-container",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "[%hardbreaks]\n====\none\ntwo\n===="
+    },
+    {
+      "id": "ordinary-post-list",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "[%hardbreaks]\n* one\n  two"
+    },
+    {
+      "id": "ordinary-post-global-list",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks:\n\n* one\n  two +"
+    },
+    {
+      "id": "ordinary-post-crlf",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "Ж +\r\nБ +"
+    },
+    {
+      "id": "ordinary-post-global-crlf",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks:\r\n\r\nЖ\r\nБ +"
+    },
+    {
+      "id": "ordinary-post-heading",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "= Title +\n\nSee <<_title>>"
+    },
+    {
+      "id": "ordinary-post-caption",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ".Caption +\none +\ntwo"
+    },
+    {
+      "id": "ordinary-post-global-heading",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks:\n\n== Section +\n\none\ntwo"
+    },
+    {
+      "id": "ordinary-post-verbatim",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":hardbreaks:\n\n----\none +\ntwo\n----\n\n....\none +\ntwo\n...."
+    },
+    {
+      "id": "ordinary-post-selected-include",
+      "category": "inlines",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": "include::part.adoc[tags=body,indent=0]",
+      "resources": {
+        "part.adoc": "// tag::body[]\r\n  Ж(C) +\r\n  // removed\r\n  Б +\r\n// end::body[]"
+      }
+    },
+    {
+      "id": "ordinary-post-cross-source",
+      "category": "inlines",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":p: +\n\nЖ {p}\ninclude::part.adoc[]",
+      "resources": {
+        "part.adoc": "Б +\nВ"
+      }
+    },
+    {
+      "id": "ordinary-post-local-attribute-isolation",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":attribute-missing: warn\n\n[%hardbreaks]\none {hardbreaks-option}\ntwo pass:a[{hardbreaks-option}] pass:normal[three\nfour +]"
+    },
+    {
+      "id": "ordinary-post-named-option-attribute-isolation",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "[hardbreaks-option=local]\none {hardbreaks-option}\ntwo pass:normal[three\nfour +]"
     }
   ]
 }

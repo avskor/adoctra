@@ -177,7 +177,8 @@ JSON/WASM export optional id/role fields on open parts. Late a/r stages preserve
 metadata; c protects the whole lexical representation. Replacements reconstruct
 only tracked generated boundaries, never arbitrary raw tags. Quote attribute lists
 expand references eagerly; ordinary inline a-stage now supports intrinsics and
-both escape positions. Definition/pass a-stage still uses the older resolver. Whole-value m/macros supports link:,
+both escape positions. Definitions and selected pass a-stages now share the
+lexical resolver in inline_attributes.rs. Whole-value m/macros supports link:,
 mailto:, URL and email through attribute_macros.rs. OpenLink(AttributeLink) /
 CloseLink preserve semantic targets, id/role/title/window/rel and label parts;
 JSON/WASM use open-link/close-link. Fields keep lexical entity protection just
@@ -241,10 +242,40 @@ including selected/indented includes. A retained failed include can also warn
 about its literal missing reference. Quote metadata retains semantic boundaries
 through late expansion; diagnostics in its earlier eager pass remain incomplete.
 WASM preserves source reference nodes and diagnostics; JSON keeps its existing
-resolved-text projection with optional parts. General post replacements,
-stem and other macro families remain incomplete. The next step is sharing the
-ordinary resolver with attribute definitions and selected pass a-stages, including
-policy context and diagnostics without regressing ordered protection.
+resolved-text projection with optional parts. Stem and other macro families
+remain incomplete.
+The shared parts entry point runs a over the complete Text/Raw/semantic stream,
+including late quote/link metadata and references spanning adjacent parts.
+Normal definitions start with special-character protection; selected pass stages
+retain their requested c/q/a/r/m/p order. Definitions use the current missing
+policy before assignment, even when assigning attribute-missing itself. Empty
+results are assigned, not unset. Locked definitions are skipped before evaluation.
+Definition diagnostics cover the entire physical declaration (including joined
+lines); selected or nested pass diagnostics use the enclosing physical construct.
+Reader provenance composes these origins across selected/indented includes.
+String-only header helpers retain skip behavior without fabricated diagnostics;
+legacy single-quoted link parameter substitution still needs policy/diagnostic
+context, as does eager quote metadata. Source definitions preserve intrinsic Raw
+parts, while later outer replacements may restore entities protected by a late c;
+inline pass restores after those outer stages. Preserve that lifecycle difference.
+Ordinary inline post replacements now share post_replacements.rs with pass:p.
+They run over the same mapped lexical stream after r/m and before passthrough
+restoration. Explicit ` +` becomes AttributePart::LineBreak at logical line ends,
+including the final line; hardbreaks-option breaks only newline-terminated lines
+and leaves the final marker alone. CRLF retains its physical range. Attribute-owned
+breaks stay in AttributeRef; source-owned breaks use Substituted with marker/newline
+spans. Definitions and snapshots remain unchanged. Document/host hardbreaks aliases
+to hardbreaks-option before locking/unsetting. Local %hardbreaks/options=hardbreaks
+and named hardbreaks-option affect this block's inline body, not child containers,
+list item principal text or the following block. A transient local_hardbreaks
+flag travels only in the inline context clone; named lookup, including pass:a,
+still sees document/host attributes. Verse keeps newlines.
+TokenKind::LineBreak (line-break) projects standalone source-owned breaks from the
+full parsed AST, including local options, final lines and include provenance.
+Attribute-owned breaks keep attribute-ref and protected regions keep pass-text;
+embedded link/formatting results retain their existing outer tokens.
+The next step is policy/diagnostic context in eager quote metadata and repeated
+single-quoted link parameter substitutions.
 Early catalog registration of anchors consumed by quote metadata, non-link pass
 macros, stateful set/counter substitutions and raw whole-doctitle replacement
 also remain work.
@@ -608,8 +639,8 @@ block** (`--` / `[open]`) is done, including *both* its *container* masquerades
 (`[quote]`/`[example]`/`[sidebar]`/`[NOTE]` on `--`) and its **verbatim**
 masquerades (`[source]`/`[literal]`/`[verse]`/`[pass]` on `--`, switched at the
 `--` fence into a `Listing`/`Literal`/`Verse`/`Passthrough`). Also unimplemented is
-**rendering of options** (`%hardbreaks`, `%nowrap`, …), which are captured but
-not yet acted on. For
+**rendering of remaining options** (`%nowrap`, …); `%hardbreaks` now affects
+inline substitutions. For
 **admonitions**, the *paragraph* forms (`[NOTE]` style and `NOTE: ` label) and the
 **delimited form** (`[NOTE]` on a `====` block) are done. **Block titles**
 (`.Title`) are parsed and rendered on every block (on `Block.title`); still missing

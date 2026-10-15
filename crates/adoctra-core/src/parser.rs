@@ -232,7 +232,7 @@ fn collect_blocks(
             context,
             diagnostics,
             BlockCtx::TopLevel,
-            metadata.attrs.style.as_deref(),
+            Some(&metadata.attrs),
         ) {
             let pending = metadata;
             block.id = pending.id;
@@ -240,7 +240,7 @@ fn collect_blocks(
             block.roles = pending.roles;
             block.title = pending.title;
             block.attrs = pending.attrs;
-            let attributes = Arc::clone(&block.attribute_context);
+            let attributes = inline_attributes(&block.attribute_context, Some(&block.attrs));
             apply_style_fixup(
                 &mut block,
                 lines,
@@ -545,11 +545,23 @@ fn parse_block(
     context: &mut ParseContext,
     diagnostics: &mut Vec<Diagnostic>,
     ctx: BlockCtx,
-    pending_style: Option<&str>,
+    pending_attrs: Option<&BlockAttrs>,
 ) -> Option<Block> {
-    let mut block = parse_block_content(lines, i, context, diagnostics, ctx, pending_style)?;
+    let mut block = parse_block_content(lines, i, context, diagnostics, ctx, pending_attrs)?;
     block.attribute_context = Arc::clone(&context.attributes);
     Some(block)
+}
+
+/// Block options affect this block's inline substitutions, not the document
+/// snapshot, nested container blocks or the principal text of list items.
+fn inline_attributes(attributes: &Arc<Attributes>, block: Option<&BlockAttrs>) -> Arc<Attributes> {
+    let mut attributes = Arc::clone(attributes);
+    if block.is_some_and(|b| {
+        b.options.iter().any(|o| o == "hardbreaks") || b.named.contains_key("hardbreaks-option")
+    }) {
+        Arc::make_mut(&mut attributes).local_hardbreaks = true;
+    }
+    attributes
 }
 
 fn parse_block_content(
@@ -562,9 +574,10 @@ fn parse_block_content(
     // line). A `____` fence needs it to choose its content model: `verse` is
     // verbatim (like `....`), every other style — including the bare default — is
     // a parsed `quote` container (like `====`).
-    pending_style: Option<&str>,
+    pending_attrs: Option<&BlockAttrs>,
 ) -> Option<Block> {
-    let attrs = Arc::clone(&context.attributes);
+    let pending_style = pending_attrs.and_then(|attrs| attrs.style.as_deref());
+    let attrs = inline_attributes(&context.attributes, pending_attrs);
     let (off, line_buffer) = lines.line(*i);
     let line = line_buffer.as_ref();
     let trimmed = line.trim_end();

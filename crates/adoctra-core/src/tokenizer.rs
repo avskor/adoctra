@@ -59,6 +59,7 @@ pub enum TokenKind {
     Link,
     CrossReference,
     ListMarker,
+    LineBreak,
 }
 
 impl TokenKind {
@@ -96,6 +97,7 @@ impl TokenKind {
             TokenKind::Link => "link",
             TokenKind::CrossReference => "xref",
             TokenKind::ListMarker => "list-marker",
+            TokenKind::LineBreak => "line-break",
         }
     }
 }
@@ -108,7 +110,7 @@ pub(crate) fn tokens_reader<'a>(
     options: &ParseOptions,
     reader: crate::reader::Reader<'a>,
 ) -> Vec<Token> {
-    let (result, reader) = crate::parser::parse_reader(options, reader);
+    let (mut result, reader) = crate::parser::parse_reader(options, reader);
     let processed = reader.content(0, usize::MAX);
     let comments: Vec<_> = reader
         .comments
@@ -132,6 +134,52 @@ pub(crate) fn tokens_reader<'a>(
                 })
         })
         .collect();
+    // Project source-owned breaks from the complete parse: the line-based
+    // highlighting scan cannot know a block's final line or local hardbreaks
+    // option. Generated attribute content retains its attribute-ref token;
+    // passthroughs retain their existing outer token.
+    struct Breaks(Vec<Span>);
+    impl crate::visit::VisitorMut for Breaks {
+        fn visit_inline(&mut self, inline: &mut Inline) {
+            use crate::AttributePart as P;
+            if let Inline::Substituted { parts, span, .. } = inline {
+                if parts.contains(&P::LineBreak)
+                    && parts.iter().all(|p| match p {
+                        P::LineBreak => true,
+                        P::Text(s) => s.chars().all(char::is_whitespace),
+                        _ => false,
+                    })
+                {
+                    self.0.push(*span);
+                }
+            }
+            crate::visit::walk_inline_mut(self, inline);
+        }
+    }
+    let mut breaks = Breaks(Vec::new());
+    crate::visit::walk_document_mut(&mut breaks, &mut result.document);
+    let mut protected: Vec<_> = out
+        .iter()
+        .filter(|t| t.kind == TokenKind::PassthroughText)
+        .map(|t| t.span)
+        .collect();
+    protected.sort_by_key(|s| (s.source_id, s.start, s.end));
+    for span in breaks.0 {
+        let fragments = span.provenance.map(|p| result.provenance[p].as_slice());
+        for &span in fragments.unwrap_or(std::slice::from_ref(&span)) {
+            let end = protected
+                .partition_point(|s| (s.source_id, s.start) <= (span.source_id, span.start));
+            let in_pass = protected[..end]
+                .last()
+                .is_some_and(|s| s.source_id == span.source_id && s.end >= span.end);
+            if span.start < span.end && !in_pass {
+                out.push(Token {
+                    span,
+                    kind: TokenKind::LineBreak,
+                });
+            }
+        }
+    }
     for (spans, kind) in [
         (
             result.conditional_directives,

@@ -1,5 +1,5 @@
 //! Selection and individual stages shared by attribute and inline pass macros.
-use crate::attributes::{push_value, reference_text};
+use crate::attributes::reference_text;
 use crate::{AttributePart as P, Attributes, Diagnostic, Severity, Span};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -84,54 +84,31 @@ pub(crate) fn resolve(subs: &str, span: Span, diagnostics: &mut Vec<Diagnostic>)
     stages
 }
 
-pub(crate) fn apply(parts: Vec<P>, stage: Stage, attrs: &Attributes, compat: bool) -> Vec<P> {
+pub(crate) fn apply(
+    parts: Vec<P>,
+    stage: Stage,
+    attrs: &Attributes,
+    compat: bool,
+    span: Span,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> Vec<P> {
     match stage {
         Stage::Specials => vec![P::Text(reference_text(&parts))],
         Stage::Quotes => crate::attribute_quotes::apply(parts, compat, attrs),
         Stage::Replacements => crate::replacements::apply_parts(parts),
         Stage::Macros => crate::attribute_macros::apply(parts, attrs, compat),
-        Stage::Attributes => {
-            let mut expanded = Vec::new();
-            for part in parts {
-                if part.is_boundary() {
-                    expanded.push(part.map_metadata(|v| {
-                        reference_text(&crate::context::substitute_attribute_parts(v, attrs, true))
-                    }));
-                } else {
-                    for part in crate::context::substitute_attribute_parts(
-                        part.text(),
-                        attrs,
-                        part.is_raw(),
-                    ) {
-                        push_value(&mut expanded, part);
-                    }
-                }
-            }
-            expanded
-        }
-        Stage::Post => post(parts, attrs.get("hardbreaks-option").is_some()),
+        Stage::Attributes => crate::inline_attributes::parts(
+            &parts,
+            attrs,
+            span,
+            attrs.get("attribute-missing").unwrap_or("skip"),
+            diagnostics,
+        ),
+        Stage::Post => crate::post_replacements::apply(
+            crate::substitution_text::Text::from_parts(&parts),
+            attrs.hardbreaks(),
+            true,
+        )
+        .into_parts(),
     }
-}
-
-fn post(parts: Vec<P>, hardbreaks: bool) -> Vec<P> {
-    let text = crate::substitution_text::Text::from_parts(&parts);
-    let mut out = crate::substitution_text::Text::default();
-    let mut start = 0;
-    for line in text.text.split_inclusive('\n') {
-        let newline = line.ends_with('\n');
-        // Reader fragments retain physical CRLF endings; the substitution
-        // sees one logical newline while its surrounding source map stays intact.
-        let end = start + line.len() - usize::from(newline) - usize::from(line.ends_with("\r\n"));
-        let explicit = text.text[start..end].ends_with(" +");
-        if if hardbreaks { newline } else { explicit } {
-            let content_end = end - if explicit { 2 } else { 0 };
-            text.copy(start..content_end, &mut out);
-            out.append_part(&P::LineBreak, 0, Span::new(0, 0));
-            text.copy(end..start + line.len(), &mut out);
-        } else {
-            text.copy(start..start + line.len(), &mut out);
-        }
-        start += line.len();
-    }
-    out.into_parts()
 }

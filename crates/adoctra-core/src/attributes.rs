@@ -260,11 +260,19 @@ pub(crate) fn parts_text(parts: &[AttributePart]) -> String {
 /// which matters for snapshot/TCK testing.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Attributes {
+    // Transient block substitution context, never part of document snapshots
+    // or the named attribute table. A local option affects p (also in selected
+    // pass stages), but cannot resolve {hardbreaks-option} in the a stage.
+    pub(crate) local_hardbreaks: bool,
     map: BTreeMap<String, String>,
     parts: BTreeMap<String, Vec<AttributePart>>,
 }
 
 impl Attributes {
+    pub(crate) fn hardbreaks(&self) -> bool {
+        self.local_hardbreaks || self.get("hardbreaks-option").is_some()
+    }
+
     pub fn new() -> Self {
         Self::default()
     }

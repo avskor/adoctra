@@ -1,6 +1,6 @@
 //! Parse configuration and attribute state shared by recursive block parsing.
 
-use crate::attributes::{parts_text, push_part, push_value};
+use crate::attributes::parts_text;
 use crate::{AttributePart, Attributes, SourceId};
 use std::{collections::BTreeSet, sync::Arc};
 
@@ -74,14 +74,15 @@ impl ParseContext {
         attributes.set("example-caption", "Example");
         let mut locked = BTreeSet::new();
         for (key, value) in options.attributes.iter() {
+            let effective_key = attribute_name(key);
             attributes.set_parts(
-                key,
+                effective_key,
                 options
                     .attributes
                     .raw_parts(key)
                     .map_or_else(|| vec![AttributePart::Raw(value.to_owned())], <[_]>::to_vec),
             );
-            locked.insert(key.to_string());
+            locked.insert(effective_key.to_string());
         }
         Self {
             quote_compat: options.attributes.get("compat-mode").is_some(),
@@ -235,6 +236,15 @@ fn ruby_space(c: char) -> bool {
     matches!(c, '\0' | '\t'..='\r' | ' ')
 }
 
+// Ruby aliases both document entries and host overrides before locking keys.
+fn attribute_name(key: &str) -> &str {
+    if key == "hardbreaks" {
+        "hardbreaks-option"
+    } else {
+        key
+    }
+}
+
 pub(crate) fn parse_attribute_entry(line: &str) -> Option<AttributeEntry> {
     let rest = line.trim_end().strip_prefix(':')?;
     let (key, value) = rest.split_once(':')?;
@@ -258,6 +268,7 @@ pub(crate) fn parse_attribute_entry(line: &str) -> Option<AttributeEntry> {
         .filter(|&c| crate::unicode_word::is_word(c) || c == '-')
         .collect();
     let key = key.to_lowercase();
+    let key = attribute_name(&key).to_owned();
     Some(if unset {
         AttributeEntry::Unset(key)
     } else {
@@ -295,7 +306,13 @@ fn attribute_entry_parts_report(
             diagnostics,
         );
     }
-    substitute_attribute_parts(value, attributes, false)
+    crate::inline_attributes::parts(
+        &[AttributePart::Text(value.into())],
+        attributes,
+        span,
+        attributes.get("attribute-missing").unwrap_or("skip"),
+        diagnostics,
+    )
 }
 
 pub(crate) fn substitute_attribute_parts(
@@ -303,30 +320,19 @@ pub(crate) fn substitute_attribute_parts(
     attributes: &Attributes,
     raw: bool,
 ) -> Vec<AttributePart> {
-    let mut result = Vec::new();
-    let mut rest = value;
-    while let Some(open) = rest.find('{') {
-        let Some(close) = rest[open + 1..].find('}').map(|i| open + 1 + i) else {
-            break;
-        };
-        if rest[..open].ends_with('\\') {
-            push_part(&mut result, &rest[..open - 1], raw);
-            push_part(&mut result, &rest[open..=close], raw);
+    // String-only header callers explicitly retain unknown references. Actual
+    // assignments use attribute_entry_parts_report and the document policy.
+    crate::inline_attributes::parts(
+        &[if raw {
+            AttributePart::Raw(value.into())
         } else {
-            push_part(&mut result, &rest[..open], raw);
-            let name = &rest[open + 1..close];
-            if let Some(parts) = attributes.value_parts(name) {
-                for part in parts {
-                    push_value(&mut result, part);
-                }
-            } else {
-                push_part(&mut result, &rest[open..=close], raw);
-            }
-        }
-        rest = &rest[close + 1..];
-    }
-    push_part(&mut result, rest, raw);
-    result
+            AttributePart::Text(value.into())
+        }],
+        attributes,
+        crate::Span::new(0, 0),
+        "skip",
+        &mut Vec::new(),
+    )
 }
 
 /// Bounds for recursive resource expansion (the primary source is excluded).

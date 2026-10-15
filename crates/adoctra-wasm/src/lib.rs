@@ -1345,6 +1345,57 @@ mod header_tests {
     }
 
     #[test]
+    fn ordinary_post_replacements_export_parts_spans_and_break_tokens() {
+        let source = ":v: one + \\\n two\n\n{v} +\nlast";
+        let json = super::parse_json_with_source(source, 9);
+        assert_eq!(json.matches(r#""kind":"line-break""#).count(), 2, "{json}");
+        assert!(
+            json.contains(r#""attribute":"v","value":"one two""#),
+            "{json}"
+        );
+        let start = source.rfind(" +").unwrap();
+        let tokens = super::tokens_json_with_source(source, 9);
+        assert!(
+            tokens.contains(&format!(
+                r#"{{"span":{{"source_id":9,"start":{start},"end":{}}},"kind":"line-break"}}"#,
+                start + 2
+            )),
+            "{tokens}"
+        );
+    }
+
+    #[test]
+    fn shared_attribute_stage_exports_definition_parts_and_diagnostic_origins() {
+        let source =
+            "\u{feff}:attribute-missing: warn\r\n:v: {cpp} {missing}\r\n\r\n{v} pass:a[{other}]";
+        let json = super::parse_json_with_source(source, 9);
+        assert!(
+            json.contains(r#""kind":"raw","value":"C&#43;&#43;""#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""attribute":"v","value":"C&#43;&#43; {missing}""#),
+            "{json}"
+        );
+        for (markup, missing, kind) in [
+            (":v: {cpp} {missing}", "missing", "attribute-entry"),
+            ("pass:a[{other}]", "other", "pass-text"),
+        ] {
+            let start = source.find(markup).unwrap();
+            let end = start + markup.len();
+            assert!(json.contains(&format!(r#""span":{{"source_id":9,"start":{start},"end":{end}}},"severity":"warning","message":"skipping reference to missing attribute: {missing}""#)), "{json}");
+            let tokens = super::tokens_json_with_source(source, 9);
+            assert!(
+                tokens.contains(&format!(
+                    r#""span":{{"source_id":9,"start":{start},"end":{end}}},"kind":"{kind}""#
+                )),
+                "{tokens}"
+            );
+        }
+        assert_eq!(json.matches(r#""severity":"warning""#).count(), 2, "{json}");
+    }
+
+    #[test]
     fn ordinary_attribute_policies_export_values_diagnostics_and_source_tokens() {
         let source = "\u{feff}:attribute-missing: warn\r\n\r\nЖ {cpp} {missing} \\{missing}";
         let json = super::parse_json_with_source(source, 7);
