@@ -2,6 +2,8 @@
 use crate::attributes::reference_text;
 use crate::{AttributePart as P, Attributes, Diagnostic, Severity, Span};
 
+pub(crate) const MAX_DEPTH: usize = 32;
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Stage {
     Specials,
@@ -90,19 +92,22 @@ pub(crate) fn apply(
     attrs: &Attributes,
     compat: bool,
     span: Span,
-    diagnostics: &mut Vec<Diagnostic>,
+    depth: usize,
+    passes: &mut crate::inline_pass::Passes,
 ) -> Vec<P> {
     match stage {
         Stage::Specials => vec![P::Text(reference_text(&parts))],
-        Stage::Quotes => crate::attribute_quotes::apply(parts, compat, attrs, span, diagnostics),
+        Stage::Quotes => {
+            crate::attribute_quotes::apply(parts, compat, attrs, span, &mut passes.diagnostics)
+        }
         Stage::Replacements => crate::replacements::apply_parts(parts),
-        Stage::Macros => crate::attribute_macros::apply(parts, attrs, compat, span, diagnostics),
+        Stage::Macros => crate::attribute_macros::apply(parts, attrs, compat, span, depth, passes),
         Stage::Attributes => crate::inline_attributes::parts(
             &parts,
             attrs,
             span,
             attrs.get("attribute-missing").unwrap_or("skip"),
-            diagnostics,
+            &mut passes.diagnostics,
         ),
         Stage::Post => crate::post_replacements::apply(
             crate::substitution_text::Text::from_parts(&parts),

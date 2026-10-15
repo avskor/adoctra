@@ -1345,6 +1345,27 @@ mod header_tests {
     }
 
     #[test]
+    fn repeated_link_normal_exports_parts_and_enclosing_physical_span() {
+        let source =
+            ":v: pass:[+*Ж*+]\r\n\r\nlink:https://e['{v}',role=x] link:https://e['end +',role=x]";
+        let json = super::parse_json_with_source(source, 8);
+        assert!(json.contains(r#"{"kind":"text","value":"*Ж*"}"#), "{json}");
+        assert!(json.contains(r#"{"kind":"line-break"}"#), "{json}");
+        let start = source.rfind("link:").unwrap();
+        assert!(
+            json.contains(&format!(
+                r#""span":{{"source_id":8,"start":{start},"end":{}}},"name":"substituted""#,
+                source.len()
+            )),
+            "{json}"
+        );
+        let tokens = super::tokens_json_with_source(source, 8);
+        assert!(tokens.contains(r#""kind":"link""#), "{tokens}");
+        assert!(!tokens.contains(r#""kind":"pass-text""#), "{tokens}");
+        assert!(!tokens.contains(r#""kind":"line-break""#), "{tokens}");
+    }
+
+    #[test]
     fn metadata_substitutions_export_each_warning_with_physical_origins() {
         let source = ":attribute-missing: warn\r\n\r\nЖ [.{missing}]*Text* link:https://e['\\{other}',role=x]";
         let json = super::parse_json_with_source(source, 8);

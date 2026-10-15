@@ -184,7 +184,7 @@ CloseLink preserve semantic targets, id/role/title/window/rel and label parts;
 JSON/WASM use open-link/close-link. Fields keep lexical entity protection just
 like quote metadata. Link params support AttributeList, URI-encoded mail subject/body,
 windows and relation options; single-quoted params rerun substitutions with a
-32-level macro recursion bound for cyclic host values. Late a/r/c stages, author
+shared 32-level pass/link recursion bound and diagnostics for cyclic host values. Late a/r/c stages, author
 derivation and snapshots retain their semantics. Implicit xref labels strip
 generated attribute link boundaries from the clone without mutating headings.
 Post-attribute link macros now share the lexical matcher across adjacent
@@ -284,11 +284,17 @@ definitions use the whole declaration. Drop-line filters only the current metada
 or parameter value, not the surrounding formatted text or link.
 AttributeList's title/reftext/opts/options fields do not rerun substitutions;
 a parsed single-quoted value beginning with an apostrophe also stays literal.
-Eligible positional/named fields use shared q/a with diagnostics and existing r/m.
-Macro reports return both matched link spans and diagnostics. Nested link warnings
-retain the outer physical macro origin, mapped through include provenance.
-The next step is completing the repeated single-quoted link normal pipeline,
-including passthrough extraction/restoration and p, with a shared recursion bound.
+Eligible positional/named fields repeat the full c/q/a/r/m/p pipeline for the
+implemented macro families. Passes owns a shared slot pool, diagnostics and depth
+budget across link parameters and selected pass stages. Extract before c/q and
+restore after p; preserve source slots and their observable mailto numbering.
+Unescape macro-label closing brackets once, before AttributeList quote unescaping.
+Repeated parameter passes use the enclosing physical link origin; they do not
+create pass-text or line-break tokens for generated syntax. Only slots reserved
+during source extraction produce passthrough tokens. Nested link/pass warnings
+retain the outer physical origin, mapped through include provenance. At depth 32,
+keep the remaining text and emit a warning instead of restarting the depth count.
+The next step is stateful set/counter substitutions and their context semantics.
 Early catalog registration of anchors consumed by quote metadata, non-link pass
 macros, stateful set/counter substitutions and raw whole-doctitle replacement
 also remain work.

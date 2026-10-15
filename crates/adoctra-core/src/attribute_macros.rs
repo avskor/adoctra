@@ -1,18 +1,16 @@
 //! Link substitutions for pass attributes and expanded inline text. Matched over
 //! the shared lexical stream; generated links remain backend-neutral boundaries.
+use crate::inline_pass::Passes;
 use crate::substitution_text::Text;
-use crate::{
-    AttributeFormat, AttributeLink, AttributePart as Part, Attributes, Diagnostic, Inline, Span,
-};
+use crate::{AttributeFormat, AttributeLink, AttributePart as Part, Attributes, Inline, Span};
 use std::collections::BTreeMap;
 use std::ops::Range;
 
 const SCHEMES: [&str; 5] = ["https://", "http://", "file://", "ftp://", "irc://"];
 
-#[derive(Default)]
-pub(crate) struct Report {
-    pub links: Vec<Span>,
-    pub diagnostics: Vec<Diagnostic>,
+struct Report<'a> {
+    links: Vec<Span>,
+    passes: &'a mut Passes,
 }
 
 pub(crate) fn apply(
@@ -20,12 +18,14 @@ pub(crate) fn apply(
     attributes: &Attributes,
     compat: bool,
     span: Span,
-    diagnostics: &mut Vec<Diagnostic>,
+    depth: usize,
+    passes: &mut Passes,
 ) -> Vec<Part> {
-    let mut report = Report::default();
-    let parts = apply_inner(parts, attributes, compat, 0, span, &mut report);
-    diagnostics.extend(report.diagnostics);
-    parts
+    let mut report = Report {
+        links: Vec::new(),
+        passes,
+    };
+    apply_inner(parts, attributes, compat, depth, span, &mut report)
 }
 
 /// Link macros run over the lexical result of quotes, attributes and replacements.
@@ -35,10 +35,14 @@ pub(crate) fn apply_inlines(
     nodes: &mut Vec<Inline>,
     attributes: &Attributes,
     fold_newlines: bool,
-) -> Report {
-    let mut report = Report::default();
+    passes: &mut Passes,
+) -> Vec<Span> {
+    let mut report = Report {
+        links: Vec::new(),
+        passes,
+    };
     process_inlines(nodes, attributes, true, fold_newlines, &mut report);
-    report
+    report.links
 }
 
 fn format(node: &Inline) -> Option<AttributeFormat> {
@@ -148,7 +152,7 @@ fn process_inlines(
     attributes: &Attributes,
     edges: bool,
     fold_newlines: bool,
-    report: &mut Report,
+    report: &mut Report<'_>,
 ) {
     let mut left_edge = edges;
     let mut flat = Vec::new();
@@ -208,7 +212,7 @@ fn flush_inlines(
     attributes: &Attributes,
     edges: (bool, bool),
     fold_newlines: bool,
-    report: &mut Report,
+    report: &mut Report<'_>,
 ) {
     if nodes.is_empty() {
         return;
@@ -271,7 +275,7 @@ fn apply_inner(
     compat: bool,
     depth: usize,
     span: Span,
-    report: &mut Report,
+    report: &mut Report<'_>,
 ) -> Vec<Part> {
     let mut text = Text::from_parts_at(&parts, span);
     for stage in 0..3 {
@@ -344,7 +348,7 @@ fn apply_stage(
     compat: bool,
     depth: usize,
     left_edge: bool,
-    report: &mut Report,
+    report: &mut Report<'_>,
 ) -> Text {
     let src = &text.text;
     let index = Index::new(src);
@@ -598,7 +602,7 @@ fn email(src: &str, at: usize) -> Option<LinkMatch> {
     })
 }
 
-fn slice(text: &Text, range: Range<usize>, unescape: Option<char>) -> Vec<Part> {
+fn slice(text: &Text, range: Range<usize>, unescape: Option<char>, brackets: bool) -> Vec<Part> {
     let mut out = Text::default();
     let mut copied = range.start;
     let mut chars = text.text[range.clone()].char_indices().peekable();
@@ -606,7 +610,7 @@ fn slice(text: &Text, range: Range<usize>, unescape: Option<char>) -> Vec<Part> 
         if c == '\\'
             && chars
                 .peek()
-                .is_some_and(|(_, c)| *c == ']' || Some(*c) == unescape)
+                .is_some_and(|(_, c)| (brackets && *c == ']') || Some(*c) == unescape)
         {
             text.copy(copied..range.start + i, &mut out);
             copied = range.start + i + 1;
@@ -624,7 +628,7 @@ fn link_parts(
     attributes: &Attributes,
     compat: bool,
     depth: usize,
-    report: &mut Report,
+    report: &mut Report<'_>,
 ) -> (AttributeLink, Vec<Part>) {
     let mut link = AttributeLink {
         target: if m.mailto {
@@ -637,7 +641,7 @@ fn link_parts(
     let mut label = m
         .label
         .clone()
-        .map_or_else(Vec::new, |r| slice(text, r, None));
+        .map_or_else(Vec::new, |r| slice(text, r, None, true));
     let mut lexical = crate::attributes::reference_text(&label);
     let mut attrs = BTreeMap::new();
     if !compat && ((!m.mailto && lexical.contains('=')) || (m.mailto && lexical.contains(','))) {
@@ -665,7 +669,7 @@ fn link_parts(
     }
     if lexical.ends_with('^') {
         let text = Text::from_parts(&label);
-        label = slice(&text, 0..text.text.len() - 1, None);
+        label = slice(&text, 0..text.text.len() - 1, None, true);
         attrs
             .entry("window".into())
             .or_insert_with(|| "_blank".into());
@@ -680,7 +684,7 @@ fn link_parts(
         let display = if display.is_empty() { target } else { display };
         // Keep semantic/literal fragments in the fallback target too.
         let offset = target.len() - display.len();
-        label = slice(text, m.target.start + offset..m.target.end, None);
+        label = slice(text, m.target.start + offset..m.target.end, None, true);
         if !m.mailto {
             attrs
                 .entry("role".into())
@@ -750,7 +754,7 @@ fn parse_label(
     compat: bool,
     depth: usize,
     span: Span,
-    report: &mut Report,
+    report: &mut Report<'_>,
 ) -> (Vec<Part>, BTreeMap<String, String>, BTreeMap<usize, String>) {
     let mut text = Text::from_parts(parts);
     // AttributeList folds physical newlines before parsing mixed text/attrs.
@@ -831,33 +835,23 @@ fn parse_label(
             at = end;
             range
         };
-        let mut value = slice(&text, range, close.and(quote).map(char::from));
+        // The macro label already removed one bracket escape. AttributeList
+        // only removes escapes for its delimiter quote; nested pass keeps the rest.
+        let mut value = slice(&text, range, close.and(quote).map(char::from), false);
         if quote == Some(b'\'')
             && close.is_some()
             && !matches!(name, Some("title" | "reftext" | "opts" | "options"))
             && !crate::attributes::reference_text(&value).starts_with('\'')
         {
-            // Eligible fields repeat q/a/r/m, protecting previously generated
-            // tags. AttributeList's excluded named fields retain their value.
-            value = vec![Part::Text(crate::attributes::reference_text(&value))];
-            value = crate::attribute_quotes::apply(
-                value,
+            // AttributeList repeats the complete normal pipeline on the
+            // lexical value, sharing slots and the recursion budget with pass:.
+            value = report.passes.normal_parameter(
+                crate::attributes::reference_text(&value),
+                attributes,
                 compat,
-                attributes,
                 span,
-                &mut report.diagnostics,
+                depth,
             );
-            value = crate::inline_attributes::parts(
-                &value,
-                attributes,
-                span,
-                attributes.get("attribute-missing").unwrap_or("skip"),
-                &mut report.diagnostics,
-            );
-            value = crate::replacements::apply_parts(value);
-            if depth < 32 {
-                value = apply_inner(value, attributes, compat, depth + 1, span, report);
-            }
         }
         let lexical = crate::attributes::reference_text(&value);
         if let Some(name) = name {

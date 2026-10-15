@@ -2498,3 +2498,34 @@ fn multiline_attribute_warning_retains_composite_include_origin() {
     );
     check_spans(&result, &sources);
 }
+
+#[test]
+fn repeated_normal_passes_keep_selected_include_diagnostics_and_link_tokens() {
+    let root = "include::part.adoc[tags=body,indent=0]";
+    let body = r"link:https://e['\pass:bad[Ж\] +',role=x]";
+    let part = format!("// tag::body[]\r\n  Ж {body}\r\n// end::body[]");
+    let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", &part)]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(result.diagnostics.len(), 1, "{result:?}");
+    assert_eq!(result.diagnostics[0].span.source_id, SourceId(1));
+    assert_eq!(sources.slice(result.diagnostics[0].span), Some(body));
+    let ts = tokens_resource(&mut sources, &options, &resources).unwrap();
+    assert!(ts
+        .iter()
+        .any(|t| t.kind == TokenKind::Link && sources.slice(t.span) == Some(body)));
+    assert!(!ts.iter().any(|t| t.kind == TokenKind::PassthroughText));
+    check_spans(&result, &sources);
+}
+
+#[test]
+fn repeated_normal_pass_warnings_preserve_cross_source_provenance() {
+    let root = "link:https://e['\\pass:bad[Ж\\]',\ninclude::part.adoc[]";
+    let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", "role=x]")]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(result.diagnostics.len(), 1, "{result:?}");
+    let fragments = &result.provenance[result.diagnostics[0].span.provenance.unwrap()];
+    assert_eq!(fragments.first().unwrap().source_id, options.source_id);
+    assert_eq!(fragments.last().unwrap().source_id, SourceId(1));
+    assert_eq!(sources.slice(*fragments.last().unwrap()), Some("role=x]"));
+    check_spans(&result, &sources);
+}

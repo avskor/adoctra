@@ -565,6 +565,21 @@ mod tests {
     }
 
     #[test]
+    fn repeated_link_normal_exports_raw_text_and_neutral_break_parts() {
+        let json = render(":v: pass:[+*bold*+]\n:r: pass:[+++<b>raw</b>+++]\n\nlink:https://e['{v}',role=x] link:https://e['{r}',role=x] link:https://e['end +',role=x]");
+        assert!(
+            json.contains(r#"{"kind":"text","value":"*bold*"}"#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#"{"kind":"raw","value":"<b>raw</b>"}"#),
+            "{json}"
+        );
+        assert!(json.contains(r#"{"kind":"line-break"}"#), "{json}");
+        assert!(!json.contains('\u{96}'));
+    }
+
+    #[test]
     fn metadata_missing_policies_export_semantic_link_parts() {
         let json = render(":attribute-missing: drop\n\nBefore [.{missing}]*Text* link:https://e['\\{missing}',role=x] link:https://e[Label,title='\\{missing}']");
         assert!(json.contains(r#""name":"strong""#), "{json}");

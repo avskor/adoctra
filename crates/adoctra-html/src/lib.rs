@@ -527,6 +527,14 @@ mod tests {
     }
 
     #[test]
+    fn repeated_link_normal_renders_protected_text_raw_parts_and_breaks() {
+        let html = render(":v: pass:[+*bold*+]\n:r: pass:[+++<b>raw</b>+++]\n\nlink:https://e['{v}',role=x] link:https://e['{r}',role=x] link:https://e['end +',role=x]");
+        assert!(html.contains(r#"class="x">*bold*</a>"#), "{html}");
+        assert!(html.contains(r#"class="x"><b>raw</b></a>"#), "{html}");
+        assert!(html.contains(r#"class="x">end<br></a>"#), "{html}");
+    }
+
+    #[test]
     fn metadata_missing_policies_preserve_enclosing_formatting_and_link_exceptions() {
         let html = render(":attribute-missing: drop-line\n\nBefore [.red{missing}]*Text* link:https://e['\\{missing}',role=x] link:https://e[Label,title='\\{missing}'] after");
         assert!(html.contains("Before <strong>Text</strong>"), "{html}");

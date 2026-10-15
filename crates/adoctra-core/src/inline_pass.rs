@@ -16,6 +16,7 @@ struct Slot {
 pub(crate) struct Passes {
     prefix: String,
     slots: Vec<Slot>,
+    token_slots: usize,
     pub diagnostics: Vec<crate::Diagnostic>,
 }
 
@@ -58,6 +59,7 @@ impl Passes {
         let mut passes = Self {
             prefix,
             slots: Vec::new(),
+            token_slots: 0,
             diagnostics: Vec::new(),
         };
         let mut text = Text::default();
@@ -65,6 +67,7 @@ impl Passes {
         for constrained in [false, true] {
             text = passes.stage(text, attrs, compat, constrained);
         }
+        passes.token_slots = passes.slots.len();
         passes.evaluate_all(0, attrs, compat, 0);
         // Special-character protection follows extraction, before quotes.
         let mut escaped = Text::default();
@@ -168,7 +171,7 @@ impl Passes {
                 continue;
             };
             let span = self.slots[i].span;
-            let mut parts = if depth >= 32 {
+            let mut parts = if depth >= pass_subs::MAX_DEPTH {
                 self.diagnostics.push(crate::Diagnostic {
                     span,
                     severity: crate::Severity::Warning,
@@ -214,9 +217,36 @@ impl Passes {
             vec![P::Raw(body)]
         };
         for &stage in stages {
-            parts = pass_subs::apply(parts, stage, attrs, compat, span, &mut self.diagnostics);
+            parts = pass_subs::apply(parts, stage, attrs, compat, span, depth, self);
         }
         self.restore_parts(parts)
+    }
+
+    pub fn normal_parameter(
+        &mut self,
+        body: String,
+        attrs: &Attributes,
+        compat: bool,
+        span: Span,
+        depth: usize,
+    ) -> Vec<P> {
+        if depth >= pass_subs::MAX_DEPTH {
+            self.diagnostics.push(crate::Diagnostic {
+                span,
+                severity: crate::Severity::Warning,
+                message: "link parameter substitution nesting limit (32) exceeded".into(),
+            });
+            return vec![P::Text(body)];
+        }
+        use Stage::*;
+        self.apply_selected(
+            body,
+            &[Specials, Quotes, Attributes, Replacements, Macros, Post],
+            attrs,
+            compat,
+            span,
+            depth + 1,
+        )
     }
 
     pub fn selected(
@@ -244,6 +274,7 @@ impl Passes {
         let mut passes = Self {
             prefix,
             slots: Vec::new(),
+            token_slots: 0,
             diagnostics: Vec::new(),
         };
         let parts = passes.apply_selected(body.into(), &stages, attrs, compat, span, 0);
@@ -258,7 +289,9 @@ impl Passes {
     }
 
     pub fn tokens(&self) -> impl Iterator<Item = Token> + '_ {
-        self.slots.iter().map(|s| Token {
+        // Parameters generated during the macro stage have only an enclosing
+        // link origin; they must not invent passthrough highlight tokens.
+        self.slots.iter().take(self.token_slots).map(|s| Token {
             span: s.span,
             kind: if s.mono {
                 TokenKind::Monospace
