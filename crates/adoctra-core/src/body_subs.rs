@@ -1,6 +1,7 @@
 //! Conversion-time inline evaluation. Reading records source and evaluated
 //! declarations; the displayed document title and surviving body fields execute
-//! after the reader finishes. Section titles have already been cached.
+//! after the reader finishes. Section titles and eligible anchored block titles
+//! have already been cached. Captions replay their reading-time counters at entry.
 use crate::scanner::FilteredSource;
 use crate::substitution_context::Evaluation;
 use crate::{AttributePart, Attributes, Block, BlockKind, Diagnostic, Inline, Span};
@@ -21,6 +22,7 @@ pub(crate) struct BodySubs {
     header: Option<Pending>,
     pending: BTreeMap<(usize, usize), Pending>,
     pub entries: Vec<Declaration>,
+    pub caption_counters: BTreeMap<(usize, usize), Vec<AttributePart>>,
 }
 
 impl BodySubs {
@@ -86,6 +88,7 @@ impl BodySubs {
     ) {
         let mut execution = Execution {
             pending: &mut self.pending,
+            caption_counters: &mut self.caption_counters,
             entries: self.entries.into_iter().peekable(),
             attributes,
             locked,
@@ -103,6 +106,7 @@ impl BodySubs {
 
 struct Execution<'a> {
     pending: &'a mut BTreeMap<(usize, usize), Pending>,
+    caption_counters: &'a mut BTreeMap<(usize, usize), Vec<AttributePart>>,
     entries: std::iter::Peekable<std::vec::IntoIter<Declaration>>,
     attributes: Attributes,
     locked: &'a BTreeSet<String>,
@@ -177,6 +181,15 @@ impl Execution<'_> {
     fn blocks(&mut self, blocks: &mut [Block]) {
         for block in blocks {
             self.replay(block.span.start);
+            if let Some(parts) = self
+                .caption_counters
+                .remove(&(block.span.start, block.span.end))
+            {
+                self.attributes.set_parts("example-number", parts);
+            }
+            if let Some(title) = &mut block.title {
+                self.inlines(title);
+            }
             match &mut block.kind {
                 BlockKind::Paragraph { inlines } | BlockKind::Verse { inlines, .. } => {
                     self.inlines(inlines)

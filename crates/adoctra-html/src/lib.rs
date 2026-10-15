@@ -108,9 +108,7 @@ fn render_block(block: &Block, out: &mut String) {
             // Passthrough: the body is emitted *completely raw* — no escaping and
             // no wrapper element at all (asciidoctor's `:pass` context). Unlike
             // every other block, the id/roles are dropped: there is no element to
-            // hang them on, matching asciidoctor. A `.Title`, if present, still
-            // renders before the raw content.
-            render_title(&block.title, &block.caption, out);
+            // hang them on, matching asciidoctor. Its title is not rendered.
             out.push_str(text);
             out.push('\n');
         }
@@ -524,6 +522,30 @@ mod tests {
     fn render(src: &str) -> String {
         let doc = adoctra_core::parse(src).document;
         String::from_utf8(HtmlBackend.convert(&doc).unwrap()).unwrap()
+    }
+
+    #[test]
+    fn stateful_block_titles_render_shared_counters_and_skip_passthrough_titles() {
+        let html = render(".A {counter:example-number}\n====\nBody {counter:example-number}\n====\n\n[[here]]\n.B {counter:example-number}\n====\nBody {counter:example-number}\n====");
+        assert!(html.contains("Example 1. A 2</div>"), "{html}");
+        assert!(html.contains("Example 2. B 3</div>"), "{html}");
+        assert_eq!(html.matches("<p>Body 3</p>").count(), 2, "{html}");
+        for anchor in ["", "[[here]]\n"] {
+            let html = render(&format!(
+                "{anchor}.Hidden {{set:x:yes}}\n[pass]\n<b>Raw</b>\n\n== S {{x}}\n\n{{x}}"
+            ));
+            assert!(!html.contains("Hidden"), "{html}");
+            assert!(html.contains("<b>Raw</b>"), "{html}");
+            assert!(html.contains("<p>{x}</p>"), "{html}");
+            assert!(
+                html.contains(if anchor.is_empty() {
+                    ">S {x}</h2>"
+                } else {
+                    ">S yes</h2>"
+                }),
+                "{html}"
+            );
+        }
     }
 
     #[test]

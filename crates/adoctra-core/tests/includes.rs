@@ -24,6 +24,73 @@ fn setup(root: &str, files: &[(&str, &str)]) -> (SourceMap, MemoryResources, Par
 }
 
 #[test]
+fn stateful_block_titles_keep_selected_include_origins_in_both_phases() {
+    for anchor in ["", "  [[here]]\r\n"] {
+        let root = ":n: 8\n:attribute-missing: warn\n\ninclude::part.adoc[tag=body,indent=0]";
+        let part = format!("// tag::body[]\r\n{anchor}  .Ж {{counter:n}} {{missing}}\r\n  ====\r\n  Body {{counter:n}}\r\n  ====\r\n// end::body[]");
+        let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", &part)]);
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        let block = &result.document.blocks[0];
+        let counter = block
+            .title
+            .as_ref()
+            .unwrap()
+            .iter()
+            .find(|n| matches!(n, Inline::AttributeRef { name, .. } if name == "counter:n"))
+            .unwrap();
+        assert_eq!(counter.span().source_id, SourceId(1));
+        assert_eq!(sources.slice(counter.span()), Some("{counter:n}"));
+        assert!(matches!(counter, Inline::AttributeRef { value: Some(v), .. } if v == "9"));
+        assert_eq!(
+            block.attribute_context.get("n"),
+            Some(if anchor.is_empty() { "8" } else { "9" })
+        );
+        assert_eq!(result.diagnostics.len(), 1);
+        assert_eq!(result.diagnostics[0].span.source_id, SourceId(1));
+        assert_eq!(sources.slice(result.diagnostics[0].span), Some("{missing}"));
+        let ts = tokens_resource(&mut sources, &options, &resources).unwrap();
+        assert!(ts
+            .iter()
+            .any(|t| t.kind == TokenKind::AttributeRef && t.span == counter.span()));
+        assert!(ts.iter().any(|t| t.kind == TokenKind::BlockTitle
+            && sources.slice(t.span) == Some(".Ж {counter:n} {missing}")));
+        check_spans(&result, &sources);
+    }
+}
+
+#[test]
+fn nested_caption_replay_keeps_composite_block_and_physical_title_spans() {
+    let root = ".Outer {example-number}\n====\ninclude::part.adoc[]\n====\n\n{example-number}";
+    let part = ".Inner {example-number}\n[example]\n--\n{counter:example-number}\n--";
+    let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", part)]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    let outer = &result.document.blocks[0];
+    assert_eq!(outer.caption.as_deref(), Some("Example 2. "));
+    assert!(outer.span.provenance.is_some());
+    let BlockKind::Example { blocks } = &outer.kind else {
+        panic!()
+    };
+    assert_eq!(blocks[0].caption.as_deref(), Some("Example 1. "));
+    for (block, id, value) in [
+        (outer, options.source_id, "2"),
+        (&blocks[0], SourceId(1), "1"),
+    ] {
+        let node = block
+            .title
+            .as_ref()
+            .unwrap()
+            .iter()
+            .find(|n| matches!(n, Inline::AttributeRef { .. }))
+            .unwrap();
+        assert_eq!(node.span().source_id, id);
+        assert!(node.span().provenance.is_none());
+        assert_eq!(sources.slice(node.span()), Some("{example-number}"));
+        assert!(matches!(node, Inline::AttributeRef { value: Some(v), .. } if v == value));
+    }
+    check_spans(&result, &sources);
+}
+
+#[test]
 fn stateful_headings_keep_selected_include_diagnostics_and_tokens() {
     let root = "include::part.adoc[tags=body,indent=0]\n\n{counter:n}";
     let part = "// tag::body[]\r\n  = Ж {counter:n}\r\n\r\n  == Б {set:attribute-missing:warn}{counter:n} {missing}\r\n// end::body[]";

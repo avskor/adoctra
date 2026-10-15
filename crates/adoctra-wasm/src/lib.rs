@@ -1345,6 +1345,24 @@ mod header_tests {
     }
 
     #[test]
+    fn stateful_block_titles_export_physical_spans_and_stable_tokens() {
+        let source = ".Ж {counter:example-number}\r\n====\r\nBody {counter:example-number}\r\n====";
+        let json = super::parse_json_with_source(source, 7);
+        assert!(json.contains(r#""caption":"Example 1. ""#), "{json}");
+        assert!(
+            json.contains(r#""attribute":"counter:example-number","value":"2""#),
+            "{json}"
+        );
+        assert!(json.contains(r#""kind":"raw","value":"3""#), "{json}");
+        let ts = super::tokens_json_with_source(source, 7);
+        for (start, _) in source.match_indices("{counter:example-number}") {
+            assert!(ts.contains(&format!(r#"{{"span":{{"source_id":7,"start":{start},"end":{}}},"kind":"attribute-ref"}}"#, start + "{counter:example-number}".len())), "{ts}");
+        }
+        assert_eq!(json, super::parse_json_with_source(source, 7));
+        assert_eq!(ts, super::tokens_json_with_source(source, 7));
+    }
+
+    #[test]
     fn stateful_headings_export_source_references_and_do_not_repeat_effects() {
         let source = "= Ж {counter:n}\r\n\r\n== Б {counter:n}\r\n\r\n{counter:n}";
         let json = super::parse_json_with_source(source, 7);

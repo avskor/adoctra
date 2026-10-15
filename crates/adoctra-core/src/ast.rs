@@ -138,15 +138,19 @@ pub struct Block {
     /// [`BlockKind`]) so it survives the type-changing style fixups — a `.Title`
     /// before a `[NOTE]`/`[example]` block stays on the resulting container, not
     /// on the wrapped child.
+    /// An unrendered passthrough title keeps its source text unless it was
+    /// evaluated during reading for an explicit block ID.
     ///
     /// [`BlockTitleRx`]: crate::parser
     pub title: Option<Vec<Inline>>,
     /// The block's resolved **caption** — the counter prefix a titled block
     /// carries before its [`title`], e.g. `"Example 1. "` (note the trailing
-    /// space). Filled by the resolve pass and *only* for a titled
+    /// space). Filled at parse completion and *only* for a titled
     /// [`BlockKind::Example`] (asciidoctor numbers example blocks via the
     /// `example-caption` attribute; an untitled example gets no caption and does
-    /// not advance the counter). `None` for every other block — a titled listing
+    /// not advance the counter). An explicit block/document `caption` replaces
+    /// the prefix without advancing the counter, including an empty caption.
+    /// `None` for every other block — a titled listing
     /// or paragraph renders its bare title, matching asciidoctor's unset
     /// `listing-caption`. Stored pre-rendered, like asciidoctor's `@caption`
     /// (`#{caption}#{title}`): backends prepend it to the title verbatim.

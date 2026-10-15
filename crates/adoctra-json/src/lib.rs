@@ -565,6 +565,19 @@ mod tests {
     }
 
     #[test]
+    fn stateful_block_titles_export_captions_and_neutral_counter_parts() {
+        let json = render(".T {counter:example-number}\n====\nBody {counter:example-number}\n====");
+        assert!(json.contains(r#""caption":"Example 1. ""#), "{json}");
+        assert!(
+            json.contains(r#""title":[{"name":"text","value":"T "}"#),
+            "{json}"
+        );
+        assert!(json.contains(r#""kind":"raw","value":"2""#), "{json}");
+        assert!(json.contains(r#""kind":"raw","value":"3""#), "{json}");
+        assert!(!json.contains("{counter:example-number}"), "{json}");
+    }
+
+    #[test]
     fn stateful_headings_export_resolved_counters_and_original_header() {
         let json = render("= H {counter:n}\n\n== S {counter:n}\n\n{counter:n}");
         assert!(json.contains(r#""title":"H {counter:n}""#), "{json}");

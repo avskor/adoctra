@@ -141,9 +141,9 @@ impl ParseContext {
         parts_text(&parts)
     }
 
-    /// Section titles are evaluated once during reading (before their ID is
-    /// generated). Their effects are not declarations to replay at conversion.
-    pub fn section_title(
+    /// Section titles and anchored block titles are cached during reading.
+    /// Their effects are not declarations to replay at conversion.
+    pub fn reading_title(
         &mut self,
         value: &str,
         base: usize,
@@ -167,6 +167,48 @@ impl ParseContext {
             self.attributes = Arc::new(attributes);
         }
         inlines
+    }
+
+    /// Example captions are fixed in child-before-parent completion order.
+    /// Their counter assignment is replayed when entering the owning block,
+    /// independently of source-ordered explicit attribute declarations.
+    pub fn assign_caption(&mut self, block: &mut crate::Block) {
+        if !matches!(block.kind, crate::BlockKind::Example { .. }) || block.title.is_none() {
+            return;
+        }
+        if let Some(caption) = block
+            .attrs
+            .named
+            .get("caption")
+            .map(String::as_str)
+            .or_else(|| self.attributes.get("caption"))
+        {
+            block.caption = Some(caption.to_owned());
+            return;
+        }
+        let Some(prefix) = self.attributes.get("example-caption").map(str::to_owned) else {
+            return;
+        };
+        let mut evaluation = crate::substitution_context::Evaluation::definition(
+            &self.attributes,
+            &self.locked,
+            &mut self.counters,
+            self.quote_compat,
+        );
+        let effect = evaluation.execute(
+            "counter:example-number",
+            block.span,
+            &mut None,
+            &mut self.inline_diagnostics,
+        );
+        let number = parts_text(&effect.parts);
+        if let Some(attributes) = evaluation.changed_attributes() {
+            self.attributes = Arc::new(attributes);
+        }
+        block.caption = Some(format!("{prefix} {number}. "));
+        self.body_subs
+            .caption_counters
+            .insert((block.span.start, block.span.end), effect.parts);
     }
 
     pub fn apply(&mut self, entry: AttributeEntry) {

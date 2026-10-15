@@ -27,7 +27,7 @@ struct PendingMeta {
     id: Option<String>,
     reftext: Option<Vec<Inline>>,
     roles: Vec<String>,
-    title: Option<Vec<Inline>>,
+    title: Option<(String, usize)>,
     attrs: BlockAttrs,
 }
 
@@ -197,17 +197,11 @@ fn collect_blocks(
         // A `.Title` line sets the next block's title (asciidoctor's
         // [`BlockTitleRx`]). Like the anchor / attribute-list lines it is *pending*
         // metadata that attaches to the block that follows (blank lines may sit
-        // between); the title text is parsed inlines, so inline substitutions
-        // apply. A second `.Title` overrides the first (last-wins, matching
-        // asciidoctor).
+        // between). Keep the source until block completion determines whether
+        // to cache the inlines or defer them to conversion. A second `.Title`
+        // overrides the first without evaluating it (last-wins).
         if let Some(title) = parse_block_title(line) {
-            pending.title = Some(scan_inlines_report(
-                title,
-                lines[*i].0 + abs_offset(line, title),
-                &context.render_attributes(),
-                true,
-                &mut context.inline_diagnostics,
-            ));
+            pending.title = Some((title.into(), lines[*i].0 + abs_offset(line, title)));
             *i += 1;
             continue;
         }
@@ -224,10 +218,35 @@ fn collect_blocks(
             block.id = pending.id;
             block.reftext = pending.reftext;
             block.roles = pending.roles;
-            block.title = pending.title;
+            let title = pending.title;
+            block.title = title.as_ref().map(|(text, base)| {
+                vec![Inline::Text {
+                    value: text.clone(),
+                    span: Span::new(*base, base + text.len()),
+                }]
+            });
             block.attrs = pending.attrs;
             let attributes = inline_attributes(&context.render_attributes(), Some(&block.attrs));
             apply_style_fixup(&mut block, lines, &attributes, context);
+            // Caption counters are assigned on completion, before an anchored
+            // title is cached. Unanchored titles run during conversion instead.
+            context.assign_caption(&mut block);
+            if let Some((text, base)) = title {
+                if block.id.is_some() && text.contains('{') {
+                    let attributes = Arc::clone(&context.attributes);
+                    block.title = Some(context.reading_title(&text, base, &attributes));
+                } else if !matches!(block.kind, BlockKind::Passthrough { .. }) {
+                    block.title = Some(context.body_subs.defer(
+                        crate::scanner::FilteredSource::from_fragments([(base, text.as_str())]),
+                        None,
+                        &context.attributes,
+                        true,
+                    ));
+                }
+                // An unrendered passthrough title retains its source text; it
+                // must neither execute expressions nor issue inline warnings.
+            }
+            block.attribute_context = Arc::clone(&context.attributes);
             blocks.push(block);
         }
     }
@@ -590,7 +609,7 @@ fn parse_block_content(
         // `title` is a subslice of this detached reader line.
         let base = lines[*i].0 + abs_offset(line, title);
         let heading_attrs = inline_attributes(&context.attributes, pending_attrs);
-        let inlines = context.section_title(title, base, &heading_attrs);
+        let inlines = context.reading_title(title, base, &heading_attrs);
         *i += 1;
         // `Block.id` is assigned later, by the resolve pass, once the whole
         // document is known (it deduplicates ids across all sections) — unless an

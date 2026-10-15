@@ -6,7 +6,7 @@
 //! defined later, so the registry of section ids must be complete before any
 //! reference resolves.
 //!
-//! Three phases over the block tree:
+//! Two phases over the block tree:
 //!   1. give every section (`level >= 1`) an auto-generated id and record
 //!      `id -> title inlines` in a registry (asciidoctor's `sectids`);
 //!   2. walk every inline and, for each [`Inline::CrossReference`], substitute
@@ -14,7 +14,6 @@
 //!      keep an explicit reftext, and — for an unknown id — emit a diagnostic
 //!      and fall back to the `[id]` text asciidoctor renders for unresolved
 //!      references.
-//!   3. number titled example blocks in document order.
 
 use std::collections::{btree_map::Entry, BTreeMap};
 
@@ -37,37 +36,6 @@ pub(crate) fn resolve(doc: &mut Document, diagnostics: &mut Vec<Diagnostic>) {
     let mut registry = Registry::new();
     assign_ids(&mut doc.blocks, &mut registry, diagnostics);
     resolve_xrefs(&mut doc.blocks, &registry, diagnostics);
-
-    // Use the attribute snapshot at each block, not the final document state.
-    assign_captions(&mut doc.blocks, &mut 0u32);
-}
-
-/// Phase 3: number titled example blocks. asciidoctor's caption counter applies
-/// to an example block *only when it has a title*: such a block gets the next
-/// number and a `"<prefix> <n>. "` caption; an untitled example is left alone and
-/// does **not** advance the counter. The counter is document-wide and runs in
-/// parse-completion order: children are numbered before their containing example,
-/// using each block's attribute snapshot, matching Ruby's caption assignment.
-/// Other block
-/// kinds carry no caption (asciidoctor's `listing-caption` etc. are unset), so a
-/// titled listing or paragraph keeps its bare title.
-fn assign_captions(blocks: &mut [Block], counter: &mut u32) {
-    struct Captions<'a> {
-        counter: &'a mut u32,
-    }
-    impl VisitorMut for Captions<'_> {
-        fn visit_block(&mut self, block: &mut Block) {
-            visit::walk_block_mut(self, block);
-            if matches!(block.kind, BlockKind::Example { .. }) && block.title.is_some() {
-                if let Some(prefix) = block.attribute_context.get("example-caption") {
-                    *self.counter += 1;
-                    block.caption = Some(format!("{} {}. ", prefix, self.counter));
-                }
-            }
-        }
-        fn visit_inlines(&mut self, _inlines: &mut [Inline], _context: InlineContext) {}
-    }
-    visit::walk_blocks_mut(&mut Captions { counter }, blocks);
 }
 
 /// Register block ids and body anchors before resolving forward references.

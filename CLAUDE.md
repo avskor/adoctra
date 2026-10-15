@@ -312,8 +312,8 @@ slot has no body effects, while repeated slot occurrences execute independently
 (e.g. a link target and its fallback label can advance the same counter twice).
 Keep the shared 32-level bound and enclosing physical diagnostic origin.
 ParseContext keeps reading attributes separate from conversion replay after the
-header. Only explicit declaration results/unsets enter replay, not effects from
-computing them. Section titles execute stateful substitutions once during reading;
+header. Explicit declaration results/unsets enter source-ordered replay, without
+the effects from computing them. Section titles execute stateful substitutions once during reading;
 IDs and xrefs reuse their resolved inlines. Effects reach later reading but do not
 enter declaration replay. The implicit doctitle executes an early a-stage with a
 fixed skip policy before header completion. The displayed document title executes
@@ -323,10 +323,20 @@ from the doctitle attribute. Body paragraphs/list/verse share its conversion sta
 Header overrides retain their enclosing declaration/host origins; their pending
 evaluation is separate from physical body ranges to avoid synthetic-span collisions.
 Tokens project source expressions from AST, suppressing generated ones whose origin
-is a doctitle declaration. Block titles still use the earlier read-only replay;
-block title/reftext/attribution, caption effects and derived block settings are the
-next integration step. Block.attribute_context remains the reading
-snapshot at block completion; it can therefore differ from resolved inline values.
+is a doctitle declaration. Dot block titles retain source until completion:
+an explicit ID plus a literal `{` triggers reading-time normal substitutions;
+other rendered titles execute before content during conversion. Overwritten and
+orphan titles do not execute. Passthrough titles are omitted from HTML; uncached
+ones retain raw source text in AST without inline evaluation or warnings.
+Example captions are assigned before title caching, in child-before-parent order,
+using the shared example-number counter. Its value replays on block entry before
+title/content, including locked counters, independently of explicit declarations.
+Only reading-time effects change subsequent caption prefixes. Local/document
+caption values (including empty strings) suppress numbering. Caption remains a
+flat string; rich/raw caption values, other caption families, reftext/attribution,
+block attribute-list substitutions and remaining derived settings are follow-ups.
+Block.attribute_context remains the reading snapshot at block completion;
+it can therefore differ from resolved inline values.
 Tokenization uses isolated contexts and the same declaration replay; it never
 mutates caller attributes or previously returned snapshots.
 Early catalog registration of anchors consumed by quote metadata, non-link pass
@@ -541,16 +551,17 @@ resulting container, not the wrapped child. The HTML backend renders it as a
 wrapper for the container blocks (after the `.admonition-title` label in an
 `<aside>`, as the first child of an `exampleblock`); `adoctra.css` ships a `.title`
 rule; JSON/WASM serialize a `title` field (the inlines, or `null`); the tokenizer
-emits one `block-title` token per `.Title` line (its inline markup *not*
-sub-tokenized, like the block anchor's reftext). Building on titles, asciidoctor's
-**caption numbering** is wired for example blocks: a third resolve phase
-(`assign_captions`, in `resolve.rs`, walking in block-completion order, children first)
+emits one `block-title` token per `.Title` line, with executed stateful expressions
+projected from AST as attribute-ref. Building on titles, asciidoctor's
+**caption numbering** is wired for example blocks: `ParseContext::assign_caption`
+(called at block completion, children first, before title caching)
 numbers every **titled** `Example` block — an untitled example is skipped and does
 *not* advance the counter, matching asciidoctor — and stores the resolved prefix on
 `Block.caption` (`Option<String>`, a ready-to-render `"Example 1. "` like
 asciidoctor's `@caption`). The prefix word comes from the `example-caption`
-attribute in the block's completion snapshot (default `Example`, overridable with
-`:example-caption: …`). An unset prefix suppresses the caption and counter increment. The HTML
+attribute at that point (default `Example`, overridable with
+`:example-caption: …`). An unset prefix suppresses the caption and counter increment;
+a local/document `caption` replaces it without numbering. The HTML
 backend prepends it inside the `<div class="title">` (`#{caption}#{title}`), and
 JSON/WASM serialize a `caption` field (the string, or `null`). Only example blocks
 are numbered: `listing-caption` stays unset (a titled listing/literal keeps its bare
@@ -585,7 +596,7 @@ ships `.quoteblock`/`.verseblock` rules. JSON/WASM serialize `name:"quote"` /
 `null`) plus the nested `blocks` / `inlines` field; the tokenizer emits a
 `quote-delimiter` token for the `____` fence (the body keeps its normal tokens, as
 for `====`). Captions do not apply (only example blocks are numbered), but the
-caption pass recurses into a quote so a titled `Example` *inside* a `____` block
+parser completes children of a quote so a titled `Example` *inside* a `____` block
 still numbers. Snapshotted by `golden/quotes/` and `golden/verses/`. **Sidebar
 blocks** are the next container, a near-exact mirror of the example block: a `****`
 delimited block (and the `[sidebar]` style on a paragraph) yields
@@ -696,13 +707,13 @@ masquerades (`[source]`/`[literal]`/`[verse]`/`[pass]` on `--`, switched at the
 inline substitutions. For
 **admonitions**, the *paragraph* forms (`[NOTE]` style and `NOTE: ` label) and the
 **delimited form** (`[NOTE]` on a `====` block) are done. **Block titles**
-(`.Title`) are parsed and rendered on every block (on `Block.title`); still missing
+(`.Title`) are kept on `Block.title` and rendered except on passthrough blocks; still missing
 here: admonitions on list items. **Caption numbering** is done for **example
 blocks** (`Example N.` via the `example-caption` attribute, on `Block.caption`); the
 `Figure N.` / `Table N.` counters await image/table blocks. The unset forms
 `:!example-caption:` / `:example-caption!:` disable example captions and their
-counter increments; there is still no custom per-block `caption=` attribute
-override. Also: **indented/offset
+counter increments; a custom per-block `caption=` or document `caption` overrides
+the prefix without incrementing the counter. Also: **indented/offset
 literal** (leading-space lines) and delimiters longer than four chars (the same
 single-length limitation applies to `====`/`____`: a nested same-length `====` /
 `____` closes the outer block); **anchors on individual list items**, TOC generation,
