@@ -1345,6 +1345,19 @@ mod header_tests {
     }
 
     #[test]
+    fn stateful_body_exports_source_tokens_without_reexecuting_effects() {
+        let source = "Ж {counter:n}\r\n// skipped\r\nБ {counter:n}\r\n\r\n{n}";
+        let json = super::parse_json_with_source(source, 7);
+        assert!(json.contains(r#""kind":"raw","value":"2""#), "{json}");
+        let tokens = super::tokens_json_with_source(source, 7);
+        for (start, _) in source.match_indices("{counter:n}") {
+            assert!(tokens.contains(&format!(r#"{{"span":{{"source_id":7,"start":{start},"end":{}}},"kind":"attribute-ref"}}"#, start + "{counter:n}".len())), "{tokens}");
+        }
+        assert_eq!(json, super::parse_json_with_source(source, 7));
+        assert_eq!(tokens, super::tokens_json_with_source(source, 7));
+    }
+
+    #[test]
     fn stateful_definitions_export_parts_physical_diagnostics_and_entry_tokens() {
         let counters = super::parse_json(":v: {counter:N:8}{counter:n}\n\n{v}");
         assert!(

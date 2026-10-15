@@ -1,5 +1,6 @@
-//! Mutable attribute evaluation is scoped to a real execution phase. A borrowed
-//! view keeps ordinary inline parsing/highlighting free of definition side effects.
+//! Mutable attribute evaluation is scoped to a real execution phase: reading
+//! definitions or evaluating body content. Syntax-only scans borrow a read-only
+//! view and cannot repeat side effects from either phase.
 use crate::{AttributePart as P, Attributes, Diagnostic, Span};
 use std::{
     borrow::Cow,

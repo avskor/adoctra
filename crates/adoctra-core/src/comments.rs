@@ -2,10 +2,9 @@
 //! or verbatim; this is deliberately not a global deletion pass.
 use crate::context::ParseContext;
 use crate::diagnostic::{Diagnostic, Severity};
-use crate::inline::scan_inlines_report;
 use crate::reader::Reader;
 use crate::scanner::FilteredSource;
-use crate::{Attributes, Inline, Span};
+use crate::Span;
 
 pub(crate) fn is_line_comment(line: &str) -> bool {
     line.starts_with("//") && !line.starts_with("///")
@@ -73,35 +72,4 @@ pub(crate) fn consume_delimited_comment(
 
 pub(crate) fn filtered_text(src: &str, base: usize) -> FilteredSource {
     FilteredSource::without_lines(src, base, is_line_comment)
-}
-
-/// Scan one logical paragraph across deleted line comments, retaining original
-/// byte positions even for nested formatting spanning the removed text.
-pub(crate) fn scan_content(
-    src: &str,
-    base: usize,
-    attrs: &Attributes,
-    context: &mut ParseContext,
-) -> Vec<Inline> {
-    let filtered = filtered_text(src, base);
-    context.comments.extend_from_slice(&filtered.removed);
-    let before = context.inline_diagnostics.len();
-    let mut inlines = scan_inlines_report(
-        &filtered.text,
-        0,
-        attrs,
-        true,
-        &mut context.inline_diagnostics,
-    );
-    for diagnostic in &mut context.inline_diagnostics[before..] {
-        diagnostic.span = filtered.original_span(diagnostic.span);
-    }
-    struct Restore<'a>(&'a FilteredSource);
-    impl crate::visit::VisitorMut for Restore<'_> {
-        fn visit_span(&mut self, span: &mut Span) {
-            *span = self.0.original_span(*span);
-        }
-    }
-    crate::visit::walk_inlines_mut(&mut Restore(&filtered), &mut inlines);
-    inlines
 }

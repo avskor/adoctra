@@ -68,6 +68,7 @@ pub(crate) struct ParseContext {
     locked: BTreeSet<String>,
     counters: BTreeMap<String, String>,
     replay: Option<Arc<Attributes>>,
+    pub body_subs: crate::body_subs::BodySubs,
     pub comments: Vec<crate::Span>,
     pub comment_diagnostics: Vec<crate::Diagnostic>,
     pub inline_diagnostics: Vec<crate::Diagnostic>,
@@ -96,6 +97,7 @@ impl ParseContext {
             locked,
             counters: BTreeMap::new(),
             replay: None,
+            body_subs: Default::default(),
             comments: Vec::new(),
             comment_diagnostics: Vec::new(),
             inline_diagnostics: Vec::new(),
@@ -108,6 +110,16 @@ impl ParseContext {
 
     pub fn render_attributes(&self) -> Arc<Attributes> {
         Arc::clone(self.replay.as_ref().unwrap_or(&self.attributes))
+    }
+
+    pub fn execute_body(&mut self, document: &mut crate::Document) {
+        std::mem::take(&mut self.body_subs).execute(
+            &mut document.blocks,
+            document.attributes.clone(),
+            &self.locked,
+            &mut self.counters,
+            &mut self.inline_diagnostics,
+        );
     }
 
     pub fn apply(&mut self, entry: AttributeEntry) {
@@ -166,6 +178,9 @@ impl ParseContext {
         // while computing it during reading. Header side effects are already
         // captured when start_body creates this independent snapshot.
         if let Some(replay) = &mut self.replay {
+            self.body_subs
+                .entries
+                .push((span.start, key.clone(), value.clone()));
             let attrs = Arc::make_mut(replay);
             if let Some(parts) = &value {
                 attrs.set_parts(&key, parts.clone());

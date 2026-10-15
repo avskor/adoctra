@@ -90,6 +90,8 @@ pub(crate) fn parse_reader<'a>(
         None,
     ));
 
+    context.execute_body(&mut doc);
+
     // All grammar operates on monotonically increasing reader coordinates.
     // Restore physical source ranges before resolution copies metadata spans.
     struct Origin<'a, 'b> {
@@ -242,12 +244,7 @@ fn collect_blocks(
             block.title = pending.title;
             block.attrs = pending.attrs;
             let attributes = inline_attributes(&context.render_attributes(), Some(&block.attrs));
-            apply_style_fixup(
-                &mut block,
-                lines,
-                &attributes,
-                &mut context.inline_diagnostics,
-            );
+            apply_style_fixup(&mut block, lines, &attributes, context);
             blocks.push(block);
         }
     }
@@ -264,7 +261,7 @@ fn apply_style_fixup(
     block: &mut Block,
     lines: &Reader<'_>,
     attrs: &Attributes,
-    diagnostics: &mut Vec<Diagnostic>,
+    context: &mut ParseContext,
 ) {
     let child_attributes = Arc::clone(&block.attribute_context);
     let new_child = |span, kind| {
@@ -372,8 +369,7 @@ fn apply_style_fixup(
             // paragraph must keep its breaks). The already-scanned (folded) inlines
             // are discarded.
             "verse" => {
-                let inlines =
-                    lines.scan(block.span.start, block.span.end, attrs, false, diagnostics);
+                let inlines = lines.scan(block.span.start, block.span.end, attrs, false, context);
                 block.kind = BlockKind::Verse {
                     attribution: None,
                     inlines,
@@ -427,7 +423,12 @@ fn apply_style_fixup(
         BlockKind::Quote { .. } | BlockKind::Verse { .. }
     ) {
         let positional = std::mem::take(&mut block.attrs.positional);
-        let attribution = build_attribution(positional, block.span.start, attrs, diagnostics);
+        let attribution = build_attribution(
+            positional,
+            block.span.start,
+            attrs,
+            &mut context.inline_diagnostics,
+        );
         if let BlockKind::Quote {
             attribution: slot, ..
         }
@@ -775,13 +776,7 @@ fn parse_block_content(
                 diagnostics,
             );
             // Verse keeps its line breaks — scan without folding newlines.
-            let inlines = lines.scan(
-                body_start,
-                body_end,
-                &attrs,
-                false,
-                &mut context.inline_diagnostics,
-            );
+            let inlines = lines.scan(body_start, body_end, &attrs, false, context);
             return Some(Block::new(
                 Span::new(start, end),
                 BlockKind::Verse {
@@ -887,13 +882,7 @@ fn parse_block_content(
                 // afterwards by `apply_style_fixup`, exactly like the `____` form.
                 Some("verse") => BlockKind::Verse {
                     attribution: None,
-                    inlines: lines.scan(
-                        body_start,
-                        body_end,
-                        &attrs,
-                        false,
-                        &mut context.inline_diagnostics,
-                    ),
+                    inlines: lines.scan(body_start, body_end, &attrs, false, context),
                 },
                 // Literal / source keep the body raw (no inline subs). For
                 // `[source,lang]` the `source` style and `language` attribute ride
@@ -1000,15 +989,14 @@ fn parse_block_content(
     }
     // Parsed text also removes comment lines; verbatim styles keep them.
     // Both paths map the preprocessed reader text to original byte spans.
-    let before_diagnostics = context.inline_diagnostics.len();
     let inlines = if verbatim {
-        lines.scan(start, end, &attrs, true, &mut Vec::new())
+        let content = lines.content(start, end);
+        let mut nodes = scan_inlines_report(&content.text, 0, &attrs, true, &mut Vec::new());
+        content.restore_inlines(&mut nodes);
+        nodes
     } else {
         lines.scan_content(start, end, &attrs, context)
     };
-    if pending_style == Some("pass") {
-        context.inline_diagnostics.truncate(before_diagnostics);
-    }
     Some(Block::new(
         Span::new(start, end),
         BlockKind::Paragraph { inlines },

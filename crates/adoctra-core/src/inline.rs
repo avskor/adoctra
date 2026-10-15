@@ -42,20 +42,21 @@ pub(crate) fn scan_inlines_report(
     diagnostics: &mut Vec<crate::Diagnostic>,
 ) -> Vec<Inline> {
     let mut evaluation = crate::substitution_context::Evaluation::read_only(attrs);
-    let mut quotes = Quotes::new(
-        src,
-        base,
-        &mut evaluation,
-        attrs.get("compat-mode").is_some(),
-    );
-    let mut out = scan_unprocessed(src, base, attrs, &quotes);
-    crate::attribute_macros::apply_inlines(
-        &mut out,
-        &mut evaluation,
-        fold_newlines,
-        &mut quotes.passes,
-    );
-    quotes.passes.restore(&mut out);
+    scan_inlines_evaluated(src, base, &mut evaluation, fold_newlines, diagnostics)
+}
+
+pub(crate) fn scan_inlines_evaluated(
+    src: &str,
+    base: usize,
+    evaluation: &mut crate::substitution_context::Evaluation<'_>,
+    fold_newlines: bool,
+    diagnostics: &mut Vec<crate::Diagnostic>,
+) -> Vec<Inline> {
+    let compat = evaluation.get("compat-mode").is_some();
+    let mut quotes = Quotes::new(src, base, evaluation, compat);
+    let mut out = scan_unprocessed(src, base, evaluation, &quotes);
+    crate::attribute_macros::apply_inlines(&mut out, evaluation, fold_newlines, &mut quotes.passes);
+    quotes.passes.restore(&mut out, evaluation, compat);
     diagnostics.extend(quotes.passes.diagnostics);
     out
 }

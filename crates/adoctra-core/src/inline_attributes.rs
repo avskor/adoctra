@@ -113,7 +113,14 @@ fn apply_with_policy(
                     &mut output,
                 );
             } else {
-                text.replace_parts(at..end, &effect.parts, &mut output);
+                refs.push(Reference {
+                    span,
+                    name: name.into(),
+                    missing: false,
+                });
+                for part in &effect.parts {
+                    output.append_part(part, refs.len(), span);
+                }
             }
         } else {
             let span = text.match_span(at..end);

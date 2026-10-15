@@ -74,7 +74,9 @@ impl Passes {
             text = passes.stage(text, attrs, compat, constrained);
         }
         passes.token_slots = passes.slots.len();
-        passes.evaluate_all(0, attrs, compat, 0);
+        if !attrs.stateful() {
+            passes.evaluate_all(0, attrs, compat, 0);
+        }
         // Special-character protection follows extraction, before quotes.
         let mut escaped = Text::default();
         for fragment in text.into_fragments() {
@@ -438,7 +440,7 @@ impl Passes {
         out
     }
 
-    pub fn restore(&self, nodes: &mut [Inline]) {
+    pub fn restore(&mut self, nodes: &mut [Inline], attrs: &mut Evaluation<'_>, compat: bool) {
         if self.slots.is_empty() {
             return;
         }
@@ -453,7 +455,16 @@ impl Passes {
                         Inline::Text { value, .. } | Inline::Raw { value, .. } => value,
                         _ => unreachable!(),
                     };
-                    let parts = self.restore_text(value, raw);
+                    let parts = self.restore_evaluated(
+                        vec![if raw {
+                            P::Raw(value.clone())
+                        } else {
+                            P::Text(value.clone())
+                        }],
+                        attrs,
+                        compat,
+                        0,
+                    );
                     *node = Inline::Substituted {
                         value: parts_text(&parts),
                         parts,
@@ -461,7 +472,7 @@ impl Passes {
                     };
                 }
                 Inline::Substituted { value, parts, .. } => {
-                    *parts = self.restore_parts(std::mem::take(parts));
+                    *parts = self.restore_evaluated(std::mem::take(parts), attrs, compat, 0);
                     *value = parts_text(parts);
                 }
                 Inline::AttributeRef {
@@ -470,9 +481,9 @@ impl Passes {
                     ..
                 } => {
                     *parts = if parts.is_empty() {
-                        self.restore_text(value, false)
+                        self.restore_evaluated(vec![P::Text(value.clone())], attrs, compat, 0)
                     } else {
-                        self.restore_parts(std::mem::take(parts))
+                        self.restore_evaluated(std::mem::take(parts), attrs, compat, 0)
                     };
                     *value = parts_text(parts);
                     if !parts.iter().any(P::is_special) {
@@ -484,20 +495,30 @@ impl Passes {
                 | Inline::Monospace { children, .. }
                 | Inline::Mark { children, .. }
                 | Inline::Superscript { children, .. }
-                | Inline::Subscript { children, .. } => self.restore(children),
+                | Inline::Subscript { children, .. } => self.restore(children, attrs, compat),
                 Inline::Link {
                     target, children, ..
                 }
                 | Inline::CrossReference {
                     target, children, ..
                 } => {
-                    *target = reference_text(&self.restore_text(target, true));
-                    self.restore(children);
+                    *target = reference_text(&self.restore_evaluated(
+                        vec![P::Raw(target.clone())],
+                        attrs,
+                        compat,
+                        0,
+                    ));
+                    self.restore(children, attrs, compat);
                 }
                 Inline::Anchor { id, reftext, .. } => {
-                    *id = reference_text(&self.restore_text(id, true));
+                    *id = reference_text(&self.restore_evaluated(
+                        vec![P::Raw(id.clone())],
+                        attrs,
+                        compat,
+                        0,
+                    ));
                     if let Some(children) = reftext {
-                        self.restore(children);
+                        self.restore(children, attrs, compat);
                     }
                 }
                 _ => {}

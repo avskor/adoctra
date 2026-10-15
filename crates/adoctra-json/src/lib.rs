@@ -565,6 +565,15 @@ mod tests {
     }
 
     #[test]
+    fn stateful_body_exports_evaluated_values_and_raw_counter_parts() {
+        let json = render("{counter:n} {set:x:yes}{x}\n\n{counter:n}");
+        assert!(json.contains(r#""value":"yes""#), "{json}");
+        assert!(json.contains(r#""kind":"raw","value":"2""#), "{json}");
+        assert!(!json.contains("{counter:n}"), "{json}");
+        assert!(!json.contains('\u{96}'));
+    }
+
+    #[test]
     fn stateful_definitions_export_replayed_values_and_neutral_link_parts() {
         let json =
             render(":v: pass:n[link:pass:a[{counter:n}][]]\n\n{v}\n\n:w: {counter:n}\n\n{w} {n}");

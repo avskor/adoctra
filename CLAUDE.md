@@ -296,9 +296,12 @@ retain the outer physical origin, mapped through include provenance. At depth 32
 keep the remaining text and emit a warning instead of restarting the depth count.
 Attribute definitions now execute set/counter/counter2 through a scoped mutable
 Evaluation (substitution_context.rs), shared by q/a, selected pass stages and
-repeated link parameters. Ordinary source inline evaluation remains read-only:
-conversion-time stateful substitutions are the next step, not an implicit effect
-of parsing or highlighting. Definitions respect host locks and preserve the
+repeated link parameters. Body text (paragraph/list/verse) executes in a separate
+conversion phase after reading, implemented in body_subs.rs. Defer source fields
+until styles have selected the surviving body; replay evaluated declarations,
+including equal-value assignments and unsets, in document order. The syntax-only
+highlighting scan remains read-only and projects executed expressions from AST.
+Definitions and body evaluation respect host locks and preserve the
 header snapshot; counter names are case sensitive while ordinary references and
 set names are normalized. Canonical integers increment without a fixed-width
 limit; string seeds follow Unicode successor/carry rules. set supports empty
@@ -311,7 +314,9 @@ Keep the shared 32-level bound and enclosing physical diagnostic origin.
 ParseContext keeps reading attributes separate from conversion replay after the
 header. Only explicit declaration results/unsets enter replay, not effects from
 computing them. Headings and preprocessing use reading state; paragraph/list/verse
-content and block titles use replay. Block.attribute_context remains the reading
+content uses mutable replay. Block titles still use the earlier read-only replay;
+stateful header/section/block metadata (title/reftext/attribution), caption effects
+and derived block settings are the next integration step. Block.attribute_context remains the reading
 snapshot at block completion; it can therefore differ from resolved inline values.
 Tokenization uses isolated contexts and the same declaration replay; it never
 mutates caller attributes or previously returned snapshots.

@@ -134,12 +134,13 @@ pub(crate) fn tokens_reader<'a>(
                 })
         })
         .collect();
-    // Project source-owned breaks from the complete parse: the line-based
-    // highlighting scan cannot know a block's final line or local hardbreaks
+    // Project source-owned breaks and executed expressions from the complete
+    // parse. The syntax-only scan must not execute body expressions again.
+    // The line-based highlighting scan cannot know a block's final line or local hardbreaks
     // option. Generated attribute content retains its attribute-ref token;
     // passthroughs retain their existing outer token.
-    struct Breaks(Vec<Span>);
-    impl crate::visit::VisitorMut for Breaks {
+    struct SourceTokens(Vec<(Span, TokenKind)>);
+    impl crate::visit::VisitorMut for SourceTokens {
         fn visit_inline(&mut self, inline: &mut Inline) {
             use crate::AttributePart as P;
             if let Inline::Substituted { parts, span, .. } = inline {
@@ -150,21 +151,29 @@ pub(crate) fn tokens_reader<'a>(
                         _ => false,
                     })
                 {
-                    self.0.push(*span);
+                    self.0.push((*span, TokenKind::LineBreak));
+                }
+            }
+            if let Inline::AttributeRef { name, span, .. } = inline {
+                if name.starts_with("set:")
+                    || name.starts_with("counter:")
+                    || name.starts_with("counter2:")
+                {
+                    self.0.push((*span, TokenKind::AttributeRef));
                 }
             }
             crate::visit::walk_inline_mut(self, inline);
         }
     }
-    let mut breaks = Breaks(Vec::new());
-    crate::visit::walk_document_mut(&mut breaks, &mut result.document);
+    let mut source_tokens = SourceTokens(Vec::new());
+    crate::visit::walk_document_mut(&mut source_tokens, &mut result.document);
     let mut protected: Vec<_> = out
         .iter()
         .filter(|t| t.kind == TokenKind::PassthroughText)
         .map(|t| t.span)
         .collect();
     protected.sort_by_key(|s| (s.source_id, s.start, s.end));
-    for span in breaks.0 {
+    for (span, kind) in source_tokens.0 {
         let fragments = span.provenance.map(|p| result.provenance[p].as_slice());
         for &span in fragments.unwrap_or(std::slice::from_ref(&span)) {
             let end = protected
@@ -173,10 +182,7 @@ pub(crate) fn tokens_reader<'a>(
                 .last()
                 .is_some_and(|s| s.source_id == span.source_id && s.end >= span.end);
             if span.start < span.end && !in_pass {
-                out.push(Token {
-                    span,
-                    kind: TokenKind::LineBreak,
-                });
+                out.push(Token { span, kind });
             }
         }
     }

@@ -24,6 +24,67 @@ fn setup(root: &str, files: &[(&str, &str)]) -> (SourceMap, MemoryResources, Par
 }
 
 #[test]
+fn stateful_body_keeps_selected_include_origins_and_replays_declarations() {
+    let root = "{counter:n}\n\ninclude::part.adoc[tags=body,indent=0]\n\n{counter:n}";
+    let part = "// tag::body[]\r\n  :n: 8\r\n\r\n  Ж {counter:n}\r\n  // skipped\r\n  Б {counter:n}\r\n// end::body[]";
+    let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", part)]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    let BlockKind::Paragraph { inlines } = &result.document.blocks[1].kind else {
+        panic!()
+    };
+    let references: Vec<_> = inlines
+        .iter()
+        .filter_map(|n| match n {
+            Inline::AttributeRef {
+                name, value, span, ..
+            } if name == "counter:n" => Some((value.as_deref(), *span)),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        references.iter().map(|r| r.0).collect::<Vec<_>>(),
+        [Some("9"), Some("10")]
+    );
+    let tokens = tokens_resource(&mut sources, &options, &resources).unwrap();
+    for (_, span) in references {
+        assert_eq!(span.source_id, SourceId(1));
+        assert_eq!(sources.slice(span), Some("{counter:n}"));
+        assert!(tokens
+            .iter()
+            .any(|t| t.kind == TokenKind::AttributeRef && t.span == span));
+    }
+    let BlockKind::Paragraph { inlines } = &result.document.blocks[2].kind else {
+        panic!()
+    };
+    assert!(
+        matches!(&inlines[0], Inline::AttributeRef { value: Some(value), .. } if value == "11")
+    );
+    check_spans(&result, &sources);
+}
+
+#[test]
+fn stateful_expression_across_files_retains_composite_provenance() {
+    let root = "{set:x:first\ninclude::part.adoc[]";
+    let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", "second}{x}")]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+        panic!()
+    };
+    let span = inlines
+        .iter()
+        .find_map(|n| match n {
+            Inline::AttributeRef { name, span, .. } if name.starts_with("set:") => Some(*span),
+            _ => None,
+        })
+        .unwrap();
+    let fragments = &result.provenance[span.provenance.unwrap()];
+    assert_eq!(fragments.first().unwrap().source_id, options.source_id);
+    assert_eq!(fragments.last().unwrap().source_id, SourceId(1));
+    assert_eq!(sources.slice(*fragments.last().unwrap()), Some("second}"));
+    check_spans(&result, &sources);
+}
+
+#[test]
 fn metadata_diagnostics_keep_selected_include_reference_and_macro_origins() {
     let root = "include::part.adoc[tags=body,indent=0]";
     let part = "// tag::body[]\r\n  :attribute-missing: warn\r\n\r\n  Ж [.{missing}]*Text* link:https://e['\\{other}',role=x]\r\n// end::body[]";

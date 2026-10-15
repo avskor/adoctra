@@ -527,6 +527,14 @@ mod tests {
     }
 
     #[test]
+    fn stateful_body_renders_counters_late_passes_and_replayed_declarations() {
+        let html = render(":n: 1\n\n{counter:n} pass:a[{counter:n}] {n}\n\n:n: 1\n\n{counter:n} {set:x:<b>X</b>}{x}\n\nlink:pass:a[{counter:n}][]");
+        assert!(html.contains("<p>2 3 2</p>"), "{html}");
+        assert!(html.contains("<p>2 &lt;b&gt;X&lt;/b&gt;</p>"), "{html}");
+        assert!(html.contains(r#"<a href="3" class="bare">4</a>"#), "{html}");
+    }
+
+    #[test]
     fn stateful_definitions_render_neutral_parts_and_body_replay() {
         let html = render(":v: pass:q,a[[.{counter:n}]*{counter:n}*]\n:l: pass:n[link:pass:a[{counter:n}][]]\n\n{v} {l} {n}\n\n:w: {counter:n}\n\n{w} {n}");
         assert!(html.contains(r#"<strong class="1">2</strong>"#), "{html}");

@@ -75,11 +75,18 @@ impl Quotes {
         // Metadata can consume {name} before normal attribute expansion. Keep
         // an empty source node just as the later link matcher does, so tools
         // can still locate the declaration use without rendering it twice.
+        let closes: Vec<_> = src.match_indices('}').map(|(at, _)| at).collect();
         for (at, _) in src.match_indices('{') {
             if passes.contains(base + at) || (at > 0 && src.as_bytes()[at - 1] == b'\\') {
                 continue;
             }
-            let Some((end, name, false)) = crate::inline_attributes::reference(src, at) else {
+            let reference = crate::inline_attributes::reference(src, at).or_else(|| {
+                attrs
+                    .stateful()
+                    .then(|| crate::substitution_context::expression(src, at, &closes))
+                    .flatten()
+            });
+            let Some((end, name, false)) = reference else {
                 continue;
             };
             if let Some((_, edit)) = edits.range_mut(..=base + at).next_back() {
