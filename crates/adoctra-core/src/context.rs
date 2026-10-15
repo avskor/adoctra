@@ -65,6 +65,7 @@ pub(crate) struct ParseContext {
     locked: BTreeSet<String>,
     pub comments: Vec<crate::Span>,
     pub comment_diagnostics: Vec<crate::Diagnostic>,
+    pub inline_diagnostics: Vec<crate::Diagnostic>,
 }
 
 impl ParseContext {
@@ -89,10 +90,15 @@ impl ParseContext {
             locked,
             comments: Vec::new(),
             comment_diagnostics: Vec::new(),
+            inline_diagnostics: Vec::new(),
         }
     }
 
     pub fn apply(&mut self, entry: AttributeEntry) {
+        self.apply_at(entry, crate::Span::new(0, 0));
+    }
+
+    fn apply_at(&mut self, entry: AttributeEntry, span: crate::Span) {
         let (key, value) = match entry {
             AttributeEntry::Set(key, value) => (key, Some(value)),
             AttributeEntry::Unset(key) => (key, None),
@@ -101,7 +107,13 @@ impl ParseContext {
             return;
         }
         let value = value.map(|v| {
-            let parts = attribute_entry_parts(&v, &self.attributes, self.quote_compat);
+            let parts = attribute_entry_parts_report(
+                &v,
+                &self.attributes,
+                self.quote_compat,
+                span,
+                &mut self.inline_diagnostics,
+            );
             let value = parts_text(&parts);
             if key == "leveloffset" {
                 let current = self
@@ -209,7 +221,13 @@ pub(crate) fn consume_attribute_entry(
             lines.attribute_entries.last().unwrap().0.end,
         ));
     }
-    context.apply(entry);
+    context.apply_at(
+        entry,
+        crate::Span::new(
+            lines.attribute_entries[first].0.start,
+            lines.attribute_entries.last().unwrap().0.end,
+        ),
+    );
     true
 }
 
@@ -255,87 +273,27 @@ pub(crate) fn substitute_attribute_value(value: &str, attributes: &Attributes) -
 
 /// A whole-value pass macro can select literal protection and attribute
 /// substitution, quotes, replacements and link macros independently.
-pub(crate) fn attribute_entry_parts(
+fn attribute_entry_parts_report(
     value: &str,
     attributes: &Attributes,
     compat: bool,
+    span: crate::Span,
+    diagnostics: &mut Vec<crate::Diagnostic>,
 ) -> Vec<AttributePart> {
     if let Some((subs, body)) = value
         .strip_prefix("pass:")
         .and_then(|v| v.split_once('['))
         .and_then(|(subs, body)| body.strip_suffix(']').map(|body| (subs, body)))
+        .filter(|(subs, _)| crate::pass_subs::syntax(subs))
     {
-        let stages: Vec<_> = if subs.is_empty() {
-            Vec::new()
-        } else {
-            subs.split(',').collect()
-        };
-        if stages.iter().all(|s| {
-            matches!(
-                *s,
-                "a" | "attributes"
-                    | "c"
-                    | "specialcharacters"
-                    | "specialchars"
-                    | "none"
-                    | "r"
-                    | "replacements"
-                    | "q"
-                    | "quotes"
-                    | "m"
-                    | "macros"
-            )
-        }) {
-            let mut parts = vec![AttributePart::Raw(body.to_owned())];
-            let mut applied_specials = false;
-            let mut applied_attributes = false;
-            let mut applied_replacements = false;
-            let mut applied_quotes = false;
-            let mut applied_macros = false;
-            for stage in stages {
-                if matches!(stage, "c" | "specialcharacters" | "specialchars") {
-                    if applied_specials {
-                        continue;
-                    }
-                    applied_specials = true;
-                    // Protect the entire current value, including prior expansions.
-                    let text = crate::attributes::reference_text(&parts);
-                    parts = vec![AttributePart::Text(text)];
-                } else if matches!(stage, "a" | "attributes") {
-                    if applied_attributes {
-                        continue;
-                    }
-                    applied_attributes = true;
-                    let mut expanded = Vec::new();
-                    for part in parts {
-                        if part.is_boundary() {
-                            expanded.push(part.map_metadata(|value| {
-                                crate::attributes::reference_text(&substitute_attribute_parts(
-                                    value, attributes, true,
-                                ))
-                            }));
-                            continue;
-                        }
-                        for new in
-                            substitute_attribute_parts(part.text(), attributes, part.is_raw())
-                        {
-                            push_value(&mut expanded, new);
-                        }
-                    }
-                    parts = expanded;
-                } else if matches!(stage, "r" | "replacements") && !applied_replacements {
-                    applied_replacements = true;
-                    parts = crate::replacements::apply_parts(parts);
-                } else if matches!(stage, "q" | "quotes") && !applied_quotes {
-                    applied_quotes = true;
-                    parts = crate::attribute_quotes::apply(parts, compat, attributes);
-                } else if matches!(stage, "m" | "macros") && !applied_macros {
-                    applied_macros = true;
-                    parts = crate::attribute_macros::apply(parts, attributes, compat);
-                }
-            }
-            return parts;
-        }
+        return crate::inline_pass::Passes::selected(
+            body,
+            subs,
+            attributes,
+            compat,
+            span,
+            diagnostics,
+        );
     }
     substitute_attribute_parts(value, attributes, false)
 }

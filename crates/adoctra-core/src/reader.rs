@@ -693,9 +693,21 @@ impl<'a> Reader<'a> {
         FilteredSource::from_fragments(fragments)
     }
 
-    pub fn scan(&self, start: usize, end: usize, attrs: &Attributes, fold: bool) -> Vec<Inline> {
+    pub fn scan(
+        &self,
+        start: usize,
+        end: usize,
+        attrs: &Attributes,
+        fold: bool,
+        diagnostics: &mut Vec<Diagnostic>,
+    ) -> Vec<Inline> {
         let content = self.content(start, end);
-        let mut inlines = crate::inline::scan_inlines_with(&content.text, 0, attrs, fold);
+        let before = diagnostics.len();
+        let mut inlines =
+            crate::inline::scan_inlines_report(&content.text, 0, attrs, fold, diagnostics);
+        for diagnostic in &mut diagnostics[before..] {
+            diagnostic.span = content.original_span(diagnostic.span);
+        }
         content.restore_inlines(&mut inlines);
         inlines
     }
@@ -709,9 +721,13 @@ impl<'a> Reader<'a> {
     ) -> Vec<Inline> {
         let content = self.content(start, end);
         let before = context.comments.len();
+        let diagnostic_start = context.inline_diagnostics.len();
         let mut inlines = crate::comments::scan_content(&content.text, 0, attrs, context);
         for span in &mut context.comments[before..] {
             *span = content.original_span(*span);
+        }
+        for diagnostic in &mut context.inline_diagnostics[diagnostic_start..] {
+            diagnostic.span = content.original_span(diagnostic.span);
         }
         content.restore_inlines(&mut inlines);
         inlines

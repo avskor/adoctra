@@ -485,6 +485,7 @@ fn render_parts(parts: &[adoctra_core::AttributePart], out: &mut String) {
                 out.push('>');
             }
             adoctra_core::AttributePart::CloseLink => out.push_str("</a>"),
+            adoctra_core::AttributePart::LineBreak => out.push_str("<br>"),
             adoctra_core::AttributePart::Open(format) => {
                 out.push('<');
                 out.push_str(attribute_format_tag(*format));

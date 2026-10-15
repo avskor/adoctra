@@ -2,6 +2,7 @@
 //! parts only after the outer substitutions finish. Slots are private and
 //! collision-free for this source and its attribute context.
 use crate::attributes::{parts_text, push_part, push_value, reference_text};
+use crate::pass_subs::{self, Stage};
 use crate::substitution_text::Text;
 use crate::{AttributeFormat as F, AttributePart as P, Attributes, Inline, Span, Token, TokenKind};
 
@@ -9,11 +10,13 @@ struct Slot {
     parts: Vec<P>,
     span: Span,
     mono: bool,
+    pending: Option<(String, Vec<Stage>, Option<P>)>,
 }
 
 pub(crate) struct Passes {
     prefix: String,
     slots: Vec<Slot>,
+    pub diagnostics: Vec<crate::Diagnostic>,
 }
 
 struct Match {
@@ -55,12 +58,14 @@ impl Passes {
         let mut passes = Self {
             prefix,
             slots: Vec::new(),
+            diagnostics: Vec::new(),
         };
         let mut text = Text::default();
         text.append_source(src, true, 0, Span::new(base, base + src.len()));
         for constrained in [false, true] {
             text = passes.stage(text, attrs, compat, constrained);
         }
+        passes.evaluate_all(0, attrs, compat, 0);
         // Special-character protection follows extraction, before quotes.
         let mut escaped = Text::default();
         for fragment in text.into_fragments() {
@@ -101,24 +106,19 @@ impl Passes {
                 } else {
                     body
                 };
-                let mut parts = if m.subs == "c" {
-                    vec![P::Text(body.into())]
-                } else if m.subs.is_empty() {
-                    vec![P::Raw(body.into())]
+                let selector_span = if m.macro_form {
+                    text.match_span(m.open + 5..m.inner - 1)
                 } else {
-                    crate::context::attribute_entry_parts(
-                        &format!("pass:{}[{}]", m.subs, body),
-                        attrs,
-                        compat,
-                    )
+                    span
                 };
+                let stages = pass_subs::resolve(&m.subs, selector_span, &mut self.diagnostics);
                 let (id, role) = m
                     .metadata
                     .as_deref()
                     .filter(|_| !m.escaped_metadata)
                     .map(|s| crate::attribute_quotes::parse_attributes(s, attrs))
                     .unwrap_or_default();
-                if m.mono || id.is_some() || role.is_some() {
+                let wrapper = if m.mono || id.is_some() || role.is_some() {
                     let kind = if m.mono { F::Monospace } else { F::Span };
                     let open = if id.is_some() || role.is_some() {
                         P::OpenWithAttributes {
@@ -129,17 +129,16 @@ impl Passes {
                     } else {
                         P::Open(kind)
                     };
-                    parts.insert(0, open);
-                    parts.push(P::Close(kind));
-                }
-                // Prior slots may be nested in a constrained passthrough. Their
-                // restoration is finite: each slot refers only to earlier slots.
-                parts = self.restore_parts(parts);
+                    Some(open)
+                } else {
+                    None
+                };
                 let key = format!("{}{}\u{97}", self.prefix, self.slots.len());
                 self.slots.push(Slot {
-                    parts,
+                    parts: Vec::new(),
                     span,
                     mono: m.mono,
+                    pending: Some((body.into(), stages, wrapper)),
                 });
                 output.append(&key, true, 0, span, false);
             }
@@ -148,6 +147,98 @@ impl Passes {
         }
         text.copy(copied..src.len(), &mut output);
         output
+    }
+
+    fn evaluate_all(&mut self, start: usize, attrs: &Attributes, compat: bool, depth: usize) {
+        // Reserve all slots from this extraction before expanding nested macros.
+        // This also preserves Ruby's observable numbering in mailto URI encoding.
+        let end = self.slots.len();
+        for i in start..end {
+            let Some((body, stages, wrapper)) = self.slots[i].pending.take() else {
+                continue;
+            };
+            let span = self.slots[i].span;
+            let mut parts = if depth >= 32 {
+                self.diagnostics.push(crate::Diagnostic {
+                    span,
+                    severity: crate::Severity::Warning,
+                    message: "passthrough substitution nesting limit (32) exceeded".into(),
+                });
+                vec![P::Raw(body)]
+            } else {
+                self.apply_selected(body, &stages, attrs, compat, span, depth)
+            };
+            if let Some(open) = wrapper {
+                let kind = match &open {
+                    P::Open(f) | P::OpenWithAttributes { format: f, .. } => *f,
+                    _ => unreachable!(),
+                };
+                parts.insert(0, open);
+                parts.push(P::Close(kind));
+            }
+            self.slots[i].parts = self.restore_parts(parts);
+        }
+    }
+
+    fn apply_selected(
+        &mut self,
+        body: String,
+        stages: &[Stage],
+        attrs: &Attributes,
+        compat: bool,
+        span: Span,
+        depth: usize,
+    ) -> Vec<P> {
+        let mut parts = if stages.contains(&Stage::Macros) && !body.is_empty() {
+            let first = self.slots.len();
+            let mut text = Text::default();
+            // A nested selector can be transformed by outer unescaping; use
+            // its enclosing physical construct instead of synthetic offsets.
+            text.append(&body, true, 0, span, false);
+            for constrained in [false, true] {
+                text = self.stage(text, attrs, compat, constrained);
+            }
+            self.evaluate_all(first, attrs, compat, depth + 1);
+            text.into_parts()
+        } else {
+            vec![P::Raw(body)]
+        };
+        for &stage in stages {
+            parts = pass_subs::apply(parts, stage, attrs, compat);
+        }
+        self.restore_parts(parts)
+    }
+
+    pub fn selected(
+        body: &str,
+        subs: &str,
+        attrs: &Attributes,
+        compat: bool,
+        span: Span,
+        diagnostics: &mut Vec<crate::Diagnostic>,
+    ) -> Vec<P> {
+        let stages = pass_subs::resolve(subs, span, diagnostics);
+        // Use the same collision check as ordinary source extraction, without
+        // extracting anything unless macros is one of the requested stages.
+        let mut prefix = "\u{96}".to_owned();
+        while body.contains(&prefix)
+            || attrs.iter().any(|(k, v)| {
+                v.contains(&prefix)
+                    || attrs
+                        .raw_parts(k)
+                        .is_some_and(|p| reference_text(p).contains(&prefix))
+            })
+        {
+            prefix.push('\u{96}');
+        }
+        let mut passes = Self {
+            prefix,
+            slots: Vec::new(),
+            diagnostics: Vec::new(),
+        };
+        let parts = passes.apply_selected(body.into(), &stages, attrs, compat, span, 0);
+        diagnostics.append(&mut passes.diagnostics);
+        parts
     }
 
     pub fn contains(&self, at: usize) -> bool {
@@ -365,30 +456,7 @@ impl Index {
         if !constrained && src[open..].starts_with("pass:") && metadata.is_none() && escaped <= 1 {
             let bracket = Self::next(&self.opens, open + 5)?;
             let subs = &src[open + 5..bracket];
-            if !subs
-                .bytes()
-                .all(|c| c.is_ascii_lowercase() || matches!(c, b',' | b'-'))
-            {
-                return None;
-            }
-            if !subs.is_empty()
-                && !subs.split(',').all(|s| {
-                    matches!(
-                        s,
-                        "c" | "specialcharacters"
-                            | "specialchars"
-                            | "q"
-                            | "quotes"
-                            | "a"
-                            | "attributes"
-                            | "r"
-                            | "replacements"
-                            | "m"
-                            | "macros"
-                            | "none"
-                    )
-                })
-            {
+            if !pass_subs::syntax(subs) {
                 return None;
             }
             let close = if src[bracket + 1..].starts_with(']') {
@@ -471,7 +539,7 @@ impl Index {
             }
         });
         let subs = if mono && !compat && marker != "`" {
-            "c,q,a,r,m"
+            "normal"
         } else if marker == "+++" {
             ""
         } else {

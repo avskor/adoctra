@@ -209,7 +209,7 @@ block's effective compat-mode; attribute-entry pass:q uses the cached mode from
 host overrides/context creation and header completion. inline_pass.rs extracts
 protected regions before quotes and restores them after the outer substitutions.
 It supports +/++/+++, $$, compat backticks, roles/id, escapes, legacy x- and inline
-pass: with the existing c/q/a/r/m stages (full names and none too). The result uses
+pass: with c/q/a/r/m/p, normal/n, verbatim/v, specialchars and none. The result uses
 Substituted Text/Raw and neutral boundaries; private collision-free slots never
 escape unchanged to the final AST, link targets or metadata. Pinned Ruby mailto
 subject/body encoding retains percent-encoded slots; preserve its explicit regression.
@@ -217,8 +217,18 @@ Attribute expansions do not
 restart extraction. Physical spans include the consumed delimiters and compose
 through includes. Tokens use pass-text or monospace and omit protected inner
 syntax; the existing line-based tokenizer limitation still affects multiline
-constructs. The next step is pass substitution groups/diagnostics and nested
-extraction within m/macros; stem and remaining stages are also not implemented.
+constructs. pass_subs.rs shares group expansion, ordered deduplication, -name
+removals and warnings for invalid stages with whole-value attribute pass. Ruby
+rejects basic; verbatim/v is special-character protection without callouts.
+Selecting macros extracts nested passthroughs before every chosen stage; reserve
+all outer slots before nested evaluation. Limit nesting to 32 with a warning and
+literal raw remainder. Diagnostics use physical selector spans or enclosing
+macro/attribute spans after transformations, mapped through reader/comment provenance.
+AttributePart::LineBreak represents p/normal hard breaks; HTML renders br and
+JSON/WASM use kind:line-break. Later c can protect the lexical spelling. Preserve
+LF/CRLF and hardbreaks-option behavior inside pass. The next step is ordinary
+inline attribute escapes/intrinsics/missing policies. General post replacements,
+stem and other macro families remain incomplete.
 Early catalog registration of anchors consumed by quote metadata, non-link pass
 macros, general inline attribute escapes/intrinsics and raw whole-doctitle
 replacement also remain work.

@@ -87,6 +87,10 @@ fn write_parts_array(parts: &[crate::AttributePart], out: &mut String) {
             out.push('}');
             continue;
         }
+        if matches!(part, crate::AttributePart::LineBreak) {
+            out.push_str("{\"kind\":\"line-break\"}");
+            continue;
+        }
         if matches!(part, crate::AttributePart::CloseLink) {
             out.push_str("{\"kind\":\"close-link\"}");
             continue;

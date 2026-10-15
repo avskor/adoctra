@@ -25,6 +25,7 @@ mod inline_pass;
 mod inline_quotes;
 pub mod json;
 mod parser;
+mod pass_subs;
 mod reader;
 mod replacements;
 mod resolve;

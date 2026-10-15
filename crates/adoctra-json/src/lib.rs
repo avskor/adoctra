@@ -565,6 +565,19 @@ mod tests {
     }
 
     #[test]
+    fn pass_groups_export_neutral_line_breaks_and_protected_nested_text() {
+        let json = render("Before pass:n[*Ж* +\n+*Literal* {v}+] after");
+        assert!(json.contains(r#""kind":"line-break""#), "{json}");
+        assert!(
+            json.contains(r#""kind":"open","format":"strong""#),
+            "{json}"
+        );
+        assert!(json.contains("*Literal* {v}"), "{json}");
+        assert!(!json.contains("<br>"), "{json}");
+        assert!(!json.contains('\u{96}'), "{json}");
+    }
+
+    #[test]
     fn inline_passthrough_exports_literal_raw_and_neutral_formatting_parts() {
         let json = render(
             ":v: Ж\n\nBefore +*Bold* {v} &amp;+ +++<b>raw</b>+++ [red]+literal+ pass:c,q[*Bold*]",

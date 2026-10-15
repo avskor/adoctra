@@ -2303,3 +2303,31 @@ fn inline_passthrough_across_files_retains_composite_provenance() {
     assert_eq!(fragments.last().unwrap().source_id, SourceId(1));
     check_spans(&result, &sources);
 }
+
+#[test]
+fn pass_group_diagnostics_restore_selected_include_coordinates() {
+    let root = "include::part.adoc[tags=body,indent=0]";
+    let part = "\u{feff}// tag::body[]\r\n  Before pass:bad,n[*Ж*] after\r\n// end::body[]";
+    let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", part)]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(result.diagnostics.len(), 1);
+    let diagnostic = &result.diagnostics[0];
+    assert_eq!(sources.slice(diagnostic.span), Some("bad,n"));
+    assert_eq!(diagnostic.span.source_id, SourceId(1));
+    check_spans(&result, &sources);
+}
+
+#[test]
+fn nested_pass_warning_keeps_composite_origin_across_include_and_comments() {
+    let root = "Before pass:m[First\n// hidden\ninclude::part.adoc[]";
+    let (mut sources, resources, options) =
+        setup(root, &[("/docs/part.adoc", r"pass:bad[Ж\]] after")]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(result.diagnostics.len(), 1);
+    let diagnostic = &result.diagnostics[0];
+    let fragments = &result.provenance[diagnostic.span.provenance.unwrap()];
+    assert_eq!(fragments.first().unwrap().source_id, options.source_id);
+    assert_eq!(fragments.last().unwrap().source_id, SourceId(1));
+    assert!(diagnostic.message.contains("invalid substitution type"));
+    check_spans(&result, &sources);
+}

@@ -18,21 +18,34 @@ use crate::inline_quotes::Quotes;
 use crate::parser::is_valid_anchor_id;
 
 /// Scan inline markup with the block's effective attributes.
+#[cfg(test)]
 pub(crate) fn scan_inlines(src: &str, base: usize, attrs: &Attributes) -> Vec<Inline> {
     scan_inlines_with(src, base, attrs, true)
 }
 
 /// `fold_newlines` preserves verse line breaks while keeping physical spans.
+#[cfg(test)]
 pub(crate) fn scan_inlines_with(
     src: &str,
     base: usize,
     attrs: &Attributes,
     fold_newlines: bool,
 ) -> Vec<Inline> {
+    scan_inlines_report(src, base, attrs, fold_newlines, &mut Vec::new())
+}
+
+pub(crate) fn scan_inlines_report(
+    src: &str,
+    base: usize,
+    attrs: &Attributes,
+    fold_newlines: bool,
+    diagnostics: &mut Vec<crate::Diagnostic>,
+) -> Vec<Inline> {
     let quotes = Quotes::new(src, base, attrs, attrs.get("compat-mode").is_some());
     let mut out = scan_unprocessed(src, base, attrs, &quotes);
     crate::attribute_macros::apply_inlines(&mut out, attrs, fold_newlines);
     quotes.passes.restore(&mut out);
+    diagnostics.extend(quotes.passes.diagnostics);
     out
 }
 

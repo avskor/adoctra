@@ -13,7 +13,7 @@ use crate::comments::{comment_fence, is_line_comment, skip_comment};
 use crate::context::{consume_attribute_entry, ParseContext, ParseOptions};
 use crate::diagnostic::{Diagnostic, ParseResult, Severity};
 use crate::header::collect_header;
-use crate::inline::scan_inlines;
+use crate::inline::scan_inlines_report;
 use crate::reader::Reader;
 use std::sync::Arc;
 
@@ -49,8 +49,18 @@ pub(crate) fn parse_reader<'a>(
     };
     let mut diagnostics = Vec::new();
     if let Some(effective) = header.effective_title {
-        let mut inlines = scan_inlines(&effective.text, effective.span.start, &context.attributes);
+        let before = context.inline_diagnostics.len();
+        let mut inlines = scan_inlines_report(
+            &effective.text,
+            effective.span.start,
+            &context.attributes,
+            true,
+            &mut context.inline_diagnostics,
+        );
         if effective.replacement {
+            for diagnostic in &mut context.inline_diagnostics[before..] {
+                diagnostic.span = effective.span;
+            }
             struct ReplacementOrigin(Span);
             impl crate::visit::VisitorMut for ReplacementOrigin {
                 fn visit_span(&mut self, span: &mut Span) {
@@ -101,6 +111,7 @@ pub(crate) fn parse_reader<'a>(
     lines.finish();
     diagnostics.append(&mut lines.diagnostics);
     diagnostics.append(&mut context.comment_diagnostics);
+    diagnostics.append(&mut context.inline_diagnostics);
     context.comments.sort_by_key(|span| span.start);
     lines.comments = context.comments.clone();
     for diagnostic in &mut diagnostics {
@@ -172,7 +183,13 @@ fn collect_blocks(
         if let Some((id, reftext)) = parse_block_anchor(line) {
             pending.id = Some(id.to_string());
             pending.reftext = reftext.map(|rt| {
-                scan_inlines(rt, lines[*i].0 + abs_offset(line, rt), &context.attributes)
+                scan_inlines_report(
+                    rt,
+                    lines[*i].0 + abs_offset(line, rt),
+                    &context.attributes,
+                    true,
+                    &mut context.inline_diagnostics,
+                )
             });
             *i += 1;
             continue;
@@ -198,10 +215,12 @@ fn collect_blocks(
         // apply. A second `.Title` overrides the first (last-wins, matching
         // asciidoctor).
         if let Some(title) = parse_block_title(line) {
-            pending.title = Some(scan_inlines(
+            pending.title = Some(scan_inlines_report(
                 title,
                 lines[*i].0 + abs_offset(line, title),
                 &context.attributes,
+                true,
+                &mut context.inline_diagnostics,
             ));
             *i += 1;
             continue;
@@ -222,7 +241,12 @@ fn collect_blocks(
             block.title = pending.title;
             block.attrs = pending.attrs;
             let attributes = Arc::clone(&block.attribute_context);
-            apply_style_fixup(&mut block, lines, &attributes);
+            apply_style_fixup(
+                &mut block,
+                lines,
+                &attributes,
+                &mut context.inline_diagnostics,
+            );
             blocks.push(block);
         }
     }
@@ -235,7 +259,12 @@ fn collect_blocks(
 /// Apply a type-changing block *style* to a freshly parsed block. A `[literal]`,
 /// `[example]` or admonition (`[NOTE]`, …) style on a *paragraph* rewrites its
 /// kind; on any other block kind these styles are inert (left on `attrs.style`).
-fn apply_style_fixup(block: &mut Block, lines: &Reader<'_>, attrs: &Attributes) {
+fn apply_style_fixup(
+    block: &mut Block,
+    lines: &Reader<'_>,
+    attrs: &Attributes,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
     let child_attributes = Arc::clone(&block.attribute_context);
     let new_child = |span, kind| {
         let mut child = Block::new(span, kind);
@@ -342,7 +371,8 @@ fn apply_style_fixup(block: &mut Block, lines: &Reader<'_>, attrs: &Attributes) 
             // paragraph must keep its breaks). The already-scanned (folded) inlines
             // are discarded.
             "verse" => {
-                let inlines = lines.scan(block.span.start, block.span.end, attrs, false);
+                let inlines =
+                    lines.scan(block.span.start, block.span.end, attrs, false, diagnostics);
                 block.kind = BlockKind::Verse {
                     attribution: None,
                     inlines,
@@ -396,7 +426,7 @@ fn apply_style_fixup(block: &mut Block, lines: &Reader<'_>, attrs: &Attributes) 
         BlockKind::Quote { .. } | BlockKind::Verse { .. }
     ) {
         let positional = std::mem::take(&mut block.attrs.positional);
-        let attribution = build_attribution(positional, block.span.start, attrs);
+        let attribution = build_attribution(positional, block.span.start, attrs, diagnostics);
         if let BlockKind::Quote {
             attribution: slot, ..
         }
@@ -424,15 +454,21 @@ fn build_attribution(
     positional: Vec<String>,
     base: usize,
     attrs: &Attributes,
+    diagnostics: &mut Vec<Diagnostic>,
 ) -> Option<Attribution> {
-    fn part(seg: Option<String>, base: usize, attrs: &Attributes) -> Option<Vec<Inline>> {
+    fn part(
+        seg: Option<String>,
+        base: usize,
+        attrs: &Attributes,
+        diagnostics: &mut Vec<Diagnostic>,
+    ) -> Option<Vec<Inline>> {
         let seg = seg?;
         let seg = seg.trim();
-        (!seg.is_empty()).then(|| scan_inlines(seg, base, attrs))
+        (!seg.is_empty()).then(|| scan_inlines_report(seg, base, attrs, true, diagnostics))
     }
     let mut it = positional.into_iter();
-    let author = part(it.next(), base, attrs);
-    let citetitle = part(it.next(), base, attrs);
+    let author = part(it.next(), base, attrs, diagnostics);
+    let citetitle = part(it.next(), base, attrs, diagnostics);
     if author.is_none() && citetitle.is_none() {
         None
     } else {
@@ -555,7 +591,8 @@ fn parse_block_content(
         let level = adjusted.clamp(0, u8::MAX as i128) as u8;
         // `title` is a subslice of this detached reader line.
         let base = lines[*i].0 + abs_offset(line, title);
-        let inlines = scan_inlines(title, base, &attrs);
+        let inlines =
+            scan_inlines_report(title, base, &attrs, true, &mut context.inline_diagnostics);
         *i += 1;
         // `Block.id` is assigned later, by the resolve pass, once the whole
         // document is known (it deduplicates ids across all sections) — unless an
@@ -718,7 +755,13 @@ fn parse_block_content(
                 diagnostics,
             );
             // Verse keeps its line breaks — scan without folding newlines.
-            let inlines = lines.scan(body_start, body_end, &attrs, false);
+            let inlines = lines.scan(
+                body_start,
+                body_end,
+                &attrs,
+                false,
+                &mut context.inline_diagnostics,
+            );
             return Some(Block::new(
                 Span::new(start, end),
                 BlockKind::Verse {
@@ -824,7 +867,13 @@ fn parse_block_content(
                 // afterwards by `apply_style_fixup`, exactly like the `____` form.
                 Some("verse") => BlockKind::Verse {
                     attribution: None,
-                    inlines: lines.scan(body_start, body_end, &attrs, false),
+                    inlines: lines.scan(
+                        body_start,
+                        body_end,
+                        &attrs,
+                        false,
+                        &mut context.inline_diagnostics,
+                    ),
                 },
                 // Literal / source keep the body raw (no inline subs). For
                 // `[source,lang]` the `source` style and `language` attribute ride
@@ -931,11 +980,15 @@ fn parse_block_content(
     }
     // Parsed text also removes comment lines; verbatim styles keep them.
     // Both paths map the preprocessed reader text to original byte spans.
+    let before_diagnostics = context.inline_diagnostics.len();
     let inlines = if verbatim {
-        lines.scan(start, end, &attrs, true)
+        lines.scan(start, end, &attrs, true, &mut Vec::new())
     } else {
         lines.scan_content(start, end, &attrs, context)
     };
+    if pending_style == Some("pass") {
+        context.inline_diagnostics.truncate(before_diagnostics);
+    }
     Some(Block::new(
         Span::new(start, end),
         BlockKind::Paragraph { inlines },

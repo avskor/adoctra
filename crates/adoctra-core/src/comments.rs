@@ -2,7 +2,7 @@
 //! or verbatim; this is deliberately not a global deletion pass.
 use crate::context::ParseContext;
 use crate::diagnostic::{Diagnostic, Severity};
-use crate::inline::scan_inlines;
+use crate::inline::scan_inlines_report;
 use crate::reader::Reader;
 use crate::scanner::FilteredSource;
 use crate::{Attributes, Inline, Span};
@@ -85,7 +85,17 @@ pub(crate) fn scan_content(
 ) -> Vec<Inline> {
     let filtered = filtered_text(src, base);
     context.comments.extend_from_slice(&filtered.removed);
-    let mut inlines = scan_inlines(&filtered.text, 0, attrs);
+    let before = context.inline_diagnostics.len();
+    let mut inlines = scan_inlines_report(
+        &filtered.text,
+        0,
+        attrs,
+        true,
+        &mut context.inline_diagnostics,
+    );
+    for diagnostic in &mut context.inline_diagnostics[before..] {
+        diagnostic.span = filtered.original_span(diagnostic.span);
+    }
     struct Restore<'a>(&'a FilteredSource);
     impl crate::visit::VisitorMut for Restore<'_> {
         fn visit_span(&mut self, span: &mut Span) {
