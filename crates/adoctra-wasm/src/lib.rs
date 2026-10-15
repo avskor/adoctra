@@ -1345,6 +1345,37 @@ mod header_tests {
     }
 
     #[test]
+    fn stateful_definitions_export_parts_physical_diagnostics_and_entry_tokens() {
+        let counters = super::parse_json(":v: {counter:N:8}{counter:n}\n\n{v}");
+        assert!(
+            counters.contains(r#""N":[{"kind":"raw","value":"8"}]"#),
+            "{counters}"
+        );
+        assert!(
+            counters.contains(r#""n":[{"kind":"raw","value":"1"}]"#),
+            "{counters}"
+        );
+        let source = ":v: pass:n[link:pass:a[{counter:n}][]]\r\n:w: {set:attribute-missing:warn}{missing}\r\n\r\n{v}";
+        let json = super::parse_json_with_source(source, 7);
+        assert!(
+            json.contains(r#""kind":"open-link","target":"1","role":"bare""#),
+            "{json}"
+        );
+        assert!(json.contains(r#""kind":"raw","value":"2""#), "{json}");
+        let start = source.find(":w:").unwrap();
+        let end = source[start..].find('\r').unwrap() + start;
+        assert!(
+            json.contains(&format!(
+                r#""span":{{"source_id":7,"start":{start},"end":{end}}},"severity":"warning""#
+            )),
+            "{json}"
+        );
+        let tokens = super::tokens_json_with_source(source, 7);
+        assert_eq!(tokens.matches(r#""kind":"attribute-entry""#).count(), 2);
+        assert_eq!(json, super::parse_json_with_source(source, 7));
+    }
+
+    #[test]
     fn repeated_link_normal_exports_parts_and_enclosing_physical_span() {
         let source =
             ":v: pass:[+*Ж*+]\r\n\r\nlink:https://e['{v}',role=x] link:https://e['end +',role=x]";

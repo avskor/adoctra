@@ -3,8 +3,9 @@
 //! collision-free for this source and its attribute context.
 use crate::attributes::{parts_text, push_part, push_value, reference_text};
 use crate::pass_subs::{self, Stage};
+use crate::substitution_context::Evaluation;
 use crate::substitution_text::Text;
-use crate::{AttributeFormat as F, AttributePart as P, Attributes, Inline, Span, Token, TokenKind};
+use crate::{AttributeFormat as F, AttributePart as P, Inline, Span, Token, TokenKind};
 
 struct Slot {
     parts: Vec<P>,
@@ -43,7 +44,12 @@ fn space(c: char) -> bool {
 }
 
 impl Passes {
-    pub fn extract(src: &str, base: usize, attrs: &Attributes, compat: bool) -> (Text, Self) {
+    pub fn extract(
+        src: &str,
+        base: usize,
+        attrs: &mut Evaluation<'_>,
+        compat: bool,
+    ) -> (Text, Self) {
         let mut prefix = "\u{96}".to_owned();
         while src.contains(&prefix)
             || attrs.iter().any(|(name, value)| {
@@ -77,7 +83,13 @@ impl Passes {
         (escaped, passes)
     }
 
-    fn stage(&mut self, text: Text, attrs: &Attributes, compat: bool, constrained: bool) -> Text {
+    fn stage(
+        &mut self,
+        text: Text,
+        attrs: &mut Evaluation<'_>,
+        compat: bool,
+        constrained: bool,
+    ) -> Text {
         let src = &text.text;
         let mut output = Text::default();
         let mut copied = 0;
@@ -162,42 +174,119 @@ impl Passes {
         output
     }
 
-    fn evaluate_all(&mut self, start: usize, attrs: &Attributes, compat: bool, depth: usize) {
-        // Reserve all slots from this extraction before expanding nested macros.
-        // This also preserves Ruby's observable numbering in mailto URI encoding.
+    fn evaluate_all(
+        &mut self,
+        start: usize,
+        attrs: &mut Evaluation<'_>,
+        compat: bool,
+        depth: usize,
+    ) {
         let end = self.slots.len();
         for i in start..end {
-            let Some((body, stages, wrapper)) = self.slots[i].pending.take() else {
+            self.evaluate_slot(i, attrs, compat, depth);
+        }
+    }
+
+    fn evaluate_slot(&mut self, i: usize, attrs: &mut Evaluation<'_>, compat: bool, depth: usize) {
+        let pending = if attrs.stateful() {
+            self.slots[i].pending.clone()
+        } else {
+            self.slots[i].pending.take()
+        };
+        let Some((body, stages, wrapper)) = pending else {
+            return;
+        };
+        let span = self.slots[i].span;
+        let mut parts = if depth >= pass_subs::MAX_DEPTH {
+            self.diagnostics.push(crate::Diagnostic {
+                span,
+                severity: crate::Severity::Warning,
+                message: "passthrough substitution nesting limit (32) exceeded".into(),
+            });
+            vec![P::Raw(body)]
+        } else {
+            self.apply_selected(body, &stages, attrs, compat, span, depth)
+        };
+        if let Some(open) = wrapper {
+            let kind = match &open {
+                P::Open(f) | P::OpenWithAttributes { format: f, .. } => *f,
+                _ => unreachable!(),
+            };
+            parts.insert(0, open);
+            parts.push(P::Close(kind));
+        }
+        self.slots[i].parts = self.restore_parts(parts);
+    }
+
+    fn restore_evaluated(
+        &mut self,
+        parts: Vec<P>,
+        attrs: &mut Evaluation<'_>,
+        compat: bool,
+        depth: usize,
+    ) -> Vec<P> {
+        let mut out = Vec::new();
+        for part in parts {
+            if part.is_boundary() {
+                push_value(
+                    &mut out,
+                    part.map_metadata(|s| {
+                        reference_text(&self.restore_stateful_text(s, true, attrs, compat, depth))
+                    }),
+                );
+            } else {
+                for p in
+                    self.restore_stateful_text(part.text(), part.is_raw(), attrs, compat, depth)
+                {
+                    push_value(&mut out, p);
+                }
+            }
+        }
+        out
+    }
+
+    fn restore_stateful_text(
+        &mut self,
+        value: &str,
+        raw: bool,
+        attrs: &mut Evaluation<'_>,
+        compat: bool,
+        depth: usize,
+    ) -> Vec<P> {
+        // A slot can occur in both a link target and its fallback label. Each
+        // occurrence executes independently, in restoration order, as in Ruby.
+        let mut out = Vec::new();
+        let mut rest = value;
+        while let Some(at) = rest.find(&self.prefix) {
+            let after = at + self.prefix.len();
+            let Some((number, tail)) = rest[after..].split_once('\u{97}') else {
+                break;
+            };
+            let Some(i) = number
+                .parse::<usize>()
+                .ok()
+                .filter(|&i| i < self.slots.len())
+            else {
+                push_part(&mut out, &rest[..after], raw);
+                rest = &rest[after..];
                 continue;
             };
-            let span = self.slots[i].span;
-            let mut parts = if depth >= pass_subs::MAX_DEPTH {
-                self.diagnostics.push(crate::Diagnostic {
-                    span,
-                    severity: crate::Severity::Warning,
-                    message: "passthrough substitution nesting limit (32) exceeded".into(),
-                });
-                vec![P::Raw(body)]
-            } else {
-                self.apply_selected(body, &stages, attrs, compat, span, depth)
-            };
-            if let Some(open) = wrapper {
-                let kind = match &open {
-                    P::Open(f) | P::OpenWithAttributes { format: f, .. } => *f,
-                    _ => unreachable!(),
-                };
-                parts.insert(0, open);
-                parts.push(P::Close(kind));
+            push_part(&mut out, &rest[..at], raw);
+            self.evaluate_slot(i, attrs, compat, depth + 1);
+            for part in self.slots[i].parts.clone() {
+                push_value(&mut out, part);
             }
-            self.slots[i].parts = self.restore_parts(parts);
+            rest = tail;
         }
+        push_part(&mut out, rest, raw);
+        out
     }
 
     fn apply_selected(
         &mut self,
         body: String,
         stages: &[Stage],
-        attrs: &Attributes,
+        attrs: &mut Evaluation<'_>,
         compat: bool,
         span: Span,
         depth: usize,
@@ -211,7 +300,9 @@ impl Passes {
             for constrained in [false, true] {
                 text = self.stage(text, attrs, compat, constrained);
             }
-            self.evaluate_all(first, attrs, compat, depth + 1);
+            if !attrs.stateful() {
+                self.evaluate_all(first, attrs, compat, depth + 1);
+            }
             text.into_parts()
         } else {
             vec![P::Raw(body)]
@@ -219,13 +310,17 @@ impl Passes {
         for &stage in stages {
             parts = pass_subs::apply(parts, stage, attrs, compat, span, depth, self);
         }
-        self.restore_parts(parts)
+        if attrs.stateful() {
+            self.restore_evaluated(parts, attrs, compat, depth)
+        } else {
+            self.restore_parts(parts)
+        }
     }
 
     pub fn normal_parameter(
         &mut self,
         body: String,
-        attrs: &Attributes,
+        attrs: &mut Evaluation<'_>,
         compat: bool,
         span: Span,
         depth: usize,
@@ -252,7 +347,7 @@ impl Passes {
     pub fn selected(
         body: &str,
         subs: &str,
-        attrs: &Attributes,
+        attrs: &mut Evaluation<'_>,
         compat: bool,
         span: Span,
         diagnostics: &mut Vec<crate::Diagnostic>,

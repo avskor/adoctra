@@ -209,6 +209,7 @@ fn tokens_processed(
     // Resolve `{attr}` against the same header table the parser uses.
     let mut context = ParseContext::new(options);
     let header = collect_header(&mut crate::reader::Reader::plain(source), &mut context);
+    context.start_body();
     let mut out = Vec::new();
     let mut in_listing = false;
     let mut in_literal = false;
@@ -450,7 +451,7 @@ fn tokens_processed(
             out.extend(scan_inlines(
                 &line[indent + mlen..],
                 off + indent + mlen,
-                &context.attributes,
+                &context.render_attributes(),
             ));
             continue;
         }
@@ -469,13 +470,13 @@ fn tokens_processed(
                 out.extend(scan_inlines(
                     &line[prefix_len..],
                     off + prefix_len,
-                    &context.attributes,
+                    &context.render_attributes(),
                 ));
                 mid_paragraph = true;
                 continue;
             }
         }
-        out.extend(scan_inlines(line, off, &context.attributes));
+        out.extend(scan_inlines(line, off, &context.render_attributes()));
         mid_paragraph = true;
     }
 

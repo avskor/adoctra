@@ -294,10 +294,29 @@ create pass-text or line-break tokens for generated syntax. Only slots reserved
 during source extraction produce passthrough tokens. Nested link/pass warnings
 retain the outer physical origin, mapped through include provenance. At depth 32,
 keep the remaining text and emit a warning instead of restarting the depth count.
-The next step is stateful set/counter substitutions and their context semantics.
+Attribute definitions now execute set/counter/counter2 through a scoped mutable
+Evaluation (substitution_context.rs), shared by q/a, selected pass stages and
+repeated link parameters. Ordinary source inline evaluation remains read-only:
+conversion-time stateful substitutions are the next step, not an implicit effect
+of parsing or highlighting. Definitions respect host locks and preserve the
+header snapshot; counter names are case sensitive while ordinary references and
+set names are normalized. Canonical integers increment without a fixed-width
+limit; string seeds follow Unicode successor/carry rules. set supports empty
+values, unsets, aliases and relative leveloffset; derived backend/doctype behavior
+remains outside the current built-in attribute profile.
+Stateful pass bodies execute lazily at restoration, after outer stages. A dropped
+slot has no body effects, while repeated slot occurrences execute independently
+(e.g. a link target and its fallback label can advance the same counter twice).
+Keep the shared 32-level bound and enclosing physical diagnostic origin.
+ParseContext keeps reading attributes separate from conversion replay after the
+header. Only explicit declaration results/unsets enter replay, not effects from
+computing them. Headings and preprocessing use reading state; paragraph/list/verse
+content and block titles use replay. Block.attribute_context remains the reading
+snapshot at block completion; it can therefore differ from resolved inline values.
+Tokenization uses isolated contexts and the same declaration replay; it never
+mutates caller attributes or previously returned snapshots.
 Early catalog registration of anchors consumed by quote metadata, non-link pass
-macros, stateful set/counter substitutions and raw whole-doctitle replacement
-also remain work.
+macros and raw whole-doctitle replacement also remain work.
 Automatic section IDs sanitize a temporary lexical title: raw XML tags and
 references matching the pinned entity grammar are removed, not decoded.
 Literal protection and structural inline boundaries remain distinct; title
@@ -333,7 +352,8 @@ and coercion rules (including arbitrary-length integers, first-operator splittin
 and the retained closing quote in string values). It always opens a block; malformed
 active expressions diagnose without pushing, skipped expressions only balance nesting.
 Ordinary/intrinsic attributes and escaped references are supported; set/counter side
-effects remain unimplemented; basic include expansion is available with an explicit provider.
+effects in conditional expressions remain unimplemented; effects from preceding
+definitions are visible to the reader. Basic include expansion is available with an explicit provider.
 ResourceProvider/ResourceRequest/Resource and typed ResourceError now define host
 resource loading. SourceMap::load resolves through an explicit provider, reuses an
 identical canonical-name/text snapshot, and preserves older ids after edits. Core's

@@ -527,6 +527,17 @@ mod tests {
     }
 
     #[test]
+    fn stateful_definitions_render_neutral_parts_and_body_replay() {
+        let html = render(":v: pass:q,a[[.{counter:n}]*{counter:n}*]\n:l: pass:n[link:pass:a[{counter:n}][]]\n\n{v} {l} {n}\n\n:w: {counter:n}\n\n{w} {n}");
+        assert!(html.contains(r#"<strong class="1">2</strong>"#), "{html}");
+        assert!(
+            html.contains(r#"<a href="3" class="bare">4</a> 4"#),
+            "{html}"
+        );
+        assert!(html.contains("<p>5 4</p>"), "{html}");
+    }
+
+    #[test]
     fn repeated_link_normal_renders_protected_text_raw_parts_and_breaks() {
         let html = render(":v: pass:[+*bold*+]\n:r: pass:[+++<b>raw</b>+++]\n\nlink:https://e['{v}',role=x] link:https://e['{r}',role=x] link:https://e['end +',role=x]");
         assert!(html.contains(r#"class="x">*bold*</a>"#), "{html}");

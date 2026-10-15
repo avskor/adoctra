@@ -1,8 +1,9 @@
 //! Link substitutions for pass attributes and expanded inline text. Matched over
 //! the shared lexical stream; generated links remain backend-neutral boundaries.
 use crate::inline_pass::Passes;
+use crate::substitution_context::Evaluation;
 use crate::substitution_text::Text;
-use crate::{AttributeFormat, AttributeLink, AttributePart as Part, Attributes, Inline, Span};
+use crate::{AttributeFormat, AttributeLink, AttributePart as Part, Inline, Span};
 use std::collections::BTreeMap;
 use std::ops::Range;
 
@@ -15,7 +16,7 @@ struct Report<'a> {
 
 pub(crate) fn apply(
     parts: Vec<Part>,
-    attributes: &Attributes,
+    attributes: &mut Evaluation<'_>,
     compat: bool,
     span: Span,
     depth: usize,
@@ -33,7 +34,7 @@ pub(crate) fn apply(
 /// label. Surviving boundaries are rebuilt into their original spanned AST nodes.
 pub(crate) fn apply_inlines(
     nodes: &mut Vec<Inline>,
-    attributes: &Attributes,
+    attributes: &mut Evaluation<'_>,
     fold_newlines: bool,
     passes: &mut Passes,
 ) -> Vec<Span> {
@@ -149,7 +150,7 @@ pub(crate) fn rebuild(nodes: Vec<Inline>, quotes: Vec<Inline>) -> Vec<Inline> {
 
 fn process_inlines(
     nodes: &mut Vec<Inline>,
-    attributes: &Attributes,
+    attributes: &mut Evaluation<'_>,
     edges: bool,
     fold_newlines: bool,
     report: &mut Report<'_>,
@@ -209,7 +210,7 @@ fn process_inlines(
 fn flush_inlines(
     nodes: &mut Vec<Inline>,
     output: &mut Vec<Inline>,
-    attributes: &Attributes,
+    attributes: &mut Evaluation<'_>,
     edges: (bool, bool),
     fold_newlines: bool,
     report: &mut Report<'_>,
@@ -271,7 +272,7 @@ fn flush_inlines(
 
 fn apply_inner(
     parts: Vec<Part>,
-    attributes: &Attributes,
+    attributes: &mut Evaluation<'_>,
     compat: bool,
     depth: usize,
     span: Span,
@@ -344,7 +345,7 @@ impl Index {
 fn apply_stage(
     text: Text,
     stage: usize,
-    attributes: &Attributes,
+    attributes: &mut Evaluation<'_>,
     compat: bool,
     depth: usize,
     left_edge: bool,
@@ -625,7 +626,7 @@ fn link_parts(
     text: &Text,
     m: &LinkMatch,
     target: &str,
-    attributes: &Attributes,
+    attributes: &mut Evaluation<'_>,
     compat: bool,
     depth: usize,
     report: &mut Report<'_>,
@@ -750,7 +751,7 @@ fn encode_uri(value: &str) -> String {
 /// the generated reference tags back into a tree.
 fn parse_label(
     parts: &[Part],
-    attributes: &Attributes,
+    attributes: &mut Evaluation<'_>,
     compat: bool,
     depth: usize,
     span: Span,

@@ -1,8 +1,9 @@
 //! Shared a-stage for ordinary inline text, definitions and selected pass
 //! substitutions. Ordinary references retain their original source ownership.
 use crate::attributes::{parts_text, push_value};
+use crate::substitution_context::Evaluation;
 use crate::substitution_text::Text;
-use crate::{AttributePart as P, Attributes, Diagnostic, Inline, Severity, Span};
+use crate::{AttributePart as P, Diagnostic, Inline, Severity, Span};
 
 pub(crate) struct Reference {
     pub span: Span,
@@ -37,22 +38,18 @@ pub(crate) fn reference(src: &str, at: usize) -> Option<(usize, &str, bool)> {
 
 pub(crate) fn apply(
     text: Text,
-    attrs: &Attributes,
+    attrs: &mut Evaluation<'_>,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> (Text, Vec<Reference>) {
-    apply_with_policy(
-        text,
-        attrs,
-        attrs.get("attribute-missing").unwrap_or("skip"),
-        diagnostics,
-    )
+    let policy = attrs.get("attribute-missing").unwrap_or("skip").to_owned();
+    apply_with_policy(text, attrs, &policy, diagnostics)
 }
 
 /// Definitions and selected stages carry an enclosing physical origin: their
 /// text may already have been joined, unescaped or rewritten by another stage.
 pub(crate) fn parts(
     parts: &[P],
-    attrs: &Attributes,
+    attrs: &mut Evaluation<'_>,
     span: Span,
     policy: &str,
     diagnostics: &mut Vec<Diagnostic>,
@@ -68,17 +65,25 @@ pub(crate) fn parts(
 
 fn apply_with_policy(
     text: Text,
-    attrs: &Attributes,
+    attrs: &mut Evaluation<'_>,
     policy: &str,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> (Text, Vec<Reference>) {
     let mut output = Text::default();
     let mut refs = Vec::new();
     let mut dropped = Vec::new();
+    let mut dropped_lines = Vec::new();
+    let closes: Vec<_> = text.text.match_indices('}').map(|(i, _)| i).collect();
     let mut at = 0;
     let mut copied = 0;
+    let mut missing_policy = None;
+    let mut undefined_policy = None;
     while at < text.text.len() {
-        let Some((end, name, escaped)) = reference(&text.text, at) else {
+        let stateful = attrs
+            .stateful()
+            .then(|| crate::substitution_context::expression(&text.text, at, &closes))
+            .flatten();
+        let Some((end, name, escaped)) = stateful.or_else(|| reference(&text.text, at)) else {
             at += text.text[at..].chars().next().unwrap().len_utf8();
             continue;
         };
@@ -86,6 +91,30 @@ fn apply_with_policy(
         if escaped {
             let literal = format!("{{{name}}}");
             text.replacement(at..end, &literal, Some(&literal), &mut output);
+        } else if stateful.is_some() {
+            let span = text.match_span(at..end);
+            let effect = attrs.execute(name, span, &mut undefined_policy, diagnostics);
+            if effect.remove_empty {
+                dropped.push(output.text.len());
+            }
+            if effect.remove_line {
+                dropped_lines.push(output.text.len());
+            }
+            let metadata = text.fragments[text.fragments.partition_point(|(r, _)| r.end <= at)]
+                .1
+                .part
+                .as_ref()
+                .is_some_and(P::is_boundary);
+            if metadata {
+                text.replacement(
+                    at..end,
+                    &crate::attributes::reference_text(&effect.parts),
+                    None,
+                    &mut output,
+                );
+            } else {
+                text.replace_parts(at..end, &effect.parts, &mut output);
+            }
         } else {
             let span = text.match_span(at..end);
             let metadata = text.fragments[text.fragments.partition_point(|(r, _)| r.end <= at)]
@@ -98,6 +127,15 @@ fn apply_with_policy(
                     .map(|value| vec![P::Raw(value.into())])
             });
             let missing = parts.is_none();
+            let policy = if missing && attrs.stateful() {
+                missing_policy
+                    .get_or_insert_with(|| {
+                        attrs.get("attribute-missing").unwrap_or("skip").to_owned()
+                    })
+                    .as_str()
+            } else {
+                policy
+            };
             let removed = missing && matches!(policy, "drop" | "drop-line");
             if !metadata {
                 refs.push(Reference {
@@ -108,6 +146,9 @@ fn apply_with_policy(
             }
             if removed {
                 dropped.push(output.text.len());
+                if policy == "drop-line" {
+                    dropped_lines.push(output.text.len());
+                }
             }
             if missing && matches!(policy, "warn" | "drop-line") {
                 diagnostics.push(Diagnostic {
@@ -155,6 +196,7 @@ fn apply_with_policy(
     if !dropped.is_empty() {
         let mut retained = Text::default();
         let mut positions = dropped.into_iter().peekable();
+        let mut line_positions = dropped_lines.into_iter().peekable();
         let mut start = 0;
         let mut previous_end = None;
         for line in output.text.split('\n') {
@@ -164,7 +206,12 @@ fn apply_with_policy(
                 positions.next();
                 missing = true;
             }
-            if !missing || (policy != "drop-line" && !line.is_empty()) {
+            let mut drop_line = false;
+            while line_positions.peek().is_some_and(|&pos| pos <= end) {
+                line_positions.next();
+                drop_line = true;
+            }
+            if !drop_line && (!missing || !line.is_empty()) {
                 if let Some(end) = previous_end {
                     output.copy(end..end + 1, &mut retained);
                 }
@@ -235,6 +282,7 @@ pub(crate) fn nodes(text: Text, refs: Vec<Reference>) -> Vec<Inline> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Attributes;
 
     #[test]
     fn shared_stage_matches_across_parts_and_drops_the_transformed_line() {
@@ -247,7 +295,7 @@ mod tests {
                 P::Text("before {na".into()),
                 P::Raw("me} {missing}\nafter".into()),
             ],
-            &attrs,
+            &mut Evaluation::read_only(&attrs),
             span,
             "drop-line",
             &mut diagnostics,

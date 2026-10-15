@@ -80,6 +80,7 @@ pub(crate) fn parse_reader<'a>(
         title.attribute_context = Arc::clone(&context.attributes);
         doc.blocks.push(title);
     }
+    context.start_body();
     let mut i = header.body_start;
     doc.blocks.extend(collect_blocks(
         &mut lines,
@@ -186,7 +187,7 @@ fn collect_blocks(
                 scan_inlines_report(
                     rt,
                     lines[*i].0 + abs_offset(line, rt),
-                    &context.attributes,
+                    &context.render_attributes(),
                     true,
                     &mut context.inline_diagnostics,
                 )
@@ -218,7 +219,7 @@ fn collect_blocks(
             pending.title = Some(scan_inlines_report(
                 title,
                 lines[*i].0 + abs_offset(line, title),
-                &context.attributes,
+                &context.render_attributes(),
                 true,
                 &mut context.inline_diagnostics,
             ));
@@ -240,7 +241,7 @@ fn collect_blocks(
             block.roles = pending.roles;
             block.title = pending.title;
             block.attrs = pending.attrs;
-            let attributes = inline_attributes(&block.attribute_context, Some(&block.attrs));
+            let attributes = inline_attributes(&context.render_attributes(), Some(&block.attrs));
             apply_style_fixup(
                 &mut block,
                 lines,
@@ -577,7 +578,7 @@ fn parse_block_content(
     pending_attrs: Option<&BlockAttrs>,
 ) -> Option<Block> {
     let pending_style = pending_attrs.and_then(|attrs| attrs.style.as_deref());
-    let attrs = inline_attributes(&context.attributes, pending_attrs);
+    let attrs = inline_attributes(&context.render_attributes(), pending_attrs);
     let (off, line_buffer) = lines.line(*i);
     let line = line_buffer.as_ref();
     let trimmed = line.trim_end();
@@ -604,8 +605,14 @@ fn parse_block_content(
         let level = adjusted.clamp(0, u8::MAX as i128) as u8;
         // `title` is a subslice of this detached reader line.
         let base = lines[*i].0 + abs_offset(line, title);
-        let inlines =
-            scan_inlines_report(title, base, &attrs, true, &mut context.inline_diagnostics);
+        let heading_attrs = inline_attributes(&context.attributes, pending_attrs);
+        let inlines = scan_inlines_report(
+            title,
+            base,
+            &heading_attrs,
+            true,
+            &mut context.inline_diagnostics,
+        );
         *i += 1;
         // `Block.id` is assigned later, by the resolve pass, once the whole
         // document is known (it deduplicates ids across all sections) — unless an
@@ -1094,7 +1101,7 @@ fn parse_list(
             principal_end = toff + tline.len();
             *i += 1;
         }
-        let attrs = Arc::clone(&context.attributes);
+        let attrs = context.render_attributes();
         let inlines = lines.scan_content(content_start, principal_end, &attrs, context);
 
         // Attached blocks (`+` continuations) and nested sublists, in source

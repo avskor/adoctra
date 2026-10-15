@@ -565,6 +565,19 @@ mod tests {
     }
 
     #[test]
+    fn stateful_definitions_export_replayed_values_and_neutral_link_parts() {
+        let json =
+            render(":v: pass:n[link:pass:a[{counter:n}][]]\n\n{v}\n\n:w: {counter:n}\n\n{w} {n}");
+        assert!(json.contains(r#""value":"3""#), "{json}");
+        assert!(
+            json.contains(r#""kind":"open-link","target":"1","role":"bare""#),
+            "{json}"
+        );
+        assert!(json.contains(r#""kind":"raw","value":"2""#), "{json}");
+        assert!(!json.contains('\u{96}'));
+    }
+
+    #[test]
     fn repeated_link_normal_exports_raw_text_and_neutral_break_parts() {
         let json = render(":v: pass:[+*bold*+]\n:r: pass:[+++<b>raw</b>+++]\n\nlink:https://e['{v}',role=x] link:https://e['{r}',role=x] link:https://e['end +',role=x]");
         assert!(

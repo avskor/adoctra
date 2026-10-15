@@ -1,6 +1,7 @@
 //! Selection and individual stages shared by attribute and inline pass macros.
 use crate::attributes::reference_text;
-use crate::{AttributePart as P, Attributes, Diagnostic, Severity, Span};
+use crate::substitution_context::Evaluation;
+use crate::{AttributePart as P, Diagnostic, Severity, Span};
 
 pub(crate) const MAX_DEPTH: usize = 32;
 
@@ -89,7 +90,7 @@ pub(crate) fn resolve(subs: &str, span: Span, diagnostics: &mut Vec<Diagnostic>)
 pub(crate) fn apply(
     parts: Vec<P>,
     stage: Stage,
-    attrs: &Attributes,
+    attrs: &mut Evaluation<'_>,
     compat: bool,
     span: Span,
     depth: usize,
@@ -102,13 +103,10 @@ pub(crate) fn apply(
         }
         Stage::Replacements => crate::replacements::apply_parts(parts),
         Stage::Macros => crate::attribute_macros::apply(parts, attrs, compat, span, depth, passes),
-        Stage::Attributes => crate::inline_attributes::parts(
-            &parts,
-            attrs,
-            span,
-            attrs.get("attribute-missing").unwrap_or("skip"),
-            &mut passes.diagnostics,
-        ),
+        Stage::Attributes => {
+            let policy = attrs.get("attribute-missing").unwrap_or("skip").to_owned();
+            crate::inline_attributes::parts(&parts, attrs, span, &policy, &mut passes.diagnostics)
+        }
         Stage::Post => crate::post_replacements::apply(
             crate::substitution_text::Text::from_parts(&parts),
             attrs.hardbreaks(),

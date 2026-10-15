@@ -41,9 +41,20 @@ pub(crate) fn scan_inlines_report(
     fold_newlines: bool,
     diagnostics: &mut Vec<crate::Diagnostic>,
 ) -> Vec<Inline> {
-    let mut quotes = Quotes::new(src, base, attrs, attrs.get("compat-mode").is_some());
+    let mut evaluation = crate::substitution_context::Evaluation::read_only(attrs);
+    let mut quotes = Quotes::new(
+        src,
+        base,
+        &mut evaluation,
+        attrs.get("compat-mode").is_some(),
+    );
     let mut out = scan_unprocessed(src, base, attrs, &quotes);
-    crate::attribute_macros::apply_inlines(&mut out, attrs, fold_newlines, &mut quotes.passes);
+    crate::attribute_macros::apply_inlines(
+        &mut out,
+        &mut evaluation,
+        fold_newlines,
+        &mut quotes.passes,
+    );
     quotes.passes.restore(&mut out);
     diagnostics.extend(quotes.passes.diagnostics);
     out
@@ -52,12 +63,21 @@ pub(crate) fn scan_inlines_report(
 /// Preserve source syntax for highlighting even when a later macro consumes it.
 /// Links are reported by the same late matcher that produces semantic parts.
 pub(crate) fn scan_for_tokens(src: &str, base: usize, attrs: &Attributes) -> Vec<crate::Token> {
-    let mut quotes = Quotes::new(src, base, attrs, attrs.get("compat-mode").is_some());
+    let mut evaluation = crate::substitution_context::Evaluation::read_only(attrs);
+    let mut quotes = Quotes::new(
+        src,
+        base,
+        &mut evaluation,
+        attrs.get("compat-mode").is_some(),
+    );
     let mut syntax = scan_unprocessed(src, base, attrs, &quotes);
     let mut processed = syntax.clone();
-    for span in
-        crate::attribute_macros::apply_inlines(&mut processed, attrs, true, &mut quotes.passes)
-    {
+    for span in crate::attribute_macros::apply_inlines(
+        &mut processed,
+        &mut evaluation,
+        true,
+        &mut quotes.passes,
+    ) {
         syntax.push(Inline::Link {
             target: String::new(),
             children: Vec::new(),

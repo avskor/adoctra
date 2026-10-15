@@ -34,6 +34,7 @@ mod resolve;
 pub mod resource;
 mod scanner;
 pub mod source;
+mod substitution_context;
 mod substitution_text;
 mod tokenizer;
 mod unicode_word;

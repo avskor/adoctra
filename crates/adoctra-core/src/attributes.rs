@@ -298,7 +298,12 @@ impl Attributes {
 
     /// Raw/formatting boundaries; absent means the entire value is literal text.
     pub fn raw_parts(&self, key: &str) -> Option<&[AttributePart]> {
-        self.parts.get(&key.to_lowercase()).map(Vec::as_slice)
+        self.raw_parts_exact(&key.to_lowercase())
+    }
+
+    // Serialization follows exact iter keys, including case-sensitive counters.
+    pub(crate) fn raw_parts_exact(&self, key: &str) -> Option<&[AttributePart]> {
+        self.parts.get(key).map(Vec::as_slice)
     }
 
     pub(crate) fn value_parts(&self, key: &str) -> Option<Vec<AttributePart>> {
@@ -306,6 +311,21 @@ impl Attributes {
             self.raw_parts(key)
                 .map_or_else(|| vec![AttributePart::Text(text.to_owned())], <[_]>::to_vec)
         })
+    }
+
+    // Counter names deliberately bypass ordinary case folding (Ruby's counter
+    // registry uses the supplied name verbatim).
+    pub(crate) fn counter_value(&self, key: &str) -> Option<String> {
+        self.map.get(key).map(|v| {
+            self.parts
+                .get(key)
+                .map_or_else(|| v.clone(), |p| reference_text(p))
+        })
+    }
+    pub(crate) fn set_counter(&mut self, key: &str, value: &str) {
+        self.parts
+            .insert(key.into(), vec![AttributePart::Raw(value.into())]);
+        self.map.insert(key.into(), value.into());
     }
 
     pub fn get(&self, key: &str) -> Option<&str> {

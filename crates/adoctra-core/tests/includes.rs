@@ -2529,3 +2529,40 @@ fn repeated_normal_pass_warnings_preserve_cross_source_provenance() {
     assert_eq!(sources.slice(*fragments.last().unwrap()), Some("role=x]"));
     check_spans(&result, &sources);
 }
+
+#[test]
+fn stateful_definition_side_effects_keep_selected_include_origins_and_snapshots() {
+    let root = ":first: {counter:n}\n\nBefore\n\ninclude::part.adoc[tag=body,indent=0]";
+    let part = "// tag::body[]\r\n  :second: {set:attribute-missing:warn}{counter:n}{missing}\r\n\r\n  {first} {second} {n}\r\n// end::body[]";
+    let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", part)]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(result.diagnostics.len(), 1, "{result:?}");
+    assert_eq!(result.diagnostics[0].span.source_id, SourceId(1));
+    assert_eq!(
+        sources.slice(result.diagnostics[0].span),
+        Some(":second: {set:attribute-missing:warn}{counter:n}{missing}")
+    );
+    assert_eq!(result.document.attributes.get("n"), Some("1"));
+    assert_eq!(
+        result.document.blocks[1].attribute_context.get("n"),
+        Some("2")
+    );
+    let tokens = tokens_resource(&mut sources, &options, &resources).unwrap();
+    assert!(tokens
+        .iter()
+        .any(|t| t.kind == TokenKind::AttributeEntry && t.span.source_id == SourceId(1)));
+    check_spans(&result, &sources);
+}
+
+#[test]
+fn stateful_multiline_definition_diagnostics_keep_composite_provenance() {
+    let root = ":v: {set:attribute-missing:warn}{counter:n} \\\ninclude::part.adoc[]\n\n{v}";
+    let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", "{missing}")]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(result.diagnostics.len(), 1, "{result:?}");
+    let spans = &result.provenance[result.diagnostics[0].span.provenance.unwrap()];
+    assert_eq!(spans.first().unwrap().source_id, options.source_id);
+    assert_eq!(spans.last().unwrap().source_id, SourceId(1));
+    assert_eq!(result.document.attributes.get("n"), Some("1"));
+    check_spans(&result, &sources);
+}

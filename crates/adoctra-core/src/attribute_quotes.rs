@@ -1,7 +1,8 @@
 //! Ordered quote substitutions shared by inline source and whole-value pass attributes. Generated
 //! formatting is semantic; only the temporary matching view has reference tags.
+use crate::substitution_context::Evaluation;
 use crate::substitution_text::Text;
-use crate::{AttributeFormat as Format, AttributePart, Attributes, Diagnostic, Span};
+use crate::{AttributeFormat as Format, AttributePart, Diagnostic, Span};
 
 struct Stage {
     open: &'static str,
@@ -13,7 +14,7 @@ struct Stage {
 pub(crate) fn apply(
     parts: Vec<AttributePart>,
     compat: bool,
-    attributes: &Attributes,
+    attributes: &mut Evaluation<'_>,
     span: Span,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Vec<AttributePart> {
@@ -38,7 +39,7 @@ pub(crate) struct Quote {
 pub(crate) fn apply_text(
     mut text: Text,
     compat: bool,
-    attributes: &Attributes,
+    attributes: &mut Evaluation<'_>,
     quotes: &mut Vec<Quote>,
     source: bool,
     diagnostics: &mut Vec<Diagnostic>,
@@ -123,7 +124,7 @@ fn apply_stage(
     stage: Stage,
     double: bool,
     compat: bool,
-    attributes: &Attributes,
+    attributes: &mut Evaluation<'_>,
     report: &mut Report<'_>,
 ) -> Text {
     let src = &text.text;
@@ -286,7 +287,7 @@ fn apply_stage(
 /// Quoted text has its own attribute grammar, not the block attribute list.
 pub(crate) fn parse_attributes(
     input: Text,
-    attributes: &Attributes,
+    attributes: &mut Evaluation<'_>,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> (Option<String>, Option<String>) {
     // The input is already the lexical q-stage view. Shared a supplies the

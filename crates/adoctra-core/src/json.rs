@@ -43,7 +43,7 @@ pub fn write_attribute_parts(parts: &[crate::AttributePart], out: &mut String) {
 pub fn write_attribute_parts_map(attributes: &crate::Attributes, out: &mut String) {
     let mut first = true;
     for (key, _) in attributes.iter() {
-        let Some(parts) = attributes.raw_parts(key) else {
+        let Some(parts) = attributes.raw_parts_exact(key) else {
             continue;
         };
         if first {

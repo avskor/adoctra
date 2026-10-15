@@ -2,7 +2,10 @@
 
 use crate::attributes::parts_text;
 use crate::{AttributePart, Attributes, SourceId};
-use std::{collections::BTreeSet, sync::Arc};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    sync::Arc,
+};
 
 #[derive(Debug, Clone, Default)]
 pub struct ParseOptions {
@@ -63,6 +66,8 @@ pub(crate) struct ParseContext {
     /// Reader range of the last accepted doctitle entry; None for host values.
     pub doctitle_span: Option<crate::Span>,
     locked: BTreeSet<String>,
+    counters: BTreeMap<String, String>,
+    replay: Option<Arc<Attributes>>,
     pub comments: Vec<crate::Span>,
     pub comment_diagnostics: Vec<crate::Diagnostic>,
     pub inline_diagnostics: Vec<crate::Diagnostic>,
@@ -89,10 +94,20 @@ impl ParseContext {
             attributes: Arc::new(attributes),
             doctitle_span: None,
             locked,
+            counters: BTreeMap::new(),
+            replay: None,
             comments: Vec::new(),
             comment_diagnostics: Vec::new(),
             inline_diagnostics: Vec::new(),
         }
+    }
+
+    pub fn start_body(&mut self) {
+        self.replay = Some(Arc::clone(&self.attributes));
+    }
+
+    pub fn render_attributes(&self) -> Arc<Attributes> {
+        Arc::clone(self.replay.as_ref().unwrap_or(&self.attributes))
     }
 
     pub fn apply(&mut self, entry: AttributeEntry) {
@@ -108,13 +123,22 @@ impl ParseContext {
             return;
         }
         let value = value.map(|v| {
+            let mut evaluation = crate::substitution_context::Evaluation::definition(
+                &self.attributes,
+                &self.locked,
+                &mut self.counters,
+                self.quote_compat,
+            );
             let parts = attribute_entry_parts_report(
                 &v,
-                &self.attributes,
+                &mut evaluation,
                 self.quote_compat,
                 span,
                 &mut self.inline_diagnostics,
             );
+            if let Some(attributes) = evaluation.changed_attributes() {
+                self.attributes = Arc::new(attributes);
+            }
             let value = parts_text(&parts);
             if key == "leveloffset" {
                 let current = self
@@ -138,6 +162,17 @@ impl ParseContext {
             }
             parts
         });
+        // Conversion replays the declared result, not side effects incurred
+        // while computing it during reading. Header side effects are already
+        // captured when start_body creates this independent snapshot.
+        if let Some(replay) = &mut self.replay {
+            let attrs = Arc::make_mut(replay);
+            if let Some(parts) = &value {
+                attrs.set_parts(&key, parts.clone());
+            } else {
+                attrs.remove(&key);
+            }
+        }
         let attributes = Arc::make_mut(&mut self.attributes);
         match value {
             Some(value) => attributes.set_parts(key, value),
@@ -284,9 +319,9 @@ pub(crate) fn substitute_attribute_value(value: &str, attributes: &Attributes) -
 
 /// A whole-value pass macro can select literal protection and attribute
 /// substitution, quotes, replacements and link macros independently.
-fn attribute_entry_parts_report(
+pub(crate) fn attribute_entry_parts_report(
     value: &str,
-    attributes: &Attributes,
+    attributes: &mut crate::substitution_context::Evaluation<'_>,
     compat: bool,
     span: crate::Span,
     diagnostics: &mut Vec<crate::Diagnostic>,
@@ -306,11 +341,15 @@ fn attribute_entry_parts_report(
             diagnostics,
         );
     }
+    let policy = attributes
+        .get("attribute-missing")
+        .unwrap_or("skip")
+        .to_owned();
     crate::inline_attributes::parts(
         &[AttributePart::Text(value.into())],
         attributes,
         span,
-        attributes.get("attribute-missing").unwrap_or("skip"),
+        &policy,
         diagnostics,
     )
 }
@@ -328,7 +367,7 @@ pub(crate) fn substitute_attribute_parts(
         } else {
             AttributePart::Text(value.into())
         }],
-        attributes,
+        &mut crate::substitution_context::Evaluation::read_only(attributes),
         crate::Span::new(0, 0),
         "skip",
         &mut Vec::new(),

@@ -2,7 +2,8 @@
 //! reads original coordinates and never scans generated text as new quotes.
 use crate::attribute_quotes::Quote;
 use crate::inline_pass::Passes;
-use crate::{AttributeFormat as F, Attributes, Inline, Span};
+use crate::substitution_context::Evaluation;
+use crate::{AttributeFormat as F, Inline, Span};
 use std::collections::BTreeMap;
 
 pub(crate) struct Edit {
@@ -17,7 +18,7 @@ pub(crate) struct Quotes {
 }
 
 impl Quotes {
-    pub fn new(src: &str, base: usize, attrs: &Attributes, compat: bool) -> Self {
+    pub fn new(src: &str, base: usize, attrs: &mut Evaluation<'_>, compat: bool) -> Self {
         let (text, mut passes) = Passes::extract(src, base, attrs, compat);
         let mut matches = Vec::new();
         let text = crate::attribute_quotes::apply_text(
