@@ -4,9 +4,7 @@
 use crate::attributes::reference_text;
 use crate::author_values::{derive_authors, split_authors};
 use crate::comments::skip_comment;
-use crate::context::{
-    consume_attribute_entry, substitute_attribute_value, AttributeEntry, ParseContext,
-};
+use crate::context::{consume_attribute_entry, AttributeEntry, ParseContext};
 use crate::parser::parse_heading;
 use crate::reader::Reader;
 use crate::{Attributes, Author, DocumentHeader, Revision, Span};
@@ -93,7 +91,10 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
                 span: Span::new(text_start, text_start + declared_title.len()),
                 replacement: false,
             });
-            let value = substitute_attribute_value(&declared_title, &context.attributes);
+            let value = context.implicit_doctitle(
+                &declared_title,
+                Span::new(text_start, text_start + declared_title.len()),
+            );
             // The implicit title also replaces a locked empty host value.
             Arc::make_mut(&mut context.attributes).set("doctitle", value);
         }

@@ -42,7 +42,7 @@ pub(crate) fn apply(
     diagnostics: &mut Vec<Diagnostic>,
 ) -> (Text, Vec<Reference>) {
     let policy = attrs.get("attribute-missing").unwrap_or("skip").to_owned();
-    apply_with_policy(text, attrs, &policy, diagnostics)
+    apply_with_policy(text, attrs, &policy, false, diagnostics)
 }
 
 /// Definitions and selected stages carry an enclosing physical origin: their
@@ -58,7 +58,22 @@ pub(crate) fn parts(
     for part in parts {
         text.append_part(part, 0, span);
     }
-    apply_with_policy(text, attrs, policy, diagnostics)
+    apply_with_policy(text, attrs, policy, false, diagnostics)
+        .0
+        .into_parts()
+}
+
+/// The implicit doctitle uses an explicit skip policy even if an expression
+/// changes attribute-missing while this early a-stage is running.
+pub(crate) fn implicit_title(
+    value: &str,
+    attrs: &mut Evaluation<'_>,
+    span: Span,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> Vec<P> {
+    let mut text = Text::default();
+    text.append_part(&P::Text(value.into()), 0, span);
+    apply_with_policy(text, attrs, "skip", true, diagnostics)
         .0
         .into_parts()
 }
@@ -67,6 +82,7 @@ fn apply_with_policy(
     text: Text,
     attrs: &mut Evaluation<'_>,
     policy: &str,
+    fixed_policy: bool,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> (Text, Vec<Reference>) {
     let mut output = Text::default();
@@ -134,7 +150,7 @@ fn apply_with_policy(
                     .map(|value| vec![P::Raw(value.into())])
             });
             let missing = parts.is_none();
-            let policy = if missing && attrs.stateful() {
+            let policy = if missing && attrs.stateful() && !fixed_policy {
                 missing_policy
                     .get_or_insert_with(|| {
                         attrs.get("attribute-missing").unwrap_or("skip").to_owned()

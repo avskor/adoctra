@@ -1,5 +1,6 @@
 //! Conversion-time inline evaluation. Reading records source and evaluated
-//! declarations; only surviving body fields execute after the reader finishes.
+//! declarations; the displayed document title and surviving body fields execute
+//! after the reader finishes. Section titles have already been cached.
 use crate::scanner::FilteredSource;
 use crate::substitution_context::Evaluation;
 use crate::{AttributePart, Attributes, Block, BlockKind, Diagnostic, Inline, Span};
@@ -10,12 +11,14 @@ struct Pending {
     filtered: Option<FilteredSource>,
     fold: bool,
     hardbreaks: bool,
+    replacement_origin: Option<Span>,
 }
 
 type Declaration = (usize, String, Option<Vec<AttributePart>>);
 
 #[derive(Default)]
 pub(crate) struct BodySubs {
+    header: Option<Pending>,
     pending: BTreeMap<(usize, usize), Pending>,
     pub entries: Vec<Declaration>,
 }
@@ -39,12 +42,37 @@ impl BodySubs {
                 filtered,
                 fold,
                 hardbreaks: attrs.local_hardbreaks,
+                replacement_origin: None,
             },
         );
         // Private placeholder; replaced before source mapping or public output.
         vec![Inline::Text {
             value: String::new(),
             span,
+        }]
+    }
+
+    /// The displayed document title runs after reading, before body conversion.
+    /// A doctitle override has an enclosing declaration/host origin rather than
+    /// offsets into the transformed replacement string.
+    pub fn defer_header(
+        &mut self,
+        title: &crate::header::HeaderTitle,
+        attrs: &Attributes,
+    ) -> Vec<Inline> {
+        let source = FilteredSource::from_fragments([(title.span.start, title.text.as_str())]);
+        // Keep this separate from physical body ranges: host replacements can
+        // have the same synthetic offsets as the first paragraph.
+        self.header = Some(Pending {
+            source,
+            filtered: None,
+            fold: true,
+            hardbreaks: attrs.local_hardbreaks,
+            replacement_origin: title.replacement.then_some(title.span),
+        });
+        vec![Inline::Text {
+            value: String::new(),
+            span: title.span,
         }]
     }
 
@@ -64,6 +92,11 @@ impl BodySubs {
             counters,
             diagnostics,
         };
+        if let (Some(header), Some(block)) = (self.header, blocks.first_mut()) {
+            if let BlockKind::Heading { inlines, .. } = &mut block.kind {
+                execution.evaluate(inlines, header);
+            }
+        }
         execution.blocks(blocks);
     }
 }
@@ -97,6 +130,10 @@ impl Execution<'_> {
             return;
         };
         self.replay(span.start);
+        self.evaluate(nodes, pending);
+    }
+
+    fn evaluate(&mut self, nodes: &mut Vec<Inline>, pending: Pending) {
         self.attributes.local_hardbreaks = pending.hardbreaks;
         let compat = self.attributes.get("compat-mode").is_some();
         let mut evaluation =
@@ -122,6 +159,18 @@ impl Execution<'_> {
         pending.source.restore_inlines(nodes);
         for diagnostic in &mut self.diagnostics[before..] {
             diagnostic.span = pending.source.original_span(diagnostic.span);
+        }
+        if let Some(origin) = pending.replacement_origin {
+            struct ReplacementOrigin(Span);
+            impl crate::visit::VisitorMut for ReplacementOrigin {
+                fn visit_span(&mut self, span: &mut Span) {
+                    *span = self.0;
+                }
+            }
+            crate::visit::walk_inlines_mut(&mut ReplacementOrigin(origin), nodes);
+            for diagnostic in &mut self.diagnostics[before..] {
+                diagnostic.span = origin;
+            }
         }
     }
 

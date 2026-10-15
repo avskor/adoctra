@@ -167,6 +167,14 @@ pub(crate) fn tokens_reader<'a>(
     }
     let mut source_tokens = SourceTokens(Vec::new());
     crate::visit::walk_document_mut(&mut source_tokens, &mut result.document);
+    // A transformed doctitle carries its entire declaration as origin. Reject
+    // that origin before splitting provenance: fragments may include newlines
+    // beyond the individual attribute-entry tokens, or cross source files.
+    let declarations: std::collections::BTreeSet<_> = out
+        .iter()
+        .filter(|t| t.kind == TokenKind::AttributeEntry)
+        .map(|t| (t.span.source_id, t.span.start))
+        .collect();
     let mut protected: Vec<_> = out
         .iter()
         .filter(|t| t.kind == TokenKind::PassthroughText)
@@ -174,14 +182,17 @@ pub(crate) fn tokens_reader<'a>(
         .collect();
     protected.sort_by_key(|s| (s.source_id, s.start, s.end));
     for (span, kind) in source_tokens.0 {
+        if declarations.contains(&(span.source_id, span.start)) {
+            continue;
+        }
         let fragments = span.provenance.map(|p| result.provenance[p].as_slice());
         for &span in fragments.unwrap_or(std::slice::from_ref(&span)) {
             let end = protected
                 .partition_point(|s| (s.source_id, s.start) <= (span.source_id, span.start));
-            let in_pass = protected[..end]
+            let covered = protected[..end]
                 .last()
                 .is_some_and(|s| s.source_id == span.source_id && s.end >= span.end);
-            if span.start < span.end && !in_pass {
+            if span.start < span.end && !covered {
                 out.push(Token { span, kind });
             }
         }

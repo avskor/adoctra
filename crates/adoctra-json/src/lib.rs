@@ -565,6 +565,16 @@ mod tests {
     }
 
     #[test]
+    fn stateful_headings_export_resolved_counters_and_original_header() {
+        let json = render("= H {counter:n}\n\n== S {counter:n}\n\n{counter:n}");
+        assert!(json.contains(r#""title":"H {counter:n}""#), "{json}");
+        assert!(json.contains(r#""id":"_s_2""#), "{json}");
+        assert!(json.contains(r#""kind":"raw","value":"2""#), "{json}");
+        assert!(json.contains(r#""kind":"raw","value":"3""#), "{json}");
+        assert!(!json.contains('\u{96}'));
+    }
+
+    #[test]
     fn stateful_body_exports_evaluated_values_and_raw_counter_parts() {
         let json = render("{counter:n} {set:x:yes}{x}\n\n{counter:n}");
         assert!(json.contains(r#""value":"yes""#), "{json}");

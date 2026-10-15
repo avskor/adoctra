@@ -122,6 +122,53 @@ impl ParseContext {
         );
     }
 
+    pub fn implicit_doctitle(&mut self, value: &str, span: crate::Span) -> String {
+        let mut evaluation = crate::substitution_context::Evaluation::definition(
+            &self.attributes,
+            &self.locked,
+            &mut self.counters,
+            self.quote_compat,
+        );
+        let parts = crate::inline_attributes::implicit_title(
+            value,
+            &mut evaluation,
+            span,
+            &mut self.inline_diagnostics,
+        );
+        if let Some(attributes) = evaluation.changed_attributes() {
+            self.attributes = Arc::new(attributes);
+        }
+        parts_text(&parts)
+    }
+
+    /// Section titles are evaluated once during reading (before their ID is
+    /// generated). Their effects are not declarations to replay at conversion.
+    pub fn section_title(
+        &mut self,
+        value: &str,
+        base: usize,
+        attributes: &Attributes,
+    ) -> Vec<crate::Inline> {
+        let mut evaluation = crate::substitution_context::Evaluation::definition(
+            attributes,
+            &self.locked,
+            &mut self.counters,
+            attributes.get("compat-mode").is_some(),
+        );
+        let inlines = crate::inline::scan_inlines_evaluated(
+            value,
+            base,
+            &mut evaluation,
+            true,
+            &mut self.inline_diagnostics,
+        );
+        if let Some(mut attributes) = evaluation.changed_attributes() {
+            attributes.local_hardbreaks = false;
+            self.attributes = Arc::new(attributes);
+        }
+        inlines
+    }
+
     pub fn apply(&mut self, entry: AttributeEntry) {
         self.apply_at(entry, crate::Span::new(0, 0));
     }
@@ -324,12 +371,6 @@ pub(crate) fn parse_attribute_entry(line: &str) -> Option<AttributeEntry> {
     } else {
         AttributeEntry::Set(key, value.trim().to_owned())
     })
-}
-
-/// Header attribute values substitute attribute references, not inline markup.
-/// Substituted strings are not rescanned, which also bounds self references.
-pub(crate) fn substitute_attribute_value(value: &str, attributes: &Attributes) -> String {
-    parts_text(&substitute_attribute_parts(value, attributes, false))
 }
 
 /// A whole-value pass macro can select literal protection and attribute

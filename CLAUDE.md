@@ -313,10 +313,19 @@ slot has no body effects, while repeated slot occurrences execute independently
 Keep the shared 32-level bound and enclosing physical diagnostic origin.
 ParseContext keeps reading attributes separate from conversion replay after the
 header. Only explicit declaration results/unsets enter replay, not effects from
-computing them. Headings and preprocessing use reading state; paragraph/list/verse
-content uses mutable replay. Block titles still use the earlier read-only replay;
-stateful header/section/block metadata (title/reftext/attribution), caption effects
-and derived block settings are the next integration step. Block.attribute_context remains the reading
+computing them. Section titles execute stateful substitutions once during reading;
+IDs and xrefs reuse their resolved inlines. Effects reach later reading but do not
+enter declaration replay. The implicit doctitle executes an early a-stage with a
+fixed skip policy before header completion. The displayed document title executes
+normal substitutions after reading, before body replay, starting from the header
+snapshot; locked counter state retains reading effects. It can therefore differ
+from the doctitle attribute. Body paragraphs/list/verse share its conversion state.
+Header overrides retain their enclosing declaration/host origins; their pending
+evaluation is separate from physical body ranges to avoid synthetic-span collisions.
+Tokens project source expressions from AST, suppressing generated ones whose origin
+is a doctitle declaration. Block titles still use the earlier read-only replay;
+block title/reftext/attribution, caption effects and derived block settings are the
+next integration step. Block.attribute_context remains the reading
 snapshot at block completion; it can therefore differ from resolved inline values.
 Tokenization uses isolated contexts and the same declaration replay; it never
 mutates caller attributes or previously returned snapshots.

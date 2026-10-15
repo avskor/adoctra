@@ -527,6 +527,16 @@ mod tests {
     }
 
     #[test]
+    fn stateful_headings_render_cached_sections_and_conversion_time_doctitle() {
+        let html = render("= H {counter:n}\n\n== S {counter:n}\n\n<<_s_2>> {counter:n}\n\n== More {counter:n}\n\n{counter:n}");
+        assert!(html.contains("<h1>H 2</h1>"), "{html}");
+        assert!(html.contains(r#"<h2 id="_s_2">S 2</h2>"#), "{html}");
+        assert!(html.contains(r##"<a href="#_s_2">S 2</a> 3"##), "{html}");
+        assert!(html.contains(r#"<h2 id="_more_3">More 3</h2>"#), "{html}");
+        assert!(html.contains("<p>4</p>"), "{html}");
+    }
+
+    #[test]
     fn stateful_body_renders_counters_late_passes_and_replayed_declarations() {
         let html = render(":n: 1\n\n{counter:n} pass:a[{counter:n}] {n}\n\n:n: 1\n\n{counter:n} {set:x:<b>X</b>}{x}\n\nlink:pass:a[{counter:n}][]");
         assert!(html.contains("<p>2 3 2</p>"), "{html}");

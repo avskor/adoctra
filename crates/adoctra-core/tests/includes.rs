@@ -24,6 +24,87 @@ fn setup(root: &str, files: &[(&str, &str)]) -> (SourceMap, MemoryResources, Par
 }
 
 #[test]
+fn stateful_headings_keep_selected_include_diagnostics_and_tokens() {
+    let root = "include::part.adoc[tags=body,indent=0]\n\n{counter:n}";
+    let part = "// tag::body[]\r\n  = Ж {counter:n}\r\n\r\n  == Б {set:attribute-missing:warn}{counter:n} {missing}\r\n// end::body[]";
+    let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", part)]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(result.document.attributes.get("n"), Some("1"));
+    assert_eq!(
+        result.document.blocks[1].attribute_context.get("n"),
+        Some("2")
+    );
+    assert_eq!(result.diagnostics.len(), 1);
+    assert_eq!(result.diagnostics[0].span.source_id, SourceId(1));
+    assert_eq!(sources.slice(result.diagnostics[0].span), Some("{missing}"));
+    let tokens = tokens_resource(&mut sources, &options, &resources).unwrap();
+    for block in &result.document.blocks[..2] {
+        let BlockKind::Heading { inlines, .. } = &block.kind else {
+            panic!()
+        };
+        let node = inlines
+            .iter()
+            .find(|n| matches!(n, Inline::AttributeRef { name, .. } if name == "counter:n"))
+            .unwrap();
+        assert_eq!(sources.slice(node.span()), Some("{counter:n}"));
+        assert_eq!(node.span().source_id, SourceId(1));
+        assert!(tokens
+            .iter()
+            .any(|t| t.kind == TokenKind::AttributeRef && t.span == node.span()));
+    }
+    check_spans(&result, &sources);
+}
+
+#[test]
+fn stateful_doctitle_override_keeps_composite_declaration_provenance() {
+    let root = "= Original\n:doctitle: pass:none[Ж {counter:n} \\\ninclude::part.adoc[]\n\n== S {counter:n}\n\n{counter:n}";
+    let (mut sources, resources, options) = setup(
+        root,
+        &[("/docs/part.adoc", "{set:attribute-missing:warn}{missing}]")],
+    );
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(result.diagnostics.len(), 1, "{result:?}");
+    let origin = result.diagnostics[0].span;
+    let fragments = &result.provenance[origin.provenance.unwrap()];
+    assert_eq!(fragments.first().unwrap().source_id, options.source_id);
+    assert_eq!(fragments.last().unwrap().source_id, SourceId(1));
+    let BlockKind::Heading { inlines, .. } = &result.document.blocks[0].kind else {
+        panic!()
+    };
+    for node in inlines {
+        assert_eq!(node.span().source_id, origin.source_id);
+        assert_eq!(
+            result.provenance[node.span().provenance.unwrap()],
+            *fragments
+        );
+    }
+    let tokens = tokens_resource(&mut sources, &options, &resources).unwrap();
+    assert!(!tokens.iter().any(|t| t.kind == TokenKind::AttributeRef
+        && (t.span.source_id == SourceId(1) || t.span.start < root.find("== S").unwrap())));
+    check_spans(&result, &sources);
+}
+
+#[test]
+fn stateful_setext_title_spans_sources_without_replaying_the_counter() {
+    let root = "Ж {counter:n}\ninclude::underline.adoc[]\n\n{counter:n}";
+    let (mut sources, resources, options) =
+        setup(root, &[("/docs/underline.adoc", "=============")]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(result.document.attributes.get("n"), Some("1"));
+    let title = &result.document.blocks[0];
+    let fragments = &result.provenance[title.span.provenance.unwrap()];
+    assert_eq!(fragments.first().unwrap().source_id, options.source_id);
+    assert_eq!(fragments.last().unwrap().source_id, SourceId(1));
+    let BlockKind::Heading { inlines, .. } = &title.kind else {
+        panic!()
+    };
+    assert!(inlines
+        .iter()
+        .any(|n| matches!(n, Inline::AttributeRef { value: Some(value), .. } if value == "2")));
+    check_spans(&result, &sources);
+}
+
+#[test]
 fn stateful_body_keeps_selected_include_origins_and_replays_declarations() {
     let root = "{counter:n}\n\ninclude::part.adoc[tags=body,indent=0]\n\n{counter:n}";
     let part = "// tag::body[]\r\n  :n: 8\r\n\r\n  Ж {counter:n}\r\n  // skipped\r\n  Б {counter:n}\r\n// end::body[]";

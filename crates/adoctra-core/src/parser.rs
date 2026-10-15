@@ -49,26 +49,9 @@ pub(crate) fn parse_reader<'a>(
     };
     let mut diagnostics = Vec::new();
     if let Some(effective) = header.effective_title {
-        let before = context.inline_diagnostics.len();
-        let mut inlines = scan_inlines_report(
-            &effective.text,
-            effective.span.start,
-            &context.attributes,
-            true,
-            &mut context.inline_diagnostics,
-        );
-        if effective.replacement {
-            for diagnostic in &mut context.inline_diagnostics[before..] {
-                diagnostic.span = effective.span;
-            }
-            struct ReplacementOrigin(Span);
-            impl crate::visit::VisitorMut for ReplacementOrigin {
-                fn visit_span(&mut self, span: &mut Span) {
-                    *span = self.0;
-                }
-            }
-            crate::visit::walk_inlines_mut(&mut ReplacementOrigin(effective.span), &mut inlines);
-        }
+        let inlines = context
+            .body_subs
+            .defer_header(&effective, &context.attributes);
         // Resolve title text against the complete header, but retain the level
         // identified before subsequent header attributes changed leveloffset.
         let mut title = Block::new(
@@ -607,13 +590,7 @@ fn parse_block_content(
         // `title` is a subslice of this detached reader line.
         let base = lines[*i].0 + abs_offset(line, title);
         let heading_attrs = inline_attributes(&context.attributes, pending_attrs);
-        let inlines = scan_inlines_report(
-            title,
-            base,
-            &heading_attrs,
-            true,
-            &mut context.inline_diagnostics,
-        );
+        let inlines = context.section_title(title, base, &heading_attrs);
         *i += 1;
         // `Block.id` is assigned later, by the resolve pass, once the whole
         // document is known (it deduplicates ids across all sections) — unless an
