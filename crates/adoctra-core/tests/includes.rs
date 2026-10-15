@@ -2247,3 +2247,59 @@ fn attribute_macro_links_keep_include_provenance_and_immutable_host_updates() {
     );
     assert_eq!(sources.get(span.source_id).unwrap().text(), part);
 }
+
+#[test]
+fn inline_passthrough_preserves_selected_include_spans_and_tokens() {
+    use adoctra_core::AttributePart;
+    let root = "include::part.adoc[tags=body,indent=0]";
+    let part = "\u{feff}// tag::body[]\r\n  Before +*Ж* {v} (C)+ after\r\n// end::body[]";
+    let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", part)]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty());
+    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+        panic!()
+    };
+    let span = inlines
+        .iter()
+        .find_map(|n| match n {
+            Inline::Substituted { parts, span, .. }
+                if parts == &[AttributePart::Text("*Ж* {v} (C)".into())] =>
+            {
+                Some(*span)
+            }
+            _ => None,
+        })
+        .unwrap();
+    assert_eq!(sources.slice(span), Some("+*Ж* {v} (C)+"));
+    let ts = tokens_resource(&mut sources, &options, &resources).unwrap();
+    assert!(ts
+        .iter()
+        .any(|t| t.kind == TokenKind::PassthroughText && t.span == span));
+    assert!(!ts
+        .iter()
+        .any(|t| matches!(t.kind, TokenKind::Strong | TokenKind::AttributeRef)));
+}
+
+#[test]
+fn inline_passthrough_across_files_retains_composite_provenance() {
+    let root = "Before +First\n// hidden\ninclude::part.adoc[]";
+    let (mut sources, resources, options) =
+        setup(root, &[("/docs/part.adoc", "*Second* {v}+ after")]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+        panic!()
+    };
+    let span = inlines
+        .iter()
+        .find_map(|n| match n {
+            Inline::Substituted { value, span, .. } if value == "First\n*Second* {v}" => {
+                Some(*span)
+            }
+            _ => None,
+        })
+        .expect("protected cross-source content");
+    let fragments = &result.provenance[span.provenance.unwrap()];
+    assert_eq!(fragments.first().unwrap().source_id, options.source_id);
+    assert_eq!(fragments.last().unwrap().source_id, SourceId(1));
+    check_spans(&result, &sources);
+}

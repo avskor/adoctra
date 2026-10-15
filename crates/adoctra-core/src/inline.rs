@@ -32,12 +32,13 @@ pub(crate) fn scan_inlines_with(
     let quotes = Quotes::new(src, base, attrs, attrs.get("compat-mode").is_some());
     let mut out = scan_unprocessed(src, base, attrs, &quotes);
     crate::attribute_macros::apply_inlines(&mut out, attrs, fold_newlines);
+    quotes.passes.restore(&mut out);
     out
 }
 
 /// Preserve source syntax for highlighting even when a later macro consumes it.
 /// Links are reported by the same late matcher that produces semantic parts.
-pub(crate) fn scan_for_tokens(src: &str, base: usize, attrs: &Attributes) -> Vec<Inline> {
+pub(crate) fn scan_for_tokens(src: &str, base: usize, attrs: &Attributes) -> Vec<crate::Token> {
     let quotes = Quotes::new(src, base, attrs, attrs.get("compat-mode").is_some());
     let mut syntax = scan_unprocessed(src, base, attrs, &quotes);
     let mut processed = syntax.clone();
@@ -50,7 +51,10 @@ pub(crate) fn scan_for_tokens(src: &str, base: usize, attrs: &Attributes) -> Vec
         });
     }
     syntax.extend(quotes.syntax());
-    syntax
+    let mut tokens = Vec::new();
+    crate::tokenizer::flatten_inlines(&syntax, &mut tokens);
+    tokens.extend(quotes.passes.tokens());
+    tokens
 }
 
 fn scan_unprocessed(src: &str, base: usize, attrs: &Attributes, quotes: &Quotes) -> Vec<Inline> {
@@ -156,7 +160,7 @@ fn match_xref_angle(
         return None;
     }
     let inner_start = i + 2;
-    let rel_close = src[inner_start..].find(">>")?;
+    let rel_close = unprotected_close(&src[inner_start..], ">>", base + inner_start, quotes)?;
     let inner = &src[inner_start..inner_start + rel_close];
     let end = inner_start + rel_close + 2;
     // Split target from reftext on the first comma; keep the reftext's absolute
@@ -209,7 +213,7 @@ fn match_xref_macro(
         return None;
     }
     let text_start = target_start + rel_bracket + 1;
-    let rel_close = src[text_start..].find(']')?;
+    let rel_close = unprotected_close(&src[text_start..], "]", base + text_start, quotes)?;
     let close = text_start + rel_close;
     let end = close + 1;
     let children = xref_children(&src[text_start..close], text_start, base, attrs, quotes);
@@ -221,6 +225,13 @@ fn match_xref_macro(
         },
         end,
     ))
+}
+
+// Passthrough extraction hides its internal delimiters from the later macro
+// matcher. Anchor catalog registration has a separate earlier lifecycle.
+fn unprotected_close(src: &str, marker: &str, base: usize, quotes: &Quotes) -> Option<usize> {
+    src.match_indices(marker)
+        .find_map(|(at, _)| (!quotes.passes.contains(base + at)).then_some(at))
 }
 
 /// The display children of a cross-reference: the scanned `reftext` (at absolute

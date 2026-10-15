@@ -206,8 +206,19 @@ in Substituted. Source typographic characters remain Unicode Text. Metadata-
 consumed attribute references remain empty nodes with physical spans/tokens.
 Eligible closers are indexed for incomplete editor input. Source quotes use the
 block's effective compat-mode; attribute-entry pass:q uses the cached mode from
-host overrides/context creation and header completion. The next step is inline
-passthrough extraction before quotes, including plus/backtick forms and compat-mode.
+host overrides/context creation and header completion. inline_pass.rs extracts
+protected regions before quotes and restores them after the outer substitutions.
+It supports +/++/+++, $$, compat backticks, roles/id, escapes, legacy x- and inline
+pass: with the existing c/q/a/r/m stages (full names and none too). The result uses
+Substituted Text/Raw and neutral boundaries; private collision-free slots never
+escape unchanged to the final AST, link targets or metadata. Pinned Ruby mailto
+subject/body encoding retains percent-encoded slots; preserve its explicit regression.
+Attribute expansions do not
+restart extraction. Physical spans include the consumed delimiters and compose
+through includes. Tokens use pass-text or monospace and omit protected inner
+syntax; the existing line-based tokenizer limitation still affects multiline
+constructs. The next step is pass substitution groups/diagnostics and nested
+extraction within m/macros; stem and remaining stages are also not implemented.
 Early catalog registration of anchors consumed by quote metadata, non-link pass
 macros, general inline attribute escapes/intrinsics and raw whole-doctitle
 replacement also remain work.

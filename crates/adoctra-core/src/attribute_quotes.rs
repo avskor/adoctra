@@ -269,7 +269,10 @@ fn apply_stage(
 }
 
 /// Quoted text has its own attribute grammar, not the block attribute list.
-fn parse_attributes(input: &str, attributes: &Attributes) -> (Option<String>, Option<String>) {
+pub(crate) fn parse_attributes(
+    input: &str,
+    attributes: &Attributes,
+) -> (Option<String>, Option<String>) {
     let expanded;
     let input = if input.contains('{') {
         let mut lexical = attributes.clone();

@@ -255,7 +255,11 @@ pub(crate) fn substitute_attribute_value(value: &str, attributes: &Attributes) -
 
 /// A whole-value pass macro can select literal protection and attribute
 /// substitution, quotes, replacements and link macros independently.
-fn attribute_entry_parts(value: &str, attributes: &Attributes, compat: bool) -> Vec<AttributePart> {
+pub(crate) fn attribute_entry_parts(
+    value: &str,
+    attributes: &Attributes,
+    compat: bool,
+) -> Vec<AttributePart> {
     if let Some((subs, body)) = value
         .strip_prefix("pass:")
         .and_then(|v| v.split_once('['))

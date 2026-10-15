@@ -1345,6 +1345,45 @@ mod header_tests {
     }
 
     #[test]
+    fn inline_passthrough_exports_literal_raw_and_neutral_formatting_parts() {
+        let json = super::parse_json(
+            ":v: Ж\n\nBefore +*Bold* {v} &amp;+ +++<b>raw</b>+++ [red]+literal+ pass:c,q[*Bold*]",
+        );
+        assert!(
+            json.contains(r#""parts":[{"kind":"text","value":"*Bold* {v} &amp;"}]"#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""parts":[{"kind":"raw","value":"<b>raw</b>"}]"#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""kind":"open","format":"span","role":"red""#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""kind":"open","format":"strong""#),
+            "{json}"
+        );
+        assert!(!json.contains('\u{96}'), "{json}");
+    }
+
+    #[test]
+    fn inline_passthrough_tokens_keep_physical_spans_and_hide_inner_syntax() {
+        let source = "\u{feff}:v: Ж\r\n\r\nBefore +*Ж* {v} (C)+ after";
+        let json = super::tokens_json(source);
+        let start = source.find('+').unwrap();
+        let end = source.rfind('+').unwrap() + 1;
+        assert!(
+            json.contains(&format!(r#""start":{start},"end":{end}"#)),
+            "{json}"
+        );
+        assert!(json.contains(r#""kind":"pass-text""#), "{json}");
+        assert!(!json.contains(r#""kind":"attribute-ref""#), "{json}");
+        assert!(!json.contains(r#""kind":"strong""#), "{json}");
+    }
+
+    #[test]
     fn source_quote_metadata_and_typographic_text_export_neutral_semantics() {
         let json = super::parse_json(":role: red\n\nA [{role}]\"`Жёлтый`\" \\*Literal* _Italic_");
         assert!(

@@ -1,7 +1,7 @@
 //! Source edits from the shared ordered quote matcher. The later syntax scan
 //! reads original coordinates and never scans generated text as new quotes.
 use crate::attribute_quotes::Quote;
-use crate::substitution_text::Text;
+use crate::inline_pass::Passes;
 use crate::{AttributeFormat as F, Attributes, Inline, Span};
 use std::collections::BTreeMap;
 
@@ -13,12 +13,12 @@ pub(crate) struct Edit {
 pub(crate) struct Quotes {
     pub edits: BTreeMap<usize, Edit>,
     pub matches: Vec<Quote>,
+    pub passes: Passes,
 }
 
 impl Quotes {
     pub fn new(src: &str, base: usize, attrs: &Attributes, compat: bool) -> Self {
-        let mut text = Text::default();
-        text.append_source(src, false, 0, Span::new(base, base + src.len()));
+        let (text, passes) = Passes::extract(src, base, attrs, compat);
         let mut matches = Vec::new();
         let text = crate::attribute_quotes::apply_text(text, compat, attrs, &mut matches, true);
         let mut edits: BTreeMap<usize, Edit> = BTreeMap::new();
@@ -81,6 +81,9 @@ impl Quotes {
         // an empty source node just as the later link matcher does, so tools
         // can still locate the declaration use without rendering it twice.
         for (at, _) in src.match_indices('{') {
+            if passes.contains(base + at) {
+                continue;
+            }
             let Some(close) = src[at + 1..].find('}').map(|n| at + 1 + n) else {
                 continue;
             };
@@ -100,7 +103,11 @@ impl Quotes {
             }
         }
         matches.sort_by_key(|q| q.span.start);
-        Self { edits, matches }
+        Self {
+            edits,
+            matches,
+            passes,
+        }
     }
 
     pub fn rebuild(&self, nodes: Vec<Inline>, range: std::ops::Range<usize>) -> Vec<Inline> {

@@ -565,6 +565,30 @@ mod tests {
     }
 
     #[test]
+    fn inline_passthrough_exports_literal_raw_and_neutral_formatting_parts() {
+        let json = render(
+            ":v: Ж\n\nBefore +*Bold* {v} &amp;+ +++<b>raw</b>+++ [red]+literal+ pass:c,q[*Bold*]",
+        );
+        assert!(
+            json.contains(r#""parts":[{"kind":"text","value":"*Bold* {v} &amp;"}]"#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""parts":[{"kind":"raw","value":"<b>raw</b>"}]"#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""kind":"open","format":"span","role":"red""#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""kind":"open","format":"strong""#),
+            "{json}"
+        );
+        assert!(!json.contains('\u{96}'), "{json}");
+    }
+
+    #[test]
     fn source_quote_metadata_and_typographic_text_export_neutral_semantics() {
         let json = render(":role: red\n\nA [{role}]\"`Жёлтый`\" \\*Literal* _Italic_");
         assert!(

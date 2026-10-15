@@ -399,14 +399,11 @@ fn tokens_processed(
                 span: Span::new(mstart, mstart + mlen),
                 kind: TokenKind::ListMarker,
             });
-            flatten_inlines(
-                &scan_inlines(
-                    &line[indent + mlen..],
-                    off + indent + mlen,
-                    &context.attributes,
-                ),
-                &mut out,
-            );
+            out.extend(scan_inlines(
+                &line[indent + mlen..],
+                off + indent + mlen,
+                &context.attributes,
+            ));
             continue;
         }
         // Body text line: flatten the shared inline scan to highlight tokens. An
@@ -421,15 +418,16 @@ fn tokens_processed(
                     span: Span::new(off, off + prefix_len - 1),
                     kind: TokenKind::AdmonitionLabel,
                 });
-                flatten_inlines(
-                    &scan_inlines(&line[prefix_len..], off + prefix_len, &context.attributes),
-                    &mut out,
-                );
+                out.extend(scan_inlines(
+                    &line[prefix_len..],
+                    off + prefix_len,
+                    &context.attributes,
+                ));
                 mid_paragraph = true;
                 continue;
             }
         }
-        flatten_inlines(&scan_inlines(line, off, &context.attributes), &mut out);
+        out.extend(scan_inlines(line, off, &context.attributes));
         mid_paragraph = true;
     }
 
@@ -440,7 +438,7 @@ fn tokens_processed(
 }
 
 /// Project the inline AST onto highlight tokens (depth-first, document order).
-fn flatten_inlines(inlines: &[Inline], out: &mut Vec<Token>) {
+pub(crate) fn flatten_inlines(inlines: &[Inline], out: &mut Vec<Token>) {
     for node in inlines {
         match node {
             Inline::Text { .. } | Inline::Raw { .. } | Inline::Substituted { .. } => {}

@@ -642,8 +642,8 @@ fn parse_block_content(
     // Passthrough block (verbatim, fenced by `++++`). Like `....`/`----` the body
     // is captured raw with no inline substitutions; what sets it apart is the
     // backend, which emits the text *completely raw* (no escaping, no wrapper).
-    // The whole trimmed line must be exactly `++++` — there is no inline `+`
-    // passthrough yet, so this never collides with paragraph text.
+    // The whole trimmed line must be exactly `++++`; inline passthrough
+    // delimiters are handled only within parsed inline content.
     if trimmed.trim() == "++++" {
         let start = off;
         *i += 1;
