@@ -1345,6 +1345,39 @@ mod header_tests {
     }
 
     #[test]
+    fn ordinary_attribute_policies_export_values_diagnostics_and_source_tokens() {
+        let source = "\u{feff}:attribute-missing: warn\r\n\r\nЖ {cpp} {missing} \\{missing}";
+        let json = super::parse_json_with_source(source, 7);
+        assert!(json.contains(r#""attribute":"cpp","value":"C&#43;&#43;","parts":[{"kind":"raw","value":"C&#43;&#43;"}]"#), "{json}");
+        assert!(
+            json.contains(r#""attribute":"missing","value":null"#),
+            "{json}"
+        );
+        let start = source.find("{missing}").unwrap();
+        let end = start + "{missing}".len();
+        assert!(json.contains(&format!(r#""span":{{"source_id":7,"start":{start},"end":{end}}},"severity":"warning","message":"skipping reference to missing attribute: missing""#)), "{json}");
+        let tokens = super::tokens_json_with_source(source, 7);
+        assert_eq!(
+            tokens.matches(r#""kind":"attribute-ref""#).count(),
+            2,
+            "{tokens}"
+        );
+        assert!(
+            tokens.contains(&format!(
+                r#""span":{{"source_id":7,"start":{start},"end":{end}}},"kind":"attribute-ref""#
+            )),
+            "{tokens}"
+        );
+        let json = super::parse_json(":attribute-missing: drop-line\n\nBefore {missing} after");
+        assert!(
+            json.contains(r#""attribute":"missing","value":"""#),
+            "{json}"
+        );
+        assert!(json.contains(r#""severity":"info""#), "{json}");
+        assert!(!json.contains("Before"), "{json}");
+    }
+
+    #[test]
     fn pass_groups_export_neutral_line_breaks_and_protected_nested_text() {
         let json = super::parse_json("Before pass:n[*Ж* +\n+*Literal* {v}+] after");
         assert!(json.contains(r#""kind":"line-break""#), "{json}");

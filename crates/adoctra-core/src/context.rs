@@ -249,13 +249,13 @@ pub(crate) fn parse_attribute_entry(line: &str) -> Option<AttributeEntry> {
         (key, false)
     };
     let first = key.chars().next()?;
-    if !first.is_alphanumeric() && first != '_' {
+    if !crate::unicode_word::is_word(first) {
         return None;
     }
     // Ruby Parser.sanitize_attribute_name removes punctuation and spaces.
     let key: String = key
         .chars()
-        .filter(|c| c.is_alphanumeric() || matches!(c, '_' | '-'))
+        .filter(|&c| crate::unicode_word::is_word(c) || c == '-')
         .collect();
     let key = key.to_lowercase();
     Some(if unset {

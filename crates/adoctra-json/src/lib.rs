@@ -565,6 +565,20 @@ mod tests {
     }
 
     #[test]
+    fn ordinary_attributes_export_intrinsic_parts_escapes_and_missing_values() {
+        let json = render(r"{cpp} \{cpp} {missing}");
+        assert!(json.contains(r#""name":"text","value":"C&#43;&#43;","parts":[{"kind":"raw","value":"C&#43;&#43;"}]"#), "{json}");
+        assert!(json.contains("{cpp}"), "{json}");
+        assert!(
+            json.contains(r#""name":"text","value":"{missing}""#),
+            "{json}"
+        );
+        let json = render(":attribute-missing: drop-line\n\nBefore {missing} after");
+        assert!(json.contains(r#""name":"text","value":"""#), "{json}");
+        assert!(!json.contains("Before"), "{json}");
+    }
+
+    #[test]
     fn pass_groups_export_neutral_line_breaks_and_protected_nested_text() {
         let json = render("Before pass:n[*Ж* +\n+*Literal* {v}+] after");
         assert!(json.contains(r#""kind":"line-break""#), "{json}");

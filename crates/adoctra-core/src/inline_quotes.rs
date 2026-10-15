@@ -18,13 +18,14 @@ pub(crate) struct Quotes {
 
 impl Quotes {
     pub fn new(src: &str, base: usize, attrs: &Attributes, compat: bool) -> Self {
-        let (text, passes) = Passes::extract(src, base, attrs, compat);
+        let (text, mut passes) = Passes::extract(src, base, attrs, compat);
         let mut matches = Vec::new();
         let text = crate::attribute_quotes::apply_text(text, compat, attrs, &mut matches, true);
+        let (text, refs) = crate::inline_attributes::apply(text, attrs, &mut passes.diagnostics);
         let mut edits: BTreeMap<usize, Edit> = BTreeMap::new();
         let mut covered = base;
-        for fragment in text.into_fragments() {
-            let span = fragment.span;
+        for node in crate::inline_attributes::nodes(text, refs) {
+            let span = node.span();
             if span.start > covered {
                 edits.insert(
                     covered,
@@ -35,25 +36,11 @@ impl Quotes {
                 );
             }
             covered = covered.max(span.end);
-            let value = fragment.decoded.unwrap_or(fragment.text);
-            let node = if let Some(part) = fragment.part {
-                Inline::Substituted {
-                    value: String::new(),
-                    parts: vec![part],
-                    span,
-                }
-            } else {
-                if !fragment.raw
-                    && src.get(span.start - base..span.end - base) == Some(value.as_str())
-                {
-                    continue;
-                }
-                if fragment.raw {
-                    Inline::Raw { value, span }
-                } else {
-                    Inline::Text { value, span }
-                }
-            };
+            if matches!(&node, Inline::Text { value, .. }
+                if src.get(span.start - base..span.end - base) == Some(value.as_str()))
+            {
+                continue;
+            }
             // A decorated typographic opener emits both a wrapper and a quote
             // from overlapping source ranges. Apply both in one source edit.
             let start = edits
@@ -81,23 +68,18 @@ impl Quotes {
         // an empty source node just as the later link matcher does, so tools
         // can still locate the declaration use without rendering it twice.
         for (at, _) in src.match_indices('{') {
-            if passes.contains(base + at) {
+            if passes.contains(base + at) || (at > 0 && src.as_bytes()[at - 1] == b'\\') {
                 continue;
             }
-            let Some(close) = src[at + 1..].find('}').map(|n| at + 1 + n) else {
+            let Some((end, name, false)) = crate::inline_attributes::reference(src, at) else {
                 continue;
             };
-            let name = &src[at + 1..close];
-            if name.is_empty() || name.contains(char::is_whitespace) {
-                continue;
-            }
             if let Some((_, edit)) = edits.range_mut(..=base + at).next_back() {
-                if base + close < edit.end {
+                if base + end <= edit.end && !edit.nodes.iter().any(|n|
+                    matches!(n, Inline::AttributeRef { span, .. } if span.start == base + at)) {
                     edit.nodes.push(Inline::AttributeRef {
-                        name: name.into(),
-                        value: Some(String::new()),
-                        parts: Vec::new(),
-                        span: Span::new(base + at, base + close + 1),
+                        name: name.into(), value: Some(String::new()), parts: Vec::new(),
+                        span: Span::new(base + at, base + end),
                     });
                 }
             }

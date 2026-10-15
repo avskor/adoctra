@@ -1695,7 +1695,7 @@ fn target_missing_policies_control_loading_and_preserve_physical_warnings() {
         ("unknown-policy", "literal", 0),
         ("drop", "resolved", 0),
         ("drop-line", "", 0),
-        ("warn", "", 1),
+        ("warn", "", 2),
     ] {
         let root = format!(":attribute-missing: {policy}\n\ninclude::part.adoc[lines=2,indent=0]");
         let (mut sources, resources, options) = setup(
@@ -1773,7 +1773,10 @@ fn blank_and_missing_targets_stop_before_provider_and_option_validation() {
         let result = parse_resource(&mut sources, &options, &NoLoads).unwrap();
         assert_eq!(
             result.diagnostics.len(),
-            usize::from(warning.is_some()),
+            usize::from(warning.is_some())
+                + usize::from(
+                    policy == "warn" && target.contains("{missing}") && warning.is_some()
+                ),
             "{root}: {result:?}"
         );
         if let Some(message) = warning {
@@ -2329,5 +2332,51 @@ fn nested_pass_warning_keeps_composite_origin_across_include_and_comments() {
     assert_eq!(fragments.first().unwrap().source_id, options.source_id);
     assert_eq!(fragments.last().unwrap().source_id, SourceId(1));
     assert!(diagnostic.message.contains("invalid substitution type"));
+    check_spans(&result, &sources);
+}
+
+#[test]
+fn inline_attribute_policies_preserve_selected_include_positions_and_tokens() {
+    let root = ":attribute-missing: warn\n\ninclude::part.adoc[tags=body,indent=0]";
+    let part =
+        "\u{feff}// tag::body[]\r\n  Ж {CPP} \\{missing} {missing} {missing\\}\r\n// end::body[]";
+    let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", part)]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(result.diagnostics.len(), 1);
+    let start = part.find(" {missing} ").unwrap() + 1;
+    let span = Span::in_source(SourceId(1), start, start + "{missing}".len());
+    assert_eq!(result.diagnostics[0].span, span);
+    let ts = tokens_resource(&mut sources, &options, &resources).unwrap();
+    let refs: Vec<_> = ts
+        .iter()
+        .filter(|t| t.kind == TokenKind::AttributeRef)
+        .collect();
+    assert_eq!(refs.len(), 2);
+    assert!(refs.iter().any(|t| t.span == span));
+    assert!(refs.iter().any(|t| sources.slice(t.span) == Some("{CPP}")));
+    check_spans(&result, &sources);
+}
+
+#[test]
+fn inline_attribute_drop_line_keeps_surviving_cross_source_text_and_reference_tokens() {
+    let root = ":attribute-missing: drop-line\n\nfirst\n// removed\ninclude::part.adoc[lines=2..3,indent=0]\nlast";
+    let part = "omitted\r\n  discarded {missing}\r\n  Ж {cpp}\r\n";
+    let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", part)]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+        panic!()
+    };
+    assert!(inlines.iter().any(
+        |n| matches!(n, Inline::AttributeRef { name, value: Some(v), span, .. }
+        if name == "missing" && v.is_empty() && sources.slice(*span) == Some("{missing}"))
+    ));
+    assert!(!format!("{inlines:?}").contains("discarded"));
+    assert_eq!(result.diagnostics.len(), 1);
+    assert_eq!(sources.slice(result.diagnostics[0].span), Some("{missing}"));
+    assert_eq!(result.diagnostics[0].severity, adoctra_core::Severity::Info);
+    let ts = tokens_resource(&mut sources, &options, &resources).unwrap();
+    assert!(ts
+        .iter()
+        .any(|t| t.kind == TokenKind::AttributeRef && sources.slice(t.span) == Some("{missing}")));
     check_spans(&result, &sources);
 }

@@ -145,7 +145,7 @@ fn process_inlines(
             Inline::Text { .. }
                 | Inline::Raw { .. }
                 | Inline::Substituted { .. }
-                | Inline::AttributeRef { value: Some(_), .. }
+                | Inline::AttributeRef { .. }
         ) {
             pending.push(node);
             continue;
@@ -199,6 +199,14 @@ fn flush_inlines(
     let mut text = Text::default();
     for (owner, node) in nodes.iter().enumerate() {
         match node {
+            Inline::AttributeRef {
+                name,
+                value: None,
+                span,
+                ..
+            } => {
+                text.append(&format!("{{{name}}}"), false, owner, *span, false);
+            }
             Inline::Text { value, span } | Inline::Raw { value, span } => {
                 text.append_source(value, matches!(node, Inline::Raw { .. }), owner, *span);
             }

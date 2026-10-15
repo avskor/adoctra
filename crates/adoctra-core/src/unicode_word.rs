@@ -1,5 +1,9 @@
 //! Ruby Unicode Word members beyond Alphabetic / Decimal_Number.
 //! Generated from the pinned reference runtime's \p{Word} minus \p{Alnum}.
+pub(crate) fn is_word(ch: char) -> bool {
+    is_alphanumeric(ch) || is_mark_or_connector(ch)
+}
+
 pub(crate) fn is_mark_or_connector(ch: char) -> bool {
     matches!(ch as u32,
         0x5f | 0x300..=0x344 | 0x346..=0x36f | 0x483..=0x489

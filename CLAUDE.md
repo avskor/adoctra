@@ -176,8 +176,8 @@ AttributeFormat::Span represents unquoted spans and metadata on typographic quot
 JSON/WASM export optional id/role fields on open parts. Late a/r stages preserve
 metadata; c protects the whole lexical representation. Replacements reconstruct
 only tracked generated boundaries, never arbitrary raw tags. Quote attribute lists
-expand references eagerly; general a-stage intrinsics and trailing reference escapes
-remain unsupported outside that list. Whole-value m/macros supports link:,
+expand references eagerly; ordinary inline a-stage now supports intrinsics and
+both escape positions. Definition/pass a-stage still uses the older resolver. Whole-value m/macros supports link:,
 mailto:, URL and email through attribute_macros.rs. OpenLink(AttributeLink) /
 CloseLink preserve semantic targets, id/role/title/window/rel and label parts;
 JSON/WASM use open-link/close-link. Fields keep lexical entity protection just
@@ -226,12 +226,28 @@ literal raw remainder. Diagnostics use physical selector spans or enclosing
 macro/attribute spans after transformations, mapped through reader/comment provenance.
 AttributePart::LineBreak represents p/normal hard breaks; HTML renders br and
 JSON/WASM use kind:line-break. Later c can protect the lexical spelling. Preserve
-LF/CRLF and hardbreaks-option behavior inside pass. The next step is ordinary
-inline attribute escapes/intrinsics/missing policies. General post replacements,
-stem and other macro families remain incomplete.
+LF/CRLF and hardbreaks-option behavior inside pass.
+inline_attributes.rs runs the ordinary a-stage over the lexical quote result,
+with Unicode Word reference names, leading/trailing escapes, case-insensitive
+intrinsics, document/host override priority, and skip/warn/drop/drop-line policies.
+Declarations now preserve the same Word characters, including combining marks.
+Generated values are not rescanned. Intrinsics retain Raw entity spelling and
+ordinary AttributeRef ownership. Removed refs remain Some("") with their tokens;
+unknown retained refs remain None and still participate in late link matching.
+Drop filters the transformed lines, including generated newlines, and removes
+only lines made empty by missing values; drop-line removes any affected line.
+Warnings (warn) and Info diagnostics (drop-line) use physical reference spans,
+including selected/indented includes. A retained failed include can also warn
+about its literal missing reference. Quote metadata retains semantic boundaries
+through late expansion; diagnostics in its earlier eager pass remain incomplete.
+WASM preserves source reference nodes and diagnostics; JSON keeps its existing
+resolved-text projection with optional parts. General post replacements,
+stem and other macro families remain incomplete. The next step is sharing the
+ordinary resolver with attribute definitions and selected pass a-stages, including
+policy context and diagnostics without regressing ordered protection.
 Early catalog registration of anchors consumed by quote metadata, non-link pass
-macros, general inline attribute escapes/intrinsics and raw whole-doctitle
-replacement also remain work.
+macros, stateful set/counter substitutions and raw whole-doctitle replacement
+also remain work.
 Automatic section IDs sanitize a temporary lexical title: raw XML tags and
 references matching the pinned entity grammar are removed, not decoded.
 Literal protection and structural inline boundaries remain distinct; title

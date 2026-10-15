@@ -370,9 +370,7 @@ pub(crate) fn write_back(nodes: Vec<Inline>, mut text: Text, fold_newlines: bool
         }
         match &mut node {
             Inline::AttributeRef {
-                value: Some(value),
-                parts,
-                ..
+                name, value, parts, ..
             } => {
                 parts.clear();
                 for f in pieces {
@@ -382,7 +380,13 @@ pub(crate) fn write_back(nodes: Vec<Inline>, mut text: Text, fold_newlines: bool
                         crate::attributes::push_part(parts, &f.text, f.raw);
                     }
                 }
-                *value = crate::attributes::parts_text(parts);
+                let resolved = crate::attributes::parts_text(parts);
+                if value.is_some()
+                    || resolved != format!("{{{name}}}")
+                    || parts.iter().any(crate::AttributePart::is_special)
+                {
+                    *value = Some(resolved);
+                }
                 if !parts.iter().any(crate::AttributePart::is_special) {
                     parts.clear();
                 }

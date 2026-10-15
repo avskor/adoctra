@@ -21,6 +21,7 @@ mod include_attributes;
 mod include_indent;
 mod include_selection;
 mod inline;
+mod inline_attributes;
 mod inline_pass;
 mod inline_quotes;
 pub mod json;

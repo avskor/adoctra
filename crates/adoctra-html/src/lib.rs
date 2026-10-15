@@ -527,6 +527,18 @@ mod tests {
     }
 
     #[test]
+    fn ordinary_attributes_render_escapes_intrinsic_entities_and_missing_policies() {
+        let html = render(r"{cpp} \{cpp} {missing} {amp}copy; {asterisk}literal{asterisk}");
+        assert!(
+            html.contains("C&#43;&#43; {cpp} {missing} &copy; *literal*"),
+            "{html}"
+        );
+        let html = render(":attribute-missing: drop-line\n\nfirst\ndiscard {missing}\nlast");
+        assert!(html.contains("<p>first last</p>"), "{html}");
+        assert!(!html.contains("discard"), "{html}");
+    }
+
+    #[test]
     fn renders_heading_and_paragraph() {
         let html = render("= Title\n\nHi *there*");
         assert!(html.contains("<h1>Title</h1>"));

@@ -107,15 +107,6 @@ fn try_match(
     quotes: &Quotes,
 ) -> Option<(Inline, usize)> {
     match src.as_bytes()[i] {
-        b'{' => match_attribute(src, i, base, attrs).filter(|(_, end)| {
-            // Quotes precede attributes: a transformed name is not the original
-            // source reference, and its surviving quote boundaries must render.
-            quotes
-                .edits
-                .range(base + i + 1..base + end)
-                .next()
-                .is_none()
-        }),
         // Cross-references: the `<<id>>` / `<<id,text>>` angle form, and the
         // `xref:id[text]` macro (brackets mandatory, like `link:`).
         b'<' => match_xref_angle(src, i, base, attrs, quotes),
@@ -126,32 +117,6 @@ fn try_match(
         b'a' => match_anchor_macro(src, i, base, attrs, quotes),
         _ => None,
     }
-}
-
-/// An attribute reference `{name}`. The name must be non-empty and contain no
-/// whitespace (same shape as a header attribute key); otherwise `{` is just
-/// text.
-fn match_attribute(
-    src: &str,
-    i: usize,
-    base: usize,
-    attrs: &Attributes,
-) -> Option<(Inline, usize)> {
-    let rel_close = src[i + 1..].find('}')?;
-    let name = &src[i + 1..i + 1 + rel_close];
-    if name.is_empty() || name.contains(char::is_whitespace) {
-        return None;
-    }
-    let end = i + 1 + rel_close + 1;
-    let value = attrs.get(name).map(str::to_string);
-    let parts = attrs.raw_parts(name).unwrap_or_default().to_vec();
-    let node = Inline::AttributeRef {
-        name: name.to_string(),
-        value,
-        parts,
-        span: Span::new(base + i, base + end),
-    };
-    Some((node, end))
 }
 
 /// A cross-reference in angle-bracket form: `<<id>>` or `<<id,text>>`. Requires
