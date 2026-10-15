@@ -20,7 +20,14 @@ impl Quotes {
     pub fn new(src: &str, base: usize, attrs: &Attributes, compat: bool) -> Self {
         let (text, mut passes) = Passes::extract(src, base, attrs, compat);
         let mut matches = Vec::new();
-        let text = crate::attribute_quotes::apply_text(text, compat, attrs, &mut matches, true);
+        let text = crate::attribute_quotes::apply_text(
+            text,
+            compat,
+            attrs,
+            &mut matches,
+            true,
+            &mut passes.diagnostics,
+        );
         let (text, refs) = crate::inline_attributes::apply(text, attrs, &mut passes.diagnostics);
         let mut edits: BTreeMap<usize, Edit> = BTreeMap::new();
         let mut covered = base;

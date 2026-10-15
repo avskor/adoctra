@@ -94,9 +94,9 @@ pub(crate) fn apply(
 ) -> Vec<P> {
     match stage {
         Stage::Specials => vec![P::Text(reference_text(&parts))],
-        Stage::Quotes => crate::attribute_quotes::apply(parts, compat, attrs),
+        Stage::Quotes => crate::attribute_quotes::apply(parts, compat, attrs, span, diagnostics),
         Stage::Replacements => crate::replacements::apply_parts(parts),
-        Stage::Macros => crate::attribute_macros::apply(parts, attrs, compat),
+        Stage::Macros => crate::attribute_macros::apply(parts, attrs, compat, span, diagnostics),
         Stage::Attributes => crate::inline_attributes::parts(
             &parts,
             attrs,

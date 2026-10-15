@@ -527,6 +527,17 @@ mod tests {
     }
 
     #[test]
+    fn metadata_missing_policies_preserve_enclosing_formatting_and_link_exceptions() {
+        let html = render(":attribute-missing: drop-line\n\nBefore [.red{missing}]*Text* link:https://e['\\{missing}',role=x] link:https://e[Label,title='\\{missing}'] after");
+        assert!(html.contains("Before <strong>Text</strong>"), "{html}");
+        assert!(html.contains("class=\"bare x\">https://e</a>"), "{html}");
+        assert!(
+            html.contains("title=\"{missing}\">Label</a> after"),
+            "{html}"
+        );
+    }
+
+    #[test]
     fn ordinary_post_replacements_render_attribute_breaks_and_local_options() {
         let html = render(":v: one + \\\n two\n\n{v}\n\n[%hardbreaks]\nЖ\nБ +\n\nthree\nfour");
         assert!(html.contains("<p>one<br> two</p>"), "{html}");

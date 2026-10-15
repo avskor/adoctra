@@ -84,9 +84,14 @@ impl Text {
     }
 
     pub fn from_parts(parts: &[AttributePart]) -> Self {
+        Self::from_parts_at(parts, Span::new(0, 0))
+    }
+
+    /// Transformed parts retain their enclosing physical origin for diagnostics.
+    pub fn from_parts_at(parts: &[AttributePart], span: Span) -> Self {
         let mut result = Self::default();
         for part in parts {
-            result.append_part(part, 0, Span::new(0, 0));
+            result.append_part(part, 0, span);
         }
         result
     }

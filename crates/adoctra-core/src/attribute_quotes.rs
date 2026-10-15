@@ -1,7 +1,7 @@
 //! Ordered quote substitutions shared by inline source and whole-value pass attributes. Generated
 //! formatting is semantic; only the temporary matching view has reference tags.
 use crate::substitution_text::Text;
-use crate::{AttributeFormat as Format, AttributePart, Attributes, Span};
+use crate::{AttributeFormat as Format, AttributePart, Attributes, Diagnostic, Span};
 
 struct Stage {
     open: &'static str,
@@ -14,13 +14,16 @@ pub(crate) fn apply(
     parts: Vec<AttributePart>,
     compat: bool,
     attributes: &Attributes,
+    span: Span,
+    diagnostics: &mut Vec<Diagnostic>,
 ) -> Vec<AttributePart> {
     apply_text(
-        Text::from_parts(&parts),
+        Text::from_parts_at(&parts, span),
         compat,
         attributes,
         &mut Vec::new(),
         false,
+        diagnostics,
     )
     .into_parts()
 }
@@ -38,7 +41,13 @@ pub(crate) fn apply_text(
     attributes: &Attributes,
     quotes: &mut Vec<Quote>,
     source: bool,
+    diagnostics: &mut Vec<Diagnostic>,
 ) -> Text {
+    let mut report = Report {
+        quotes,
+        source,
+        diagnostics,
+    };
     use Format::*;
     let stages = [
         ("**", "**", Some(Strong), false),
@@ -88,8 +97,7 @@ pub(crate) fn apply_text(
                 index == 2,
                 compat,
                 attributes,
-                quotes,
-                source,
+                &mut report,
             );
         }
     }
@@ -104,14 +112,19 @@ fn space(ch: char) -> bool {
     matches!(ch, ' ' | '\t'..='\r')
 }
 
+struct Report<'a> {
+    quotes: &'a mut Vec<Quote>,
+    source: bool,
+    diagnostics: &'a mut Vec<Diagnostic>,
+}
+
 fn apply_stage(
     text: Text,
     stage: Stage,
     double: bool,
     compat: bool,
     attributes: &Attributes,
-    quotes: &mut Vec<Quote>,
-    source: bool,
+    report: &mut Report<'_>,
 ) -> Text {
     let src = &text.text;
     if !src.contains(stage.open) {
@@ -206,9 +219,11 @@ fn apply_stage(
             if escaped {
                 text.copy(prefix..open, &mut output);
             }
-            let attrs = attr_end
-                .filter(|_| !escaped)
-                .map(|end| parse_attributes(&src[prefix + 1..end], attributes));
+            let attrs = attr_end.filter(|_| !escaped).map(|end| {
+                let mut metadata = Text::default();
+                text.copy(prefix + 1..end, &mut metadata);
+                parse_attributes(metadata, attributes, report.diagnostics)
+            });
             let format = if stage.format == Some(Format::Mark) && attrs.is_some() {
                 Some(Format::Span)
             } else {
@@ -237,7 +252,7 @@ fn apply_stage(
                 text.replacement(
                     open..inner,
                     if double { "&#8220;" } else { "&#8216;" },
-                    source.then_some(if double { "“" } else { "‘" }),
+                    report.source.then_some(if double { "“" } else { "‘" }),
                     &mut output,
                 );
             }
@@ -246,15 +261,15 @@ fn apply_stage(
                 text.replacement(
                     close..end,
                     if double { "&#8221;" } else { "&#8217;" },
-                    source.then_some(if double { "”" } else { "’" }),
+                    report.source.then_some(if double { "”" } else { "’" }),
                     &mut output,
                 );
             }
             if let Some(format) = wrapper {
                 text.replace_parts(close..end, &[AttributePart::Close(format)], &mut output);
             }
-            if source {
-                quotes.push(Quote {
+            if report.source {
+                report.quotes.push(Quote {
                     span: text.match_span(if escaped { open } else { prefix }..end),
                     format: wrapper,
                     decorated,
@@ -270,32 +285,14 @@ fn apply_stage(
 
 /// Quoted text has its own attribute grammar, not the block attribute list.
 pub(crate) fn parse_attributes(
-    input: &str,
+    input: Text,
     attributes: &Attributes,
+    diagnostics: &mut Vec<Diagnostic>,
 ) -> (Option<String>, Option<String>) {
-    let expanded;
-    let input = if input.contains('{') {
-        let mut lexical = attributes.clone();
-        for (key, _) in attributes.iter() {
-            if let Some(parts) = attributes.raw_parts(key) {
-                lexical.set(key, crate::attributes::reference_text(parts));
-            } else if let Some(value) = attributes.get(key) {
-                lexical.set(
-                    key,
-                    crate::attributes::reference_text(&[AttributePart::Text(value.into())]),
-                );
-            }
-        }
-        expanded = crate::include_attributes::substitute(
-            input,
-            &lexical,
-            attributes.get("attribute-missing").unwrap_or("skip"),
-        )
-        .0;
-        &expanded
-    } else {
-        input
-    };
+    // The input is already the lexical q-stage view. Shared a supplies the
+    // grammar, protection and missing policy while retaining mapped origins.
+    let expanded = crate::inline_attributes::apply(input, attributes, diagnostics).0;
+    let input = expanded.text.as_str();
     let input = input
         .split(',')
         .next()

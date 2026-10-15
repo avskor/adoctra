@@ -240,7 +240,8 @@ only lines made empty by missing values; drop-line removes any affected line.
 Warnings (warn) and Info diagnostics (drop-line) use physical reference spans,
 including selected/indented includes. A retained failed include can also warn
 about its literal missing reference. Quote metadata retains semantic boundaries
-through late expansion; diagnostics in its earlier eager pass remain incomplete.
+through late expansion. Eager metadata now uses the same lexical a resolver
+and emits diagnostics with mapped origins.
 WASM preserves source reference nodes and diagnostics; JSON keeps its existing
 resolved-text projection with optional parts. Stem and other macro families
 remain incomplete.
@@ -254,8 +255,8 @@ Definition diagnostics cover the entire physical declaration (including joined
 lines); selected or nested pass diagnostics use the enclosing physical construct.
 Reader provenance composes these origins across selected/indented includes.
 String-only header helpers retain skip behavior without fabricated diagnostics;
-legacy single-quoted link parameter substitution still needs policy/diagnostic
-context, as does eager quote metadata. Source definitions preserve intrinsic Raw
+eager quote metadata and repeated single-quoted link parameters now share
+the ordinary missing policy and diagnostic sink. Source definitions preserve intrinsic Raw
 parts, while later outer replacements may restore entities protected by a late c;
 inline pass restores after those outer stages. Preserve that lifecycle difference.
 Ordinary inline post replacements now share post_replacements.rs with pass:p.
@@ -274,8 +275,20 @@ TokenKind::LineBreak (line-break) projects standalone source-owned breaks from t
 full parsed AST, including local options, final lines and include provenance.
 Attribute-owned breaks keep attribute-ref and protected regions keep pass-text;
 embedded link/formatting results retain their existing outer tokens.
-The next step is policy/diagnostic context in eager quote metadata and repeated
-single-quoted link parameter substitutions.
+Quote metadata uses mapped lexical slices, preserving special-character
+protection, Unicode names and both reference escapes. Source metadata warnings
+point to the physical reference; late a may warn again on the generated opening
+boundary. These are distinct executed stages, not duplicate diagnostics to remove.
+Passthrough metadata and selected q/m stages use the enclosing construct's span;
+definitions use the whole declaration. Drop-line filters only the current metadata
+or parameter value, not the surrounding formatted text or link.
+AttributeList's title/reftext/opts/options fields do not rerun substitutions;
+a parsed single-quoted value beginning with an apostrophe also stays literal.
+Eligible positional/named fields use shared q/a with diagnostics and existing r/m.
+Macro reports return both matched link spans and diagnostics. Nested link warnings
+retain the outer physical macro origin, mapped through include provenance.
+The next step is completing the repeated single-quoted link normal pipeline,
+including passthrough extraction/restoration and p, with a shared recursion bound.
 Early catalog registration of anchors consumed by quote metadata, non-link pass
 macros, stateful set/counter substitutions and raw whole-doctitle replacement
 also remain work.

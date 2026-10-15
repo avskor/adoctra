@@ -565,6 +565,17 @@ mod tests {
     }
 
     #[test]
+    fn metadata_missing_policies_export_semantic_link_parts() {
+        let json = render(":attribute-missing: drop\n\nBefore [.{missing}]*Text* link:https://e['\\{missing}',role=x] link:https://e[Label,title='\\{missing}']");
+        assert!(json.contains(r#""name":"strong""#), "{json}");
+        assert!(
+            json.contains(r#""kind":"open-link","target":"https://e","role":"bare x""#),
+            "{json}"
+        );
+        assert!(json.contains(r#""title":"{missing}""#), "{json}");
+    }
+
+    #[test]
     fn ordinary_post_replacements_export_neutral_breaks_for_both_owners() {
         let json = render(":v: one + \\\n two\n\n{v} +\nlast");
         assert_eq!(json.matches(r#""kind":"line-break""#).count(), 2, "{json}");

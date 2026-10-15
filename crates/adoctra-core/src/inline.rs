@@ -43,9 +43,10 @@ pub(crate) fn scan_inlines_report(
 ) -> Vec<Inline> {
     let quotes = Quotes::new(src, base, attrs, attrs.get("compat-mode").is_some());
     let mut out = scan_unprocessed(src, base, attrs, &quotes);
-    crate::attribute_macros::apply_inlines(&mut out, attrs, fold_newlines);
+    let report = crate::attribute_macros::apply_inlines(&mut out, attrs, fold_newlines);
     quotes.passes.restore(&mut out);
     diagnostics.extend(quotes.passes.diagnostics);
+    diagnostics.extend(report.diagnostics);
     out
 }
 
@@ -55,7 +56,7 @@ pub(crate) fn scan_for_tokens(src: &str, base: usize, attrs: &Attributes) -> Vec
     let quotes = Quotes::new(src, base, attrs, attrs.get("compat-mode").is_some());
     let mut syntax = scan_unprocessed(src, base, attrs, &quotes);
     let mut processed = syntax.clone();
-    for span in crate::attribute_macros::apply_inlines(&mut processed, attrs, true) {
+    for span in crate::attribute_macros::apply_inlines(&mut processed, attrs, true).links {
         syntax.push(Inline::Link {
             target: String::new(),
             children: Vec::new(),

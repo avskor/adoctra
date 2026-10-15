@@ -1,14 +1,31 @@
 //! Link substitutions for pass attributes and expanded inline text. Matched over
 //! the shared lexical stream; generated links remain backend-neutral boundaries.
 use crate::substitution_text::Text;
-use crate::{AttributeFormat, AttributeLink, AttributePart as Part, Attributes, Inline, Span};
+use crate::{
+    AttributeFormat, AttributeLink, AttributePart as Part, Attributes, Diagnostic, Inline, Span,
+};
 use std::collections::BTreeMap;
 use std::ops::Range;
 
 const SCHEMES: [&str; 5] = ["https://", "http://", "file://", "ftp://", "irc://"];
 
-pub(crate) fn apply(parts: Vec<Part>, attributes: &Attributes, compat: bool) -> Vec<Part> {
-    apply_inner(parts, attributes, compat, 0)
+#[derive(Default)]
+pub(crate) struct Report {
+    pub links: Vec<Span>,
+    pub diagnostics: Vec<Diagnostic>,
+}
+
+pub(crate) fn apply(
+    parts: Vec<Part>,
+    attributes: &Attributes,
+    compat: bool,
+    span: Span,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> Vec<Part> {
+    let mut report = Report::default();
+    let parts = apply_inner(parts, attributes, compat, 0, span, &mut report);
+    diagnostics.extend(report.diagnostics);
+    parts
 }
 
 /// Link macros run over the lexical result of quotes, attributes and replacements.
@@ -18,10 +35,10 @@ pub(crate) fn apply_inlines(
     nodes: &mut Vec<Inline>,
     attributes: &Attributes,
     fold_newlines: bool,
-) -> Vec<Span> {
-    let mut links = Vec::new();
-    process_inlines(nodes, attributes, true, fold_newlines, &mut links);
-    links
+) -> Report {
+    let mut report = Report::default();
+    process_inlines(nodes, attributes, true, fold_newlines, &mut report);
+    report
 }
 
 fn format(node: &Inline) -> Option<AttributeFormat> {
@@ -131,7 +148,7 @@ fn process_inlines(
     attributes: &Attributes,
     edges: bool,
     fold_newlines: bool,
-    links: &mut Vec<Span>,
+    report: &mut Report,
 ) {
     let mut left_edge = edges;
     let mut flat = Vec::new();
@@ -156,7 +173,7 @@ fn process_inlines(
             attributes,
             (left_edge, false),
             fold_newlines,
-            links,
+            report,
         );
         match &mut node {
             Inline::CrossReference { children, .. }
@@ -164,11 +181,11 @@ fn process_inlines(
                 children,
                 bare: false,
                 ..
-            } => process_inlines(children, attributes, false, true, links),
+            } => process_inlines(children, attributes, false, true, report),
             Inline::Anchor {
                 reftext: Some(children),
                 ..
-            } => process_inlines(children, attributes, false, true, links),
+            } => process_inlines(children, attributes, false, true, report),
             _ => {}
         }
         output.push(node);
@@ -180,7 +197,7 @@ fn process_inlines(
         attributes,
         (left_edge, edges),
         fold_newlines,
-        links,
+        report,
     );
     *nodes = rebuild(output, quotes);
 }
@@ -191,7 +208,7 @@ fn flush_inlines(
     attributes: &Attributes,
     edges: (bool, bool),
     fold_newlines: bool,
-    links: &mut Vec<Span>,
+    report: &mut Report,
 ) {
     if nodes.is_empty() {
         return;
@@ -237,7 +254,7 @@ fn flush_inlines(
             attributes.get("compat-mode").is_some(),
             0,
             edges.0,
-            links,
+            report,
         );
     }
     text = crate::post_replacements::apply(text, attributes.hardbreaks(), edges.1);
@@ -248,18 +265,17 @@ fn flush_inlines(
     ));
 }
 
-fn apply_inner(parts: Vec<Part>, attributes: &Attributes, compat: bool, depth: usize) -> Vec<Part> {
-    let mut text = Text::from_parts(&parts);
+fn apply_inner(
+    parts: Vec<Part>,
+    attributes: &Attributes,
+    compat: bool,
+    depth: usize,
+    span: Span,
+    report: &mut Report,
+) -> Vec<Part> {
+    let mut text = Text::from_parts_at(&parts, span);
     for stage in 0..3 {
-        text = apply_stage(
-            text,
-            stage,
-            attributes,
-            compat,
-            depth,
-            true,
-            &mut Vec::new(),
-        );
+        text = apply_stage(text, stage, attributes, compat, depth, true, report);
     }
     text.into_parts()
 }
@@ -328,7 +344,7 @@ fn apply_stage(
     compat: bool,
     depth: usize,
     left_edge: bool,
-    links: &mut Vec<Span>,
+    report: &mut Report,
 ) -> Text {
     let src = &text.text;
     let index = Index::new(src);
@@ -360,9 +376,9 @@ fn apply_stage(
             text.copy(m.start..escape, &mut output);
             text.copy(escape + 1..m.end, &mut output);
         } else {
-            links.push(text.match_span(m.start..m.end));
+            report.links.push(text.match_span(m.start..m.end));
             let target = &src[m.target.clone()];
-            let (link, label) = link_parts(&text, &m, target, attributes, compat, depth);
+            let (link, label) = link_parts(&text, &m, target, attributes, compat, depth, report);
             let mut parts = vec![Part::OpenLink(link)];
             parts.extend(label);
             parts.push(Part::CloseLink);
@@ -608,6 +624,7 @@ fn link_parts(
     attributes: &Attributes,
     compat: bool,
     depth: usize,
+    report: &mut Report,
 ) -> (AttributeLink, Vec<Part>) {
     let mut link = AttributeLink {
         target: if m.mailto {
@@ -624,7 +641,14 @@ fn link_parts(
     let mut lexical = crate::attributes::reference_text(&label);
     let mut attrs = BTreeMap::new();
     if !compat && ((!m.mailto && lexical.contains('=')) || (m.mailto && lexical.contains(','))) {
-        let (first, parsed, positional) = parse_label(&label, attributes, compat, depth);
+        let (first, parsed, positional) = parse_label(
+            &label,
+            attributes,
+            compat,
+            depth,
+            text.match_span(m.start..m.end),
+            report,
+        );
         label = first;
         attrs = parsed;
         lexical = crate::attributes::reference_text(&label);
@@ -725,6 +749,8 @@ fn parse_label(
     attributes: &Attributes,
     compat: bool,
     depth: usize,
+    span: Span,
+    report: &mut Report,
 ) -> (Vec<Part>, BTreeMap<String, String>, BTreeMap<usize, String>) {
     let mut text = Text::from_parts(parts);
     // AttributeList folds physical newlines before parsing mixed text/attrs.
@@ -806,28 +832,31 @@ fn parse_label(
             range
         };
         let mut value = slice(&text, range, close.and(quote).map(char::from));
-        if quote == Some(b'\'') && close.is_some() {
-            // Single-quoted attribute values run a fresh normal substitution
-            // sequence, including protection of any previously generated tags.
+        if quote == Some(b'\'')
+            && close.is_some()
+            && !matches!(name, Some("title" | "reftext" | "opts" | "options"))
+            && !crate::attributes::reference_text(&value).starts_with('\'')
+        {
+            // Eligible fields repeat q/a/r/m, protecting previously generated
+            // tags. AttributeList's excluded named fields retain their value.
             value = vec![Part::Text(crate::attributes::reference_text(&value))];
-            value = crate::attribute_quotes::apply(value, compat, attributes);
-            let mut expanded = Vec::new();
-            for part in value {
-                if part.is_boundary() {
-                    expanded.push(part);
-                } else {
-                    for part in crate::context::substitute_attribute_parts(
-                        part.text(),
-                        attributes,
-                        part.is_raw(),
-                    ) {
-                        crate::attributes::push_value(&mut expanded, part);
-                    }
-                }
-            }
-            value = crate::replacements::apply_parts(expanded);
+            value = crate::attribute_quotes::apply(
+                value,
+                compat,
+                attributes,
+                span,
+                &mut report.diagnostics,
+            );
+            value = crate::inline_attributes::parts(
+                &value,
+                attributes,
+                span,
+                attributes.get("attribute-missing").unwrap_or("skip"),
+                &mut report.diagnostics,
+            );
+            value = crate::replacements::apply_parts(value);
             if depth < 32 {
-                value = apply_inner(value, attributes, compat, depth + 1);
+                value = apply_inner(value, attributes, compat, depth + 1, span, report);
             }
         }
         let lexical = crate::attributes::reference_text(&value);

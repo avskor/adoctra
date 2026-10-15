@@ -1345,6 +1345,30 @@ mod header_tests {
     }
 
     #[test]
+    fn metadata_substitutions_export_each_warning_with_physical_origins() {
+        let source = ":attribute-missing: warn\r\n\r\nЖ [.{missing}]*Text* link:https://e['\\{other}',role=x]";
+        let json = super::parse_json_with_source(source, 8);
+        assert_eq!(json.matches(r#""severity":"warning""#).count(), 3, "{json}");
+        for markup in [
+            "{missing}",
+            "[.{missing}]*",
+            "link:https://e['\\{other}',role=x]",
+        ] {
+            let start = source.find(markup).unwrap();
+            let end = start + markup.len();
+            assert!(
+                json.contains(&format!(
+                    r#""span":{{"source_id":8,"start":{start},"end":{end}}},"severity":"warning""#
+                )),
+                "{json}"
+            );
+        }
+        let tokens = super::tokens_json_with_source(source, 8);
+        assert!(tokens.contains(r#""kind":"attribute-ref""#), "{tokens}");
+        assert!(tokens.contains(r#""kind":"link""#), "{tokens}");
+    }
+
+    #[test]
     fn ordinary_post_replacements_export_parts_spans_and_break_tokens() {
         let source = ":v: one + \\\n two\n\n{v} +\nlast";
         let json = super::parse_json_with_source(source, 9);

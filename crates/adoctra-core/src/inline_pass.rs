@@ -116,7 +116,17 @@ impl Passes {
                     .metadata
                     .as_deref()
                     .filter(|_| !m.escaped_metadata)
-                    .map(|s| crate::attribute_quotes::parse_attributes(s, attrs))
+                    .map(|s| {
+                        let mut metadata = Text::default();
+                        // Legacy suffix removal can rewrite metadata; the
+                        // enclosing passthrough remains its physical origin.
+                        metadata.append(s, true, 0, span, false);
+                        crate::attribute_quotes::parse_attributes(
+                            metadata,
+                            attrs,
+                            &mut self.diagnostics,
+                        )
+                    })
                     .unwrap_or_default();
                 let wrapper = if m.mono || id.is_some() || role.is_some() {
                     let kind = if m.mono { F::Monospace } else { F::Span };

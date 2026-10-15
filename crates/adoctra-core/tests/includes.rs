@@ -24,6 +24,46 @@ fn setup(root: &str, files: &[(&str, &str)]) -> (SourceMap, MemoryResources, Par
 }
 
 #[test]
+fn metadata_diagnostics_keep_selected_include_reference_and_macro_origins() {
+    let root = "include::part.adoc[tags=body,indent=0]";
+    let part = "// tag::body[]\r\n  :attribute-missing: warn\r\n\r\n  Ж [.{missing}]*Text* link:https://e['\\{other}',role=x]\r\n// end::body[]";
+    let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", part)]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(result.diagnostics.len(), 3, "{result:?}");
+    let origins: Vec<_> = result
+        .diagnostics
+        .iter()
+        .map(|d| {
+            assert_eq!(d.span.source_id, SourceId(1));
+            sources.slice(d.span).unwrap()
+        })
+        .collect();
+    assert_eq!(
+        origins,
+        [
+            "{missing}",
+            "[.{missing}]*",
+            "link:https://e['\\{other}',role=x]"
+        ]
+    );
+    check_spans(&result, &sources);
+}
+
+#[test]
+fn repeated_link_warning_across_files_keeps_composite_provenance() {
+    let root = ":attribute-missing: warn\n\nlink:https://e['\\{missing}',\ninclude::part.adoc[]";
+    let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", "role=x]")]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(result.diagnostics.len(), 1, "{result:?}");
+    let span = result.diagnostics[0].span;
+    let fragments = &result.provenance[span.provenance.unwrap()];
+    assert_eq!(fragments.first().unwrap().source_id, options.source_id);
+    assert_eq!(fragments.last().unwrap().source_id, SourceId(1));
+    assert_eq!(sources.slice(*fragments.last().unwrap()), Some("role=x]"));
+    check_spans(&result, &sources);
+}
+
+#[test]
 fn post_replacements_keep_selected_include_break_origins_and_tokens() {
     let root = "include::part.adoc[tags=body,indent=0]";
     let part = "\u{feff}// tag::body[]\r\n  Ж(C) +\r\n  // removed\r\n  Б +\r\n// end::body[]";
