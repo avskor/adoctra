@@ -54,8 +54,7 @@
     {
       "id": "word-boundary",
       "category": "inlines",
-      "expect": "xfail",
-      "reason": "Constrained emphasis is incorrectly recognized inside a word.",
+      "expect": "pass",
       "source": "foo_bar_baz"
     },
     {
@@ -68,8 +67,7 @@
     {
       "id": "double-strong",
       "category": "inlines",
-      "expect": "xfail",
-      "reason": "Unconstrained double markers create empty strong nodes.",
+      "expect": "pass",
       "source": "**bold**"
     },
     {
@@ -6906,6 +6904,374 @@
       "resources": {
         "part.adoc": "Second]"
       }
+    },
+    {
+      "id": "direct-macros-target-attribute",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":host: example.org\n\nhttps://{host}[Site]"
+    },
+    {
+      "id": "direct-macros-target-link",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":target: page?a=1&b=2\n\nlink:{target}[Site]"
+    },
+    {
+      "id": "direct-macros-target-mailto",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":email: a@example.org\n\nmailto:{email}[Mail,Subject,Body]"
+    },
+    {
+      "id": "direct-macros-target-replacement",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "link:page(C)[Label(C)]"
+    },
+    {
+      "id": "direct-macros-target-entity",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "link:page?a=1&b=2[A&B]"
+    },
+    {
+      "id": "direct-macros-label-attribute",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":label: *Literal*\n\nlink:page[{label}]"
+    },
+    {
+      "id": "direct-macros-params",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "link:page[Ж&,id=anchor,role=red,title=A&B,window=_blank,opts=nofollow]"
+    },
+    {
+      "id": "direct-macros-blank",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "link:page[]"
+    },
+    {
+      "id": "direct-macros-empty",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "link:[Empty]"
+    },
+    {
+      "id": "direct-macros-empty-both",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "link:[]"
+    },
+    {
+      "id": "direct-macros-file",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "file:///tmp/test"
+    },
+    {
+      "id": "direct-macros-angle",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "<https://example.org>"
+    },
+    {
+      "id": "direct-macros-hide",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":hide-uri-scheme:\n\nhttps://example.org/[]"
+    },
+    {
+      "id": "direct-macros-quoted-label",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "link:page[\"Hello, world\",role=red]"
+    },
+    {
+      "id": "direct-macros-substituted-params",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":role: red\n\nlink:page[Text,role={role}]"
+    },
+    {
+      "id": "direct-macros-formatted-label",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "link:page[*Bold* _Italic_ `Code` #Mark# H~2~ E^2^]"
+    },
+    {
+      "id": "direct-macros-nested-label",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "link:page[*Bold _Italic_*]"
+    },
+    {
+      "id": "direct-macros-outer-format",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "*link:page[Bold]*"
+    },
+    {
+      "id": "direct-macros-link-new-window",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "link:page[Text^]"
+    },
+    {
+      "id": "direct-macros-escaped-link",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "\\link:page[Text]"
+    },
+    {
+      "id": "direct-macros-escaped-url",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "\\https://example.org"
+    },
+    {
+      "id": "direct-macros-escaped-macro",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "\\https://example.org[Text]"
+    },
+    {
+      "id": "direct-macros-escaped-mail",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "\\mailto:a@example.org[Text]"
+    },
+    {
+      "id": "direct-macros-escaped-label",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "link:page[A\\]B]"
+    },
+    {
+      "id": "direct-macros-escaped-label-formatted",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "link:page[*A\\]B*]"
+    },
+    {
+      "id": "direct-macros-escaped-param-quote",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "link:page[\"A\\\"B\",title=T]"
+    },
+    {
+      "id": "direct-macros-escaped-link-scheme",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "link:\\https://example.org[Text]"
+    },
+    {
+      "id": "direct-macros-bare-format",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "*https://example.org*"
+    },
+    {
+      "id": "direct-macros-multiple",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "Before https://one.example[] middle link:two[Two] after"
+    },
+    {
+      "id": "direct-macros-replace-before",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "(C) link:page[Label] (R)"
+    },
+    {
+      "id": "direct-macros-replace-in-label",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "link:page[(C) ... &copy; -- label]"
+    },
+    {
+      "id": "direct-macros-nested-url",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "link:outer[https://example.org]"
+    },
+    {
+      "id": "direct-macros-bare-email",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "a@example.org"
+    },
+    {
+      "id": "direct-macros-format-email",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "*a@example.org*"
+    },
+    {
+      "id": "direct-macros-format-email-space",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "*Mail a@example.org*"
+    },
+    {
+      "id": "direct-macros-mailto-subject",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "mailto:a@example.org[Mail,Hello world,Body & text]"
+    },
+    {
+      "id": "direct-macros-mailto-quotes",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "mailto:a@example.org[\"Mail, me\",\"Hello, world\",Body]"
+    },
+    {
+      "id": "direct-macros-url-punctuation",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "https://example.org:; https://example.org)."
+    },
+    {
+      "id": "direct-macros-bare-protected",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "https://example.org/?a=1&b=2"
+    },
+    {
+      "id": "direct-macros-incomplete",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "link:page[Unfinished"
+    },
+    {
+      "id": "direct-macros-heading",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "<<_label>>\n\n== link:page[Label]"
+    },
+    {
+      "id": "direct-macros-single-quoted",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: *Bold*\n\nlink:page['{v}',title=T]"
+    },
+    {
+      "id": "direct-macros-compat-mode",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":compat-mode:\n\nlink:page[Text,role=red]"
+    },
+    {
+      "id": "direct-macros-multiline",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "link:page[one\ntwo]"
+    },
+    {
+      "id": "direct-macros-unicode",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "﻿:target: страница\r\n\r\nЖ(C) link:{target}[*Жёлтый*]"
+    },
+    {
+      "id": "direct-macros-include",
+      "category": "substitutions",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": "include::part.adoc[tags=body,indent=0]",
+      "resources": {
+        "part.adoc": "﻿// tag::body[]\r\n  :target: страница\r\n\r\n  Ж(C) link:{target}[*Жёлтый*]\r\n// end::body[]"
+      }
+    },
+    {
+      "id": "direct-macros-cross-source",
+      "category": "substitutions",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": ":target: page\n\nlink:{target}[*First\ninclude::part.adoc[]",
+      "resources": {
+        "part.adoc": "Second*]"
+      }
+    },
+    {
+      "id": "direct-macros-snapshot",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":target: one\n\nlink:{target}[One]\n\n:target: two\n\nlink:{target}[Two]"
+    },
+    {
+      "id": "direct-macros-caption",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":target: page\n\n.link:{target}[*Title*]\nBody"
+    },
+    {
+      "id": "direct-macros-list",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":target: page\n\n* link:{target}[*Label*]"
+    },
+    {
+      "id": "direct-macros-target-quote-boundary",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "link:*page*[Text]"
+    },
+    {
+      "id": "direct-macros-target-word-quotes",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "link:page_*name*[Text]"
+    },
+    {
+      "id": "direct-macros-adjacent-format",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "*Bold*link:page[Text]"
+    },
+    {
+      "id": "direct-macros-double-label-strong",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "link:page[a**Bold**b]"
+    },
+    {
+      "id": "direct-macros-double-outer-strong",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "**link:page[Bold]**"
+    },
+    {
+      "id": "direct-macros-double-emphasis",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "link:page[a__Italic__b]"
+    },
+    {
+      "id": "direct-macros-double-monospace",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "link:page[a``Code``b]"
+    },
+    {
+      "id": "direct-macros-double-mark",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "link:page[a##Mark##b]"
+    },
+    {
+      "id": "direct-macros-target-semicolon",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "link:page;*name*[Text]"
+    },
+    {
+      "id": "direct-macros-target-closing-brace",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "link:page}*name*[Text]"
     }
   ]
 }

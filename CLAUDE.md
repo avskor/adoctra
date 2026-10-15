@@ -192,11 +192,18 @@ in source text uses Inline::Substituted { value, parts, span }; parts retain neu
 boundaries, and JSON/WASM use name:"substituted". Attribute-owned results stay in
 AttributeRef; consumed references remain empty with their original spans/tokens.
 Source-owned results cover consumed constructs, including source provenance across
-includes. Definitions/snapshots do not change. Existing syntax nodes bound runs;
-their children are visited separately, excluding already parsed bare Link labels.
-Migrating the old inline link scanner into this pipeline (including ordinary macro
-target substitutions, params and escapes), non-link pass macros, general inline
-attribute escapes/intrinsics and raw whole-doctitle replacement remain work.
+includes. Definitions/snapshots do not change. Direct links now use this same late
+matcher, including target/parameter substitutions, escapes and formatted labels.
+Replacements and macros retain one fragment map until AST write-back, preserving
+precise link spans after length-changing replacements. Source quotes are flattened
+temporarily into semantic boundaries and surviving pairs are rebuilt into their
+original nodes. Syntax highlighting retains consumed quote/attribute tokens and
+uses link spans reported by the matcher. Source single quote markers observe word,
+space and punctuation boundaries; doubled markers are unconstrained. Eligible
+closers are indexed for incomplete editor input. The next step is the complete
+ordinary quote pipeline (escapes, ordered nesting, metadata and compat-mode).
+Non-link pass macros, general inline attribute escapes/intrinsics and raw
+whole-doctitle replacement also remain work.
 The quote compat-mode is cached from host overrides at context creation and from
 attributes at header completion; header entries and body assignments do not
 eagerly change this cache. This does not yet change the ordinary inline scanner.

@@ -183,11 +183,25 @@ fn email_macros_observe_formatting_boundaries() {
 fn macros_after_length_changing_replacements_cover_consumed_source() {
     let source = ":s: ttps\n\nЖ(C) h{s}://example.org";
     let nodes = paragraph(source);
-    let Inline::Substituted { value, span, .. } = &nodes[0] else {
+    let Inline::Substituted { value, span, .. } = nodes
+        .iter()
+        .find(|n| matches!(n, Inline::Substituted { .. }))
+        .unwrap()
+    else {
         panic!("{nodes:?}")
     };
-    assert_eq!(value, "Ж© https://example.org");
-    assert_eq!(&source[span.start..span.end], "Ж(C) h{s}://example.org");
+    assert_eq!(value, "https://example.org");
+    assert_eq!(
+        nodes
+            .iter()
+            .filter_map(|n| match n {
+                Inline::Text { value, .. } => Some(value.as_str()),
+                _ => None,
+            })
+            .collect::<String>(),
+        "Ж© "
+    );
+    assert_eq!(&source[span.start..span.end], "h{s}://example.org");
 }
 
 #[test]
@@ -203,11 +217,8 @@ fn unicode_partial_input_and_source_ids_remain_physical() {
     let BlockKind::Paragraph { inlines } = &doc.blocks[0].kind else {
         panic!()
     };
-    assert!(matches!(&inlines[0], Inline::Substituted { .. }));
-    assert_eq!(
-        sources.slice(inlines[0].span()),
-        Some("Ж h{s}://example.org")
-    );
+    assert!(matches!(&inlines[1], Inline::Substituted { .. }));
+    assert_eq!(sources.slice(inlines[1].span()), Some("h{s}://example.org"));
     for end in (0..=source.len()).filter(|&i| source.is_char_boundary(i)) {
         let partial = &source[..end];
         let _ = parse_with_options(partial, &options);
@@ -223,8 +234,8 @@ fn unicode_partial_input_and_source_ids_remain_physical() {
 #[test]
 fn plain_email_and_borrowed_section_titles_use_neutral_semantics() {
     let nodes = paragraph("Mail a@example.org.");
-    assert!(matches!(&nodes[0], Inline::Substituted { value, parts, .. }
-        if value == "Mail a@example.org." && parts.iter().any(|p| matches!(p, P::OpenLink(l) if l.target == "mailto:a@example.org"))));
+    assert!(matches!(&nodes[1], Inline::Substituted { value, parts, .. }
+        if value == "a@example.org" && parts.iter().any(|p| matches!(p, P::OpenLink(l) if l.target == "mailto:a@example.org"))));
     let doc = parse(":s: ttps\n\n<<_httpsexample_org>>\n\n== h{s}://example.org").document;
     assert_eq!(doc.blocks[1].id.as_deref(), Some("_httpsexample_org"));
     let BlockKind::Paragraph { inlines } = &doc.blocks[0].kind else {

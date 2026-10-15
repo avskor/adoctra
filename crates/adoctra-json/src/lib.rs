@@ -565,6 +565,14 @@ mod tests {
     }
 
     #[test]
+    fn direct_links_export_substituted_targets_and_formatted_labels() {
+        let json = render(":target: page?a=1&b=2\n\nlink:{target}[*Ж&*,role=red,title=Title]");
+        assert!(json.contains(r#""name":"substituted","value":"Ж&","parts":[{"kind":"open-link","target":"page?a=1&amp;b=2","role":"red","title":"Title"},{"kind":"open","format":"strong"},{"kind":"text","value":"Ж&"},{"kind":"close","format":"strong"},{"kind":"close-link"}]"#), "{json}");
+        assert!(json.contains(r#""name":"text","value":"""#), "{json}");
+        assert!(!json.contains("<a href"), "{json}");
+    }
+
+    #[test]
     fn post_attribute_macros_export_neutral_parts_without_generated_markup() {
         let json = render(":s: ttps\n\nh{s}://example.org");
         assert!(json.contains(r#""name":"substituted","value":"https://example.org","parts":[{"kind":"open-link","target":"https://example.org","role":"bare"},{"kind":"text","value":"https://example.org"},{"kind":"close-link"}]"#), "{json}");
@@ -733,25 +741,25 @@ mod tests {
     }
 
     #[test]
-    fn link_serializes_with_target_and_bare_flag() {
+    fn link_serializes_with_target_and_semantic_label() {
         let json = render("See link:https://example.org[the site].");
-        assert!(json.contains("\"name\":\"link\""), "got: {json}");
+        assert!(json.contains("\"name\":\"substituted\""), "got: {json}");
         assert!(
             json.contains("\"target\":\"https://example.org\""),
             "got: {json}"
         );
-        assert!(json.contains("\"bare\":false"), "got: {json}");
+        assert!(json.contains("\"kind\":\"open-link\""), "got: {json}");
         assert!(
-            json.contains("{\"name\":\"text\",\"value\":\"the site\"}"),
+            json.contains("{\"kind\":\"text\",\"value\":\"the site\"}"),
             "got: {json}"
         );
     }
 
     #[test]
-    fn bare_autolink_sets_bare_true() {
+    fn bare_autolink_sets_bare_role() {
         let json = render("Bare https://example.org now.");
-        assert!(json.contains("\"name\":\"link\""), "got: {json}");
-        assert!(json.contains("\"bare\":true"), "got: {json}");
+        assert!(json.contains("\"name\":\"substituted\""), "got: {json}");
+        assert!(json.contains("\"role\":\"bare\""), "got: {json}");
         assert!(
             json.contains("\"target\":\"https://example.org\""),
             "got: {json}"

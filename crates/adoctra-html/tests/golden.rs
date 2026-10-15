@@ -843,6 +843,16 @@ fn quote_attributes_match_reference_and_ordered_protection() {
 }
 
 #[test]
+fn direct_link_macros_follow_ordered_substitutions() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden");
+    let source = fs::read_to_string(dir.join("direct-link-macros.adoc")).unwrap();
+    let expected = fs::read_to_string(dir.join("direct-link-macros.expected.html")).unwrap();
+    let doc = adoctra_core::parse(&source).document;
+    let actual = String::from_utf8(HtmlBackend.convert(&doc).unwrap()).unwrap();
+    assert_eq!(paragraph_inner(&actual), paragraph_inner(&expected));
+}
+
+#[test]
 fn post_attribute_link_macros_match_reference_across_text_and_reference_parts() {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden");
     let source = fs::read_to_string(dir.join("post-attribute-macros.adoc")).unwrap();

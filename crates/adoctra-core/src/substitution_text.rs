@@ -268,6 +268,13 @@ impl Text {
         });
     }
 
+    /// Physical coverage of a match, using the same ownership rules as replacements.
+    pub fn match_span(&self, range: Range<usize>) -> Span {
+        let mut anchor = Self::default();
+        self.replacement(range, " ", None, &mut anchor);
+        anchor.fragments[0].1.span
+    }
+
     /// Anchor a generated semantic value to its first source owner. References
     /// consumed later in the range are retained as empty nodes by write_back.
     pub fn replace_parts(&self, range: Range<usize>, parts: &[AttributePart], output: &mut Self) {
@@ -380,25 +387,52 @@ pub(crate) fn write_back(nodes: Vec<Inline>, mut text: Text, fold_newlines: bool
             | Inline::Raw {
                 span: original_span,
                 ..
+            }
+            | Inline::Substituted {
+                span: original_span,
+                ..
             } => {
                 if pieces.iter().any(|f| f.part.is_some()) {
-                    let end = pieces.iter().map(|f| f.span.end).max().unwrap();
-                    let mut parts = Vec::new();
-                    for f in pieces {
-                        if let Some(part) = f.part {
-                            crate::attributes::push_value(&mut parts, part);
+                    // Keep generated constructs separate from their surrounding
+                    // source text so direct links have precise physical spans.
+                    let mut pieces = pieces.into_iter().peekable();
+                    while let Some(first) = pieces.next() {
+                        let span = first.span;
+                        let mut group = vec![first];
+                        while pieces.peek().is_some_and(|f| f.span == span) {
+                            group.push(pieces.next().unwrap());
+                        }
+                        let mut parts = Vec::new();
+                        let semantic = group.iter().any(|f| f.part.is_some());
+                        for f in group {
+                            if let Some(part) = f.part {
+                                crate::attributes::push_value(&mut parts, part);
+                            } else {
+                                crate::attributes::push_part(&mut parts, &f.text, f.raw);
+                            }
+                        }
+                        if semantic {
+                            result.push(Inline::Substituted {
+                                value: crate::attributes::parts_text(&parts),
+                                parts,
+                                span,
+                            });
                         } else {
-                            crate::attributes::push_part(&mut parts, &f.text, f.raw);
+                            for part in parts {
+                                result.push(if part.is_raw() {
+                                    Inline::Raw {
+                                        value: part.text().into(),
+                                        span,
+                                    }
+                                } else {
+                                    Inline::Text {
+                                        value: part.text().into(),
+                                        span,
+                                    }
+                                });
+                            }
                         }
                     }
-                    result.push(Inline::Substituted {
-                        value: crate::attributes::parts_text(&parts),
-                        parts,
-                        span: Span {
-                            end: original_span.end.max(end),
-                            ..*original_span
-                        },
-                    });
                     continue;
                 }
                 if !pieces.is_empty() && pieces.iter().all(|f| !f.raw) {

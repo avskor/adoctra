@@ -451,8 +451,8 @@ pub enum Inline {
         parts: Vec<crate::AttributePart>,
         span: Span,
     },
-    /// A link: the `link:target[text]` macro, an autolinked URL macro
-    /// `https://host[text]`, or a bare autolinked URL `https://host`. `target`
+    /// A programmatically constructed link. Parsed links use `Substituted`
+    /// with semantic link parts after ordered substitutions. `target`
     /// is the resolved href; `children` is the display text (parsed inlines),
     /// which for a bare link is the target's own text. `bare` is `true` when no
     /// explicit link text was given — asciidoctor renders those with a

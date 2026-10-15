@@ -1503,7 +1503,7 @@ mod tests {
         };
         let link = inlines
             .iter()
-            .find(|n| matches!(n, Inline::Link { .. }))
+            .find(|n| matches!(n, Inline::Substituted { .. }))
             .unwrap();
         let s = link.span();
         assert_eq!(&src[s.start..s.end], "link:https://example.org[here]");

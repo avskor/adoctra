@@ -1,7 +1,7 @@
 //! Link substitutions for pass attributes and expanded inline text. Matched over
 //! the shared lexical stream; generated links remain backend-neutral boundaries.
 use crate::substitution_text::Text;
-use crate::{AttributeLink, AttributePart as Part, Attributes, Inline};
+use crate::{AttributeFormat, AttributeLink, AttributePart as Part, Attributes, Inline, Span};
 use std::collections::BTreeMap;
 use std::ops::Range;
 
@@ -11,55 +11,187 @@ pub(crate) fn apply(parts: Vec<Part>, attributes: &Attributes, compat: bool) -> 
     apply_inner(parts, attributes, compat, 0)
 }
 
-/// Link macros after attribute expansion and replacements. Existing syntax
-/// nodes delimit runs; newly generated links are not visited again.
-pub(crate) fn apply_inlines(nodes: &mut Vec<Inline>, attributes: &Attributes) {
-    process_inlines(nodes, attributes, true);
+/// Link macros run over the lexical result of quotes, attributes and replacements.
+/// Flatten source quote boundaries temporarily so a macro can consume a formatted
+/// label. Surviving boundaries are rebuilt into their original spanned AST nodes.
+pub(crate) fn apply_inlines(
+    nodes: &mut Vec<Inline>,
+    attributes: &Attributes,
+    fold_newlines: bool,
+) -> Vec<Span> {
+    let mut links = Vec::new();
+    process_inlines(nodes, attributes, true, fold_newlines, &mut links);
+    links
 }
 
-fn process_inlines(nodes: &mut Vec<Inline>, attributes: &Attributes, mut left_edge: bool) {
+fn format(node: &Inline) -> Option<AttributeFormat> {
+    Some(match node {
+        Inline::Strong { .. } => AttributeFormat::Strong,
+        Inline::Emphasis { .. } => AttributeFormat::Emphasis,
+        Inline::Monospace { .. } => AttributeFormat::Monospace,
+        Inline::Mark { .. } => AttributeFormat::Mark,
+        Inline::Superscript { .. } => AttributeFormat::Superscript,
+        Inline::Subscript { .. } => AttributeFormat::Subscript,
+        _ => return None,
+    })
+}
+
+fn children(node: &mut Inline) -> &mut Vec<Inline> {
+    match node {
+        Inline::Strong { children, .. }
+        | Inline::Emphasis { children, .. }
+        | Inline::Monospace { children, .. }
+        | Inline::Mark { children, .. }
+        | Inline::Superscript { children, .. }
+        | Inline::Subscript { children, .. } => children,
+        _ => unreachable!(),
+    }
+}
+
+fn boundary(part: Part, span: Span) -> Inline {
+    Inline::Substituted {
+        value: String::new(),
+        parts: vec![part],
+        span,
+    }
+}
+
+fn flatten(nodes: Vec<Inline>, flat: &mut Vec<Inline>, quotes: &mut Vec<Inline>) {
+    for mut node in nodes {
+        if let Some(kind) = format(&node) {
+            let span = node.span();
+            let contents = children(&mut node);
+            let open_end = contents.first().map_or(span.start + 1, |n| n.span().start);
+            let close_start = contents.last().map_or(span.end - 1, |n| n.span().end);
+            flat.push(boundary(
+                Part::Open(kind),
+                Span {
+                    end: open_end,
+                    ..span
+                },
+            ));
+            flatten(std::mem::take(children(&mut node)), flat, quotes);
+            flat.push(boundary(
+                Part::Close(kind),
+                Span {
+                    start: close_start,
+                    ..span
+                },
+            ));
+            quotes.push(node);
+        } else {
+            flat.push(node);
+        }
+    }
+}
+
+fn rebuild(nodes: Vec<Inline>, quotes: Vec<Inline>) -> Vec<Inline> {
+    let mut openings: BTreeMap<_, _> = quotes.into_iter().map(|n| (n.span().start, n)).collect();
+    let mut output = Vec::new();
+    let mut stack: Vec<(Inline, Inline, Vec<Inline>)> = Vec::new();
+    for node in nodes {
+        if let Inline::Substituted { parts, span, .. } = &node {
+            if let [Part::Open(kind)] = parts.as_slice() {
+                if openings
+                    .get(&span.start)
+                    .is_some_and(|n| format(n) == Some(*kind))
+                {
+                    let template = openings.remove(&span.start).unwrap();
+                    stack.push((template, node, std::mem::take(&mut output)));
+                    continue;
+                }
+            }
+            if let [Part::Close(kind)] = parts.as_slice() {
+                if stack
+                    .last()
+                    .is_some_and(|(n, _, _)| format(n) == Some(*kind) && n.span().end == span.end)
+                {
+                    let (mut template, _, mut parent) = stack.pop().unwrap();
+                    *children(&mut template) = output;
+                    parent.push(template);
+                    output = parent;
+                    continue;
+                }
+            }
+        }
+        output.push(node);
+    }
+    // A macro may consume only one boundary. Preserve the remaining semantic
+    // boundary literally instead of inventing a differently nested source tree.
+    while let Some((_, open, mut parent)) = stack.pop() {
+        parent.push(open);
+        parent.extend(output);
+        output = parent;
+    }
+    output
+}
+
+fn process_inlines(
+    nodes: &mut Vec<Inline>,
+    attributes: &Attributes,
+    edges: bool,
+    fold_newlines: bool,
+    links: &mut Vec<Span>,
+) {
+    let mut left_edge = edges;
+    let mut flat = Vec::new();
+    let mut quotes = Vec::new();
+    flatten(std::mem::take(nodes), &mut flat, &mut quotes);
     let mut pending = Vec::new();
     let mut output = Vec::new();
-    for mut node in std::mem::take(nodes) {
+    for mut node in flat {
         if matches!(
             node,
-            Inline::Text { .. } | Inline::Raw { .. } | Inline::AttributeRef { value: Some(_), .. }
+            Inline::Text { .. }
+                | Inline::Raw { .. }
+                | Inline::Substituted { .. }
+                | Inline::AttributeRef { value: Some(_), .. }
         ) {
             pending.push(node);
             continue;
         }
-        flush_inlines(&mut pending, &mut output, attributes, left_edge);
+        flush_inlines(
+            &mut pending,
+            &mut output,
+            attributes,
+            (left_edge, false),
+            fold_newlines,
+            links,
+        );
         match &mut node {
-            Inline::Strong { children, .. }
-            | Inline::Emphasis { children, .. }
-            | Inline::Monospace { children, .. }
-            | Inline::Mark { children, .. }
-            | Inline::Superscript { children, .. }
-            | Inline::Subscript { children, .. }
-            | Inline::CrossReference { children, .. }
+            Inline::CrossReference { children, .. }
             | Inline::Link {
                 children,
                 bare: false,
                 ..
-            } => process_inlines(children, attributes, false),
+            } => process_inlines(children, attributes, false, true, links),
             Inline::Anchor {
                 reftext: Some(children),
                 ..
-            } => process_inlines(children, attributes, false),
+            } => process_inlines(children, attributes, false, true, links),
             _ => {}
         }
         output.push(node);
         left_edge = false;
     }
-    flush_inlines(&mut pending, &mut output, attributes, left_edge);
-    *nodes = output;
+    flush_inlines(
+        &mut pending,
+        &mut output,
+        attributes,
+        (left_edge, edges),
+        fold_newlines,
+        links,
+    );
+    *nodes = rebuild(output, quotes);
 }
 
 fn flush_inlines(
     nodes: &mut Vec<Inline>,
     output: &mut Vec<Inline>,
     attributes: &Attributes,
-    left_edge: bool,
+    edges: (bool, bool),
+    fold_newlines: bool,
+    links: &mut Vec<Span>,
 ) {
     if nodes.is_empty() {
         return;
@@ -75,7 +207,8 @@ fn flush_inlines(
                 parts,
                 span,
                 ..
-            } => {
+            }
+            | Inline::Substituted { value, parts, span } => {
                 if parts.is_empty() {
                     text.append(value, false, owner, *span, false);
                 } else {
@@ -87,6 +220,7 @@ fn flush_inlines(
             _ => unreachable!(),
         }
     }
+    text = crate::replacements::apply_text(text, edges.0, edges.1);
     for stage in 0..3 {
         text = apply_stage(
             text,
@@ -94,20 +228,29 @@ fn flush_inlines(
             attributes,
             attributes.get("compat-mode").is_some(),
             0,
-            left_edge,
+            edges.0,
+            links,
         );
     }
     output.extend(crate::substitution_text::write_back(
         std::mem::take(nodes),
         text,
-        false,
+        fold_newlines,
     ));
 }
 
 fn apply_inner(parts: Vec<Part>, attributes: &Attributes, compat: bool, depth: usize) -> Vec<Part> {
     let mut text = Text::from_parts(&parts);
     for stage in 0..3 {
-        text = apply_stage(text, stage, attributes, compat, depth, true);
+        text = apply_stage(
+            text,
+            stage,
+            attributes,
+            compat,
+            depth,
+            true,
+            &mut Vec::new(),
+        );
     }
     text.into_parts()
 }
@@ -176,6 +319,7 @@ fn apply_stage(
     compat: bool,
     depth: usize,
     left_edge: bool,
+    links: &mut Vec<Span>,
 ) -> Text {
     let src = &text.text;
     let index = Index::new(src);
@@ -207,6 +351,7 @@ fn apply_stage(
             text.copy(m.start..escape, &mut output);
             text.copy(escape + 1..m.end, &mut output);
         } else {
+            links.push(text.match_span(m.start..m.end));
             let target = &src[m.target.clone()];
             let (link, label) = link_parts(&text, &m, target, attributes, compat, depth);
             let mut parts = vec![Part::OpenLink(link)];

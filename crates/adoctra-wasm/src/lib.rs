@@ -842,18 +842,20 @@ mod tests {
         let json = parse_json("See link:https://h[the site]");
         // The link runs from byte 4 ("link:") through the closing bracket (28).
         assert!(
-            json.contains("\"span\":{\"source_id\":0,\"start\":4,\"end\":28},\"name\":\"link\""),
+            json.contains(
+                "\"span\":{\"source_id\":0,\"start\":4,\"end\":28},\"name\":\"substituted\""
+            ),
             "got: {json}"
         );
         assert!(json.contains("\"target\":\"https://h\""), "got: {json}");
-        assert!(json.contains("\"bare\":false"), "got: {json}");
+        assert!(json.contains("\"kind\":\"open-link\""), "got: {json}");
     }
 
     #[test]
     fn bare_autolink_is_structured_and_bare() {
         let json = parse_json("Bare https://example.org now");
-        assert!(json.contains("\"name\":\"link\""), "got: {json}");
-        assert!(json.contains("\"bare\":true"), "got: {json}");
+        assert!(json.contains("\"name\":\"substituted\""), "got: {json}");
+        assert!(json.contains("\"role\":\"bare\""), "got: {json}");
         assert!(
             json.contains("\"target\":\"https://example.org\""),
             "got: {json}"
@@ -1343,6 +1345,18 @@ mod header_tests {
     }
 
     #[test]
+    fn direct_links_export_substituted_targets_and_formatted_labels() {
+        let json =
+            super::parse_json(":target: page?a=1&b=2\n\nlink:{target}[*Ж&*,role=red,title=Title]");
+        assert!(json.contains(r#""name":"substituted","value":"Ж&","parts":[{"kind":"open-link","target":"page?a=1&amp;b=2","role":"red","title":"Title"},{"kind":"open","format":"strong"},{"kind":"text","value":"Ж&"},{"kind":"close","format":"strong"},{"kind":"close-link"}]"#), "{json}");
+        assert!(
+            json.contains(r#""name":"attribute-ref","attribute":"target","value":"""#),
+            "{json}"
+        );
+        assert!(!json.contains("<a href"), "{json}");
+    }
+
+    #[test]
     fn post_attribute_macros_export_neutral_parts_without_generated_markup() {
         let json = super::parse_json(":s: ttps\n\nh{s}://example.org");
         assert!(json.contains(r#""name":"substituted","value":"https://example.org","parts":[{"kind":"open-link","target":"https://example.org","role":"bare"},{"kind":"text","value":"https://example.org"},{"kind":"close-link"}]"#), "{json}");
@@ -1363,6 +1377,35 @@ mod header_tests {
         );
         let json = super::parse_json(":v: pass:m[link:page[Alpha]]\n\n<<_alpha>>\n\n== {v}");
         assert!(json.contains(r#""target":"_alpha""#), "{json}");
+    }
+
+    #[test]
+    fn direct_link_exports_precise_span_and_consumed_source_tokens() {
+        let source = "\u{feff}:target: страница\r\n\r\nЖ(C) link:{target}[*Жёлтый*]";
+        let json = super::parse_json_with_source(source, 7);
+        let start = source.find("link:").unwrap();
+        assert!(
+            json.contains(&format!(
+                r#""span":{{"source_id":7,"start":{start},"end":{}}},"name":"substituted""#,
+                source.len()
+            )),
+            "{json}"
+        );
+        let tokens = super::tokens_json_with_source(source, 7);
+        for (kind, syntax) in [
+            ("link", "link:{target}[*Жёлтый*]"),
+            ("strong", "*Жёлтый*"),
+            ("attribute-ref", "{target}"),
+        ] {
+            let start = source.find(syntax).unwrap();
+            assert!(
+                tokens.contains(&format!(
+                    r#""span":{{"source_id":7,"start":{start},"end":{}}},"kind":"{kind}""#,
+                    start + syntax.len()
+                )),
+                "{tokens}"
+            );
+        }
     }
 
     #[test]

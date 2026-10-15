@@ -37,18 +37,34 @@ pub(crate) fn scan_inlines_with(
     fold_newlines: bool,
 ) -> Vec<Inline> {
     let mut out = scan_unprocessed(src, base, attrs);
-    crate::replacements::apply_inlines(&mut out, fold_newlines);
-    crate::attribute_macros::apply_inlines(&mut out, attrs);
+    crate::attribute_macros::apply_inlines(&mut out, attrs, fold_newlines);
     out
 }
 
+/// Preserve source syntax for highlighting even when a later macro consumes it.
+/// Links are reported by the same late matcher that produces semantic parts.
+pub(crate) fn scan_for_tokens(src: &str, base: usize, attrs: &Attributes) -> Vec<Inline> {
+    let mut syntax = scan_unprocessed(src, base, attrs);
+    let mut processed = syntax.clone();
+    for span in crate::attribute_macros::apply_inlines(&mut processed, attrs, true) {
+        syntax.push(Inline::Link {
+            target: String::new(),
+            children: Vec::new(),
+            bare: false,
+            span,
+        });
+    }
+    syntax
+}
+
 fn scan_unprocessed(src: &str, base: usize, attrs: &Attributes) -> Vec<Inline> {
+    let quotes = QuoteIndex::new(src);
     let mut out = Vec::new();
     let mut text_start = 0usize;
     let mut i = 0usize;
 
     while i < src.len() {
-        if let Some((node, end)) = try_match(src, i, base, attrs) {
+        if let Some((node, end)) = try_match(src, i, base, attrs, &quotes) {
             flush_text(src, text_start, i, base, &mut out);
             out.push(node);
             i = end;
@@ -64,7 +80,13 @@ fn scan_unprocessed(src: &str, base: usize, attrs: &Attributes) -> Vec<Inline> {
 
 /// Try to recognise a construct starting at byte `i`. Returns the node and the
 /// byte index (src-relative) just past it.
-fn try_match(src: &str, i: usize, base: usize, attrs: &Attributes) -> Option<(Inline, usize)> {
+fn try_match(
+    src: &str,
+    i: usize,
+    base: usize,
+    attrs: &Attributes,
+    quotes: &QuoteIndex,
+) -> Option<(Inline, usize)> {
     // Wrap a matcher's `(children, absolute_end)` into a quote node: the span
     // covers the markers, and `scan_inlines` wants the end as a src-relative
     // index (hence `end - base`).
@@ -72,27 +94,22 @@ fn try_match(src: &str, i: usize, base: usize, attrs: &Attributes) -> Option<(In
         res.map(|(children, end)| (make(children, Span::new(base + i, end)), end - base))
     };
     match src.as_bytes()[i] {
-        // Constrained quotes: the marker must hug its content (no space just
-        // inside the open marker), matching the parser's naive rule.
+        // Single constrained and double unconstrained quote markers.
         b'*' => quote(
             |children, span| Inline::Strong { children, span },
-            match_quoted(src, i, b'*', base, attrs),
+            match_quoted(src, i, b'*', base, attrs, quotes),
         ),
         b'_' => quote(
             |children, span| Inline::Emphasis { children, span },
-            match_quoted(src, i, b'_', base, attrs),
+            match_quoted(src, i, b'_', base, attrs, quotes),
         ),
         b'`' => quote(
             |children, span| Inline::Monospace { children, span },
-            match_quoted(src, i, b'`', base, attrs),
+            match_quoted(src, i, b'`', base, attrs, quotes),
         ),
-        // Special-character protection precedes quotes in the reference: an
-        // ampersand ends in `;`, which cannot open constrained mark syntax.
-        // In particular, the # in numeric entities must remain ordinary text.
-        b'#' if i > 0 && src.as_bytes()[i - 1] == b'&' => None,
         b'#' => quote(
             |children, span| Inline::Mark { children, span },
-            match_quoted(src, i, b'#', base, attrs),
+            match_quoted(src, i, b'#', base, attrs, quotes),
         ),
         // Unconstrained quotes: match anywhere (incl. mid-word), but the content
         // may not be empty or contain whitespace.
@@ -105,13 +122,6 @@ fn try_match(src: &str, i: usize, base: usize, attrs: &Attributes) -> Option<(In
             match_unconstrained(src, i, b'~', base, attrs),
         ),
         b'{' => match_attribute(src, i, base, attrs),
-        // Link macros (`link:`/`mailto:`) need brackets and — matching
-        // asciidoctor — no left word boundary. A scheme (`https://` etc.) is a
-        // bare autolink or, when followed by `[text]`, a URL macro; both want a
-        // left boundary so a scheme glued to a word is not linked.
-        b'l' => match_link_macro(src, i, base, attrs, "link:"),
-        b'm' => match_link_macro(src, i, base, attrs, "mailto:"),
-        b'h' | b'f' | b'i' => match_url(src, i, base, attrs),
         // Cross-references: the `<<id>>` / `<<id,text>>` angle form, and the
         // `xref:id[text]` macro (brackets mandatory, like `link:`).
         b'<' => match_xref_angle(src, i, base, attrs),
@@ -124,26 +134,101 @@ fn try_match(src: &str, i: usize, base: usize, attrs: &Attributes) -> Option<(In
     }
 }
 
-/// A constrained quote `*...*` / `_..._`: open marker at `i`, first matching
-/// marker closes it, and the char right after the open must not be a space
-/// (matching the current naive rule). Returns the parsed children and the
-/// absolute end offset (one past the closing marker).
+fn quote_word(ch: char) -> bool {
+    crate::unicode_word::is_alphanumeric(ch) || crate::unicode_word::is_mark_or_connector(ch)
+}
+
+fn quote_space(ch: char) -> bool {
+    matches!(ch, ' ' | '\t'..='\r')
+}
+
+fn quote_extra(marker: u8, ch: char) -> bool {
+    match marker {
+        b'#' => ch == '&',
+        b'`' => matches!(ch, '"' | '\'' | '`'),
+        _ => false,
+    }
+}
+
+/// Index eligible closing markers once, including constrained word/space edges.
+/// Repeated incomplete openers in an editor buffer must not rescan every suffix.
+struct QuoteIndex {
+    single: [Vec<usize>; 4],
+    double: [Vec<usize>; 4],
+}
+
+impl QuoteIndex {
+    const MARKERS: [u8; 4] = *b"*_`#";
+
+    fn new(src: &str) -> Self {
+        let mut result = Self {
+            single: Default::default(),
+            double: Default::default(),
+        };
+        for (at, ch) in src.char_indices() {
+            let Some(index) = Self::MARKERS.iter().position(|&m| ch == m as char) else {
+                continue;
+            };
+            let marker = Self::MARKERS[index];
+            if src.as_bytes().get(at + 1) == Some(&marker) {
+                result.double[index].push(at);
+            }
+            if src[..at]
+                .chars()
+                .next_back()
+                .is_some_and(|c| !quote_space(c))
+                && !src[at + 1..]
+                    .chars()
+                    .next()
+                    .is_some_and(|c| quote_word(c) || (marker == b'`' && quote_extra(marker, c)))
+            {
+                result.single[index].push(at);
+            }
+        }
+        result
+    }
+
+    fn close(&self, marker: u8, doubled: bool, after: usize) -> Option<usize> {
+        let index = Self::MARKERS.iter().position(|&m| m == marker).unwrap();
+        let positions = if doubled {
+            &self.double[index]
+        } else {
+            &self.single[index]
+        };
+        positions
+            .get(positions.partition_point(|&at| at < after))
+            .copied()
+    }
+}
+
+/// Single markers require lexical boundaries; doubled markers are unconstrained.
+/// Check these before macros so punctuation and underscores in link targets do
+/// not accidentally become generated formatting tags.
 fn match_quoted(
     src: &str,
     i: usize,
     marker: u8,
     base: usize,
     attrs: &Attributes,
+    quotes: &QuoteIndex,
 ) -> Option<(Vec<Inline>, usize)> {
-    let bytes = src.as_bytes();
-    let inner_start = i + 1;
-    if bytes.get(inner_start) == Some(&b' ') {
+    let doubled = src.as_bytes().get(i + 1) == Some(&marker);
+    let width = if doubled { 2 } else { 1 };
+    if !doubled
+        && src[..i].chars().next_back().is_some_and(|ch| {
+            quote_word(ch) || matches!(ch, ';' | ':' | '}') || quote_extra(marker, ch)
+        })
+    {
         return None;
     }
-    let rel_close = src[inner_start..].find(marker as char)?;
-    let close = inner_start + rel_close;
+    let inner_start = i + width;
+    let first = src[inner_start..].chars().next()?;
+    if !doubled && quote_space(first) {
+        return None;
+    }
+    let close = quotes.close(marker, doubled, inner_start + first.len_utf8())?;
     let children = scan_unprocessed(&src[inner_start..close], base + inner_start, attrs);
-    Some((children, base + close + 1))
+    Some((children, base + close + width))
 }
 
 /// An unconstrained quote `^...^` / `~...~`: open marker at `i`, first matching
@@ -193,152 +278,6 @@ fn match_attribute(
         span: Span::new(base + i, base + end),
     };
     Some((node, end))
-}
-
-/// Schemes that autolink as a bare URL or a URL macro. `mailto:` is handled by
-/// [`match_link_macro`] instead (it has no `//` and is *not* bare-autolinked,
-/// matching asciidoctor).
-const URL_SCHEMES: [&str; 4] = ["https://", "http://", "ftp://", "irc://"];
-
-/// Trailing punctuation stripped from a *bare* autolinked URL so a sentence's
-/// period (etc.) stays outside the link. The set is pinned against asciidoctor
-/// 2.0.23; a port colon like `:8080` is kept because only the trailing run is
-/// trimmed.
-fn trim_trailing_url_punct(url: &str) -> &str {
-    url.trim_end_matches([',', '.', ';', ':', '!', '?', ')'])
-}
-
-/// Whether byte `i` may start a bare/URL-macro autolink. asciidoctor only
-/// autolinks a scheme at the start of the text, after whitespace, or after one
-/// of a small set of "opening" chars — *not* after a letter (`x_https://`) and
-/// crucially *not* after `:` (so `link:url`/`word:url` without brackets stay
-/// literal, with the `link:` macro form handled by [`match_link_macro`]).
-fn at_left_boundary(src: &str, i: usize) -> bool {
-    match src[..i].chars().next_back() {
-        None => true,
-        Some(prev) => {
-            prev.is_whitespace()
-                || matches!(prev, '<' | '>' | '(' | ')' | '[' | ']' | ';' | '"' | '\'')
-        }
-    }
-}
-
-/// The `link:target[text]` / `mailto:target[text]` macro. Brackets are
-/// mandatory (a bare `link:url` is literal text); the target may not be empty
-/// or contain whitespace. `link:` puts the bare target in the href, `mailto:`
-/// keeps its scheme. Returns the node and the src-relative end index.
-fn match_link_macro(
-    src: &str,
-    i: usize,
-    base: usize,
-    attrs: &Attributes,
-    prefix: &str,
-) -> Option<(Inline, usize)> {
-    if !src[i..].starts_with(prefix) {
-        return None;
-    }
-    let target_start = i + prefix.len();
-    let rel_bracket = src[target_start..].find('[')?;
-    let target = &src[target_start..target_start + rel_bracket];
-    if target.is_empty() || target.contains(char::is_whitespace) {
-        return None;
-    }
-    let bracket = target_start + rel_bracket;
-    let href = if prefix == "mailto:" {
-        format!("mailto:{target}")
-    } else {
-        target.to_string()
-    };
-    finish_bracketed_link(src, i, bracket, &href, target, base, attrs)
-}
-
-/// A scheme-prefixed URL: either a URL macro `https://h[text]` or a bare
-/// autolink `https://h`. Both require a left word boundary. Returns the node
-/// and the src-relative end index.
-fn match_url(src: &str, i: usize, base: usize, attrs: &Attributes) -> Option<(Inline, usize)> {
-    if !at_left_boundary(src, i) {
-        return None;
-    }
-    let scheme = URL_SCHEMES.iter().find(|s| src[i..].starts_with(**s))?;
-    // The URL run ends at whitespace, a `[`, or end of slice.
-    let rest = &src[i..];
-    let run_len = rest
-        .find(|c: char| c.is_whitespace() || c == '[')
-        .unwrap_or(rest.len());
-    // There must be something after the `scheme://`.
-    if run_len <= scheme.len() {
-        return None;
-    }
-    let run_end = i + run_len;
-    // URL-macro form: the run is immediately followed by `[text]`. If the
-    // bracket has no close it is not a macro — fall through to a bare autolink.
-    if src.as_bytes().get(run_end) == Some(&b'[') {
-        let target = &src[i..run_end];
-        if let Some(node) = finish_bracketed_link(src, i, run_end, target, target, base, attrs) {
-            return Some(node);
-        }
-    }
-    // Bare autolink: trim a sentence's trailing punctuation off the run.
-    let trimmed = trim_trailing_url_punct(&src[i..run_end]);
-    if trimmed.len() <= scheme.len() {
-        return None;
-    }
-    let end = i + trimmed.len();
-    let span = Span::new(base + i, base + end);
-    Some((
-        Inline::Link {
-            target: trimmed.to_string(),
-            children: vec![Inline::Text {
-                value: trimmed.to_string(),
-                span,
-            }],
-            bare: true,
-            span,
-        },
-        end,
-    ))
-}
-
-/// Finish a link whose display text is in `[...]` starting at byte `bracket`.
-/// `href` is the resolved target; `bare_text` is the text used when the
-/// brackets are empty (asciidoctor renders an empty-text link `class="bare"`).
-/// The text inside the brackets is scanned recursively so markup inside a link
-/// (`link:url[*bold*]`) still parses. Returns `None` if the bracket is not
-/// closed. The end index is src-relative (one past the `]`).
-fn finish_bracketed_link(
-    src: &str,
-    start: usize,
-    bracket: usize,
-    href: &str,
-    bare_text: &str,
-    base: usize,
-    attrs: &Attributes,
-) -> Option<(Inline, usize)> {
-    let text_start = bracket + 1;
-    let rel_close = src[text_start..].find(']')?;
-    let close = text_start + rel_close;
-    let text = &src[text_start..close];
-    let end = close + 1;
-    let (children, bare) = if text.is_empty() {
-        (
-            vec![Inline::Text {
-                value: bare_text.to_string(),
-                span: Span::new(base + start, base + bracket),
-            }],
-            true,
-        )
-    } else {
-        (scan_unprocessed(text, base + text_start, attrs), false)
-    };
-    Some((
-        Inline::Link {
-            target: href.to_string(),
-            children,
-            bare,
-            span: Span::new(base + start, base + end),
-        },
-        end,
-    ))
 }
 
 /// A cross-reference in angle-bracket form: `<<id>>` or `<<id,text>>`. Requires
@@ -726,16 +665,12 @@ mod tests {
         assert!(children.iter().any(|n| matches!(n, Inline::Strong { .. })));
     }
 
-    /// The single link node in `v`, or `None`.
-    fn first_link(v: &[Inline]) -> Option<(String, Vec<Inline>, bool, Span)> {
-        v.iter().find_map(|n| match n {
-            Inline::Link {
-                target,
-                children,
-                bare,
-                span,
-            } => Some((target.clone(), children.clone(), *bare, *span)),
-            _ => None,
+    /// The first semantic link and its display parts and source coverage.
+    fn first_link(v: &[Inline]) -> Option<(String, Vec<crate::AttributePart>, bool, Span)> {
+        v.iter().find_map(|n| {
+            let Inline::Substituted { parts, span, .. } = n else { return None };
+            let [crate::AttributePart::OpenLink(link), label @ .., crate::AttributePart::CloseLink] = parts.as_slice() else { return None };
+            Some((link.target.clone(), label.to_vec(), link.role.as_deref() == Some("bare"), *span))
         })
     }
 
@@ -752,10 +687,7 @@ mod tests {
         assert!(!bare);
         assert_eq!(
             children,
-            vec![Inline::Text {
-                value: "the site".into(),
-                span: Span::new(29, 37),
-            }]
+            vec![crate::AttributePart::Text("the site".into())]
         );
     }
 
@@ -793,7 +725,15 @@ mod tests {
     fn link_text_parses_inline_markup() {
         let v = scan_inlines("link:https://h[*bold* text]", 0, &attrs());
         let (_, children, _, _) = first_link(&v).expect("no link");
-        assert!(children.iter().any(|n| matches!(n, Inline::Strong { .. })));
+        assert_eq!(
+            children,
+            vec![
+                crate::AttributePart::Open(crate::AttributeFormat::Strong),
+                crate::AttributePart::Text("bold".into()),
+                crate::AttributePart::Close(crate::AttributeFormat::Strong),
+                crate::AttributePart::Text(" text".into()),
+            ]
+        );
     }
 
     #[test]
@@ -802,7 +742,7 @@ mod tests {
         let (target, children, bare, _) = first_link(&v).expect("no link");
         assert!(bare);
         assert_eq!(target, "https://h");
-        assert!(matches!(&children[0], Inline::Text { value, .. } if value == "https://h"));
+        assert!(matches!(&children[0], crate::AttributePart::Text(value) if value == "https://h"));
     }
 
     #[test]
@@ -836,8 +776,7 @@ mod tests {
 
     #[test]
     fn bare_link_inside_strong_still_links() {
-        // The recursive scanner handles `*https://h*` for free: Strong wraps a
-        // bare Link.
+        // Quote boundaries survive around a generated bare link.
         let v = scan_inlines("*https://h*", 0, &attrs());
         let children = v
             .iter()
@@ -846,7 +785,7 @@ mod tests {
                 _ => None,
             })
             .expect("no strong");
-        assert!(children.iter().any(|n| matches!(n, Inline::Link { .. })));
+        assert_eq!(first_link(&children).unwrap().0, "https://h");
     }
 
     #[test]

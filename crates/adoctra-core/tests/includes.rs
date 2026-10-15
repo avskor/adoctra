@@ -24,6 +24,58 @@ fn setup(root: &str, files: &[(&str, &str)]) -> (SourceMap, MemoryResources, Par
 }
 
 #[test]
+fn direct_link_labels_cross_files_and_keep_formatting_provenance() {
+    let root = ":target: page\n\nlink:{target}[*First\ninclude::part.adoc[]";
+    let (mut sources, resources, options) = setup(root, &[("docs/part.adoc", "Second*]")]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+        panic!()
+    };
+    let Inline::Substituted { value, span, parts } = &inlines[0] else {
+        panic!("{inlines:?}")
+    };
+    assert_eq!(value, "First Second");
+    assert!(matches!(&parts[0], adoctra_core::AttributePart::OpenLink(l) if l.target == "page"));
+    let fragments = &result.provenance[span.provenance.unwrap()];
+    assert_eq!(
+        sources.slice(fragments[0]),
+        Some("link:{target}[*First\ninclude::part.adoc[]")
+    );
+    assert_eq!(sources.slice(*fragments.last().unwrap()), Some("Second*]"));
+    check_spans(&result, &sources);
+}
+
+#[test]
+fn direct_link_tokens_survive_include_selection_and_indentation() {
+    let root = "include::part.adoc[tags=body,indent=0]";
+    let part = "\u{feff}// tag::body[]\r\n  :target: страница\r\n\r\n  Ж(C) link:{target}[*Жёлтый*]\r\n// end::body[]";
+    let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", part)]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+        panic!()
+    };
+    let link = inlines
+        .iter()
+        .find(|n| matches!(n, Inline::Substituted { .. }))
+        .unwrap();
+    assert_eq!(sources.slice(link.span()), Some("link:{target}[*Жёлтый*]"));
+    let tokens = tokens_resource(&mut sources, &options, &resources).unwrap();
+    for (kind, syntax) in [
+        (TokenKind::Link, "link:{target}[*Жёлтый*]"),
+        (TokenKind::AttributeRef, "{target}"),
+        (TokenKind::Strong, "*Жёлтый*"),
+    ] {
+        assert!(
+            tokens
+                .iter()
+                .any(|t| t.kind == kind && sources.slice(t.span) == Some(syntax)),
+            "{tokens:?}"
+        );
+    }
+    check_spans(&result, &sources);
+}
+
+#[test]
 fn post_attribute_macro_across_files_retains_all_source_fragments() {
     let root = ":k: nk:\n\nli{k}page[First\ninclude::part.adoc[]";
     let (mut sources, resources, options) = setup(root, &[("docs/part.adoc", "Second]")]);

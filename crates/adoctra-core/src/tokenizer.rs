@@ -13,7 +13,7 @@
 use crate::ast::{AdmonitionKind, Inline, Span};
 use crate::context::{ParseContext, ParseOptions};
 use crate::header::collect_header;
-use crate::inline::scan_inlines;
+use crate::inline::scan_for_tokens as scan_inlines;
 use crate::parser::{
     parse_block_anchor, parse_block_attr_list, parse_block_title, parse_heading, parse_list_marker,
 };

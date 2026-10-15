@@ -1,13 +1,15 @@
 //! Ordered replacements over the lexical view after attribute expansion.
 //! The order and escape rules follow Asciidoctor 2.0.23 REPLACEMENTS.
-use crate::substitution_text::{self, Text};
-use crate::{AttributePart, Inline};
+use crate::substitution_text::Text;
+use crate::AttributePart;
 use std::borrow::Cow;
 
-/// Formatting and macros bound runs; adjacent Text and AttributeRef values share
-/// a stream. Children have markup on both sides, not artificial line boundaries.
-pub(crate) fn apply_inlines(nodes: &mut Vec<Inline>, fold_newlines: bool) {
-    process(nodes, fold_newlines, true);
+/// Preserve fragment ownership and physical positions until macros also finish.
+pub(crate) fn apply_text(mut text: Text, left: bool, right: bool) -> Text {
+    for stage in 0..13 {
+        text = replace_stage(text, stage, left, right, true);
+    }
+    text
 }
 
 /// Attribute entries may apply specialcharacters after replacements. Keep the
@@ -19,79 +21,6 @@ pub(crate) fn apply_parts(parts: Vec<AttributePart>) -> Vec<AttributePart> {
         text = replace_stage(text, stage, true, true, false);
     }
     text.into_parts()
-}
-
-fn process(nodes: &mut Vec<Inline>, fold_newlines: bool, edges: bool) {
-    let old = std::mem::take(nodes);
-    let mut pending = Vec::new();
-    let mut left_edge = edges;
-    for mut node in old {
-        if matches!(
-            &node,
-            Inline::Text { .. } | Inline::AttributeRef { value: Some(_), .. }
-        ) {
-            pending.push(node);
-            continue;
-        }
-        flush(&mut pending, nodes, fold_newlines, left_edge, false);
-        match &mut node {
-            Inline::Strong { children, .. }
-            | Inline::Emphasis { children, .. }
-            | Inline::Monospace { children, .. }
-            | Inline::Mark { children, .. }
-            | Inline::Superscript { children, .. }
-            | Inline::Subscript { children, .. }
-            | Inline::CrossReference { children, .. }
-            | Inline::Link {
-                children,
-                bare: false,
-                ..
-            } => process(children, true, false),
-            Inline::Anchor {
-                reftext: Some(children),
-                ..
-            } => process(children, true, false),
-            _ => {}
-        }
-        nodes.push(node);
-        left_edge = false;
-    }
-    flush(&mut pending, nodes, fold_newlines, left_edge, edges);
-}
-
-fn flush(pending: &mut Vec<Inline>, output: &mut Vec<Inline>, fold: bool, left: bool, right: bool) {
-    if pending.is_empty() {
-        return;
-    }
-    let mut text = Text::default();
-    for (owner, node) in pending.iter().enumerate() {
-        match node {
-            Inline::Text { value, span } => text.append(value, false, owner, *span, true),
-            Inline::AttributeRef {
-                value: Some(value),
-                parts,
-                span,
-                ..
-            } => {
-                if parts.is_empty() {
-                    text.append(value, false, owner, *span, false);
-                } else {
-                    for part in parts {
-                        text.append_part(part, owner, *span);
-                    }
-                }
-            }
-            _ => unreachable!(),
-        }
-    }
-    for stage in 0..13 {
-        text = replace_stage(text, stage, left, right, true);
-    }
-    output.extend(substitution_text::write_back(
-        std::mem::take(pending),
-        text,
-        fold,
-    ));
 }
 
 struct Match<'a> {
@@ -226,18 +155,8 @@ fn is_word(ch: char) -> bool {
 
 #[cfg(test)]
 fn apply(src: &str) -> String {
-    let mut nodes = vec![Inline::Text {
-        value: src.into(),
-        span: crate::Span::new(0, src.len()),
-    }];
-    apply_inlines(&mut nodes, false);
-    nodes
-        .into_iter()
-        .map(|n| match n {
-            Inline::Text { value, .. } | Inline::Raw { value, .. } => value,
-            _ => unreachable!(),
-        })
-        .collect()
+    let text = Text::from_parts(&[AttributePart::Text(src.into())]);
+    crate::attributes::parts_text(&apply_text(text, true, true).into_parts())
 }
 
 #[cfg(test)]

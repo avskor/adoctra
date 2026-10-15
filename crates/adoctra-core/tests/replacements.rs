@@ -16,7 +16,9 @@ fn text(nodes: &[Inline]) -> String {
     nodes
         .iter()
         .map(|node| match node {
-            Inline::Text { value, .. } | Inline::Raw { value, .. } => value.clone(),
+            Inline::Text { value, .. }
+            | Inline::Raw { value, .. }
+            | Inline::Substituted { value, .. } => value.clone(),
             Inline::AttributeRef { value, .. } => value.clone().unwrap_or_default(),
             Inline::Strong { children, .. } | Inline::Link { children, .. } => text(children),
             _ => panic!("unexpected inline {node:?}"),
