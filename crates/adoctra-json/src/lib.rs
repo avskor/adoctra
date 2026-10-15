@@ -565,6 +565,20 @@ mod tests {
     }
 
     #[test]
+    fn source_quote_metadata_and_typographic_text_export_neutral_semantics() {
+        let json = render(":role: red\n\nA [{role}]\"`Жёлтый`\" \\*Literal* _Italic_");
+        assert!(
+            json.contains(r#""parts":[{"kind":"open","format":"span","role":"red"}]"#),
+            "{json}"
+        );
+        assert!(json.contains("“"), "{json}");
+        assert!(json.contains("”"), "{json}");
+        assert!(json.contains(r#""name":"emphasis""#), "{json}");
+        assert!(!json.contains(r#""name":"strong""#), "{json}");
+        assert!(!json.contains("<span"), "{json}");
+    }
+
+    #[test]
     fn direct_links_export_substituted_targets_and_formatted_labels() {
         let json = render(":target: page?a=1&b=2\n\nlink:{target}[*Ж&*,role=red,title=Title]");
         assert!(json.contains(r#""name":"substituted","value":"Ж&","parts":[{"kind":"open-link","target":"page?a=1&amp;b=2","role":"red","title":"Title"},{"kind":"open","format":"strong"},{"kind":"text","value":"Ж&"},{"kind":"close","format":"strong"},{"kind":"close-link"}]"#), "{json}");

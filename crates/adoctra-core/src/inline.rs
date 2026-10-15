@@ -14,29 +14,23 @@
 
 use crate::ast::{Inline, Span};
 use crate::attributes::Attributes;
+use crate::inline_quotes::Quotes;
 use crate::parser::is_valid_anchor_id;
 
-/// Scan inline markup in `src`. `base` is the absolute byte offset of `src[0]`
-/// in the original source; `attrs` resolves `{name}` references. Newlines in text
-/// content fold to spaces (asciidoctor's soft wrap); use [`scan_inlines_with`] to
-/// keep them.
+/// Scan inline markup with the block's effective attributes.
 pub(crate) fn scan_inlines(src: &str, base: usize, attrs: &Attributes) -> Vec<Inline> {
     scan_inlines_with(src, base, attrs, true)
 }
 
-/// Like [`scan_inlines`], but `fold_newlines` chooses whether newlines in *text*
-/// content collapse to spaces. A paragraph folds (a soft line wrap is just a
-/// space); a verse block does **not** — its line breaks are significant and render
-/// inside a `<pre>`. A newline *inside* an inline-markup span still folds (markup
-/// children are scanned through the regular folding path), but markup straddling a
-/// line break is vanishingly rare in verse.
+/// `fold_newlines` preserves verse line breaks while keeping physical spans.
 pub(crate) fn scan_inlines_with(
     src: &str,
     base: usize,
     attrs: &Attributes,
     fold_newlines: bool,
 ) -> Vec<Inline> {
-    let mut out = scan_unprocessed(src, base, attrs);
+    let quotes = Quotes::new(src, base, attrs, attrs.get("compat-mode").is_some());
+    let mut out = scan_unprocessed(src, base, attrs, &quotes);
     crate::attribute_macros::apply_inlines(&mut out, attrs, fold_newlines);
     out
 }
@@ -44,7 +38,8 @@ pub(crate) fn scan_inlines_with(
 /// Preserve source syntax for highlighting even when a later macro consumes it.
 /// Links are reported by the same late matcher that produces semantic parts.
 pub(crate) fn scan_for_tokens(src: &str, base: usize, attrs: &Attributes) -> Vec<Inline> {
-    let mut syntax = scan_unprocessed(src, base, attrs);
+    let quotes = Quotes::new(src, base, attrs, attrs.get("compat-mode").is_some());
+    let mut syntax = scan_unprocessed(src, base, attrs, &quotes);
     let mut processed = syntax.clone();
     for span in crate::attribute_macros::apply_inlines(&mut processed, attrs, true) {
         syntax.push(Inline::Link {
@@ -54,17 +49,24 @@ pub(crate) fn scan_for_tokens(src: &str, base: usize, attrs: &Attributes) -> Vec
             span,
         });
     }
+    syntax.extend(quotes.syntax());
     syntax
 }
 
-fn scan_unprocessed(src: &str, base: usize, attrs: &Attributes) -> Vec<Inline> {
-    let quotes = QuoteIndex::new(src);
+fn scan_unprocessed(src: &str, base: usize, attrs: &Attributes, quotes: &Quotes) -> Vec<Inline> {
     let mut out = Vec::new();
     let mut text_start = 0usize;
     let mut i = 0usize;
 
     while i < src.len() {
-        if let Some((node, end)) = try_match(src, i, base, attrs, &quotes) {
+        if let Some(edit) = quotes.edits.get(&(base + i)) {
+            flush_text(src, text_start, i, base, &mut out);
+            out.extend(edit.nodes.clone());
+            i = edit.end - base;
+            text_start = i;
+            continue;
+        }
+        if let Some((node, end)) = try_match(src, i, base, attrs, quotes) {
             flush_text(src, text_start, i, base, &mut out);
             out.push(node);
             i = end;
@@ -75,7 +77,7 @@ fn scan_unprocessed(src: &str, base: usize, attrs: &Attributes) -> Vec<Inline> {
         }
     }
     flush_text(src, text_start, src.len(), base, &mut out);
-    out
+    quotes.rebuild(out, base..base + src.len())
 }
 
 /// Try to recognise a construct starting at byte `i`. Returns the node and the
@@ -85,173 +87,28 @@ fn try_match(
     i: usize,
     base: usize,
     attrs: &Attributes,
-    quotes: &QuoteIndex,
+    quotes: &Quotes,
 ) -> Option<(Inline, usize)> {
-    // Wrap a matcher's `(children, absolute_end)` into a quote node: the span
-    // covers the markers, and `scan_inlines` wants the end as a src-relative
-    // index (hence `end - base`).
-    let quote = |make: fn(Vec<Inline>, Span) -> Inline, res: Option<(Vec<Inline>, usize)>| {
-        res.map(|(children, end)| (make(children, Span::new(base + i, end)), end - base))
-    };
     match src.as_bytes()[i] {
-        // Single constrained and double unconstrained quote markers.
-        b'*' => quote(
-            |children, span| Inline::Strong { children, span },
-            match_quoted(src, i, b'*', base, attrs, quotes),
-        ),
-        b'_' => quote(
-            |children, span| Inline::Emphasis { children, span },
-            match_quoted(src, i, b'_', base, attrs, quotes),
-        ),
-        b'`' => quote(
-            |children, span| Inline::Monospace { children, span },
-            match_quoted(src, i, b'`', base, attrs, quotes),
-        ),
-        b'#' => quote(
-            |children, span| Inline::Mark { children, span },
-            match_quoted(src, i, b'#', base, attrs, quotes),
-        ),
-        // Unconstrained quotes: match anywhere (incl. mid-word), but the content
-        // may not be empty or contain whitespace.
-        b'^' => quote(
-            |children, span| Inline::Superscript { children, span },
-            match_unconstrained(src, i, b'^', base, attrs),
-        ),
-        b'~' => quote(
-            |children, span| Inline::Subscript { children, span },
-            match_unconstrained(src, i, b'~', base, attrs),
-        ),
-        b'{' => match_attribute(src, i, base, attrs),
+        b'{' => match_attribute(src, i, base, attrs).filter(|(_, end)| {
+            // Quotes precede attributes: a transformed name is not the original
+            // source reference, and its surviving quote boundaries must render.
+            quotes
+                .edits
+                .range(base + i + 1..base + end)
+                .next()
+                .is_none()
+        }),
         // Cross-references: the `<<id>>` / `<<id,text>>` angle form, and the
         // `xref:id[text]` macro (brackets mandatory, like `link:`).
-        b'<' => match_xref_angle(src, i, base, attrs),
-        b'x' => match_xref_macro(src, i, base, attrs),
+        b'<' => match_xref_angle(src, i, base, attrs, quotes),
+        b'x' => match_xref_macro(src, i, base, attrs, quotes),
         // Inline anchors: the `[[id]]` / `[[id,reftext]]` shorthand mid-text, and
         // the `anchor:id[reftext]` macro (brackets mandatory, like `xref:`).
-        b'[' => match_inline_anchor(src, i, base, attrs),
-        b'a' => match_anchor_macro(src, i, base, attrs),
+        b'[' => match_inline_anchor(src, i, base, attrs, quotes),
+        b'a' => match_anchor_macro(src, i, base, attrs, quotes),
         _ => None,
     }
-}
-
-fn quote_word(ch: char) -> bool {
-    crate::unicode_word::is_alphanumeric(ch) || crate::unicode_word::is_mark_or_connector(ch)
-}
-
-fn quote_space(ch: char) -> bool {
-    matches!(ch, ' ' | '\t'..='\r')
-}
-
-fn quote_extra(marker: u8, ch: char) -> bool {
-    match marker {
-        b'#' => ch == '&',
-        b'`' => matches!(ch, '"' | '\'' | '`'),
-        _ => false,
-    }
-}
-
-/// Index eligible closing markers once, including constrained word/space edges.
-/// Repeated incomplete openers in an editor buffer must not rescan every suffix.
-struct QuoteIndex {
-    single: [Vec<usize>; 4],
-    double: [Vec<usize>; 4],
-}
-
-impl QuoteIndex {
-    const MARKERS: [u8; 4] = *b"*_`#";
-
-    fn new(src: &str) -> Self {
-        let mut result = Self {
-            single: Default::default(),
-            double: Default::default(),
-        };
-        for (at, ch) in src.char_indices() {
-            let Some(index) = Self::MARKERS.iter().position(|&m| ch == m as char) else {
-                continue;
-            };
-            let marker = Self::MARKERS[index];
-            if src.as_bytes().get(at + 1) == Some(&marker) {
-                result.double[index].push(at);
-            }
-            if src[..at]
-                .chars()
-                .next_back()
-                .is_some_and(|c| !quote_space(c))
-                && !src[at + 1..]
-                    .chars()
-                    .next()
-                    .is_some_and(|c| quote_word(c) || (marker == b'`' && quote_extra(marker, c)))
-            {
-                result.single[index].push(at);
-            }
-        }
-        result
-    }
-
-    fn close(&self, marker: u8, doubled: bool, after: usize) -> Option<usize> {
-        let index = Self::MARKERS.iter().position(|&m| m == marker).unwrap();
-        let positions = if doubled {
-            &self.double[index]
-        } else {
-            &self.single[index]
-        };
-        positions
-            .get(positions.partition_point(|&at| at < after))
-            .copied()
-    }
-}
-
-/// Single markers require lexical boundaries; doubled markers are unconstrained.
-/// Check these before macros so punctuation and underscores in link targets do
-/// not accidentally become generated formatting tags.
-fn match_quoted(
-    src: &str,
-    i: usize,
-    marker: u8,
-    base: usize,
-    attrs: &Attributes,
-    quotes: &QuoteIndex,
-) -> Option<(Vec<Inline>, usize)> {
-    let doubled = src.as_bytes().get(i + 1) == Some(&marker);
-    let width = if doubled { 2 } else { 1 };
-    if !doubled
-        && src[..i].chars().next_back().is_some_and(|ch| {
-            quote_word(ch) || matches!(ch, ';' | ':' | '}') || quote_extra(marker, ch)
-        })
-    {
-        return None;
-    }
-    let inner_start = i + width;
-    let first = src[inner_start..].chars().next()?;
-    if !doubled && quote_space(first) {
-        return None;
-    }
-    let close = quotes.close(marker, doubled, inner_start + first.len_utf8())?;
-    let children = scan_unprocessed(&src[inner_start..close], base + inner_start, attrs);
-    Some((children, base + close + width))
-}
-
-/// An unconstrained quote `^...^` / `~...~`: open marker at `i`, first matching
-/// marker closes it. Unlike [`match_quoted`] there is no word-boundary rule (it
-/// matches mid-word, e.g. `E=mc^2^`), but the content must be non-empty and
-/// contain no whitespace — otherwise the marker is just text. Returns the parsed
-/// children and the absolute end offset (one past the closing marker).
-fn match_unconstrained(
-    src: &str,
-    i: usize,
-    marker: u8,
-    base: usize,
-    attrs: &Attributes,
-) -> Option<(Vec<Inline>, usize)> {
-    let inner_start = i + 1;
-    let rel_close = src[inner_start..].find(marker as char)?;
-    let close = inner_start + rel_close;
-    let inner = &src[inner_start..close];
-    if inner.is_empty() || inner.contains(char::is_whitespace) {
-        return None;
-    }
-    let children = scan_unprocessed(inner, base + inner_start, attrs);
-    Some((children, base + close + 1))
 }
 
 /// An attribute reference `{name}`. The name must be non-empty and contain no
@@ -293,6 +150,7 @@ fn match_xref_angle(
     i: usize,
     base: usize,
     attrs: &Attributes,
+    quotes: &Quotes,
 ) -> Option<(Inline, usize)> {
     if !src[i..].starts_with("<<") {
         return None;
@@ -318,7 +176,7 @@ fn match_xref_angle(
     if target.is_empty() {
         return None;
     }
-    let children = xref_children(reftext, reftext_off, base, attrs);
+    let children = xref_children(reftext, reftext_off, base, attrs, quotes);
     Some((
         Inline::CrossReference {
             target: target.to_string(),
@@ -338,6 +196,7 @@ fn match_xref_macro(
     i: usize,
     base: usize,
     attrs: &Attributes,
+    quotes: &Quotes,
 ) -> Option<(Inline, usize)> {
     const PREFIX: &str = "xref:";
     if !src[i..].starts_with(PREFIX) {
@@ -353,7 +212,7 @@ fn match_xref_macro(
     let rel_close = src[text_start..].find(']')?;
     let close = text_start + rel_close;
     let end = close + 1;
-    let children = xref_children(&src[text_start..close], text_start, base, attrs);
+    let children = xref_children(&src[text_start..close], text_start, base, attrs, quotes);
     Some((
         Inline::CrossReference {
             target: target.to_string(),
@@ -373,11 +232,12 @@ fn xref_children(
     reftext_off: usize,
     base: usize,
     attrs: &Attributes,
+    quotes: &Quotes,
 ) -> Vec<Inline> {
     if reftext.is_empty() {
         Vec::new()
     } else {
-        scan_unprocessed(reftext, base + reftext_off, attrs)
+        scan_unprocessed(reftext, base + reftext_off, attrs, quotes)
     }
 }
 
@@ -396,6 +256,7 @@ fn match_inline_anchor(
     i: usize,
     base: usize,
     attrs: &Attributes,
+    quotes: &Quotes,
 ) -> Option<(Inline, usize)> {
     if !src[i..].starts_with("[[") {
         return None;
@@ -424,7 +285,7 @@ fn match_inline_anchor(
     Some((
         Inline::Anchor {
             id: id.to_string(),
-            reftext: anchor_reftext(reftext, reftext_off, base, attrs),
+            reftext: anchor_reftext(reftext, reftext_off, base, attrs, quotes),
             span: Span::new(base + i, base + end),
         },
         end,
@@ -441,6 +302,7 @@ fn match_anchor_macro(
     i: usize,
     base: usize,
     attrs: &Attributes,
+    quotes: &Quotes,
 ) -> Option<(Inline, usize)> {
     const PREFIX: &str = "anchor:";
     if !src[i..].starts_with(PREFIX) {
@@ -459,7 +321,7 @@ fn match_anchor_macro(
     Some((
         Inline::Anchor {
             id: id.to_string(),
-            reftext: anchor_reftext(&src[text_start..close], text_start, base, attrs),
+            reftext: anchor_reftext(&src[text_start..close], text_start, base, attrs, quotes),
             span: Span::new(base + i, base + end),
         },
         end,
@@ -475,11 +337,12 @@ fn anchor_reftext(
     reftext_off: usize,
     base: usize,
     attrs: &Attributes,
+    quotes: &Quotes,
 ) -> Option<Vec<Inline>> {
     if reftext.is_empty() {
         None
     } else {
-        Some(scan_unprocessed(reftext, base + reftext_off, attrs))
+        Some(scan_unprocessed(reftext, base + reftext_off, attrs, quotes))
     }
 }
 

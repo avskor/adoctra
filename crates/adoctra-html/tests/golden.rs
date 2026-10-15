@@ -843,6 +843,20 @@ fn quote_attributes_match_reference_and_ordered_protection() {
 }
 
 #[test]
+fn ordered_inline_quotes_match_reference_with_metadata_and_escapes() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden");
+    let source = fs::read_to_string(dir.join("inline-quotes.adoc")).unwrap();
+    let expected = fs::read_to_string(dir.join("inline-quotes.expected.html")).unwrap();
+    let actual = String::from_utf8(
+        HtmlBackend
+            .convert(&adoctra_core::parse(&source).document)
+            .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(paragraph_inner(&actual), paragraph_inner(&expected));
+}
+
+#[test]
 fn direct_link_macros_follow_ordered_substitutions() {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden");
     let source = fs::read_to_string(dir.join("direct-link-macros.adoc")).unwrap();

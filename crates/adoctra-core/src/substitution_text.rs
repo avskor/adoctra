@@ -91,6 +91,14 @@ impl Text {
         result
     }
 
+    pub fn into_fragments(mut self) -> Vec<Fragment> {
+        self.restore_boundaries();
+        self.fragments
+            .into_iter()
+            .map(|(_, fragment)| fragment)
+            .collect()
+    }
+
     pub fn into_parts(mut self) -> Vec<AttributePart> {
         self.restore_boundaries();
         let mut parts = Vec::new();

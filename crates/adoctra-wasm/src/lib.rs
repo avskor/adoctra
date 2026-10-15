@@ -1345,6 +1345,20 @@ mod header_tests {
     }
 
     #[test]
+    fn source_quote_metadata_and_typographic_text_export_neutral_semantics() {
+        let json = super::parse_json(":role: red\n\nA [{role}]\"`Жёлтый`\" \\*Literal* _Italic_");
+        assert!(
+            json.contains(r#""parts":[{"kind":"open","format":"span","role":"red"}]"#),
+            "{json}"
+        );
+        assert!(json.contains("“"), "{json}");
+        assert!(json.contains("”"), "{json}");
+        assert!(json.contains(r#""name":"emphasis""#), "{json}");
+        assert!(!json.contains(r#""name":"strong""#), "{json}");
+        assert!(!json.contains("<span"), "{json}");
+    }
+
+    #[test]
     fn direct_links_export_substituted_targets_and_formatted_labels() {
         let json =
             super::parse_json(":target: page?a=1&b=2\n\nlink:{target}[*Ж&*,role=red,title=Title]");
@@ -1377,6 +1391,36 @@ mod header_tests {
         );
         let json = super::parse_json(":v: pass:m[link:page[Alpha]]\n\n<<_alpha>>\n\n== {v}");
         assert!(json.contains(r#""target":"_alpha""#), "{json}");
+    }
+
+    #[test]
+    fn source_quote_tokens_keep_consumed_metadata_and_unicode_offsets() {
+        let source = "\u{feff}:role: красный\r\n\r\nЖ(C) [{role}]*Жёлтый* \\_Literal_";
+        let json = super::parse_json_with_source(source, 7);
+        let start = source.find("[{role}]").unwrap();
+        let end = start + "[{role}]*".len();
+        assert!(
+            json.contains(&format!(
+                r#""span":{{"source_id":7,"start":{start},"end":{end}}},"name":"substituted""#
+            )),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""name":"attribute-ref","attribute":"role","value":"""#),
+            "{json}"
+        );
+        let tokens = super::tokens_json_with_source(source, 7);
+        for (kind, syntax) in [("strong", "[{role}]*Жёлтый*"), ("attribute-ref", "{role}")] {
+            let start = source.find(syntax).unwrap();
+            assert!(
+                tokens.contains(&format!(
+                    r#""span":{{"source_id":7,"start":{start},"end":{}}},"kind":"{kind}""#,
+                    start + syntax.len()
+                )),
+                "{tokens}"
+            );
+        }
+        assert!(!tokens.contains(r#""kind":"emphasis""#), "{tokens}");
     }
 
     #[test]

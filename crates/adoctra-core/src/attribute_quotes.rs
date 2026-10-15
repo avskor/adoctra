@@ -1,4 +1,4 @@
-//! Ordered quote substitutions for whole-value pass attributes. Generated
+//! Ordered quote substitutions shared by inline source and whole-value pass attributes. Generated
 //! formatting is semantic; only the temporary matching view has reference tags.
 use crate::substitution_text::Text;
 use crate::{AttributeFormat as Format, AttributePart, Attributes, Span};
@@ -15,6 +15,30 @@ pub(crate) fn apply(
     compat: bool,
     attributes: &Attributes,
 ) -> Vec<AttributePart> {
+    apply_text(
+        Text::from_parts(&parts),
+        compat,
+        attributes,
+        &mut Vec::new(),
+        false,
+    )
+    .into_parts()
+}
+
+#[derive(Clone)]
+pub(crate) struct Quote {
+    pub span: Span,
+    pub format: Option<Format>,
+    pub decorated: bool,
+}
+
+pub(crate) fn apply_text(
+    mut text: Text,
+    compat: bool,
+    attributes: &Attributes,
+    quotes: &mut Vec<Quote>,
+    source: bool,
+) -> Text {
     use Format::*;
     let stages = [
         ("**", "**", Some(Strong), false),
@@ -51,7 +75,6 @@ pub(crate) fn apply(
         ("^", "^", Some(Superscript), false),
         ("~", "~", Some(Subscript), false),
     ];
-    let mut text = Text::from_parts(&parts);
     for (index, (open, close, format, constrained)) in stages.into_iter().enumerate() {
         if !open.is_empty() {
             text = apply_stage(
@@ -65,10 +88,12 @@ pub(crate) fn apply(
                 index == 2,
                 compat,
                 attributes,
+                quotes,
+                source,
             );
         }
     }
-    text.into_parts()
+    text
 }
 
 fn word(ch: char) -> bool {
@@ -85,8 +110,13 @@ fn apply_stage(
     double: bool,
     compat: bool,
     attributes: &Attributes,
+    quotes: &mut Vec<Quote>,
+    source: bool,
 ) -> Text {
     let src = &text.text;
+    if !src.contains(stage.open) {
+        return text;
+    }
     // Index eligible closers once. Repeated unmatched openers ("*a *a …")
     // must not rescan the entire suffix for every marker in an editor buffer.
     let closings: Vec<_> = src
@@ -197,29 +227,38 @@ fn apply_stage(
                 } else {
                     AttributePart::Open(format)
                 };
-                output.append_part(&part, 0, Span::new(0, 0));
+                text.replace_parts(
+                    if escaped { open } else { prefix }..inner,
+                    &[part],
+                    &mut output,
+                );
             }
             if stage.format.is_none() {
-                output.append(
+                text.replacement(
+                    open..inner,
                     if double { "&#8220;" } else { "&#8216;" },
-                    true,
-                    0,
-                    Span::new(0, 0),
-                    false,
+                    source.then_some(if double { "“" } else { "‘" }),
+                    &mut output,
                 );
             }
             text.copy(inner..close, &mut output);
             if stage.format.is_none() {
-                output.append(
+                text.replacement(
+                    close..end,
                     if double { "&#8221;" } else { "&#8217;" },
-                    true,
-                    0,
-                    Span::new(0, 0),
-                    false,
+                    source.then_some(if double { "”" } else { "’" }),
+                    &mut output,
                 );
             }
             if let Some(format) = wrapper {
-                output.append_part(&AttributePart::Close(format), 0, Span::new(0, 0));
+                text.replace_parts(close..end, &[AttributePart::Close(format)], &mut output);
+            }
+            if source {
+                quotes.push(Quote {
+                    span: text.match_span(if escaped { open } else { prefix }..end),
+                    format: wrapper,
+                    decorated,
+                });
             }
         }
         copied = end;

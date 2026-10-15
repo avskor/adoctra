@@ -198,15 +198,19 @@ Replacements and macros retain one fragment map until AST write-back, preserving
 precise link spans after length-changing replacements. Source quotes are flattened
 temporarily into semantic boundaries and surviving pairs are rebuilt into their
 original nodes. Syntax highlighting retains consumed quote/attribute tokens and
-uses link spans reported by the matcher. Source single quote markers observe word,
-space and punctuation boundaries; doubled markers are unconstrained. Eligible
-closers are indexed for incomplete editor input. The next step is the complete
-ordinary quote pipeline (escapes, ordered nesting, metadata and compat-mode).
-Non-link pass macros, general inline attribute escapes/intrinsics and raw
-whole-doctitle replacement also remain work.
-The quote compat-mode is cached from host overrides at context creation and from
-attributes at header completion; header entries and body assignments do not
-eagerly change this cache. This does not yet change the ordinary inline scanner.
+uses link spans reported by the matcher. Ordinary source quotes and whole-value
+pass:q now share attribute_quotes.rs with ordered stages, single/double markers, escaping,
+roles/id and typographic quotes. inline_quotes.rs maps the result to source edits,
+rebuilds undecorated AST quote nodes, and preserves decorated semantic boundaries
+in Substituted. Source typographic characters remain Unicode Text. Metadata-
+consumed attribute references remain empty nodes with physical spans/tokens.
+Eligible closers are indexed for incomplete editor input. Source quotes use the
+block's effective compat-mode; attribute-entry pass:q uses the cached mode from
+host overrides/context creation and header completion. The next step is inline
+passthrough extraction before quotes, including plus/backtick forms and compat-mode.
+Early catalog registration of anchors consumed by quote metadata, non-link pass
+macros, general inline attribute escapes/intrinsics and raw whole-doctitle
+replacement also remain work.
 Automatic section IDs sanitize a temporary lexical title: raw XML tags and
 references matching the pinned entity grammar are removed, not decoded.
 Literal protection and structural inline boundaries remain distinct; title

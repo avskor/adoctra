@@ -85,7 +85,7 @@ fn flatten(nodes: Vec<Inline>, flat: &mut Vec<Inline>, quotes: &mut Vec<Inline>)
     }
 }
 
-fn rebuild(nodes: Vec<Inline>, quotes: Vec<Inline>) -> Vec<Inline> {
+pub(crate) fn rebuild(nodes: Vec<Inline>, quotes: Vec<Inline>) -> Vec<Inline> {
     let mut openings: BTreeMap<_, _> = quotes.into_iter().map(|n| (n.span().start, n)).collect();
     let mut output = Vec::new();
     let mut stack: Vec<(Inline, Inline, Vec<Inline>)> = Vec::new();

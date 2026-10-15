@@ -24,6 +24,53 @@ fn setup(root: &str, files: &[(&str, &str)]) -> (SourceMap, MemoryResources, Par
 }
 
 #[test]
+fn source_quotes_keep_metadata_reference_tokens_in_selected_include_text() {
+    let root = "include::part.adoc[tags=body,indent=0]";
+    let part = "\u{feff}// tag::body[]\r\n  :role: красный\r\n\r\n  Ж(C) [{role}]*Жёлтый*\r\n// end::body[]";
+    let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", part)]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+        panic!()
+    };
+    assert!(inlines.iter().any(|n| matches!(n, Inline::Substituted { parts, span, .. }
+        if matches!(&parts[0], adoctra_core::AttributePart::OpenWithAttributes { role: Some(role), .. } if role == "красный")
+        && sources.slice(*span) == Some("[{role}]*"))));
+    let tokens = tokens_resource(&mut sources, &options, &resources).unwrap();
+    for (kind, syntax) in [
+        (TokenKind::Strong, "[{role}]*Жёлтый*"),
+        (TokenKind::AttributeRef, "{role}"),
+    ] {
+        assert!(
+            tokens
+                .iter()
+                .any(|t| t.kind == kind && sources.slice(t.span) == Some(syntax)),
+            "{tokens:?}"
+        );
+    }
+    check_spans(&result, &sources);
+}
+
+#[test]
+fn ordered_source_quotes_retain_provenance_across_an_include_and_comment() {
+    let root = "*First\n// hidden\ninclude::part.adoc[]";
+    let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", "**Second** Tail*")]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+        panic!()
+    };
+    let Inline::Strong { children, span } = &inlines[0] else {
+        panic!("{inlines:?}")
+    };
+    let fragments = &result.provenance[span.provenance.unwrap()];
+    assert_eq!(fragments.first().unwrap().source_id, options.source_id);
+    assert_eq!(fragments.last().unwrap().source_id, SourceId(1));
+    assert!(children.iter().any(
+        |n| matches!(n, Inline::Strong { span, .. } if sources.slice(*span) == Some("**Second**"))
+    ));
+    check_spans(&result, &sources);
+}
+
+#[test]
 fn direct_link_labels_cross_files_and_keep_formatting_provenance() {
     let root = ":target: page\n\nlink:{target}[*First\ninclude::part.adoc[]";
     let (mut sources, resources, options) = setup(root, &[("docs/part.adoc", "Second*]")]);
