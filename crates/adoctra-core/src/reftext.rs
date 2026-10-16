@@ -33,6 +33,16 @@ pub(crate) fn read(
 }
 
 impl Read {
+    /// A value already expanded by an attribute list's early a-stage.
+    pub fn expanded(expanded: Text, refs: Vec<crate::inline_attributes::Reference>) -> Self {
+        Read {
+            value: expanded.text.clone(),
+            references: refs.iter().map(|r| r.span).collect(),
+            expanded,
+            refs,
+        }
+    }
+
     pub fn finish(
         self,
         attributes: &crate::Attributes,

@@ -1545,6 +1545,25 @@ mod tests {
     }
 
     #[test]
+    fn list_titles_and_reftext_render_like_dot_titles_and_anchors() {
+        let html = render("[#p,title=*T* & U,reftext='*R*']\npara\n\n<<p>>");
+        assert!(
+            html.contains("<div class=\"title\"><strong>T</strong> &amp; U</div>"),
+            "got: {html}"
+        );
+        assert!(
+            html.contains("<a href=\"#p\"><strong>R</strong></a>"),
+            "got: {html}"
+        );
+        // A block title is carried past a section heading.
+        let html = render(".T\n== S\n\npara");
+        assert!(
+            html.contains("<h2 id=\"_s\">S</h2>\n<div class=\"title\">T</div>"),
+            "got: {html}"
+        );
+    }
+
+    #[test]
     fn verse_block_renders_pre_preserving_newlines() {
         let html = render("[verse]\n____\nThe fog comes\non little cat feet.\n____");
         assert!(

@@ -94,10 +94,35 @@ pub(crate) fn merge(
     let current_style = pending.list.positional.get(&1).cloned().flatten();
     for field in attribute_list::parse(&expanded.text) {
         let name = field.name(&expanded.text).map(str::to_owned);
+        let text = field.value.as_ref().map(|_| field_text(&expanded, &field));
+        match (name.as_deref(), text) {
+            // Titles and reftext share their keys with `.Title` lines and block
+            // anchors (last wins) and never request `sub_result`.
+            (Some("title"), Some(text)) => {
+                let (text, span, exact) = lexical(text);
+                pending.title = Some(crate::parser::PendingTitle {
+                    text,
+                    base: span.start,
+                    origin: (!exact).then_some(span),
+                });
+                continue;
+            }
+            (Some("reftext"), Some(text)) => {
+                let (text, refs) = renumber(text.text, &refs);
+                pending.reftext = Some(crate::reftext::Read::expanded(text, refs));
+                continue;
+            }
+            _ => {}
+        }
+        let substitute = field.single_quoted
+            && !matches!(
+                name.as_deref(),
+                Some("title" | "reftext" | "opts" | "options")
+            );
         let value = field
             .value
             .as_ref()
-            .map(|_| field_value(&expanded, &field, &refs, name.as_deref(), context));
+            .map(|_| field_value(field_text(&expanded, &field), &refs, substitute, context));
         let Some(name) = name else {
             pending.list.positional.insert(field.index + 1, value);
             continue;
@@ -144,16 +169,15 @@ pub(crate) fn merge(
     references
 }
 
-/// One field of the expanded line. A single-quoted value (except the named
-/// `title`/`reftext`/`options`) repeats the normal substitutions on its lexical
-/// spelling; other values keep the raw source and expanded references.
-fn field_value(
-    expanded: &Text,
-    field: &Field,
-    refs: &[Reference],
-    name: Option<&str>,
-    context: &mut ParseContext,
-) -> AttrValue {
+/// One field of the expanded line with its physical range. `exact` holds when
+/// the field is unchanged source text, so its own offsets remain valid.
+struct FieldText {
+    text: Text,
+    span: Span,
+    exact: bool,
+}
+
+fn field_text(expanded: &Text, field: &Field) -> FieldText {
     let range = field.value.clone().unwrap();
     let mut text = Text::default();
     let mut copied = range.start;
@@ -183,24 +207,63 @@ fn field_value(
         let at = expanded.match_span(range.start - 1..range.start).end;
         Span::new(at, at)
     } else {
-        expanded.match_span(range.clone())
+        covering(expanded, range.clone())
     };
-    let substitute =
-        field.single_quoted && !matches!(name, Some("title" | "reftext" | "opts" | "options"));
-    if !substitute {
-        return AttrValue {
-            text: text.text.clone(),
-            span,
-            inlines: field_nodes(text, refs),
-        };
-    }
-    // The early a-stage result is rescanned from its lexical spelling. Exact
-    // offsets survive only when the field is unchanged source text.
     let exact = !unescaped
         && text.fragments.iter().all(|(_, f)| f.owner == 0)
         && span.end - span.start == text.text.len();
-    let lexical = crate::attributes::reference_text(&text.into_parts());
-    let inlines = context.attribute_value(&lexical, span, exact);
+    FieldText { text, span, exact }
+}
+
+/// The physical range from a field's first to its last character. A match
+/// starting inside an expanded value covers only that reference, so the ends
+/// are mapped separately.
+fn covering(expanded: &Text, range: std::ops::Range<usize>) -> Span {
+    let text = &expanded.text[range.clone()];
+    let first = text.chars().next().map_or(0, char::len_utf8);
+    let last = text.chars().next_back().map_or(0, char::len_utf8);
+    let start = expanded.match_span(range.start..range.start + first);
+    let end = expanded.match_span(range.end - last..range.end);
+    if start.source_id != end.source_id || end.end < start.start {
+        return start;
+    }
+    Span {
+        end: end.end,
+        ..start
+    }
+}
+
+/// A value that is rescanned later (a title, or a single-quoted value) keeps
+/// its source text when exact; otherwise its lexical spelling from the early
+/// a-stage, whose protected characters stay escaped.
+fn lexical(field: FieldText) -> (String, Span, bool) {
+    let text = if field.exact {
+        field.text.text
+    } else {
+        crate::attributes::reference_text(&field.text.into_parts())
+    };
+    (text, field.span, field.exact)
+}
+
+/// A single-quoted value (except the named `title`/`reftext`/`options`)
+/// repeats the normal substitutions; other values keep the raw source and
+/// expanded references.
+fn field_value(
+    field: FieldText,
+    refs: &[Reference],
+    substitute: bool,
+    context: &mut ParseContext,
+) -> AttrValue {
+    if !substitute {
+        let (text, refs) = renumber(field.text, refs);
+        return AttrValue {
+            text: text.text.clone(),
+            span: field.span,
+            inlines: merge_raw(crate::inline_attributes::nodes(text, refs)),
+        };
+    }
+    let (value, span, exact) = lexical(field);
+    let inlines = context.attribute_value(&value, span, exact);
     AttrValue {
         text: visible_text(&inlines),
         span,
@@ -208,9 +271,9 @@ fn field_value(
     }
 }
 
-/// Raw source fragments and AttributeRef nodes for the references that
-/// contributed to this field. A reference split across fields appears in each.
-fn field_nodes(mut text: Text, refs: &[Reference]) -> Vec<Inline> {
+/// Keep only the references that contributed to this field, renumbering their
+/// owners. A reference split across fields appears in each.
+fn renumber(mut text: Text, refs: &[Reference]) -> (Text, Vec<Reference>) {
     let mut owners = Vec::new();
     for (_, fragment) in &mut text.fragments {
         if fragment.owner > 0 {
@@ -235,16 +298,20 @@ fn field_nodes(mut text: Text, refs: &[Reference]) -> Vec<Inline> {
             }
         })
         .collect();
-    // The a-stage copies source in pieces; contiguous raw source is one node.
-    let mut nodes: Vec<Inline> = Vec::new();
-    for node in crate::inline_attributes::nodes(text, refs) {
+    (text, refs)
+}
+
+/// The a-stage copies source in pieces; contiguous raw source is one node.
+fn merge_raw(nodes: Vec<Inline>) -> Vec<Inline> {
+    let mut merged: Vec<Inline> = Vec::new();
+    for node in nodes {
         if let (
             Some(Inline::Raw { value, span }),
             Inline::Raw {
                 value: next,
                 span: next_span,
             },
-        ) = (nodes.last_mut(), &node)
+        ) = (merged.last_mut(), &node)
         {
             if span.end == next_span.start && span.source_id == next_span.source_id {
                 value.push_str(next);
@@ -252,9 +319,9 @@ fn field_nodes(mut text: Text, refs: &[Reference]) -> Vec<Inline> {
                 continue;
             }
         }
-        nodes.push(node);
+        merged.push(node);
     }
-    nodes
+    merged
 }
 
 /// Ruby stores substituted strings for other fields; adoctra keeps their

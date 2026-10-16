@@ -1328,6 +1328,20 @@ mod tests {
     }
 
     #[test]
+    fn list_title_spans_point_to_the_field() {
+        let src = ":x: X\n\n[title=\"Ж {x}\"]\npara";
+        let json = parse_json(src);
+        let start = src.find("Ж").unwrap();
+        let end = src.find("\"]").unwrap();
+        assert!(
+            json.contains(&format!(
+                "\"title\":[{{\"span\":{{\"source_id\":0,\"start\":{start},\"end\":{end}}}"
+            )),
+            "got: {json}"
+        );
+    }
+
+    #[test]
     fn verse_block_serializes_inlines_preserving_newline() {
         let json = parse_json("[verse]\n____\nfirst\nsecond\n____");
         assert!(json.contains("\"name\":\"verse\""), "got: {json}");

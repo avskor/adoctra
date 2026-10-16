@@ -54,6 +54,29 @@ impl BodySubs {
         }]
     }
 
+    /// A block title runs during conversion. A `title=` value transformed by
+    /// the attribute-list a-stage takes its field's physical range.
+    pub fn defer_title(
+        &mut self,
+        text: &str,
+        base: usize,
+        origin: Option<Span>,
+        attrs: &Attributes,
+    ) -> Vec<Inline> {
+        let nodes = self.defer(
+            FilteredSource::from_fragments([(base, text)]),
+            None,
+            attrs,
+            true,
+        );
+        if let (Some(origin), [Inline::Text { span, .. }]) = (origin, nodes.as_slice()) {
+            if let Some(pending) = self.pending.get_mut(&(span.start, span.end)) {
+                pending.replacement_origin = Some(origin);
+            }
+        }
+        nodes
+    }
+
     /// The displayed document title runs after reading, before body conversion.
     /// A doctitle override has an enclosing declaration/host origin rather than
     /// offsets into the transformed replacement string.

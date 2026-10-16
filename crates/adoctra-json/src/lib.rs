@@ -1409,6 +1409,17 @@ mod tests {
         );
     }
 
+    #[test]
+    fn list_title_serializes_like_a_dot_title() {
+        let json = render("[#p,title=T]\npara");
+        assert!(
+            json.contains("\"title\":[{\"name\":\"text\",\"value\":\"T\"}]"),
+            "got: {json}"
+        );
+        // The JSON projection has no reftext field; the id is still exposed.
+        assert!(json.contains("\"id\":\"p\""), "got: {json}");
+    }
+
     // --- verbatim masquerades on a `--` open block ---
 
     #[test]

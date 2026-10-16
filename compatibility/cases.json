@@ -15917,6 +15917,152 @@
       },
       "source": ":n: 1\n\npara\n\ninclude::quote.adoc[]\n\n{n}",
       "expect": "pass"
+    },
+    {
+      "id": "block-attrs-title-named",
+      "category": "block-attributes",
+      "source": "[title=T]\npara",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-title-after-dot-title",
+      "category": "block-attributes",
+      "source": ".A\n[title=B]\npara",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-title-before-dot-title",
+      "category": "block-attributes",
+      "source": "[title=B]\n.A\npara",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-title-single-quoted-no-sub-result",
+      "category": "block-attributes",
+      "source": ":n: 1\n\n[title='*T* {n} (C)']\npara",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-title-unquoted-title-subs",
+      "category": "block-attributes",
+      "source": "[title=*T* -- x & <y>]\npara",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-title-expanded-value",
+      "category": "block-attributes",
+      "source": ":x: X, Y\n:who: A<b>\n\n[title={x} {who}]\npara",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-title-double-quoted-comma",
+      "category": "block-attributes",
+      "source": "[title=\"Q, R\"]\npara",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-title-empty",
+      "category": "block-attributes",
+      "source": "[title=]\npara\n\n[title='']\npara",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-title-counter-reading",
+      "category": "block-attributes",
+      "source": "p\n\n[title={counter:n}]\npara\n\n[title={counter:n}]\npara\n\n{n}",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-title-escaped-reference",
+      "category": "block-attributes",
+      "source": ":n: 5\n\n[#i,title=\\{n} *x*]\npara\n\n[title=\\{n}]\npara",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-title-listing",
+      "category": "block-attributes",
+      "source": "[title=T]\n----\nx\n----",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-title-example-caption",
+      "category": "block-attributes",
+      "source": "[example,title=T]\n====\nx\n====\n\n[title=U,caption=\"C: \"]\n====\ny\n====",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-title-section-carry-over",
+      "category": "block-attributes",
+      "source": "[title=T]\n== S\n\npara",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-dot-title-section-carry-over",
+      "category": "block-attributes",
+      "source": ".T\n== S\n\n== U\n\npara",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-title-carry-over-replaced",
+      "category": "block-attributes",
+      "source": ".T\n[#s,reftext=R]\n== S\n\n.U\npara\n\n<<s>>",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-title-discrete-discards",
+      "category": "block-attributes",
+      "source": ".T\n[discrete]\n== H\n\npara",
+      "expect": "xfail",
+      "reason": "Discrete headings are not implemented: adoctra omits class=\"discrete\". The discarded block title already matches."
+    },
+    {
+      "id": "block-attrs-title-section-counter",
+      "category": "block-attributes",
+      "source": ":n: 1\n\np\n\n[title={counter:n}]\n== S\n\npara {n}",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-reftext-named",
+      "category": "block-attributes",
+      "source": "[#id,reftext=R]\npara\n\n<<id>>",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-reftext-after-anchor",
+      "category": "block-attributes",
+      "source": "[[id,A]]\n[reftext=B]\npara\n\n<<id>>",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-reftext-before-anchor",
+      "category": "block-attributes",
+      "source": "[reftext=B]\n[[id,A]]\npara\n\n<<id>>",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-reftext-single-quoted",
+      "category": "block-attributes",
+      "source": "[#id,reftext='*R* {counter:n} (C)']\npara\n\n<<id>> <<id>>",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-reftext-expanded",
+      "category": "block-attributes",
+      "source": ":who: A<b>\n:x: X, Y\n\n[#id,reftext={who} {x}]\npara\n\n<<id>>",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-reftext-header",
+      "category": "block-attributes",
+      "source": "[reftext=R {counter:n}]\n= Doc\n\n{reftext} {n}",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-title-header-not-doctitle",
+      "category": "block-attributes",
+      "source": "[title=T]\n= Doc\n\npara",
+      "expect": "xfail",
+      "reason": "A level-0 section without a doctitle lacks Ruby's generated id and sect0 class. The carried block title already matches."
     }
   ]
 }

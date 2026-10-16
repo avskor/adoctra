@@ -28,9 +28,19 @@ pub(crate) struct PendingMeta {
     pub id: Option<String>,
     pub reftext: Option<crate::reftext::Read>,
     pub roles: Vec<String>,
-    pub title: Option<(String, usize)>,
+    pub title: Option<PendingTitle>,
     pub attrs: BlockAttrs,
     pub list: crate::block_attributes::BlockList,
+}
+
+/// A pending block title from a `.Title` line or a `title=` attribute. Source
+/// text starts at `base`; a value transformed by the attribute-list a-stage
+/// has no exact offsets, so its nodes and diagnostics take `origin`.
+#[derive(Clone)]
+pub(crate) struct PendingTitle {
+    pub text: String,
+    pub base: usize,
+    pub origin: Option<Span>,
 }
 
 pub fn parse_with_options(source: &str, options: &ParseOptions) -> ParseResult {
@@ -174,6 +184,7 @@ fn collect_blocks(
             continue;
         }
         let metadata = std::mem::take(&mut pending);
+        let mut carried = None;
         if let Some(mut block) = parse_block(
             lines,
             i,
@@ -188,11 +199,19 @@ fn collect_blocks(
                 .reftext
                 .map(|value| value.finish(&context.attributes, &mut context.inline_diagnostics));
             block.roles = pending.roles;
-            let title = pending.title;
-            block.title = title.as_ref().map(|(text, base)| {
+            let mut title = pending.title;
+            if matches!(block.kind, BlockKind::Heading { .. }) {
+                // Ruby keeps a block title for the next content block rather
+                // than a section; a discrete heading discards it.
+                let discrete = matches!(pending.attrs.style.as_deref(), Some("discrete" | "float"));
+                carried = title.take().filter(|_| !discrete);
+            }
+            block.title = title.as_ref().map(|title| {
                 vec![Inline::Text {
-                    value: text.clone(),
-                    span: Span::new(*base, base + text.len()),
+                    value: title.text.clone(),
+                    span: title
+                        .origin
+                        .unwrap_or(Span::new(title.base, title.base + title.text.len())),
                 }]
             });
             block.attrs = pending.attrs;
@@ -201,16 +220,19 @@ fn collect_blocks(
             // Caption counters are assigned on completion, before an anchored
             // title is cached. Unanchored titles run during conversion instead.
             context.assign_caption(&mut block);
-            if let Some((text, base)) = title {
-                if block.id.is_some() && text.contains('{') {
-                    let attributes = Arc::clone(&context.attributes);
-                    block.title = Some(context.reading_title(&text, base, &attributes));
+            if let Some(title) = title {
+                if block.id.is_some() && title.text.contains('{') {
+                    let span = title
+                        .origin
+                        .unwrap_or(Span::new(title.base, title.base + title.text.len()));
+                    block.title =
+                        Some(context.attribute_value(&title.text, span, title.origin.is_none()));
                 } else if !matches!(block.kind, BlockKind::Passthrough { .. }) {
-                    block.title = Some(context.body_subs.defer(
-                        crate::scanner::FilteredSource::from_fragments([(base, text.as_str())]),
-                        None,
+                    block.title = Some(context.body_subs.defer_title(
+                        &title.text,
+                        title.base,
+                        title.origin,
                         &context.attributes,
-                        true,
                     ));
                 }
                 // An unrendered passthrough title retains its source text; it
@@ -218,6 +240,9 @@ fn collect_blocks(
             }
             block.attribute_context = Arc::clone(&context.attributes);
             blocks.push(block);
+        }
+        if let Some(title) = carried.take() {
+            pending.title = Some(title);
         }
     }
     if let Some(limit) = previous_limit {
@@ -267,7 +292,11 @@ pub(crate) fn consume_block_metadata(
     // to cache the inlines or defer them to conversion. A second `.Title`
     // overrides the first without evaluating it (last-wins).
     if let Some(title) = parse_block_title(line) {
-        pending.title = Some((title.into(), lines[*i].0 + abs_offset(line, title)));
+        pending.title = Some(PendingTitle {
+            text: title.into(),
+            base: lines[*i].0 + abs_offset(line, title),
+            origin: None,
+        });
         *i += 1;
         return true;
     }
