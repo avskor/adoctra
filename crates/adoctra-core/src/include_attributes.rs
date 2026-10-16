@@ -1,4 +1,4 @@
-//! AttributeList grammar used by the pinned PreprocessorReader. Substitution
+//! Include parameters use the shared AttributeList grammar. Substitution
 //! happens on the whole list, before tokenization. Unlike block lists, include
 //! lists do not request `sub_result`: single quotes only delimit a value.
 use crate::Attributes;
@@ -13,90 +13,28 @@ pub(crate) fn parse(
         attributes,
         attributes.get("attribute-missing").unwrap_or("skip"),
     );
-    let mut rest = input.as_str();
     let mut named = BTreeMap::new();
-    while !rest.is_empty() {
-        rest = rest.trim_start_matches([' ', '\t']);
-        if rest.is_empty() || rest.starts_with('\n') {
-            break;
-        }
-        if rest.starts_with(['\'', '"']) {
-            // Positional fields have no meaning to the built-in include reader.
-            value(&mut rest);
-        } else {
-            let start = rest;
-            let end = rest
-                .char_indices()
-                .find(|(i, c)| {
-                    !c.is_alphanumeric() && *c != '_' && !(*i > 0 && matches!(c, '-' | '.'))
-                })
-                .map_or(rest.len(), |(i, _)| i);
-            let name = &rest[..end];
-            rest = rest[end..].trim_start_matches([' ', '\t']);
-            if !name.is_empty() && rest.starts_with('=') {
-                rest = rest[1..].trim_start_matches([' ', '\t']);
-                let quoted = rest.starts_with(['\'', '"']);
-                let value = value(&mut rest);
-                if quoted || value != "None" {
-                    if matches!(name, "opts" | "options") {
-                        // Only a comma-separated options value deletes spaces;
-                        // tabs and spaces in a single value remain significant.
-                        if value.contains(',') {
-                            for option in
-                                value.replace(' ', "").split(',').filter(|s| !s.is_empty())
-                            {
-                                named.insert(format!("{option}-option"), String::new());
-                            }
-                        } else if !value.is_empty() {
-                            named.insert(format!("{value}-option"), String::new());
-                        }
-                    } else {
-                        named.insert(name.to_owned(), value);
-                    }
+    // Positional fields have no meaning to the built-in include reader.
+    for field in crate::attribute_list::parse(&input) {
+        let Some(name) = field.name(&input) else {
+            continue;
+        };
+        let value = field.text(&input).unwrap_or_default();
+        if matches!(name, "opts" | "options") {
+            // Only a comma-separated options value deletes spaces;
+            // tabs and spaces in a single value remain significant.
+            if value.contains(',') {
+                for option in value.replace(' ', "").split(',').filter(|s| !s.is_empty()) {
+                    named.insert(format!("{option}-option"), String::new());
                 }
-            } else {
-                rest = start;
-                unquoted(&mut rest);
+            } else if !value.is_empty() {
+                named.insert(format!("{value}-option"), String::new());
             }
+        } else {
+            named.insert(name.to_owned(), value);
         }
-        rest = rest.trim_start_matches([' ', '\t']);
-        if let Some(next) = rest.strip_prefix(',') {
-            rest = next;
-        }
-        // Ruby also accepts an adjacent field after a closing quote without a
-        // comma. Each iteration consumes a field or delimiter, including blanks.
     }
     (named, warnings)
-}
-
-fn unquoted(rest: &mut &str) -> String {
-    let end = rest.find([',', '\n']).unwrap_or(rest.len());
-    let value = rest[..end].trim_end_matches([' ', '\t']).to_owned();
-    *rest = &rest[end..];
-    value
-}
-
-fn value(rest: &mut &str) -> String {
-    let Some(quote @ (b'\'' | b'"')) = rest.as_bytes().first().copied() else {
-        return unquoted(rest);
-    };
-    let body = &rest[1..];
-    let close = body
-        .bytes()
-        .enumerate()
-        .take_while(|(_, c)| *c != b'\n')
-        .find(|(i, c)| *c == quote && (*i == 0 || body.as_bytes()[i - 1] != b'\\'));
-    if let Some((end, _)) = close {
-        let value = body[..end].replace(
-            &format!("\\{}", quote as char),
-            &(quote as char).to_string(),
-        );
-        *rest = &body[end + 1..];
-        value
-    } else {
-        // An unmatched quote becomes literal, and commas delimit again.
-        unquoted(rest)
-    }
 }
 
 /// Shared, single-pass include substitutions. Targets override `warn` with

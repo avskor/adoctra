@@ -9,6 +9,7 @@ pub mod ast;
 pub mod attributes;
 mod author_values;
 pub mod backend;
+mod block_attributes;
 mod body_subs;
 mod comments;
 mod conditional_expression;
@@ -44,6 +45,7 @@ pub mod visit;
 
 pub use ast::{Author, Block, BlockKind, Document, DocumentHeader, Inline, Revision, Span};
 pub use attributes::{AttributeFormat, AttributeLink, AttributePart, Attributes};
+mod attribute_list;
 mod attribute_macros;
 mod attribute_quotes;
 pub use backend::Backend;

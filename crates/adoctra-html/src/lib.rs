@@ -1516,6 +1516,22 @@ mod tests {
     }
 
     #[test]
+    fn quote_attribution_uses_ruby_field_keys() {
+        // A named field occupies the author slot; a quoted empty author keeps
+        // the em dash, as asciidoctor renders it.
+        let html = render("[quote, role=x, Fog]\n____\nx\n____");
+        assert!(
+            html.contains("<figcaption><cite>Fog</cite></figcaption>"),
+            "got: {html}"
+        );
+        let html = render("[quote,\"\",W]\nx");
+        assert!(
+            html.contains("<figcaption>&#8212; <br>\n<cite>W</cite></figcaption>"),
+            "got: {html}"
+        );
+    }
+
+    #[test]
     fn verse_block_renders_pre_preserving_newlines() {
         let html = render("[verse]\n____\nThe fog comes\non little cat feet.\n____");
         assert!(

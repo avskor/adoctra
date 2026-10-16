@@ -14,9 +14,7 @@ use crate::ast::{AdmonitionKind, Inline, Span};
 use crate::context::{ParseContext, ParseOptions};
 use crate::header::collect_header;
 use crate::inline::scan_for_tokens as scan_inlines;
-use crate::parser::{
-    parse_block_anchor, parse_block_attr_list, parse_block_title, parse_heading, parse_list_marker,
-};
+use crate::parser::{parse_block_anchor, parse_block_title, parse_heading, parse_list_marker};
 use crate::scanner::lines_with_offsets;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -431,7 +429,7 @@ fn tokens_processed(
         // A whole-line block-attribute list (`[style, #id.role, name=value]`):
         // one token over the line, recognised exactly as the parser consumes it,
         // so highlighting and parsing never disagree.
-        if parse_block_attr_list(line).is_some() {
+        if crate::block_attributes::attr_list_inner(line).is_some() {
             out.push(Token {
                 span: line_span,
                 kind: TokenKind::BlockAttributeList,
@@ -801,6 +799,19 @@ mod tests {
         // The shorthand form is the same token kind (it is the same grammar).
         let toks = tokens("[#id.role]\ntext");
         assert!(toks.iter().any(|t| t.kind == TokenKind::BlockAttributeList));
+        // Ruby's recognition: `[]` is a list; a leading blank, another first
+        // character or a non-anchor `[[` line is text.
+        assert!(tokens("[]\ntext")
+            .iter()
+            .any(|t| t.kind == TokenKind::BlockAttributeList && t.span == Span::new(0, 2)));
+        for src in ["[ quote]\ntext", "[*x]\ntext", "[[x y]]\ntext"] {
+            assert!(
+                !tokens(src)
+                    .iter()
+                    .any(|t| t.kind == TokenKind::BlockAttributeList),
+                "{src}"
+            );
+        }
     }
 
     #[test]

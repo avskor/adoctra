@@ -518,9 +518,8 @@
     {
       "id": "conditional-verse",
       "category": "conditionals",
-      "expect": "xfail",
-      "source": ":enabled:\n\n[verse]\n____\nbefore\nifdef::enabled[*shown*]\nifdef::missing[hidden]\nafter\n____",
-      "reason": "Verse HTML uses figure/pre.verse instead of div/pre.content; this profile does not normalize those backend differences."
+      "expect": "pass",
+      "source": ":enabled:\n\n[verse]\n____\nbefore\nifdef::enabled[*shown*]\nifdef::missing[hidden]\nafter\n____"
     },
     {
       "id": "conditional-open",
@@ -15560,6 +15559,216 @@
       "category": "attributes",
       "expect": "pass",
       "source": "[[here,Ref]]\n= {reftext}\n\n{doctitle}\n\n<<here>>"
+    },
+    {
+      "id": "block-attrs-quote-fields",
+      "category": "block-attributes",
+      "expect": "pass",
+      "source": "[quote, Ann, Work]\n____\nBody\n____"
+    },
+    {
+      "id": "block-attrs-quote-title-shorthand",
+      "category": "block-attributes",
+      "expect": "pass",
+      "source": ".T\n[quote#i.r, A, W]\nPara"
+    },
+    {
+      "id": "block-attrs-named-field-slot",
+      "category": "block-attributes",
+      "expect": "pass",
+      "source": "[quote, role=x, Author]\n____\n1\n____"
+    },
+    {
+      "id": "block-attrs-none-field-slot",
+      "category": "block-attributes",
+      "expect": "pass",
+      "source": "[quote, role=None, A]\npara"
+    },
+    {
+      "id": "block-attrs-trailing-nil",
+      "category": "block-attributes",
+      "expect": "pass",
+      "source": "[quote, A,]\npara"
+    },
+    {
+      "id": "block-attrs-unicode-name-slot",
+      "category": "block-attributes",
+      "expect": "pass",
+      "source": "[quote, Ünï=1, Ä]\npara"
+    },
+    {
+      "id": "block-attrs-merge-replaces-key",
+      "category": "block-attributes",
+      "expect": "pass",
+      "source": "[quote, A, W1]\n[quote, B]\n____\nx\n____"
+    },
+    {
+      "id": "block-attrs-merge-explicit-nil",
+      "category": "block-attributes",
+      "expect": "pass",
+      "source": "[quote,A]\n[,B]\n____\n2\n____"
+    },
+    {
+      "id": "block-attrs-merge-shorthand-keeps-style",
+      "category": "block-attributes",
+      "expect": "pass",
+      "source": "[quote,A,W]\n[#x]\n____\n3\n____"
+    },
+    {
+      "id": "block-attrs-merge-open-masquerade",
+      "category": "block-attributes",
+      "expect": "pass",
+      "source": "[quote, A]\n[quote, , W]\n--\nx\n--"
+    },
+    {
+      "id": "block-attrs-empty-list",
+      "category": "block-attributes",
+      "expect": "pass",
+      "source": "[]\npara"
+    },
+    {
+      "id": "block-attrs-space-first",
+      "category": "block-attributes",
+      "expect": "pass",
+      "source": "[ quote]\npara"
+    },
+    {
+      "id": "block-attrs-invalid-first-char",
+      "category": "block-attributes",
+      "expect": "pass",
+      "source": "[*x]\npara"
+    },
+    {
+      "id": "block-attrs-bracket-not-anchor",
+      "category": "block-attributes",
+      "expect": "pass",
+      "source": "[[x y]]\npara"
+    },
+    {
+      "id": "block-attrs-shorthand-id-after-named",
+      "category": "block-attributes",
+      "expect": "pass",
+      "source": "[#a, id=b]\npara"
+    },
+    {
+      "id": "block-attrs-shorthand-role-appends",
+      "category": "block-attributes",
+      "expect": "pass",
+      "source": "[.x, role=y]\npara"
+    },
+    {
+      "id": "block-attrs-named-role-then-shorthand",
+      "category": "block-attributes",
+      "expect": "pass",
+      "source": "[role=y]\n[.x]\npara"
+    },
+    {
+      "id": "block-attrs-shorthand-then-named-role",
+      "category": "block-attributes",
+      "expect": "pass",
+      "source": "[.x]\n[role=y]\npara"
+    },
+    {
+      "id": "block-attrs-multiple-ids",
+      "category": "block-attributes",
+      "expect": "pass",
+      "source": "[#a#b]\npara"
+    },
+    {
+      "id": "block-attrs-empty-shorthand",
+      "category": "block-attributes",
+      "expect": "pass",
+      "source": "[quote..r%]\npara"
+    },
+    {
+      "id": "block-attrs-space-disables-shorthand",
+      "category": "block-attributes",
+      "expect": "pass",
+      "source": "[#bad id]\npara"
+    },
+    {
+      "id": "block-attrs-unvalidated-shorthand",
+      "category": "block-attributes",
+      "expect": "pass",
+      "source": "[#a&b.c:d]\npara"
+    },
+    {
+      "id": "block-attrs-quoted-empty-author",
+      "category": "block-attributes",
+      "expect": "pass",
+      "source": "[quote,\"\"]\npara"
+    },
+    {
+      "id": "block-attrs-quoted-empty-author-cite",
+      "category": "block-attributes",
+      "expect": "pass",
+      "source": "[quote,\"\",W]\npara"
+    },
+    {
+      "id": "block-attrs-adjacent-quoted-field",
+      "category": "block-attributes",
+      "expect": "pass",
+      "source": "[\"quote\" A,B]\npara"
+    },
+    {
+      "id": "block-attrs-name-gap-tab",
+      "category": "block-attributes",
+      "expect": "pass",
+      "source": "[quote, A\tB]\npara"
+    },
+    {
+      "id": "block-attrs-escaped-quote",
+      "category": "block-attributes",
+      "expect": "pass",
+      "source": "[quote, \"A\\\"q\", W]\npara"
+    },
+    {
+      "id": "block-attrs-unclosed-quote",
+      "category": "block-attributes",
+      "expect": "pass",
+      "source": "[quote, \"A, W]\npara"
+    },
+    {
+      "id": "block-attrs-source-rekey-over-named",
+      "category": "block-attributes",
+      "expect": "pass",
+      "source": "[source,ruby,language=py]\n----\nx\n----"
+    },
+    {
+      "id": "block-attrs-source-named-before-positional",
+      "category": "block-attributes",
+      "expect": "pass",
+      "source": "[source,language=py,ruby]\n----\nx\n----"
+    },
+    {
+      "id": "block-attrs-source-language-retained",
+      "category": "block-attributes",
+      "expect": "pass",
+      "source": "[source, ruby]\n[source]\n----\nx\n----"
+    },
+    {
+      "id": "block-attrs-options-merge",
+      "category": "block-attributes",
+      "expect": "pass",
+      "source": "[%hardbreaks, options=\"a, b\"]\nx\ny"
+    },
+    {
+      "id": "block-attrs-options-single-value",
+      "category": "block-attributes",
+      "expect": "pass",
+      "source": "[opts=\"hardbreaks x\"]\na\nb"
+    },
+    {
+      "id": "block-attrs-verse-fields",
+      "category": "block-attributes",
+      "expect": "pass",
+      "source": "[verse, A, W]\nl1\nl2"
+    },
+    {
+      "id": "block-attrs-link-label-tab-gap",
+      "category": "block-attributes",
+      "expect": "pass",
+      "source": "https://example.org[A\tB,role=r]"
     }
   ]
 }

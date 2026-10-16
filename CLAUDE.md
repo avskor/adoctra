@@ -494,13 +494,17 @@ sharing its line with text, or the `anchor:id[reftext]` macro) renders as an emp
 `<a id>` at that point, its `reftext` feeding a textless `<<id>>`; a known id with
 no natural text falls back to `[id]` *without* a diagnostic and a duplicate id
 warns once (first definition wins). **Block attribute lists** share that
-seam: a whole-line `[…]` (anything but the `[[id]]` anchor or an empty `[]`) is
-parsed as the full `[style, #id.role, name=value, %option]` list — matching
-asciidoctor, which consumes *any* such line (even `[draft]` / `[Note to self]`),
-so a malformed id/role token is skipped rather than rejecting the line. The
-shorthand `#id`/`.role` and the longhand `id=`/`role=` both fold into `Block.id`
-(last-wins) and `Block.roles` (accumulated; a `role=` value splits on spaces); the
-first positional is the block **style**, `name=value` pairs land in
+seam (`block_attributes.rs`): a line matching Ruby's `BlockAttributeListRx`
+(`[` in column 0, then empty or a Word/`.#%{,"'` character; `[]` is consumed,
+`[[…]]` is only ever an anchor) is tokenized by the shared AttributeList lexer
+(`attribute_list.rs`, also used by include parameters and link labels) and
+merged into the pending metadata by Ruby's *integer keys*: a field's index counts
+named and `None` fields, a later line replaces the same key, and an empty unquoted
+field is an explicit nil. Shorthand (`style#id.role%opt`, disabled by a space) is
+parsed from the merged first positional *after* the line's named fields, without
+validating ids/roles; empty and repeated shorthand ids warn on the line span. A
+named `role=` replaces earlier roles, shorthand roles append; `Block.id` takes the
+last id. The first positional is the block **style**, `name=value` pairs land in
 `Block.attrs.named` (a `BTreeMap`), `%option` flags in `Block.attrs.options`. Two
 styles are wired to rendering. `source`: `[source,<lang>]` folds the language
 into a `language` attribute *in core*, and the HTML backend renders the listing as
@@ -590,12 +594,13 @@ either form into `BlockKind::Verse { attribution, inlines }`, which is **verbati
 `scan_inlines` folds them to spaces) while `*bold*` still formats, and the HTML
 backend renders the body in a `<pre>`. The content model is chosen at the `____`
 fence from the pending style threaded into `parse_block`. Both kinds carry an
-optional `Attribution { author, citetitle }` (each an inline `Vec`, asciidoctor
-applies subs) folded by `apply_style_fixup` from the positional attributes
-(`[quote, author, work]`, consumed off `attrs.positional`); an empty leading slot
-is preserved so `[quote, , Work]` is citetitle-only, matching asciidoctor —
-`parse_block_attr_list` now keeps empty positional slots past the style word (its
-attribution inline spans are best-effort, based at the block start). An admonition
+optional `Attribution { author, citetitle }` (each an inline `Vec`) rekeyed by
+`apply_style_fixup` from Ruby's second and third positional keys (`[quote,
+author, work]`, consumed off `attrs.positional`); a nil key is `None` (so
+`[quote, , Work]` and `[quote, role=x, Work]` are citetitle-only) while a quoted
+`""` is an empty part, and inline spans start at their own field. Attribution is
+still inline-scanned; Ruby's stateful early a-stage, single-quoted normal subs and
+raw unquoted values are the next step. An admonition
 style on a `____` block (`[NOTE]` on `____`) still wins, moving the quote's children
 into an `Admonition`. HTML renders the **modern HTML5 idiom** — `<figure
 class="quoteblock"><blockquote>…</blockquote><figcaption>&#8212; author

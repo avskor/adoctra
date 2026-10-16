@@ -30,6 +30,23 @@ class ProjectionTests(unittest.TestCase):
         self.assertNotEqual(projection(ours), projection(ours.replace('<ul>', '<ol>').replace('</ul>', '</ol>')))
         self.assertNotEqual(projection(ours), projection('<ul><li>one</li><li>two</li></ul><p>more</p>'))
 
+    def test_quote_and_verse_layouts_are_reconciled(self):
+        ruby = ('<div id="i" class="quoteblock r">\n<div class="title">T</div>\n<blockquote>\nPara <strong>b</strong>\n'
+                '</blockquote>\n<div class="attribution">\n&#8212; A<br>\n<cite>W</cite>\n</div>\n</div>')
+        ours = ('<figure class="quoteblock r" id="i">\n<div class="title">T</div>\n<blockquote>\n'
+                '<p>Para <strong>b</strong></p>\n</blockquote>\n<figcaption>&#8212; A<br>\n<cite>W</cite></figcaption>\n'
+                '</figure>')
+        self.assertEqual(projection(ruby), projection(ours))
+        verse = '<div class="verseblock"><pre class="content">a\n  b</pre><div class="attribution">\n&#8212; A\n</div></div>'
+        self.assertEqual(projection(verse),
+                         projection('<figure class="verseblock"><pre class="verse">a\n  b</pre>'
+                                    '<figcaption>&#8212; A</figcaption></figure>'))
+        # Attribution text, verse whitespace and multiple quoted paragraphs survive.
+        self.assertNotEqual(projection(ours), projection(ours.replace('<cite>W</cite>', '<cite>X</cite>')))
+        self.assertNotEqual(projection(verse), projection(verse.replace('a\n  b', 'a\nb')))
+        self.assertNotEqual(projection('<blockquote><p>x</p><p>y</p></blockquote>'),
+                            projection('<blockquote>x y</blockquote>'))
+
     def test_full_document_head_is_outside_body_profile(self):
         self.assertEqual(projection('<html><head><style>p {color:red}</style></head><body><p>one</p></body></html>'),
                          projection('<p>one</p>'))

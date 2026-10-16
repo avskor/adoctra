@@ -1284,6 +1284,26 @@ mod tests {
     }
 
     #[test]
+    fn attribution_spans_point_to_their_fields() {
+        // Each attribution part keeps the physical range of its own field.
+        let src = "[quote, Ann, \"Fög\"]\n____\nx\n____";
+        let json = parse_json(src);
+        for part in ["Ann", "Fög"] {
+            let at = src.find(part).unwrap();
+            assert!(
+                json.contains(&format!(
+                    "\"span\":{{\"source_id\":0,\"start\":{at},\"end\":{}}},\"name\":\"text\",\"value\":\"{part}\"",
+                    at + part.len()
+                )),
+                "got: {json}"
+            );
+        }
+        // A named field occupies the author slot.
+        let json = parse_json("[quote, role=x, Ann]\n____\nx\n____");
+        assert!(json.contains("\"author\":null"), "got: {json}");
+    }
+
+    #[test]
     fn verse_block_serializes_inlines_preserving_newline() {
         let json = parse_json("[verse]\n____\nfirst\nsecond\n____");
         assert!(json.contains("\"name\":\"verse\""), "got: {json}");

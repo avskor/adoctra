@@ -1380,6 +1380,19 @@ mod tests {
         );
     }
 
+    #[test]
+    fn attribution_follows_merged_ruby_keys() {
+        // The second line replaces the author key and keeps the citetitle;
+        // a quoted empty value is an empty inline array.
+        let json = render("[quote, A, W]\n[quote, \"\"]\n____\nx\n____");
+        assert!(
+            json.contains(
+                "\"attribution\":{\"author\":[],\"citetitle\":[{\"name\":\"text\",\"value\":\"W\"}]}"
+            ),
+            "got: {json}"
+        );
+    }
+
     // --- verbatim masquerades on a `--` open block ---
 
     #[test]

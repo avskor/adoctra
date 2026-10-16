@@ -772,78 +772,34 @@ fn parse_label(
         text = out;
     }
     let src = &text.text;
-    let mut at = 0;
     let mut first = None;
     let mut positional = BTreeMap::new();
-    let mut field_index = 1;
     let mut named = BTreeMap::new();
-    while at < src.len() {
-        while src
-            .as_bytes()
-            .get(at)
-            .is_some_and(|c| matches!(c, b' ' | b'\t'))
-        {
-            at += 1;
-        }
-        if at == src.len() {
-            break;
-        }
-        let field = at;
-        let name_end = src[at..]
-            .char_indices()
-            .find(|(i, c)| !word(*c) && !(*i > 0 && matches!(c, '-' | '.')))
-            .map_or(src.len(), |(i, _)| at + i);
-        let mut eq = name_end;
-        while src
-            .as_bytes()
-            .get(eq)
-            .is_some_and(|c| matches!(c, b' ' | b'\t'))
-        {
-            eq += 1;
-        }
-        let name = if name_end > at && src.as_bytes().get(eq) == Some(&b'=') {
-            at = eq + 1;
-            while src
-                .as_bytes()
-                .get(at)
-                .is_some_and(|c| matches!(c, b' ' | b'\t'))
-            {
-                at += 1;
+    let fields = crate::attribute_list::parse(src);
+    let last = fields.len().saturating_sub(1);
+    for (n, field) in fields.iter().enumerate() {
+        let name = field.name(src);
+        let Some(range) = field.value.clone() else {
+            // Ruby stores nil here (and its mailto encoding then fails); keep
+            // interior empty fields as empty strings and omit a trailing one.
+            if n != last {
+                positional.insert(field.index + 1, String::new());
             }
-            Some(&src[field..name_end])
-        } else {
-            None
-        };
-        let quote = src
-            .as_bytes()
-            .get(at)
-            .copied()
-            .filter(|c| matches!(c, b'\'' | b'"'));
-        let close = quote.and_then(|q| {
-            src[at + 1..]
-                .char_indices()
-                .find(|(i, c)| *c == q as char && (*i == 0 || src.as_bytes()[at + *i] != b'\\'))
-                .map(|(i, _)| at + 1 + i)
-        });
-        let range = if let Some(close) = close {
-            let range = at + 1..close;
-            at = close + 1;
-            range
-        } else {
-            let end = src[at..].find(',').map_or(src.len(), |i| at + i);
-            let trimmed = src[at..end].trim_end_matches([' ', '\t']).len();
-            let range = at..at + trimmed;
-            at = end;
-            range
+            continue;
         };
         // The macro label already removed one bracket escape. AttributeList
         // only removes escapes for its delimiter quote; nested pass keeps the rest.
-        let mut value = slice(&text, range, close.and(quote).map(char::from), false);
-        if quote == Some(b'\'')
-            && close.is_some()
-            && !matches!(name, Some("title" | "reftext" | "opts" | "options"))
-            && !crate::attributes::reference_text(&value).starts_with('\'')
-        {
+        let mut value = match &field.gap {
+            Some(gap) if src[gap.clone()].contains('\t') => {
+                let mut normalized = Text::default();
+                text.copy(range.start..gap.start, &mut normalized);
+                text.replacement(gap.clone(), &" ".repeat(gap.len()), None, &mut normalized);
+                text.copy(gap.end..range.end, &mut normalized);
+                normalized.into_parts()
+            }
+            _ => slice(&text, range, field.quote, false),
+        };
+        if field.single_quoted && !matches!(name, Some("title" | "reftext" | "opts" | "options")) {
             // AttributeList repeats the complete normal pipeline on the
             // lexical value, sharing slots and the recursion budget with pass:.
             value = report.passes.normal_parameter(
@@ -856,37 +812,24 @@ fn parse_label(
         }
         let lexical = crate::attributes::reference_text(&value);
         if let Some(name) = name {
-            if close.is_some() || lexical != "None" {
-                if matches!(name, "opts" | "options") {
-                    let options = if lexical.contains(',') {
-                        lexical.replace(' ', "")
-                    } else {
-                        lexical
-                    };
-                    for option in options.split(',').filter(|s| !s.is_empty()) {
-                        named.insert(format!("{option}-option"), String::new());
-                    }
+            if matches!(name, "opts" | "options") {
+                let options = if lexical.contains(',') {
+                    lexical.replace(' ', "")
                 } else {
-                    named.insert(name.into(), lexical);
+                    lexical
+                };
+                for option in options.split(',').filter(|s| !s.is_empty()) {
+                    named.insert(format!("{option}-option"), String::new());
                 }
+            } else {
+                named.insert(name.into(), lexical);
             }
         } else {
-            if field_index == 1 {
+            if field.index == 0 {
                 first = Some(value);
             }
-            positional.insert(field_index, lexical);
+            positional.insert(field.index + 1, lexical);
         }
-        while src
-            .as_bytes()
-            .get(at)
-            .is_some_and(|c| matches!(c, b' ' | b'\t'))
-        {
-            at += 1;
-        }
-        if src.as_bytes().get(at) == Some(&b',') {
-            at += 1;
-        }
-        field_index += 1;
     }
     let first = first.unwrap_or_default();
     if positional.get(&1).is_some_and(|s| s == src) {

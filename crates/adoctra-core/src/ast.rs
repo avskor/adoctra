@@ -201,8 +201,9 @@ impl Block {
 ///   positional is folded in here under the `language` key, in core, so every
 ///   backend reads it the same way.
 /// - `options` — `%option` flags, in source order.
-/// - `positional` — positional attributes after the style that core did not map
-///   to a named key, verbatim and in source order.
+/// - `positional` — asciidoctor's positional attributes after the style (and
+///   after a `source` language), by field index: named and skipped fields leave
+///   an empty slot, and a later attribute line replaces the same index.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct BlockAttrs {
     pub style: Option<String>,
@@ -286,20 +287,19 @@ impl AdmonitionKind {
     }
 }
 
-/// The attribution of a [`BlockKind::Quote`] / [`BlockKind::Verse`] block: the
-/// positional attributes after the style word (`[quote, author, citetitle]`).
-/// Both parts are parsed inlines — asciidoctor applies the normal inline
-/// substitutions to an attribution, so `[quote, *Ann*]` renders a bold author —
-/// and either may be absent (`[quote, , Source]` carries only a `citetitle`,
-/// `[quote, Ann]` only an `author`). A block with no positional attribution at
-/// all carries `None` rather than an empty `Attribution`.
+/// The attribution of a [`BlockKind::Quote`] / [`BlockKind::Verse`] block:
+/// asciidoctor's second and third positional attributes
+/// (`[quote, author, citetitle]`). Field indexes count named fields, so
+/// `[quote, role=x, Source]` carries only a `citetitle`. A nil field is absent
+/// (`[quote, , Source]`); a quoted `""` is an empty part. A block with neither
+/// part carries `None` rather than an empty `Attribution`.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Attribution {
-    /// The first positional attribute — the cited author (asciidoctor's
-    /// `attribution`), rendered before the `citetitle`. `None` when omitted.
+    /// The cited author (asciidoctor's `attribution`), rendered before the
+    /// `citetitle`. `None` when omitted.
     pub author: Option<Vec<Inline>>,
-    /// The second positional attribute — the cited work (asciidoctor's
-    /// `citetitle`), rendered inside a `<cite>`. `None` when omitted.
+    /// The cited work (asciidoctor's `citetitle`), rendered inside a `<cite>`.
+    /// `None` when omitted.
     pub citetitle: Option<Vec<Inline>>,
 }
 

@@ -98,6 +98,21 @@ def normalize(node, verbatim=False, block_kind=None):
     tag, attrs = node.tag, dict(node.attrs)
     classes = attrs.get("class", "").split()
     wrapper = None
+    # Quote and verse blocks: Ruby's div/attribution layout and adoctra's
+    # figure/figcaption idiom project to the same named nodes.
+    kind = next((c for c in classes if c in {"quoteblock", "verseblock"}), None)
+    if tag in {"div", "figure"} and kind:
+        tag = "quote" if kind == "quoteblock" else "verse"
+        classes.remove(kind)
+        block_kind = tag if tag == "verse" else None
+        if classes:
+            attrs["class"] = " ".join(classes)
+        else:
+            attrs.pop("class", None)
+    elif tag == "figcaption" or (tag == "div" and classes == ["attribution"]):
+        tag = "attribution"
+        attrs.pop("class", None)
+        classes = []
     if tag == "div":
         wrapper = next((c for c in classes if c in {
             "paragraph", "ulist", "olist", "listingblock", "literalblock",
@@ -106,6 +121,9 @@ def normalize(node, verbatim=False, block_kind=None):
         if wrapper in {"listingblock", "literalblock"}:
             block_kind = "listing" if wrapper == "listingblock" else "literal"
 
+    if tag == "pre" and block_kind == "verse":
+        classes = [c for c in classes if c not in {"content", "verse"}]
+        block_kind = "pre"
     if tag == "pre":
         if "literalblock" in classes:
             block_kind = "literal"
@@ -138,7 +156,16 @@ def normalize(node, verbatim=False, block_kind=None):
         if children and isinstance(children[0], dict) and children[0]["tag"] == "p" and not children[0]["attrs"]:
             children = children[0]["children"] + children[1:]
 
-    is_prose = tag in INLINE or tag == "li" or "title" in classes
+    if tag == "blockquote":
+        # Ruby renders a quoted paragraph's text directly; adoctra and Ruby's
+        # compound form use one paragraph. Both are the same quoted content.
+        content = [c for c in children if not (isinstance(c, str) and not c.strip())]
+        if len(content) == 1 and isinstance(content[0], dict) and content[0]["tag"] == "p" \
+                and not content[0]["attrs"]:
+            children = content[0]["children"]
+        if any(isinstance(c, str) and c.strip() for c in children):
+            children = trim_edges(compact(children, True))
+    is_prose = tag in INLINE or tag in {"li", "attribution"} or "title" in classes
     children = compact(children, is_prose, verbatim)
     if tag == "li":
         # A line break before an attached block is layout, not item text.
@@ -146,7 +173,7 @@ def normalize(node, verbatim=False, block_kind=None):
             if isinstance(child, dict) and child["tag"] in LIST_BLOCKS:
                 if i and isinstance(children[i - 1], str):
                     children[i - 1] = children[i - 1].rstrip(" ")
-    if tag in {"p", "li", "h1", "h2", "h3", "h4", "h5", "h6"} or "title" in classes:
+    if tag in {"p", "li", "attribution", "h1", "h2", "h3", "h4", "h5", "h6"} or "title" in classes:
         children = trim_edges(children)
 
     if wrapper:
