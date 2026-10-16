@@ -565,6 +565,15 @@ mod tests {
     }
 
     #[test]
+    fn block_reftext_exports_evaluated_values_and_literal_macros() {
+        let json = render("[[here,R {counter:n} link:p[x]]]\nBody {counter:n}\n\n<<here>>");
+        assert!(json.contains(r#""name":"xref","target":"here""#), "{json}");
+        assert!(json.contains(r#""name":"text","value":"1""#), "{json}");
+        assert!(json.contains("link:p[x]"), "{json}");
+        assert!(!json.contains("{counter:n}"), "{json}");
+    }
+
+    #[test]
     fn stateful_block_titles_export_captions_and_neutral_counter_parts() {
         let json = render(".T {counter:example-number}\n====\nBody {counter:example-number}\n====");
         assert!(json.contains(r#""caption":"Example 1. ""#), "{json}");

@@ -333,8 +333,20 @@ using the shared example-number counter. Its value replays on block entry before
 title/content, including locked counters, independently of explicit declarations.
 Only reading-time effects change subsequent caption prefixes. Local/document
 caption values (including empty strings) suppress numbering. Caption remains a
-flat string; rich/raw caption values, other caption families, reftext/attribution,
+flat string; rich/raw caption values, other caption families, attribution,
 block attribute-list substitutions and remaining derived settings are follow-ups.
+Block-anchor reftext (`[[id,text]]`) executes the early a-stage during metadata
+collection, including overwritten and orphan values. Header collection consumes
+initial block metadata once before saving attributes, then transfers it to the
+document title or first body block. Body reftext effects affect reading only,
+without declaration replay. Formatting uses c/q/r at block/header completion,
+preserving reference owners and physical spans; attributes are not rerun and
+macros/passthroughs are not executed. Empty expanded labels fall back to a section
+title or `[id]`. Header reftext also retains its raw lexical document attribute.
+Reader records early reference spans even for discarded metadata, so tokenization
+does not need to execute it again. On-demand formatting of reftext, including
+conversion-time effects/context in quote metadata, is still pending, as are
+stateful inline anchors and reftext supplied through block attribute lists.
 Block.attribute_context remains the reading snapshot at block completion;
 it can therefore differ from resolved inline values.
 Tokenization uses isolated contexts and the same declaration replay; it never
@@ -664,7 +676,7 @@ passthrough is passthrough text). Snapshotted by `golden/passthrough/` (the
 `masquerade.adoc` fixture pins `[pass]` on `--`). Other styles
 are parsed and carried on `Block.attrs.style` but do not yet change a block's
 *type*. The id
-lives on the block (`Block.id`, `None` for the level-0 doctitle and plain blocks)
+lives on the block (`Block.id`, `None` for unanchored doctitles and plain blocks)
 and roles on `Block.roles` — the HTML backend emits the id on `hN`/`p`/`pre`/`ol`/
 `ul` and roles as a `class` (appended to a listing's base class; asciidoctor hangs
 both on a wrapping `<div>`, adoctra emits no wrapper so they go on the inner

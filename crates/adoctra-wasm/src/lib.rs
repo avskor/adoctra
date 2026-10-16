@@ -1345,6 +1345,27 @@ mod header_tests {
     }
 
     #[test]
+    fn block_reftext_exports_early_values_and_physical_expression_tokens() {
+        let source = "[[here,Ж {counter:n:Я}]]\r\nBody {counter:n}\r\n\r\n<<here>>";
+        let json = super::parse_json_with_source(source, 7);
+        assert!(
+            json.contains(r#""attribute":"counter:n:Я","value":"Я""#),
+            "{json}"
+        );
+        let ts = super::tokens_json_with_source(source, 7);
+        let start = source.find("{counter:n:Я}").unwrap();
+        assert!(
+            ts.contains(&format!(
+                r#"{{"span":{{"source_id":7,"start":{start},"end":{}}},"kind":"attribute-ref"}}"#,
+                start + "{counter:n:Я}".len()
+            )),
+            "{ts}"
+        );
+        assert_eq!(json, super::parse_json_with_source(source, 7));
+        assert_eq!(ts, super::tokens_json_with_source(source, 7));
+    }
+
+    #[test]
     fn stateful_block_titles_export_physical_spans_and_stable_tokens() {
         let source = ".Ж {counter:example-number}\r\n====\r\nBody {counter:example-number}\r\n====";
         let json = super::parse_json_with_source(source, 7);

@@ -123,7 +123,7 @@ impl Quotes {
     }
 }
 
-fn node(kind: F, span: Span) -> Option<Inline> {
+pub(crate) fn node(kind: F, span: Span) -> Option<Inline> {
     let children = Vec::new();
     Some(match kind {
         F::Strong => Inline::Strong { children, span },

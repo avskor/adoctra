@@ -30,6 +30,7 @@ mod parser;
 mod pass_subs;
 mod post_replacements;
 mod reader;
+mod reftext;
 mod replacements;
 mod resolve;
 pub mod resource;

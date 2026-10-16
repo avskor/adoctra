@@ -134,6 +134,12 @@ pub(crate) fn tokens_reader<'a>(
                 })
         })
         .collect();
+    for &span in &reader.metadata_references {
+        out.extend(reader.token_spans(span).into_iter().map(|span| Token {
+            span,
+            kind: TokenKind::AttributeRef,
+        }));
+    }
     // Project source-owned breaks and executed expressions from the complete
     // parse. The syntax-only scan must not execute body expressions again.
     // The line-based highlighting scan cannot know a block's final line or local hardbreaks

@@ -23,12 +23,12 @@ use std::sync::Arc;
 /// order; `attrs` merges across consecutive lines (style last-wins, named/options
 /// accumulate).
 #[derive(Default)]
-struct PendingMeta {
-    id: Option<String>,
-    reftext: Option<Vec<Inline>>,
-    roles: Vec<String>,
-    title: Option<(String, usize)>,
-    attrs: BlockAttrs,
+pub(crate) struct PendingMeta {
+    pub id: Option<String>,
+    pub reftext: Option<crate::reftext::Read>,
+    pub roles: Vec<String>,
+    pub title: Option<(String, usize)>,
+    pub attrs: BlockAttrs,
 }
 
 pub fn parse_with_options(source: &str, options: &ParseOptions) -> ParseResult {
@@ -41,7 +41,7 @@ pub(crate) fn parse_reader<'a>(
 ) -> (ParseResult, Reader<'a>) {
     lines.set_primary_id(options.source_id);
     let mut context = ParseContext::new(options);
-    let header = collect_header(&mut lines, &mut context);
+    let mut header = collect_header(&mut lines, &mut context);
     let mut doc = Document {
         attributes: (*context.attributes).clone(),
         header: header.metadata,
@@ -60,6 +60,13 @@ pub(crate) fn parse_reader<'a>(
                 .map_or(effective.span, |header| header.title_span),
             BlockKind::Heading { level: 0, inlines },
         );
+        if header.metadata_for_title {
+            let metadata = std::mem::take(&mut header.pending);
+            title.id = metadata.id;
+            title.reftext = metadata
+                .reftext
+                .map(|value| value.finish(&context.attributes, &mut context.inline_diagnostics));
+        }
         title.attribute_context = Arc::clone(&context.attributes);
         doc.blocks.push(title);
     }
@@ -71,6 +78,7 @@ pub(crate) fn parse_reader<'a>(
         &mut context,
         &mut diagnostics,
         None,
+        header.pending,
     ));
 
     context.execute_body(&mut doc);
@@ -147,12 +155,12 @@ fn collect_blocks(
     context: &mut ParseContext,
     diagnostics: &mut Vec<Diagnostic>,
     stop: Option<&str>,
+    mut pending: PendingMeta,
 ) -> Vec<Block> {
     // Ruby first preprocesses and captures a container up to its closing fence,
     // then parses the body. A nested comment/verbatim region cannot hide that fence.
     let previous_limit = stop.map(|fence| lines.bound(*i, context, |line| line.trim() == fence));
     let mut blocks = Vec::new();
-    let mut pending = PendingMeta::default();
     while lines.has(*i, context) {
         let (_, line_buffer) = lines.line(*i);
         let line = line_buffer.as_ref();
@@ -160,49 +168,7 @@ fn collect_blocks(
             *i += 1;
             continue;
         }
-        if skip_comment(lines, i, context) {
-            continue;
-        }
-        if consume_attribute_entry(lines, i, context) {
-            continue;
-        }
-        if let Some((id, reftext)) = parse_block_anchor(line) {
-            pending.id = Some(id.to_string());
-            pending.reftext = reftext.map(|rt| {
-                scan_inlines_report(
-                    rt,
-                    lines[*i].0 + abs_offset(line, rt),
-                    &context.render_attributes(),
-                    true,
-                    &mut context.inline_diagnostics,
-                )
-            });
-            *i += 1;
-            continue;
-        }
-        if let Some(parsed) = parse_block_attr_list(line) {
-            if let Some(id) = parsed.id {
-                pending.id = Some(id);
-            }
-            pending.roles.extend(parsed.roles);
-            if parsed.attrs.style.is_some() {
-                pending.attrs.style = parsed.attrs.style;
-            }
-            pending.attrs.named.extend(parsed.attrs.named);
-            pending.attrs.options.extend(parsed.attrs.options);
-            pending.attrs.positional.extend(parsed.attrs.positional);
-            *i += 1;
-            continue;
-        }
-        // A `.Title` line sets the next block's title (asciidoctor's
-        // [`BlockTitleRx`]). Like the anchor / attribute-list lines it is *pending*
-        // metadata that attaches to the block that follows (blank lines may sit
-        // between). Keep the source until block completion determines whether
-        // to cache the inlines or defer them to conversion. A second `.Title`
-        // overrides the first without evaluating it (last-wins).
-        if let Some(title) = parse_block_title(line) {
-            pending.title = Some((title.into(), lines[*i].0 + abs_offset(line, title)));
-            *i += 1;
+        if consume_block_metadata(lines, i, context, &mut pending) {
             continue;
         }
         let metadata = std::mem::take(&mut pending);
@@ -216,7 +182,9 @@ fn collect_blocks(
         ) {
             let pending = metadata;
             block.id = pending.id;
-            block.reftext = pending.reftext;
+            block.reftext = pending
+                .reftext
+                .map(|value| value.finish(&context.attributes, &mut context.inline_diagnostics));
             block.roles = pending.roles;
             let title = pending.title;
             block.title = title.as_ref().map(|(text, base)| {
@@ -254,6 +222,61 @@ fn collect_blocks(
         lines.limit = limit;
     }
     blocks
+}
+
+/// Consume metadata once, both before header detection and at body boundaries.
+pub(crate) fn consume_block_metadata(
+    lines: &mut Reader<'_>,
+    i: &mut usize,
+    context: &mut ParseContext,
+    pending: &mut PendingMeta,
+) -> bool {
+    let (_, line_buffer) = lines.line(*i);
+    let line = line_buffer.as_ref();
+    if skip_comment(lines, i, context) {
+        return true;
+    }
+    if consume_attribute_entry(lines, i, context) {
+        return true;
+    }
+    if let Some((id, reftext)) = parse_block_anchor(line) {
+        pending.id = Some(id.to_string());
+        if let Some(rt) = reftext {
+            let value = context.block_reftext(rt, lines[*i].0 + abs_offset(line, rt));
+            lines
+                .metadata_references
+                .extend(value.references.iter().copied());
+            pending.reftext = Some(value);
+        }
+        *i += 1;
+        return true;
+    }
+    if let Some(parsed) = parse_block_attr_list(line) {
+        if let Some(id) = parsed.id {
+            pending.id = Some(id);
+        }
+        pending.roles.extend(parsed.roles);
+        if parsed.attrs.style.is_some() {
+            pending.attrs.style = parsed.attrs.style;
+        }
+        pending.attrs.named.extend(parsed.attrs.named);
+        pending.attrs.options.extend(parsed.attrs.options);
+        pending.attrs.positional.extend(parsed.attrs.positional);
+        *i += 1;
+        return true;
+    }
+    // A `.Title` line sets the next block's title (asciidoctor's
+    // [`BlockTitleRx`]). Like the anchor / attribute-list lines it is *pending*
+    // metadata that attaches to the block that follows (blank lines may sit
+    // between). Keep the source until block completion determines whether
+    // to cache the inlines or defer them to conversion. A second `.Title`
+    // overrides the first without evaluating it (last-wins).
+    if let Some(title) = parse_block_title(line) {
+        pending.title = Some((title.into(), lines[*i].0 + abs_offset(line, title)));
+        *i += 1;
+        return true;
+    }
+    false
 }
 
 /// Apply a type-changing block *style* to a freshly parsed block. A `[literal]`,
@@ -726,7 +749,14 @@ fn parse_block_content(
     if trimmed.trim() == "====" {
         let start = off;
         *i += 1;
-        let blocks = collect_blocks(lines, i, context, diagnostics, Some("===="));
+        let blocks = collect_blocks(
+            lines,
+            i,
+            context,
+            diagnostics,
+            Some("===="),
+            PendingMeta::default(),
+        );
         let end;
         if lines.has(*i, context) && lines[*i].1.trim() == "====" {
             let (loff, lline_buffer) = lines.line(*i);
@@ -783,7 +813,14 @@ fn parse_block_content(
         }
         // Quote (default): a parsed container, mirror of the `====` example block.
         *i += 1;
-        let blocks = collect_blocks(lines, i, context, diagnostics, Some("____"));
+        let blocks = collect_blocks(
+            lines,
+            i,
+            context,
+            diagnostics,
+            Some("____"),
+            PendingMeta::default(),
+        );
         let end;
         if lines.has(*i, context) && lines[*i].1.trim() == "____" {
             let (loff, lline_buffer) = lines.line(*i);
@@ -816,7 +853,14 @@ fn parse_block_content(
     if trimmed.trim() == "****" {
         let start = off;
         *i += 1;
-        let blocks = collect_blocks(lines, i, context, diagnostics, Some("****"));
+        let blocks = collect_blocks(
+            lines,
+            i,
+            context,
+            diagnostics,
+            Some("****"),
+            PendingMeta::default(),
+        );
         let end;
         if lines.has(*i, context) && lines[*i].1.trim() == "****" {
             let (loff, lline_buffer) = lines.line(*i);
@@ -893,7 +937,14 @@ fn parse_block_content(
             return Some(Block::new(Span::new(start, end), kind));
         }
         *i += 1;
-        let blocks = collect_blocks(lines, i, context, diagnostics, Some("--"));
+        let blocks = collect_blocks(
+            lines,
+            i,
+            context,
+            diagnostics,
+            Some("--"),
+            PendingMeta::default(),
+        );
         let end;
         if lines.has(*i, context) && lines[*i].1.trim() == "--" {
             let (loff, lline_buffer) = lines.line(*i);

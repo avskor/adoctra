@@ -62,6 +62,8 @@ pub(crate) struct Reader<'a> {
     next_occurrence: usize,
     pub loaded: Vec<(usize, Arc<str>)>,
     pub attribute_entries: Vec<(Span, Option<crate::context::AttributeEntry>)>,
+    /// Early metadata substitutions, including values later overwritten or orphaned.
+    pub metadata_references: Vec<Span>,
     endings: Vec<(usize, String)>,
     pub limit: usize,
     stack: Vec<Conditional>,
@@ -100,6 +102,7 @@ impl<'a> Reader<'a> {
             next_occurrence: 1,
             loaded: Vec::new(),
             attribute_entries: Vec::new(),
+            metadata_references: Vec::new(),
             endings: Vec::new(),
             limit: usize::MAX,
             stack: Vec::new(),

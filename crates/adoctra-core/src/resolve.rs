@@ -51,7 +51,11 @@ fn assign_ids(blocks: &mut [Block], registry: &mut Registry, diagnostics: &mut V
                 _ => None,
             };
             if let Some(id) = block.id.clone() {
-                let reftext = block.reftext.clone().or(heading_title);
+                let reftext = block
+                    .reftext
+                    .clone()
+                    .filter(|nodes| !inline_text(nodes).is_empty())
+                    .or(heading_title);
                 register_id(self.registry, id, reftext, block.span, self.diagnostics);
             } else if let Some(title) = heading_title {
                 let unique = dedup(generate_id(&inline_text(&title)), self.registry);

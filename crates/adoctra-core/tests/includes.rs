@@ -24,6 +24,31 @@ fn setup(root: &str, files: &[(&str, &str)]) -> (SourceMap, MemoryResources, Par
 }
 
 #[test]
+fn block_reftext_early_effects_keep_selected_include_origins() {
+    let root =
+        ":attribute-missing: warn\n\ninclude::part.adoc[tag=body,indent=0]\n\n<<here>> {counter:n}";
+    let part = "// tag::body[]\r\n  [[here,Ж {counter:n:Я} {missing}]]\r\n  Body {counter:n}\r\n// end::body[]";
+    let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", part)]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(result.document.attributes.get("n"), Some("Я"));
+    let nodes = result.document.blocks[0].reftext.as_ref().unwrap();
+    let counter = nodes
+        .iter()
+        .find(|n| matches!(n, Inline::AttributeRef { name, .. } if name == "counter:n:Я"))
+        .unwrap();
+    assert_eq!(counter.span().source_id, SourceId(1));
+    assert_eq!(sources.slice(counter.span()), Some("{counter:n:Я}"));
+    assert_eq!(result.diagnostics.len(), 1);
+    assert_eq!(sources.slice(result.diagnostics[0].span), Some("{missing}"));
+    assert_eq!(result.diagnostics[0].span.source_id, SourceId(1));
+    let ts = tokens_resource(&mut sources, &options, &resources).unwrap();
+    assert!(ts
+        .iter()
+        .any(|t| t.kind == TokenKind::AttributeRef && t.span == counter.span()));
+    check_spans(&result, &sources);
+}
+
+#[test]
 fn stateful_block_titles_keep_selected_include_origins_in_both_phases() {
     for anchor in ["", "  [[here]]\r\n"] {
         let root = ":n: 8\n:attribute-missing: warn\n\ninclude::part.adoc[tag=body,indent=0]";

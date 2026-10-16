@@ -26,15 +26,15 @@ pub(crate) struct Header {
     pub body_start: usize,
     pub metadata: Option<DocumentHeader>,
     pub effective_title: Option<HeaderTitle>,
+    pub pending: crate::parser::PendingMeta,
+    pub metadata_for_title: bool,
 }
 
 pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext) -> Header {
     let mut i = 0;
+    let mut pending = crate::parser::PendingMeta::default();
     while lines.has(i, context) {
-        if skip_comment(lines, &mut i, context) {
-            continue;
-        }
-        if consume_attribute_entry(lines, &mut i, context) {
+        if crate::parser::consume_block_metadata(lines, &mut i, context, &mut pending) {
             continue;
         } else if !lines[i].1.trim().is_empty() {
             break;
@@ -48,6 +48,8 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
         revision_line: None,
         body_start: i,
         metadata: None,
+        metadata_for_title: false,
+        pending,
         effective_title: context
             .attributes
             .get("doctitle")
@@ -61,7 +63,11 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
     let mut implicit_author = None;
     let mut implicit_authors = None;
     let mut implicit_initials = None;
-    let title = if lines.has(i, context) {
+    let title = if !matches!(
+        result.pending.attrs.style.as_deref(),
+        Some("comment" | "discrete" | "float")
+    ) && lines.has(i, context)
+    {
         // Ruby peeks two processed lines even for ATX. Directives immediately
         // following it therefore see the context before the implicit doctitle.
         let has_next = lines.has(i + 1, context);
@@ -75,7 +81,10 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
     } else {
         None
     };
-    if let Some((_, setext)) = title.filter(|(level, _)| context.section_level(*level) == 0) {
+    if let Some((_, setext)) = title
+        .filter(|(level, _)| context.section_level(*level) == 0 && result.pending.title.is_none())
+    {
+        result.metadata_for_title = true;
         result.title_line = Some(i);
         let mut title_span = line_span((lines[i].0, &lines[i].1));
         let declared = if setext {
@@ -105,6 +114,16 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
             result.title_underline = Some(i);
             title_span.end = lines[i].0 + lines[i].1.len();
             context.apply(AttributeEntry::Set("compat-mode".to_owned(), String::new()));
+        }
+        // Ruby installs document metadata after the implicit doctitle a-stage.
+        if !result.pending.roles.is_empty() {
+            Arc::make_mut(&mut context.attributes).set("role", result.pending.roles.join(" "));
+        }
+        if let Some(reftext) = &result.pending.reftext {
+            Arc::make_mut(&mut context.attributes).set_parts(
+                "reftext",
+                vec![crate::AttributePart::Raw(reftext.value.clone())],
+            );
         }
         i += 1;
         consume_attributes(lines, &mut i, context);

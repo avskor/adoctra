@@ -100,12 +100,14 @@ pub struct Revision {
 /// `id` is the block's anchor — the target a `<<id>>` resolves to. It comes from
 /// an explicit anchor (`[[id]]`, set by the parser) or, for a section heading
 /// without one, an auto-generated [`sectids`] id assigned during the resolve
-/// pass. It is `None` for any block with no anchor (a plain paragraph, the
-/// level-0 document title, …) and before resolution runs for an auto-id section.
+/// pass. It is `None` for any block with no anchor, including an unanchored
+/// document title, and before resolution runs for an auto-id section.
 ///
 /// `reftext` is the inline display text from an explicit `[[id,reftext]]` anchor;
 /// the resolve pass uses it as a textless reference's display text (preferring it
-/// over a section's own title). `None` when no reftext was given.
+/// over a section's own title when nonempty). `None` when no reftext was given.
+/// Block-anchor reftext executes an early attribute stage followed by c/q/r;
+/// even an empty result can retain source reference nodes for editor consumers.
 ///
 /// `roles` are the CSS roles attached by a `[.role]` / `[#id.role1.role2]`
 /// shorthand block-attribute line — pure rendering metadata (the HTML backend

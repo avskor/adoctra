@@ -141,6 +141,21 @@ impl ParseContext {
         parts_text(&parts)
     }
 
+    pub fn block_reftext(&mut self, value: &str, base: usize) -> crate::reftext::Read {
+        let mut evaluation = crate::substitution_context::Evaluation::definition(
+            &self.attributes,
+            &self.locked,
+            &mut self.counters,
+            self.quote_compat,
+        );
+        let result =
+            crate::reftext::read(value, base, &mut evaluation, &mut self.inline_diagnostics);
+        if let Some(attributes) = evaluation.changed_attributes() {
+            self.attributes = Arc::new(attributes);
+        }
+        result
+    }
+
     /// Section titles and anchored block titles are cached during reading.
     /// Their effects are not declarations to replay at conversion.
     pub fn reading_title(

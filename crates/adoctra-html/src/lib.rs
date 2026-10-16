@@ -525,6 +525,26 @@ mod tests {
     }
 
     #[test]
+    fn block_reftext_preserves_early_values_and_uses_only_cqr() {
+        let html = render("[[here,*{counter:n}* \\{n} link:p[{counter:n}] <x>]]\nBody {counter:n}\n\n<<here>> / <<here>>");
+        assert!(html.contains("Body 3</p>"), "{html}");
+        assert_eq!(
+            html.matches(r##"<a href="#here"><strong>1</strong> {n} link:p[2] &lt;x&gt;</a>"##)
+                .count(),
+            2,
+            "{html}"
+        );
+        let empty = render(":attribute-missing: drop-line\n\n[[here,{missing}]]\nBody\n\n<<here>>");
+        assert!(empty.contains(r##"<a href="#here">[here]</a>"##), "{empty}");
+        let header = render("[[here,<b>{counter:n}</b>]]\n= H\n\n{reftext}\n\n<<here>>");
+        assert!(header.contains("<p><b>1</b></p>"), "{header}");
+        assert!(
+            header.contains(r##"<a href="#here">&lt;b&gt;1&lt;/b&gt;</a>"##),
+            "{header}"
+        );
+    }
+
+    #[test]
     fn stateful_block_titles_render_shared_counters_and_skip_passthrough_titles() {
         let html = render(".A {counter:example-number}\n====\nBody {counter:example-number}\n====\n\n[[here]]\n.B {counter:example-number}\n====\nBody {counter:example-number}\n====");
         assert!(html.contains("Example 1. A 2</div>"), "{html}");
