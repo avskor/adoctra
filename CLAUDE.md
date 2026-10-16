@@ -353,8 +353,9 @@ Reader records early reference spans even for discarded metadata, so tokenizatio
 does not need to execute it again. A named `reftext=` shares the anchor's key
 (last wins): its field from the line's early a-stage becomes the same `reftext::Read`
 (reference owners and spans kept), so formatting and header transfer are shared.
-On-demand formatting of reftext, including conversion-time effects/context in
-quote metadata, is still pending, as are stateful inline anchors.
+Reftext is formatted once at completion: Ruby's per-reference formatting with
+conversion-time state only differs for escaped references in quote metadata (an
+explicit XFAIL), as does anchor recognition after the attribute stage.
 Block.attribute_context remains the reading snapshot at block completion;
 it can therefore differ from resolved inline values.
 Tokenization uses isolated contexts and the same declaration replay; it never
@@ -499,7 +500,16 @@ anchors** join the same registry: a *block anchor* (a whole-line `[[id]]` /
 `[[id,reftext]]`) attaches its id and inline `reftext` to the next block,
 overriding a section's auto id; an *inline anchor* (`[[id]]` / `[[id,reftext]]`
 sharing its line with text, or the `anchor:id[reftext]` macro) renders as an empty
-`<a id>` at that point, its `reftext` feeding a textless `<<id>>`; a known id with
+`<a id>` at that point, its `reftext` feeding a textless `<<id>>` — but only
+anchors *cataloged while reading* (`anchor_catalog.rs`, Ruby's
+`catalog_inline_anchors`/`InlineAnchorScanRx`) join the registry: ordinary
+paragraphs (including `NOTE:` label paragraphs and paragraphs inside containers;
+not `[NOTE]`/`[quote]`/`[example]`/`[sidebar]`/`[verse]`-styled ones) and an
+anchor *leading* a list item. Their reftext runs the stateful early a-stage with
+reading state (an empty expanded shorthand reftext skips the anchor; `\]` is
+unescaped in `anchor:`), formatted with c/q/r; the registry keys them by physical
+start and registers leftovers whose display is not an anchor. Escaped
+`\[[…]]`/`\anchor:` render as literal text; a known id with
 no natural text falls back to `[id]` *without* a diagnostic and a duplicate id
 warns once (first definition wins). **Block attribute lists** share that
 seam (`block_attributes.rs`): a line matching Ruby's `BlockAttributeListRx`

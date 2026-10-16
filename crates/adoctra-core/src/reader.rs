@@ -708,6 +708,28 @@ impl<'a> Reader<'a> {
         context.body_subs.defer(content, None, attrs, fold)
     }
 
+    /// Catalog inline anchors from the same comment-filtered text that the
+    /// paragraph body converts later. `leading` restricts it to an anchor that
+    /// starts a list item.
+    pub fn catalog_anchors(
+        &self,
+        start: usize,
+        end: usize,
+        leading: bool,
+        context: &mut ParseContext,
+    ) {
+        let content = self.content(start, end);
+        let filtered = crate::comments::filtered_text(&content.text, 0);
+        let map = |range: std::ops::Range<usize>| {
+            content.original_span(filtered.original_span(Span::new(range.start, range.end)))
+        };
+        if leading {
+            context.catalog_leading_anchor(&filtered.text, map);
+        } else {
+            context.catalog_inline_anchors(&filtered.text, map);
+        }
+    }
+
     pub fn scan_content(
         &self,
         start: usize,

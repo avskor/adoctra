@@ -72,6 +72,8 @@ pub(crate) struct ParseContext {
     pub comments: Vec<crate::Span>,
     pub comment_diagnostics: Vec<crate::Diagnostic>,
     pub inline_diagnostics: Vec<crate::Diagnostic>,
+    /// Inline anchors cataloged while reading, in reading order.
+    pub anchors: Vec<(String, crate::anchor_catalog::Entry)>,
 }
 
 impl ParseContext {
@@ -101,6 +103,7 @@ impl ParseContext {
             comments: Vec::new(),
             comment_diagnostics: Vec::new(),
             inline_diagnostics: Vec::new(),
+            anchors: Vec::new(),
         }
     }
 

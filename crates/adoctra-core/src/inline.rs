@@ -138,6 +138,18 @@ fn try_match(
         // the `anchor:id[reftext]` macro (brackets mandatory, like `xref:`).
         b'[' => match_inline_anchor(src, i, base, attrs, quotes),
         b'a' => match_anchor_macro(src, i, base, attrs, quotes),
+        // An escaped anchor is literal text without its backslash.
+        b'\\' if src[i + 1..].starts_with("[[") || src[i + 1..].starts_with("anchor:") => {
+            let (_, end) = match_inline_anchor(src, i + 1, base, attrs, quotes)
+                .or_else(|| match_anchor_macro(src, i + 1, base, attrs, quotes))?;
+            Some((
+                Inline::Text {
+                    value: src[i + 1..end].to_owned(),
+                    span: Span::new(base + i, base + end),
+                },
+                end,
+            ))
+        }
         _ => None,
     }
 }
@@ -327,8 +339,10 @@ fn match_anchor_macro(
         return None;
     }
     let text_start = id_start + rel_bracket + 1;
-    let rel_close = src[text_start..].find(']')?;
-    let close = text_start + rel_close;
+    // `\[(?:\]|(.*?[^\\])\])`: an escaped `\]` does not close the reftext.
+    let bytes = src.as_bytes();
+    let close = (text_start..src.len())
+        .find(|&i| bytes[i] == b']' && (i == text_start || bytes[i - 1] != b'\\'))?;
     let end = close + 1;
     Some((
         Inline::Anchor {

@@ -16063,6 +16063,92 @@
       "source": "[title=T]\n= Doc\n\npara",
       "expect": "xfail",
       "reason": "A level-0 section without a doctitle lacks Ruby's generated id and sect0 class. The carried block title already matches."
+    },
+    {
+      "id": "inline-anchor-catalog-reading-counter",
+      "category": "references",
+      "source": ":n: 1\n\nA [[a,R {counter:n}]] {n}\n\n<<a>> {n}",
+      "expect": "pass"
+    },
+    {
+      "id": "inline-anchor-catalog-reading-state",
+      "category": "references",
+      "source": "p\n\n[[x,{counter:n}]]\npara\n\nA [[a,R {counter:n}]] {n}\n\n<<a>>",
+      "expect": "pass"
+    },
+    {
+      "id": "inline-anchor-catalog-macro-escaped-bracket",
+      "category": "references",
+      "source": "p\n\nx anchor:a[R \\] {counter:n}] y\n\n<<a>>",
+      "expect": "pass"
+    },
+    {
+      "id": "inline-anchor-catalog-list-trailing",
+      "category": "references",
+      "source": "p\n\n* item [[li,L {counter:n}]]\n\n<<li>> {n}",
+      "expect": "pass"
+    },
+    {
+      "id": "inline-anchor-catalog-list-leading",
+      "category": "references",
+      "source": "p\n\n* [[li,L {counter:n}]] item {n}\n\n<<li>> {n}",
+      "expect": "pass"
+    },
+    {
+      "id": "inline-anchor-catalog-escaped",
+      "category": "references",
+      "source": "p\n\nA \\[[a,R]] \\anchor:b[S] [[[c,S]]]\n\n<<a>> <<b>> <<c>>",
+      "expect": "pass"
+    },
+    {
+      "id": "inline-anchor-catalog-adjacent",
+      "category": "references",
+      "source": "p\n\n[[a]][[b,B]] x\n\n<<a>> <<b>>",
+      "expect": "pass"
+    },
+    {
+      "id": "inline-anchor-catalog-quote-metadata",
+      "category": "references",
+      "source": "p\n\nA [[a,[.r]#X#]]\n\n<<a>>",
+      "expect": "pass"
+    },
+    {
+      "id": "inline-anchor-catalog-forward-and-duplicate",
+      "category": "references",
+      "source": "p\n\n<<a>>\n\nx [[a,F {counter:n}]]\n\n[[a,R]]\npara\n\n<<a>>",
+      "expect": "pass"
+    },
+    {
+      "id": "inline-anchor-catalog-empty-macro-reftext",
+      "category": "references",
+      "source": ":attribute-missing: drop\n\nx anchor:a[{nope}] y\n\n<<a>>",
+      "expect": "pass"
+    },
+    {
+      "id": "inline-anchor-catalog-quote-paragraph",
+      "category": "references",
+      "source": "p\n\n[quote]\nB [[b,R]]\n\n<<b>>",
+      "expect": "pass"
+    },
+    {
+      "id": "inline-anchor-catalog-containers",
+      "category": "references",
+      "source": "p\n\n____\nC [[c,T]]\n____\n\n* x\n+\nD [[d,U]]\n\n<<c>> <<d>>",
+      "expect": "pass"
+    },
+    {
+      "id": "inline-anchor-catalog-drop-empty-shorthand",
+      "category": "references",
+      "expect": "xfail",
+      "reason": "Inline anchors are recognized before the attribute stage: a dropped reference leaves an anchor instead of Ruby's literal [[a,]]. The catalog already skips the registration.",
+      "source": ":attribute-missing: drop\n\nx [[a,{nope}]] y\n\n<<a>>"
+    },
+    {
+      "id": "inline-anchor-reftext-on-demand-metadata",
+      "category": "references",
+      "expect": "xfail",
+      "reason": "Reftext is formatted at block completion; Ruby formats it at each reference, so escaped references in quote metadata see conversion-time attributes and counters.",
+      "source": "p\n\n[[b,[.r\\{x}]#X#]]\npara\n\n:x: Y\n\n<<b>>\n\n:x: Z\n\n<<b>>"
     }
   ]
 }

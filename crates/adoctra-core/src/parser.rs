@@ -125,7 +125,23 @@ pub(crate) fn parse_reader<'a>(
     }
     // Selection warnings already refer to physical lines, including omitted tags.
     diagnostics.append(&mut lines.resource_diagnostics);
-    crate::resolve::resolve(&mut doc, &mut diagnostics);
+    let anchors = std::mem::take(&mut context.anchors)
+        .into_iter()
+        .map(|(id, mut entry)| {
+            entry.span = lines.map_span(entry.span, &mut provenance);
+            if let Some(reftext) = &mut entry.reftext {
+                crate::visit::walk_inlines_mut(
+                    &mut Origin {
+                        reader: &lines,
+                        provenance: &mut provenance,
+                    },
+                    reftext,
+                );
+            }
+            (id, entry)
+        })
+        .collect();
+    crate::resolve::resolve(&mut doc, anchors, &mut diagnostics);
     let physical = |spans: &[Span]| {
         spans
             .iter()
@@ -503,6 +519,30 @@ fn build_attribution(
     } else {
         Some(Attribution { author, citetitle })
     }
+}
+
+/// Paragraph styles that Ruby builds outside its ordinary paragraph branch,
+/// which is the only one that catalogs inline anchors.
+fn changes_paragraph_type(style: &str) -> bool {
+    AdmonitionKind::from_style(style).is_some()
+        || matches!(
+            style,
+            "abstract"
+                | "comment"
+                | "example"
+                | "listing"
+                | "literal"
+                | "open"
+                | "partintro"
+                | "pass"
+                | "quote"
+                | "sidebar"
+                | "source"
+                | "stem"
+                | "latexmath"
+                | "asciimath"
+                | "verse"
+        )
 }
 
 /// Capture the verbatim body of a delimited block whose opening `fence` has just
@@ -1020,6 +1060,7 @@ fn parse_block_content(
     // `[NOTE]` *style* form is handled later, in the pending-attrs fixup.
     if let Some((kind, prefix_len)) = AdmonitionKind::from_label_prefix(line) {
         let content_start = start + prefix_len;
+        lines.catalog_anchors(content_start, end, false, context);
         let inlines = lines.scan_content(content_start, end, &attrs, context);
         // The body is a single child paragraph spanning the text after the prefix;
         // the admonition block still spans the whole paragraph (label included).
@@ -1044,6 +1085,11 @@ fn parse_block_content(
         content.restore_inlines(&mut nodes);
         nodes
     } else {
+        // Ruby catalogs anchors only for ordinary paragraphs; a style that
+        // changes the block type is built without cataloging.
+        if !pending_style.is_some_and(changes_paragraph_type) {
+            lines.catalog_anchors(start, end, false, context);
+        }
         lines.scan_content(start, end, &attrs, context)
     };
     Some(Block::new(
@@ -1139,6 +1185,7 @@ fn parse_list(
             *i += 1;
         }
         let attrs = context.render_attributes();
+        lines.catalog_anchors(content_start, principal_end, true, context);
         let inlines = lines.scan_content(content_start, principal_end, &attrs, context);
 
         // Attached blocks (`+` continuations) and nested sublists, in source

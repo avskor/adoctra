@@ -1342,6 +1342,20 @@ mod tests {
     }
 
     #[test]
+    fn xref_labels_from_cataloged_anchors_keep_reftext_spans() {
+        let src = "p\n\nЖ [[a,*R*]]\n\n<<a>>";
+        let json = parse_json(src);
+        let at = src.find("*R*").unwrap();
+        assert!(
+            json.contains(&format!(
+                "\"span\":{{\"source_id\":0,\"start\":{at},\"end\":{}}},\"name\":\"strong\"",
+                at + 3
+            )),
+            "got: {json}"
+        );
+    }
+
+    #[test]
     fn verse_block_serializes_inlines_preserving_newline() {
         let json = parse_json("[verse]\n____\nfirst\nsecond\n____");
         assert!(json.contains("\"name\":\"verse\""), "got: {json}");

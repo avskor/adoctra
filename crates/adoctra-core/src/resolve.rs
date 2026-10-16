@@ -29,18 +29,38 @@ use crate::visit::{self, InlineContext, VisitorMut};
 /// (like [`Attributes`]).
 type Registry = BTreeMap<String, Option<Vec<Inline>>>;
 
+/// Inline anchors cataloged while reading, keyed by their physical start.
+type Anchors = BTreeMap<(crate::SourceId, usize), (String, Option<Vec<Inline>>)>;
+
 /// Assign section ids and resolve cross-references over `doc`, pushing a
 /// diagnostic for every reference whose id is not in the registry (and for a
 /// duplicate explicit id).
-pub(crate) fn resolve(doc: &mut Document, diagnostics: &mut Vec<Diagnostic>) {
+pub(crate) fn resolve(
+    doc: &mut Document,
+    anchors: Vec<(String, crate::anchor_catalog::Entry)>,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let anchors = anchors
+        .into_iter()
+        .map(|(id, entry)| {
+            let span = entry.span;
+            ((span.source_id, span.start), (id, entry.reftext))
+        })
+        .collect();
     let mut registry = Registry::new();
-    assign_ids(&mut doc.blocks, &mut registry, diagnostics);
+    assign_ids(&mut doc.blocks, anchors, &mut registry, diagnostics);
     resolve_xrefs(&mut doc.blocks, &registry, diagnostics);
 }
 
 /// Register block ids and body anchors before resolving forward references.
-fn assign_ids(blocks: &mut [Block], registry: &mut Registry, diagnostics: &mut Vec<Diagnostic>) {
+fn assign_ids(
+    blocks: &mut [Block],
+    mut anchors: Anchors,
+    registry: &mut Registry,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
     struct Ids<'a> {
+        anchors: &'a mut Anchors,
         registry: &'a mut Registry,
         diagnostics: &'a mut Vec<Diagnostic>,
     }
@@ -72,25 +92,39 @@ fn assign_ids(blocks: &mut [Block], registry: &mut Registry, diagnostics: &mut V
             }
         }
         fn visit_inline(&mut self, inline: &mut Inline) {
-            if let Inline::Anchor { id, reftext, span } = inline {
-                register_id(
-                    self.registry,
-                    id.clone(),
-                    reftext.clone(),
-                    *span,
-                    self.diagnostics,
-                );
+            // Only anchors cataloged while reading join the registry, with
+            // their reading-time reftext; others still render.
+            if let Inline::Anchor { id, span, .. } = inline {
+                let key = (span.source_id, span.start);
+                if self
+                    .anchors
+                    .get(&key)
+                    .is_some_and(|(cataloged, _)| cataloged == id)
+                {
+                    let (id, reftext) = self.anchors.remove(&key).unwrap();
+                    register_id(self.registry, id, reftext, *span, self.diagnostics);
+                }
             }
             visit::walk_inline_mut(self, inline);
         }
     }
     visit::walk_blocks_mut(
         &mut Ids {
+            anchors: &mut anchors,
             registry,
             diagnostics,
         },
         blocks,
     );
+    // Ruby registers cataloged anchors even where the rendered text does not
+    // form an anchor (for example, quote metadata inside the reftext).
+    for ((source_id, start), (id, reftext)) in anchors {
+        let span = Span {
+            source_id,
+            ..Span::new(start, start)
+        };
+        register_id(registry, id, reftext, span, diagnostics);
+    }
 }
 
 /// Register `id -> reftext` in the registry, warning (at `span`) on a duplicate

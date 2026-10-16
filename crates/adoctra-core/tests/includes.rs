@@ -2844,3 +2844,30 @@ fn block_attribute_line_subs_keep_selected_include_origins() {
         .iter()
         .any(|t| t.kind == TokenKind::AttributeRef && t.span == counter.span()));
 }
+
+#[test]
+fn inline_anchor_catalog_keeps_selected_include_origins() {
+    let root = "para\n\ninclude::part.adoc[tag=body,indent=0]\n\n<<a>> <<b>>";
+    let part =
+        "// tag::body[]\r\n  Ж [[a,R {counter:n} *x*]]\r\n\r\n  * [[b,L]] item\r\n// end::body[]";
+    let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", part)]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    let BlockKind::Paragraph { inlines } = &result.document.blocks.last().unwrap().kind else {
+        panic!("{result:?}");
+    };
+    let refs: Vec<_> = inlines
+        .iter()
+        .filter_map(|n| match n {
+            Inline::CrossReference { children, .. } => Some(children),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(refs.len(), 2);
+    let strong = refs[0]
+        .iter()
+        .find(|n| matches!(n, Inline::Strong { .. }))
+        .unwrap();
+    assert_eq!(strong.span().source_id, SourceId(1));
+    assert_eq!(sources.slice(strong.span()), Some("*x*"));
+    assert!(matches!(&refs[1][0], Inline::Text { value, .. } if value == "L"));
+}

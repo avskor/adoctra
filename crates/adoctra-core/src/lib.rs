@@ -45,6 +45,7 @@ pub mod visit;
 
 pub use ast::{Author, Block, BlockKind, Document, DocumentHeader, Inline, Revision, Span};
 pub use attributes::{AttributeFormat, AttributeLink, AttributePart, Attributes};
+mod anchor_catalog;
 mod attribute_list;
 mod attribute_macros;
 mod attribute_quotes;

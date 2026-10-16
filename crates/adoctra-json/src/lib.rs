@@ -1420,6 +1420,20 @@ mod tests {
         assert!(json.contains("\"id\":\"p\""), "got: {json}");
     }
 
+    #[test]
+    fn xrefs_use_cataloged_anchor_reftext() {
+        let json = render("p\n\nA [[a,R {counter:n}]]\n\n* x [[b,L]]\n\n<<a>> <<b>>");
+        assert!(
+            json.contains("{\"name\":\"xref\",\"target\":\"a\",\"inlines\":[{\"name\":\"text\",\"value\":\"R \"},{\"name\":\"text\",\"value\":\"1\"}]}"),
+            "got: {json}"
+        );
+        // A trailing list item anchor is rendered but not cataloged.
+        assert!(
+            json.contains("{\"name\":\"xref\",\"target\":\"b\",\"inlines\":[{\"name\":\"text\",\"value\":\"[b]\"}]}"),
+            "got: {json}"
+        );
+    }
+
     // --- verbatim masquerades on a `--` open block ---
 
     #[test]

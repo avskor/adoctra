@@ -1564,6 +1564,18 @@ mod tests {
     }
 
     #[test]
+    fn cataloged_inline_anchors_resolve_and_escaped_anchors_are_text() {
+        let html = render(
+            "p\n\nA [[a,*R* {counter:n}]] \\[[b,S]]\n\n[NOTE]\nC [[c,T]]\n\n<<a>> <<b>> <<c>>",
+        );
+        assert!(html.contains("A <a id=\"a\"></a> [[b,S]]"), "got: {html}");
+        assert!(
+            html.contains("<a href=\"#a\"><strong>R</strong> 1</a> <a href=\"#b\">[b]</a> <a href=\"#c\">[c]</a>"),
+            "got: {html}"
+        );
+    }
+
+    #[test]
     fn verse_block_renders_pre_preserving_newlines() {
         let html = render("[verse]\n____\nThe fog comes\non little cat feet.\n____");
         assert!(
