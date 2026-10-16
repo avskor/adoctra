@@ -32,8 +32,13 @@ impl Backend for HtmlBackend {
         out.push_str("<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"utf-8\">\n<style>\n");
         out.push_str(STYLESHEET);
         out.push_str("</style>\n</head>\n<body>\n");
-        for block in &doc.blocks {
-            render_block(block, &mut out);
+        for (i, block) in doc.blocks.iter().enumerate() {
+            match &block.kind {
+                BlockKind::Heading { level, inlines } if i == 0 && doc.has_title => {
+                    render_heading(block, *level, inlines, false, &mut out);
+                }
+                _ => render_block(block, &mut out),
+            }
         }
         out.push_str("</body>\n</html>\n");
         Ok(out.into_bytes())
@@ -49,14 +54,7 @@ fn render_block(block: &Block, out: &mut String) {
     // already does).
     let id = id_attr(&block.id);
     match &block.kind {
-        BlockKind::Heading { level, inlines } => {
-            let h = level.saturating_add(1).min(6);
-            let class = class_attr(&[], &block.roles);
-            render_title(&block.title, &block.caption, out);
-            out.push_str(&format!("<h{h}{id}{class}>"));
-            render_inlines(inlines, out);
-            out.push_str(&format!("</h{h}>\n"));
-        }
+        BlockKind::Heading { level, inlines } => render_heading(block, *level, inlines, true, out),
         BlockKind::Paragraph { inlines } => {
             let class = class_attr(&[], &block.roles);
             render_title(&block.title, &block.caption, out);
@@ -132,7 +130,11 @@ fn render_block(block: &Block, out: &mut String) {
             }
             out.push_str(&format!("</{tag}>\n"));
         }
-        BlockKind::Admonition { kind, blocks } => {
+        BlockKind::Admonition {
+            kind,
+            label,
+            blocks,
+        } => {
             // A modern, semantic admonition: a single `<aside>` carrying the type
             // (`data-type`) and an accessible label, then a title and the rendered
             // child blocks. No table/icon-font scaffolding (asciidoctor's) — the
@@ -140,13 +142,20 @@ fn render_block(block: &Block, out: &mut String) {
             // wrapping `<div>`: id/roles hang on the `<aside>` itself (roles append
             // to `admonition`). The paragraph/label forms carry a single child
             // paragraph, so their body renders as `<p>…</p>` exactly as before.
+            // The label is core's resolved `caption` / `<kind>-caption` value; an
+            // unset caption leaves an empty title, as in asciidoctor.
             let class = class_attr(&["admonition"], &block.roles);
             let ty = kind.as_str();
-            let label = kind.label();
-            out.push_str(&format!(
-                "<aside{id}{class} data-type=\"{ty}\" aria-label=\"{label}\">\n"
-            ));
-            out.push_str(&format!("<p class=\"admonition-title\">{label}</p>\n"));
+            let mut label_html = String::new();
+            render_parts(label, &mut label_html);
+            let text = adoctra_core::attributes::parts_text(label);
+            let aria = if text.is_empty() {
+                String::new()
+            } else {
+                format!(" aria-label=\"{}\"", escape(&text).replace('"', "&quot;"))
+            };
+            out.push_str(&format!("<aside{id}{class} data-type=\"{ty}\"{aria}>\n"));
+            out.push_str(&format!("<p class=\"admonition-title\">{label_html}</p>\n"));
             // A `.Title` on the admonition is the block's *own* title (distinct from
             // the `Note`/`Tip`/… label), rendered above the body — matching where
             // asciidoctor places it in the content cell.
@@ -238,6 +247,23 @@ fn render_block(block: &Block, out: &mut String) {
             out.push_str("</div>\n");
         }
     }
+}
+
+/// A heading element. A discrete (`[discrete]`/`[float]`) heading carries its
+/// style as a class, like asciidoctor's floating title; a level-0 heading that
+/// is not the document title is a part (`sect0`).
+fn render_heading(block: &Block, level: u8, inlines: &[Inline], body: bool, out: &mut String) {
+    let h = level.saturating_add(1).min(6);
+    let base = match block.attrs.style.as_deref() {
+        Some(style @ ("discrete" | "float")) => Some(style),
+        _ if body && level == 0 => Some("sect0"),
+        _ => None,
+    };
+    let class = class_attr(base.as_slice(), &block.roles);
+    render_title(&block.title, &block.caption, out);
+    out.push_str(&format!("<h{h}{}{class}>", id_attr(&block.id)));
+    render_inlines(inlines, out);
+    out.push_str(&format!("</h{h}>\n"));
 }
 
 /// Emit a quote/verse [`Attribution`] as a `<figcaption>` (nothing when absent).
@@ -1571,6 +1597,31 @@ mod tests {
         assert!(html.contains("A <a id=\"a\"></a> [[b,S]]"), "got: {html}");
         assert!(
             html.contains("<a href=\"#a\"><strong>R</strong> 1</a> <a href=\"#b\">[b]</a> <a href=\"#c\">[c]</a>"),
+            "got: {html}"
+        );
+    }
+
+    #[test]
+    fn admonition_labels_and_heading_classes_follow_core() {
+        // A `caption` attribute is emitted raw, as in asciidoctor; aria-label escapes.
+        let html =
+            render("[NOTE,caption=\"Say \\\"hi\\\" & <go>\"]\nx\n\n:tip-caption!:\n\nTIP: y");
+        assert!(
+            html.contains("aria-label=\"Say &quot;hi&quot; &amp; &lt;go&gt;\">\n<p class=\"admonition-title\">Say \"hi\" & <go></p>"),
+            "got: {html}"
+        );
+        assert!(
+            html.contains("data-type=\"tip\">\n<p class=\"admonition-title\"></p>"),
+            "got: {html}"
+        );
+        let html = render("= Doc\n\n[float#f.r]\n=== F\n\n= Part");
+        assert!(html.contains("<h1>Doc</h1>"), "got: {html}");
+        assert!(
+            html.contains("<h3 id=\"f\" class=\"float r\">F</h3>"),
+            "got: {html}"
+        );
+        assert!(
+            html.contains("<h1 id=\"_part\" class=\"sect0\">Part</h1>"),
             "got: {html}"
         );
     }

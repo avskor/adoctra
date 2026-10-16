@@ -80,6 +80,15 @@ impl ParseContext {
     pub fn new(options: &ParseOptions) -> Self {
         let mut attributes = Attributes::new();
         attributes.set("example-caption", "Example");
+        for kind in [
+            crate::ast::AdmonitionKind::Note,
+            crate::ast::AdmonitionKind::Tip,
+            crate::ast::AdmonitionKind::Important,
+            crate::ast::AdmonitionKind::Warning,
+            crate::ast::AdmonitionKind::Caution,
+        ] {
+            attributes.set(format!("{}-caption", kind.as_str()), kind.label());
+        }
         let mut locked = BTreeSet::new();
         for (key, value) in options.attributes.iter() {
             let effective_key = attribute_name(key);
@@ -235,6 +244,22 @@ impl ParseContext {
             self.attributes = Arc::new(attributes);
         }
         inlines
+    }
+
+    /// An admonition's label while reading: its own `caption`, else the
+    /// document's `<kind>-caption` (empty when unset).
+    pub fn admonition_label(
+        &self,
+        kind: crate::ast::AdmonitionKind,
+        attrs: Option<&crate::ast::BlockAttrs>,
+    ) -> Vec<crate::AttributePart> {
+        match attrs.and_then(|attrs| attrs.named.get("caption")) {
+            Some(caption) => vec![crate::AttributePart::Raw(caption.clone())],
+            None => self
+                .attributes
+                .value_parts(&format!("{}-caption", kind.as_str()))
+                .unwrap_or_default(),
+        }
     }
 
     /// Example captions are fixed in child-before-parent completion order.

@@ -58,6 +58,7 @@ pub(crate) fn parse_reader<'a>(
         attributes: (*context.attributes).clone(),
         header: header.metadata,
         blocks: Vec::new(),
+        has_title: header.effective_title.is_some(),
     };
     let mut diagnostics = Vec::new();
     if let Some(effective) = header.effective_title {
@@ -74,7 +75,7 @@ pub(crate) fn parse_reader<'a>(
         );
         if header.metadata_for_title {
             let metadata = std::mem::take(&mut header.pending);
-            title.id = metadata.id;
+            title.id = metadata.id.or(header.title_anchor.take());
             title.reftext = metadata
                 .reftext
                 .map(|value| value.finish(&context.attributes, &mut context.inline_diagnostics));
@@ -208,12 +209,17 @@ fn collect_blocks(
             diagnostics,
             BlockCtx::TopLevel,
             Some(&metadata.attrs),
+            metadata.id.is_some(),
         ) {
             let pending = metadata;
-            block.id = pending.id;
-            block.reftext = pending
-                .reftext
-                .map(|value| value.finish(&context.attributes, &mut context.inline_diagnostics));
+            // A section-title anchor supplies the id only without one from
+            // metadata, but its reftext replaces a pending reftext.
+            block.id = pending.id.or(block.id.take());
+            let reftext = block.reftext.take().map(Ok).or(pending.reftext.map(Err));
+            block.reftext = reftext.map(|value| match value {
+                Ok(nodes) => nodes,
+                Err(value) => value.finish(&context.attributes, &mut context.inline_diagnostics),
+            });
             block.roles = pending.roles;
             let mut title = pending.title;
             if matches!(block.kind, BlockKind::Heading { .. }) {
@@ -350,6 +356,7 @@ fn apply_style_fixup(
                 let child = new_child(block.span, BlockKind::Paragraph { inlines });
                 block.kind = BlockKind::Admonition {
                     kind,
+                    label: context.admonition_label(kind, Some(&block.attrs)),
                     blocks: vec![child],
                 };
             }
@@ -360,7 +367,11 @@ fn apply_style_fixup(
             | BlockKind::Quote { blocks, .. }
             | BlockKind::Open { blocks } => {
                 let blocks = std::mem::take(blocks);
-                block.kind = BlockKind::Admonition { kind, blocks };
+                block.kind = BlockKind::Admonition {
+                    kind,
+                    label: context.admonition_label(kind, Some(&block.attrs)),
+                    blocks,
+                };
             }
             _ => {}
         }
@@ -615,8 +626,10 @@ fn parse_block(
     diagnostics: &mut Vec<Diagnostic>,
     ctx: BlockCtx,
     pending_attrs: Option<&BlockAttrs>,
+    has_id: bool,
 ) -> Option<Block> {
-    let mut block = parse_block_content(lines, i, context, diagnostics, ctx, pending_attrs)?;
+    let mut block =
+        parse_block_content(lines, i, context, diagnostics, ctx, pending_attrs, has_id)?;
     block.attribute_context = Arc::clone(&context.attributes);
     Some(block)
 }
@@ -644,6 +657,8 @@ fn parse_block_content(
     // verbatim (like `....`), every other style — including the bare default — is
     // a parsed `quote` container (like `====`).
     pending_attrs: Option<&BlockAttrs>,
+    // Whether metadata already supplied an id (a section-title anchor then stays text).
+    has_id: bool,
 ) -> Option<Block> {
     let pending_style = pending_attrs.and_then(|attrs| attrs.style.as_deref());
     let attrs = inline_attributes(&context.render_attributes(), pending_attrs);
@@ -672,17 +687,29 @@ fn parse_block_content(
         }
         let level = adjusted.clamp(0, u8::MAX as i128) as u8;
         // `title` is a subslice of this detached reader line.
+        // Without an id from metadata, a trailing ` [[id,reftext]]` names the
+        // section and is removed from its title.
+        let anchor = (!has_id).then(|| section_anchor(title)).flatten();
+        let title = anchor.as_ref().map_or(title, |a| a.title);
         let base = lines[*i].0 + abs_offset(line, title);
         let heading_attrs = inline_attributes(&context.attributes, pending_attrs);
         let inlines = context.reading_title(title, base, &heading_attrs);
-        *i += 1;
-        // `Block.id` is assigned later, by the resolve pass, once the whole
-        // document is known (it deduplicates ids across all sections) — unless an
-        // explicit `[[id]]` anchor on the enclosing block already set it.
-        return Some(Block::new(
+        // `Block.id` is otherwise assigned later, by the resolve pass, once the
+        // whole document is known (it deduplicates ids across all sections).
+        let mut block = Block::new(
             Span::new(off, off + line.len()),
             BlockKind::Heading { level, inlines },
-        ));
+        );
+        if let Some(anchor) = anchor {
+            block.id = Some(anchor.id.to_owned());
+            block.reftext = anchor.reftext.map(|reftext| {
+                let base = lines[*i].0 + abs_offset(line, reftext);
+                crate::reftext::Read::source(reftext, base)
+                    .finish(&context.attributes, &mut context.inline_diagnostics)
+            });
+        }
+        *i += 1;
+        return Some(block);
     }
 
     // Listing block (verbatim, fenced by `----`).
@@ -1073,6 +1100,7 @@ fn parse_block_content(
             Span::new(start, end),
             BlockKind::Admonition {
                 kind,
+                label: context.admonition_label(kind, pending_attrs),
                 blocks: vec![child],
             },
         ));
@@ -1205,9 +1233,15 @@ fn parse_list(
                         break;
                     }
                     if lines.has(*i, context) && !lines[*i].1.trim().is_empty() {
-                        if let Some(b) =
-                            parse_block(lines, i, context, diagnostics, BlockCtx::InListItem, None)
-                        {
+                        if let Some(b) = parse_block(
+                            lines,
+                            i,
+                            context,
+                            diagnostics,
+                            BlockCtx::InListItem,
+                            None,
+                            false,
+                        ) {
                             item_end = b.span.end;
                             blocks.push(b);
                         }
@@ -1323,6 +1357,67 @@ pub(crate) fn parse_heading(line: &str) -> Option<(u8, &str)> {
     let rest = &line[eqs..];
     let title = rest.strip_prefix(' ')?;
     Some(((eqs - 1) as u8, title.trim()))
+}
+
+/// A trailing section-title anchor, split off its title.
+pub(crate) struct SectionAnchor<'a> {
+    pub title: &'a str,
+    pub id: &'a str,
+    pub reftext: Option<&'a str>,
+}
+
+/// Ruby's `InlineSectionAnchorRx`: ` [[id]]` or ` [[id, reftext]]` ending a
+/// section title, at its leftmost match. An escaped (`\[[`) match keeps the
+/// title unchanged.
+pub(crate) fn section_anchor(title: &str) -> Option<SectionAnchor<'_>> {
+    if !title.ends_with("]]") {
+        return None;
+    }
+    for (space, _) in title.match_indices(' ') {
+        let rest = &title[space + 1..];
+        let escaped = rest.starts_with("\\[[");
+        let Some(inner) = rest.strip_prefix("\\").unwrap_or(rest).strip_prefix("[[") else {
+            continue;
+        };
+        let mut chars = inner.char_indices();
+        if !chars
+            .next()
+            .is_some_and(|(_, c)| c.is_alphabetic() || matches!(c, '_' | ':'))
+        {
+            continue;
+        }
+        let id_end = chars
+            .find(|(_, c)| !crate::unicode_word::is_word(*c) && !matches!(c, '-' | ':' | '.'))
+            .map_or(inner.len(), |(i, _)| i);
+        let after = &inner[id_end..];
+        let reftext = if after == "]]" {
+            None
+        } else if let Some(text) = after.strip_prefix(',') {
+            // `, *(.+)` greedy to the final `]]`; the last space may be the text.
+            let text = text.strip_suffix("]]")?;
+            let trimmed = text.trim_start_matches(' ');
+            let text = if trimmed.is_empty() {
+                &text[text.len().saturating_sub(1)..]
+            } else {
+                trimmed
+            };
+            if text.is_empty() {
+                continue;
+            }
+            Some(text)
+        } else {
+            continue;
+        };
+        if escaped {
+            return None;
+        }
+        return Some(SectionAnchor {
+            title: &title[..space],
+            id: &inner[..id_end],
+            reftext,
+        });
+    }
+    None
 }
 
 /// Recognise a *block anchor* line — `[[id]]` or `[[id,reftext]]` occupying the
@@ -2204,7 +2299,7 @@ mod tests {
     /// paragraph — the shape the paragraph and label forms always produce.
     fn admonition_para(block: &Block) -> (AdmonitionKind, &[Inline]) {
         match &block.kind {
-            BlockKind::Admonition { kind, blocks } => {
+            BlockKind::Admonition { kind, blocks, .. } => {
                 assert_eq!(blocks.len(), 1, "expected a single body paragraph");
                 match &blocks[0].kind {
                     BlockKind::Paragraph { inlines } => (*kind, inlines),
@@ -2335,7 +2430,7 @@ mod tests {
     /// The kind and child blocks of an admonition container.
     fn admonition_blocks(block: &Block) -> (AdmonitionKind, &[Block]) {
         match &block.kind {
-            BlockKind::Admonition { kind, blocks } => (*kind, blocks),
+            BlockKind::Admonition { kind, blocks, .. } => (*kind, blocks),
             other => panic!("expected Admonition, got {other:?}"),
         }
     }
@@ -3291,7 +3386,7 @@ mod tests {
         // renders alongside the `Note` label).
         let b = &parse(".My note\n[NOTE]\nNote body.").document.blocks[0];
         assert_eq!(block_title_text(b).as_deref(), Some("My note"));
-        let BlockKind::Admonition { kind, blocks } = &b.kind else {
+        let BlockKind::Admonition { kind, blocks, .. } = &b.kind else {
             panic!("expected admonition, got {:?}", b.kind);
         };
         assert_eq!(*kind, AdmonitionKind::Note);

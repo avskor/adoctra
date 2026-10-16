@@ -252,7 +252,7 @@ pub(crate) fn push_part(parts: &mut Vec<AttributePart>, text: &str, raw: bool) {
     }
 }
 
-pub(crate) fn parts_text(parts: &[AttributePart]) -> String {
+pub fn parts_text(parts: &[AttributePart]) -> String {
     parts.iter().map(AttributePart::text).collect()
 }
 

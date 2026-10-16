@@ -60,6 +60,10 @@ pub struct Document {
     pub attributes: Attributes,
     pub header: Option<DocumentHeader>,
     pub blocks: Vec<Block>,
+    /// Whether `blocks[0]` is the document title: a source `= Title` or a
+    /// `doctitle` attribute without one. A leading level-0 heading that is not
+    /// the title (for example, under a block title) is a part.
+    pub has_title: bool,
 }
 
 /// Source declarations in a document header. Effective (possibly overridden)
@@ -239,7 +243,7 @@ impl AdmonitionKind {
         }
     }
 
-    /// The human-readable label (`"Note"`, …): the rendered title / `aria-label`.
+    /// The default label (`"Note"`, …): the built-in `<kind>-caption` value.
     pub fn label(self) -> &'static str {
         match self {
             Self::Note => "Note",
@@ -344,6 +348,11 @@ pub enum BlockKind {
     /// block's children. `kind` selects the type.
     Admonition {
         kind: AdmonitionKind,
+        /// asciidoctor's `textlabel`: the block's `caption` attribute (raw, as
+        /// asciidoctor emits it), else the document's `<kind>-caption` while
+        /// reading (default `Note`, …) with its own Text/Raw parts. Empty when
+        /// that attribute is unset.
+        label: Vec<crate::AttributePart>,
         blocks: Vec<Block>,
     },
     /// An example block: a parsed container of child blocks, delimited by `====`

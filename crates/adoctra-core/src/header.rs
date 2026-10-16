@@ -28,6 +28,8 @@ pub(crate) struct Header {
     pub effective_title: Option<HeaderTitle>,
     pub pending: crate::parser::PendingMeta,
     pub metadata_for_title: bool,
+    /// The id of a trailing ` [[id]]` on the document title.
+    pub title_anchor: Option<String>,
 }
 
 pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext) -> Header {
@@ -49,6 +51,7 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
         body_start: i,
         metadata: None,
         metadata_for_title: false,
+        title_anchor: None,
         pending,
         effective_title: context
             .attributes
@@ -92,6 +95,11 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
         } else {
             parse_heading(&lines[i].1).unwrap().1
         };
+        // A trailing ` [[id]]` always leaves the document title; its id applies
+        // unless metadata supplied one (its reftext is ignored, as in Ruby).
+        let anchor = crate::parser::section_anchor(declared);
+        let declared = anchor.as_ref().map_or(declared, |anchor| anchor.title);
+        result.title_anchor = anchor.map(|anchor| anchor.id.to_owned());
         let text_start = lines[i].0 + (declared.as_ptr() as usize - lines[i].1.as_ptr() as usize);
         let declared_title = declared.to_owned();
         if result.effective_title.is_none() {

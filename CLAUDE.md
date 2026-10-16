@@ -492,10 +492,19 @@ markup parsed inside the reftext; a **post-parse resolve pass**
 because a reference may point forward) builds a registry of **auto-generated
 section ids** (asciidoctor's `sectids`: lowercase, non-alphanumerics dropped or
 folded to `_`, `_`-prefixed — `== Hello World` → `_hello_world`, with `_2`/`_3`
-deduplication) and resolves each reference: a textless `<<id>>` / `xref:id[]` takes
-the section's title as display text (inline formatting preserved), an explicit
+deduplication) — for every heading except the document title (`Document.has_title`
+marks `blocks[0]`), so discrete (`[discrete]`/`[float]`, rendered with the style plus
+roles as class and never a section) and body level-0 headings (parts, `sect0`) get
+ids too — and resolves each reference: a textless `<<id>>` / `xref:id[]` takes
+the section's title as display text (inline formatting preserved, inline anchors
+dropped; the document title lends its text to an explicit id), an explicit
 reftext is kept verbatim, and an unknown id emits a `Warning` diagnostic and
-renders the `[id]` *unresolved* fallback (asciidoctor-compatible). **Explicit
+renders the `[id]` *unresolved* fallback (asciidoctor-compatible). A trailing
+` [[id]]`/` [[id, reftext]]` on a section, discrete or document title (Ruby's
+`InlineSectionAnchorRx`, leftmost match, preceding space required, escape keeps
+it) is removed from the title and names it unless metadata already supplied an
+id; its raw reftext gets c/q/r without the attribute stage and replaces a pending
+reftext (the document title ignores it). **Explicit
 anchors** join the same registry: a *block anchor* (a whole-line `[[id]]` /
 `[[id,reftext]]`) attaches its id and inline `reftext` to the next block,
 overriding a section's auto id; an *inline anchor* (`[[id]]` / `[[id,reftext]]`
@@ -542,7 +551,10 @@ the paragraph and label forms wrap their inlines in a single child paragraph (an
 `AdmonitionKind` enum; both forms case-sensitive, matching asciidoctor —
 `[note]`/`note:` stay paragraphs). The HTML backend renders a **modern, semantic**
 `<aside class="admonition" data-type="TYPE" aria-label="…">` with a
-`.admonition-title` and the rendered child blocks — *not* asciidoctor's
+`.admonition-title` and the rendered child blocks. The label is core's
+`Admonition.label` (asciidoctor's `textlabel`): a raw `caption=` attribute, else
+the document's `<kind>-caption` parts while reading (built-in `Note`/…, empty
+when unset) — *not* asciidoctor's
 table/icon-font layout; id/roles hang on the `<aside>`. This is also where adoctra first **ships a
 reference stylesheet**: `adoctra-html` exposes `STYLESHEET` (`assets/adoctra.css`,
 a modern theme — custom properties, `color-mix()`, logical properties, SVG-mask

@@ -33,6 +33,13 @@ pub(crate) fn read(
 }
 
 impl Read {
+    /// Source reftext without the early a-stage (a section-title anchor).
+    pub fn source(value: &str, base: usize) -> Self {
+        let mut expanded = Text::default();
+        expanded.append_source(value, true, 0, Span::new(base, base + value.len()));
+        Self::expanded(expanded, Vec::new())
+    }
+
     /// A value already expanded by an attribute list's early a-stage.
     pub fn expanded(expanded: Text, refs: Vec<crate::inline_attributes::Reference>) -> Self {
         Read {

@@ -16012,8 +16012,7 @@
       "id": "block-attrs-title-discrete-discards",
       "category": "block-attributes",
       "source": ".T\n[discrete]\n== H\n\npara",
-      "expect": "xfail",
-      "reason": "Discrete headings are not implemented: adoctra omits class=\"discrete\". The discarded block title already matches."
+      "expect": "pass"
     },
     {
       "id": "block-attrs-title-section-counter",
@@ -16061,8 +16060,7 @@
       "id": "block-attrs-title-header-not-doctitle",
       "category": "block-attributes",
       "source": "[title=T]\n= Doc\n\npara",
-      "expect": "xfail",
-      "reason": "A level-0 section without a doctitle lacks Ruby's generated id and sect0 class. The carried block title already matches."
+      "expect": "pass"
     },
     {
       "id": "inline-anchor-catalog-reading-counter",
@@ -16149,6 +16147,126 @@
       "expect": "xfail",
       "reason": "Reftext is formatted at block completion; Ruby formats it at each reference, so escaped references in quote metadata see conversion-time attributes and counters.",
       "source": "p\n\n[[b,[.r\\{x}]#X#]]\npara\n\n:x: Y\n\n<<b>>\n\n:x: Z\n\n<<b>>"
+    },
+    {
+      "id": "discrete-heading-basic",
+      "category": "blocks",
+      "source": "[discrete]\n== H\n\npara",
+      "expect": "pass"
+    },
+    {
+      "id": "discrete-heading-float-roles",
+      "category": "blocks",
+      "source": "[float#f.r]\n=== H *b*\n\n<<f>>",
+      "expect": "pass"
+    },
+    {
+      "id": "discrete-heading-auto-id-reference",
+      "category": "blocks",
+      "source": "p\n\n[discrete]\n== H\n\n== S\n\n<<_h>>",
+      "expect": "pass"
+    },
+    {
+      "id": "discrete-heading-level-zero",
+      "category": "blocks",
+      "source": "[discrete]\n= H\n\npara",
+      "expect": "pass"
+    },
+    {
+      "id": "discrete-heading-duplicate-ids",
+      "category": "blocks",
+      "source": "p\n\n[discrete]\n== H\n\n== H\n\n<<_h>> <<_h_2>>",
+      "expect": "pass"
+    },
+    {
+      "id": "level-zero-part-without-doctitle",
+      "category": "blocks",
+      "source": ".T\n= Part\n\npara\n\n<<_part>>",
+      "expect": "pass"
+    },
+    {
+      "id": "level-zero-part-after-doctitle",
+      "category": "blocks",
+      "source": "= Doc\n\n= Part\n\n<<_part>>",
+      "expect": "pass"
+    },
+    {
+      "id": "section-anchor-trailing-reftext",
+      "category": "references",
+      "source": "p\n\n== S [[s,SS]]\n\n<<s>>",
+      "expect": "pass"
+    },
+    {
+      "id": "section-anchor-trailing-id",
+      "category": "references",
+      "source": "p\n\n== S [[s]]\n\n<<s>>",
+      "expect": "pass"
+    },
+    {
+      "id": "section-anchor-metadata-id-wins",
+      "category": "references",
+      "source": "p\n\n[[x]]\n== S [[s,SS]]\n\n<<x>> <<s>>",
+      "expect": "pass"
+    },
+    {
+      "id": "section-anchor-reftext-overrides-pending",
+      "category": "references",
+      "source": "p\n\n[reftext=R]\n== S [[s,*SS* {x}]]\n\n<<s>>",
+      "expect": "pass"
+    },
+    {
+      "id": "section-anchor-escaped",
+      "category": "references",
+      "source": "p\n\n== S \\[[s,SS]]\n\n<<s>>",
+      "expect": "pass"
+    },
+    {
+      "id": "section-anchor-needs-space",
+      "category": "references",
+      "source": "p\n\n== S[[s]]\n\n<<s>>",
+      "expect": "pass"
+    },
+    {
+      "id": "section-anchor-leftmost-match",
+      "category": "references",
+      "source": "p\n\n== A [[a]] B [[b,  ]]\n\n<<a>> <<b>>",
+      "expect": "pass"
+    },
+    {
+      "id": "section-anchor-discrete",
+      "category": "references",
+      "source": "p\n\n[discrete]\n== D [[d,DD]]\n\n<<d>>",
+      "expect": "pass"
+    },
+    {
+      "id": "section-anchor-doctitle",
+      "category": "references",
+      "source": "= Doc [[top,T]]\n\npara <<top>>",
+      "expect": "pass"
+    },
+    {
+      "id": "section-anchor-doctitle-metadata-id",
+      "category": "references",
+      "source": "[[top]]\n= Doc [[x,X]]\n\npara <<top>> <<x>>",
+      "expect": "pass"
+    },
+    {
+      "id": "section-anchor-duplicate",
+      "category": "references",
+      "source": "p\n\n== S [[s,R]]\n\n== S [[s,Q]]\n\n<<s>>",
+      "expect": "pass"
+    },
+    {
+      "id": "doctitle-explicit-id-uses-title",
+      "category": "references",
+      "source": "[[top]]\n= Doc *b*\n\npara <<top>>",
+      "expect": "pass"
+    },
+    {
+      "id": "borrowed-title-drops-inline-anchors",
+      "category": "references",
+      "source": "p\n\n[[x]]\n== S [[i,I]] tail\n\n<<x>>",
+      "expect": "pass"
     }
   ]
 }

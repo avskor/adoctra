@@ -208,11 +208,17 @@ fn write_block(block: &Block, s: &mut String) {
             }
             s.push_str("]}");
         }
-        BlockKind::Admonition { kind, blocks } => {
+        BlockKind::Admonition {
+            kind,
+            label,
+            blocks,
+        } => {
             s.push_str(&format!(
-                "{{\"name\":\"admonition\",\"admonition-type\":\"{}\",",
+                "{{\"name\":\"admonition\",\"admonition-type\":\"{}\",\"label\":",
                 kind.as_str()
             ));
+            escape_into(&adoctra_core::attributes::parts_text(label), s);
+            s.push(',');
             write_id(&block.id, s);
             write_roles(&block.roles, s);
             write_style(&block.attrs.style, s);
@@ -1430,6 +1436,15 @@ mod tests {
         // A trailing list item anchor is rendered but not cataloged.
         assert!(
             json.contains("{\"name\":\"xref\",\"target\":\"b\",\"inlines\":[{\"name\":\"text\",\"value\":\"[b]\"}]}"),
+            "got: {json}"
+        );
+    }
+
+    #[test]
+    fn admonition_serializes_its_resolved_label() {
+        let json = render(":note-caption: Nota\n\nNOTE: x");
+        assert!(
+            json.contains("\"admonition-type\":\"note\",\"label\":\"Nota\""),
             "got: {json}"
         );
     }

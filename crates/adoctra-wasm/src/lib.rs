@@ -311,11 +311,17 @@ fn write_block(b: &Block, s: &mut String) {
             }
             s.push(']');
         }
-        BlockKind::Admonition { kind, blocks } => {
+        BlockKind::Admonition {
+            kind,
+            label,
+            blocks,
+        } => {
             s.push_str(&format!(
-                "\"name\":\"admonition\",\"admonition-type\":\"{}\",",
+                "\"name\":\"admonition\",\"admonition-type\":\"{}\",\"label\":",
                 kind.as_str()
             ));
+            write_str(&adoctra_core::attributes::parts_text(label), s);
+            s.push(',');
             write_id(&b.id, s);
             write_roles(&b.roles, s);
             write_style(&b.attrs.style, s);
@@ -1351,6 +1357,19 @@ mod tests {
                 "\"span\":{{\"source_id\":0,\"start\":{at},\"end\":{}}},\"name\":\"strong\"",
                 at + 3
             )),
+            "got: {json}"
+        );
+    }
+
+    #[test]
+    fn admonition_label_and_section_anchor_ids_reach_the_editor() {
+        let json = parse_json("[WARNING,caption=Careful]\nx\n\n== S [[s,R]]");
+        assert!(
+            json.contains("\"admonition-type\":\"warning\",\"label\":\"Careful\""),
+            "got: {json}"
+        );
+        assert!(
+            json.contains("\"name\":\"heading\",\"level\":1,\"id\":\"s\""),
             "got: {json}"
         );
     }

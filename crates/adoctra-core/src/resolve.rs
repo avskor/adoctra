@@ -47,8 +47,21 @@ pub(crate) fn resolve(
             ((span.source_id, span.start), (id, entry.reftext))
         })
         .collect();
+    // Every heading except the document title gets an automatic id, including
+    // discrete and level-0 headings in the body, as in asciidoctor.
+    let doctitle = doc
+        .blocks
+        .first()
+        .filter(|_| doc.has_title)
+        .map(|block| block.span);
     let mut registry = Registry::new();
-    assign_ids(&mut doc.blocks, anchors, &mut registry, diagnostics);
+    assign_ids(
+        &mut doc.blocks,
+        anchors,
+        &mut registry,
+        diagnostics,
+        doctitle,
+    );
     resolve_xrefs(&mut doc.blocks, &registry, diagnostics);
 }
 
@@ -58,8 +71,10 @@ fn assign_ids(
     mut anchors: Anchors,
     registry: &mut Registry,
     diagnostics: &mut Vec<Diagnostic>,
+    doctitle: Option<Span>,
 ) {
     struct Ids<'a> {
+        doctitle: Option<Span>,
         anchors: &'a mut Anchors,
         registry: &'a mut Registry,
         diagnostics: &'a mut Vec<Diagnostic>,
@@ -67,9 +82,12 @@ fn assign_ids(
     impl VisitorMut for Ids<'_> {
         fn visit_block(&mut self, block: &mut Block) {
             let heading_title = match &block.kind {
-                BlockKind::Heading { level, inlines } if *level >= 1 => Some(inlines.clone()),
+                BlockKind::Heading { inlines, .. } => Some(inlines.clone()),
                 _ => None,
             };
+            // The document title lends its text to an explicit id but never
+            // receives an automatic one.
+            let automatic = Some(block.span) != self.doctitle;
             if let Some(id) = block.id.clone() {
                 let reftext = block
                     .reftext
@@ -77,7 +95,7 @@ fn assign_ids(
                     .filter(|nodes| !inline_text(nodes).is_empty())
                     .or(heading_title);
                 register_id(self.registry, id, reftext, block.span, self.diagnostics);
-            } else if let Some(title) = heading_title {
+            } else if let Some(title) = heading_title.filter(|_| automatic) {
                 let unique = dedup(generate_id(&inline_text(&title)), self.registry);
                 self.registry.insert(unique.clone(), Some(title));
                 block.id = Some(unique);
@@ -110,6 +128,7 @@ fn assign_ids(
     }
     visit::walk_blocks_mut(
         &mut Ids {
+            doctitle,
             anchors: &mut anchors,
             registry,
             diagnostics,
@@ -332,7 +351,7 @@ fn resolve_xrefs(blocks: &mut [Block], registry: &Registry, diagnostics: &mut Ve
                     *children = match reftext {
                         Some(Some(text)) => {
                             let mut label = text.clone();
-                            strip_attribute_links(&mut label);
+                            strip_label(&mut label);
                             label
                         }
                         _ => vec![Inline::Text {
@@ -359,6 +378,26 @@ fn resolve_xrefs(blocks: &mut [Block], registry: &Registry, diagnostics: &mut Ve
 
 /// Implicit xref labels retain formatting but drop generated link boundaries.
 /// The original heading and source reference positions remain unchanged.
+/// A borrowed label drops generated link boundaries and inline anchors, so the
+/// reference does not nest links or repeat the target's anchors.
+fn strip_label(inlines: &mut Vec<Inline>) {
+    inlines.retain(|inline| !matches!(inline, Inline::Anchor { .. }));
+    for inline in inlines.iter_mut() {
+        if let Inline::Strong { children, .. }
+        | Inline::Emphasis { children, .. }
+        | Inline::Monospace { children, .. }
+        | Inline::Mark { children, .. }
+        | Inline::Superscript { children, .. }
+        | Inline::Subscript { children, .. }
+        | Inline::Link { children, .. }
+        | Inline::CrossReference { children, .. } = inline
+        {
+            strip_label(children);
+        }
+    }
+    strip_attribute_links(inlines);
+}
+
 fn strip_attribute_links(inlines: &mut [Inline]) {
     struct Strip;
     impl VisitorMut for Strip {

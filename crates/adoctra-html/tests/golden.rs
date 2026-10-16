@@ -151,7 +151,7 @@ fn block_title(html: &str) -> String {
 /// We pin the admonition *type* and the body's inline markup; the surrounding
 /// structure (aside vs table, the title/icon cell) is adoctra's deliberate
 /// divergence and is not compared.
-fn admonition(html: &str) -> (String, String) {
+fn admonition(html: &str) -> (String, String, String) {
     // Restrict to <body>: adoctra inlines its stylesheet in <head>, which also
     // mentions `data-type` and `.admonition`. asciidoctor's `-s` fragment has no
     // <body>, so it falls through unchanged.
@@ -170,6 +170,19 @@ fn admonition(html: &str) -> (String, String) {
         rest[..end].to_string()
     };
 
+    // The label: asciidoctor's icon-cell title, adoctra's `admonition-title`.
+    let label = [
+        "<td class=\"icon\">\n<div class=\"title\">",
+        "<p class=\"admonition-title\">",
+    ]
+    .iter()
+    .find_map(|open| {
+        let start = body.find(open)? + open.len();
+        let end = body[start..].find("</")? + start;
+        Some(body[start..end].to_string())
+    })
+    .unwrap_or_default();
+
     let content = if let Some(i) = body.find("<td class=\"content\">") {
         let start = i + "<td class=\"content\">".len();
         let end = body[start..].find("</td>").unwrap() + start;
@@ -187,7 +200,7 @@ fn admonition(html: &str) -> (String, String) {
     // each child in `<div class="paragraph"><p>…</p></div>` (and its shorthand form
     // emits bare text), adoctra in a bare `<p>…</p>` — so drop the `<div>` and `<p>`
     // wrappers on both sides and compare what is left.
-    (ty, normalize_container(content, true))
+    (ty, label, normalize_container(content, true))
 }
 
 /// Normalise an example block to its children's markup in document order.
