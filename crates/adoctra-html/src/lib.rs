@@ -1532,6 +1532,19 @@ mod tests {
     }
 
     #[test]
+    fn unquoted_attribution_is_raw_and_single_quoted_is_substituted() {
+        // asciidoctor emits an unquoted value as is; attribute values keep the
+        // protection from their definition; single quotes run normal subs.
+        let html = render(":who: A<b>\n\n[quote, *Ann* & <i>x</i> {who}, '*W* & (C)']\nx");
+        assert!(
+            html.contains(
+                "<figcaption>&#8212; *Ann* & <i>x</i> A&lt;b&gt;<br>\n<cite><strong>W</strong> &amp; &#169;</cite></figcaption>"
+            ),
+            "got: {html}"
+        );
+    }
+
+    #[test]
     fn verse_block_renders_pre_preserving_newlines() {
         let html = render("[verse]\n____\nThe fog comes\non little cat feet.\n____");
         assert!(

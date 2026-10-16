@@ -1292,7 +1292,7 @@ mod tests {
             let at = src.find(part).unwrap();
             assert!(
                 json.contains(&format!(
-                    "\"span\":{{\"source_id\":0,\"start\":{at},\"end\":{}}},\"name\":\"text\",\"value\":\"{part}\"",
+                    "\"span\":{{\"source_id\":0,\"start\":{at},\"end\":{}}},\"name\":\"raw\",\"value\":\"{part}\"",
                     at + part.len()
                 )),
                 "got: {json}"
@@ -1301,6 +1301,30 @@ mod tests {
         // A named field occupies the author slot.
         let json = parse_json("[quote, role=x, Ann]\n____\nx\n____");
         assert!(json.contains("\"author\":null"), "got: {json}");
+    }
+
+    #[test]
+    fn attribution_references_keep_their_source_spans() {
+        let src = ":a: X\n\n[quote, Ж{a}, '{counter:n}']\nx";
+        let json = parse_json(src);
+        let at = src.find("{a}").unwrap();
+        assert!(
+            json.contains(&format!(
+                "\"span\":{{\"source_id\":0,\"start\":{at},\"end\":{}}},\"name\":\"attribute-ref\"",
+                at + 3
+            )),
+            "got: {json}"
+        );
+        // A single-quoted field changed by the early a-stage is rescanned;
+        // its nodes take the field's range.
+        let field = src.find("{counter:n}").unwrap();
+        assert!(
+            json.contains(&format!(
+                "\"citetitle\":[{{\"span\":{{\"source_id\":0,\"start\":{field},\"end\":{}}},\"name\":\"text\",\"value\":\"1\"}}]",
+                field + "{counter:n}".len()
+            )),
+            "got: {json}"
+        );
     }
 
     #[test]

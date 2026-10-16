@@ -15769,6 +15769,154 @@
       "category": "block-attributes",
       "expect": "pass",
       "source": "https://example.org[A\tB,role=r]"
+    },
+    {
+      "id": "block-attrs-subs-unquoted-raw",
+      "category": "block-attributes",
+      "source": "[quote, *Ann* & <i>x</i>]\n____\nB\n____",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-subs-unquoted-no-replacements",
+      "category": "block-attributes",
+      "source": "[verse, A -- B (C) ...]\nv",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-subs-single-quoted-normal",
+      "category": "block-attributes",
+      "source": "[quote, x, '*Work* -- (C) & <i>']\n____\nb\n____",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-subs-double-quoted-literal",
+      "category": "block-attributes",
+      "source": "[quote, \"dq *b* & x\", W]\npara",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-subs-value-splits-fields",
+      "category": "block-attributes",
+      "source": ":a: X, Y\n\n[quote, {a}]\npara",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-subs-escaped-reference",
+      "category": "block-attributes",
+      "source": ":a: X\n\n[quote, \\{a}]\npara",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-subs-single-quoted-rescan",
+      "category": "block-attributes",
+      "source": ":a: X\n\n[quote, x, '\\{a}']\npara",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-subs-value-markup",
+      "category": "block-attributes",
+      "source": ":f: *b*\n\n[quote, {f}, '{f}']\npara",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-subs-value-escaping",
+      "category": "block-attributes",
+      "source": ":who: A<b>\n\n[quote, {who}, '{who}']\npara",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-subs-counter-reading-only",
+      "category": "block-attributes",
+      "source": ":n: 5\n\nA {n}\n\n[quote, {counter:n}]\n____\nB {n}\n____\n\nC {n}\n\n[quote, {counter:n}]\nD {n}\n\nE {n}",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-subs-counter-initial-metadata",
+      "category": "block-attributes",
+      "source": ":n: 5\n\n[quote, a, '{counter:n}']\n____\nB {n}\n____\n\nC {n}",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-subs-counter-order",
+      "category": "block-attributes",
+      "source": ":n: 1\n\npara\n\n[quote, {counter:n}, 'q {counter:n} {n}']\npara",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-subs-set-reading-only",
+      "category": "block-attributes",
+      "source": "para\n\n[quote, x, '{set:z:Q}{z}']\npara\n\n{z}",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-subs-counter2",
+      "category": "block-attributes",
+      "source": ":n: 1\n\npara\n\n[quote, a{counter2:n}b, '{n}']\npara",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-subs-missing-skip",
+      "category": "block-attributes",
+      "source": "[quote, x {nope}, 'y {nope}']\npara",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-subs-missing-drop-line",
+      "category": "block-attributes",
+      "source": ":attribute-missing: drop-line\n\n[quote, P]\n[quote, {nope}]\n____\n3\n____",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-subs-missing-drop",
+      "category": "block-attributes",
+      "source": ":attribute-missing: drop\n\n[quote, A {nope}, W]\npara",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-subs-shorthand-expansion",
+      "category": "block-attributes",
+      "source": ":a: X, Y\n\n[quote#q{a}.r, A]\npara",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-subs-single-quoted-pass",
+      "category": "block-attributes",
+      "source": "[quote, x, 'pass:[<u>u</u>] *b*']\npara",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-subs-style-reference",
+      "category": "block-attributes",
+      "source": ":s: verse\n\n[{s}, A]\nl1\nl2",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-subs-open-masquerade-raw",
+      "category": "block-attributes",
+      "source": "[quote, <b>A</b>, '_W_']\n--\nx\n--",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-subs-single-quoted-link",
+      "category": "block-attributes",
+      "source": "[quote, x, 'https://example.org[Site] (R)']\npara",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-subs-intrinsic",
+      "category": "block-attributes",
+      "source": "[quote, A{nbsp}B{amp}, 'C{nbsp}D{amp}']\npara",
+      "expect": "pass"
+    },
+    {
+      "id": "block-attrs-subs-include",
+      "category": "block-attributes",
+      "profile": "include-body-dom-v1",
+      "resources": {
+        "quote.adoc": "[quote, {counter:n} <b>A</b>, '*W* {n}']\n____\nx {n}\n____"
+      },
+      "source": ":n: 1\n\npara\n\ninclude::quote.adoc[]\n\n{n}",
+      "expect": "pass"
     }
   ]
 }

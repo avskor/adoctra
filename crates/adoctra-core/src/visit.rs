@@ -146,7 +146,7 @@ mod tests {
                 walk_inline_mut(self, inline);
             }
         }
-        let source = "[[q,reference]]\n.Caption\n[quote, author, work]\n____\n* *item*\n+\n--\nnested [[point,anchor text]]body\n--\n____";
+        let source = "[[q,reference]]\n.Caption\n[quote, 'author', 'work']\n____\n* *item*\n+\n--\nnested [[point,anchor text]]body\n--\n____";
         let mut document = crate::parse(source).document;
         let mut visitor = Uppercase { fields: Vec::new() };
         walk_document_mut(&mut visitor, &mut document);

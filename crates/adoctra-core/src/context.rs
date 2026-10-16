@@ -156,6 +156,56 @@ impl ParseContext {
         result
     }
 
+    /// The early a-stage of a block attribute line (`sub_input`): the whole
+    /// line, with the document missing policy and stateful expressions.
+    pub fn block_attribute_line(
+        &mut self,
+        source: crate::substitution_text::Text,
+    ) -> (
+        crate::substitution_text::Text,
+        Vec<crate::inline_attributes::Reference>,
+    ) {
+        let mut evaluation = crate::substitution_context::Evaluation::definition(
+            &self.attributes,
+            &self.locked,
+            &mut self.counters,
+            self.quote_compat,
+        );
+        let result =
+            crate::inline_attributes::apply(source, &mut evaluation, &mut self.inline_diagnostics);
+        if let Some(attributes) = evaluation.changed_attributes() {
+            self.attributes = Arc::new(attributes);
+        }
+        result
+    }
+
+    /// Normal substitutions of a single-quoted attribute list value while
+    /// reading. A value changed by the early a-stage no longer has exact source
+    /// offsets: its nodes and diagnostics take the field's physical range.
+    pub fn attribute_value(
+        &mut self,
+        value: &str,
+        span: crate::Span,
+        exact: bool,
+    ) -> Vec<crate::Inline> {
+        let before = self.inline_diagnostics.len();
+        let attributes = Arc::clone(&self.attributes);
+        let mut inlines = self.reading_title(value, span.start, &attributes);
+        if !exact {
+            struct Origin(crate::Span);
+            impl crate::visit::VisitorMut for Origin {
+                fn visit_span(&mut self, span: &mut crate::Span) {
+                    *span = self.0;
+                }
+            }
+            crate::visit::walk_inlines_mut(&mut Origin(span), &mut inlines);
+            for diagnostic in &mut self.inline_diagnostics[before..] {
+                diagnostic.span = span;
+            }
+        }
+        inlines
+    }
+
     /// Section titles and anchored block titles are cached during reading.
     /// Their effects are not declarations to replay at conversion.
     pub fn reading_title(

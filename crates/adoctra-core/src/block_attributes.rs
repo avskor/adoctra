@@ -1,28 +1,36 @@
 //! Block attribute lines, as the pinned Ruby parser consumes them: the
-//! `BlockAttributeListRx` gate, AttributeList fields merged `into:` the
-//! accumulated metadata by Ruby's integer keys, and the first-positional style
-//! shorthand (`style#id.role%option`).
+//! `BlockAttributeListRx` gate, an early a-stage over the whole line
+//! (`sub_input`), AttributeList fields merged `into:` the accumulated metadata
+//! by Ruby's integer keys, normal substitutions of single-quoted values
+//! (`sub_result`) and the first-positional style shorthand
+//! (`style#id.role%option`). Everything runs while reading; effects are not
+//! replayed as declarations.
 use crate::attribute_list::{self, Field};
+use crate::context::ParseContext;
 use crate::diagnostic::{Diagnostic, Severity};
+use crate::inline_attributes::Reference;
 use crate::parser::PendingMeta;
-use crate::Span;
+use crate::substitution_text::Text;
+use crate::{Inline, Span};
 use std::collections::BTreeMap;
 
-/// A recognised attribute line: the text between the brackets, its offset in
-/// the processed source and its AttributeList fields.
+/// A recognised attribute line: the text between the brackets and its offset
+/// in the processed source.
 #[derive(Debug, PartialEq)]
 pub(crate) struct AttrLine {
     pub inner: String,
     pub base: usize,
-    pub fields: Vec<Field>,
 }
 
 /// A positional value as Ruby stores it, with the processed-source range of
-/// the field that produced it.
+/// the field that produced it. `inlines` is the rendered value: substituted
+/// for a single-quoted field, otherwise the raw source and the attribute
+/// references expanded by the early a-stage.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct AttrValue {
     pub text: String,
     pub span: Span,
+    pub inlines: Vec<Inline>,
 }
 
 /// Ruby's integer-keyed positional attributes and plain named attributes.
@@ -61,32 +69,41 @@ pub(crate) fn parse_block_attr_list(line: &str, line_start: usize) -> Option<Att
     Some(AttrLine {
         inner: inner.to_owned(),
         base: line_start + 1,
-        fields: attribute_list::parse(inner),
     })
 }
 
-/// Ruby's `parse_attributes(…, into: attributes)` followed by the style
-/// shorthand of the merged first positional.
+/// Ruby's `parse_attributes(…, sub_input: true, sub_result: true, into:)`
+/// followed by the style shorthand of the merged first positional. Returns the
+/// physical spans of the references expanded by the early a-stage.
 pub(crate) fn merge(
     pending: &mut PendingMeta,
     line: AttrLine,
     line_span: Span,
-    diagnostics: &mut Vec<Diagnostic>,
-) {
+    context: &mut ParseContext,
+) -> Vec<Span> {
+    let mut source = Text::default();
+    // sub_attributes does not protect special characters before expansion.
+    source.append_source(
+        &line.inner,
+        true,
+        0,
+        Span::new(line.base, line.base + line.inner.len()),
+    );
+    let (expanded, refs) = context.block_attribute_line(source);
+    let references = refs.iter().map(|r| r.span).collect();
     let current_style = pending.list.positional.get(&1).cloned().flatten();
-    for field in &line.fields {
-        let text = field.text(&line.inner);
-        let Some(name) = field.name(&line.inner) else {
-            let range = field.value.clone().unwrap_or(0..0);
-            let value = text.map(|text| AttrValue {
-                text,
-                span: Span::new(line.base + range.start, line.base + range.end),
-            });
+    for field in attribute_list::parse(&expanded.text) {
+        let name = field.name(&expanded.text).map(str::to_owned);
+        let value = field
+            .value
+            .as_ref()
+            .map(|_| field_value(&expanded, &field, &refs, name.as_deref(), context));
+        let Some(name) = name else {
             pending.list.positional.insert(field.index + 1, value);
             continue;
         };
-        let text = text.unwrap_or_default();
-        match name {
+        let text = value.map(|v| v.text).unwrap_or_default();
+        match name.as_str() {
             "options" | "opts" => {
                 if text.contains(',') {
                     for option in text.replace(' ', "").split(',') {
@@ -100,14 +117,23 @@ pub(crate) fn merge(
             // The named role replaces earlier roles; shorthand roles append.
             "role" => pending.roles = text.split_whitespace().map(str::to_owned).collect(),
             _ => {
-                pending.list.named.insert(name.to_owned(), text);
+                pending.list.named.insert(name, text);
             }
         }
     }
     if let Some(raw) = pending.list.value(1).cloned() {
-        let style = parse_style(pending, &raw.text, line_span, diagnostics);
+        let style = parse_style(
+            pending,
+            &raw.text,
+            line_span,
+            &mut context.inline_diagnostics,
+        );
         let style = style
             .map(|text| AttrValue {
+                inlines: vec![Inline::Raw {
+                    value: text.clone(),
+                    span: raw.span,
+                }],
                 text,
                 span: raw.span,
             })
@@ -115,6 +141,148 @@ pub(crate) fn merge(
         pending.list.positional.insert(1, style);
     }
     sync(pending);
+    references
+}
+
+/// One field of the expanded line. A single-quoted value (except the named
+/// `title`/`reftext`/`options`) repeats the normal substitutions on its lexical
+/// spelling; other values keep the raw source and expanded references.
+fn field_value(
+    expanded: &Text,
+    field: &Field,
+    refs: &[Reference],
+    name: Option<&str>,
+    context: &mut ParseContext,
+) -> AttrValue {
+    let range = field.value.clone().unwrap();
+    let mut text = Text::default();
+    let mut copied = range.start;
+    let mut unescaped = false;
+    if let Some(quote) = field.quote {
+        let bytes = expanded.text.as_bytes();
+        let mut i = range.start;
+        while i + 1 < range.end {
+            if bytes[i] == b'\\' && bytes[i + 1] == quote as u8 {
+                expanded.copy(copied..i, &mut text);
+                copied = i + 1;
+                unescaped = true;
+                i += 2;
+            } else {
+                i += 1;
+            }
+        }
+    }
+    if let Some(gap) = &field.gap {
+        expanded.copy(copied..gap.start, &mut text);
+        expanded.replacement(gap.clone(), &" ".repeat(gap.len()), None, &mut text);
+        copied = gap.end;
+    }
+    expanded.copy(copied..range.end, &mut text);
+    let span = if range.is_empty() {
+        // An empty quoted value sits right after its opening quote.
+        let at = expanded.match_span(range.start - 1..range.start).end;
+        Span::new(at, at)
+    } else {
+        expanded.match_span(range.clone())
+    };
+    let substitute =
+        field.single_quoted && !matches!(name, Some("title" | "reftext" | "opts" | "options"));
+    if !substitute {
+        return AttrValue {
+            text: text.text.clone(),
+            span,
+            inlines: field_nodes(text, refs),
+        };
+    }
+    // The early a-stage result is rescanned from its lexical spelling. Exact
+    // offsets survive only when the field is unchanged source text.
+    let exact = !unescaped
+        && text.fragments.iter().all(|(_, f)| f.owner == 0)
+        && span.end - span.start == text.text.len();
+    let lexical = crate::attributes::reference_text(&text.into_parts());
+    let inlines = context.attribute_value(&lexical, span, exact);
+    AttrValue {
+        text: visible_text(&inlines),
+        span,
+        inlines,
+    }
+}
+
+/// Raw source fragments and AttributeRef nodes for the references that
+/// contributed to this field. A reference split across fields appears in each.
+fn field_nodes(mut text: Text, refs: &[Reference]) -> Vec<Inline> {
+    let mut owners = Vec::new();
+    for (_, fragment) in &mut text.fragments {
+        if fragment.owner > 0 {
+            let index = match owners.iter().position(|o| *o == fragment.owner) {
+                Some(index) => index,
+                None => {
+                    owners.push(fragment.owner);
+                    owners.len() - 1
+                }
+            };
+            fragment.owner = index + 1;
+        }
+    }
+    let refs = owners
+        .iter()
+        .map(|owner| {
+            let r = &refs[owner - 1];
+            Reference {
+                span: r.span,
+                name: r.name.clone(),
+                missing: r.missing,
+            }
+        })
+        .collect();
+    // The a-stage copies source in pieces; contiguous raw source is one node.
+    let mut nodes: Vec<Inline> = Vec::new();
+    for node in crate::inline_attributes::nodes(text, refs) {
+        if let (
+            Some(Inline::Raw { value, span }),
+            Inline::Raw {
+                value: next,
+                span: next_span,
+            },
+        ) = (nodes.last_mut(), &node)
+        {
+            if span.end == next_span.start && span.source_id == next_span.source_id {
+                value.push_str(next);
+                span.end = next_span.end;
+                continue;
+            }
+        }
+        nodes.push(node);
+    }
+    nodes
+}
+
+/// Ruby stores substituted strings for other fields; adoctra keeps their
+/// visible text.
+fn visible_text(inlines: &[Inline]) -> String {
+    let mut out = String::new();
+    for inline in inlines {
+        match inline {
+            Inline::Text { value, .. } | Inline::Raw { value, .. } => out.push_str(value),
+            Inline::AttributeRef { name, value, .. } => match value {
+                Some(value) => out.push_str(value),
+                None => out.push_str(&format!("{{{name}}}")),
+            },
+            Inline::Substituted { parts, .. } => {
+                out.push_str(&crate::attributes::parts_text(parts))
+            }
+            Inline::Strong { children, .. }
+            | Inline::Emphasis { children, .. }
+            | Inline::Monospace { children, .. }
+            | Inline::Mark { children, .. }
+            | Inline::Superscript { children, .. }
+            | Inline::Subscript { children, .. }
+            | Inline::Link { children, .. }
+            | Inline::CrossReference { children, .. } => out.push_str(&visible_text(children)),
+            _ => {}
+        }
+    }
+    out
 }
 
 fn add_option(pending: &mut PendingMeta, option: &str) {
@@ -230,17 +398,12 @@ mod tests {
 
     fn meta(lines: &[&str]) -> (PendingMeta, Vec<Diagnostic>) {
         let mut pending = PendingMeta::default();
-        let mut diagnostics = Vec::new();
+        let mut context = ParseContext::new(&crate::ParseOptions::default());
         for line in lines {
             let parsed = parse_block_attr_list(line, 0).expect("attribute line");
-            merge(
-                &mut pending,
-                parsed,
-                Span::new(0, line.len()),
-                &mut diagnostics,
-            );
+            merge(&mut pending, parsed, Span::new(0, line.len()), &mut context);
         }
-        (pending, diagnostics)
+        (pending, context.inline_diagnostics)
     }
 
     #[test]

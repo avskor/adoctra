@@ -1340,7 +1340,7 @@ mod tests {
         assert!(json.contains("\"name\":\"quote\""), "got: {json}");
         assert!(
             json.contains(
-                "\"attribution\":{\"author\":[{\"name\":\"text\",\"value\":\"Albert Einstein\"}],\"citetitle\":[{\"name\":\"text\",\"value\":\"Theory\"}]}"
+                "\"attribution\":{\"author\":[{\"name\":\"raw\",\"value\":\"Albert Einstein\"}],\"citetitle\":[{\"name\":\"raw\",\"value\":\"Theory\"}]}"
             ),
             "got: {json}"
         );
@@ -1361,7 +1361,7 @@ mod tests {
         assert!(json.contains("\"name\":\"verse\""), "got: {json}");
         assert!(
             json.contains(
-                "\"attribution\":{\"author\":[{\"name\":\"text\",\"value\":\"Carl Sandburg\"}]"
+                "\"attribution\":{\"author\":[{\"name\":\"raw\",\"value\":\"Carl Sandburg\"}]"
             ),
             "got: {json}"
         );
@@ -1374,7 +1374,7 @@ mod tests {
         let json = render("[verse, , Fog]\n____\nx\n____");
         assert!(
             json.contains(
-                "\"attribution\":{\"author\":null,\"citetitle\":[{\"name\":\"text\",\"value\":\"Fog\"}]}"
+                "\"attribution\":{\"author\":null,\"citetitle\":[{\"name\":\"raw\",\"value\":\"Fog\"}]}"
             ),
             "got: {json}"
         );
@@ -1387,8 +1387,24 @@ mod tests {
         let json = render("[quote, A, W]\n[quote, \"\"]\n____\nx\n____");
         assert!(
             json.contains(
-                "\"attribution\":{\"author\":[],\"citetitle\":[{\"name\":\"text\",\"value\":\"W\"}]}"
+                "\"attribution\":{\"author\":[],\"citetitle\":[{\"name\":\"raw\",\"value\":\"W\"}]}"
             ),
+            "got: {json}"
+        );
+    }
+
+    #[test]
+    fn attribution_serializes_raw_source_and_references() {
+        // JSON keeps its resolved-text projection of attribute references.
+        let json = render(":a: X\n\n[quote, <i>{a}</i>, '*W*']\nx");
+        assert!(
+            json.contains(
+                "\"author\":[{\"name\":\"raw\",\"value\":\"<i>\"},{\"name\":\"text\",\"value\":\"X\"},{\"name\":\"raw\",\"value\":\"</i>\"}]"
+            ),
+            "got: {json}"
+        );
+        assert!(
+            json.contains("\"citetitle\":[{\"name\":\"strong\""),
             "got: {json}"
         );
     }
@@ -1422,7 +1438,7 @@ mod tests {
         assert!(json.contains("\"name\":\"verse\""), "got: {json}");
         assert!(
             json.contains(
-                "\"attribution\":{\"author\":[{\"name\":\"text\",\"value\":\"Carl Sandburg\"}]"
+                "\"attribution\":{\"author\":[{\"name\":\"raw\",\"value\":\"Carl Sandburg\"}]"
             ),
             "got: {json}"
         );

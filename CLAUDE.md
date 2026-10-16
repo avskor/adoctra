@@ -598,9 +598,16 @@ optional `Attribution { author, citetitle }` (each an inline `Vec`) rekeyed by
 `apply_style_fixup` from Ruby's second and third positional keys (`[quote,
 author, work]`, consumed off `attrs.positional`); a nil key is `None` (so
 `[quote, , Work]` and `[quote, role=x, Work]` are citetitle-only) while a quoted
-`""` is an empty part, and inline spans start at their own field. Attribution is
-still inline-scanned; Ruby's stateful early a-stage, single-quoted normal subs and
-raw unquoted values are the next step. An admonition
+`""` is an empty part. Both stages run while reading the attribute line, as in
+Ruby: an early a-stage over the whole line (`sub_input`, stateful
+set/counter/counter2, missing policies including drop-line, reading effects only,
+initial metadata entering the header snapshot) before AttributeList splits the
+*expanded* text, then normal subs for single-quoted values (`sub_result`, not
+named title/reftext/options). Unquoted and double-quoted attribution is
+`Inline::Raw` source plus `AttributeRef` nodes — HTML emits it unescaped, like
+asciidoctor; a transformed single-quoted field maps its nodes and diagnostics to
+the field's physical range. Other single-quoted fields keep only visible text
+(Ruby stores substituted HTML). An admonition
 style on a `____` block (`[NOTE]` on `____`) still wins, moving the quote's children
 into an `Admonition`. HTML renders the **modern HTML5 idiom** — `<figure
 class="quoteblock"><blockquote>…</blockquote><figcaption>&#8212; author

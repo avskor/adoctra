@@ -255,7 +255,8 @@ pub(crate) fn consume_block_metadata(
     }
     if let Some(parsed) = parse_block_attr_list(line, lines[*i].0) {
         let span = Span::new(lines[*i].0, lines[*i].0 + line.len());
-        crate::block_attributes::merge(pending, parsed, span, &mut context.inline_diagnostics);
+        let references = crate::block_attributes::merge(pending, parsed, span, context);
+        lines.metadata_references.extend(references);
         *i += 1;
         return true;
     }
@@ -443,12 +444,7 @@ fn apply_style_fixup(
         BlockKind::Quote { .. } | BlockKind::Verse { .. }
     ) {
         block.attrs.positional.clear();
-        let attribution = build_attribution(
-            list.value(2),
-            list.value(3),
-            attrs,
-            &mut context.inline_diagnostics,
-        );
+        let attribution = build_attribution(list.value(2), list.value(3));
         if let BlockKind::Quote {
             attribution: slot, ..
         }
@@ -465,18 +461,14 @@ fn apply_style_fixup(
 /// positional attributes (`[quote, author, citetitle]`). A nil field (empty
 /// and unquoted, or absent) is `None`; a quoted empty value is an empty part,
 /// as in asciidoctor. An attribution with neither part collapses to `None`.
-/// Both parts are inline-scanned from their field's source offset.
+/// The parts were substituted while reading the attribute line: single-quoted
+/// values with normal substitutions, others as raw source and references.
 fn build_attribution(
     author: Option<&crate::block_attributes::AttrValue>,
     citetitle: Option<&crate::block_attributes::AttrValue>,
-    attrs: &Attributes,
-    diagnostics: &mut Vec<Diagnostic>,
 ) -> Option<Attribution> {
-    let mut part = |value: Option<&crate::block_attributes::AttrValue>| {
-        value.map(|v| scan_inlines_report(&v.text, v.span.start, attrs, true, diagnostics))
-    };
-    let author = part(author);
-    let citetitle = part(citetitle);
+    let author = author.map(|v| v.inlines.clone());
+    let citetitle = citetitle.map(|v| v.inlines.clone());
     if author.is_none() && citetitle.is_none() {
         None
     } else {
@@ -2856,7 +2848,7 @@ mod tests {
             inlines
                 .iter()
                 .filter_map(|i| match i {
-                    Inline::Text { value, .. } => Some(value.as_str()),
+                    Inline::Text { value, .. } | Inline::Raw { value, .. } => Some(value.as_str()),
                     _ => None,
                 })
                 .collect()
@@ -2982,20 +2974,21 @@ mod tests {
 
     #[test]
     fn attribution_inlines_carry_field_spans() {
-        // Unicode and CRLF before the field keep byte offsets exact.
-        let src = "Ünï\r\n\r\n[quote, *Ann*, \"Wörk\"]\r\n____\r\nx\r\n____";
+        // Unicode and CRLF before the field keep byte offsets exact. Unquoted
+        // values stay raw source; single-quoted values get normal substitutions.
+        let src = "Ünï\r\n\r\n[quote, *Ann* & <i>, '*Wörk*']\r\n____\r\nx\r\n____";
         let r = parse(src);
         let (attribution, _) = quote_parts(&r.document.blocks[1]);
         let attr = attribution.as_ref().unwrap();
-        let author = attr.author.as_ref().unwrap();
-        let Inline::Strong { span, .. } = &author[0] else {
-            panic!("expected strong author: {author:?}");
+        let [Inline::Raw { value, span }] = attr.author.as_deref().unwrap() else {
+            panic!("expected raw author: {attr:?}");
         };
-        assert_eq!(&src[span.start..span.end], "*Ann*");
-        let Inline::Text { span, .. } = &attr.citetitle.as_ref().unwrap()[0] else {
-            panic!("expected text citetitle");
+        assert_eq!(value, "*Ann* & <i>");
+        assert_eq!(&src[span.start..span.end], "*Ann* & <i>");
+        let [Inline::Strong { span, .. }] = attr.citetitle.as_deref().unwrap() else {
+            panic!("expected strong citetitle: {attr:?}");
         };
-        assert_eq!(&src[span.start..span.end], "Wörk");
+        assert_eq!(&src[span.start..span.end], "*Wörk*");
     }
 
     #[test]

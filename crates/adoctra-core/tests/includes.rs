@@ -2800,3 +2800,47 @@ fn stateful_multiline_definition_diagnostics_keep_composite_provenance() {
     assert_eq!(result.document.attributes.get("n"), Some("1"));
     check_spans(&result, &sources);
 }
+
+#[test]
+fn block_attribute_line_subs_keep_selected_include_origins() {
+    let root = ":attribute-missing: warn\n\npara\n\ninclude::part.adoc[tag=body,indent=0]\n\n{n}";
+    let part = "// tag::body[]\r\n  [quote, Ж {counter:n:Я} {missing}, 'w {counter:n}']\r\n  ____\r\n  x\r\n  ____\r\n// end::body[]";
+    let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", part)]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    let BlockKind::Quote { attribution, .. } = &result.document.blocks[1].kind else {
+        panic!("{result:?}");
+    };
+    let attribution = attribution.as_ref().unwrap();
+    let author = attribution.author.as_ref().unwrap();
+    let Inline::Raw { span, .. } = &author[0] else {
+        panic!("{author:?}");
+    };
+    assert_eq!(span.source_id, SourceId(1));
+    assert_eq!(sources.slice(*span), Some("Ж "));
+    let counter = author
+        .iter()
+        .find(|n| matches!(n, Inline::AttributeRef { name, .. } if name == "counter:n:Я"))
+        .unwrap();
+    assert_eq!(sources.slice(counter.span()), Some("{counter:n:Я}"));
+    // The repeated normal pass covers the whole transformed field.
+    let cite = attribution.citetitle.as_ref().unwrap();
+    assert_eq!(sources.slice(cite[0].span()), Some("w {counter:n}"));
+    let warning = result
+        .diagnostics
+        .iter()
+        .find(|d| d.message.contains("missing"))
+        .unwrap();
+    assert_eq!(sources.slice(warning.span), Some("{missing}"));
+    // Reading effects are not replayed into the body.
+    let BlockKind::Paragraph { inlines } = &result.document.blocks[2].kind else {
+        panic!("{result:?}");
+    };
+    assert!(matches!(
+        &inlines[0],
+        Inline::AttributeRef { value: None, .. }
+    ));
+    let tokens = tokens_resource(&mut sources, &options, &resources).unwrap();
+    assert!(tokens
+        .iter()
+        .any(|t| t.kind == TokenKind::AttributeRef && t.span == counter.span()));
+}
