@@ -42,6 +42,7 @@ mod section_numbers;
 pub mod source;
 mod substitution_context;
 mod substitution_text;
+mod table;
 mod tokenizer;
 mod unicode_word;
 pub mod visit;

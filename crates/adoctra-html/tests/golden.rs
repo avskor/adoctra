@@ -681,6 +681,42 @@ fn html_media_match_asciidoctor() {
     assert!(checked > 0, "no golden fixtures found in {dir:?}");
 }
 
+/// Tables: asciidoctor's `<table class="tableblock">` markup is already
+/// semantic, so adoctra emits it unchanged and the body matches line for line.
+#[test]
+fn html_tables_match_asciidoctor() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/tables");
+    let lines = |html: &str| -> Vec<String> {
+        let body = html.split("<body>").nth(1).unwrap_or(html);
+        let body = body.split("</body>").next().unwrap_or(body);
+        body.lines()
+            .map(str::trim)
+            .filter(|l| !l.is_empty())
+            .map(str::to_owned)
+            .collect()
+    };
+    let mut checked = 0usize;
+    for entry in fs::read_dir(&dir).expect("golden/tables dir is missing") {
+        let path = entry.unwrap().path();
+        if path.extension().and_then(|e| e.to_str()) != Some("adoc") {
+            continue;
+        }
+        let expected_path = path.with_extension("expected.html");
+        let name = path.file_stem().unwrap().to_string_lossy().into_owned();
+        let adoc = fs::read_to_string(&path).unwrap();
+        let expected = fs::read_to_string(&expected_path).unwrap();
+        let doc = adoctra_core::parse(&adoc).document;
+        let ours = String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap();
+        assert_eq!(
+            lines(&ours),
+            lines(&expected),
+            "HTML table diverges from asciidoctor for `{name}`"
+        );
+        checked += 1;
+    }
+    assert!(checked > 0, "no golden fixtures found in {dir:?}");
+}
+
 #[test]
 fn html_block_titles_match_asciidoctor() {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/titles");

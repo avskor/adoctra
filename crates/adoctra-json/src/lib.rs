@@ -113,6 +113,95 @@ fn write_header(header: &adoctra_core::DocumentHeader, s: &mut String) {
     s.push('}');
 }
 
+/// A table: its resolved presentation (`width` percentage, `frame`, `grid`,
+/// `stripes`), the columns and the head/body/foot rows of cells. A cell has
+/// `paragraphs` (arrays of inlines; one run in the head) or verbatim `literal`
+/// text.
+fn write_table(table: &adoctra_core::ast::Table, s: &mut String) {
+    s.push_str(&format!(",\"width\":{},\"frame\":", table.width));
+    escape_into(&table.frame, s);
+    s.push_str(",\"grid\":");
+    escape_into(&table.grid, s);
+    s.push_str(",\"stripes\":");
+    match &table.stripes {
+        Some(stripes) => escape_into(stripes, s),
+        None => s.push_str("null"),
+    }
+    s.push_str(",\"columns\":[");
+    for (i, column) in table.columns.iter().enumerate() {
+        if i > 0 {
+            s.push(',');
+        }
+        s.push_str(&format!(
+            "{{\"halign\":\"{}\",\"valign\":\"{}\",\"style\":{},\"width\":",
+            column.halign.as_str(),
+            column.valign.as_str(),
+            column
+                .style
+                .map_or("null".to_owned(), |style| format!("\"{}\"", style.as_str()))
+        ));
+        escape_into(&column.width, s);
+        s.push_str(&format!(",\"autowidth\":{}}}", column.autowidth));
+    }
+    s.push(']');
+    for (name, rows) in [
+        ("head", &table.head),
+        ("body", &table.body),
+        ("foot", &table.foot),
+    ] {
+        s.push_str(&format!(",\"{name}\":["));
+        for (i, row) in rows.iter().enumerate() {
+            if i > 0 {
+                s.push(',');
+            }
+            s.push('[');
+            for (j, cell) in row.iter().enumerate() {
+                if j > 0 {
+                    s.push(',');
+                }
+                write_cell(cell, s);
+            }
+            s.push(']');
+        }
+        s.push(']');
+    }
+}
+
+fn write_cell(cell: &adoctra_core::ast::TableCell, s: &mut String) {
+    let number = |n: Option<u32>| n.map_or("null".to_owned(), |n| n.to_string());
+    s.push('{');
+    s.push_str(&format!(
+        "\"style\":{},\"halign\":\"{}\",\"valign\":\"{}\",\"colspan\":{},\"rowspan\":{},\"background\":",
+        cell.style
+            .map_or("null".to_owned(), |style| format!("\"{}\"", style.as_str())),
+        cell.halign.as_str(),
+        cell.valign.as_str(),
+        number(cell.colspan),
+        number(cell.rowspan)
+    ));
+    match &cell.background {
+        Some(color) => escape_into(color, s),
+        None => s.push_str("null"),
+    }
+    match &cell.content {
+        adoctra_core::ast::CellContent::Paragraphs(paragraphs) => {
+            s.push_str(",\"paragraphs\":[");
+            for (i, inlines) in paragraphs.iter().enumerate() {
+                if i > 0 {
+                    s.push(',');
+                }
+                write_inlines(inlines, s);
+            }
+            s.push(']');
+        }
+        adoctra_core::ast::CellContent::Literal(text) => {
+            s.push_str(",\"literal\":");
+            escape_into(text, s);
+        }
+    }
+    s.push('}');
+}
+
 fn write_block(block: &Block, s: &mut String) {
     match &block.kind {
         BlockKind::Heading { level, inlines } => {
@@ -208,6 +297,18 @@ fn write_block(block: &Block, s: &mut String) {
             write_options(&block.attrs.options, s);
             write_title(&block.title, s);
             write_caption(&block.caption, s);
+            s.push('}');
+        }
+        BlockKind::Table(table) => {
+            s.push_str("{\"name\":\"table\",");
+            write_id(&block.id, s);
+            write_roles(&block.roles, s);
+            write_style(&block.attrs.style, s);
+            write_attributes(&block.attrs.named, s);
+            write_options(&block.attrs.options, s);
+            write_title(&block.title, s);
+            write_caption(&block.caption, s);
+            write_table(table, s);
             s.push('}');
         }
         BlockKind::Video {
@@ -1440,6 +1541,31 @@ mod tests {
         assert!(json.contains("\"blocks\":["), "got: {json}");
         assert!(json.contains("\"name\":\"paragraph\""), "got: {json}");
         assert!(json.contains("\"name\":\"strong\""), "got: {json}");
+    }
+
+    #[test]
+    fn tables_serialize_columns_rows_and_cells() {
+        let json = render(
+            "[%footer,cols=\"1,1l\",frame=topbot]\n|===\n|H |I\n\n|a |  lit\n|{set:cellbgcolor:red}f |g\n|===",
+        );
+        assert!(json.contains(r#""name":"table","#), "{json}");
+        assert!(
+            json.contains(r#""width":100,"frame":"ends","grid":"all","stripes":null,"columns":[{"halign":"left","valign":"top","style":null,"width":"50","autowidth":false},{"halign":"left","valign":"top","style":"literal","width":"50","autowidth":false}]"#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""head":[[{"style":null,"halign":"left","valign":"top","colspan":null,"rowspan":null,"background":null,"paragraphs":[[{"name":"text","value":"H"}]]},"#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#"{"style":"literal","halign":"left","valign":"top","colspan":null,"rowspan":null,"background":null,"literal":"  lit"}"#),
+            "{json}"
+        );
+        assert!(json.contains(r#""foot":[[{"style":null"#), "{json}");
+        assert!(
+            json.contains(r#""background":"red","paragraphs":[[{"name":"text","value":""},{"name":"text","value":"f"}]]},{"style":"literal","halign":"left","valign":"top","colspan":null,"rowspan":null,"background":"red","literal":"g"}"#),
+            "{json}"
+        );
     }
 
     #[test]

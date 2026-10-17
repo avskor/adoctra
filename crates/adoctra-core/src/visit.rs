@@ -94,6 +94,16 @@ pub fn walk_block_mut(visitor: &mut (impl VisitorMut + ?Sized), block: &mut Bloc
         | BlockKind::Open { blocks }
         | BlockKind::Section { blocks, .. }
         | BlockKind::Preamble { blocks } => walk_blocks_mut(visitor, blocks),
+        BlockKind::Table(table) => {
+            for cell in table.cells_mut() {
+                visitor.visit_span(&mut cell.span);
+                if let crate::ast::CellContent::Paragraphs(paragraphs) = &mut cell.content {
+                    for inlines in paragraphs {
+                        visitor.visit_inlines(inlines, InlineContext::Body);
+                    }
+                }
+            }
+        }
         BlockKind::Listing { .. }
         | BlockKind::Literal { .. }
         | BlockKind::Passthrough { .. }

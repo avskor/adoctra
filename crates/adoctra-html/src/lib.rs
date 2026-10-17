@@ -227,6 +227,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             }
             out.push_str("</figure>\n");
         }
+        BlockKind::Table(table) => render_table(block, table, out),
         BlockKind::Video {
             src,
             poster,
@@ -609,6 +610,146 @@ fn drop_anchors(html: &str) -> String {
     }
     out.push_str(rest);
     out
+}
+
+/// Ruby's `convert_table`: a `<table class="tableblock">` is already the
+/// semantic element, so adoctra keeps its markup (frame/grid/stripes classes,
+/// a `<caption>`, the column widths in a `<colgroup>`) and styles it in the
+/// reference stylesheet.
+fn render_table(block: &Block, table: &adoctra_core::ast::Table, out: &mut String) {
+    use adoctra_core::ast::{CellContent, CellStyle};
+    let frame = format!("frame-{}", table.frame);
+    let grid = format!("grid-{}", table.grid);
+    let stripes = table.stripes.as_ref().map(|s| format!("stripes-{s}"));
+    let mut base = vec!["tableblock", frame.as_str(), grid.as_str()];
+    base.extend(stripes.as_deref());
+    let autowidth = block.attrs.options.iter().any(|o| o == "autowidth")
+        || block.attrs.named.contains_key("autowidth-option");
+    let mut style = String::new();
+    if autowidth && !block.attrs.named.contains_key("width") {
+        base.push("fit-content");
+    } else if table.width == 100 {
+        base.push("stretch");
+    } else {
+        style = format!(" style=\"width: {}%;\"", table.width);
+    }
+    base.extend(block.attrs.named.get("float").map(String::as_str));
+    out.push_str(&format!(
+        "<table{}{}{style}>\n",
+        id_attr(&block.id),
+        class_attr(&base, &block.roles)
+    ));
+    if let Some(title) = &block.title {
+        out.push_str("<caption class=\"title\">");
+        if let Some(caption) = &block.caption {
+            out.push_str(&escape(caption));
+        }
+        render_inlines(title, out);
+        out.push_str("</caption>\n");
+    }
+    if table.cells().next().is_some() {
+        out.push_str("<colgroup>\n");
+        for column in &table.columns {
+            if autowidth || column.autowidth {
+                out.push_str("<col>\n");
+            } else {
+                out.push_str(&format!("<col style=\"width: {}%;\">\n", column.width));
+            }
+        }
+        out.push_str("</colgroup>\n");
+    }
+    for (section, rows) in [
+        ("head", &table.head),
+        ("body", &table.body),
+        ("foot", &table.foot),
+    ] {
+        if rows.is_empty() {
+            continue;
+        }
+        out.push_str(&format!("<t{section}>\n"));
+        for row in rows {
+            out.push_str("<tr>\n");
+            for cell in row {
+                let head = section == "head";
+                let tag = if head || cell.style == Some(CellStyle::Header) {
+                    "th"
+                } else {
+                    "td"
+                };
+                out.push_str(&format!(
+                    "<{tag} class=\"tableblock halign-{} valign-{}\"",
+                    cell.halign.as_str(),
+                    cell.valign.as_str()
+                ));
+                if let Some(colspan) = cell.colspan {
+                    out.push_str(&format!(" colspan=\"{colspan}\""));
+                }
+                if let Some(rowspan) = cell.rowspan {
+                    out.push_str(&format!(" rowspan=\"{rowspan}\""));
+                }
+                if let Some(color) = &cell.background {
+                    out.push_str(&format!(
+                        " style=\"background-color: {};\"",
+                        attr_value(color)
+                    ));
+                }
+                out.push('>');
+                match &cell.content {
+                    CellContent::Literal(text) => {
+                        out.push_str("<div class=\"literal\"><pre>");
+                        out.push_str(&escape(text));
+                        out.push_str("</pre></div>");
+                    }
+                    CellContent::Paragraphs(paragraphs) if head => {
+                        for inlines in paragraphs {
+                            render_inlines(inlines, out);
+                        }
+                    }
+                    CellContent::Paragraphs(paragraphs) => match cell.style {
+                        Some(CellStyle::Literal) => {
+                            out.push_str("<div class=\"literal\"><pre>");
+                            for inlines in paragraphs {
+                                render_inlines(inlines, out);
+                            }
+                            out.push_str("</pre></div>");
+                        }
+                        // Not yet a nested document: its paragraphs.
+                        Some(CellStyle::Asciidoc) => {
+                            out.push_str("<div class=\"content\">");
+                            for inlines in paragraphs {
+                                out.push_str("<div class=\"paragraph\">\n<p>");
+                                render_inlines(inlines, out);
+                                out.push_str("</p>\n</div>");
+                            }
+                            out.push_str("</div>");
+                        }
+                        style => {
+                            let (open, close) = match style {
+                                Some(CellStyle::Strong) => ("<strong>", "</strong>"),
+                                Some(CellStyle::Emphasis) => ("<em>", "</em>"),
+                                Some(CellStyle::Monospaced) => ("<code>", "</code>"),
+                                _ => ("", ""),
+                            };
+                            for (i, inlines) in paragraphs.iter().enumerate() {
+                                if i > 0 {
+                                    out.push('\n');
+                                }
+                                out.push_str("<p class=\"tableblock\">");
+                                out.push_str(open);
+                                render_inlines(inlines, out);
+                                out.push_str(close);
+                                out.push_str("</p>");
+                            }
+                        }
+                    },
+                }
+                out.push_str(&format!("</{tag}>\n"));
+            }
+            out.push_str("</tr>\n");
+        }
+        out.push_str(&format!("</t{section}>\n"));
+    }
+    out.push_str("</table>\n");
 }
 
 /// Ruby's `String#to_i`: an optional sign and leading digits, else 0.
@@ -2571,6 +2712,58 @@ mod tests {
              <figure class=\"videoblock\">\n<iframe src=\"https://player.vimeo.com/video/7\" allowfullscreen></iframe>\n</figure>\n\
              <figure class=\"audioblock q\">\n<figcaption class=\"title\">Theme</figcaption>\n<audio src=\"m/s.ogg#t=,3\" autoplay>\nYour browser does not support the audio tag.\n</audio>\n</figure>\n\
              <figure class=\"audioblock\">\n<audio src=\"m/t.ogg\" controls>\nYour browser does not support the audio tag.\n</audio>\n</figure>\n</body>\n</html>\n"
+        );
+    }
+
+    #[test]
+    fn tables_render_ruby_tableblock_markup() {
+        let html = render(
+            "[[t]]\n.Data\n[.r,cols=\"1,2e\",width=40%,float=right]\n|===\n|H |I\n\n|<a> |{set:cellbgcolor:#eee}x\n\ny\nl|  <l> m|`c`\n|===",
+        );
+        assert!(
+            html.contains("<table id=\"t\" class=\"tableblock frame-all grid-all right r\" style=\"width: 40%;\">"),
+            "{html}"
+        );
+        assert!(
+            html.contains("<caption class=\"title\">Table 1. Data</caption>"),
+            "{html}"
+        );
+        assert!(
+            html.contains("<col style=\"width: 33.3333%;\">\n<col style=\"width: 66.6667%;\">"),
+            "{html}"
+        );
+        assert!(
+            html.contains("<thead>\n<tr>\n<th class=\"tableblock halign-left valign-top\">H</th>"),
+            "{html}"
+        );
+        assert!(
+            html.contains("<p class=\"tableblock\">&lt;a&gt;</p>"),
+            "{html}"
+        );
+        assert!(html.contains("style=\"background-color: #eee;\"><p class=\"tableblock\"><em>x</em></p>\n<p class=\"tableblock\"><em>y</em></p></td>"), "{html}");
+        assert!(
+            html.contains("<div class=\"literal\"><pre>  &lt;l&gt;</pre></div>"),
+            "{html}"
+        );
+        assert!(
+            html.contains("<p class=\"tableblock\"><code><code>c</code></code></p>"),
+            "{html}"
+        );
+    }
+
+    #[test]
+    fn empty_tables_and_interim_asciidoc_cells() {
+        assert!(STYLESHEET.contains("table.tableblock"));
+        let html = render("|===\n|===\n\n[cols=a]\n|===\n|*x*\n\ny\n|===");
+        assert!(
+            html.contains("<table class=\"tableblock frame-all grid-all stretch\">\n</table>"),
+            "{html}"
+        );
+        assert!(html.contains("<td class=\"tableblock halign-left valign-top\"><div class=\"content\"><div class=\"paragraph\">\n<p><strong>x</strong></p>\n</div><div class=\"paragraph\">\n<p>y</p>\n</div></div></td>"), "{html}");
+        let html = render("[%autowidth]\n|===\n|a\n|===");
+        assert!(
+            html.contains("fit-content\">\n<colgroup>\n<col>\n</colgroup>"),
+            "{html}"
         );
     }
 

@@ -568,6 +568,7 @@ impl Execution<'_> {
                         self.blocks(&mut item.blocks);
                     }
                 }
+                BlockKind::Table(table) => self.table(table, &block.attrs),
                 BlockKind::Admonition { blocks, .. }
                 | BlockKind::Example { blocks }
                 | BlockKind::Quote { blocks, .. }
@@ -579,6 +580,79 @@ impl Execution<'_> {
             }
         }
     }
+}
+
+impl Execution<'_> {
+    /// Ruby's `convert_table`: the frame, grid and stripes with their
+    /// document fallbacks, then every cell in head, body, foot order, each
+    /// reading `cellbgcolor` after its content. A repeated cell (`3*|`)
+    /// shares its source and converts again for every copy.
+    fn table(&mut self, table: &mut crate::ast::Table, attrs: &crate::ast::BlockAttrs) {
+        let value = |name: &str, fallback: &str| {
+            attrs
+                .named
+                .get(name)
+                .map(String::as_str)
+                .or(self.attributes.get(fallback))
+                .map(str::to_owned)
+        };
+        let frame = value("frame", "table-frame").unwrap_or_else(|| "all".into());
+        table.frame = if frame == "topbot" {
+            "ends".into()
+        } else {
+            frame
+        };
+        table.grid = value("grid", "table-grid").unwrap_or_else(|| "all".into());
+        table.stripes = value("stripes", "table-stripes");
+        let mut keys = Vec::new();
+        let head = table.head.iter().map(Vec::len).sum::<usize>();
+        for (index, cell) in table.cells_mut().enumerate() {
+            if let crate::ast::CellContent::Paragraphs(paragraphs) = &mut cell.content {
+                for nodes in paragraphs.iter_mut() {
+                    match crate::resolve::placeholder(nodes) {
+                        Some(key) => {
+                            if let Some(pending) = self.pending.get(&key).cloned() {
+                                *nodes = self.convert(key, pending);
+                                keys.push(key);
+                            }
+                        }
+                        None => self.resolve(nodes),
+                    }
+                }
+                // Ruby splits the converted body text, which drops trailing
+                // empty paragraphs (all of them when the text is empty).
+                if index >= head {
+                    while paragraphs.last().is_some_and(|nodes| blank(nodes)) {
+                        paragraphs.pop();
+                    }
+                }
+            }
+            cell.background = self.attributes.get("cellbgcolor").map(str::to_owned);
+        }
+        for key in keys {
+            self.pending.remove(&key);
+        }
+    }
+}
+
+/// Converted inlines without output.
+fn blank(nodes: &[Inline]) -> bool {
+    nodes.iter().all(|node| match node {
+        Inline::Text { value, .. } | Inline::Raw { value, .. } => value.is_empty(),
+        Inline::Substituted { value, parts, .. } => {
+            value.is_empty()
+                && parts
+                    .iter()
+                    .all(|p| matches!(p, AttributePart::Text(t) if t.is_empty()))
+        }
+        Inline::AttributeRef { value, parts, .. } => {
+            value.as_deref() == Some("")
+                && parts
+                    .iter()
+                    .all(|p| matches!(p, AttributePart::Text(t) if t.is_empty()))
+        }
+        _ => false,
+    })
 }
 
 /// Scan a deferred field with `evaluation` and map nodes and diagnostics back

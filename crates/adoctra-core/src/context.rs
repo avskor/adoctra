@@ -63,6 +63,7 @@ pub(crate) fn caption_context(kind: &crate::BlockKind) -> Option<&'static str> {
     match kind {
         crate::BlockKind::Example { .. } => Some("example"),
         crate::BlockKind::Image { .. } => Some("figure"),
+        crate::BlockKind::Table(_) => Some("table"),
         _ => None,
     }
 }
@@ -115,6 +116,7 @@ impl ParseContext {
         let mut attributes = Attributes::new();
         attributes.set("example-caption", "Example");
         attributes.set("figure-caption", "Figure");
+        attributes.set("table-caption", "Table");
         // Ruby's DEFAULT_ATTRIBUTES for section and appendix signifiers.
         attributes.set("appendix-caption", "Appendix");
         for (name, value) in [

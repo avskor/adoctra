@@ -66,6 +66,10 @@ pub(crate) struct Reader<'a> {
     pub metadata_references: Vec<Span>,
     /// Lines of body section titles (ATX, setext title and underline), for highlighting.
     pub heading_lines: Vec<Span>,
+    /// Table blocks (fence to fence) and their cell separators with specs,
+    /// for highlighting.
+    pub tables: Vec<Span>,
+    pub table_separators: Vec<Span>,
     endings: Vec<(usize, String)>,
     pub limit: usize,
     stack: Vec<Conditional>,
@@ -108,6 +112,8 @@ impl<'a> Reader<'a> {
             attribute_entries: Vec::new(),
             metadata_references: Vec::new(),
             heading_lines: Vec::new(),
+            tables: Vec::new(),
+            table_separators: Vec::new(),
             endings: Vec::new(),
             limit: usize::MAX,
             stack: Vec::new(),

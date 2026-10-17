@@ -521,6 +521,32 @@ class="videoblock|audioblock">` with a leading `<figcaption class="title">` and
 an `<iframe>` (no obsolete frameborder) or `<video>`/`<audio>` with Ruby's
 boolean attributes and fallback text; the DOM profile maps them to Ruby's divs.
 JSON/WASM `name:"video"`/`"audio"`; token `block-macro`.
+**Tables**: `BlockKind::Table(Box<Table>)` is a `|===`/`,===`/`:===`/`!===`
+block (a longer `=` run closes only with the identical line; any style keeps it
+a table; a paragraph ends at the fence). parser.rs read_table captures the lines
+to that fence without `//` line comments; table.rs ports Ruby's parse_table,
+Table::ParserContext, Cell and Column: psv cell specs at line start and before a
+separator (CellSpecStart/EndRx, leftmost end match — Ruby drops a trailing
+` b` style-like word), `\|` escapes, colspan/rowspan (`2.3+`), duplication
+(`3*`, every copy converts again), alignments and styles (d/s/e/m/h/l/a), csv
+(quotes, `""`, unclosed-quote recovery) / dsv / tsv and `separator` (a start
+separator slices one character, like Ruby), the implicit header (first line holds
+the whole first row, then a blank line; reinitialized cells when rejected),
+`%header`/`%noheader`/`%footer`, Ruby's widths (`cols` specs, `~` autowidth,
+Float#truncate(4), donation to the last column, Ruby number spelling) and its
+error messages. Cell text is `(offset, char)` so stripping/unescaping/unquoting
+keep physical spans; body cells split into paragraphs at blank lines (trailing
+empty converted paragraphs dropped), header cells are one run, literal cells keep
+raw text. Leading cell anchors are cataloged in Ruby's order (header row at
+partition). body_subs converts head, body, foot and resolves frame/grid/stripes
+(`table-*` fallbacks, topbot → ends) and per-cell `cellbgcolor` after the cell's
+content. Titles number with `table-caption`/`table-number`. HTML keeps Ruby's
+semantic `<table class="tableblock …">` markup exactly (golden/tables compares
+lines); JSON/WASM `name:"table"` with columns, head/body/foot cells (spans in
+WASM); tokens `table-delimiter`/`cell-separator` from parser spans, cell text
+scanned between separators. AsciiDoc (`a`) cells are not nested documents yet
+(their paragraphs render in Ruby's content/paragraph divs; XFAIL
+table-asciidoc-cell-blocks), so nested `!===` tables are also future work.
 Xref labels: resolve::register builds the registry after reading (auto ids,
 block ids, cataloged anchors in source order); body_subs Execution resolves each
 textless xref after its field's subs, like Ruby's xreftext:
@@ -807,8 +833,8 @@ a local/document `caption` replaces it without numbering. The HTML
 backend prepends it inside the `<div class="title">` (`#{caption}#{title}`), and
 JSON/WASM serialize a `caption` field (the string, or `null`). Only example blocks
 are numbered: `listing-caption` stays unset (a titled listing/literal keeps its bare
-title), images number with `figure-caption` (see **Images**) and `table-caption`
-is moot until table blocks exist.
+title), images number with `figure-caption` (see **Images**) and tables with
+`table-caption` (see **Tables**).
 Snapshotted by `golden/examples/caption_numbering.adoc` and the golden oracle no
 longer strips the counter. **Quote and verse blocks** are the next type-changing
 styles. A `____` delimited block defaults to `BlockKind::Quote { attribution,
@@ -936,14 +962,15 @@ fixtures under `golden/blocks/`, literal-block fixtures under `golden/literals/`
 admonition fixtures under `golden/admonitions/`, example-block fixtures under
 `golden/examples/`, block-title fixtures under `golden/titles/`, quote/verse
 fixtures under `golden/quotes/` and `golden/verses/`, open-block fixtures under
-`golden/opens/`, and passthrough fixtures under `golden/passthrough/`).
+`golden/opens/`, passthrough fixtures under `golden/passthrough/` and table
+fixtures under `golden/tables/`).
 
 Scaffold only: DOCX backend; the extension API exists but `parse`/`convert` do
 not invoke it yet.
 
 Not yet implemented (common asks — treat as roadmap, do not assume present):
-broader language coverage (tables, footnotes, includes,
-block/inline macros). The full block-attribute list is now *parsed* (style, named
+broader language coverage (AsciiDoc table cells and nested tables, footnotes,
+remaining block/inline macros). The full block-attribute list is now *parsed* (style, named
 attributes, `%options`, id/role folding), but most of it has nothing to render
 against yet: a few **styles that change a block's type** (`[stem]`/`[latexmath]` →
 math, …) remain unimplemented — `[source,<lang>]`, `[literal]`, `[pass]`,
@@ -961,7 +988,7 @@ inline substitutions. For
 (`.Title`) are kept on `Block.title` and rendered except on passthrough blocks; still missing
 here: admonitions on list items. **Caption numbering** is done for **example
 blocks** (`Example N.` via the `example-caption` attribute, on `Block.caption`) and
-images (`Figure N.`); the `Table N.` counter awaits table blocks. The unset forms
+images (`Figure N.`) and tables (`Table N.`). The unset forms
 `:!example-caption:` / `:example-caption!:` disable example captions and their
 counter increments; a custom per-block `caption=` or document `caption` overrides
 the prefix without incrementing the counter. Also: **indented/offset

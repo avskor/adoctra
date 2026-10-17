@@ -211,6 +211,97 @@ fn write_header(header: &adoctra_core::DocumentHeader, s: &mut String) {
     s.push('}');
 }
 
+/// A table: its resolved presentation (`width` percentage, `frame`, `grid`,
+/// `stripes`), the columns and the head/body/foot rows of cells. A cell has
+/// `paragraphs` (arrays of inlines; one run in the head) or verbatim `literal`
+/// text.
+fn write_table(table: &adoctra_core::ast::Table, s: &mut String) {
+    s.push_str(&format!(",\"width\":{},\"frame\":", table.width));
+    write_str(&table.frame, s);
+    s.push_str(",\"grid\":");
+    write_str(&table.grid, s);
+    s.push_str(",\"stripes\":");
+    match &table.stripes {
+        Some(stripes) => write_str(stripes, s),
+        None => s.push_str("null"),
+    }
+    s.push_str(",\"columns\":[");
+    for (i, column) in table.columns.iter().enumerate() {
+        if i > 0 {
+            s.push(',');
+        }
+        s.push_str(&format!(
+            "{{\"halign\":\"{}\",\"valign\":\"{}\",\"style\":{},\"width\":",
+            column.halign.as_str(),
+            column.valign.as_str(),
+            column
+                .style
+                .map_or("null".to_owned(), |style| format!("\"{}\"", style.as_str()))
+        ));
+        write_str(&column.width, s);
+        s.push_str(&format!(",\"autowidth\":{}}}", column.autowidth));
+    }
+    s.push(']');
+    for (name, rows) in [
+        ("head", &table.head),
+        ("body", &table.body),
+        ("foot", &table.foot),
+    ] {
+        s.push_str(&format!(",\"{name}\":["));
+        for (i, row) in rows.iter().enumerate() {
+            if i > 0 {
+                s.push(',');
+            }
+            s.push('[');
+            for (j, cell) in row.iter().enumerate() {
+                if j > 0 {
+                    s.push(',');
+                }
+                write_cell(cell, s);
+            }
+            s.push(']');
+        }
+        s.push(']');
+    }
+}
+
+fn write_cell(cell: &adoctra_core::ast::TableCell, s: &mut String) {
+    let number = |n: Option<u32>| n.map_or("null".to_owned(), |n| n.to_string());
+    s.push('{');
+    write_span_field(&cell.span, s);
+    s.push(',');
+    s.push_str(&format!(
+        "\"style\":{},\"halign\":\"{}\",\"valign\":\"{}\",\"colspan\":{},\"rowspan\":{},\"background\":",
+        cell.style
+            .map_or("null".to_owned(), |style| format!("\"{}\"", style.as_str())),
+        cell.halign.as_str(),
+        cell.valign.as_str(),
+        number(cell.colspan),
+        number(cell.rowspan)
+    ));
+    match &cell.background {
+        Some(color) => write_str(color, s),
+        None => s.push_str("null"),
+    }
+    match &cell.content {
+        adoctra_core::ast::CellContent::Paragraphs(paragraphs) => {
+            s.push_str(",\"paragraphs\":[");
+            for (i, inlines) in paragraphs.iter().enumerate() {
+                if i > 0 {
+                    s.push(',');
+                }
+                write_inlines(inlines, s);
+            }
+            s.push(']');
+        }
+        adoctra_core::ast::CellContent::Literal(text) => {
+            s.push_str(",\"literal\":");
+            write_str(text, s);
+        }
+    }
+    s.push('}');
+}
+
 fn write_block(b: &Block, s: &mut String) {
     s.push('{');
     write_span_field(&b.span, s);
@@ -306,6 +397,17 @@ fn write_block(b: &Block, s: &mut String) {
             write_options(&b.attrs.options, s);
             write_title(&b.title, s);
             write_caption(&b.caption, s);
+        }
+        BlockKind::Table(table) => {
+            s.push_str("\"name\":\"table\",");
+            write_id(&b.id, s);
+            write_roles(&b.roles, s);
+            write_style(&b.attrs.style, s);
+            write_attributes(&b.attrs.named, s);
+            write_options(&b.attrs.options, s);
+            write_title(&b.title, s);
+            write_caption(&b.caption, s);
+            write_table(table, s);
         }
         BlockKind::Video {
             target,
@@ -2355,6 +2457,32 @@ mod header_tests {
             tokens.contains(r#"{"span":{"source_id":3,"start":10,"end":32},"kind":"block-macro"}"#),
             "{tokens}"
         );
+    }
+
+    #[test]
+    fn tables_export_columns_cells_with_spans_and_tokens() {
+        let source = ".T\n[cols=\"1,2\"]\n|===\n|H |*I*\n\n2+|l\n|===";
+        let json = super::parse_json_with_source(source, 3);
+        assert!(
+            json.contains(r#""name":"table","id":null,"roles":[],"style":null,"attributes":{"cols":"1,2"},"options":[],"title":[{"span":{"source_id":3,"start":1,"end":2},"name":"text","value":"T"}],"caption":"Table 1. ","width":100,"frame":"all","grid":"all","stripes":null,"columns":[{"halign":"left","valign":"top","style":null,"width":"33.3333","autowidth":false},{"halign":"left","valign":"top","style":null,"width":"66.6667","autowidth":false}]"#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""head":[[{"span":{"source_id":3,"start":21,"end":23},"style":null,"halign":"left","valign":"top","colspan":null,"rowspan":null,"background":null,"paragraphs":[[{"span":{"source_id":3,"start":22,"end":23},"name":"text","value":"H"}]]},{"span":{"source_id":3,"start":24,"end":28},"style":null,"halign":"left","valign":"top","colspan":null,"rowspan":null,"background":null,"paragraphs":[[{"span":{"source_id":3,"start":25,"end":28},"name":"strong""#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""body":[[{"span":{"source_id":3,"start":30,"end":34},"style":null,"halign":"left","valign":"top","colspan":2,"rowspan":null,"background":null,"paragraphs":[[{"span":{"source_id":3,"start":33,"end":34},"name":"text","value":"l"}]]}]],"foot":[]"#),
+            "{json}"
+        );
+        let tokens = super::tokens_json_with_source(source, 3);
+        for token in [
+            r#"{"span":{"source_id":3,"start":16,"end":20},"kind":"table-delimiter"}"#,
+            r#"{"span":{"source_id":3,"start":30,"end":33},"kind":"cell-separator"}"#,
+            r#"{"span":{"source_id":3,"start":25,"end":28},"kind":"strong"}"#,
+        ] {
+            assert!(tokens.contains(token), "{tokens}");
+        }
     }
 
     #[test]

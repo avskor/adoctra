@@ -45,6 +45,8 @@ pub enum TokenKind {
     QuoteDelimiter,
     SidebarDelimiter,
     OpenDelimiter,
+    TableDelimiter,
+    CellSeparator,
     BlockTitle,
     AdmonitionLabel,
     Strong,
@@ -85,6 +87,8 @@ impl TokenKind {
             TokenKind::QuoteDelimiter => "quote-delimiter",
             TokenKind::SidebarDelimiter => "sidebar-delimiter",
             TokenKind::OpenDelimiter => "open-delimiter",
+            TokenKind::TableDelimiter => "table-delimiter",
+            TokenKind::CellSeparator => "cell-separator",
             TokenKind::BlockTitle => "block-title",
             TokenKind::AdmonitionLabel => "admonition-label",
             TokenKind::Strong => "strong",
@@ -129,19 +133,37 @@ pub(crate) fn tokens_reader<'a>(
         .iter()
         .map(|span| processed.transformed_span(*span))
         .collect();
-    let mut out: Vec<_> =
-        tokens_processed(&processed.text, options, &comments, &entries, &headings)
+    let tables = Tables {
+        blocks: reader
+            .tables
+            .iter()
+            .map(|span| processed.transformed_span(*span))
+            .collect(),
+        separators: reader
+            .table_separators
+            .iter()
+            .map(|span| processed.transformed_span(*span))
+            .collect(),
+    };
+    let mut out: Vec<_> = tokens_processed(
+        &processed.text,
+        options,
+        &comments,
+        &entries,
+        &headings,
+        &tables,
+    )
+    .into_iter()
+    .flat_map(|token| {
+        reader
+            .token_spans(processed.original_span(token.span))
             .into_iter()
-            .flat_map(|token| {
-                reader
-                    .token_spans(processed.original_span(token.span))
-                    .into_iter()
-                    .map(move |span| Token {
-                        span,
-                        kind: token.kind,
-                    })
+            .map(move |span| Token {
+                span,
+                kind: token.kind,
             })
-            .collect();
+    })
+    .collect();
     for &span in &reader.metadata_references {
         out.extend(reader.token_spans(span).into_iter().map(|span| Token {
             span,
@@ -226,6 +248,12 @@ pub(crate) fn tokens_reader<'a>(
     out
 }
 
+/// Table blocks and their cell separators, from the parser.
+struct Tables {
+    blocks: Vec<Span>,
+    separators: Vec<Span>,
+}
+
 fn tokens_processed(
     source: &str,
     options: &ParseOptions,
@@ -235,6 +263,7 @@ fn tokens_processed(
     // the structural parser: only it knows section contexts and paragraph
     // continuation, and a setext underline may look like a fence.
     headings: &[Span],
+    tables: &Tables,
 ) -> Vec<Token> {
     // Comment classification is owned by the structural parser, including
     // verbatim styles and list continuations. Do not duplicate those rules here.
@@ -320,6 +349,43 @@ fn tokens_processed(
                     TokenKind::Revision
                 },
             });
+            continue;
+        }
+        // A table, as the parser read it: its fences, then each line's cell
+        // separators (with their specs) and the cell text between them.
+        if let Some(table) = tables.blocks.iter().find(|t| t.start <= off && off < t.end) {
+            mid_paragraph = false;
+            if (off == table.start || off + line.len() == table.end)
+                && crate::table::delimiter(line).is_some()
+            {
+                out.push(Token {
+                    span: line_span,
+                    kind: TokenKind::TableDelimiter,
+                });
+                continue;
+            }
+            let mut at = off;
+            let first = tables.separators.partition_point(|s| s.start < off);
+            for separator in tables.separators[first..]
+                .iter()
+                .take_while(|s| s.end <= off + line.len())
+            {
+                out.extend(scan_inlines(
+                    &line[at - off..separator.start - off],
+                    at,
+                    &context.render_attributes(),
+                ));
+                out.push(Token {
+                    span: *separator,
+                    kind: TokenKind::CellSeparator,
+                });
+                at = separator.end;
+            }
+            out.extend(scan_inlines(
+                &line[at - off..],
+                at,
+                &context.render_attributes(),
+            ));
             continue;
         }
         let at_para_start = !mid_paragraph;

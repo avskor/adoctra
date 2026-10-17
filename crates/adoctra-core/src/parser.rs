@@ -1141,6 +1141,158 @@ fn capture_verbatim_body(
     (body_start, body_end, end)
 }
 
+/// Whether a block has an option (`%name`, `options=name` or `name-option`).
+pub(crate) fn has_option(attrs: &BlockAttrs, name: &str) -> bool {
+    attrs.options.iter().any(|o| o == name) || attrs.named.contains_key(&format!("{name}-option"))
+}
+
+/// Ruby's `:table` branch of `next_block`: the lines up to the identical
+/// closing fence, without line comments, parsed by `parse_table`. Cell text
+/// is deferred to conversion like paragraphs; leading cell anchors are
+/// cataloged while reading.
+fn read_table(
+    lines: &mut Reader<'_>,
+    i: &mut usize,
+    opening: Span,
+    hint: char,
+    attrs: Option<&BlockAttrs>,
+    context: &mut ParseContext,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> Block {
+    use crate::ast::{CellContent, Table, TableCell, TableColumn};
+    let fence = lines.content(opening.start, opening.end).text;
+    let limit = lines.bound(*i, context, |line| line == fence);
+    let mut body = Vec::new();
+    while lines.has(*i, context) {
+        let (off, line) = lines.line(*i);
+        if is_line_comment(&line) {
+            context.comments.push(Span::new(off, off + line.len()));
+        } else {
+            body.push((off, line));
+        }
+        *i += 1;
+    }
+    lines.limit = limit;
+    let end = if lines.has(*i, context) && *lines[*i].1 == *fence {
+        let (off, line) = lines.line(*i);
+        *i += 1;
+        off + line.len()
+    } else {
+        diagnostics.push(Diagnostic {
+            span: opening,
+            severity: Severity::Warning,
+            message: "unterminated table block".into(),
+        });
+        lines
+            .loaded
+            .get(i.saturating_sub(1))
+            .map_or(opening.end, |(off, line)| {
+                (off + line.len()).max(opening.end)
+            })
+    };
+    let default = BlockAttrs::default();
+    let attrs = attrs.unwrap_or(&default);
+    let named = |key: &str| attrs.named.get(key).map(String::as_str);
+    let body: Vec<(usize, &str)> = body
+        .iter()
+        .map(|(off, line)| (*off, line.as_ref()))
+        .collect();
+    let parsed = crate::table::parse(
+        &body,
+        hint,
+        &crate::table::Options {
+            cols: named("cols"),
+            format: named("format"),
+            separator: named("separator"),
+            header: has_option(attrs, "header"),
+            noheader: has_option(attrs, "noheader"),
+            footer: has_option(attrs, "footer"),
+        },
+        opening,
+        diagnostics,
+    );
+    lines.tables.push(Span::new(opening.start, end));
+    lines.table_separators.extend(parsed.separators);
+    for text in &parsed.anchors {
+        let source = crate::table::source(text);
+        context.catalog_leading_anchor(&crate::table::text(text), |range| {
+            source.original_span(Span::new(range.start, range.end))
+        });
+    }
+    let render = context.render_attributes();
+    let mut cell = |cell: crate::table::Cell, head: bool| {
+        let content = if cell.literal {
+            CellContent::Literal(crate::table::text(&cell.text))
+        } else {
+            // A header cell (and a csv/dsv literal) is one run, like Ruby's
+            // `Cell#text`; body cells split into paragraphs.
+            let single = head || cell.style == Some(crate::ast::CellStyle::Literal);
+            let runs = if cell.text.is_empty() {
+                Vec::new()
+            } else if single {
+                vec![cell.text]
+            } else {
+                crate::table::paragraphs(&cell.text)
+            };
+            CellContent::Paragraphs(
+                runs.iter()
+                    .map(|run| {
+                        context
+                            .body_subs
+                            .defer(crate::table::source(run), None, &render, true)
+                    })
+                    .collect(),
+            )
+        };
+        TableCell {
+            content,
+            style: cell.style,
+            halign: cell.halign,
+            valign: cell.valign,
+            colspan: cell.colspan,
+            rowspan: cell.rowspan,
+            background: None,
+            span: cell.span,
+        }
+    };
+    let head = parsed
+        .head
+        .into_iter()
+        .map(|row| row.into_iter().map(|c| cell(c, true)).collect())
+        .collect();
+    let mut rows = |rows: Vec<Vec<crate::table::Cell>>| -> Vec<Vec<TableCell>> {
+        rows.into_iter()
+            .map(|row| row.into_iter().map(|c| cell(c, false)).collect())
+            .collect()
+    };
+    let body = rows(parsed.body);
+    let foot = rows(parsed.foot);
+    let table = Table {
+        columns: parsed
+            .columns
+            .iter()
+            .map(|column| TableColumn {
+                halign: column.halign,
+                valign: column.valign,
+                style: column.style,
+                width: column.width(),
+                autowidth: column.autowidth,
+            })
+            .collect(),
+        head,
+        body,
+        foot,
+        width: crate::table::table_width(named("width")),
+        frame: "all".into(),
+        grid: "all".into(),
+        stripes: None,
+    };
+    Block::new(
+        Span::new(opening.start, end),
+        BlockKind::Table(Box::new(table)),
+    )
+}
+
 /// Where a block is being parsed. The only behavioural difference is how a
 /// paragraph *ends*: at the top level it runs until a blank line, a heading or a
 /// column-0 list marker; inside a list item (after a `+` continuation) it
@@ -1305,6 +1457,21 @@ fn parse_block_content(
         return Some(Block::new(
             Span::new(off, off + trimmed.len()),
             BlockKind::Toc,
+        ));
+    }
+
+    // A table (`|===`, `,===`, `:===`, `!===`) whatever the style, like Ruby's
+    // delimited blocks without masquerades.
+    if let Some(hint) = crate::table::delimiter(trimmed) {
+        *i += 1;
+        return Some(read_table(
+            lines,
+            i,
+            Span::new(off, off + trimmed.len()),
+            hint,
+            pending_attrs,
+            context,
+            diagnostics,
         ));
     }
 
@@ -1662,6 +1829,7 @@ fn parse_block_content(
         let ends = (!verbatim && comment_fence(t).is_some())
             || t.trim().is_empty()
             || matches!(t.trim(), "----" | "...." | "====" | "____" | "****" | "--")
+            || crate::table::delimiter(t).is_some()
             || match ctx {
                 BlockCtx::Section | BlockCtx::TopLevel => parse_list_marker(t).is_some(),
                 BlockCtx::InListItem => t.trim() == "+" || list_marker_indented(t).is_some(),

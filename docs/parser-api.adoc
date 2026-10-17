@@ -1290,6 +1290,29 @@ JSON/WASM экспортируют `name:"video"` (`target`, `src`, `poster`, `e
 `<figure class="videoblock|audioblock">` с ведущим `<figcaption class="title">` и
 `<iframe>`/`<video>`/`<audio>` с текстом Ruby для браузеров без поддержки.
 
+Таблицы. `BlockKind::Table(Box<Table>)` — блок `|===`, `,===`, `:===` или `!===`
+(более длинная серия `=` закрывается той же строкой; любой стиль оставляет
+таблицу). Строки до закрывающей строки читаются без строковых комментариев `//`
+и разбираются как `parse_table` Ruby: формат из `format` или символа ограничителя
+(`,` — csv, `:` — dsv; `tsv` — csv с табуляцией), `separator`, спецификации ячеек
+psv (`2.3+`, `3*`, выравнивания `<^>` и `.<.^.>`, стили `d s e m h l a`),
+неявный заголовок, `%header`, `%noheader`, `%footer`. `Table.columns` —
+`TableColumn { halign, valign, style, width, autowidth }`, где `width` —
+`colpcwidth` в записи числа Ruby (`33.3333`, `50.0001`, `50.0`); `head`, `body`,
+`foot` — строки `TableCell { content, style, halign, valign, colspan, rowspan,
+background, span }`. Диапазон ячейки — от её спецификации или разделителя до
+конца обрезанного текста. `CellContent::Paragraphs` содержит inline-узлы с
+обычными подстановками (ячейки тела делятся на абзацы по пустым строкам, ячейка
+заголовка — один фрагмент); `CellContent::Literal` — текст `l`-ячейки. Ячейка `a`
+пока хранит абзацы, а не вложенный документ. `Table.width` — `tablepcwidth`;
+`frame`, `grid`, `stripes` и `background` ячеек вычисляются при преобразовании
+(атрибуты `table-frame`/`table-grid`/`table-stripes` и `cellbgcolor` документа).
+Название нумеруется `table-caption` (счётчик `table-number`). Диагностики
+повторяют сообщения Ruby. JSON/WASM экспортируют `name:"table"` с `width`,
+`frame`, `grid`, `stripes`, `columns`, `head`, `body`, `foot` (ячейки с
+`paragraphs` или `literal`; WASM — с диапазонами), подсветка — `table-delimiter`
+для ограничителей и `cell-separator` для разделителей со спецификациями.
+
 Ссылка, начатая в исходном тексте, — узел `Inline::CrossReference { xref,
 children, span }` с физическим диапазоном всей конструкции (поля `xref`
 декодированы); поглощённые AttributeRef

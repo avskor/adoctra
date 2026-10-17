@@ -507,6 +507,170 @@ pub enum BlockKind {
     /// target's web path under `imagesdir` with a `#t=start,end` anchor,
     /// resolved during conversion.
     Audio { target: String, src: String },
+    /// A table (Ruby's `:table` block), delimited by `|===`, `,===`, `:===` or
+    /// `!===` (a longer `=` run must close with the same line). See [`Table`].
+    Table(Box<Table>),
+}
+
+/// A table's columns and rows, parsed like Ruby's `parse_table`. The `cols`
+/// attribute, `format`/`separator`, `header`/`noheader`/`footer` and
+/// `autowidth` options stay in [`Block::attrs`]; a `.Title` makes it a numbered
+/// table (`table-caption`, [`Block::caption`]).
+#[derive(Debug, Clone, PartialEq)]
+pub struct Table {
+    pub columns: Vec<TableColumn>,
+    /// The header row (explicit `%header`, or Ruby's implicit header: a first
+    /// line holding the whole first row followed by a blank line).
+    pub head: Vec<Vec<TableCell>>,
+    pub body: Vec<Vec<TableCell>>,
+    /// The last row with `%footer`.
+    pub foot: Vec<Vec<TableCell>>,
+    /// Ruby's `tablepcwidth`: the `width` attribute as an integer percentage
+    /// (1–100, or 0 for an explicit `0`/`0%`), else 100.
+    pub width: u32,
+    /// Ruby's `frame`, `grid` and `stripes` with the `table-frame`,
+    /// `table-grid` and `table-stripes` document fallbacks at the table during
+    /// conversion (`topbot` becomes `ends`; defaults `all`).
+    pub frame: String,
+    pub grid: String,
+    pub stripes: Option<String>,
+}
+
+impl Table {
+    /// Every cell in Ruby's conversion order: head, body, foot.
+    pub fn cells(&self) -> impl Iterator<Item = &TableCell> {
+        self.head
+            .iter()
+            .chain(&self.body)
+            .chain(&self.foot)
+            .flatten()
+    }
+
+    pub fn cells_mut(&mut self) -> impl Iterator<Item = &mut TableCell> {
+        self.head
+            .iter_mut()
+            .chain(&mut self.body)
+            .chain(&mut self.foot)
+            .flatten()
+    }
+}
+
+/// A table column (Ruby's `Table::Column`) from the `cols` specs, or an equal
+/// share of the width for columns implied by the first row.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TableColumn {
+    pub halign: HAlign,
+    pub valign: VAlign,
+    pub style: Option<CellStyle>,
+    /// Ruby's `colpcwidth`, spelled as Ruby prints the number (`25`,
+    /// `33.3333`, `50.0001`).
+    pub width: String,
+    /// A `~` width (Ruby's `autowidth-option`).
+    pub autowidth: bool,
+}
+
+/// A table cell (Ruby's `Table::Cell`). The alignments and style combine the
+/// column's with the cell spec's; header-row cells have no style.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TableCell {
+    pub content: CellContent,
+    pub style: Option<CellStyle>,
+    pub halign: HAlign,
+    pub valign: VAlign,
+    pub colspan: Option<u32>,
+    pub rowspan: Option<u32>,
+    /// The `cellbgcolor` document attribute after converting the cell's
+    /// content (a `{set:cellbgcolor:…}` in the cell applies to it).
+    pub background: Option<String>,
+    /// From the cell spec (or the separator) through the end of the cell text.
+    pub span: Span,
+}
+
+/// What a cell holds.
+#[derive(Debug, Clone, PartialEq)]
+pub enum CellContent {
+    /// Normal substitutions. Body and footer cells split into paragraphs at
+    /// blank lines (Ruby's `Cell#content`); a header-row cell is one run.
+    /// An AsciiDoc (`a`) cell is not yet parsed as a nested document and
+    /// keeps this form too.
+    Paragraphs(Vec<Vec<Inline>>),
+    /// A literal (`l`) cell: verbatim text (Ruby's basic substitutions are
+    /// output escaping).
+    Literal(String),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HAlign {
+    Left,
+    Center,
+    Right,
+}
+
+impl HAlign {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            HAlign::Left => "left",
+            HAlign::Center => "center",
+            HAlign::Right => "right",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum VAlign {
+    Top,
+    Middle,
+    Bottom,
+}
+
+impl VAlign {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            VAlign::Top => "top",
+            VAlign::Middle => "middle",
+            VAlign::Bottom => "bottom",
+        }
+    }
+}
+
+/// Ruby's `TableCellStyles`: `d`, `s`, `e`, `m`, `h`, `l` and `a`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CellStyle {
+    Default,
+    Strong,
+    Emphasis,
+    Monospaced,
+    Header,
+    Literal,
+    Asciidoc,
+}
+
+impl CellStyle {
+    pub fn from_letter(letter: char) -> Option<Self> {
+        Some(match letter {
+            'd' => CellStyle::Default,
+            's' => CellStyle::Strong,
+            'e' => CellStyle::Emphasis,
+            'm' => CellStyle::Monospaced,
+            'h' => CellStyle::Header,
+            'l' => CellStyle::Literal,
+            'a' => CellStyle::Asciidoc,
+            _ => return None,
+        })
+    }
+
+    /// Ruby's style symbol (`none` for `d`).
+    pub fn as_str(self) -> &'static str {
+        match self {
+            CellStyle::Default => "none",
+            CellStyle::Strong => "strong",
+            CellStyle::Emphasis => "emphasis",
+            CellStyle::Monospaced => "monospaced",
+            CellStyle::Header => "header",
+            CellStyle::Literal => "literal",
+            CellStyle::Asciidoc => "asciidoc",
+        }
+    }
 }
 
 /// One item of a [`BlockKind::List`]: its resolved inline content (the
