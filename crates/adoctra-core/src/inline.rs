@@ -3,8 +3,8 @@
 //! One pass over a slice of source produces spanned [`Inline`] nodes. Both the
 //! parser (which builds the document model) and the tokenizer (which feeds
 //! editor highlighting) drive off *this* function, so there is exactly one
-//! place that understands `*strong*`, `_emphasis_` and `{attribute}` markup —
-//! no second grammar that can drift out of sync.
+//! place that understands `*strong*`, `_emphasis_`, `{attribute}` and macro
+//! markup — no second grammar that can drift out of sync.
 //!
 //! Offsets are absolute: `base` is the byte offset of `src[0]` in the original
 //! document, so every node's [`Span`] maps straight back to real source bytes.
@@ -53,7 +53,7 @@ pub(crate) fn scan_inlines_evaluated(
 ) -> Vec<Inline> {
     let compat = evaluation.get("compat-mode").is_some();
     let mut quotes = Quotes::new(src, base, evaluation, compat);
-    let mut out = scan_unprocessed(src, base, evaluation, &quotes);
+    let mut out = scan_unprocessed(src, base, &quotes);
     crate::attribute_macros::apply_inlines(&mut out, evaluation, fold_newlines, &mut quotes.passes);
     quotes.passes.restore(&mut out, evaluation, compat);
     diagnostics.extend(quotes.passes.diagnostics);
@@ -70,7 +70,7 @@ pub(crate) fn scan_for_tokens(src: &str, base: usize, attrs: &Attributes) -> Vec
         &mut evaluation,
         attrs.get("compat-mode").is_some(),
     );
-    let mut syntax = scan_unprocessed(src, base, attrs, &quotes);
+    let mut syntax = scan_unprocessed(src, base, &quotes);
     let mut processed = syntax.clone();
     let matches = crate::attribute_macros::apply_inlines(
         &mut processed,
@@ -92,6 +92,14 @@ pub(crate) fn scan_for_tokens(src: &str, base: usize, attrs: &Attributes) -> Vec
             span,
         });
     }
+    for span in matches.xrefs {
+        syntax.push(Inline::CrossReference {
+            target: String::new(),
+            role: None,
+            children: Vec::new(),
+            span,
+        });
+    }
     syntax.extend(quotes.syntax());
     let mut tokens = Vec::new();
     crate::tokenizer::flatten_inlines(&syntax, &mut tokens);
@@ -99,163 +107,24 @@ pub(crate) fn scan_for_tokens(src: &str, base: usize, attrs: &Attributes) -> Vec
     tokens
 }
 
-fn scan_unprocessed(src: &str, base: usize, attrs: &Attributes, quotes: &Quotes) -> Vec<Inline> {
+fn scan_unprocessed(src: &str, base: usize, quotes: &Quotes) -> Vec<Inline> {
+    // Every macro, including cross-references and inline anchors, is
+    // recognized later by the macros stage over the expanded text (see
+    // `attribute_macros`), so references can complete or break them. Only
+    // the quote/attribute edits are applied to the source text here.
     let mut out = Vec::new();
     let mut text_start = 0usize;
-    let mut i = 0usize;
-
-    while i < src.len() {
-        if let Some(edit) = quotes.edits.get(&(base + i)) {
-            flush_text(src, text_start, i, base, &mut out);
-            out.extend(edit.nodes.clone());
-            i = edit.end - base;
-            text_start = i;
+    for (&at, edit) in quotes.edits.range(base..base + src.len()) {
+        let i = at - base;
+        if i < text_start {
             continue;
         }
-        if let Some((node, end)) = try_match(src, i, base, attrs, quotes) {
-            flush_text(src, text_start, i, base, &mut out);
-            out.push(node);
-            i = end;
-            text_start = end;
-        } else {
-            // advance one whole UTF-8 char
-            i += utf8_step(src, i);
-        }
+        flush_text(src, text_start, i, base, &mut out);
+        out.extend(edit.nodes.clone());
+        text_start = edit.end - base;
     }
     flush_text(src, text_start, src.len(), base, &mut out);
     quotes.rebuild(out, base..base + src.len())
-}
-
-/// Try to recognise a construct starting at byte `i`. Returns the node and the
-/// byte index (src-relative) just past it.
-fn try_match(
-    src: &str,
-    i: usize,
-    base: usize,
-    attrs: &Attributes,
-    quotes: &Quotes,
-) -> Option<(Inline, usize)> {
-    match src.as_bytes()[i] {
-        // Cross-references: the `<<id>>` / `<<id,text>>` angle form, and the
-        // `xref:id[text]` macro (brackets mandatory, like `link:`).
-        b'<' => match_xref_angle(src, i, base, attrs, quotes),
-        b'x' => match_xref_macro(src, i, base, attrs, quotes),
-        // Inline anchors are recognized later, by the macros stage, so that
-        // expanded references can complete or break them (see
-        // `attribute_macros::apply_anchors`).
-        _ => None,
-    }
-}
-
-/// A cross-reference in angle-bracket form: `<<id>>` or `<<id,text>>`. Requires
-/// the doubled `<<` … `>>` delimiters; the content is split on the *first* comma
-/// into the raw `target` id and an optional reftext. The reftext is trimmed and
-/// scanned for inline markup (`<<id,*bold*>>` works). With no reftext (or an
-/// empty one) the display text is the core-generated `[id]`, matching
-/// asciidoctor's rendering of an unresolved reference. An empty `target`, or a
-/// missing `>>`, is not a cross-reference (the `<` stays literal text). Returns
-/// the node and the src-relative end index (one past the closing `>>`).
-fn match_xref_angle(
-    src: &str,
-    i: usize,
-    base: usize,
-    attrs: &Attributes,
-    quotes: &Quotes,
-) -> Option<(Inline, usize)> {
-    if !src[i..].starts_with("<<") {
-        return None;
-    }
-    let inner_start = i + 2;
-    let rel_close = unprotected_close(&src[inner_start..], ">>", base + inner_start, quotes)?;
-    let inner = &src[inner_start..inner_start + rel_close];
-    let end = inner_start + rel_close + 2;
-    // Split target from reftext on the first comma; keep the reftext's absolute
-    // offset so its scanned children carry real source spans.
-    let (target, reftext, reftext_off) = match inner.find(',') {
-        Some(comma) => {
-            let after = &inner[comma + 1..];
-            let lead = after.len() - after.trim_start().len();
-            (
-                &inner[..comma],
-                after.trim(),
-                inner_start + comma + 1 + lead,
-            )
-        }
-        None => (inner, "", inner_start),
-    };
-    if target.is_empty() {
-        return None;
-    }
-    let children = xref_children(reftext, reftext_off, base, attrs, quotes);
-    Some((
-        Inline::CrossReference {
-            target: target.to_string(),
-            children,
-            span: Span::new(base + i, base + end),
-        },
-        end,
-    ))
-}
-
-/// The `xref:id[text]` macro. Brackets are mandatory (like `link:`); `target` is
-/// the id up to `[` (non-empty, no whitespace). Empty brackets leave the display
-/// text empty for the resolve pass to fill in, like the textless angle form.
-/// Returns the node and the src-relative end index (one past the `]`).
-fn match_xref_macro(
-    src: &str,
-    i: usize,
-    base: usize,
-    attrs: &Attributes,
-    quotes: &Quotes,
-) -> Option<(Inline, usize)> {
-    const PREFIX: &str = "xref:";
-    if !src[i..].starts_with(PREFIX) {
-        return None;
-    }
-    let target_start = i + PREFIX.len();
-    let rel_bracket = src[target_start..].find('[')?;
-    let target = &src[target_start..target_start + rel_bracket];
-    if target.is_empty() || target.contains(char::is_whitespace) {
-        return None;
-    }
-    let text_start = target_start + rel_bracket + 1;
-    let rel_close = unprotected_close(&src[text_start..], "]", base + text_start, quotes)?;
-    let close = text_start + rel_close;
-    let end = close + 1;
-    let children = xref_children(&src[text_start..close], text_start, base, attrs, quotes);
-    Some((
-        Inline::CrossReference {
-            target: target.to_string(),
-            children,
-            span: Span::new(base + i, base + end),
-        },
-        end,
-    ))
-}
-
-// Passthrough extraction hides its internal delimiters from the later macro
-// matcher. Anchor catalog registration has a separate earlier lifecycle.
-fn unprotected_close(src: &str, marker: &str, base: usize, quotes: &Quotes) -> Option<usize> {
-    src.match_indices(marker)
-        .find_map(|(at, _)| (!quotes.passes.contains(base + at)).then_some(at))
-}
-
-/// The display children of a cross-reference: the scanned `reftext` (at absolute
-/// offset `base + reftext_off`) when non-empty, otherwise **empty** — a textless
-/// reference has no display text until the resolve pass fills it in (with the
-/// section title, or the `[id]` fallback for an unknown id).
-fn xref_children(
-    reftext: &str,
-    reftext_off: usize,
-    base: usize,
-    attrs: &Attributes,
-    quotes: &Quotes,
-) -> Vec<Inline> {
-    if reftext.is_empty() {
-        Vec::new()
-    } else {
-        scan_unprocessed(reftext, base + reftext_off, attrs, quotes)
-    }
 }
 
 /// Preserve source text until attribute expansion and the ordered replacements
@@ -266,22 +135,6 @@ fn flush_text(src: &str, a: usize, b: usize, base: usize, out: &mut Vec<Inline>)
             value: src[a..b].into(),
             span: Span::new(base + a, base + b),
         });
-    }
-}
-
-/// Byte width of the UTF-8 char starting at `i` (at least 1).
-fn utf8_step(src: &str, i: usize) -> usize {
-    let b = src.as_bytes()[i];
-    if b < 0x80 {
-        1
-    } else if b >= 0xF0 {
-        4
-    } else if b >= 0xE0 {
-        3
-    } else if b >= 0xC0 {
-        2
-    } else {
-        1
     }
 }
 
@@ -604,6 +457,7 @@ mod tests {
                 target,
                 children,
                 span,
+                ..
             } => Some((target.clone(), children.clone(), *span)),
             _ => None,
         })
@@ -659,10 +513,24 @@ mod tests {
 
     #[test]
     fn xref_reftext_parses_inline_markup() {
-        // The reftext is scanned recursively, so markup inside it still parses.
-        let v = scan_inlines("<<id,*bold* ref>>", 0, &attrs());
+        // Quotes run before the macros stage; the consumed label keeps the
+        // formatting as semantic parts over the label's physical range.
+        let src = "<<id,*bold* ref>>";
+        let v = scan_inlines(src, 0, &attrs());
         let (_, children, _) = first_xref(&v).expect("no xref");
-        assert!(children.iter().any(|n| matches!(n, Inline::Strong { .. })));
+        let [Inline::Substituted { parts, span, .. }] = children.as_slice() else {
+            panic!("{children:?}")
+        };
+        assert_eq!(&src[span.start..span.end], "*bold* ref");
+        assert_eq!(
+            parts,
+            &vec![
+                crate::AttributePart::Open(crate::AttributeFormat::Strong),
+                crate::AttributePart::Text("bold".into()),
+                crate::AttributePart::Close(crate::AttributeFormat::Strong),
+                crate::AttributePart::Text(" ref".into()),
+            ]
+        );
     }
 
     #[test]

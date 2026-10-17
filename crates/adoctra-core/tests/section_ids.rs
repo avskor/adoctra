@@ -73,6 +73,7 @@ fn sanitized_ids_deduplicate_and_forward_references_keep_original_title_nodes() 
         target,
         children,
         span,
+        ..
     } = &inlines[0]
     else {
         panic!()

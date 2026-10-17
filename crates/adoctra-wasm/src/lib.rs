@@ -633,10 +633,17 @@ fn write_inlines(inlines: &[Inline], s: &mut String) {
             // The editor gets the raw anchor id (`target`) so it can resolve or
             // validate the reference; the display text is in `inlines`.
             Inline::CrossReference {
-                target, children, ..
+                target,
+                role,
+                children,
+                ..
             } => {
                 s.push_str("\"name\":\"xref\",\"target\":");
                 write_str(target, s);
+                if let Some(role) = role {
+                    s.push_str(",\"role\":");
+                    write_str(role, s);
+                }
                 s.push_str(",\"inlines\":");
                 write_inlines(children, s);
             }
@@ -2271,6 +2278,34 @@ mod ifeval_tests {
         let tokens = super::tokens_json(src);
         assert!(
             tokens.contains(&format!(r#"{span},"kind":"anchor"}}"#)),
+            "{tokens}"
+        );
+    }
+
+    #[test]
+    fn late_xrefs_keep_spans_roles_and_attribute_parts() {
+        let src = ":id: s\n:r: <<s>>\n\n[[s]]\n== T\n\nA <<{id}>> {r} xref:s[x,role=r]";
+        let json = super::parse_json(src);
+        let start = src.find("<<{id}>>").unwrap();
+        let span = format!(
+            r#"{{"span":{{"source_id":0,"start":{start},"end":{}}}"#,
+            start + 8
+        );
+        assert!(
+            json.contains(&format!(r#"{span},"name":"xref","target":"s","inlines":"#)),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""parts":[{"kind":"open-xref","target":"s"},{"kind":"text","value":"T"},{"kind":"close-xref"}]"#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""name":"xref","target":"s","role":"r","inlines":"#),
+            "{json}"
+        );
+        let tokens = super::tokens_json(src);
+        assert!(
+            tokens.contains(&format!(r#"{span},"kind":"xref"}}"#)),
             "{tokens}"
         );
     }

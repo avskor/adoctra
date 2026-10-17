@@ -101,6 +101,20 @@ fn write_parts_array(parts: &[crate::AttributePart], out: &mut String) {
             out.push_str("{\"kind\":\"close-link\"}");
             continue;
         }
+        if let crate::AttributePart::OpenXref { target, role } = part {
+            out.push_str("{\"kind\":\"open-xref\",\"target\":");
+            escape_into(target, out);
+            if let Some(role) = role {
+                out.push_str(",\"role\":");
+                escape_into(role, out);
+            }
+            out.push('}');
+            continue;
+        }
+        if matches!(part, crate::AttributePart::CloseXref) {
+            out.push_str("{\"kind\":\"close-xref\"}");
+            continue;
+        }
         if let crate::AttributePart::Open(format)
         | crate::AttributePart::Close(format)
         | crate::AttributePart::OpenWithAttributes { format, .. } = part

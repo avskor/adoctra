@@ -533,16 +533,25 @@ pub enum Inline {
         span: Span,
     },
     /// A cross-reference: `<<id>>`, `<<id,text>>`, or the `xref:id[text]` macro.
-    /// `target` is the raw anchor id (without the leading `#`); the HTML backend
-    /// renders it as `href="#id"`. `children` is the display text. The parser
-    /// leaves it *empty* for a textless reference; the resolve pass then fills it
+    /// Like Ruby, it is recognized by the macros stage (after links, emails and
+    /// inline anchors) over the result of quotes, attribute references and
+    /// replacements, so `<<{id}>>` takes the expanded id and a consumed label
+    /// keeps its formatting as [`Inline::Substituted`] parts.
+    /// `target` is the anchor id (a leading `#` removed); the HTML backend
+    /// renders it as `href="#id"`. `role` comes from the macro's attribute list
+    /// (`xref:id[text,role=r]`). `children` is the display text. The parser
+    /// leaves it *empty* for a textless reference; conversion then fills it
     /// in — with the referenced section's title inlines (formatting preserved,
     /// like asciidoctor's `xrefstyle=basic`) when the id is known, or the literal
     /// `[id]` text when it is not (asciidoctor's *unresolved*-reference rendering,
     /// which also emits a diagnostic). An explicit reftext is kept verbatim.
-    /// `span` covers the whole construct (the `<<…>>` or `xref:…[…]`).
+    /// `span` covers the whole construct (the `<<…>>` or `xref:…[…]`). A
+    /// reference generated entirely by an attribute value stays a pair of
+    /// [`AttributePart::OpenXref`](crate::AttributePart::OpenXref) /
+    /// `CloseXref` parts of its reference.
     CrossReference {
         target: String,
+        role: Option<String>,
         children: Vec<Inline>,
         span: Span,
     },

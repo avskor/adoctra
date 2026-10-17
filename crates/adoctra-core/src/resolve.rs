@@ -118,6 +118,7 @@ impl Ids<'_> {
                     target,
                     children,
                     span,
+                    ..
                 } if children.is_empty() => {
                     let label = match self.registry.get(target.as_str()) {
                         None => Some(vec![Inline::Text {
@@ -141,10 +142,131 @@ impl Ids<'_> {
                 | Inline::CrossReference { children, .. } => {
                     self.resolve_reading(children, attributes)
                 }
+                Inline::AttributeRef { span, .. } | Inline::Substituted { span, .. } => {
+                    let span = *span;
+                    fill_labels(inline, |target| {
+                        if self.registry.contains_key(target) {
+                            self.reading_label(target, span, attributes)
+                        } else {
+                            Some(vec![Inline::Text {
+                                value: format!("[{target}]"),
+                                span,
+                            }])
+                        }
+                    });
+                }
                 _ => {}
             }
         }
     }
+}
+
+/// The decoded targets of cross-references generated inside a value.
+pub(crate) fn part_targets(parts: &[crate::AttributePart]) -> impl Iterator<Item = String> + '_ {
+    parts.iter().filter_map(|part| match part {
+        crate::AttributePart::OpenXref { target, .. } => {
+            Some(crate::attributes::decode_special(target))
+        }
+        _ => None,
+    })
+}
+
+/// Textless cross-references generated inside a value: an `OpenXref` directly
+/// followed by its `CloseXref` receives the label as semantic parts, and the
+/// node's flat value follows. Labels lose their link and anchor tags, as
+/// borrowed AST labels do.
+pub(crate) fn fill_labels(node: &mut Inline, label: impl FnMut(&str) -> Option<Vec<Inline>>) {
+    match node {
+        Inline::AttributeRef {
+            value: Some(value),
+            parts,
+            ..
+        }
+        | Inline::Substituted { value, parts, .. } => {
+            if fill_part_labels(parts, label) {
+                *value = crate::attributes::parts_text(parts);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn fill_part_labels(
+    parts: &mut Vec<crate::AttributePart>,
+    mut label: impl FnMut(&str) -> Option<Vec<Inline>>,
+) -> bool {
+    let mut filled = false;
+    let mut i = 0;
+    while i < parts.len() {
+        if let crate::AttributePart::OpenXref { target, .. } = &parts[i] {
+            if matches!(parts.get(i + 1), Some(crate::AttributePart::CloseXref)) {
+                let target = crate::attributes::decode_special(target);
+                if let Some(mut nodes) = label(&target) {
+                    strip_label(&mut nodes);
+                    let inserted = label_parts(&nodes);
+                    let count = inserted.len();
+                    parts.splice(i + 1..i + 1, inserted);
+                    i += count;
+                    filled = true;
+                }
+            }
+        }
+        i += 1;
+    }
+    filled
+}
+
+/// A borrowed label as semantic parts (plain formatting becomes boundaries).
+fn label_parts(nodes: &[Inline]) -> Vec<crate::AttributePart> {
+    use crate::AttributePart as Part;
+    let mut parts = Vec::new();
+    for node in nodes {
+        match node {
+            Inline::Text { value, .. } => crate::attributes::push_part(&mut parts, value, false),
+            Inline::Raw { value, .. } => crate::attributes::push_part(&mut parts, value, true),
+            Inline::Substituted { parts: inner, .. } => {
+                for part in inner {
+                    crate::attributes::push_value(&mut parts, part.clone());
+                }
+            }
+            Inline::AttributeRef {
+                name,
+                value,
+                parts: inner,
+                ..
+            } => match value {
+                Some(_) if !inner.is_empty() => {
+                    for part in inner {
+                        crate::attributes::push_value(&mut parts, part.clone());
+                    }
+                }
+                Some(value) => crate::attributes::push_part(&mut parts, value, false),
+                None => crate::attributes::push_part(&mut parts, &format!("{{{name}}}"), false),
+            },
+            Inline::Link { children, .. } | Inline::CrossReference { children, .. } => {
+                parts.extend(label_parts(children))
+            }
+            Inline::Anchor { .. } => {}
+            node => {
+                let format = crate::attribute_macros::format(node).expect("formatting node");
+                let (Inline::Strong { children, .. }
+                | Inline::Emphasis { children, .. }
+                | Inline::Monospace { children, .. }
+                | Inline::Mark { children, .. }
+                | Inline::Superscript { children, .. }
+                | Inline::Subscript { children, .. }) = node
+                else {
+                    unreachable!()
+                };
+                parts.push(Part::Open(format));
+                for part in label_parts(children) {
+                    crate::attributes::push_value(&mut parts, part);
+                }
+                parts.push(Part::Close(format));
+            }
+        }
+    }
+    parts
 }
 
 /// The range of a deferred field's private conversion placeholder.
@@ -454,6 +576,8 @@ fn strip_attribute_links(inlines: &mut [Inline]) {
                         crate::AttributePart::OpenLink(_)
                             | crate::AttributePart::CloseLink
                             | crate::AttributePart::Anchor(_)
+                            | crate::AttributePart::OpenXref { .. }
+                            | crate::AttributePart::CloseXref
                     )
                 });
             }

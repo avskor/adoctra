@@ -412,11 +412,20 @@ fn render_inlines(inlines: &[Inline], out: &mut String) {
             // display text (explicit reftext, or the core-generated `[id]`) is in
             // `children`; no `class="bare"` (that is a link-only concern).
             Inline::CrossReference {
-                target, children, ..
+                target,
+                role,
+                children,
+                ..
             } => {
                 out.push_str("<a href=\"#");
                 out.push_str(&escape(target));
-                out.push_str("\">");
+                out.push('"');
+                if let Some(role) = role {
+                    out.push_str(" class=\"");
+                    out.push_str(&escape(role));
+                    out.push('"');
+                }
+                out.push('>');
                 render_inlines(children, out);
                 out.push_str("</a>");
             }
@@ -551,7 +560,21 @@ fn render_parts(parts: &[adoctra_core::AttributePart], out: &mut String) {
                 }
                 out.push('>');
             }
-            adoctra_core::AttributePart::CloseLink => out.push_str("</a>"),
+            adoctra_core::AttributePart::CloseLink | adoctra_core::AttributePart::CloseXref => {
+                out.push_str("</a>")
+            }
+            // Lexical values keep their entity protection, like link fields.
+            adoctra_core::AttributePart::OpenXref { target, role } => {
+                out.push_str("<a href=\"#");
+                out.push_str(target);
+                out.push('"');
+                if let Some(role) = role {
+                    out.push_str(" class=\"");
+                    out.push_str(role);
+                    out.push('"');
+                }
+                out.push('>');
+            }
             adoctra_core::AttributePart::LineBreak => out.push_str("<br>"),
             adoctra_core::AttributePart::Anchor(id) => {
                 out.push_str("<a id=\"");
@@ -1788,5 +1811,24 @@ mod tests {
         assert!(html.contains("<p>C <a id=\"c\"></a>x</p>"), "{html}");
         assert!(html.contains("T <a id=\"q\"></a>x</div>"), "{html}");
         assert!(html.contains(r##"<a href="#t">T x</a>"##), "{html}");
+    }
+
+    #[test]
+    fn late_xrefs_render_from_nodes_and_parts_with_roles() {
+        let html = render(":id: sec\n:r: <<sec>>\n\n[[sec]]\n== S&T\n\nA <<{id}>> {r} xref:sec[x,role=r&s] \\<<sec>> <<sec,*a>> b*\n\n.T {r}\n====\nB\n====");
+        assert!(
+            html.contains(r##"<p>A <a href="#sec">S&amp;T</a> <a href="#sec">S&amp;T</a> <a href="#sec" class="r&amp;s">x</a> &lt;&lt;sec&gt;&gt; <a href="#sec"><strong>a</a> b</strong></p>"##),
+            "{html}"
+        );
+        assert!(
+            html.contains(r##"T <a href="#sec">S&amp;T</a></div>"##),
+            "{html}"
+        );
+        // A value-generated reference to a missing id shows the fallback.
+        let html = render(":r: xref:nope[]\n\n{r}");
+        assert!(
+            html.contains(r##"<p><a href="#nope">[nope]</a></p>"##),
+            "{html}"
+        );
     }
 }

@@ -65,6 +65,15 @@ pub enum AttributePart {
     /// An inline anchor recognized by the macros stage (Ruby's
     /// `InlineAnchorRx`). Its reftext is registry metadata, not content.
     Anchor(String),
+    /// A cross-reference recognized by the macros stage (Ruby's
+    /// `InlineXrefMacroRx`). `target` is the refid; it and `role` retain the
+    /// lexical entity protection like link fields. A pair with no label
+    /// between receives the target's label during conversion.
+    OpenXref {
+        target: String,
+        role: Option<String>,
+    },
+    CloseXref,
 }
 
 impl AttributePart {
@@ -78,7 +87,9 @@ impl AttributePart {
             | Self::OpenLink(_)
             | Self::CloseLink
             | Self::LineBreak
-            | Self::Anchor(_) => "",
+            | Self::Anchor(_)
+            | Self::OpenXref { .. }
+            | Self::CloseXref => "",
         }
     }
 
@@ -100,6 +111,8 @@ impl AttributePart {
                 | Self::CloseLink
                 | Self::LineBreak
                 | Self::Anchor(_)
+                | Self::OpenXref { .. }
+                | Self::CloseXref
         )
     }
 
@@ -111,6 +124,12 @@ impl AttributePart {
                 }
             }
             Self::Anchor(id) => *id = f(id),
+            Self::OpenXref { target, role } => {
+                *target = f(target);
+                if let Some(role) = role {
+                    *role = f(role);
+                }
+            }
             Self::OpenLink(link) => {
                 link.target = f(&link.target);
                 for value in [
@@ -203,7 +222,15 @@ impl AttributePart {
                 text.push('>');
                 return Cow::Owned(text);
             }
-            Self::CloseLink => "</a>",
+            Self::CloseLink | Self::CloseXref => "</a>",
+            Self::OpenXref { target, role } => {
+                let mut text = format!("<a href=\"#{target}\"");
+                if let Some(role) = role {
+                    text.push_str(&format!(" class=\"{role}\""));
+                }
+                text.push('>');
+                return Cow::Owned(text);
+            }
             Self::LineBreak => "<br>",
             Self::Anchor(id) => return Cow::Owned(format!("<a id=\"{id}\"></a>")),
             Self::OpenWithAttributes { format, id, role } => {
@@ -261,6 +288,14 @@ pub(crate) fn push_part(parts: &mut Vec<AttributePart>, text: &str, raw: bool) {
 
 pub fn parts_text(parts: &[AttributePart]) -> String {
     parts.iter().map(AttributePart::text).collect()
+}
+
+/// Remove the special-character protection of a lexical metadata value.
+pub(crate) fn decode_special(lexical: &str) -> String {
+    lexical
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&amp;", "&")
 }
 
 /// Ordered map of document attributes. `BTreeMap` keeps output deterministic,

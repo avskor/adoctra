@@ -2201,8 +2201,14 @@ fn doctitle_override_keeps_selected_multisource_origins_and_snapshots() {
     let origin = inlines[0].span();
     assert_ne!(origin.source_id, options.source_id);
     assert_eq!(sources.get(origin.source_id).unwrap().text(), included);
-    assert_eq!(result.diagnostics.len(), 1);
+    // The body reference expands the value, whose `<<missing>>` the macros
+    // stage then recognizes: one warning per field, at its physical origin.
+    assert_eq!(result.diagnostics.len(), 2);
     assert_eq!(result.diagnostics[0].span, origin);
+    assert_eq!(
+        sources.slice(result.diagnostics[1].span),
+        Some("{doctitle}")
+    );
     let tokens = tokens_resource(&mut sources, &options, &resources).unwrap();
     assert_eq!(
         tokens

@@ -246,14 +246,9 @@ impl Execution<'_> {
                     target,
                     children,
                     span,
+                    ..
                 } => {
-                    if !self.registry.contains_key(target.as_str()) {
-                        self.references.push(Diagnostic {
-                            span: *span,
-                            severity: crate::Severity::Warning,
-                            message: format!("unresolved cross reference: '{target}'"),
-                        });
-                    }
+                    self.unresolved(target, *span);
                     if children.is_empty() {
                         // Borrowed labels are not expanded again.
                         *children = self.label(target, *span);
@@ -268,8 +263,27 @@ impl Execution<'_> {
                 | Inline::Superscript { children, .. }
                 | Inline::Subscript { children, .. }
                 | Inline::Link { children, .. } => self.resolve(children),
+                // References generated inside attribute values.
+                Inline::AttributeRef { parts, span, .. }
+                | Inline::Substituted { parts, span, .. } => {
+                    let span = *span;
+                    for target in crate::resolve::part_targets(parts).collect::<Vec<_>>() {
+                        self.unresolved(&target, span);
+                    }
+                    crate::resolve::fill_labels(node, |target| Some(self.label(target, span)));
+                }
                 _ => {}
             }
+        }
+    }
+
+    fn unresolved(&mut self, target: &str, span: Span) {
+        if !self.registry.contains_key(target) {
+            self.references.push(Diagnostic {
+                span,
+                severity: crate::Severity::Warning,
+                message: format!("unresolved cross reference: '{target}'"),
+            });
         }
     }
 

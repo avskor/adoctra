@@ -8,6 +8,7 @@ fn reference(inlines: &[Inline]) -> (&str, &[Inline], adoctra_core::Span) {
                 target,
                 children,
                 span,
+                ..
             } => Some((target.as_str(), children.as_slice(), *span)),
             _ => None,
         })

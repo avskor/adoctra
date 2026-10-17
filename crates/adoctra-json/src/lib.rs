@@ -524,10 +524,17 @@ fn write_inlines(inlines: &[Inline], s: &mut String) {
                 s.push('}');
             }
             Inline::CrossReference {
-                target, children, ..
+                target,
+                role,
+                children,
+                ..
             } => {
                 s.push_str("{\"name\":\"xref\",\"target\":");
                 escape_into(target, s);
+                if let Some(role) = role {
+                    s.push_str(",\"role\":");
+                    escape_into(role, s);
+                }
                 s.push_str(",\"inlines\":");
                 write_inlines(children, s);
                 s.push('}');
@@ -1530,6 +1537,26 @@ mod tests {
         );
         assert!(
             json.contains(r#"{"name":"text","value":" [[e]]"}"#),
+            "{json}"
+        );
+    }
+
+    #[test]
+    fn late_xrefs_serialize_as_nodes_or_attribute_parts() {
+        let json = render(":r: <<s>>\n\n[[s]]\n== T\n\nA xref:s[x,role=r] {r}");
+        assert!(
+            json.contains(
+                r#"{"name":"xref","target":"s","role":"r","inlines":[{"name":"text","value":"x"}]}"#
+            ),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""value":"T","parts":[{"kind":"open-xref","target":"s"},{"kind":"text","value":"T"},{"kind":"close-xref"}]"#),
+            "{json}"
+        );
+        let json = render(":r: xref:s[x,role=r]\n\n{r}");
+        assert!(
+            json.contains(r#""parts":[{"kind":"open-xref","target":"s","role":"r"},{"kind":"text","value":"x"},{"kind":"close-xref"}]"#),
             "{json}"
         );
     }

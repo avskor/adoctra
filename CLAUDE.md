@@ -363,6 +363,20 @@ anchors are `Inline::Anchor { id, span }` (no reftext field: labels come from th
 catalog); consumed refs stay empty after it. Value-generated anchors are
 `AttributePart::Anchor(id)` (HTML `<a id>`, JSON/WASM kind:anchor), dropped from
 borrowed xref labels like link tags; pass:m and link parameter passes share it.
+Cross-references are the last macro (attribute_macros.rs apply_xrefs, Ruby's
+InlineXrefMacroRx after anchors) over the same lexical stream: `<<{id}>>` takes the
+expanded id and values may open, close or wholly create references. Escapes drop
+the backslash; outside compat-mode a leading `#` is stripped; the angle label is
+left-stripped (blank → textless); the macro label unescapes `\]` and with `=` is an
+AttributeList (first positional = label, `role`; named-only → textless). Source-owned
+references are `Inline::CrossReference { target, role, children, span }` (children:
+Text, or one Substituted over the label span when it holds boundaries); consumed refs
+stay empty after it. Value-generated ones are `AttributePart::OpenXref { target,
+role }`/`CloseXref` (lexical values; HTML `<a href>`, JSON/WASM open-xref/close-xref);
+a textless pair gets its label parts and refreshed flat value from
+resolve::fill_labels (body_subs at conversion, resolve_reading for headings), with
+the unresolved warning on the reference span. Not in pass:m/link parameters yet;
+interdocument paths and natural (title) xrefs keep the refid unchanged.
 Xref labels: resolve::register builds the registry after reading (auto ids,
 block ids, cataloged anchors in source order); body_subs Execution resolves each
 textless xref after its field's subs, like Ruby's xreftext without xrefstyle:
@@ -524,8 +538,8 @@ macro `https://h[text]` and **bare autolinks** for `http(s)`/`ftp`/`irc` (with
 asciidoctor's left-boundary rule and trailing-punctuation trimming), an empty
 or omitted text rendered `class="bare"`, and inline markup inside link text;
 **cross-references** — the `<<id>>` / `<<id,text>>` angle form and the
-`xref:id[text]` macro, rendered as an internal `<a href="#id">` link, with inline
-markup parsed inside the reftext; a **post-read registry pass**
+`xref:id[text]` macro (matched by the macros stage, see above), rendered as an
+internal `<a href="#id">` link, with inline markup kept inside the reftext; a **post-read registry pass**
 (`adoctra-core/src/resolve.rs`, the first pass over the *whole* document — needed
 because a reference may point forward; labels resolve during conversion) builds a registry of **auto-generated
 section ids** (asciidoctor's `sectids`: lowercase, non-alphanumerics dropped or

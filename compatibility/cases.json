@@ -16942,6 +16942,162 @@
       "resources": {
         "part.adoc": "== A\n\nx\n\n=== B\n\ny"
       }
+    },
+    {
+      "id": "xref-late-attribute-id",
+      "category": "references",
+      "expect": "pass",
+      "source": ":id: sec\n\n[[sec]]\n== Sec Title\n\nC <<{id}>> D xref:{id}[] E"
+    },
+    {
+      "id": "xref-late-attribute-value",
+      "category": "references",
+      "expect": "pass",
+      "source": ":r: <<sec>>\n:m: xref:sec[Text]\n\n[[sec]]\n== Sec Title\n\nA {r} B {m} C"
+    },
+    {
+      "id": "xref-late-attribute-label",
+      "category": "references",
+      "expect": "pass",
+      "source": ":lab: *Label*\n\n[[sec]]\n== Sec Title\n\nE <<sec,{lab}>> F xref:sec[{lab} more]"
+    },
+    {
+      "id": "xref-late-escapes",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[sec]]\n== Sec Title\n\nG \\<<sec>> and \\xref:sec[] H \\<<sec,x>>"
+    },
+    {
+      "id": "xref-late-angle-label-spacing",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[sec]]\n== Sec Title\n\nI <<sec, text >> J <<sec,  >> K <<sec,>> L"
+    },
+    {
+      "id": "xref-late-macro-role",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[sec]]\n== Sec Title\n\nK xref:sec[text,role=r] L xref:sec[role=r] M xref:sec[a=b]"
+    },
+    {
+      "id": "xref-late-macro-quoted-label",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[sec]]\n== Sec Title\n\nxref:sec['*x*',role=r] and xref:sec[\"y, z\",role=s]"
+    },
+    {
+      "id": "xref-late-fragment-hash",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[sec]]\n== Sec Title\n\nN <<#sec>> O xref:#sec[] P <<#sec,T>>"
+    },
+    {
+      "id": "xref-late-compat-hash",
+      "category": "references",
+      "expect": "pass",
+      "source": ":compat-mode:\n\n[[sec]]\n== Sec Title\n\nN <<#sec>> O <<sec>>"
+    },
+    {
+      "id": "xref-late-quote-enclosing",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[sec]]\n== Sec Title\n\nP *see <<sec>>* and _<<sec,x>>_ Q"
+    },
+    {
+      "id": "xref-late-macro-escaped-bracket",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[sec]]\n== Sec Title\n\nR xref:sec[a\\]b] S xref:sec[c]d] T"
+    },
+    {
+      "id": "xref-late-angle-invalid-start",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[sec]]\n== Sec Title\n\nT << sec>> U <<>> V <<,x>> W <<*sec*>>"
+    },
+    {
+      "id": "xref-late-multiline-label",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[sec]]\n== Sec Title\n\nV <<sec,a\nb>> W xref:sec[c\nd]"
+    },
+    {
+      "id": "xref-late-link-label",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[sec]]\n== Sec Title\n\nZ link:x[see <<sec>>] end"
+    },
+    {
+      "id": "xref-late-unicode-label",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[sec]]\n== Sec Title\n\nxref:sec[Я] and xref:sec[+a]b+] and <<sec,Ж>>"
+    },
+    {
+      "id": "xref-late-attribute-closer",
+      "category": "references",
+      "expect": "pass",
+      "source": ":c: >>\n:o: <<\n\n[[sec]]\n== Sec Title\n\nA <<sec{c} B {o}sec>> C"
+    },
+    {
+      "id": "xref-late-attribute-forward",
+      "category": "references",
+      "expect": "pass",
+      "source": ":r: <<later>>\n\nBefore {r}.\n\n[[later,Later Ref]]\n== Later"
+    },
+    {
+      "id": "xref-late-attribute-forward-title",
+      "category": "references",
+      "expect": "pass",
+      "source": ":r: <<later>>\n\nBefore {r}.\n\n[#later]\n.Block *Title*\n====\nx\n===="
+    },
+    {
+      "id": "xref-late-attribute-missing",
+      "category": "references",
+      "expect": "pass",
+      "source": ":r: <<missing>>\n\nA {r} B xref:{nope}[] C"
+    },
+    {
+      "id": "xref-late-heading-attribute",
+      "category": "references",
+      "expect": "pass",
+      "source": ":r: <<sec>>\n\n[[sec]]\n== Sec Title\n\n== Other {r}\n\n<<_other_sec_title>>"
+    },
+    {
+      "id": "xref-late-block-title-attribute",
+      "category": "references",
+      "expect": "pass",
+      "source": ":r: <<sec>>\n\n[[sec]]\n== Sec Title\n\n.See {r}\n----\nx\n----"
+    },
+    {
+      "id": "xref-late-list-item",
+      "category": "references",
+      "expect": "pass",
+      "source": ":r: <<sec>>\n\n[[sec]]\n== Sec Title\n\n* item {r}\n* <<{id}>> xref:sec[*b*]"
+    },
+    {
+      "id": "xref-late-email-target",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[sec]]\n== Sec Title\n\n<<a@b.com>> and xref:sec[mail a@b.com]"
+    },
+    {
+      "id": "xref-late-url-label",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[sec]]\n== Sec Title\n\n<<sec,https://example.org>> and <<https://example.org>>"
+    },
+    {
+      "id": "xref-late-anchor-label",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[sec]]\n== Sec Title\n\n<<sec,[[in]]x>> and <<in>>"
+    },
+    {
+      "id": "xref-late-replacements",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[sec]]\n== Sec Title\n\n<<sec,(C) -- x>> and xref:sec[a...b]"
     }
   ]
 }

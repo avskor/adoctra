@@ -1,5 +1,7 @@
-//! Link substitutions for pass attributes and expanded inline text. Matched over
-//! the shared lexical stream; generated links remain backend-neutral boundaries.
+//! Macro substitutions for pass attributes and expanded inline text: links,
+//! emails, inline anchors and (for inline text) cross-references. Matched over
+//! the shared lexical stream; generated constructs remain backend-neutral
+//! boundaries.
 use crate::inline_pass::Passes;
 use crate::substitution_context::Evaluation;
 use crate::substitution_text::Text;
@@ -12,7 +14,22 @@ const SCHEMES: [&str; 5] = ["https://", "http://", "file://", "ftp://", "irc://"
 struct Report<'a> {
     links: Vec<Span>,
     anchors: Vec<Span>,
+    xrefs: Vec<Span>,
+    /// Physical label range of each cross-reference, keyed by its match range.
+    labels: BTreeMap<(usize, usize), Span>,
     passes: &'a mut Passes,
+}
+
+impl<'a> Report<'a> {
+    fn new(passes: &'a mut Passes) -> Self {
+        Self {
+            links: Vec::new(),
+            anchors: Vec::new(),
+            xrefs: Vec::new(),
+            labels: BTreeMap::new(),
+            passes,
+        }
+    }
 }
 
 /// Physical ranges of constructs consumed by the macros stage, for highlighting.
@@ -20,6 +37,7 @@ struct Report<'a> {
 pub(crate) struct Matches {
     pub links: Vec<Span>,
     pub anchors: Vec<Span>,
+    pub xrefs: Vec<Span>,
 }
 
 pub(crate) fn apply(
@@ -30,11 +48,7 @@ pub(crate) fn apply(
     depth: usize,
     passes: &mut Passes,
 ) -> Vec<Part> {
-    let mut report = Report {
-        links: Vec::new(),
-        anchors: Vec::new(),
-        passes,
-    };
+    let mut report = Report::new(passes);
     apply_inner(parts, attributes, compat, depth, span, &mut report)
 }
 
@@ -47,19 +61,16 @@ pub(crate) fn apply_inlines(
     fold_newlines: bool,
     passes: &mut Passes,
 ) -> Matches {
-    let mut report = Report {
-        links: Vec::new(),
-        anchors: Vec::new(),
-        passes,
-    };
+    let mut report = Report::new(passes);
     process_inlines(nodes, attributes, true, fold_newlines, &mut report);
     Matches {
         links: report.links,
         anchors: report.anchors,
+        xrefs: report.xrefs,
     }
 }
 
-fn format(node: &Inline) -> Option<AttributeFormat> {
+pub(crate) fn format(node: &Inline) -> Option<AttributeFormat> {
     Some(match node {
         Inline::Strong { .. } => AttributeFormat::Strong,
         Inline::Emphasis { .. } => AttributeFormat::Emphasis,
@@ -193,14 +204,13 @@ fn process_inlines(
             fold_newlines,
             report,
         );
-        match &mut node {
-            Inline::CrossReference { children, .. }
-            | Inline::Link {
-                children,
-                bare: false,
-                ..
-            } => process_inlines(children, attributes, false, true, report),
-            _ => {}
+        if let Inline::Link {
+            children,
+            bare: false,
+            ..
+        } = &mut node
+        {
+            process_inlines(children, attributes, false, true, report);
         }
         output.push(node);
         left_edge = false;
@@ -272,10 +282,11 @@ fn flush_inlines(
         );
     }
     text = apply_anchors(text, report);
+    text = apply_xrefs(text, attributes, report);
     text = crate::post_replacements::apply(text, attributes.hardbreaks(), edges.1);
     let written = crate::substitution_text::write_back(std::mem::take(nodes), text, fold_newlines);
-    // A source-owned anchor keeps its spanned AST node; attribute-owned ones
-    // remain parts of their reference.
+    // Source-owned anchors and cross-references keep their spanned AST nodes;
+    // attribute-owned ones remain parts of their reference.
     output.extend(written.into_iter().map(|node| match node {
         Inline::Substituted { parts, span, .. }
             if matches!(parts.as_slice(), [Part::Anchor(_)]) =>
@@ -285,8 +296,65 @@ fn flush_inlines(
             };
             Inline::Anchor { id, span }
         }
+        Inline::Substituted { parts, span, .. } if single_xref(&parts) => {
+            let label = report
+                .labels
+                .get(&(span.start, span.end))
+                .copied()
+                .unwrap_or(span);
+            xref_node(parts, span, label, fold_newlines)
+        }
         node => node,
     }));
+}
+
+/// Exactly one generated cross-reference and nothing around it.
+fn single_xref(parts: &[Part]) -> bool {
+    matches!(
+        (parts.first(), parts.last()),
+        (Some(Part::OpenXref { .. }), Some(Part::CloseXref))
+    ) && parts
+        .iter()
+        .filter(|p| matches!(p, Part::OpenXref { .. } | Part::CloseXref))
+        .count()
+        == 2
+}
+
+/// A source-owned reference becomes its AST node. The consumed label keeps
+/// its text and semantic boundaries; a textless one stays empty for conversion.
+fn xref_node(mut parts: Vec<Part>, span: Span, label: Span, fold_newlines: bool) -> Inline {
+    parts.pop();
+    let Part::OpenXref { target, role } = parts.remove(0) else {
+        unreachable!()
+    };
+    let children = if parts.iter().any(Part::is_boundary) {
+        vec![Inline::Substituted {
+            value: crate::attributes::parts_text(&parts),
+            parts,
+            span: label,
+        }]
+    } else {
+        parts
+            .into_iter()
+            .map(|part| match part {
+                Part::Raw(value) => Inline::Raw { value, span: label },
+                part => Inline::Text {
+                    value: if fold_newlines {
+                        part.text().replace(['\r', '\n'], " ")
+                    } else {
+                        part.text().into()
+                    },
+                    span: label,
+                },
+            })
+            .collect()
+    };
+    Inline::CrossReference {
+        target: crate::attributes::decode_special(&target),
+        role: role.as_deref().map(crate::attributes::decode_special),
+        children,
+        span,
+    }
 }
 
 fn apply_inner(
@@ -343,6 +411,155 @@ fn apply_anchors(text: Text, report: &mut Report<'_>) -> Text {
     }
     text.copy(copied..src.len(), &mut output);
     output
+}
+
+/// Ruby's `InlineXrefMacroRx`, the last macro: `<<id[,label]>>` over the
+/// protected spelling and `xref:id[label]`, matched after inline anchors over
+/// the lexical result of the earlier stages, so `<<{id}>>` takes the expanded
+/// id. An escaped reference loses its backslash. A textless reference keeps an
+/// empty label, filled from the registry during conversion.
+fn apply_xrefs(text: Text, attributes: &mut Evaluation<'_>, report: &mut Report<'_>) -> Text {
+    let src = &text.text;
+    if !src.contains("&lt;&lt;") && !src.contains("xref:") {
+        return text;
+    }
+    let compat = attributes.get("compat-mode").is_some();
+    let mut output = Text::default();
+    let mut copied = 0;
+    let mut at = 0;
+    while at < src.len() {
+        let escaped = src.as_bytes()[at] == b'\\';
+        let start = at + usize::from(escaped);
+        let Some(m) = xref_at(src, start) else {
+            at += src[at..].chars().next().unwrap().len_utf8();
+            continue;
+        };
+        text.copy(copied..at, &mut output);
+        if escaped {
+            text.copy(start..m.end, &mut output);
+        } else {
+            let span = text.match_span(at..m.end);
+            report.xrefs.push(span);
+            let parts = xref_parts(&text, &m, attributes, compat, span, report);
+            text.replace_parts(at..m.end, &parts, &mut output);
+        }
+        copied = m.end;
+        at = m.end;
+    }
+    text.copy(copied..src.len(), &mut output);
+    output
+}
+
+struct XrefMatch {
+    end: usize,
+    refid: Range<usize>,
+    label: Option<Range<usize>>,
+    macro_form: bool,
+}
+
+/// The refid starts with a word character or one of `#/.:{`, then extends
+/// lazily (across lines) to the first closer.
+fn xref_at(src: &str, start: usize) -> Option<XrefMatch> {
+    let rest = &src[start..];
+    let (refid, macro_form) = if rest.starts_with("&lt;&lt;") {
+        (start + 8, false)
+    } else if rest.starts_with("xref:") {
+        (start + 5, true)
+    } else {
+        return None;
+    };
+    let first = src[refid..].chars().next()?;
+    if !(word(first) || matches!(first, '#' | '/' | '.' | ':' | '{')) {
+        return None;
+    }
+    let lazy = refid + first.len_utf8();
+    if !macro_form {
+        let close = lazy + src[lazy..].find("&gt;&gt;")?;
+        let (id_end, label) = match src[refid..close].find(',') {
+            Some(comma) => {
+                let after = refid + comma + 1;
+                let lead = src[after..close].len()
+                    - src[after..close]
+                        .trim_start_matches([' ', '\t', '\n', '\x0b', '\x0c', '\r', '\0'])
+                        .len();
+                (
+                    refid + comma,
+                    (after + lead < close).then_some(after + lead..close),
+                )
+            }
+            None => (close, None),
+        };
+        return Some(XrefMatch {
+            end: close + 8,
+            refid: refid..id_end,
+            label,
+            macro_form,
+        });
+    }
+    // A later bracket can only close where an earlier one could, so the
+    // first bracket decides whether the macro matches at all.
+    let bracket = lazy + src[lazy..].find('[')?;
+    if src[bracket + 1..].starts_with(']') {
+        return Some(XrefMatch {
+            end: bracket + 2,
+            refid: refid..bracket,
+            label: None,
+            macro_form,
+        });
+    }
+    let lazy = bracket + 1 + src[bracket + 1..].chars().next()?.len_utf8();
+    let close = src[lazy..]
+        .match_indices(']')
+        .map(|(i, _)| lazy + i)
+        .find(|&i| src.as_bytes()[i - 1] != b'\\')?;
+    Some(XrefMatch {
+        end: close + 1,
+        refid: refid..bracket,
+        label: Some(bracket + 1..close),
+        macro_form,
+    })
+}
+
+/// The reference's semantic parts. Outside compat mode a leading `#` names a
+/// fragment of this document; the macro form unescapes `\]` and, with an
+/// `=`, reads its label and role from an AttributeList like Ruby's
+/// `extract_attributes_from_text`. Interdocument paths and natural (title)
+/// references keep the refid unchanged.
+fn xref_parts(
+    text: &Text,
+    m: &XrefMatch,
+    attributes: &mut Evaluation<'_>,
+    compat: bool,
+    span: Span,
+    report: &mut Report<'_>,
+) -> Vec<Part> {
+    let mut refid = m.refid.clone();
+    if !compat
+        && text.text[refid.clone()].starts_with('#')
+        && !text.text[refid.clone()].ends_with('&')
+    {
+        refid.start += 1;
+    }
+    let target = crate::attributes::reference_text(&slice(text, refid, None, false));
+    let mut label = m
+        .label
+        .clone()
+        .map_or_else(Vec::new, |r| slice(text, r, None, m.macro_form));
+    let mut role = None;
+    if m.macro_form && !compat && crate::attributes::reference_text(&label).contains('=') {
+        let (first, mut named, _) = parse_label(&label, attributes, compat, 0, span, report);
+        label = first;
+        role = named.remove("role");
+    }
+    if let Some(range) = m.label.clone() {
+        report
+            .labels
+            .insert((span.start, span.end), text.cover_span(range));
+    }
+    let mut parts = vec![Part::OpenXref { target, role }];
+    parts.extend(label);
+    parts.push(Part::CloseXref);
+    parts
 }
 
 fn space(ch: char) -> bool {

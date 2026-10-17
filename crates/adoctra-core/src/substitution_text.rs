@@ -289,6 +289,27 @@ impl Text {
         anchor.fragments[0].1.span
     }
 
+    /// Physical union of the fragments a range selects in the source of its
+    /// first owner, e.g. a consumed label starting at a formatting boundary.
+    pub fn cover_span(&self, range: Range<usize>) -> Span {
+        let mut span = self.match_span(range.clone());
+        let first = self
+            .fragments
+            .partition_point(|(r, _)| r.end <= range.start);
+        for (r, f) in &self.fragments[first..] {
+            if r.start >= range.end {
+                break;
+            }
+            let selected = range.start.max(r.start) - r.start..range.end.min(r.end) - r.start;
+            let part = slice_span(f.span, selected, f.exact);
+            if part.source_id == span.source_id && part.provenance == span.provenance {
+                span.start = span.start.min(part.start);
+                span.end = span.end.max(part.end);
+            }
+        }
+        span
+    }
+
     /// Anchor a generated semantic value to its first source owner. References
     /// consumed later in the range are retained as empty nodes by write_back.
     pub fn replace_parts(&self, range: Range<usize>, parts: &[AttributePart], output: &mut Self) {
