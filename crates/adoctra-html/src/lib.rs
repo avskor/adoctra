@@ -3143,6 +3143,19 @@ mod tests {
             "{html}"
         );
         assert!(STYLESHEET.contains(".keyseq") && STYLESHEET.contains("b.button::before"));
+        // Nested macros render inside the labels, well-formed where Ruby
+        // misnests tags; formatting crossing the markup is split.
+        let html = render(
+            ":experimental:\n\nbtn:[link:x[y]] kbd:[Ctrl+link:k[a+b]] menu:A[link:m[x,y] > Z] btn:[OK footnote:[Press.]] kbd:[*a+b*] *x kbd:[a*] end",
+        );
+        assert!(
+            html.contains("<p><b class=\"button\"><a href=\"x\">y</a></b> <span class=\"keyseq\"><kbd>Ctrl</kbd>+<kbd><a href=\"k\">a+b</a></kbd></span> <span class=\"menuseq\"><b class=\"menu\">A</b>&#160;<b class=\"caret\">&#8250;</b> <b class=\"submenu\"><a href=\"m\">x,y</a></b>&#160;<b class=\"caret\">&#8250;</b> <b class=\"menuitem\">Z</b></span> <b class=\"button\">OK <sup class=\"footnote\">[<a id=\"_footnoteref_1\" class=\"footnote\" href=\"#_footnotedef_1\" title=\"View footnote.\">1</a>]</sup></b> <span class=\"keyseq\"><kbd><strong>a</strong></kbd>+<kbd><strong>b</strong></kbd></span> <strong>x </strong><kbd><strong>a</strong></kbd> end</p>"),
+            "{html}"
+        );
+        assert!(
+            html.contains("<a href=\"#_footnoteref_1\">1</a>. Press.\n</div>"),
+            "{html}"
+        );
         // Without `experimental` the macros stay text.
         let html = render("kbd:[F1] menu:A[B]");
         assert!(html.contains("<p>kbd:[F1] menu:A[B]</p>"), "{html}");

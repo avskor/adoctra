@@ -1689,6 +1689,9 @@ mod tests {
             json.contains(r#""parts":[{"kind":"button","parts":[{"kind":"text","value":"Go"}]}]"#),
             "{json}"
         );
+        // A nested macro is a part of its label.
+        let json = render(":experimental:\n\nbtn:[link:x[y]]");
+        assert!(json.contains(r#"{"name":"button","parts":[{"kind":"open-link","target":"x"},{"kind":"text","value":"y"},{"kind":"close-link"}]}"#), "{json}");
     }
 
     #[test]

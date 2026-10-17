@@ -503,6 +503,12 @@ pub(crate) fn fill_labels(
         Inline::Footnote { footnote, .. } => {
             fill_part_labels(&mut footnote.content, &mut f);
         }
+        // References inside a keyboard, button or menu label.
+        Inline::Ui { ui, .. } => {
+            for label in ui.labels_mut() {
+                fill_part_labels(label, &mut f);
+            }
+        }
         _ => {}
     }
 }
@@ -516,6 +522,13 @@ fn fill_part_labels(
     while i < parts.len() {
         if let crate::AttributePart::Footnote(footnote) = &mut parts[i] {
             filled |= fill_part_labels(&mut footnote.content, f);
+            i += 1;
+            continue;
+        }
+        if let crate::AttributePart::Ui(ui) = &mut parts[i] {
+            for label in ui.labels_mut() {
+                filled |= fill_part_labels(label, f);
+            }
             i += 1;
             continue;
         }
@@ -974,6 +987,14 @@ pub(crate) fn strip_label(inlines: &mut Vec<Inline>) {
                 image.attributes.remove("link");
                 stripped.push(inline);
             }
+            // A keyboard, button or menu macro keeps its markup; links inside
+            // its labels lose their tags.
+            Inline::Ui { ui, .. } => {
+                for label in ui.labels_mut() {
+                    strip_parts(label);
+                }
+                stripped.push(inline);
+            }
             Inline::Strong { children, .. }
             | Inline::Emphasis { children, .. }
             | Inline::Monospace { children, .. }
@@ -995,26 +1016,41 @@ fn strip_attribute_links(inlines: &mut [Inline]) {
     impl VisitorMut for Strip {
         fn visit_inline(&mut self, inline: &mut Inline) {
             if let Inline::AttributeRef { parts, .. } | Inline::Substituted { parts, .. } = inline {
-                for part in parts.iter_mut() {
-                    if let crate::AttributePart::Image(image) = part {
-                        image.attributes.remove("link");
-                    }
-                }
-                parts.retain(|part| {
-                    !matches!(
-                        part,
-                        crate::AttributePart::OpenLink(_)
-                            | crate::AttributePart::CloseLink
-                            | crate::AttributePart::Anchor(_)
-                            | crate::AttributePart::OpenXref(_)
-                            | crate::AttributePart::CloseXref
-                    )
-                });
+                strip_parts(parts);
             }
             visit::walk_inline_mut(self, inline);
         }
     }
     visit::walk_inlines_mut(&mut Strip, inlines);
+}
+
+/// Ruby's DropAnchorRx over generated parts: link, anchor and cross-reference
+/// tags go, images lose their link, labels of keyboard, button and menu
+/// macros are stripped too.
+fn strip_parts(parts: &mut Vec<crate::AttributePart>) {
+    for part in parts.iter_mut() {
+        match part {
+            crate::AttributePart::Image(image) => {
+                image.attributes.remove("link");
+            }
+            crate::AttributePart::Ui(ui) => {
+                for label in ui.labels_mut() {
+                    strip_parts(label);
+                }
+            }
+            _ => {}
+        }
+    }
+    parts.retain(|part| {
+        !matches!(
+            part,
+            crate::AttributePart::OpenLink(_)
+                | crate::AttributePart::CloseLink
+                | crate::AttributePart::Anchor(_)
+                | crate::AttributePart::OpenXref(_)
+                | crate::AttributePart::CloseXref
+        )
+    });
 }
 
 #[cfg(test)]

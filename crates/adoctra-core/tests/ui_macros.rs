@@ -275,3 +275,153 @@ fn macros_are_inline_macro_tokens() {
         ]
     );
 }
+
+/// The label of a button macro.
+fn label(ui: &UiMacro) -> &[P] {
+    match ui {
+        UiMacro::Button { label } => label,
+        _ => panic!("{ui:?}"),
+    }
+}
+
+/// `[OpenLink(target), text…, CloseLink]` as `(target, text)`.
+fn link(parts: &[P]) -> (String, String) {
+    let [P::OpenLink(open), inner @ .., P::CloseLink] = parts else {
+        panic!("{parts:?}");
+    };
+    (open.target.clone(), parts_text(inner))
+}
+
+#[test]
+fn macros_nested_in_labels_stay_inside_them() {
+    let nodes = last(
+        ":experimental:\n\nbtn:[link:x[y]] btn:[link:x[*b*] z] kbd:[Ctrl+link:k[a+b]] \
+         menu:A[link:m[x,y] > Z] kbd:[https://example.com]",
+    );
+    let found = macros(&nodes);
+    // The content runs to the bracket balancing the nested macro.
+    assert_eq!(link(label(&found[0].0)), ("x".into(), "y".into()));
+    let formatted = label(&found[1].0);
+    assert!(
+        matches!(formatted, [P::OpenLink(_), P::Open(F::Strong), P::Text(b), P::Close(F::Strong), P::CloseLink, P::Text(z)] if b == "b" && z == " z"),
+        "{formatted:?}"
+    );
+    // Delimiters inside a nested macro do not split keys or menu items.
+    let UiMacro::Keyboard { keys } = &found[2].0 else {
+        panic!("{:?}", found[2].0);
+    };
+    assert_eq!(parts_text(&keys[0]), "Ctrl");
+    assert_eq!(link(&keys[1]), ("k".into(), "a+b".into()));
+    let UiMacro::Menu { submenus, item, .. } = &found[3].0 else {
+        panic!("{:?}", found[3].0);
+    };
+    assert_eq!(link(&submenus[0]), ("m".into(), "x,y".into()));
+    assert_eq!(item.as_deref().map(parts_text).as_deref(), Some("Z"));
+    let UiMacro::Keyboard { keys } = &found[4].0 else {
+        panic!("{:?}", found[4].0);
+    };
+    assert_eq!(
+        link(&keys[0]),
+        ("https://example.com".into(), "https://example.com".into())
+    );
+    // Each macro keeps one node over its whole source.
+    let source = ":experimental:\n\nbtn:[link:x[y]] z";
+    let found = macros(&last(source));
+    let start = source.find("btn:").unwrap();
+    assert_eq!(
+        found[0].1,
+        Span::new(start, start + "btn:[link:x[y]]".len())
+    );
+}
+
+#[test]
+fn cross_references_and_footnotes_inside_labels() {
+    let doc = parse(
+        ":experimental:\n\n[[t]]Target.\n\nkbd:[<<t>>] menu:Help[<<t,About>>] btn:[OK footnote:[Press it.]]",
+    )
+    .document;
+    let found = macros(paragraph(&doc.blocks[1]));
+    // A textless reference gets its label inside the key.
+    let UiMacro::Keyboard { keys } = &found[0].0 else {
+        panic!("{:?}", found[0].0);
+    };
+    assert!(
+        matches!(keys[0].as_slice(), [P::OpenXref(x), P::Text(label), P::CloseXref] if x.target == "#t" && label == "[t]"),
+        "{keys:?}"
+    );
+    // A `<<id,label>>` keeps its comma inside one menu item.
+    let (menu, submenus, item) = menu(&found[1].0);
+    assert_eq!((menu.as_str(), submenus.len()), ("Help", 0));
+    assert_eq!(item.as_deref(), Some("About"));
+    // A footnote inside a button is listed after the document.
+    assert!(matches!(label(&found[2].0), [P::Text(ok), P::Footnote(_)] if ok == "OK "));
+    assert_eq!(doc.footnotes.len(), 1);
+    assert_eq!(parts_text(&doc.footnotes[0].content), "Press it.");
+}
+
+#[test]
+fn formatting_crossing_the_markup_is_split_into_labels() {
+    let nodes = last(":experimental:\n\nkbd:[*a+b*] *x kbd:[a*] end");
+    let found = macros(&nodes);
+    let strong = |text: &str| {
+        vec![
+            P::Open(F::Strong),
+            P::Text(text.into()),
+            P::Close(F::Strong),
+        ]
+    };
+    let UiMacro::Keyboard { keys } = &found[0].0 else {
+        panic!("{:?}", found[0].0);
+    };
+    assert_eq!(keys, &[strong("a"), strong("b")]);
+    // Formatting opened before the macro closes before it.
+    let UiMacro::Keyboard { keys } = &found[1].0 else {
+        panic!("{:?}", found[1].0);
+    };
+    assert_eq!(keys, &[strong("a")]);
+    assert!(
+        nodes.iter().any(|node| matches!(node, Inline::Strong { children, .. } if matches!(children.as_slice(), [Inline::Text { value, .. }] if value == "x "))),
+        "{nodes:?}"
+    );
+}
+
+#[test]
+fn an_unsplittable_crossing_keeps_ruby_markup() {
+    // The link's label ends inside the key: Ruby's misnested markup stays.
+    let nodes = last(":experimental:\n\nlink:u[a kbd:[b\\]c] z");
+    assert!(macros(&nodes).is_empty());
+    let raw: Vec<_> = nodes
+        .iter()
+        .flat_map(|node| match node {
+            Inline::Substituted { parts, .. } => parts.clone(),
+            _ => Vec::new(),
+        })
+        .filter_map(|part| match part {
+            P::Raw(raw) => Some(raw),
+            _ => None,
+        })
+        .collect();
+    assert!(raw.iter().any(|raw| raw == "<kbd>"), "{nodes:?}");
+}
+
+#[test]
+fn borrowed_xref_labels_drop_links_inside_labels() {
+    let doc = parse(":experimental:\n\n== See kbd:[link:k[K]]\n\n<<_see_k>>").document;
+    let BlockKind::Section { blocks, .. } = &doc.blocks[0].kind else {
+        panic!("{:?}", doc.blocks[0].kind);
+    };
+    assert_eq!(blocks[0].id.as_deref(), Some("_see_k"));
+    let title = macros(match &blocks[0].kind {
+        BlockKind::Heading { inlines, .. } => inlines,
+        kind => panic!("{kind:?}"),
+    });
+    let UiMacro::Keyboard { keys } = &title[0].0 else {
+        panic!("{:?}", title[0].0);
+    };
+    assert_eq!(link(&keys[0]), ("k".into(), "K".into()));
+    let found = macros(&paragraph(&blocks[1])[..1]);
+    let UiMacro::Keyboard { keys } = &found[0].0 else {
+        panic!("{:?}", found[0].0);
+    };
+    assert_eq!(keys[0], [P::Text("K".into())]);
+}

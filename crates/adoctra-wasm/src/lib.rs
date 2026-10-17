@@ -2612,6 +2612,9 @@ mod header_tests {
         assert!(json.contains(r#"{"span":{"source_id":3,"start":18,"end":25},"name":"kbd","keys":[[{"kind":"text","value":"B"}]]}"#), "{json}");
         assert!(json.contains(r#"{"span":{"source_id":3,"start":26,"end":33},"name":"button","parts":[{"kind":"text","value":"C"}]}"#), "{json}");
         assert!(json.contains(r#"{"span":{"source_id":3,"start":34,"end":41},"name":"menu","menu":[{"kind":"text","value":"D"}],"submenus":[],"item":[{"kind":"text","value":"E"}],"font":false}"#), "{json}");
+        // A nested link is a part of the label; the macro keeps one span.
+        let nested = super::parse_json_with_source(":experimental:\n\nbtn:[link:x[y]]", 3);
+        assert!(nested.contains(r#"{"span":{"source_id":3,"start":16,"end":31},"name":"button","parts":[{"kind":"open-link","target":"x"},{"kind":"text","value":"y"},{"kind":"close-link"}]}"#), "{nested}");
         let tokens = super::tokens_json_with_source(source, 3);
         for span in ["18,\"end\":25", "26,\"end\":33", "34,\"end\":41"] {
             assert!(

@@ -1373,6 +1373,21 @@ fn collect_footnotes(blocks: &mut [Block]) -> Vec<crate::ast::FootnoteDefinition
     #[derive(Default)]
     struct Collect(BTreeMap<usize, crate::ast::FootnoteDefinition>);
     impl Collect {
+        /// Footnotes among generated parts, including inside the labels of
+        /// keyboard, button and menu macros.
+        fn add_parts(&mut self, parts: &[crate::AttributePart], span: Span) {
+            for part in parts {
+                match part {
+                    crate::AttributePart::Footnote(footnote) => self.add(footnote, span),
+                    crate::AttributePart::Ui(ui) => {
+                        for label in ui.clone().labels_mut() {
+                            self.add_parts(label, span);
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
         fn add(&mut self, footnote: &crate::Footnote, span: Span) {
             if let (Some(sequence), Some(index)) = (footnote.sequence, &footnote.index) {
                 self.0
@@ -1413,11 +1428,11 @@ fn collect_footnotes(blocks: &mut [Block]) -> Vec<crate::ast::FootnoteDefinition
             match inline {
                 Inline::Footnote { footnote, span } => self.add(footnote, *span),
                 Inline::AttributeRef { parts, span, .. }
-                | Inline::Substituted { parts, span, .. } => {
-                    for part in parts.iter() {
-                        if let crate::AttributePart::Footnote(footnote) = part {
-                            self.add(footnote, *span);
-                        }
+                | Inline::Substituted { parts, span, .. } => self.add_parts(parts, *span),
+                Inline::Ui { ui, span } => {
+                    let span = *span;
+                    for label in ui.labels_mut() {
+                        self.add_parts(label, span);
                     }
                 }
                 _ => {}

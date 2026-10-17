@@ -349,47 +349,62 @@ impl UiMacro {
         }
     }
 
-    /// Ruby's `convert_inline_kbd`/`_button`/`_menu` markup, the lexical
-    /// spelling later stages see.
-    fn lexical(&self) -> String {
-        let text = |parts: &[AttributePart]| reference_text(parts);
+    /// The markup Ruby's `convert_inline_kbd`/`_button`/`_menu` put around
+    /// the labels: one more piece than labels (the opening markup, the
+    /// separators between labels, the closing markup).
+    pub(crate) fn pieces(&self) -> Vec<String> {
+        let mut pieces: Vec<String> = Vec::new();
         match self {
-            Self::Keyboard { keys } if keys.len() == 1 => format!("<kbd>{}</kbd>", text(&keys[0])),
-            Self::Keyboard { keys } => format!(
-                "<span class=\"keyseq\"><kbd>{}</kbd></span>",
-                keys.iter()
-                    .map(|key| text(key))
-                    .collect::<Vec<_>>()
-                    .join("</kbd>+<kbd>")
-            ),
-            Self::Button { label } => format!("<b class=\"button\">{}</b>", text(label)),
+            Self::Keyboard { keys } if keys.len() == 1 => {
+                pieces.extend(["<kbd>".into(), "</kbd>".into()]);
+            }
+            Self::Keyboard { keys } => {
+                pieces.push("<span class=\"keyseq\"><kbd>".into());
+                for _ in 1..keys.len() {
+                    pieces.push("</kbd>+<kbd>".into());
+                }
+                pieces.push("</kbd></span>".into());
+            }
+            Self::Button { .. } => pieces.extend(["<b class=\"button\">".into(), "</b>".into()]),
             Self::Menu {
-                menu,
+                submenus,
+                item: None,
+                ..
+            } if submenus.is_empty() => {
+                pieces.extend(["<b class=\"menuref\">".into(), "</b>".into()]);
+            }
+            Self::Menu {
                 submenus,
                 item,
                 font,
+                ..
             } => {
                 let caret = Self::caret(*font);
-                match (submenus.is_empty(), item) {
-                    (true, None) => format!("<b class=\"menuref\">{}</b>", text(menu)),
-                    (true, Some(item)) => format!(
-                        "<span class=\"menuseq\"><b class=\"menu\">{}</b>{caret}<b class=\"menuitem\">{}</b></span>",
-                        text(menu),
-                        text(item)
-                    ),
-                    (false, item) => format!(
-                        "<span class=\"menuseq\"><b class=\"menu\">{}</b>{caret}<b class=\"submenu\">{}</b>{caret}<b class=\"menuitem\">{}</b></span>",
-                        text(menu),
-                        submenus
-                            .iter()
-                            .map(|submenu| text(submenu))
-                            .collect::<Vec<_>>()
-                            .join(&format!("</b>{caret}<b class=\"submenu\">")),
-                        item.as_deref().map(text).unwrap_or_default()
-                    ),
+                pieces.push("<span class=\"menuseq\"><b class=\"menu\">".into());
+                for _ in submenus {
+                    pieces.push(format!("</b>{caret}<b class=\"submenu\">"));
                 }
+                if item.is_some() {
+                    pieces.push(format!("</b>{caret}<b class=\"menuitem\">"));
+                }
+                pieces.push("</b></span>".into());
             }
         }
+        pieces
+    }
+
+    /// Ruby's markup with the lexical labels, the spelling later stages see.
+    fn lexical(&self) -> String {
+        let mut labels = self.clone();
+        let labels = labels.labels_mut();
+        let mut out = String::new();
+        for (i, piece) in self.pieces().iter().enumerate() {
+            out.push_str(piece);
+            if let Some(label) = labels.get(i) {
+                out.push_str(&reference_text(label));
+            }
+        }
+        out
     }
 }
 

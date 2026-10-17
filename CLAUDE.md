@@ -623,9 +623,20 @@ delimiter is itself the last key), `Button { label }` (normalize_text), `Menu {
 menu, submenus, item, font }` (items split at `&gt;` else `,` with Ruby's split
 dropping trailing empties; `menu:X[]` → item None = menuref; `font` = `icons`
 is `font` at the macro, picks the caret). Labels keep lexical parts. Source-owned
-`Inline::Ui { ui, span }`, attribute-owned `AttributePart::Ui` (lexical = Ruby's
-markup, so a later link inside a key breaks it into raw markup exactly like
-Ruby). HTML renders Ruby's `<kbd>`/`span.keyseq`/`b.button`/`span.menuseq`;
+`Inline::Ui { ui, span }`, attribute-owned `AttributePart::Ui`. While the later
+macro stages run, Text::replace_ui keeps the macro as marks carrying Ruby's
+markup around its labels (substitution_text.rs UiMark), so links, xrefs,
+images and footnotes see Ruby's lexical text and nest inside a label; leaving
+the Text (into_parts/write_back) rebuilds the node (restore_ui). Unlike Ruby,
+content containing a nested macro runs to the bracket balancing it
+(content_end/nested_macro: `btn:[link:x[y]]`, a literal `kbd:[[]` still ends at
+the first `]`) and `,`/`+`/`&gt;` inside a nested macro or `<<…>>` do not split
+keys/items (nested_regions), so the output stays well-formed where Ruby
+misnests tags. A boundary crossing the markup is split (repair: closed at a
+label end and reopened in the next label/after the macro; formatting opened
+before closes before it with an empty span that `rebuild` accepts); a link
+opened before the macro and closed inside a label keeps Ruby's literal markup.
+HTML renders Ruby's `<kbd>`/`span.keyseq`/`b.button`/`span.menuseq`;
 JSON/WASM name/kind `kbd`/`button`/`menu`; token `inline-macro`.
 **Footnotes**: attribute_macros.rs apply_footnotes is Ruby's
 InlineFootnoteMacroRx, the last macro (after xrefs), over the lexical stream, also

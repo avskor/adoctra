@@ -1,6 +1,6 @@
 //! Temporary lexical text for ordered substitutions. Protection, node ownership
 //! and source ranges travel with fragments; HTML escaping stays in the backend.
-use crate::{AttributePart, Inline, Span};
+use crate::{AttributePart, Inline, Span, UiMacro};
 use std::ops::Range;
 use std::sync::Arc;
 
@@ -26,6 +26,16 @@ impl Boundary {
     }
 }
 
+/// A piece of a keyboard, button or menu macro's markup while the later macro
+/// stages run over its labels (`index` 0 opens, the last closes, the others
+/// separate labels). Leaving the lexical text rebuilds the macro around
+/// whatever those stages made of its labels.
+#[derive(Clone)]
+struct UiMark {
+    ui: Arc<UiMacro>,
+    index: usize,
+}
+
 #[derive(Clone)]
 pub(crate) struct Fragment {
     pub text: String,
@@ -35,6 +45,7 @@ pub(crate) struct Fragment {
     pub span: Span,
     pub part: Option<AttributePart>,
     boundary: Option<Boundary>,
+    ui: Option<UiMark>,
     exact: bool,
     extend_span: bool,
 }
@@ -76,6 +87,7 @@ impl Text {
                 span,
                 part: Some(part.clone()),
                 boundary,
+                ui: None,
                 exact: false,
                 extend_span: false,
             });
@@ -99,6 +111,7 @@ impl Text {
 
     pub fn into_fragments(mut self) -> Vec<Fragment> {
         self.restore_boundaries();
+        self.restore_ui();
         self.fragments
             .into_iter()
             .map(|(_, fragment)| fragment)
@@ -107,6 +120,7 @@ impl Text {
 
     pub fn into_parts(mut self) -> Vec<AttributePart> {
         self.restore_boundaries();
+        self.restore_ui();
         let mut parts = Vec::new();
         for (_, fragment) in self.fragments {
             if let Some(part) = fragment.part {
@@ -155,6 +169,7 @@ impl Text {
                 span: slice_span(span, offset..offset + ch.len_utf8(), exact),
                 part: None,
                 boundary: None,
+                ui: None,
                 exact: false,
                 extend_span: exact,
             });
@@ -178,6 +193,7 @@ impl Text {
             span,
             part: None,
             boundary: None,
+            ui: None,
             exact,
             extend_span: exact,
         });
@@ -214,6 +230,7 @@ impl Text {
                     .boundary
                     .as_ref()
                     .and_then(|b| b.slice(start..end, f.text.len())),
+                ui: f.ui.clone().filter(|_| start == 0 && end == f.text.len()),
                 exact: f.exact,
                 extend_span: f.extend_span,
             });
@@ -277,6 +294,7 @@ impl Text {
             span,
             part: None,
             boundary,
+            ui: None,
             exact: false,
             extend_span: f.extend_span,
         });
@@ -318,6 +336,53 @@ impl Text {
         let (_, fragment) = &anchor.fragments[0];
         for part in parts {
             output.append_part(part, fragment.owner, fragment.span);
+        }
+    }
+
+    /// A keyboard, button or menu macro replacing a range: Ruby's markup as
+    /// marks around its labels, so the later macro stages see the same
+    /// lexical text as in Ruby and nest what they find inside a label.
+    pub fn replace_ui(&self, range: Range<usize>, mut ui: UiMacro, output: &mut Self) {
+        let mut anchor = Self::default();
+        self.replacement(range, " ", None, &mut anchor);
+        let (owner, span) = (anchor.fragments[0].1.owner, anchor.fragments[0].1.span);
+        let pieces = ui.pieces();
+        let labels: Vec<Vec<AttributePart>> =
+            ui.labels_mut().into_iter().map(std::mem::take).collect();
+        let ui = Arc::new(ui);
+        for (index, piece) in pieces.into_iter().enumerate() {
+            output.push(Fragment {
+                text: piece,
+                decoded: None,
+                raw: true,
+                owner,
+                span,
+                part: None,
+                boundary: None,
+                ui: Some(UiMark {
+                    ui: ui.clone(),
+                    index,
+                }),
+                exact: false,
+                extend_span: false,
+            });
+            for part in labels.get(index).into_iter().flatten() {
+                output.append_part(part, owner, span);
+            }
+        }
+    }
+
+    /// Rebuild every complete keyboard, button or menu macro around its
+    /// labels. Marks a later stage separated or crossed (an unbalanced
+    /// boundary inside a label) stay Ruby's literal markup.
+    fn restore_ui(&mut self) {
+        if !self.fragments.iter().any(|(_, f)| f.ui.is_some()) {
+            return;
+        }
+        let fragments = std::mem::take(&mut self.fragments);
+        let mut i = 0;
+        while i < fragments.len() {
+            i = rebuild_ui(&self.text, &fragments, i, &mut self.fragments);
         }
     }
 
@@ -379,10 +444,209 @@ fn slice_span(span: Span, range: Range<usize>, exact: bool) -> Span {
     }
 }
 
+/// Copy `fragments[i]`, or the whole macro it opens as one semantic
+/// fragment; returns the next index.
+fn rebuild_ui(
+    text: &str,
+    fragments: &[(Range<usize>, Fragment)],
+    i: usize,
+    out: &mut Vec<(Range<usize>, Fragment)>,
+) -> usize {
+    let (range, open) = &fragments[i];
+    let plain = |out: &mut Vec<(Range<usize>, Fragment)>| {
+        let mut fragment = open.clone();
+        fragment.ui = None;
+        out.push((range.clone(), fragment));
+        i + 1
+    };
+    let Some(mark) = open.ui.as_ref().filter(|mark| mark.index == 0) else {
+        return plain(out);
+    };
+    let count = mark.ui.pieces().len() - 1;
+    let mut labels = Vec::new();
+    let mut current = Vec::new();
+    let mut j = i + 1;
+    let close = loop {
+        let Some((r, f)) = fragments.get(j) else {
+            break None;
+        };
+        match &f.ui {
+            Some(m) if Arc::ptr_eq(&m.ui, &mark.ui) => {
+                if m.index != labels.len() + 1 {
+                    break None;
+                }
+                labels.push(std::mem::take(&mut current));
+                if m.index == count {
+                    break Some(j);
+                }
+                j += 1;
+            }
+            Some(m) if m.index == 0 => j = rebuild_ui(text, fragments, j, &mut current),
+            Some(_) => break None,
+            None => {
+                current.push((r.clone(), f.clone()));
+                j += 1;
+            }
+        }
+    };
+    let Some(close) = close else {
+        return plain(out);
+    };
+    let Some((before, labels, after)) = repair(labels) else {
+        return plain(out);
+    };
+    let mut ui = (*mark.ui).clone();
+    for (slot, label) in ui.labels_mut().into_iter().zip(labels) {
+        *slot = label;
+    }
+    let generated = |part: AttributePart| Fragment {
+        text: part.lexical().into_owned(),
+        decoded: None,
+        raw: true,
+        owner: open.owner,
+        span: open.span,
+        part: Some(part),
+        boundary: None,
+        ui: None,
+        exact: false,
+        extend_span: false,
+    };
+    for mut fragment in before {
+        // Formatting that only opened right before the macro disappears.
+        let opener = out
+            .last()
+            .and_then(|(_, f)| f.part.as_ref())
+            .and_then(pairing);
+        if opener.is_some_and(|(opens, key)| {
+            opens && Some((false, key)) == fragment.part.as_ref().and_then(pairing)
+        }) {
+            out.pop();
+            continue;
+        }
+        // Keep the macro's owner so write-back sees fragments in order; an
+        // empty span at the macro's start lets the quote close there.
+        fragment.owner = open.owner;
+        fragment.span = Span {
+            end: open.span.start,
+            ..open.span
+        };
+        out.push((range.start..range.start, fragment));
+    }
+    let whole = range.start..fragments[close].0.end;
+    out.push((
+        whole.clone(),
+        Fragment {
+            text: text[whole.clone()].to_owned(),
+            ..generated(AttributePart::Ui(Box::new(ui)))
+        },
+    ));
+    for part in after {
+        let reopened = Fragment {
+            span: Span {
+                start: open.span.end,
+                ..open.span
+            },
+            ..generated(part)
+        };
+        out.push((whole.end..whole.end, reopened));
+    }
+    close + 1
+}
+
+/// A boundary's pairing key: its format, or 1/2 for a link/cross-reference.
+type Pairing = (bool, Result<crate::AttributeFormat, u8>);
+
+fn pairing(part: &AttributePart) -> Option<Pairing> {
+    Some(match part {
+        AttributePart::Open(format) | AttributePart::OpenWithAttributes { format, .. } => {
+            (true, Ok(*format))
+        }
+        AttributePart::Close(format) => (false, Ok(*format)),
+        AttributePart::OpenLink(_) => (true, Err(1)),
+        AttributePart::CloseLink => (false, Err(1)),
+        AttributePart::OpenXref(_) => (true, Err(2)),
+        AttributePart::CloseXref => (false, Err(2)),
+        _ => return None,
+    })
+}
+
+fn closing(open: &AttributePart) -> AttributePart {
+    match pairing(open) {
+        Some((_, Ok(format))) => AttributePart::Close(format),
+        Some((_, Err(1))) => AttributePart::CloseLink,
+        _ => AttributePart::CloseXref,
+    }
+}
+
+/// What [`repair`] puts before the macro, its labels, and what it reopens
+/// after the macro.
+type Repaired = (Vec<Fragment>, Vec<Vec<AttributePart>>, Vec<AttributePart>);
+
+/// Labels whose boundaries all close inside them. Where an earlier stage made
+/// a boundary cross the macro's markup (Ruby then emits misnested tags), the
+/// boundary is split instead: one still open at a label's end closes there
+/// and reopens in the next label or after the macro; formatting closed inside
+/// a label but opened before the macro closes before it and is reopened at
+/// the start of the labels it covered. `None` when a crossing cannot be split
+/// (a link opened before the macro): Ruby's markup then stays literal.
+fn repair(labels: Vec<Vec<(Range<usize>, Fragment)>>) -> Option<Repaired> {
+    let mut before = Vec::new();
+    let mut carry: Vec<AttributePart> = Vec::new();
+    let mut result: Vec<Vec<AttributePart>> = Vec::new();
+    for label in labels {
+        let mut stack = carry.clone();
+        let mut out = carry.clone();
+        for (_, fragment) in label {
+            let Some(part) = fragment.part.clone() else {
+                crate::attributes::push_part(
+                    &mut out,
+                    fragment.decoded.as_deref().unwrap_or(&fragment.text),
+                    fragment.raw,
+                );
+                continue;
+            };
+            match pairing(&part) {
+                Some((true, _)) => {
+                    stack.push(part.clone());
+                    out.push(part);
+                }
+                Some((false, key)) => {
+                    if stack.last().and_then(pairing).map(|(_, k)| k) == Some(key) {
+                        stack.pop();
+                        out.push(part);
+                        continue;
+                    }
+                    // Only formatting opened before the macro, with nothing
+                    // opened inside still pending, can close before it.
+                    let (Ok(format), true) = (key, stack.is_empty()) else {
+                        return None;
+                    };
+                    let opener = AttributePart::Open(format);
+                    for previous in &mut result {
+                        previous.insert(0, opener.clone());
+                        previous.push(part.clone());
+                    }
+                    out.insert(0, opener);
+                    out.push(part);
+                    before.push(fragment);
+                }
+                None => crate::attributes::push_value(&mut out, part),
+            }
+        }
+        for open in stack.iter().rev() {
+            out.push(closing(open));
+        }
+        carry = stack;
+        result.push(out);
+    }
+    Some((before, result, carry))
+}
+
 /// Restore AST nodes, retaining attribute references even if a replacement
 /// consumed their whole value. This keeps editor tokens and provenance stable.
 pub(crate) fn write_back(nodes: Vec<Inline>, mut text: Text, fold_newlines: bool) -> Vec<Inline> {
     text.restore_boundaries();
+    text.restore_ui();
     let mut fragments = text.fragments.into_iter().peekable();
     let mut result = Vec::new();
     for (owner, mut node) in nodes.into_iter().enumerate() {

@@ -158,10 +158,10 @@ pub(crate) fn rebuild(nodes: Vec<Inline>, quotes: Vec<Inline>) -> Vec<Inline> {
                 }
             }
             if let [Part::Close(kind)] = parts.as_slice() {
-                if stack
-                    .last()
-                    .is_some_and(|(n, _, _)| format(n) == Some(*kind) && n.span().end == span.end)
-                {
+                // An empty close is formatting a macro's markup split before it.
+                if stack.last().is_some_and(|(n, _, _)| {
+                    format(n) == Some(*kind) && (n.span().end == span.end || span.start == span.end)
+                }) {
                     let (mut template, _, mut parent) = stack.pop().unwrap();
                     *children(&mut template) = output;
                     parent.push(template);
@@ -469,8 +469,7 @@ fn scan_ui(
             text.copy(start..end, &mut output);
         } else {
             report.ui.push(text.match_span(at..end));
-            let ui = ui_macro(&text, m, font);
-            text.replace_parts(at..end, &[Part::Ui(Box::new(ui))], &mut output);
+            text.replace_ui(at..end, ui_macro(&text, m, font), &mut output);
         }
         copied = end;
         at = end;
@@ -479,13 +478,101 @@ fn scan_ui(
     output
 }
 
-/// The first `]` after at least one content character that does not follow
-/// a backslash: Ruby's lazy `(CC_ALL*?[^\\])\]`.
+/// Where macro content opened at `open` ends: Ruby's lazy `(CC_ALL*?[^\\])\]`
+/// stops at the first `]` after at least one character that does not follow
+/// a backslash. Like Ruby we take that `]`, unless it closes a macro nested in
+/// the content (`btn:[link:x[y]]`): then the content runs to the bracket that
+/// balances it, so the nested macro is matched whole inside the label instead
+/// of across its markup.
 fn content_end(src: &str, open: usize) -> Option<usize> {
+    let closes = |close: usize| close > open && src.as_bytes()[close - 1] != b'\\';
+    let mut depth = 0usize;
+    for (i, c) in src[open..].char_indices() {
+        let at = open + i;
+        match c {
+            '[' if nested_macro(&src[open..at]).is_some() => depth += 1,
+            ']' if closes(at) && depth > 0 => depth -= 1,
+            ']' if closes(at) => return Some(at),
+            _ => {}
+        }
+    }
+    // An unbalanced nested macro leaves Ruby's first closing bracket.
     src[open..]
         .match_indices(']')
         .map(|(i, _)| open + i)
-        .find(|&close| close > open && src.as_bytes()[close - 1] != b'\\')
+        .find(|&close| closes(close))
+}
+
+/// Where the inline macro whose `[` follows `before` starts (`name:target[`
+/// with a built-in macro name or a URL scheme), or `None` for a literal
+/// bracket (`kbd:[[]`, `kbd:[Ctrl+[]`).
+fn nested_macro(before: &str) -> Option<usize> {
+    const NAMES: [&str; 16] = [
+        "link",
+        "mailto",
+        "image",
+        "icon",
+        "footnote",
+        "footnoteref",
+        "xref",
+        "anchor",
+        "pass",
+        "kbd",
+        "btn",
+        "menu",
+        "stem",
+        "latexmath",
+        "asciimath",
+        "indexterm",
+    ];
+    let token = before
+        .rfind(|c: char| blank(c) || c == '[' || c == ']')
+        .map_or(0, |i| i + 1);
+    let colon = token + before[token..].find(':')?;
+    let start = before[..colon]
+        .rfind(|c: char| !c.is_ascii_alphanumeric())
+        .map_or(0, |i| i + 1)
+        .max(token);
+    let macro_ = &before[start..];
+    (NAMES.contains(&&before[start..colon])
+        || SCHEMES
+            .iter()
+            .any(|scheme| macro_.starts_with(scheme) && macro_.len() > scheme.len()))
+    .then_some(start)
+}
+
+/// The ranges of `src` covered by inline macros nested in content (from the
+/// macro name to its balancing `]`) and by `<<…>>` cross-references, where
+/// delimiters do not split labels.
+fn nested_regions(src: &str) -> Vec<Range<usize>> {
+    let mut regions = Vec::new();
+    let mut starts = Vec::new();
+    let mut from = 0;
+    while let Some(open) = src[from..].find("&lt;&lt;").map(|i| from + i) {
+        let Some(close) = src[open..].find("&gt;&gt;").map(|i| open + i) else {
+            break;
+        };
+        from = close + "&gt;&gt;".len();
+        regions.push(open..from);
+    }
+    for (at, c) in src.char_indices() {
+        match c {
+            '[' => {
+                if let Some(start) = nested_macro(&src[..at]) {
+                    starts.push(start);
+                }
+            }
+            ']' if at > 0 && src.as_bytes()[at - 1] != b'\\' => {
+                if let Some(start) = starts.pop() {
+                    if starts.is_empty() {
+                        regions.push(start..at + 1);
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    regions
 }
 
 /// `(kbd|btn):\[(CC_ALL*?[^\\])\]` at `start`.
@@ -577,13 +664,19 @@ fn strip(src: &str, range: Range<usize>, left: bool) -> Range<usize> {
 }
 
 /// Ruby's `String#split(delimiter)` of a range: trailing empty pieces are
-/// dropped unless `keep_empty` (Ruby's `-1` limit).
+/// dropped unless `keep_empty` (Ruby's `-1` limit). Delimiters inside a
+/// nested macro do not split.
 fn split(src: &str, range: Range<usize>, delimiter: &str, keep_empty: bool) -> Vec<Range<usize>> {
+    let regions = nested_regions(src);
     let mut pieces = Vec::new();
     let mut from = range.start;
     for (i, _) in src[range.clone()].match_indices(delimiter) {
-        pieces.push(from..range.start + i);
-        from = range.start + i + delimiter.len();
+        let at = range.start + i;
+        if at < from || regions.iter().any(|r| r.contains(&at)) {
+            continue;
+        }
+        pieces.push(from..at);
+        from = at + delimiter.len();
     }
     pieces.push(from..range.end);
     if !keep_empty {
@@ -608,7 +701,13 @@ fn ui_macro(text: &Text, m: UiMatch, font: bool) -> UiMacro {
             let range = strip(src, 0..src.len(), true);
             let value = &src[range.clone()];
             let second = value.chars().next().map_or(0, char::len_utf8);
-            let position = |c: char| value[second..].find(c).map(|i| range.start + second + i);
+            let regions = nested_regions(src);
+            let position = |c: char| {
+                value[second..]
+                    .match_indices(c)
+                    .map(|(i, _)| range.start + second + i)
+                    .find(|at| !regions.iter().any(|r| r.contains(at)))
+            };
             let delimiter = match (position(','), position('+')) {
                 _ if value.chars().nth(1).is_none() => None,
                 (Some(comma), plus) => Some(plus.map_or(comma, |plus| plus.min(comma))),
@@ -643,9 +742,14 @@ fn ui_macro(text: &Text, m: UiMatch, font: bool) -> UiMacro {
                 Some(items) => {
                     let items = unescaped(items);
                     let src = &items.text;
-                    let delimiter = if src.contains("&gt;") {
+                    let regions = nested_regions(src);
+                    let outside = |delimiter: &str| {
+                        src.match_indices(delimiter)
+                            .any(|(at, _)| !regions.iter().any(|r| r.contains(&at)))
+                    };
+                    let delimiter = if outside("&gt;") {
                         Some("&gt;")
-                    } else if src.contains(',') {
+                    } else if outside(",") {
                         Some(",")
                     } else {
                         None
