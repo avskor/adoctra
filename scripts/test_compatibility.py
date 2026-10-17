@@ -84,6 +84,22 @@ class ProjectionTests(unittest.TestCase):
         self.assertNotEqual(projection('<figcaption class="title">x</figcaption>'),
                             projection('<figcaption>x</figcaption>'))
 
+    def test_video_and_audio_figures_are_ruby_media_blocks(self):
+        ruby = ('<div id="v" class="videoblock left"><div class="title">T</div><div class="content">'
+                '<iframe src="https://y/e" frameborder="0" allowfullscreen></iframe></div></div>'
+                '<div class="audioblock"><div class="content"><audio src="s.ogg" controls>x</audio></div></div>')
+        ours = ('<figure id="v" class="videoblock left"><figcaption class="title">T</figcaption>'
+                '<iframe src="https://y/e" allowfullscreen></iframe></figure>'
+                '<figure class="audioblock"><audio src="s.ogg" controls>x</audio></figure>')
+        self.assertEqual(projection(ruby), projection(ours))
+        # Sources, booleans, classes and titles remain observable.
+        self.assertNotEqual(projection(ours), projection(ours.replace(' allowfullscreen', '')))
+        self.assertNotEqual(projection(ours), projection(ours.replace('s.ogg', 't.ogg')))
+        self.assertNotEqual(projection(ours), projection(ours.replace('videoblock left', 'videoblock')))
+        self.assertNotEqual(projection(ours), projection(ours.replace('>T<', '><')))
+        # Only a zero frameborder is presentation.
+        self.assertNotEqual(projection(ruby), projection(ruby.replace('frameborder="0"', 'frameborder="1"')))
+
     def test_full_document_head_is_outside_body_profile(self):
         self.assertEqual(projection('<html><head><style>p {color:red}</style></head><body><p>one</p></body></html>'),
                          projection('<p>one</p>'))

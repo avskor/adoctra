@@ -1,5 +1,6 @@
 //! The `image::target[…]` block macro, as the pinned Ruby parser reads it
-//! (`BlockMediaMacroRx`, the `:image` branch of `next_block`) and the HTML
+//! (`BlockMediaMacroRx`, shared with `video::`/`audio::`, and the `:image`
+//! branch of `next_block`) and the HTML
 //! converter resolves it (`AbstractBlock#alt`, `AbstractNode#image_uri` with
 //! `PathResolver#web_path`). Only the secure-mode behavior applies: there are
 //! no data URIs and no inline/interactive SVG.
@@ -7,12 +8,37 @@ use crate::substitution_text::Text;
 use crate::AttributePart;
 use std::ops::Range;
 
-/// `^image::(\S|\S.*?\S)\[(.+)?\]$`: the target ends at the first `[`
-/// preceded by a non-blank character, and the line ends with `]`. Returns the
-/// target and the attribute list ranges within `line`.
-pub(crate) fn match_macro(line: &str) -> Option<(Range<usize>, Range<usize>)> {
-    const PREFIX: &str = "image::";
-    let rest = line.strip_prefix(PREFIX)?;
+/// The context of a block media macro.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Media {
+    Image,
+    Video,
+    Audio,
+}
+
+impl Media {
+    /// The names of the positional attributes (Ruby's `posattrs`).
+    pub fn posattrs(self) -> &'static [&'static str] {
+        match self {
+            Media::Image => &["alt", "width", "height"],
+            Media::Video => &["poster", "width", "height"],
+            Media::Audio => &[],
+        }
+    }
+}
+
+/// `^(image|video|audio)::(\S|\S.*?\S)\[(.+)?\]$`: the target ends at the
+/// first `[` preceded by a non-blank character, and the line ends with `]`.
+/// Returns the context, the target and the attribute list ranges within `line`.
+pub(crate) fn match_macro(line: &str) -> Option<(Media, Range<usize>, Range<usize>)> {
+    let (media, prefix) = [
+        (Media::Image, "image::"),
+        (Media::Video, "video::"),
+        (Media::Audio, "audio::"),
+    ]
+    .into_iter()
+    .find(|(_, prefix)| line.starts_with(prefix))?;
+    let rest = &line[prefix.len()..];
     let close = rest.strip_suffix(']')?.len();
     if !rest.chars().next().is_some_and(|c| !is_blank(c)) {
         return None;
@@ -21,8 +47,8 @@ pub(crate) fn match_macro(line: &str) -> Option<(Range<usize>, Range<usize>)> {
         .match_indices('[')
         .map(|(at, _)| at)
         .find(|&at| at > 0 && !rest[..at].chars().next_back().is_some_and(is_blank))?;
-    let base = PREFIX.len();
-    Some((base..base + open, base + open + 1..base + close))
+    let base = prefix.len();
+    Some((media, base..base + open, base + open + 1..base + close))
 }
 
 /// Ruby's `\s` (and the complement of `\S`).
@@ -166,15 +192,23 @@ mod tests {
     #[test]
     fn matches_ruby_media_macro_lines() {
         let line = "image::a b.png[x]y]";
-        let (target, list) = match_macro(line).unwrap();
+        let (media, target, list) = match_macro(line).unwrap();
+        assert_eq!(media, Media::Image);
         assert_eq!((&line[target], &line[list]), ("a b.png", "x]y"));
         let line = "image::a.png[]";
-        let (target, list) = match_macro(line).unwrap();
+        let (_, target, list) = match_macro(line).unwrap();
         assert_eq!((&line[target], &line[list]), ("a.png", ""));
         // A blank before the bracket moves the match to a later bracket.
         let line = "image::a [b][c]";
-        let (target, list) = match_macro(line).unwrap();
+        let (_, target, list) = match_macro(line).unwrap();
         assert_eq!((&line[target], &line[list]), ("a [b]", "c"));
+        let line = "video::v.mp4[poster.png]";
+        let (media, target, list) = match_macro(line).unwrap();
+        assert_eq!(media, Media::Video);
+        assert_eq!((&line[target], &line[list]), ("v.mp4", "poster.png"));
+        let line = "audio::s.ogg[]";
+        let (media, target, _) = match_macro(line).unwrap();
+        assert_eq!((media, &line[target]), (Media::Audio, "s.ogg"));
         for line in [
             "image::f.png [x]",
             "image:: f.png[x]",
@@ -182,6 +216,8 @@ mod tests {
             "image::f.png[x] ",
             "image:f.png[x]",
             "text image::f.png[]",
+            "Video::v.mp4[]",
+            "audio:s.ogg[]",
         ] {
             assert_eq!(match_macro(line), None, "{line}");
         }

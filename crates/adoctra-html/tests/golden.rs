@@ -652,6 +652,35 @@ fn html_images_match_asciidoctor() {
     assert!(checked > 0, "no golden fixtures found in {dir:?}");
 }
 
+/// Video and audio blocks: asciidoctor's `videoblock`/`audioblock` divs with a
+/// leading title and a `content` wrapper, and adoctra's `<figure>` with a
+/// leading `<figcaption>`, reduce to the title and the player tags; Ruby's
+/// obsolete `frameborder="0"` on embedded players is stylesheet presentation.
+#[test]
+fn html_media_match_asciidoctor() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/media");
+    let mut checked = 0usize;
+    for entry in fs::read_dir(&dir).expect("golden/media dir is missing") {
+        let path = entry.unwrap().path();
+        if path.extension().and_then(|e| e.to_str()) != Some("adoc") {
+            continue;
+        }
+        let expected_path = path.with_extension("expected.html");
+        let name = path.file_stem().unwrap().to_string_lossy().into_owned();
+        let adoc = fs::read_to_string(&path).unwrap();
+        let expected = fs::read_to_string(&expected_path).unwrap();
+        let doc = adoctra_core::parse(&adoc).document;
+        let ours = String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap();
+        assert_eq!(
+            toc_body(&ours),
+            toc_body(&expected.replace(" frameborder=\"0\"", "")),
+            "HTML media diverges from asciidoctor for `{name}`"
+        );
+        checked += 1;
+    }
+    assert!(checked > 0, "no golden fixtures found in {dir:?}");
+}
+
 #[test]
 fn html_block_titles_match_asciidoctor() {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/titles");

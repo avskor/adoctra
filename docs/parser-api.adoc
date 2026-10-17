@@ -1259,6 +1259,21 @@ secure. Изображение с названием нумеруется `figur
 префикс. JSON/WASM экспортируют `name:"image"`, `target`, `src` и плоский `alt`,
 подсветка — `block-macro`.
 
+Видео и аудио. `BlockKind::Video { target, src, poster, embedded }` и
+`BlockKind::Audio { target, src }` — блочные макросы `video::`/`audio::` той же
+грамматики (`BlockMediaMacroRx`) и с тем же чтением списка, цели, drop-line и
+метаданных. Позиционные поля видео называются `poster`, `width`, `height`, у аудио
+имён нет; стиль блока удаляется. Названия не нумеруются. Источники вычисляются в
+ядре при преобразовании, как `convert_video`/`convert_audio` Ruby: `poster`
+`youtube`/`vimeo` даёт `embedded` URL плеера (`asset-uri-scheme`, по умолчанию
+`https`; список/playlist или hash из цели и атрибутов, `start`/`end`/`theme`/`lang`
+и опции; разделители — буквальный `&`), иначе `src` — web-путь цели относительно
+`imagesdir` с якорем `#t=start,end`, а непустой `poster` разрешается так же.
+JSON/WASM экспортируют `name:"video"` (`target`, `src`, `poster`, `embedded`) и
+`name:"audio"` (`target`, `src`), подсветка — `block-macro`. HTML выводит
+`<figure class="videoblock|audioblock">` с ведущим `<figcaption class="title">` и
+`<iframe>`/`<video>`/`<audio>` с текстом Ruby для браузеров без поддержки.
+
 Ссылка, начатая в исходном тексте, — узел `Inline::CrossReference { xref,
 children, span }` с физическим диапазоном всей конструкции (поля `xref`
 декодированы); поглощённые AttributeRef

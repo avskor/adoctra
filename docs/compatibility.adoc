@@ -26,9 +26,11 @@ entities и нормализует пробелы обычного текста.
 При генерации этого профиля задан `showtitle`, чтобы заголовок документа входил
 в сравнение. Quote и verse проецируются в общие узлы: Ruby `div.attribution`
 и `pre.content` согласуются с `figcaption` и `pre.verse`, а единственный параграф
-внутри `blockquote` сравнивается с текстом простой цитаты. `figure.imageblock`
-и его `figcaption.title` adoctra проецируются в `div.imageblock` и `div.title` Ruby.
-Корпус содержит 2769 сценариев: 2764 PASS и 5 XFAIL.
+внутри `blockquote` сравнивается с текстом простой цитаты. `figure.imageblock`,
+`figure.videoblock`, `figure.audioblock` и их `figcaption.title` adoctra
+проецируются в `div` и `div.title` Ruby; `frameborder="0"` у `iframe` Ruby —
+оформление (adoctra задаёт рамку стилями).
+Корпус содержит 2775 сценариев: 2770 PASS и 5 XFAIL.
 
 [source,sh]
 ----
@@ -73,7 +75,8 @@ Ruby-процесс явно активирует эту версию; друг�
 |Listing и literal |Частично |Нормализация конечных пробелов reader; tabsize вне include[indent=…] — XFAIL
 |Ссылки и метаданные |Частично |Ссылки в заголовках, очистка автоматических ID, грамматика, объединение и подстановки списков атрибутов блоков и атрибуции проверены; title/reftext из списков и перенос названия через разделы проверены; каталог inline-якорей проверен; подписи xref при преобразовании (reftext при каждом обращении, названия блоков, ранние ID разделов) проверены; распознавание inline-якорей и xref после a-стадии проверено; междокументные пути, каталог include и естественные xref проверены; xref в pass:m и параметрах ссылок проверены; xrefstyle для подписей примеров и глав книги проверен
 |Подписи примеров и рисунков |Частично |Изменение/удаление префикса, вложенная нумерация и контексты проверены; `figure-caption` изображений проверен
-|Изображения |Блочный макрос реализован |`image::` с alt/размерами, link/window, float/align, imagesdir, подписи и xref проверены; SVG inline/interactive и data-uri (небезопасные режимы), video/audio и inline `image:` впереди
+|Изображения |Блочный макрос реализован |`image::` с alt/размерами, link/window, float/align, imagesdir, подписи и xref проверены; SVG inline/interactive и data-uri (небезопасные режимы) и inline `image:` впереди
+|Видео и аудио |Блочные макросы реализованы |`video::` (локальный, YouTube, Vimeo: poster, размеры, start/end, опции, playlist/list/hash, `asset-uri-scheme`) и `audio::` с imagesdir, названиями, xref, drop-line и продолжениями списков проверены
 |Источники и позиции |Базовая модель готова |SourceMap/source_id и provenance для диапазонов через включения; общие substitutions ещё впереди
 |Комментарии |Базовые формы реализованы |//, //// и [comment], header/list/container, verbatim, позиции и незакрытые блоки проверены
 |Условия |ifdef/ifndef/ifeval/endif реализованы |Вложенность, типы сравнений, атрибуты при чтении, позиции и диагностики проверены; set/counter substitutions впереди
@@ -888,6 +891,19 @@ adoctra к `<div id="toc">`. Расхождения: номера в TOC бер�
 продолжениях списков. Расхождения: опорный режим secure, поэтому SVG inline/
 interactive и data-uri не реализованы; символы `<&>` в `src`/`href` экранируются
 (DOM совпадает). Добавлены golden fixtures; прежние эталоны и baseline не изменены.
+
+Ещё 6 PASS проверяют блочные макросы `video::`/`audio::`, как ветку
+`BlockMediaMacroRx` в `next_block`, `media_uri`, `convert_video` и `convert_audio`
+Ruby: позиционные poster/width/height видео и отсутствие позиционных имён аудио,
+удаление стиля, локальные цели и poster относительно `imagesdir` (в том числе
+изменённого в теле, URI с пробелами), якорь `#t=start,end`, логические атрибуты
+autoplay/muted/controls/loop и preload, float/align/role, YouTube (порядок
+параметров, list/playlist в цели и атрибутах, playlist для loop, nofullscreen) и
+Vimeo (hash, опции, `#at=`), `asset-uri-scheme` (пустой и изменённый), названия
+без подписей, id из списка, xref, drop-line в цели, продолжения списков, стили
+verbatim и строки внутри абзаца. Расхождения: символы `<&>` в параметрах
+экранируются (Ruby вставляет их как есть), `frameborder` не выводится.
+Добавлены golden fixtures; прежние эталоны и baseline не изменены.
 
 Ранние ссылки из заголовков используют reftext с атрибутами чтения без
 исполнения выражений; Ruby исполняет их при разборе. Порядок регистрации

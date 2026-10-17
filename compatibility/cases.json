@@ -17839,6 +17839,42 @@
       "category": "blocks",
       "expect": "pass",
       "source": ":imagesdir: a\n\nimage::x.png[]\n\n:imagesdir: b/\n\nimage::x.png[]\n\nimage::/root.png[]\n"
+    },
+    {
+      "id": "video-local-poster-size-options-time",
+      "category": "blocks",
+      "expect": "pass",
+      "source": ":imagesdir: img\n\n[[v1]]\nvideo::my clip.mp4[poster.png,640,480,start=10,end=20,opts=\"autoplay,loop,muted\",preload=none,role=r]\n\n[foo]\nvideo::a.mp4[float=left,align=center,options=nocontrols]\n\nvideo::https://ex.com/a b.mp4[https://ex.com/p.png]\n\nvideo::v.webm[,,,preload=auto]\n"
+    },
+    {
+      "id": "video-youtube-parameters-and-playlists",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "video::dQw4w9WgXcQ[youtube,640,360,start=5,end=9,theme=light,lang=fr,opts=\"autoplay,loop,modest,related,muted,nocontrols,nofullscreen\"]\n\nvideo::abc/PL1[youtube]\n\nvideo::a,b,c[youtube,opts=loop]\n\nvideo::x[youtube,playlist=p1]\n\nvideo::y[youtube,list=L2,start=1]\n"
+    },
+    {
+      "id": "video-vimeo-hash-options-and-scheme",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "video::12345/hh[vimeo,start=60,opts=\"autoplay,loop,muted,nofullscreen\"]\n\n:asset-uri-scheme:\n\nvideo::67890[vimeo,hash=zz]\n\n:asset-uri-scheme: http\n\n[poster=vimeo,role=x]\nvideo::42[]\n"
+    },
+    {
+      "id": "audio-time-anchor-options-and-imagesdir",
+      "category": "blocks",
+      "expect": "pass",
+      "source": ":imagesdir: media/\n\naudio::s.ogg[start=1,options=\"autoplay,loop,nocontrols\"]\n\naudio::s.ogg[]\n\naudio::s.ogg[end=3,role=a]\n\n:imagesdir!:\n\n[quote]\naudio::{nope}s.ogg[]\n"
+    },
+    {
+      "id": "media-titles-ids-and-xrefs",
+      "category": "blocks",
+      "expect": "pass",
+      "source": ".Video *title*\n[[v1]]\nvideo::v.mp4[]\n\n.Audio\naudio::s.ogg[id=a1]\n\naudio::s.ogg[end=3,title=T2,id=a2]\n\n.First\nvideo::v.mp4[title=Second,id=v2]\n\n<<v1>> <<a1>> <<a2>> <<v2,xrefstyle=full>>\n"
+    },
+    {
+      "id": "media-drop-line-list-and-verbatim",
+      "category": "blocks",
+      "expect": "pass",
+      "source": ":attribute-missing: drop-line\n\n.Dropped\n[[gone]]\nvideo::{nope}[]\n\n* item\n+\nvideo::v.mp4[width=10]\n* two\n+\naudio::s.ogg[title=In list]\n\n[verse]\naudio::s.ogg[]\n\n[literal]\nvideo::v.mp4[]\n\ntext\nvideo::v.mp4[]\n"
     }
   ]
 }

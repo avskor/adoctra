@@ -529,11 +529,12 @@ impl Execution<'_> {
                 self.attributes
                     .set_parts(format!("{context}-number"), parts);
             }
-            // Ruby's `image_uri` reads `imagesdir` from the document at
-            // conversion.
+            // Ruby's `image_uri` and `media_uri` read `imagesdir` (and
+            // `asset-uri-scheme`) from the document at conversion./`asset-uri-scheme`
             if let BlockKind::Image { target, src, .. } = &mut block.kind {
                 *src = crate::image::web_path(target, self.attributes.get("imagesdir"));
             }
+            crate::media::resolve(block, &self.attributes);
             if let Some(title) = &mut block.title {
                 self.inlines(title);
             }

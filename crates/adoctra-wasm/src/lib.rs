@@ -307,6 +307,45 @@ fn write_block(b: &Block, s: &mut String) {
             write_title(&b.title, s);
             write_caption(&b.caption, s);
         }
+        BlockKind::Video {
+            target,
+            src,
+            poster,
+            embedded,
+        } => {
+            // The resolved video macro; its line span covers target and list.
+            s.push_str("\"name\":\"video\",\"target\":");
+            write_str(target, s);
+            s.push_str(",\"src\":");
+            write_str(src, s);
+            s.push_str(",\"poster\":");
+            match poster {
+                Some(poster) => write_str(poster, s),
+                None => s.push_str("null"),
+            }
+            s.push_str(&format!(",\"embedded\":{embedded},"));
+            write_id(&b.id, s);
+            write_roles(&b.roles, s);
+            write_style(&b.attrs.style, s);
+            write_attributes(&b.attrs.named, s);
+            write_options(&b.attrs.options, s);
+            write_title(&b.title, s);
+            write_caption(&b.caption, s);
+        }
+        BlockKind::Audio { target, src } => {
+            s.push_str("\"name\":\"audio\",\"target\":");
+            write_str(target, s);
+            s.push_str(",\"src\":");
+            write_str(src, s);
+            s.push(',');
+            write_id(&b.id, s);
+            write_roles(&b.roles, s);
+            write_style(&b.attrs.style, s);
+            write_attributes(&b.attrs.named, s);
+            write_options(&b.attrs.options, s);
+            write_title(&b.title, s);
+            write_caption(&b.caption, s);
+        }
         BlockKind::List { ordered, items } => {
             s.push_str(&format!("\"name\":\"list\",\"ordered\":{ordered},"));
             write_id(&b.id, s);
@@ -2311,6 +2350,27 @@ mod header_tests {
             tokens.contains(r#"{"span":{"source_id":3,"start":10,"end":32},"kind":"block-macro"}"#),
             "{tokens}"
         );
+    }
+
+    #[test]
+    fn media_macros_keep_their_spans_and_block_macro_tokens() {
+        let source = "video::v.mp4[vimeo]\n\n.T\naudio::s.ogg[start=1]";
+        let json = super::parse_json_with_source(source, 3);
+        assert!(
+            json.contains(r#"{"span":{"source_id":3,"start":0,"end":19},"name":"video","target":"v.mp4","src":"https://player.vimeo.com/video/v.mp4","poster":null,"embedded":true,"id":null,"roles":[],"style":null,"attributes":{"poster":"vimeo"},"options":[],"title":null,"caption":null}"#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#"{"span":{"source_id":3,"start":24,"end":45},"name":"audio","target":"s.ogg","src":"s.ogg#t=1","id":null,"roles":[],"style":null,"attributes":{"start":"1"},"options":[],"title":[{"span":{"source_id":3,"start":22,"end":23},"name":"text","value":"T"}],"caption":null}"#),
+            "{json}"
+        );
+        let tokens = super::tokens_json_with_source(source, 3);
+        for (start, end) in [(0, 19), (24, 45)] {
+            let token = format!(
+                r#"{{"span":{{"source_id":3,"start":{start},"end":{end}}},"kind":"block-macro"}}"#
+            );
+            assert!(tokens.contains(&token), "{tokens}");
+        }
     }
 
     #[test]

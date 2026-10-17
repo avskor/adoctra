@@ -98,7 +98,9 @@ pub fn walk_block_mut(visitor: &mut (impl VisitorMut + ?Sized), block: &mut Bloc
         | BlockKind::Literal { .. }
         | BlockKind::Passthrough { .. }
         | BlockKind::Toc
-        | BlockKind::Image { .. } => {}
+        | BlockKind::Image { .. }
+        | BlockKind::Video { .. }
+        | BlockKind::Audio { .. } => {}
     }
 }
 

@@ -1106,8 +1106,24 @@ Ruby API и выполнение Ruby-расширений относятся к
 * Добавлены 12 PASS: всего 2764 PASS и 5 XFAIL. Прежние эталоны не изменены.
   Проверены Rust-тесты, fmt, clippy с запретом warning, WASM target и тесты стенда.
 
-*Следующее изменение:* блочные макросы video/audio и inline-макрос `image:` или
-таблицы — по приоритетам этапов 4–6.
+Шестьдесят второй рабочий набор изменений:
+
+* Блочные макросы `video::`/`audio::`, как ветка `BlockMediaMacroRx` в
+  `next_block`, `media_uri`, `convert_video` и `convert_audio` Ruby:
+  `BlockKind::Video { target, src, poster, embedded }` и `BlockKind::Audio`,
+  общий с `image::` разбор строки, списка (позиционные poster/width/height у видео),
+  цели и drop-line, удаление стиля. Источники вычисляются в ядре при
+  преобразовании (`media.rs`): YouTube/Vimeo — URL плеера с `asset-uri-scheme`,
+  параметрами и опциями, иначе путь относительно `imagesdir` с `#t=start,end`
+  и poster.
+* HTML `<figure class="videoblock|audioblock">` с ведущим `<figcaption>`, стили;
+  DOM-профиль приравнивает их к div Ruby и не учитывает `frameborder="0"`.
+  JSON/WASM `name:"video"`/`"audio"`, подсветка `block-macro`.
+* Добавлены 6 PASS: всего 2770 PASS и 5 XFAIL. Прежние эталоны не изменены.
+  Проверены Rust-тесты, fmt, clippy с запретом warning, WASM target и тесты стенда.
+
+*Следующее изменение:* inline-макрос `image:` или таблицы — по приоритетам
+этапов 4–6.
 Исполнение выражений reftext в ранних ссылках
 заголовков и порядок регистрации контейнеров после содержимого — отдельная работа.
 Остальные производные настройки, структурные/raw caption

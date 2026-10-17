@@ -28,6 +28,7 @@ mod inline_attributes;
 mod inline_pass;
 mod inline_quotes;
 pub mod json;
+mod media;
 mod parser;
 mod pass_subs;
 mod post_replacements;

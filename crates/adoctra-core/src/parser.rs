@@ -79,14 +79,18 @@ impl MacroMeta {
     }
 }
 
-/// Ruby's `:image` branch of `next_block`: the macro list (positional `alt`,
-/// `width`, `height`) gets the early a-stage like an attribute line, then the
-/// target its attribute references. A target emptied by `drop-line` drops
-/// the block and its metadata.
-fn read_image_macro(
+/// Ruby's `BlockMediaMacroRx` branch of `next_block`: the macro list (with
+/// the media's positional names) gets the early a-stage like an attribute
+/// line, then the target its attribute references. A target emptied by
+/// `drop-line` drops the block and its metadata.
+fn read_media_macro(
     line: &str,
     off: usize,
-    (target, list): (std::ops::Range<usize>, std::ops::Range<usize>),
+    (media, target, list): (
+        crate::image::Media,
+        std::ops::Range<usize>,
+        std::ops::Range<usize>,
+    ),
     context: &mut ParseContext,
     includes: &crate::xref_target::Includes,
 ) -> Option<Block> {
@@ -94,12 +98,8 @@ fn read_image_macro(
         inner: line[list.clone()].to_owned(),
         base: off + list.start,
     };
-    let (meta, _) = crate::block_attributes::macro_list(
-        attr_line,
-        &["alt", "width", "height"],
-        context,
-        includes,
-    );
+    let (meta, _) =
+        crate::block_attributes::macro_list(attr_line, media.posattrs(), context, includes);
     let mut value = line[target.clone()].to_owned();
     if value.contains('{') {
         let source = crate::image::target_text(&value, off + target.start);
@@ -110,37 +110,53 @@ fn read_image_macro(
         value = expanded.text;
     }
     context.block_macro = Some(MacroMeta::from_list(meta));
-    Some(Block::new(
-        Span::new(off, off + line.len()),
-        BlockKind::Image {
+    let kind = match media {
+        crate::image::Media::Image => BlockKind::Image {
             target: value,
             src: String::new(),
             alt: Vec::new(),
         },
-    ))
+        crate::image::Media::Video => BlockKind::Video {
+            target: value,
+            src: String::new(),
+            poster: None,
+            embedded: false,
+        },
+        crate::image::Media::Audio => BlockKind::Audio {
+            target: value,
+            src: String::new(),
+        },
+    };
+    Some(Block::new(Span::new(off, off + line.len()), kind))
 }
 
-/// Complete an image once its metadata is merged: Ruby drops the style
-/// (which becomes the alt text without an explicit one) and makes a unitless
-/// `scaledwidth` a percentage.
-fn complete_image(block: &mut Block, attributes: &Attributes) {
-    let BlockKind::Image { target, src, alt } = &mut block.kind else {
-        return;
-    };
-    let style = block.attrs.style.take();
-    let (text, default) = match (block.attrs.named.get("alt"), style) {
-        (Some(alt), _) => (alt.clone(), false),
-        (None, Some(style)) => (style, false),
-        (None, None) => (crate::image::default_alt(target), true),
-    };
-    *alt = crate::image::alt_parts(&text, default);
-    if let Some(width) = block.attrs.named.remove("scaledwidth") {
-        if !width.is_empty() {
-            let width = crate::image::scaled_width(&width);
-            block.attrs.named.insert("scaledwidth".to_owned(), width);
+/// Complete a media block once its metadata is merged: Ruby drops the style,
+/// which for an image becomes the alt text without an explicit one, and makes
+/// an image's unitless `scaledwidth` a percentage.
+fn complete_media(block: &mut Block, attributes: &Attributes) {
+    match &mut block.kind {
+        BlockKind::Image { target, src, alt } => {
+            let style = block.attrs.style.take();
+            let (text, default) = match (block.attrs.named.get("alt"), style) {
+                (Some(alt), _) => (alt.clone(), false),
+                (None, Some(style)) => (style, false),
+                (None, None) => (crate::image::default_alt(target), true),
+            };
+            *alt = crate::image::alt_parts(&text, default);
+            if let Some(width) = block.attrs.named.remove("scaledwidth") {
+                if !width.is_empty() {
+                    let width = crate::image::scaled_width(&width);
+                    block.attrs.named.insert("scaledwidth".to_owned(), width);
+                }
+            }
+            *src = crate::image::web_path(target, attributes.get("imagesdir"));
         }
+        BlockKind::Video { .. } | BlockKind::Audio { .. } => {
+            block.attrs.style = None;
+            crate::media::resolve(block, attributes);
+        }
+        _ => {}
     }
-    *src = crate::image::web_path(target, attributes.get("imagesdir"));
 }
 
 /// Ruby's `BlockTocMacroRx` (`^toc::\[(.+)?\]$`). Like its
@@ -390,7 +406,7 @@ fn collect_blocks(
                     }
                 }
             }
-            complete_image(&mut block, &context.attributes);
+            complete_media(&mut block, &context.attributes);
             let attributes = inline_attributes(&context.render_attributes(), Some(&block.attrs));
             apply_style_fixup(&mut block, lines, &attributes, &pending.list, context);
             if let Some(value) = reftext {
@@ -1281,7 +1297,7 @@ fn parse_block_content(
     );
     if let Some(found) = crate::image::match_macro(trimmed).filter(|_| !verbatim) {
         *i += 1;
-        return read_image_macro(trimmed, off, found, context, &lines.include_catalog);
+        return read_media_macro(trimmed, off, found, context, &lines.include_catalog);
     }
     if let Some(meta) = parse_toc_macro(trimmed, off).filter(|_| !verbatim) {
         context.block_macro = Some(meta);
@@ -1830,7 +1846,7 @@ fn parse_list(
                                 }
                                 let title = meta.title.take();
                                 meta.apply_alone(&mut b);
-                                complete_image(&mut b, &context.attributes);
+                                complete_media(&mut b, &context.attributes);
                                 if let Some(title) = title {
                                     b.title = Some(context.body_subs.defer_title(
                                         &title.text,

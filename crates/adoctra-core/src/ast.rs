@@ -487,6 +487,26 @@ pub enum BlockKind {
         src: String,
         alt: Vec<crate::AttributePart>,
     },
+    /// The `video::target[poster, width, height]` block macro (Ruby's `:video`
+    /// block). `target` is the macro target after its attribute references.
+    /// `src` is resolved at the block during conversion, as Ruby's
+    /// `convert_video` builds it: a `poster` of `youtube`/`vimeo` makes it an
+    /// `embedded` player URL (`asset-uri-scheme`, the target's list/playlist or
+    /// hash and the `start`/`end`/`theme`/`lang` attributes and options, with
+    /// literal `&` separators); otherwise it is the target's web path under
+    /// `imagesdir` with a `#t=start,end` anchor, and a non-empty `poster` is
+    /// resolved the same way. Named attributes and options stay in
+    /// [`Block::attrs`]; a title is not captioned.
+    Video {
+        target: String,
+        src: String,
+        poster: Option<String>,
+        embedded: bool,
+    },
+    /// The `audio::target[]` block macro (Ruby's `:audio` block): `src` is the
+    /// target's web path under `imagesdir` with a `#t=start,end` anchor,
+    /// resolved during conversion.
+    Audio { target: String, src: String },
 }
 
 /// One item of a [`BlockKind::List`]: its resolved inline content (the

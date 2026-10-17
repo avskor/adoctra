@@ -489,8 +489,22 @@ with `<img src alt width height>` (inside `<a class="image" href>` with
 `link`, window/noopener/nofollow like append_link_constraint_attrs) and a
 trailing `<figcaption class="title">`; the DOM profile maps them to Ruby's divs.
 JSON/WASM `name:"image"` with target/src/flat alt; token `block-macro`. No SVG
-inline/interactive or data-uri (the reference runs in secure mode); video/audio
-and inline `image:` remain work.
+inline/interactive or data-uri (the reference runs in secure mode); inline
+`image:` remains work.
+**Video/audio**: `BlockKind::Video { target, src, poster, embedded }` /
+`BlockKind::Audio { target, src }` share image.rs match_macro (`Media`, Ruby's
+posattrs: video `poster,width,height`, audio none), the macro list, target
+a-stage and drop-line; the style is dropped and titles are never captioned.
+media.rs resolves sources once in core (complete_media at reading, body_subs at
+conversion), like convert_video/convert_audio: a `youtube`/`vimeo` poster gives
+an `embedded` player URL (`asset-uri-scheme`, default https; list/playlist or
+hash from the target or attributes, start/end/theme/lang and options in Ruby's
+order, literal `&`), else the `imagesdir` web path plus `#t=start,end`, and a
+non-empty poster resolved the same way. HTML renders `<figure
+class="videoblock|audioblock">` with a leading `<figcaption class="title">` and
+an `<iframe>` (no obsolete frameborder) or `<video>`/`<audio>` with Ruby's
+boolean attributes and fallback text; the DOM profile maps them to Ruby's divs.
+JSON/WASM `name:"video"`/`"audio"`; token `block-macro`.
 Xref labels: resolve::register builds the registry after reading (auto ids,
 block ids, cataloged anchors in source order); body_subs Execution resolves each
 textless xref after its field's subs, like Ruby's xreftext:

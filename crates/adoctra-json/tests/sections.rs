@@ -70,3 +70,22 @@ fn images_serialize_target_src_alt_and_figure_caption() {
         "{json}"
     );
 }
+
+#[test]
+fn video_and_audio_serialize_target_src_poster_and_embedding() {
+    let json = render(
+        ":imagesdir: m\n\n.Clip\n[[v]]\nvideo::a.mp4[p.png,start=2]\n\nvideo::id[youtube]\n\naudio::s.ogg[role=r]",
+    );
+    assert!(
+        json.contains(r#"{"name":"video","target":"a.mp4","src":"m/a.mp4#t=2","poster":"m/p.png","embedded":false,"id":"v","roles":[],"style":null,"attributes":{"poster":"p.png","start":"2"},"options":[],"title":[{"name":"text","value":"Clip"}],"caption":null}"#),
+        "{json}"
+    );
+    assert!(
+        json.contains(r#"{"name":"video","target":"id","src":"https://www.youtube.com/embed/id?rel=0","poster":null,"embedded":true,"id":null"#),
+        "{json}"
+    );
+    assert!(
+        json.contains(r#"{"name":"audio","target":"s.ogg","src":"m/s.ogg","id":null,"roles":["r"],"style":null,"attributes":{},"options":[],"title":null,"caption":null}"#),
+        "{json}"
+    );
+}

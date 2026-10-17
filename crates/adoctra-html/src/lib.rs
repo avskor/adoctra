@@ -227,6 +227,84 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             }
             out.push_str("</figure>\n");
         }
+        BlockKind::Video {
+            src,
+            poster,
+            embedded,
+            ..
+        } => {
+            // A semantic `<figure class="videoblock">` with the title first as
+            // a `<figcaption>` (Ruby's leading title `<div>`), then the player:
+            // an `<iframe>` for YouTube/Vimeo, else a `<video>` with Ruby's
+            // fallback text. asciidoctor nests a `content` div and adds the
+            // obsolete `frameborder="0"`, which the stylesheet replaces.
+            let named = &block.attrs.named;
+            let option = |name: &str| block.attrs.options.iter().any(|o| o == name);
+            let align = named.get("align").map(|align| format!("text-{align}"));
+            let mut base = vec!["videoblock"];
+            base.extend(named.get("float").map(String::as_str));
+            base.extend(align.as_deref());
+            let class = class_attr(&base, &block.roles);
+            out.push_str(&format!("<figure{id}{class}>\n"));
+            render_media_title(&block.title, out);
+            let mut size = String::new();
+            for key in ["width", "height"] {
+                if let Some(value) = named.get(key) {
+                    size.push_str(&format!(" {key}=\"{}\"", attr_value(value)));
+                }
+            }
+            if *embedded {
+                let fullscreen = if option("nofullscreen") {
+                    ""
+                } else {
+                    " allowfullscreen"
+                };
+                out.push_str(&format!(
+                    "<iframe{size} src=\"{}\"{fullscreen}></iframe>\n",
+                    attr_value(src)
+                ));
+            } else {
+                out.push_str(&format!("<video src=\"{}\"{size}", attr_value(src)));
+                if let Some(poster) = poster {
+                    out.push_str(&format!(" poster=\"{}\"", attr_value(poster)));
+                }
+                for (name, on) in [
+                    ("autoplay", option("autoplay")),
+                    ("muted", option("muted")),
+                    ("controls", !option("nocontrols")),
+                    ("loop", option("loop")),
+                ] {
+                    if on {
+                        out.push(' ');
+                        out.push_str(name);
+                    }
+                }
+                if let Some(preload) = named.get("preload").filter(|p| !p.is_empty()) {
+                    out.push_str(&format!(" preload=\"{}\"", attr_value(preload)));
+                }
+                out.push_str(">\nYour browser does not support the video tag.\n</video>\n");
+            }
+            out.push_str("</figure>\n");
+        }
+        BlockKind::Audio { src, .. } => {
+            // Like a video, without float/align classes (Ruby's `convert_audio`).
+            let option = |name: &str| block.attrs.options.iter().any(|o| o == name);
+            let class = class_attr(&["audioblock"], &block.roles);
+            out.push_str(&format!("<figure{id}{class}>\n"));
+            render_media_title(&block.title, out);
+            out.push_str(&format!("<audio src=\"{}\"", attr_value(src)));
+            for (name, on) in [
+                ("autoplay", option("autoplay")),
+                ("controls", !option("nocontrols")),
+                ("loop", option("loop")),
+            ] {
+                if on {
+                    out.push(' ');
+                    out.push_str(name);
+                }
+            }
+            out.push_str(">\nYour browser does not support the audio tag.\n</audio>\n</figure>\n");
+        }
         BlockKind::List { ordered, items } => {
             let tag = if *ordered { "ol" } else { "ul" };
             let class = class_attr(&[], &block.roles);
@@ -788,6 +866,16 @@ fn class_attr(base: &[&str], roles: &[String]) -> String {
         .collect::<Vec<_>>()
         .join(" ");
     format!(" class=\"{}\"", escape(&classes))
+}
+
+/// The leading `<figcaption>` of a video or audio figure: its title, never
+/// captioned (Ruby numbers only listing/example/figure/table captions).
+fn render_media_title(title: &Option<Vec<Inline>>, out: &mut String) {
+    if let Some(title) = title {
+        out.push_str("<figcaption class=\"title\">");
+        render_inlines(title, out);
+        out.push_str("</figcaption>\n");
+    }
 }
 
 /// An escaped attribute value (Ruby's `encode_attribute_value` after special
@@ -2390,6 +2478,23 @@ mod tests {
                 r##"F <a href="#">Sec Title</a></p>"##
             )),
             "{html}"
+        );
+    }
+
+    #[test]
+    fn video_and_audio_render_figures_with_leading_titles_and_players() {
+        let html = render(
+            ":imagesdir: m\n\n.A *clip*\n[[v]]\nvideo::a b.mp4[p.png,640,360,start=5,opts=\"autoplay,muted,loop\",preload=none,float=left,align=center,role=r]\n\n\
+             video::id[youtube,opts=\"nofullscreen\",theme=<&>]\n\nvideo::7[vimeo]\n\n\
+             .Theme\naudio::s.ogg[end=3,opts=\"autoplay,nocontrols\",role=q]\n\naudio::t.ogg[]",
+        );
+        assert_eq!(
+            body(&html),
+            "<figure id=\"v\" class=\"videoblock left text-center r\">\n<figcaption class=\"title\">A <strong>clip</strong></figcaption>\n<video src=\"m/a%20b.mp4#t=5\" width=\"640\" height=\"360\" poster=\"m/p.png\" autoplay muted controls loop preload=\"none\">\nYour browser does not support the video tag.\n</video>\n</figure>\n\
+             <figure class=\"videoblock\">\n<iframe src=\"https://www.youtube.com/embed/id?rel=0&amp;fs=0&amp;theme=&lt;&amp;&gt;\"></iframe>\n</figure>\n\
+             <figure class=\"videoblock\">\n<iframe src=\"https://player.vimeo.com/video/7\" allowfullscreen></iframe>\n</figure>\n\
+             <figure class=\"audioblock q\">\n<figcaption class=\"title\">Theme</figcaption>\n<audio src=\"m/s.ogg#t=,3\" autoplay>\nYour browser does not support the audio tag.\n</audio>\n</figure>\n\
+             <figure class=\"audioblock\">\n<audio src=\"m/t.ogg\" controls>\nYour browser does not support the audio tag.\n</audio>\n</figure>\n</body>\n</html>\n"
         );
     }
 
