@@ -35,7 +35,7 @@ impl Backend for HtmlBackend {
         for (i, block) in doc.blocks.iter().enumerate() {
             match &block.kind {
                 BlockKind::Heading { level, inlines } if i == 0 && doc.has_title => {
-                    render_heading(block, *level, inlines, false, &mut out);
+                    render_heading(block, *level, inlines, false, &block.roles, &mut out);
                 }
                 _ => render_block(block, &mut out),
             }
@@ -54,7 +54,9 @@ fn render_block(block: &Block, out: &mut String) {
     // already does).
     let id = id_attr(&block.id);
     match &block.kind {
-        BlockKind::Heading { level, inlines } => render_heading(block, *level, inlines, true, out),
+        BlockKind::Heading { level, inlines } => {
+            render_heading(block, *level, inlines, true, &block.roles, out)
+        }
         BlockKind::Paragraph { inlines } => {
             let class = class_attr(&[], &block.roles);
             render_title(&block.title, &block.caption, out);
@@ -230,6 +232,40 @@ fn render_block(block: &Block, out: &mut String) {
             render_attribution(attribution, out);
             out.push_str("</figure>\n");
         }
+        BlockKind::Section { level: 0, blocks } => {
+            // Like Ruby, a level-0 section (a part) has no wrapper: its `sect0`
+            // title (carrying the roles) is followed by its content.
+            for child in blocks {
+                render_block(child, out);
+            }
+        }
+        BlockKind::Section { level, blocks } => {
+            // A semantic `<section class="sectN">` holding the title and content.
+            // asciidoctor uses `<div class="sectN">` plus a `sectionbody` div for
+            // level 1; adoctra keeps one element. The section roles (stored on its
+            // title) hang on the `<section>`, the id on the heading, as in Ruby.
+            let (heading, content) = blocks.split_first().expect("section title");
+            let base = format!("sect{level}");
+            out.push_str(&format!(
+                "<section{}>\n",
+                class_attr(&[base.as_str()], &heading.roles)
+            ));
+            if let BlockKind::Heading { level, inlines } = &heading.kind {
+                render_heading(heading, *level, inlines, true, &[], out);
+            }
+            for child in content {
+                render_block(child, out);
+            }
+            out.push_str("</section>\n");
+        }
+        BlockKind::Preamble { blocks } => {
+            // asciidoctor's `<div id="preamble">` (without its `sectionbody`).
+            out.push_str("<section id=\"preamble\">\n");
+            for child in blocks {
+                render_block(child, out);
+            }
+            out.push_str("</section>\n");
+        }
         BlockKind::Open { blocks } => {
             // A parsed container with no semantic styling of its own (a `--` block,
             // or `[open]` on a paragraph). asciidoctor nests
@@ -252,14 +288,21 @@ fn render_block(block: &Block, out: &mut String) {
 /// A heading element. A discrete (`[discrete]`/`[float]`) heading carries its
 /// style as a class, like asciidoctor's floating title; a level-0 heading that
 /// is not the document title is a part (`sect0`).
-fn render_heading(block: &Block, level: u8, inlines: &[Inline], body: bool, out: &mut String) {
+fn render_heading(
+    block: &Block,
+    level: u8,
+    inlines: &[Inline],
+    body: bool,
+    roles: &[String],
+    out: &mut String,
+) {
     let h = level.saturating_add(1).min(6);
     let base = match block.attrs.style.as_deref() {
         Some(style @ ("discrete" | "float")) => Some(style),
         _ if body && level == 0 => Some("sect0"),
         _ => None,
     };
-    let class = class_attr(base.as_slice(), &block.roles);
+    let class = class_attr(base.as_slice(), roles);
     render_title(&block.title, &block.caption, out);
     out.push_str(&format!("<h{h}{}{class}>", id_attr(&block.id)));
     render_inlines(inlines, out);
@@ -1052,10 +1095,22 @@ mod tests {
     }
 
     #[test]
-    fn shorthand_role_on_section_renders_class_on_heading() {
+    fn shorthand_role_on_section_renders_class_on_section() {
+        // Like Ruby's `<div class="sect1 notice">`: roles on the section, the id
+        // on its heading.
         let html = render("[.notice]\n== Hello World\n\nbody");
         assert!(
-            html.contains("<h2 id=\"_hello_world\" class=\"notice\">Hello World</h2>"),
+            html.contains(
+                "<section class=\"sect1 notice\">\n<h2 id=\"_hello_world\">Hello World</h2>\n<p>body</p>\n</section>"
+            ),
+            "got: {html}"
+        );
+        // A part keeps them on its `sect0` heading, without a wrapper.
+        let html = render("Intro\n\n[.notice]\n= Part\n\n== Chapter");
+        assert!(
+            html.contains(
+                "<h1 id=\"_part\" class=\"sect0 notice\">Part</h1>\n<section class=\"sect1\">"
+            ),
             "got: {html}"
         );
     }

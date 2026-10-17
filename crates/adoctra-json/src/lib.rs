@@ -271,6 +271,29 @@ fn write_block(block: &Block, s: &mut String) {
             }
             s.push_str("]}");
         }
+        BlockKind::Section { level, blocks } => {
+            // The section's id, roles and attributes live on its title, `blocks[0]`.
+            s.push_str(&format!(
+                "{{\"name\":\"section\",\"level\":{level},\"blocks\":["
+            ));
+            for (i, child) in blocks.iter().enumerate() {
+                if i > 0 {
+                    s.push(',');
+                }
+                write_block(child, s);
+            }
+            s.push_str("]}");
+        }
+        BlockKind::Preamble { blocks } => {
+            s.push_str("{\"name\":\"preamble\",\"blocks\":[");
+            for (i, child) in blocks.iter().enumerate() {
+                if i > 0 {
+                    s.push(',');
+                }
+                write_block(child, s);
+            }
+            s.push_str("]}");
+        }
         BlockKind::Open { blocks } => {
             s.push_str("{\"name\":\"open\",");
             write_id(&block.id, s);

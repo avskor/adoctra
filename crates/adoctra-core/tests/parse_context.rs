@@ -24,17 +24,17 @@ fn title_uses_header_attributes_without_moving_original_byte_ranges() {
     let source = "= Привет {who}\r\n:who: мир\r\n\r\nHello {who}";
     let result = parse(source);
     assert!(result.diagnostics.is_empty());
-    assert_eq!(result.document.blocks.len(), 2);
-    assert_eq!(attribute_values(&result.document.blocks[0]), ["мир"]);
-    assert_eq!(attribute_values(&result.document.blocks[1]), ["мир"]);
+    assert_eq!(result.document.flat_blocks().len(), 2);
+    assert_eq!(attribute_values(result.document.flat_blocks()[0]), ["мир"]);
+    assert_eq!(attribute_values(result.document.flat_blocks()[1]), ["мир"]);
     assert_eq!(result.document.attributes.get("who"), Some("мир"));
-    let BlockKind::Heading { inlines, .. } = &result.document.blocks[0].kind else {
+    let BlockKind::Heading { inlines, .. } = &result.document.flat_blocks()[0].kind else {
         panic!()
     };
     let span = inlines.last().unwrap().span();
     assert_eq!(&source[span.start..span.end], "{who}");
     assert_eq!(
-        result.document.blocks[0].span,
+        result.document.flat_blocks()[0].span,
         Span::new(0, "= Привет {who}".len())
     );
 }
@@ -44,28 +44,31 @@ fn snapshots_share_storage_until_an_assignment_and_nested_changes_persist() {
     let source = ":who: first\n\n{who}\n\n{who}\n\n====\n:who: inside\n\n{who}\n====\n\n{who}";
     let doc = parse(source).document;
     assert!(Arc::ptr_eq(
-        &doc.blocks[0].attribute_context,
-        &doc.blocks[1].attribute_context
+        &doc.flat_blocks()[0].attribute_context,
+        &doc.flat_blocks()[1].attribute_context
     ));
-    assert_eq!(attribute_values(&doc.blocks[0]), ["first"]);
+    assert_eq!(attribute_values(doc.flat_blocks()[0]), ["first"]);
     assert_eq!(
         doc.attributes.get("who"),
         Some("first"),
         "document attributes are the header snapshot"
     );
-    let BlockKind::Example { blocks } = &doc.blocks[2].kind else {
+    let BlockKind::Example { blocks } = &doc.flat_blocks()[2].kind else {
         panic!()
     };
-    assert_eq!(doc.blocks[2].attribute_context.get("who"), Some("inside"));
+    assert_eq!(
+        doc.flat_blocks()[2].attribute_context.get("who"),
+        Some("inside")
+    );
     assert_eq!(attribute_values(&blocks[0]), ["inside"]);
-    assert_eq!(attribute_values(&doc.blocks[3]), ["inside"]);
+    assert_eq!(attribute_values(doc.flat_blocks()[3]), ["inside"]);
     assert!(!Arc::ptr_eq(
-        &doc.blocks[0].attribute_context,
-        &doc.blocks[3].attribute_context
+        &doc.flat_blocks()[0].attribute_context,
+        &doc.flat_blocks()[3].attribute_context
     ));
     assert!(Arc::ptr_eq(
         &blocks[0].attribute_context,
-        &doc.blocks[3].attribute_context
+        &doc.flat_blocks()[3].attribute_context
     ));
 }
 
@@ -76,10 +79,10 @@ fn attribute_unset_forms_and_case_insensitive_values() {
             ":WHO: World\n\n{{WHO}} {{who}}\n\n{unset}\n\n{{who}}"
         ))
         .document;
-        assert_eq!(attribute_values(&doc.blocks[0]), ["World", "World"]);
-        assert_eq!(attribute_values(&doc.blocks[1]), Vec::<&str>::new());
-        assert_eq!(doc.blocks[1].attribute_context.get("who"), None);
-        let BlockKind::Paragraph { inlines } = &doc.blocks[1].kind else {
+        assert_eq!(attribute_values(doc.flat_blocks()[0]), ["World", "World"]);
+        assert_eq!(attribute_values(doc.flat_blocks()[1]), Vec::<&str>::new());
+        assert_eq!(doc.flat_blocks()[1].attribute_context.get("who"), None);
+        let BlockKind::Paragraph { inlines } = &doc.flat_blocks()[1].kind else {
             panic!()
         };
         assert!(matches!(
@@ -93,8 +96,8 @@ fn attribute_unset_forms_and_case_insensitive_values() {
 fn entries_inside_paragraphs_and_verbatim_do_not_change_attributes() {
     let source = ":who: first\n\n{who}\n:who: second\n{who}\n\n----\n:who: third\n----\n\n{who}";
     let doc = parse(source).document;
-    assert_eq!(attribute_values(&doc.blocks[0]), ["first", "first"]);
-    assert_eq!(attribute_values(&doc.blocks[2]), ["first"]);
+    assert_eq!(attribute_values(doc.flat_blocks()[0]), ["first", "first"]);
+    assert_eq!(attribute_values(doc.flat_blocks()[2]), ["first"]);
     let tokens = adoctra_core::tokens(source);
     assert_eq!(
         tokens
@@ -111,7 +114,7 @@ fn header_attribute_values_substitute_once_and_keep_inline_markup_raw() {
         ":one: first\n:two: {one} *second*\n:escaped: \\{one}\n:one: changed\n\n{two} {escaped}";
     let doc = parse(source).document;
     assert_eq!(
-        attribute_values(&doc.blocks[0]),
+        attribute_values(doc.flat_blocks()[0]),
         ["first *second*", "{one}"]
     );
 }
@@ -129,7 +132,7 @@ fn hard_options_override_source_assignments_and_unsets() {
         &options,
     )
     .document;
-    for block in &doc.blocks {
+    for block in &doc.flat_blocks() {
         assert_eq!(attribute_values(block), ["option"]);
     }
     assert_eq!(options.attributes.get("who"), Some("option"));
@@ -139,7 +142,7 @@ fn hard_options_override_source_assignments_and_unsets() {
 fn captions_use_each_blocks_context_and_unset_does_not_advance_counter() {
     let doc = parse(".A\n====\na\n====\n\n:!example-caption:\n\n.B\n====\nb\n====\n\n:example-caption: Eg\n\n.C\n====\nc\n====").document;
     assert_eq!(
-        doc.blocks
+        doc.flat_blocks()
             .iter()
             .map(|b| b.caption.as_deref())
             .collect::<Vec<_>>(),
@@ -151,8 +154,8 @@ fn captions_use_each_blocks_context_and_unset_does_not_advance_counter() {
 fn captions_follow_ruby_block_completion_order_and_context() {
     let doc =
         parse(".Outer\n====\n:example-caption: Inner\n\n.Child\n[example]\nchild\n====").document;
-    assert_eq!(doc.blocks[0].caption.as_deref(), Some("Inner 2. "));
-    let BlockKind::Example { blocks } = &doc.blocks[0].kind else {
+    assert_eq!(doc.flat_blocks()[0].caption.as_deref(), Some("Inner 2. "));
+    let BlockKind::Example { blocks } = &doc.flat_blocks()[0].kind else {
         panic!()
     };
     assert_eq!(blocks[0].caption.as_deref(), Some("Inner 1. "));
@@ -234,10 +237,12 @@ fn leveloffset_attributes_use_relative_arithmetic_and_header_detection() {
         (":leveloffset: -4\n\n== Clamped", vec![0]),
     ] {
         let result = parse(source);
+        // Without a header, Ruby does not check the levels of top-level sections
+        // when the body starts with one.
         assert!(result.diagnostics.is_empty(), "{result:?}");
         let actual: Vec<_> = result
             .document
-            .blocks
+            .flat_blocks()
             .iter()
             .filter_map(|block| match block.kind {
                 BlockKind::Heading { level, .. } => Some(level),
@@ -245,7 +250,7 @@ fn leveloffset_attributes_use_relative_arithmetic_and_header_detection() {
             })
             .collect();
         assert_eq!(actual, expected, "{source}");
-        for block in &result.document.blocks {
+        for block in &result.document.flat_blocks() {
             assert!(source[block.span.start..block.span.end].starts_with('='));
         }
     }
@@ -256,13 +261,13 @@ fn extreme_leveloffset_is_bounded_with_a_physical_diagnostic() {
     let header = parse("= Title\n:leveloffset: 99999999999999999999999999999999999999999999");
     assert!(header.diagnostics.is_empty());
     assert!(matches!(
-        header.document.blocks[0].kind,
+        header.document.flat_blocks()[0].kind,
         BlockKind::Heading { level: 0, .. }
     ));
     let source = ":leveloffset: +99999999999999999999999999999999999999999999999999999\n\n== Huge";
     let result = parse(source);
     assert!(matches!(
-        result.document.blocks[0].kind,
+        result.document.flat_blocks()[0].kind,
         BlockKind::Heading { level: 255, .. }
     ));
     assert_eq!(result.diagnostics.len(), 1);

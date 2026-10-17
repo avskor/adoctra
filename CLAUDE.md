@@ -396,10 +396,23 @@ Body setext sections share setext_level, but only where Ruby looks for sections
 (BlockCtx::Section: document level, not containers or list items); a
 discrete/float style accepts them anywhere. ATX wins; the underline wins over
 block fences (`----`/`--`/`====`/`++++`); paragraphs are not interrupted; a
-comment style peeks the underline raw. Heading spans both lines; the reader
-records them in setext_lines so highlighting emits heading tokens instead of
-fences. Section hierarchy (preamble, nesting, level-order warnings, ATX inside
-containers as paragraph text) is the next step. JSON and WASM expose header metadata;
+comment style peeks the underline raw. Heading spans both lines. ATX titles
+follow the same context rule (text inside containers, list items and paragraphs;
+paragraphs are not interrupted). The reader records all section title lines in
+heading_lines, so highlighting emits heading tokens without its own ATX scan.
+**Section hierarchy** (parser.rs nest_sections, Ruby's next_section) runs after
+reading the body: BlockKind::Section { level, blocks } with the title Heading as
+blocks[0] (id/reftext/roles/attrs stay on it) and BlockKind::Preamble { blocks }
+(only with a document title and at least one section; a book keeps a standalone
+preamble). Section spans cover title through last nested block; snapshots are the
+last block's. Discrete headings and the doctitle stay plain Headings. Diagnostics
+match Ruby: out-of-sequence warnings (book: "expected levels 0 or 1") and the
+level-0-outside-book error; without a header, a body that starts with a section
+skips top-level checks. Document::flat_blocks/into_flat_blocks give the old flat
+order. HTML renders `<section class="sectN role">` (id on the heading, level 0
+unwrapped) and `<section id="preamble">`; JSON/WASM use section/preamble; the DOM
+profile treats section as div. Special sections (appendix/preface/abstract),
+book partintro and sectnums are not implemented. JSON and WASM expose header metadata;
 WASM includes source spans. See parser-api.adoc for remaining header limitations.
 Comments (`//`, matching slash fences of length >= 4, and `[comment]` paragraphs
 or open blocks) are omitted contextually. ParseResult.comments retains source

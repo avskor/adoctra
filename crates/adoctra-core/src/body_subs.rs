@@ -401,7 +401,9 @@ impl Execution<'_> {
                 | BlockKind::Example { blocks }
                 | BlockKind::Quote { blocks, .. }
                 | BlockKind::Sidebar { blocks }
-                | BlockKind::Open { blocks } => self.blocks(blocks),
+                | BlockKind::Open { blocks }
+                | BlockKind::Section { blocks, .. }
+                | BlockKind::Preamble { blocks } => self.blocks(blocks),
                 _ => {}
             }
         }

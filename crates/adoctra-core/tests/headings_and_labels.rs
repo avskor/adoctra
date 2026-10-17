@@ -37,19 +37,19 @@ fn admonition_labels_use_caption_then_document_captions_while_reading() {
         "[NOTE,caption=Hey]\nx\n\nNOTE: y\n\n:note-caption: Nota\n\n[NOTE]\n====\nz\n====\n\n[TIP]\nt",
     )
     .document;
-    assert_eq!(label(&doc.blocks[0]), "Hey");
-    assert_eq!(label(&doc.blocks[1]), "Note");
-    assert_eq!(label(&doc.blocks[2]), "Nota");
-    assert_eq!(label(&doc.blocks[3]), "Tip");
+    assert_eq!(label(doc.flat_blocks()[0]), "Hey");
+    assert_eq!(label(doc.flat_blocks()[1]), "Note");
+    assert_eq!(label(doc.flat_blocks()[2]), "Nota");
+    assert_eq!(label(doc.flat_blocks()[3]), "Tip");
     assert_eq!(doc.attributes.get("warning-caption"), Some("Warning"));
     // A `caption` attribute is raw, as asciidoctor emits it; document captions
     // keep the protection of their definition.
     let doc = parse(":note-caption: A <b>\n\nNOTE: x\n\n[NOTE,caption=<i>B</i>]\ny").document;
-    let BlockKind::Admonition { label: first, .. } = &doc.blocks[0].kind else {
+    let BlockKind::Admonition { label: first, .. } = &doc.flat_blocks()[0].kind else {
         panic!()
     };
     assert_eq!(first, &[adoctra_core::AttributePart::Text("A <b>".into())]);
-    let BlockKind::Admonition { label: second, .. } = &doc.blocks[1].kind else {
+    let BlockKind::Admonition { label: second, .. } = &doc.flat_blocks()[1].kind else {
         panic!()
     };
     assert_eq!(
@@ -58,10 +58,10 @@ fn admonition_labels_use_caption_then_document_captions_while_reading() {
     );
     // An unset caption leaves an empty label.
     let doc = parse(":caution-caption!:\n\nCAUTION: x").document;
-    assert_eq!(label(&doc.blocks[0]), "");
+    assert_eq!(label(doc.flat_blocks()[0]), "");
     // A list continuation admonition reads the same state.
     let doc = parse(":tip-caption: Hint\n\n* item\n+\nTIP: x").document;
-    let BlockKind::List { items, .. } = &doc.blocks[0].kind else {
+    let BlockKind::List { items, .. } = &doc.flat_blocks()[0].kind else {
         panic!()
     };
     assert_eq!(label(&items[0].blocks[0]), "Hint");
@@ -79,18 +79,21 @@ fn host_captions_override_document_captions() {
         },
     )
     .document;
-    assert_eq!(label(&doc.blocks[0]), "Host");
+    assert_eq!(label(doc.flat_blocks()[0]), "Host");
 }
 
 #[test]
 fn discrete_headings_get_ids_but_are_not_sections() {
     let doc = parse("p\n\n[discrete]\n== H\n\n[float#f.r]\n=== F\n\n== H\n\n<<_h>> <<f>> <<_h_2>>")
         .document;
-    assert_eq!(doc.blocks[1].id.as_deref(), Some("_h"));
-    assert_eq!(doc.blocks[1].attrs.style.as_deref(), Some("discrete"));
-    assert_eq!(doc.blocks[2].id.as_deref(), Some("f"));
-    assert_eq!(doc.blocks[3].id.as_deref(), Some("_h_2"));
-    let BlockKind::Paragraph { inlines } = &doc.blocks[4].kind else {
+    assert_eq!(doc.flat_blocks()[1].id.as_deref(), Some("_h"));
+    assert_eq!(
+        doc.flat_blocks()[1].attrs.style.as_deref(),
+        Some("discrete")
+    );
+    assert_eq!(doc.flat_blocks()[2].id.as_deref(), Some("f"));
+    assert_eq!(doc.flat_blocks()[3].id.as_deref(), Some("_h_2"));
+    let BlockKind::Paragraph { inlines } = &doc.flat_blocks()[4].kind else {
         panic!()
     };
     assert_eq!(text(inlines), "H F H");
@@ -100,23 +103,23 @@ fn discrete_headings_get_ids_but_are_not_sections() {
 fn level_zero_headings_outside_the_title_are_parts_with_ids() {
     let doc = parse("= Doc\n\n= Part\n\n<<_part>>").document;
     assert!(doc.has_title);
-    assert_eq!(doc.blocks[0].id, None);
-    assert_eq!(doc.blocks[1].id.as_deref(), Some("_part"));
+    assert_eq!(doc.flat_blocks()[0].id, None);
+    assert_eq!(doc.flat_blocks()[1].id.as_deref(), Some("_part"));
     // A block title above the first heading prevents a document title.
     let doc = parse(".T\n= Part\n\npara").document;
     assert!(!doc.has_title && doc.header.is_none());
-    assert_eq!(doc.blocks[0].id.as_deref(), Some("_part"));
+    assert_eq!(doc.flat_blocks()[0].id.as_deref(), Some("_part"));
     // A doctitle attribute without a source title is still the title.
     let doc = parse(":doctitle: Only\n\n== S").document;
     assert!(doc.has_title);
-    assert_eq!(doc.blocks[0].id, None);
+    assert_eq!(doc.flat_blocks()[0].id, None);
 }
 
 #[test]
 fn trailing_section_anchors_name_the_section() {
     let source = "p\n\n[reftext=R]\n== Ж *t* [[s,*SS* {x}]]\n\n<<s>>";
     let doc = parse(source).document;
-    let block = &doc.blocks[1];
+    let block = &doc.flat_blocks()[1];
     assert_eq!(block.id.as_deref(), Some("s"));
     assert_eq!(heading(block), (1, "Ж t".to_owned()));
     // Title inlines stop before the anchor; the raw reftext keeps its spans
@@ -135,21 +138,21 @@ fn trailing_section_anchors_name_the_section() {
 #[test]
 fn section_anchors_respect_metadata_ids_escapes_and_the_document_title() {
     let doc = parse("p\n\n[[x]]\n== S [[s,SS]]\n\n<<x>> <<s>>").document;
-    assert_eq!(doc.blocks[1].id.as_deref(), Some("x"));
-    assert_eq!(heading(&doc.blocks[1]).1, "S ");
-    let BlockKind::Paragraph { inlines } = &doc.blocks[2].kind else {
+    assert_eq!(doc.flat_blocks()[1].id.as_deref(), Some("x"));
+    assert_eq!(heading(doc.flat_blocks()[1]).1, "S ");
+    let BlockKind::Paragraph { inlines } = &doc.flat_blocks()[2].kind else {
         panic!()
     };
     // The borrowed title drops the inline anchor; `s` is not cataloged.
     assert_eq!(text(inlines), "S  [s]");
     let doc = parse("p\n\n== S \\[[s,SS]]\n\n== T[[t]]").document;
-    assert_eq!(doc.blocks[1].id.as_deref(), Some("_s_sss"));
-    assert_eq!(doc.blocks[2].id.as_deref(), Some("_t"));
+    assert_eq!(doc.flat_blocks()[1].id.as_deref(), Some("_s_sss"));
+    assert_eq!(doc.flat_blocks()[2].id.as_deref(), Some("_t"));
     let doc = parse("= Doc [[top,T]]\n\npara <<top>>").document;
-    assert_eq!(doc.blocks[0].id.as_deref(), Some("top"));
+    assert_eq!(doc.flat_blocks()[0].id.as_deref(), Some("top"));
     assert_eq!(doc.attributes.get("doctitle"), Some("Doc"));
     assert_eq!(doc.header.as_ref().unwrap().title, "Doc");
-    let BlockKind::Paragraph { inlines } = &doc.blocks[1].kind else {
+    let BlockKind::Paragraph { inlines } = &doc.flat_blocks()[1].kind else {
         panic!()
     };
     // The document title lends its text; the anchor reftext is ignored.
@@ -171,7 +174,7 @@ fn incomplete_section_anchors_do_not_panic() {
             .diagnostics
             .iter()
             .all(|d| source.get(d.span.start..d.span.end).is_some()));
-        for block in &result.document.blocks {
+        for block in &result.document.flat_blocks() {
             if let BlockKind::Heading { inlines, .. } = &block.kind {
                 for node in inlines {
                     assert!(source.get(node.span().start..node.span().end).is_some());

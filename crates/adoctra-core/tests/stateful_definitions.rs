@@ -26,14 +26,14 @@ fn definitions_execute_left_to_right_and_keep_header_snapshot() {
     let result = parse(source);
     assert!(result.diagnostics.is_empty());
     assert_eq!(result.document.attributes.get("n"), Some("4"));
-    assert_eq!(text(&result.document.blocks[0]), "1 2 2|4|4");
-    assert_eq!(text(&result.document.blocks[1]), "5|4");
+    assert_eq!(text(result.document.flat_blocks()[0]), "1 2 2|4|4");
+    assert_eq!(text(result.document.flat_blocks()[1]), "5|4");
     assert_eq!(
-        result.document.blocks[0].attribute_context.get("n"),
+        result.document.flat_blocks()[0].attribute_context.get("n"),
         Some("4")
     );
     assert_eq!(
-        result.document.blocks[1].attribute_context.get("n"),
+        result.document.flat_blocks()[1].attribute_context.get("n"),
         Some("5")
     );
 }
@@ -41,9 +41,9 @@ fn definitions_execute_left_to_right_and_keep_header_snapshot() {
 #[test]
 fn body_side_effects_affect_reading_and_headings_but_only_declared_results_replay() {
     let result=parse(":first: {counter:n}\n\n{n}\n\n:second: {counter:n}\n\n== Head {n}\n\n{n} {second}\n\n:n: 8\n:third: {counter:n}\n\n{n} {third}");
-    assert_eq!(text(&result.document.blocks[1]), "Head 2");
-    assert_eq!(text(&result.document.blocks[2]), "1 2");
-    assert_eq!(text(&result.document.blocks[3]), "8 9");
+    assert_eq!(text(result.document.flat_blocks()[1]), "Head 2");
+    assert_eq!(text(result.document.flat_blocks()[2]), "1 2");
+    assert_eq!(text(result.document.flat_blocks()[3]), "8 9");
     assert_eq!(result.document.attributes.get("n"), Some("1"));
 }
 
@@ -60,7 +60,7 @@ fn locked_counters_have_an_independent_registry_and_locked_definitions_do_not_ex
             ..Default::default()
         },
     );
-    assert_eq!(text(&result.document.blocks[0]), "9 10 11 8");
+    assert_eq!(text(result.document.flat_blocks()[0]), "9 10 11 8");
     assert_eq!(result.document.attributes.get("other"), None);
 }
 

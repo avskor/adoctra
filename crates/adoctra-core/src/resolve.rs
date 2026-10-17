@@ -471,7 +471,7 @@ mod tests {
     /// The id assigned to the n-th heading block (0-based), if any.
     fn heading_id(src: &str, nth: usize) -> Option<String> {
         let doc = crate::parse(src).document;
-        doc.blocks
+        doc.flat_blocks()
             .iter()
             .filter(|b| matches!(b.kind, BlockKind::Heading { .. }))
             .map(|b| b.id.clone())
@@ -504,7 +504,7 @@ mod tests {
             None
         }
         let doc = crate::parse(src).document;
-        for b in &doc.blocks {
+        for b in &doc.flat_blocks() {
             let inlines = match &b.kind {
                 BlockKind::Heading { inlines, .. } | BlockKind::Paragraph { inlines } => inlines,
                 _ => continue,
@@ -622,7 +622,7 @@ mod tests {
         assert!(result.diagnostics.is_empty(), "known id, no diagnostic");
         let inlines = result
             .document
-            .blocks
+            .flat_blocks()
             .iter()
             .find_map(|b| match &b.kind {
                 BlockKind::Admonition { blocks, .. } => match &blocks[0].kind {
@@ -829,7 +829,7 @@ mod tests {
         // inside a `____` block still gets numbered; the quote carries no caption.
         let src = "____\n.Inner\n====\nx\n====\n____";
         let doc = crate::parse(src).document;
-        let quote = &doc.blocks[0];
+        let quote = &doc.flat_blocks()[0];
         assert!(quote.caption.is_none());
         let inner = match &quote.kind {
             BlockKind::Quote { blocks, .. } => &blocks[0],

@@ -47,6 +47,19 @@ class ProjectionTests(unittest.TestCase):
         self.assertNotEqual(projection('<blockquote><p>x</p><p>y</p></blockquote>'),
                             projection('<blockquote>x y</blockquote>'))
 
+    def test_section_layouts_are_reconciled(self):
+        ruby = ('<div id="preamble"><div class="sectionbody"><div class="paragraph"><p>P</p></div></div></div>'
+                '<div class="sect1"><h2 id="_a">A</h2><div class="sectionbody"><div class="sect2">'
+                '<h3 id="_b">B</h3></div></div></div><div class="sect1 r"><h2 id="_c">C</h2>'
+                '<div class="sectionbody"><p>x</p></div></div>')
+        ours = ('<section id="preamble"><p>P</p></section><section class="sect1"><h2 id="_a">A</h2>'
+                '<section class="sect2"><h3 id="_b">B</h3></section></section>'
+                '<section class="sect1 r"><h2 id="_c">C</h2><p>x</p></section>')
+        self.assertEqual(projection(ruby), projection(ours))
+        # The preamble and section roles remain observable.
+        self.assertNotEqual(projection(ours), projection(ours.replace(' id="preamble"', '')))
+        self.assertNotEqual(projection(ours), projection(ours.replace('sect1 r', 'sect1')))
+
     def test_full_document_head_is_outside_body_profile(self):
         self.assertEqual(projection('<html><head><style>p {color:red}</style></head><body><p>one</p></body></html>'),
                          projection('<p>one</p>'))

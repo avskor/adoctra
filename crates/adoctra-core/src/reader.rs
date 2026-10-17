@@ -64,8 +64,8 @@ pub(crate) struct Reader<'a> {
     pub attribute_entries: Vec<(Span, Option<crate::context::AttributeEntry>)>,
     /// Early metadata substitutions, including values later overwritten or orphaned.
     pub metadata_references: Vec<Span>,
-    /// Title and underline lines of body setext headings, for highlighting.
-    pub setext_lines: Vec<Span>,
+    /// Lines of body section titles (ATX, setext title and underline), for highlighting.
+    pub heading_lines: Vec<Span>,
     endings: Vec<(usize, String)>,
     pub limit: usize,
     stack: Vec<Conditional>,
@@ -105,7 +105,7 @@ impl<'a> Reader<'a> {
             loaded: Vec::new(),
             attribute_entries: Vec::new(),
             metadata_references: Vec::new(),
-            setext_lines: Vec::new(),
+            heading_lines: Vec::new(),
             endings: Vec::new(),
             limit: usize::MAX,
             stack: Vec::new(),

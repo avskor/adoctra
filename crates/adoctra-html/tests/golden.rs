@@ -700,13 +700,86 @@ fn offset_heading_levels_match_asciidoctor() {
     assert_eq!(headings(&ours).len(), 3);
 }
 
+/// The section structure of rendered HTML: `sectN`/preamble containers (Ruby's
+/// `<div>` or adoctra's `<section>`, with any extra classes), their ends, and
+/// every heading and paragraph with whitespace collapsed. Ruby's `sectionbody`
+/// and other wrappers are ignored.
+fn section_outline(html: &str) -> Vec<String> {
+    let body = html.split("<body>").nth(1).unwrap_or(html);
+    let mut out = Vec::new();
+    let mut stack = Vec::new();
+    let mut rest = body;
+    while let Some(open) = rest.find('<') {
+        let close = rest[open..].find('>').unwrap() + open;
+        let tag = &rest[open + 1..close];
+        let name = tag.split([' ', '/']).find(|s| !s.is_empty()).unwrap_or("");
+        let after = &rest[close + 1..];
+        if let Some(closing) = tag.strip_prefix('/') {
+            if closing == "div" || closing == "section" {
+                if let Some(Some(label)) = stack.pop() {
+                    out.push(format!("end {label}"));
+                }
+            }
+        } else if name == "div" || name == "section" {
+            let class = tag
+                .split("class=\"")
+                .nth(1)
+                .map(|c| c.split('"').next().unwrap());
+            let label = if tag.contains("id=\"preamble\"") {
+                Some("preamble".to_owned())
+            } else {
+                class
+                    .filter(|c| c.starts_with("sect") && !c.starts_with("sectionbody"))
+                    .map(str::to_owned)
+            };
+            if let Some(label) = &label {
+                out.push(label.clone());
+            }
+            stack.push(label);
+        } else if name == "p" || (name.len() == 2 && name.starts_with('h')) {
+            let end = after.find(&format!("</{name}>")).unwrap();
+            let text = after[..end]
+                .split_whitespace()
+                .collect::<Vec<_>>()
+                .join(" ");
+            out.push(format!("<{tag}>{text}"));
+        }
+        rest = after;
+    }
+    out
+}
+
+#[test]
+fn section_hierarchy_and_preamble_match_asciidoctor() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden");
+    let source = fs::read_to_string(dir.join("sections.adoc")).unwrap();
+    let expected = fs::read_to_string(dir.join("sections.expected.html")).unwrap();
+    let result = adoctra_core::parse(&source);
+    assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+    let ours = String::from_utf8(HtmlBackend.convert(&result.document).unwrap()).unwrap();
+    // The reference omits the document title (no `showtitle`).
+    let mut outline = section_outline(&ours);
+    assert_eq!(outline.remove(0), "<h1>Doc");
+    assert_eq!(outline, section_outline(&expected));
+    assert!(outline.contains(&"sect1 special".to_owned()), "{outline:?}");
+    assert!(
+        outline.contains(&"<p>Para == Not a title".to_owned()),
+        "{outline:?}"
+    );
+}
+
 #[test]
 fn setext_body_sections_match_asciidoctor() {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden");
     let source = fs::read_to_string(dir.join("section-setext.adoc")).unwrap();
     let expected = fs::read_to_string(dir.join("section-setext.expected.html")).unwrap();
     let result = adoctra_core::parse(&source);
-    assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+    // Ruby reports the same skipped level for `Part` (line 21).
+    let messages: Vec<_> = result.diagnostics.iter().map(|d| &*d.message).collect();
+    assert_eq!(
+        messages,
+        ["section title out of sequence: expected level 2, got level 4"]
+    );
     let ours = String::from_utf8(HtmlBackend.convert(&result.document).unwrap()).unwrap();
     let headings = |html: &str| -> Vec<String> {
         html.lines()

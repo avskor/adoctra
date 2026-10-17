@@ -19,11 +19,11 @@ fn section_ids_remove_raw_entities_but_keep_protected_spellings() {
         let source = format!(":v: {value}\n\n== {{v}}");
         let result = parse(&source);
         assert_eq!(
-            result.document.blocks[0].id.as_deref(),
+            result.document.flat_blocks()[0].id.as_deref(),
             Some(expected),
             "{value}"
         );
-        let BlockKind::Heading { inlines, .. } = &result.document.blocks[0].kind else {
+        let BlockKind::Heading { inlines, .. } = &result.document.flat_blocks()[0].kind else {
             panic!()
         };
         let Inline::AttributeRef { span, .. } = &inlines[0] else {
@@ -46,13 +46,16 @@ fn malformed_tags_and_entity_grammar_follow_the_reference_without_decoding() {
     ] {
         let result = parse(&format!(":v: pass:[{value}]\n\n== {{v}}"));
         assert_eq!(
-            result.document.blocks[0].id.as_deref(),
+            result.document.flat_blocks()[0].id.as_deref(),
             Some(expected),
             "{value}"
         );
     }
     let source = format!(":v: pass:[{}A]\n\n== {{v}}", "<".repeat(20_000));
-    assert_eq!(parse(&source).document.blocks[0].id.as_deref(), Some("_a"));
+    assert_eq!(
+        parse(&source).document.into_flat_blocks()[0].id.as_deref(),
+        Some("_a")
+    );
 }
 
 #[test]
@@ -60,7 +63,7 @@ fn sanitized_ids_deduplicate_and_forward_references_keep_original_title_nodes() 
     let source = ":v: pass:[<b>Alpha</b> &copy;]\n\n<<_alpha>> <<_alpha_2>>\n\n== {v}\n\n== Alpha";
     let result = parse(source);
     assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
-    let blocks = &result.document.blocks;
+    let blocks = &result.document.flat_blocks();
     assert_eq!(blocks[1].id.as_deref(), Some("_alpha"));
     assert_eq!(blocks[2].id.as_deref(), Some("_alpha_2"));
     let BlockKind::Paragraph { inlines } = &blocks[0].kind else {
@@ -92,7 +95,7 @@ fn formatting_and_anchor_boundaries_do_not_join_a_new_entity_for_id_generation()
     for title in ["{v}*py*;", "{v}link:target[py];", "{v}[[point]]py;"] {
         let source = format!(":v: pass:[&co]\n\n== {title}");
         assert_eq!(
-            parse(&source).document.blocks[0].id.as_deref(),
+            parse(&source).document.into_flat_blocks()[0].id.as_deref(),
             Some("_copy"),
             "{title}"
         );
@@ -105,8 +108,8 @@ fn changed_attribute_snapshots_and_host_raw_values_determine_each_id() {
     let result = parse(source);
     assert_eq!(result.document.attributes.get("v"), Some("Alpha &copy;"));
     for (block, value, id) in [
-        (&result.document.blocks[0], "Alpha &copy;", "_alpha"),
-        (&result.document.blocks[1], "Beta &#65;", "_beta"),
+        (&result.document.flat_blocks()[0], "Alpha &copy;", "_alpha"),
+        (&result.document.flat_blocks()[1], "Beta &#65;", "_beta"),
     ] {
         assert_eq!(block.id.as_deref(), Some(id));
         assert_eq!(block.attribute_context.get("v"), Some(value));
@@ -120,7 +123,10 @@ fn changed_attribute_snapshots_and_host_raw_values_determine_each_id() {
             ..Default::default()
         },
     );
-    assert_eq!(result.document.blocks[0].id.as_deref(), Some("_host"));
+    assert_eq!(
+        result.document.flat_blocks()[0].id.as_deref(),
+        Some("_host")
+    );
     assert_eq!(
         result.document.attributes.get("v"),
         Some("<b>Host</b> &#65;")
@@ -137,7 +143,7 @@ fn unicode_crlf_and_partial_input_keep_physical_spans_and_tokens() {
         ..Default::default()
     };
     let result = parse_with_options(source, &options);
-    let block = &result.document.blocks[0];
+    let block = &result.document.flat_blocks()[0];
     assert_eq!(block.id.as_deref(), Some("_жёлтый_café"));
     assert_eq!(sources.slice(block.span), Some("== {v}"));
     let BlockKind::Heading { inlines, .. } = &block.kind else {

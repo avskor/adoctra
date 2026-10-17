@@ -24,15 +24,15 @@ fn text(nodes: &[Inline]) -> String {
 #[test]
 fn named_title_shares_the_title_key_with_dot_title_lines() {
     let doc = parse(".A\n[title=B]\npara\n\n[title=B]\n.A\npara").document;
-    assert_eq!(text(doc.blocks[0].title.as_ref().unwrap()), "B");
-    assert_eq!(text(doc.blocks[1].title.as_ref().unwrap()), "A");
+    assert_eq!(text(doc.flat_blocks()[0].title.as_ref().unwrap()), "B");
+    assert_eq!(text(doc.flat_blocks()[1].title.as_ref().unwrap()), "A");
 }
 
 #[test]
 fn unchanged_titles_keep_exact_spans_and_get_title_substitutions() {
     let source = "Ж\r\n\r\n[quote, A, title='*T* (C)']\r\nx";
     let doc = parse(source).document;
-    let title = doc.blocks[1].title.as_ref().unwrap();
+    let title = doc.flat_blocks()[1].title.as_ref().unwrap();
     // Single quotes do not request sub_result for title; title subs apply once.
     let Inline::Strong { span, .. } = &title[0] else {
         panic!("{title:?}");
@@ -49,7 +49,7 @@ fn transformed_titles_take_the_field_range() {
         ..Default::default()
     };
     let result = parse_with_options(source, &options);
-    let title = result.document.blocks[0].title.as_ref().unwrap();
+    let title = result.document.flat_blocks()[0].title.as_ref().unwrap();
     assert_eq!(text(title), "X, Y {nope} b");
     let field = source.find("{x}").unwrap()..source.find("\"]").unwrap();
     for node in title {
@@ -80,35 +80,35 @@ fn anchored_titles_with_references_are_cached_while_reading() {
     .document;
     // The anchored title executes while reading, the unanchored one during
     // conversion, which starts from the header state again.
-    assert_eq!(text(doc.blocks[1].title.as_ref().unwrap()), "6");
-    assert_eq!(text(doc.blocks[2].title.as_ref().unwrap()), "6");
-    assert_eq!(doc.blocks[2].attribute_context.get("n"), Some("6"));
+    assert_eq!(text(doc.flat_blocks()[1].title.as_ref().unwrap()), "6");
+    assert_eq!(text(doc.flat_blocks()[2].title.as_ref().unwrap()), "6");
+    assert_eq!(doc.flat_blocks()[2].attribute_context.get("n"), Some("6"));
 }
 
 #[test]
 fn block_titles_skip_sections_and_discrete_headings_discard_them() {
     let doc = parse(".T\n== S\n\n== U\n\npara").document;
-    assert!(doc.blocks[0].title.is_none() && doc.blocks[1].title.is_none());
-    assert_eq!(text(doc.blocks[2].title.as_ref().unwrap()), "T");
+    assert!(doc.flat_blocks()[0].title.is_none() && doc.flat_blocks()[1].title.is_none());
+    assert_eq!(text(doc.flat_blocks()[2].title.as_ref().unwrap()), "T");
     // A later title replaces the carried one; section metadata stays.
     let doc = parse("[title=T]\n[#s]\n== S\n\n.U\npara").document;
-    assert_eq!(doc.blocks[0].id.as_deref(), Some("s"));
-    assert_eq!(text(doc.blocks[1].title.as_ref().unwrap()), "U");
+    assert_eq!(doc.flat_blocks()[0].id.as_deref(), Some("s"));
+    assert_eq!(text(doc.flat_blocks()[1].title.as_ref().unwrap()), "U");
     let doc = parse(".T\n[discrete]\n== H\n\npara").document;
-    assert!(doc.blocks.iter().all(|b| b.title.is_none()));
+    assert!(doc.flat_blocks().iter().all(|b| b.title.is_none()));
     // A carried title with an expression executes once, on its content block.
     let doc = parse("p\n\n[title={counter:n}]\n== S\n\npara\n\n{n}").document;
-    assert_eq!(text(doc.blocks[2].title.as_ref().unwrap()), "1");
+    assert_eq!(text(doc.flat_blocks()[2].title.as_ref().unwrap()), "1");
 }
 
 #[test]
 fn named_reftext_shares_the_anchor_key_and_keeps_reference_nodes() {
     let doc = parse("[[id,A]]\n[reftext=B]\npara\n\n[reftext=B]\n[[other,A]]\npara").document;
-    assert_eq!(text(doc.blocks[0].reftext.as_ref().unwrap()), "B");
-    assert_eq!(text(doc.blocks[1].reftext.as_ref().unwrap()), "A");
+    assert_eq!(text(doc.flat_blocks()[0].reftext.as_ref().unwrap()), "B");
+    assert_eq!(text(doc.flat_blocks()[1].reftext.as_ref().unwrap()), "A");
     let source = ":x: X, Y\n\n[#id,reftext='*R* {x}']\npara\n\n<<id>>";
     let doc = parse(source).document;
-    let reftext = doc.blocks[0].reftext.as_ref().unwrap();
+    let reftext = doc.flat_blocks()[0].reftext.as_ref().unwrap();
     assert!(matches!(reftext[0], Inline::Strong { .. }), "{reftext:?}");
     let reference = reftext
         .iter()
@@ -116,7 +116,7 @@ fn named_reftext_shares_the_anchor_key_and_keeps_reference_nodes() {
         .unwrap();
     let at = source.find("{x}").unwrap();
     assert_eq!((reference.span().start, reference.span().end), (at, at + 3));
-    let BlockKind::Paragraph { inlines } = &doc.blocks[1].kind else {
+    let BlockKind::Paragraph { inlines } = &doc.flat_blocks()[1].kind else {
         panic!()
     };
     assert_eq!(text(inlines), "R X, Y");
@@ -129,7 +129,7 @@ fn header_reftext_and_title_from_lists() {
     // A block title is not allowed above the document title: it moves on.
     let doc = parse("[title=T]\n= Doc\n\npara").document;
     assert!(doc.header.is_none());
-    assert_eq!(text(doc.blocks[1].title.as_ref().unwrap()), "T");
+    assert_eq!(text(doc.flat_blocks()[1].title.as_ref().unwrap()), "T");
 }
 
 #[test]
@@ -153,7 +153,7 @@ fn incomplete_title_and_reftext_fields_stay_in_bounds() {
             .diagnostics
             .iter()
             .all(|d| source.get(d.span.start..d.span.end).is_some()));
-        for block in &result.document.blocks {
+        for block in &result.document.flat_blocks() {
             for node in block.title.iter().flatten() {
                 assert!(
                     source.get(node.span().start..node.span().end).is_some(),

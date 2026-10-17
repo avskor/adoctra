@@ -27,7 +27,7 @@ fn quotes_produce_semantic_boundaries_and_flat_text_without_backend_tags() {
         assert_eq!(doc.attributes.get("v"), Some("Ж&"));
         let expected = [P::Open(format), P::Text("Ж&".into()), P::Close(format)];
         assert_eq!(doc.attributes.raw_parts("v").unwrap(), expected);
-        let BlockKind::Paragraph { inlines } = &doc.blocks[0].kind else {
+        let BlockKind::Paragraph { inlines } = &doc.flat_blocks()[0].kind else {
             panic!()
         };
         assert!(
@@ -97,7 +97,7 @@ fn replacements_preserve_formatting_and_cannot_join_across_boundaries() {
         ]
     );
     let doc = parse(":v: pass:q[**C**]\n\n({v})").document;
-    let BlockKind::Paragraph { inlines } = &doc.blocks[0].kind else {
+    let BlockKind::Paragraph { inlines } = &doc.flat_blocks()[0].kind else {
         panic!()
     };
     assert!(
@@ -146,10 +146,13 @@ fn snapshots_host_parts_and_forward_references_keep_boundaries() {
     let result = parse(source);
     assert!(result.diagnostics.is_empty());
     let doc = result.document;
-    assert_eq!(doc.blocks[1].id.as_deref(), Some("_alpha"));
+    assert_eq!(doc.flat_blocks()[1].id.as_deref(), Some("_alpha"));
     assert_eq!(doc.attributes.get("v"), Some("Alpha"));
-    assert_eq!(doc.blocks[2].attribute_context.get("v"), Some("Beta"));
-    let BlockKind::Paragraph { inlines } = &doc.blocks[0].kind else {
+    assert_eq!(
+        doc.flat_blocks()[2].attribute_context.get("v"),
+        Some("Beta")
+    );
+    let BlockKind::Paragraph { inlines } = &doc.flat_blocks()[0].kind else {
         panic!()
     };
     let Inline::CrossReference { children, .. } = &inlines[0] else {
@@ -184,7 +187,7 @@ fn unicode_crlf_tokens_and_partial_values_keep_physical_reference_spans() {
         ..Default::default()
     };
     let doc = parse_with_options(source, &options).document;
-    let BlockKind::Paragraph { inlines } = &doc.blocks[0].kind else {
+    let BlockKind::Paragraph { inlines } = &doc.flat_blocks()[0].kind else {
         panic!()
     };
     let span = inlines[1].span();
@@ -209,9 +212,15 @@ fn compat_quotes_use_the_cached_mode_after_header_completion() {
     let doc =
         parse(":compat-mode:\n:v: pass:q[+Header+]\n\n{v}\n\n:v: pass:q[+Body+]\n\n{v}").document;
     assert_eq!(doc.attributes.get("v"), Some("+Header+"));
-    assert_eq!(doc.blocks[1].attribute_context.get("v"), Some("Body"));
     assert_eq!(
-        doc.blocks[1].attribute_context.raw_parts("v").unwrap()[0],
+        doc.flat_blocks()[1].attribute_context.get("v"),
+        Some("Body")
+    );
+    assert_eq!(
+        doc.flat_blocks()[1]
+            .attribute_context
+            .raw_parts("v")
+            .unwrap()[0],
         P::Open(F::Monospace)
     );
     let mut attributes = Attributes::new();
@@ -269,7 +278,7 @@ fn quote_attributes_are_semantic_for_every_format_and_keep_reference_spans() {
         ];
         assert_eq!(result.document.attributes.get("v"), Some("Ж&"));
         assert_eq!(result.document.attributes.raw_parts("v").unwrap(), expected);
-        let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+        let BlockKind::Paragraph { inlines } = &result.document.flat_blocks()[0].kind else {
             panic!()
         };
         assert!(
@@ -380,7 +389,7 @@ fn attribute_lists_expand_eagerly_and_later_stages_preserve_metadata() {
     assert!(doc.attributes.raw_parts("v").is_none());
     // Ordinary inline replacements also update roles without flattening them.
     let doc = parse(":v: pass:q[[.(C)]*x*]\n\n{v}").document;
-    let BlockKind::Paragraph { inlines } = &doc.blocks[0].kind else {
+    let BlockKind::Paragraph { inlines } = &doc.flat_blocks()[0].kind else {
         panic!()
     };
     assert!(
@@ -416,13 +425,16 @@ fn attributed_quotes_survive_author_derivation_snapshots_host_values_and_section
         ":v: pass:q[[#id.red]*Alpha*]\n\n<<_alpha>>\n\n== {v}\n\n:v: pass:q[[.blue]_Beta_]\n\n{v}",
     )
     .document;
-    assert_eq!(doc.blocks[1].id.as_deref(), Some("_alpha"));
+    assert_eq!(doc.flat_blocks()[1].id.as_deref(), Some("_alpha"));
     assert_eq!(
         doc.attributes.raw_parts("v").unwrap()[0],
         decorated(F::Strong, Some("id"), Some("red"))
     );
     assert_eq!(
-        doc.blocks[2].attribute_context.raw_parts("v").unwrap()[0],
+        doc.flat_blocks()[2]
+            .attribute_context
+            .raw_parts("v")
+            .unwrap()[0],
         decorated(F::Emphasis, None, Some("blue"))
     );
     let mut attributes = Attributes::new();
@@ -453,7 +465,7 @@ fn attributed_quotes_keep_unicode_crlf_positions_and_tolerate_partial_lists() {
         ..Default::default()
     };
     let doc = parse_with_options(source, &options).document;
-    let BlockKind::Paragraph { inlines } = &doc.blocks[0].kind else {
+    let BlockKind::Paragraph { inlines } = &doc.flat_blocks()[0].kind else {
         panic!()
     };
     assert_eq!(sources.slice(inlines[1].span()), Some("{v}"));

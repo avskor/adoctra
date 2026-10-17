@@ -377,6 +377,30 @@ fn write_block(b: &Block, s: &mut String) {
             }
             s.push(']');
         }
+        BlockKind::Section { level, blocks } => {
+            // The span covers the title through the last nested block (useful
+            // for folding); id/roles/attributes live on the title, `blocks[0]`.
+            s.push_str(&format!(
+                "\"name\":\"section\",\"level\":{level},\"blocks\":["
+            ));
+            for (j, child) in blocks.iter().enumerate() {
+                if j > 0 {
+                    s.push(',');
+                }
+                write_block(child, s);
+            }
+            s.push(']');
+        }
+        BlockKind::Preamble { blocks } => {
+            s.push_str("\"name\":\"preamble\",\"blocks\":[");
+            for (j, child) in blocks.iter().enumerate() {
+                if j > 0 {
+                    s.push(',');
+                }
+                write_block(child, s);
+            }
+            s.push(']');
+        }
         BlockKind::Open { blocks } => {
             s.push_str("\"name\":\"open\",");
             write_id(&b.id, s);
@@ -2107,6 +2131,23 @@ mod header_tests {
             );
         }
         assert!(!tokens.contains("listing-delimiter"), "{tokens}");
+    }
+
+    #[test]
+    fn sections_export_nested_spans_for_folding() {
+        let source = "= Doc\r\n\r\nPre\r\n\r\n== Я\r\n\r\nx\r\n\r\nPara\r\n== T";
+        let json = super::parse_json_with_source(source, 7);
+        assert!(
+            json.contains(r#"{"span":{"source_id":7,"start":9,"end":12},"name":"preamble","blocks":[{"span":{"source_id":7,"start":9,"end":12},"name":"paragraph""#),
+            "{json}"
+        );
+        // The section spans its title through the paragraph that swallowed `== T`.
+        assert!(
+            json.contains(r#"{"span":{"source_id":7,"start":16,"end":40},"name":"section","level":1,"blocks":[{"span":{"source_id":7,"start":16,"end":21},"name":"heading""#),
+            "{json}"
+        );
+        let tokens = super::tokens_json_with_source(source, 7);
+        assert_eq!(tokens.matches(r#""kind":"heading""#).count(), 2, "{tokens}");
     }
 
     #[test]

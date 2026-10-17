@@ -42,7 +42,7 @@ fn link_macros_have_neutral_boundaries_and_flat_labels_with_physical_reference_s
         let expected = vec![link(target), P::Raw(value.into()), P::CloseLink];
         assert_eq!(result.document.attributes.get("v"), Some(value));
         assert_eq!(result.document.attributes.raw_parts("v").unwrap(), expected);
-        let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+        let BlockKind::Paragraph { inlines } = &result.document.flat_blocks()[0].kind else {
             panic!()
         };
         assert!(
@@ -232,16 +232,19 @@ fn links_survive_authors_snapshots_section_ids_and_resolved_reference_labels() {
     assert_eq!(doc.header.unwrap().authors[1].name, "Mary Roe");
     let result=parse(":v: pass:m[link:page[Alpha]]\n\n<<_alpha>>\n\n== {v}\n\n:v: pass:m[link:other[Beta]]\n\n{v}");
     assert!(result.diagnostics.is_empty());
-    assert_eq!(result.document.blocks[1].id.as_deref(), Some("_alpha"));
+    assert_eq!(
+        result.document.flat_blocks()[1].id.as_deref(),
+        Some("_alpha")
+    );
     assert_eq!(result.document.attributes.get("v"), Some("Alpha"));
     assert_eq!(
-        result.document.blocks[2]
+        result.document.flat_blocks()[2]
             .attribute_context
             .raw_parts("v")
             .unwrap()[0],
         link("other")
     );
-    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+    let BlockKind::Paragraph { inlines } = &result.document.flat_blocks()[0].kind else {
         panic!()
     };
     let Inline::CrossReference { children, .. } = &inlines[0] else {
@@ -271,11 +274,11 @@ fn host_link_parts_and_cached_compat_mode_are_respected() {
         matches!(&doc.attributes.raw_parts("v").unwrap()[0],P::OpenLink(l) if l.role.as_deref()==Some("red"))
     );
     assert_eq!(
-        doc.blocks[1].attribute_context.get("v"),
+        doc.flat_blocks()[1].attribute_context.get("v"),
         Some("Text,role=red")
     );
     assert!(
-        matches!(&doc.blocks[1].attribute_context.raw_parts("v").unwrap()[0],P::OpenLink(l) if l.role.is_none())
+        matches!(&doc.flat_blocks()[1].attribute_context.raw_parts("v").unwrap()[0],P::OpenLink(l) if l.role.is_none())
     );
 }
 
@@ -289,7 +292,7 @@ fn links_keep_unicode_crlf_reference_positions_and_partial_input_is_safe() {
         ..Default::default()
     };
     let doc = parse_with_options(source, &options).document;
-    let BlockKind::Paragraph { inlines } = &doc.blocks[0].kind else {
+    let BlockKind::Paragraph { inlines } = &doc.flat_blocks()[0].kind else {
         panic!()
     };
     assert_eq!(sources.slice(inlines[1].span()), Some("{v}"));

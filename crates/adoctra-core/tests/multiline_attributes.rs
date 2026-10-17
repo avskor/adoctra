@@ -44,7 +44,7 @@ fn header_body_snapshots_substitutions_and_locked_unsets() {
     for (block, expected) in
         result
             .document
-            .blocks
+            .flat_blocks()
             .iter()
             .zip([Some("old"), Some("old again"), None])
     {
@@ -68,7 +68,7 @@ fn header_body_snapshots_substitutions_and_locked_unsets() {
     assert_eq!(locked.document.blocks.len(), 3);
     assert!(locked
         .document
-        .blocks
+        .flat_blocks()
         .iter()
         .all(|b| b.attribute_context.get("x") == Some("locked")));
     assert_eq!(tokens(source), tokens_with_options(source, &options));

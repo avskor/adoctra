@@ -66,6 +66,45 @@ pub struct Document {
     pub has_title: bool,
 }
 
+impl Document {
+    /// The blocks in document order with the section structure flattened: a
+    /// [`BlockKind::Section`] contributes its title heading followed by its
+    /// content, and a [`BlockKind::Preamble`] its blocks. Other containers are
+    /// returned as they are. Useful for consumers that ignore the hierarchy.
+    pub fn flat_blocks(&self) -> Vec<&Block> {
+        fn push<'a>(blocks: &'a [Block], out: &mut Vec<&'a Block>) {
+            for block in blocks {
+                match &block.kind {
+                    BlockKind::Section { blocks, .. } | BlockKind::Preamble { blocks } => {
+                        push(blocks, out)
+                    }
+                    _ => out.push(block),
+                }
+            }
+        }
+        let mut out = Vec::new();
+        push(&self.blocks, &mut out);
+        out
+    }
+
+    /// The owned counterpart of [`Document::flat_blocks`].
+    pub fn into_flat_blocks(self) -> Vec<Block> {
+        fn push(blocks: Vec<Block>, out: &mut Vec<Block>) {
+            for block in blocks {
+                match block.kind {
+                    BlockKind::Section { blocks, .. } | BlockKind::Preamble { blocks } => {
+                        push(blocks, out)
+                    }
+                    _ => out.push(block),
+                }
+            }
+        }
+        let mut out = Vec::new();
+        push(self.blocks, &mut out);
+        out
+    }
+}
+
 /// Source declarations in a document header. Effective (possibly overridden)
 /// metadata lives in `Document.attributes`. The title remains the first level-0
 /// heading in `blocks`, avoiding a second mutable copy of its inline tree.
@@ -312,6 +351,8 @@ pub struct Attribution {
 pub enum BlockKind {
     /// A section title. `level` is the number of leading `=` minus one
     /// (so a document title `= Title` is level 0, `== Section` is level 1).
+    /// A body section title is the first block of its [`BlockKind::Section`];
+    /// the document title and discrete headings stand alone.
     /// The section's anchor lives on the enclosing [`Block::id`] — auto-generated
     /// from the title during the resolve pass (asciidoctor's `sectids`, e.g.
     /// `== Hello World` → `_hello_world`) unless an explicit `[[id]]` anchor
@@ -407,6 +448,18 @@ pub enum BlockKind {
     /// [`BlockKind::Listing`] / [`BlockKind::Literal`] / [`BlockKind::Verse`]
     /// directly rather than an `Open`.
     Open { blocks: Vec<Block> },
+    /// A section (asciidoctor's `Section`): the document-level structure built
+    /// from section titles, like Ruby's `next_section`. `blocks[0]` is always the
+    /// section's title, a [`BlockKind::Heading`] of the same `level` that keeps
+    /// the id, reftext, roles and attributes; the remaining blocks are the
+    /// section's content, including nested subsections. Discrete headings and
+    /// the document title stay plain headings. The span covers the title through
+    /// the end of the last nested block.
+    Section { level: u8, blocks: Vec<Block> },
+    /// asciidoctor's preamble: the blocks between a document header and the first
+    /// section. Present only when the document has a title and at least one
+    /// section; otherwise those blocks stay at the top level.
+    Preamble { blocks: Vec<Block> },
 }
 
 /// One item of a [`BlockKind::List`]: its resolved inline content (the

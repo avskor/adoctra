@@ -95,6 +95,10 @@ def element(tag, attrs, children):
 def normalize(node, verbatim=False, block_kind=None):
     if isinstance(node, str):
         return [node]
+    if node.tag == "section":
+        # adoctra's semantic <section> for sections and the preamble is the same
+        # structure as Ruby's <div>; the sectN/sectionbody wrappers drop below.
+        node = Element("div", node.attrs, node.children)
     tag, attrs = node.tag, dict(node.attrs)
     classes = attrs.get("class", "").split()
     wrapper = None

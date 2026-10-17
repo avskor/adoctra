@@ -31,7 +31,7 @@ fn block_reftext_early_effects_keep_selected_include_origins() {
     let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", part)]);
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
     assert_eq!(result.document.attributes.get("n"), Some("Я"));
-    let nodes = result.document.blocks[0].reftext.as_ref().unwrap();
+    let nodes = result.document.flat_blocks()[0].reftext.as_ref().unwrap();
     let counter = nodes
         .iter()
         .find(|n| matches!(n, Inline::AttributeRef { name, .. } if name == "counter:n:Я"))
@@ -55,7 +55,7 @@ fn stateful_block_titles_keep_selected_include_origins_in_both_phases() {
         let part = format!("// tag::body[]\r\n{anchor}  .Ж {{counter:n}} {{missing}}\r\n  ====\r\n  Body {{counter:n}}\r\n  ====\r\n// end::body[]");
         let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", &part)]);
         let result = parse_resource(&mut sources, &options, &resources).unwrap();
-        let block = &result.document.blocks[0];
+        let block = &result.document.flat_blocks()[0];
         let counter = block
             .title
             .as_ref()
@@ -89,7 +89,7 @@ fn nested_caption_replay_keeps_composite_block_and_physical_title_spans() {
     let part = ".Inner {example-number}\n[example]\n--\n{counter:example-number}\n--";
     let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", part)]);
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
-    let outer = &result.document.blocks[0];
+    let outer = result.document.flat_blocks()[0];
     assert_eq!(outer.caption.as_deref(), Some("Example 2. "));
     assert!(outer.span.provenance.is_some());
     let BlockKind::Example { blocks } = &outer.kind else {
@@ -123,14 +123,14 @@ fn stateful_headings_keep_selected_include_diagnostics_and_tokens() {
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
     assert_eq!(result.document.attributes.get("n"), Some("1"));
     assert_eq!(
-        result.document.blocks[1].attribute_context.get("n"),
+        result.document.flat_blocks()[1].attribute_context.get("n"),
         Some("2")
     );
     assert_eq!(result.diagnostics.len(), 1);
     assert_eq!(result.diagnostics[0].span.source_id, SourceId(1));
     assert_eq!(sources.slice(result.diagnostics[0].span), Some("{missing}"));
     let tokens = tokens_resource(&mut sources, &options, &resources).unwrap();
-    for block in &result.document.blocks[..2] {
+    for block in &result.document.flat_blocks()[..2] {
         let BlockKind::Heading { inlines, .. } = &block.kind else {
             panic!()
         };
@@ -160,7 +160,7 @@ fn stateful_doctitle_override_keeps_composite_declaration_provenance() {
     let fragments = &result.provenance[origin.provenance.unwrap()];
     assert_eq!(fragments.first().unwrap().source_id, options.source_id);
     assert_eq!(fragments.last().unwrap().source_id, SourceId(1));
-    let BlockKind::Heading { inlines, .. } = &result.document.blocks[0].kind else {
+    let BlockKind::Heading { inlines, .. } = &result.document.flat_blocks()[0].kind else {
         panic!()
     };
     for node in inlines {
@@ -183,7 +183,7 @@ fn stateful_setext_title_spans_sources_without_replaying_the_counter() {
         setup(root, &[("/docs/underline.adoc", "=============")]);
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
     assert_eq!(result.document.attributes.get("n"), Some("1"));
-    let title = &result.document.blocks[0];
+    let title = &result.document.flat_blocks()[0];
     let fragments = &result.provenance[title.span.provenance.unwrap()];
     assert_eq!(fragments.first().unwrap().source_id, options.source_id);
     assert_eq!(fragments.last().unwrap().source_id, SourceId(1));
@@ -202,7 +202,7 @@ fn stateful_body_keeps_selected_include_origins_and_replays_declarations() {
     let part = "// tag::body[]\r\n  :n: 8\r\n\r\n  Ж {counter:n}\r\n  // skipped\r\n  Б {counter:n}\r\n// end::body[]";
     let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", part)]);
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
-    let BlockKind::Paragraph { inlines } = &result.document.blocks[1].kind else {
+    let BlockKind::Paragraph { inlines } = &result.document.flat_blocks()[1].kind else {
         panic!()
     };
     let references: Vec<_> = inlines
@@ -226,7 +226,7 @@ fn stateful_body_keeps_selected_include_origins_and_replays_declarations() {
             .iter()
             .any(|t| t.kind == TokenKind::AttributeRef && t.span == span));
     }
-    let BlockKind::Paragraph { inlines } = &result.document.blocks[2].kind else {
+    let BlockKind::Paragraph { inlines } = &result.document.flat_blocks()[2].kind else {
         panic!()
     };
     assert!(
@@ -240,7 +240,7 @@ fn stateful_expression_across_files_retains_composite_provenance() {
     let root = "{set:x:first\ninclude::part.adoc[]";
     let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", "second}{x}")]);
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
-    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+    let BlockKind::Paragraph { inlines } = &result.document.flat_blocks()[0].kind else {
         panic!()
     };
     let span = inlines
@@ -303,7 +303,7 @@ fn post_replacements_keep_selected_include_break_origins_and_tokens() {
     let part = "\u{feff}// tag::body[]\r\n  Ж(C) +\r\n  // removed\r\n  Б +\r\n// end::body[]";
     let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", part)]);
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
-    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+    let BlockKind::Paragraph { inlines } = &result.document.flat_blocks()[0].kind else {
         panic!()
     };
     let spans: Vec<_> = inlines
@@ -335,7 +335,7 @@ fn source_quotes_keep_metadata_reference_tokens_in_selected_include_text() {
     let part = "\u{feff}// tag::body[]\r\n  :role: красный\r\n\r\n  Ж(C) [{role}]*Жёлтый*\r\n// end::body[]";
     let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", part)]);
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
-    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+    let BlockKind::Paragraph { inlines } = &result.document.flat_blocks()[0].kind else {
         panic!()
     };
     assert!(inlines.iter().any(|n| matches!(n, Inline::Substituted { parts, span, .. }
@@ -361,7 +361,7 @@ fn ordered_source_quotes_retain_provenance_across_an_include_and_comment() {
     let root = "*First\n// hidden\ninclude::part.adoc[]";
     let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", "**Second** Tail*")]);
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
-    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+    let BlockKind::Paragraph { inlines } = &result.document.flat_blocks()[0].kind else {
         panic!()
     };
     let Inline::Strong { children, span } = &inlines[0] else {
@@ -381,7 +381,7 @@ fn direct_link_labels_cross_files_and_keep_formatting_provenance() {
     let root = ":target: page\n\nlink:{target}[*First\ninclude::part.adoc[]";
     let (mut sources, resources, options) = setup(root, &[("docs/part.adoc", "Second*]")]);
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
-    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+    let BlockKind::Paragraph { inlines } = &result.document.flat_blocks()[0].kind else {
         panic!()
     };
     let Inline::Substituted { value, span, parts } = &inlines[0] else {
@@ -404,7 +404,7 @@ fn direct_link_tokens_survive_include_selection_and_indentation() {
     let part = "\u{feff}// tag::body[]\r\n  :target: страница\r\n\r\n  Ж(C) link:{target}[*Жёлтый*]\r\n// end::body[]";
     let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", part)]);
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
-    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+    let BlockKind::Paragraph { inlines } = &result.document.flat_blocks()[0].kind else {
         panic!()
     };
     let link = inlines
@@ -434,7 +434,7 @@ fn post_attribute_macro_across_files_retains_all_source_fragments() {
     let (mut sources, resources, options) = setup(root, &[("docs/part.adoc", "Second]")]);
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
     assert!(result.diagnostics.is_empty());
-    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+    let BlockKind::Paragraph { inlines } = &result.document.flat_blocks()[0].kind else {
         panic!()
     };
     let Inline::Substituted { value, span, .. } = &inlines[0] else {
@@ -460,7 +460,7 @@ fn post_attribute_macros_keep_selected_physical_spans_and_snapshot_values() {
     let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", part)]);
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
     assert!(result.diagnostics.is_empty());
-    let block = &result.document.blocks[0];
+    let block = &result.document.flat_blocks()[0];
     assert_eq!(block.attribute_context.get("s"), Some("ttps"));
     let BlockKind::Paragraph { inlines } = &block.kind else {
         panic!()
@@ -495,7 +495,7 @@ fn sanitized_section_ids_keep_selected_include_title_and_reference_provenance() 
     let (mut sources, resources, options) = setup(root, &[("docs/part.adoc", child)]);
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
     assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
-    let heading = &result.document.blocks[1];
+    let heading = &result.document.flat_blocks()[1];
     assert_eq!(heading.id.as_deref(), Some("_жёлтый"));
     let BlockKind::Heading { inlines, .. } = &heading.kind else {
         panic!()
@@ -504,7 +504,7 @@ fn sanitized_section_ids_keep_selected_include_title_and_reference_provenance() 
     assert_eq!(sources.slice(span), Some("{v}"));
     assert_eq!(sources.get(span.source_id).unwrap().text(), child);
     assert_ne!(span.source_id, options.source_id);
-    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+    let BlockKind::Paragraph { inlines } = &result.document.flat_blocks()[0].kind else {
         panic!()
     };
     let Inline::CrossReference {
@@ -528,7 +528,7 @@ fn sanitized_section_ids_keep_selected_include_title_and_reference_provenance() 
 fn paragraphs(result: &ParseResult) -> Vec<String> {
     result
         .document
-        .blocks
+        .flat_blocks()
         .iter()
         .filter_map(|block| match &block.kind {
             BlockKind::Paragraph { inlines } => Some(
@@ -562,7 +562,7 @@ fn normalization_depends_on_resource_type_and_keeps_include_boundaries() {
         );
         let result = parse_resource(&mut sources, &options, &resources).unwrap();
         assert!(result.diagnostics.is_empty(), "{result:?}");
-        let BlockKind::Listing { text } = &result.document.blocks[0].kind else {
+        let BlockKind::Listing { text } = &result.document.flat_blocks()[0].kind else {
             panic!("{result:?}")
         };
         assert_eq!(text, expected, "{name}");
@@ -587,7 +587,7 @@ fn selected_normalized_lines_preserve_physical_markup_and_snapshot_versions() {
     );
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
     assert!(result.diagnostics.is_empty());
-    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+    let BlockKind::Paragraph { inlines } = &result.document.flat_blocks()[0].kind else {
         panic!("{result:?}")
     };
     let highlighted = tokens_resource(&mut sources, &options, &resources).unwrap();
@@ -597,7 +597,7 @@ fn selected_normalized_lines_preserve_physical_markup_and_snapshot_versions() {
         assert!(inlines.iter().any(|inline| inline.span() == span));
         assert!(highlighted.iter().any(|token| token.span == span));
     }
-    assert!(result.document.blocks[0].span.provenance.is_some());
+    assert!(result.document.flat_blocks()[0].span.provenance.is_some());
     for token in highlighted
         .iter()
         .filter(|t| t.span.source_id == SourceId(1))
@@ -664,20 +664,20 @@ fn nested_paths_attributes_and_forward_references_share_one_document() {
     assert_eq!(
         paragraphs(&ParseResult {
             document: adoctra_core::Document {
-                blocks: vec![result.document.blocks[2].clone()],
+                blocks: vec![result.document.flat_blocks()[2].clone()],
                 ..Default::default()
             },
             ..result.clone()
         }),
         ["yes"]
     );
-    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+    let BlockKind::Paragraph { inlines } = &result.document.flat_blocks()[0].kind else {
         panic!()
     };
     assert!(matches!(&inlines[1], Inline::CrossReference { .. }));
     assert_eq!(
         sources
-            .get(result.document.blocks[0].span.source_id)
+            .get(result.document.flat_blocks()[0].span.source_id)
             .unwrap()
             .name(),
         "/docs/sub/two.adoc"
@@ -693,8 +693,8 @@ fn one_paragraph_and_nested_markup_can_cross_multiple_sources() {
     );
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
     assert!(result.diagnostics.is_empty());
-    assert_eq!(result.document.blocks.len(), 1);
-    let block = &result.document.blocks[0];
+    assert_eq!(result.document.flat_blocks().len(), 1);
+    let block = &result.document.flat_blocks()[0];
     let fragments = &result.provenance[block.span.provenance.unwrap()];
     assert_eq!(
         fragments.iter().map(|s| s.source_id).collect::<Vec<_>>(),
@@ -720,7 +720,7 @@ fn unicode_crlf_bom_and_diagnostics_retain_physical_offsets() {
         Some("<<missing>>")
     );
     assert_eq!(result.diagnostics[0].span.source_id, SourceId(1));
-    assert_eq!(result.document.blocks[0].span.start, 3);
+    assert_eq!(result.document.flat_blocks()[0].span.start, 3);
     let tokens = tokens_resource(&mut sources, &options, &resources).unwrap();
     assert!(tokens
         .iter()
@@ -758,10 +758,10 @@ fn includes_can_supply_header_list_items_and_container_fences() {
                 "Иван Иванов"
             ),
             "list" => assert!(
-                matches!(&result.document.blocks[0].kind, BlockKind::List { items, .. } if items.len() == 3)
+                matches!(&result.document.flat_blocks()[0].kind, BlockKind::List { items, .. } if items.len() == 3)
             ),
             _ => assert!(
-                matches!(&result.document.blocks[0].kind, BlockKind::Example { blocks } if blocks.len() == 1)
+                matches!(&result.document.flat_blocks()[0].kind, BlockKind::Example { blocks } if blocks.len() == 1)
             ),
         }
         check_spans(&result, &sources);
@@ -821,7 +821,7 @@ fn included_attributes_follow_lazy_reads_and_container_capture() {
         let result = parse_resource(&mut sources, &options, &resources).unwrap();
         assert!(result.diagnostics.is_empty());
         assert_eq!(paragraphs(&result), expected);
-        if let BlockKind::Example { blocks } = &result.document.blocks[0].kind {
+        if let BlockKind::Example { blocks } = &result.document.flat_blocks()[0].kind {
             assert!(blocks.is_empty());
         }
         check_spans(&result, &sources);
@@ -837,7 +837,7 @@ fn repeated_include_reuses_snapshot_and_preserves_occurrences() {
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
     assert_eq!(paragraphs(&result), ["text text"]);
     assert!(sources.get(SourceId(2)).is_none());
-    let fragments = &result.provenance[result.document.blocks[0].span.provenance.unwrap()];
+    let fragments = &result.provenance[result.document.flat_blocks()[0].span.provenance.unwrap()];
     assert_eq!(
         fragments
             .iter()
@@ -908,7 +908,7 @@ fn non_asciidoc_includes_are_raw_but_adoc_includes_preprocess_inside_listings() 
         let result = parse_resource(&mut sources, &options, &resources).unwrap();
         assert!(result.diagnostics.is_empty());
         assert!(
-            matches!(&result.document.blocks[0].kind, BlockKind::Listing { text } if text == expected)
+            matches!(&result.document.flat_blocks()[0].kind, BlockKind::Listing { text } if text == expected)
         );
         check_spans(&result, &sources);
     }
@@ -1082,7 +1082,7 @@ fn selected_unicode_crlf_lines_have_exact_fragments_and_tokens() {
         &[("docs/part.adoc", child)],
     );
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
-    let block = &result.document.blocks[0];
+    let block = &result.document.flat_blocks()[0];
     let fragments = &result.provenance[block.span.provenance.unwrap()];
     assert_eq!(
         fragments
@@ -1170,7 +1170,7 @@ fn raw_tag_markers_obey_boundaries_and_are_not_required_to_be_comments() {
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
     assert!(result.diagnostics.is_empty());
     assert!(
-        matches!(&result.document.blocks[0].kind, BlockKind::Listing { text } if text == "kept\nnotag::b[]\n// tag::bad name[]\n// tag::bad[]\t\ninside")
+        matches!(&result.document.flat_blocks()[0].kind, BlockKind::Listing { text } if text == "kept\nnotag::b[]\n// tag::bad name[]\n// tag::bad[]\t\ninside")
     );
     check_spans(&result, &sources);
 }
@@ -1282,7 +1282,7 @@ fn optional_does_not_disable_cycles_limits_or_option_validation() {
 fn levels(result: &ParseResult) -> Vec<u8> {
     result
         .document
-        .blocks
+        .flat_blocks()
         .iter()
         .filter_map(|block| match block.kind {
             BlockKind::Heading { level, .. } => Some(level),
@@ -1304,38 +1304,38 @@ fn nested_offsets_restore_attributes_and_keep_unicode_heading_positions() {
     assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
     assert_eq!(levels(&result), [0, 1, 2, 3, 2, 1]);
     assert_eq!(
-        result.document.blocks[1]
+        result.document.flat_blocks()[1]
             .attribute_context
             .get("leveloffset"),
         Some("1")
     );
     assert_eq!(
-        result.document.blocks[2]
+        result.document.flat_blocks()[2]
             .attribute_context
             .get("leveloffset"),
         Some("2")
     );
     assert_eq!(
-        result.document.blocks[4]
+        result.document.flat_blocks()[4]
             .attribute_context
             .get("leveloffset"),
         Some("1")
     );
     assert_eq!(
-        result.document.blocks[5]
+        result.document.flat_blocks()[5]
             .attribute_context
             .get("leveloffset"),
         None
     );
     assert_eq!(
-        sources.slice(result.document.blocks[1].span),
+        sources.slice(result.document.flat_blocks()[1].span),
         Some("= Глава")
     );
     assert_eq!(
-        result.document.blocks[1].span,
+        result.document.flat_blocks()[1].span,
         Span::in_source(SourceId(1), 3, 3 + "= Глава".len())
     );
-    let BlockKind::Heading { inlines, .. } = &result.document.blocks[1].kind else {
+    let BlockKind::Heading { inlines, .. } = &result.document.flat_blocks()[1].kind else {
         panic!()
     };
     assert_eq!(sources.slice(inlines[0].span()), Some("Глава"));
@@ -1392,7 +1392,7 @@ fn offsets_in_verbatim_remain_literal_without_synthetic_highlighting() {
     let (mut sources, resources, options) = setup(root, &[("docs/part.rs", "== Literal")]);
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
     assert!(result.diagnostics.is_empty());
-    let BlockKind::Listing { text } = &result.document.blocks[0].kind else {
+    let BlockKind::Listing { text } = &result.document.flat_blocks()[0].kind else {
         panic!()
     };
     assert_eq!(text, ":leveloffset: +1\n\n== Literal\n\n:leveloffset!:");
@@ -1425,11 +1425,12 @@ fn offsets_empty_selections_locked_values_and_partial_input_are_tolerant() {
     );
     options.attributes.set("leveloffset", "2");
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
-    assert!(result.diagnostics.is_empty());
+    // Without a header, Ruby does not check the level of a leading section.
+    assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
     assert_eq!(levels(&result), [2, 3]);
     assert!(result
         .document
-        .blocks
+        .flat_blocks()
         .iter()
         .all(|b| b.attribute_context.get("leveloffset") == Some("2")));
     check_spans(&result, &sources);
@@ -1459,11 +1460,11 @@ fn indentation_preserves_unicode_markup_tokens_and_old_snapshots() {
     let (mut sources, mut resources, options) = setup(root, &[("docs/part.adoc", child)]);
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
     assert!(result.diagnostics.is_empty());
-    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+    let BlockKind::Paragraph { inlines } = &result.document.flat_blocks()[0].kind else {
         panic!("{result:?}")
     };
     assert!(matches!(inlines[0], Inline::Strong { .. }));
-    assert!(result.document.blocks[0].span.provenance.is_some());
+    assert!(result.document.flat_blocks()[0].span.provenance.is_some());
     let tokens = tokens_resource(&mut sources, &options, &resources).unwrap();
     for text in ["*Я*", "_🙂_"] {
         let off = child.find(text).unwrap();
@@ -1493,7 +1494,7 @@ fn indentation_and_tab_expansion_map_to_physical_characters() {
     );
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
     assert!(result.diagnostics.is_empty());
-    let BlockKind::Listing { text } = &result.document.blocks[0].kind else {
+    let BlockKind::Listing { text } = &result.document.flat_blocks()[0].kind else {
         panic!("{result:?}")
     };
     assert_eq!(text, "  Я🙂  X\n  Z");
@@ -1648,7 +1649,7 @@ fn inline_tokens_after_expanded_tabs_keep_exact_unicode_offsets() {
         &[("docs/part.adoc", child)],
     );
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
-    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+    let BlockKind::Paragraph { inlines } = &result.document.flat_blocks()[0].kind else {
         panic!("{result:?}")
     };
     let expected = Span::in_source(SourceId(1), 3, child.len());
@@ -1689,7 +1690,7 @@ fn multiline_attributes_cross_selected_sources_and_preserve_snapshots() {
         );
     }
     let start = root.find("{x}").unwrap();
-    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+    let BlockKind::Paragraph { inlines } = &result.document.flat_blocks()[0].kind else {
         panic!("{result:?}")
     };
     assert!(
@@ -1734,7 +1735,7 @@ fn multiline_attributes_can_end_in_parent_and_use_current_values_for_later_inclu
         result.document.attributes.get("target"),
         Some("leaf file.adoc")
     );
-    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+    let BlockKind::Paragraph { inlines } = &result.document.flat_blocks()[0].kind else {
         panic!("{result:?}")
     };
     assert!(matches!(&inlines[0], Inline::Strong { .. }));
@@ -1763,7 +1764,7 @@ fn raw_include_suffix_does_not_open_attribute_continuation() {
     );
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
     assert_eq!(result.document.attributes.get("x"), Some("one two \\ \t"));
-    assert_eq!(result.document.blocks.len(), 1);
+    assert_eq!(result.document.flat_blocks().len(), 1);
 }
 
 #[test]
@@ -1857,7 +1858,7 @@ fn include_parameter_substitutions_precede_parsing_without_rescanning_values() {
         assert_eq!(paragraphs(&result), ["Я"], "{params}");
         let start = child.find('Я').unwrap();
         assert_eq!(
-            result.document.blocks[0].span,
+            result.document.flat_blocks()[0].span,
             Span::in_source(SourceId(1), start, start + "Я".len())
         );
         check_spans(&result, &sources);
@@ -1911,7 +1912,7 @@ fn parameter_grammar_keeps_unicode_selection_provenance_and_snapshots() {
     let (mut sources, mut resources, options) = setup(root, &[("docs/part.adoc", child)]);
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
     assert!(result.diagnostics.is_empty(), "{result:?}");
-    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+    let BlockKind::Paragraph { inlines } = &result.document.flat_blocks()[0].kind else {
         panic!("{result:?}")
     };
     let tokens = tokens_resource(&mut sources, &options, &resources).unwrap();
@@ -1921,7 +1922,7 @@ fn parameter_grammar_keeps_unicode_selection_provenance_and_snapshots() {
         assert!(inlines.iter().any(|inline| inline.span() == span));
         assert!(tokens.iter().any(|token| token.span == span));
     }
-    assert!(result.document.blocks[0].span.provenance.is_some());
+    assert!(result.document.flat_blocks()[0].span.provenance.is_some());
     resources.insert("docs/part.adoc", "replacement").unwrap();
     parse_resource(&mut sources, &options, &resources).unwrap();
     assert_eq!(sources.get(SourceId(1)).unwrap().text(), child);
@@ -1973,7 +1974,7 @@ fn target_substitutions_share_reference_grammar_and_do_not_rescan_values() {
         options.attributes.set("raw", "{name}");
         let result = parse_resource(&mut sources, &options, &resources).unwrap();
         assert!(result.diagnostics.is_empty(), "{target}: {result:?}");
-        let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+        let BlockKind::Paragraph { inlines } = &result.document.flat_blocks()[0].kind else {
             panic!("{result:?}")
         };
         let tokens = tokens_resource(&mut sources, &options, &resources).unwrap();
@@ -1983,7 +1984,7 @@ fn target_substitutions_share_reference_grammar_and_do_not_rescan_values() {
             assert!(inlines.iter().any(|inline| inline.span() == span));
             assert!(tokens.iter().any(|token| token.span == span));
         }
-        assert!(result.document.blocks[0].span.provenance.is_some());
+        assert!(result.document.flat_blocks()[0].span.provenance.is_some());
         resources
             .insert(&format!("docs/{filename}"), "updated")
             .unwrap();
@@ -2099,9 +2100,11 @@ fn blank_and_missing_targets_stop_before_provider_and_option_validation() {
                 Some(root.lines().nth(3).unwrap())
             );
         }
-        assert!(matches!(&result.document.blocks.last().unwrap().kind,
+        assert!(
+            matches!(&result.document.flat_blocks().last().unwrap().kind,
             BlockKind::Paragraph { inlines } if matches!(inlines.as_slice(),
-                [Inline::Text { value, .. }] if value == "after")));
+                [Inline::Text { value, .. }] if value == "after"))
+        );
         assert_eq!(result.include_directives.len(), 1);
         check_spans(&result, &sources);
     }
@@ -2129,9 +2132,11 @@ fn incomplete_and_long_target_substitutions_remain_tolerant() {
             let root = format!("include::{target}{close}\n\nafter");
             let (mut sources, resources, options) = setup(&root, &[]);
             let result = parse_resource(&mut sources, &options, &resources).unwrap();
-            assert!(matches!(&result.document.blocks.last().unwrap().kind,
+            assert!(
+                matches!(&result.document.flat_blocks().last().unwrap().kind,
             BlockKind::Paragraph { inlines } if matches!(inlines.as_slice(),
-                [Inline::Text { value, .. }] if value == "after")));
+                [Inline::Text { value, .. }] if value == "after"))
+            );
             check_spans(&result, &sources);
         }
     }
@@ -2162,7 +2167,7 @@ fn setext_title_crosses_selected_indented_include_sources() {
         root.find("====").unwrap() + 4
     );
     assert_eq!(header.authors[0].name, "Jane Doe");
-    let BlockKind::Heading { inlines, .. } = &result.document.blocks[0].kind else {
+    let BlockKind::Heading { inlines, .. } = &result.document.flat_blocks()[0].kind else {
         panic!()
     };
     assert_eq!(sources.slice(inlines[0].span()), Some("*Я🙂*"));
@@ -2190,7 +2195,7 @@ fn doctitle_override_keeps_selected_multisource_origins_and_snapshots() {
     let header = result.document.header.as_ref().unwrap();
     assert_eq!(header.title, "Исходный");
     assert_eq!(sources.slice(header.title_span), Some("= Исходный"));
-    let BlockKind::Heading { inlines, .. } = &result.document.blocks[0].kind else {
+    let BlockKind::Heading { inlines, .. } = &result.document.flat_blocks()[0].kind else {
         panic!()
     };
     let origin = inlines[0].span();
@@ -2225,7 +2230,7 @@ fn doctitle_override_keeps_selected_multisource_origins_and_snapshots() {
         &[("/docs/rest.txt", "second\n")],
     );
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
-    let BlockKind::Heading { inlines, .. } = &result.document.blocks[0].kind else {
+    let BlockKind::Heading { inlines, .. } = &result.document.flat_blocks()[0].kind else {
         panic!()
     };
     let origin = inlines[0].span();
@@ -2297,7 +2302,7 @@ fn raw_author_substitutions_across_include_preserve_fragments_and_physical_spans
         result.document.header.as_ref().unwrap().authors[1].name,
         "Mary Roe"
     );
-    let BlockKind::Paragraph { inlines } = &result.document.blocks[1].kind else {
+    let BlockKind::Paragraph { inlines } = &result.document.flat_blocks()[1].kind else {
         panic!()
     };
     let Inline::AttributeRef { parts, span, .. } = &inlines[0] else {
@@ -2332,7 +2337,7 @@ fn restored_entities_from_included_attributes_keep_reference_source_and_snapshot
     );
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
     assert!(result.diagnostics.is_empty());
-    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+    let BlockKind::Paragraph { inlines } = &result.document.flat_blocks()[0].kind else {
         panic!()
     };
     let Inline::AttributeRef { parts, span, .. } = &inlines[0] else {
@@ -2364,7 +2369,7 @@ fn shared_replacements_keep_selected_source_spans_and_old_snapshots() {
     let (mut sources, mut resources, options) = setup(root, &[("/docs/part.adoc", part)]);
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
     assert!(result.diagnostics.is_empty());
-    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+    let BlockKind::Paragraph { inlines } = &result.document.flat_blocks()[0].kind else {
         panic!()
     };
     let raw = inlines
@@ -2409,7 +2414,7 @@ fn pass_replacements_keep_include_selection_positions_and_snapshots() {
         result.document.attributes.get("v"),
         Some("До &#169; &copy;")
     );
-    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+    let BlockKind::Paragraph { inlines } = &result.document.flat_blocks()[0].kind else {
         panic!()
     };
     let Inline::AttributeRef { span, parts, .. } = &inlines[0] else {
@@ -2441,7 +2446,7 @@ fn pass_quotes_keep_include_selection_positions_and_immutable_formatting() {
     let (mut sources, mut resources, options) = setup(root, &[("/docs/part.adoc", part)]);
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
     assert!(result.diagnostics.is_empty());
-    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+    let BlockKind::Paragraph { inlines } = &result.document.flat_blocks()[0].kind else {
         panic!()
     };
     let Inline::AttributeRef {
@@ -2485,7 +2490,7 @@ fn quote_attributes_keep_selected_include_positions_and_old_snapshots() {
     let (mut sources, mut resources, options) = setup(root, &[("/docs/part.adoc", part)]);
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
     assert!(result.diagnostics.is_empty());
-    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+    let BlockKind::Paragraph { inlines } = &result.document.flat_blocks()[0].kind else {
         panic!()
     };
     let Inline::AttributeRef {
@@ -2526,7 +2531,7 @@ fn attribute_macro_links_keep_include_provenance_and_immutable_host_updates() {
     let (mut sources, mut resources, options) = setup(root, &[("/docs/part.adoc", part)]);
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
     assert!(result.diagnostics.is_empty());
-    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+    let BlockKind::Paragraph { inlines } = &result.document.flat_blocks()[0].kind else {
         panic!()
     };
     let Inline::AttributeRef {
@@ -2565,7 +2570,7 @@ fn inline_passthrough_preserves_selected_include_spans_and_tokens() {
     let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", part)]);
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
     assert!(result.diagnostics.is_empty());
-    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+    let BlockKind::Paragraph { inlines } = &result.document.flat_blocks()[0].kind else {
         panic!()
     };
     let span = inlines
@@ -2595,7 +2600,7 @@ fn inline_passthrough_across_files_retains_composite_provenance() {
     let (mut sources, resources, options) =
         setup(root, &[("/docs/part.adoc", "*Second* {v}+ after")]);
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
-    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+    let BlockKind::Paragraph { inlines } = &result.document.flat_blocks()[0].kind else {
         panic!()
     };
     let span = inlines
@@ -2669,7 +2674,7 @@ fn inline_attribute_drop_line_keeps_surviving_cross_source_text_and_reference_to
     let part = "omitted\r\n  discarded {missing}\r\n  Ж {cpp}\r\n";
     let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", part)]);
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
-    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+    let BlockKind::Paragraph { inlines } = &result.document.flat_blocks()[0].kind else {
         panic!()
     };
     assert!(inlines.iter().any(
@@ -2778,7 +2783,7 @@ fn stateful_definition_side_effects_keep_selected_include_origins_and_snapshots(
     );
     assert_eq!(result.document.attributes.get("n"), Some("1"));
     assert_eq!(
-        result.document.blocks[1].attribute_context.get("n"),
+        result.document.flat_blocks()[1].attribute_context.get("n"),
         Some("2")
     );
     let tokens = tokens_resource(&mut sources, &options, &resources).unwrap();
@@ -2807,7 +2812,7 @@ fn block_attribute_line_subs_keep_selected_include_origins() {
     let part = "// tag::body[]\r\n  [quote, Ж {counter:n:Я} {missing}, 'w {counter:n}']\r\n  ____\r\n  x\r\n  ____\r\n// end::body[]";
     let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", part)]);
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
-    let BlockKind::Quote { attribution, .. } = &result.document.blocks[1].kind else {
+    let BlockKind::Quote { attribution, .. } = &result.document.flat_blocks()[1].kind else {
         panic!("{result:?}");
     };
     let attribution = attribution.as_ref().unwrap();
@@ -2832,7 +2837,7 @@ fn block_attribute_line_subs_keep_selected_include_origins() {
         .unwrap();
     assert_eq!(sources.slice(warning.span), Some("{missing}"));
     // Reading effects are not replayed into the body.
-    let BlockKind::Paragraph { inlines } = &result.document.blocks[2].kind else {
+    let BlockKind::Paragraph { inlines } = &result.document.flat_blocks()[2].kind else {
         panic!("{result:?}");
     };
     assert!(matches!(
@@ -2852,7 +2857,8 @@ fn inline_anchor_catalog_keeps_selected_include_origins() {
         "// tag::body[]\r\n  Ж [[a,R {counter:n} *x*]]\r\n\r\n  * [[b,L]] item\r\n// end::body[]";
     let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", part)]);
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
-    let BlockKind::Paragraph { inlines } = &result.document.blocks.last().unwrap().kind else {
+    let BlockKind::Paragraph { inlines } = &result.document.flat_blocks().last().unwrap().kind
+    else {
         panic!("{result:?}");
     };
     let refs: Vec<_> = inlines
@@ -2880,7 +2886,7 @@ fn body_setext_section_spans_title_and_included_underline() {
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
     assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
     check_spans(&result, &sources);
-    let block = &result.document.blocks[1];
+    let block = &result.document.flat_blocks()[1];
     assert!(matches!(block.kind, BlockKind::Heading { level: 1, .. }));
     assert_eq!(block.id.as_deref(), Some("_sec_я"));
     let fragments = &result.provenance[block.span.provenance.unwrap()];

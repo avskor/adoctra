@@ -8,7 +8,7 @@ fn paragraph(source: &str) -> String {
     assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
     result
         .document
-        .blocks
+        .flat_blocks()
         .iter()
         .filter_map(|b| match &b.kind {
             BlockKind::Paragraph { inlines } => Some(

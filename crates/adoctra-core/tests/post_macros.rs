@@ -6,7 +6,7 @@ use adoctra_core::{
 fn paragraph(source: &str) -> Vec<Inline> {
     let result = parse(source);
     assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
-    let BlockKind::Paragraph { inlines } = result.document.blocks[0].kind.clone() else {
+    let BlockKind::Paragraph { inlines } = result.document.flat_blocks()[0].kind.clone() else {
         panic!("expected paragraph")
     };
     inlines
@@ -28,7 +28,7 @@ fn expanded_macros_keep_reference_spans_and_definitions() {
         let doc = parse(&source).document;
         assert_eq!(doc.attributes.get("v"), Some(value));
         assert!(doc.attributes.raw_parts("v").is_none());
-        assert_eq!(doc.blocks[0].attribute_context.get("v"), Some(value));
+        assert_eq!(doc.flat_blocks()[0].attribute_context.get("v"), Some(value));
         let nodes = paragraph(&source);
         assert!(
             matches!(&nodes[0], Inline::AttributeRef { value: Some(v), parts, span, .. }
@@ -126,7 +126,7 @@ fn new_macro_pass_does_not_repeat_quotes_or_attribute_expansion() {
             ..Default::default()
         },
     );
-    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+    let BlockKind::Paragraph { inlines } = &result.document.flat_blocks()[0].kind else {
         panic!()
     };
     assert!(
@@ -214,7 +214,7 @@ fn unicode_partial_input_and_source_ids_remain_physical() {
         ..Default::default()
     };
     let doc = parse_with_options(source, &options).document;
-    let BlockKind::Paragraph { inlines } = &doc.blocks[0].kind else {
+    let BlockKind::Paragraph { inlines } = &doc.flat_blocks()[0].kind else {
         panic!()
     };
     assert!(matches!(&inlines[1], Inline::Substituted { .. }));
@@ -237,8 +237,11 @@ fn plain_email_and_borrowed_section_titles_use_neutral_semantics() {
     assert!(matches!(&nodes[1], Inline::Substituted { value, parts, .. }
         if value == "a@example.org" && parts.iter().any(|p| matches!(p, P::OpenLink(l) if l.target == "mailto:a@example.org"))));
     let doc = parse(":s: ttps\n\n<<_httpsexample_org>>\n\n== h{s}://example.org").document;
-    assert_eq!(doc.blocks[1].id.as_deref(), Some("_httpsexample_org"));
-    let BlockKind::Paragraph { inlines } = &doc.blocks[0].kind else {
+    assert_eq!(
+        doc.flat_blocks()[1].id.as_deref(),
+        Some("_httpsexample_org")
+    );
+    let BlockKind::Paragraph { inlines } = &doc.flat_blocks()[0].kind else {
         panic!()
     };
     let Inline::CrossReference { children, .. } = &inlines[0] else {

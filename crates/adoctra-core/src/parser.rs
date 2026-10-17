@@ -84,15 +84,19 @@ pub(crate) fn parse_reader<'a>(
         doc.blocks.push(title);
     }
     context.start_body();
+    // Ruby reads the doctype once the header is complete.
+    let book = context.attributes.get("doctype") == Some("book");
     let mut i = header.body_start;
-    doc.blocks.extend(collect_blocks(
+    let body = collect_blocks(
         &mut lines,
         &mut i,
         &mut context,
         &mut diagnostics,
         None,
         header.pending,
-    ));
+    );
+    doc.blocks
+        .extend(nest_sections(body, doc.has_title, book, &mut diagnostics));
 
     let mut references = Vec::new();
     let registry = context.register_references(&mut doc, &mut references);
@@ -263,6 +267,132 @@ fn collect_blocks(
         lines.limit = limit;
     }
     blocks
+}
+
+/// Ruby's `next_section`: nest the document-level blocks under their section
+/// titles. A title opens a subsection of the innermost open section with a lower
+/// level and closes the others; levels that skip one warn, and a level-0 section
+/// outside a book is an error but still nests under the document. Blocks before
+/// the first section form a preamble when the document has a title, unless there
+/// are no sections at all (except for a book, as in Ruby).
+fn nest_sections(
+    blocks: Vec<Block>,
+    has_header: bool,
+    book: bool,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> Vec<Block> {
+    // Close the innermost open section into its parent (or the top level).
+    fn close(open: &mut Vec<Block>, top: &mut Vec<Block>) {
+        let mut section = open.pop().unwrap();
+        if let BlockKind::Section { blocks, .. } = &section.kind {
+            let last = blocks.last().unwrap();
+            section.span.end = section.span.end.max(last.span.end);
+            section.attribute_context = Arc::clone(&last.attribute_context);
+        }
+        match open.last_mut() {
+            Some(Block {
+                kind: BlockKind::Section { blocks, .. },
+                ..
+            }) => blocks.push(section),
+            _ => top.push(section),
+        }
+    }
+    fn section_level(block: &Block) -> Option<u8> {
+        match block.kind {
+            BlockKind::Heading { level, .. }
+                if !matches!(block.attrs.style.as_deref(), Some("discrete" | "float")) =>
+            {
+                Some(level)
+            }
+            _ => None,
+        }
+    }
+    // Without a header, a body that starts with a section title makes Ruby
+    // create every top-level section directly, without checking its level.
+    let unchecked = !has_header && blocks.first().and_then(section_level).is_some();
+    let mut top = Vec::new();
+    let mut preamble = Vec::new();
+    // Open sections, innermost last.
+    let mut open: Vec<Block> = Vec::new();
+    for block in blocks {
+        let level = match section_level(&block) {
+            Some(level) => level,
+            None => {
+                match open.last_mut() {
+                    Some(Block {
+                        kind: BlockKind::Section { blocks, .. },
+                        ..
+                    }) => blocks.push(block),
+                    _ if has_header => preamble.push(block),
+                    _ => top.push(block),
+                }
+                continue;
+            }
+        };
+        while matches!(
+            open.last(),
+            Some(Block { kind: BlockKind::Section { level: current, .. }, .. }) if level <= *current
+        ) {
+            close(&mut open, &mut top);
+        }
+        let expected = match open.last() {
+            Some(Block {
+                kind: BlockKind::Section { level, .. },
+                ..
+            }) => Some(level.saturating_add(1)),
+            _ if unchecked => None,
+            _ if level == 0 => {
+                if !book {
+                    diagnostics.push(Diagnostic {
+                        span: block.span,
+                        severity: Severity::Error,
+                        message: "level 0 sections can only be used when doctype is book".into(),
+                    });
+                }
+                None
+            }
+            _ => Some(1),
+        };
+        if let Some(expected) = expected.filter(|expected| *expected != level) {
+            let condition = if book && open.is_empty() {
+                format!("expected levels 0 or {expected}")
+            } else {
+                format!("expected level {expected}")
+            };
+            diagnostics.push(Diagnostic {
+                span: block.span,
+                severity: Severity::Warning,
+                message: format!("section title out of sequence: {condition}, got level {level}"),
+            });
+        }
+        let (span, context) = (block.span, Arc::clone(&block.attribute_context));
+        let blocks = vec![block];
+        let mut section = Block::new(span, BlockKind::Section { level, blocks });
+        section.attribute_context = context;
+        open.push(section);
+    }
+    while !open.is_empty() {
+        close(&mut open, &mut top);
+    }
+    if preamble.is_empty() {
+        return top;
+    }
+    // Ruby unwraps a standalone preamble (a document without sections), except
+    // for a book.
+    if top.is_empty() && !book {
+        return preamble;
+    }
+    let last = preamble.last().unwrap();
+    let span = Span {
+        end: last.span.end,
+        ..preamble[0].span
+    };
+    let context = Arc::clone(&last.attribute_context);
+    let mut wrapper = Block::new(span, BlockKind::Preamble { blocks: preamble });
+    wrapper.attribute_context = context;
+    let mut result = vec![wrapper];
+    result.extend(top);
+    result
 }
 
 /// Consume metadata once, both before header detection and at body boundaries.
@@ -671,13 +801,19 @@ fn parse_block_content(
         return None;
     }
 
-    // Heading. ATX takes precedence over a setext title; Ruby recognizes the
-    // two-line form where it looks for sections, and for a discrete heading anywhere.
+    // Heading. ATX takes precedence over a setext title. Ruby recognizes both
+    // forms only where it looks for sections, and a discrete heading anywhere;
+    // elsewhere (and within a paragraph) the lines are ordinary text.
     let discrete = matches!(pending_style, Some("discrete" | "float"));
+    let sections = ctx == BlockCtx::Section || discrete;
     let heading = parse_heading(trimmed)
-        .map(|(level, title)| (level, title, off + line.len(), 1))
+        .filter(|_| sections)
+        .map(|(level, title)| {
+            lines.heading_lines.push(Span::new(off, off + line.len()));
+            (level, title, off + line.len(), 1)
+        })
         .or_else(|| {
-            if ctx != BlockCtx::Section && !discrete {
+            if !sections {
                 return None;
             }
             // Ruby peeks a comment-styled block's next line without preprocessing.
@@ -691,7 +827,7 @@ fn parse_block_content(
             }
             let (underline_off, underline) = lines.line(*i + 1);
             let level = setext_level(line, &underline)?;
-            lines.setext_lines.extend([
+            lines.heading_lines.extend([
                 Span::new(off, off + line.len()),
                 Span::new(underline_off, underline_off + underline.len()),
             ]);
@@ -1082,7 +1218,6 @@ fn parse_block_content(
         // text).
         let ends = (!verbatim && comment_fence(t).is_some())
             || t.trim().is_empty()
-            || parse_heading(t).is_some()
             || matches!(t.trim(), "----" | "...." | "====" | "____" | "****" | "--")
             || match ctx {
                 BlockCtx::Section | BlockCtx::TopLevel => parse_list_marker(t).is_some(),
@@ -1508,9 +1643,9 @@ mod tests {
     fn parses_title_and_paragraph() {
         let r = parse("= Title\n\nHello world");
         assert!(r.diagnostics.is_empty());
-        assert_eq!(r.document.blocks.len(), 2);
+        assert_eq!(r.document.flat_blocks().len(), 2);
         assert!(matches!(
-            r.document.blocks[0].kind,
+            r.document.flat_blocks()[0].kind,
             BlockKind::Heading { level: 0, .. }
         ));
     }
@@ -1518,13 +1653,13 @@ mod tests {
     #[test]
     fn heading_span_covers_the_line() {
         let r = parse("= Title");
-        assert_eq!(r.document.blocks[0].span, Span::new(0, 7));
+        assert_eq!(r.document.flat_blocks()[0].span, Span::new(0, 7));
     }
 
     #[test]
     fn unterminated_listing_is_a_diagnostic_not_a_failure() {
         let r = parse("----\nlet x = 1;");
-        assert_eq!(r.document.blocks.len(), 1);
+        assert_eq!(r.document.flat_blocks().len(), 1);
         assert_eq!(r.diagnostics.len(), 1);
         assert_eq!(r.diagnostics[0].severity, Severity::Error);
     }
@@ -1538,7 +1673,7 @@ mod tests {
 
     /// Helper: the first inline of the first block, whatever its kind.
     fn first_inline(src: &str) -> Inline {
-        match &parse(src).document.blocks[0].kind {
+        match &parse(src).document.into_flat_blocks()[0].kind {
             BlockKind::Paragraph { inlines } | BlockKind::Heading { inlines, .. } => {
                 inlines[0].clone()
             }
@@ -1549,7 +1684,7 @@ mod tests {
     #[test]
     fn inline_strong_span_points_at_real_source() {
         let src = "Hi *there*";
-        let inlines = match &parse(src).document.blocks[0].kind {
+        let inlines = match &parse(src).document.into_flat_blocks()[0].kind {
             BlockKind::Paragraph { inlines } => inlines.clone(),
             _ => unreachable!(),
         };
@@ -1566,7 +1701,7 @@ mod tests {
         // The paragraph is scanned over the original source slice, so the
         // strong marker on the *second* line still gets real byte offsets.
         let src = "first line\nsecond *strong* line";
-        let inlines = match &parse(src).document.blocks[0].kind {
+        let inlines = match &parse(src).document.into_flat_blocks()[0].kind {
             BlockKind::Paragraph { inlines } => inlines.clone(),
             _ => unreachable!(),
         };
@@ -1582,7 +1717,7 @@ mod tests {
     fn link_span_is_accurate_across_a_line_break() {
         // Like strong, a link on a wrapped line keeps real byte offsets.
         let src = "first line\nsee link:https://example.org[here] now";
-        let inlines = match &parse(src).document.blocks[0].kind {
+        let inlines = match &parse(src).document.into_flat_blocks()[0].kind {
             BlockKind::Paragraph { inlines } => inlines.clone(),
             _ => unreachable!(),
         };
@@ -1600,7 +1735,7 @@ mod tests {
         let attr = match first_inline(src) {
             Inline::Text { .. } => {
                 // {v} is the second inline; grab the block again
-                let blocks = parse(src).document.blocks;
+                let blocks = parse(src).document.into_flat_blocks();
                 match &blocks[0].kind {
                     BlockKind::Paragraph { inlines } => inlines[1].clone(),
                     _ => unreachable!(),
@@ -1624,7 +1759,7 @@ mod tests {
     #[test]
     fn missing_attribute_keeps_no_value() {
         let r = parse("Ref to {unknown} here");
-        let inlines = match &r.document.blocks[0].kind {
+        let inlines = match &r.document.flat_blocks()[0].kind {
             BlockKind::Paragraph { inlines } => inlines.clone(),
             _ => unreachable!(),
         };
@@ -1635,7 +1770,7 @@ mod tests {
 
     /// The list block of `src`, or panic if the first block is not a list.
     fn list(src: &str) -> (bool, Vec<ListItem>) {
-        match &parse(src).document.blocks[0].kind {
+        match &parse(src).document.into_flat_blocks()[0].kind {
             BlockKind::List { ordered, items } => (*ordered, items.clone()),
             other => panic!("expected List, got {other:?}"),
         }
@@ -1662,7 +1797,7 @@ mod tests {
     fn parses_unordered_star_list() {
         let r = parse("* one\n* two");
         assert!(r.diagnostics.is_empty());
-        assert_eq!(r.document.blocks.len(), 1);
+        assert_eq!(r.document.flat_blocks().len(), 1);
         let (ordered, items) = list("* one\n* two");
         assert!(!ordered);
         assert_eq!(items.len(), 2);
@@ -1688,7 +1823,7 @@ mod tests {
     #[test]
     fn list_block_and_item_spans_cover_their_lines() {
         let src = "* one\n* two";
-        let block = &parse(src).document.blocks[0];
+        let block = &parse(src).document.into_flat_blocks()[0];
         assert_eq!(block.span, Span::new(0, 11));
         let items = match &block.kind {
             BlockKind::List { items, .. } => items,
@@ -1701,11 +1836,11 @@ mod tests {
     #[test]
     fn list_stops_at_blank_line() {
         let r = parse("* one\n\nA paragraph");
-        assert_eq!(r.document.blocks.len(), 2);
+        assert_eq!(r.document.flat_blocks().len(), 2);
         let (_, items) = list("* one\n\nA paragraph");
         assert_eq!(items.len(), 1);
         assert!(matches!(
-            r.document.blocks[1].kind,
+            r.document.flat_blocks()[1].kind,
             BlockKind::Paragraph { .. }
         ));
     }
@@ -1716,7 +1851,7 @@ mod tests {
         // (ordered) nests inside the `* a` (unordered) item — it does not start
         // a second top-level list. (Confirmed against asciidoctor 2.0.23.)
         let r = parse("* a\n. b");
-        assert_eq!(r.document.blocks.len(), 1);
+        assert_eq!(r.document.flat_blocks().len(), 1);
         let (ordered, items) = list("* a\n. b");
         assert!(!ordered);
         assert_eq!(items.len(), 1);
@@ -1806,7 +1941,7 @@ mod tests {
         // `*bold*` has no space after the marker → it stays a paragraph.
         let r = parse("*bold*");
         assert!(matches!(
-            r.document.blocks[0].kind,
+            r.document.flat_blocks()[0].kind,
             BlockKind::Paragraph { .. }
         ));
     }
@@ -1814,12 +1949,15 @@ mod tests {
     #[test]
     fn a_list_interrupts_a_paragraph_without_a_blank_line() {
         let r = parse("text\n* item");
-        assert_eq!(r.document.blocks.len(), 2);
+        assert_eq!(r.document.flat_blocks().len(), 2);
         assert!(matches!(
-            r.document.blocks[0].kind,
+            r.document.flat_blocks()[0].kind,
             BlockKind::Paragraph { .. }
         ));
-        assert!(matches!(r.document.blocks[1].kind, BlockKind::List { .. }));
+        assert!(matches!(
+            r.document.flat_blocks()[1].kind,
+            BlockKind::List { .. }
+        ));
     }
 
     /// `item_text` with interior whitespace collapsed — handy where a multi-line
@@ -1984,11 +2122,11 @@ mod tests {
     fn number_without_space_or_dot_is_not_a_list() {
         // `1.text` (no space) and `1) item` (no dot) are not markers → paragraph.
         assert!(matches!(
-            parse("1.text").document.blocks[0].kind,
+            parse("1.text").document.into_flat_blocks()[0].kind,
             BlockKind::Paragraph { .. }
         ));
         assert!(matches!(
-            parse("1) item").document.blocks[0].kind,
+            parse("1) item").document.into_flat_blocks()[0].kind,
             BlockKind::Paragraph { .. }
         ));
     }
@@ -2013,7 +2151,7 @@ mod tests {
 
     #[test]
     fn block_anchor_attaches_id_to_paragraph() {
-        let b = &parse("[[pa]]\nHello.").document.blocks[0];
+        let b = &parse("[[pa]]\nHello.").document.into_flat_blocks()[0];
         assert_eq!(b.id.as_deref(), Some("pa"));
         assert!(b.reftext.is_none());
         assert!(matches!(b.kind, BlockKind::Paragraph { .. }));
@@ -2022,7 +2160,9 @@ mod tests {
     #[test]
     fn block_anchor_reftext_parses_inline_markup() {
         // asciidoctor renders `[[pa,*Bold* ref]]` reftext with the markup.
-        let b = &parse("[[pa,*Bold* ref]]\nHello.").document.blocks[0];
+        let b = &parse("[[pa,*Bold* ref]]\nHello.")
+            .document
+            .into_flat_blocks()[0];
         assert_eq!(b.id.as_deref(), Some("pa"));
         let reftext = b.reftext.as_ref().expect("reftext present");
         assert!(
@@ -2034,21 +2174,25 @@ mod tests {
     #[test]
     fn block_anchor_floats_across_a_blank_line() {
         // asciidoctor lets a blank line sit between the anchor and its block.
-        let b = &parse("[[pa]]\n\nHello.").document.blocks[0];
+        let b = &parse("[[pa]]\n\nHello.").document.into_flat_blocks()[0];
         assert_eq!(b.id.as_deref(), Some("pa"));
     }
 
     #[test]
     fn block_anchor_before_heading_sets_block_id() {
         // The explicit anchor overrides the auto-generated section id.
-        let b = &parse("[[custom]]\n== Real Title\n\nbody").document.blocks[0];
+        let b = &parse("[[custom]]\n== Real Title\n\nbody")
+            .document
+            .into_flat_blocks()[0];
         assert!(matches!(b.kind, BlockKind::Heading { level: 1, .. }));
         assert_eq!(b.id.as_deref(), Some("custom"));
     }
 
     #[test]
     fn block_anchor_before_listing_sets_block_id() {
-        let b = &parse("[[code1]]\n----\nx = 1\n----").document.blocks[0];
+        let b = &parse("[[code1]]\n----\nx = 1\n----")
+            .document
+            .into_flat_blocks()[0];
         assert_eq!(b.id.as_deref(), Some("code1"));
         assert!(matches!(b.kind, BlockKind::Listing { .. }));
     }
@@ -2056,7 +2200,9 @@ mod tests {
     #[test]
     fn second_anchor_before_a_block_wins() {
         // Stacked anchors: the one nearest the block (last seen) attaches.
-        let b = &parse("[[first]]\n[[second]]\nHello.").document.blocks[0];
+        let b = &parse("[[first]]\n[[second]]\nHello.")
+            .document
+            .into_flat_blocks()[0];
         assert_eq!(b.id.as_deref(), Some("second"));
     }
 
@@ -2065,7 +2211,7 @@ mod tests {
         // A line that is *wholly* `[[id]]` stays a block anchor on the next block
         // (no inline `Anchor` node in the paragraph text), unlike an anchor that
         // shares its line with other text. Matches asciidoctor's disambiguation.
-        let b = &parse("[[pa]]\nHello.").document.blocks[0];
+        let b = &parse("[[pa]]\nHello.").document.into_flat_blocks()[0];
         assert_eq!(b.id.as_deref(), Some("pa"));
         let BlockKind::Paragraph { inlines } = &b.kind else {
             panic!("expected paragraph");
@@ -2080,7 +2226,7 @@ mod tests {
     fn anchor_sharing_its_line_is_inline() {
         // `[[id]]` with other text on the line is an *inline* anchor: the block
         // gets no id, and the paragraph carries an `Anchor` node.
-        let b = &parse("[[id]] and more text").document.blocks[0];
+        let b = &parse("[[id]] and more text").document.into_flat_blocks()[0];
         assert!(b.id.is_none(), "inline anchor does not set the block id");
         let BlockKind::Paragraph { inlines } = &b.kind else {
             panic!("expected paragraph");
@@ -2093,7 +2239,7 @@ mod tests {
 
     #[test]
     fn block_attr_id_sets_block_id_and_excludes_line_from_span() {
-        let b = &parse("[#intro]\nHello.").document.blocks[0];
+        let b = &parse("[#intro]\nHello.").document.into_flat_blocks()[0];
         assert_eq!(b.id.as_deref(), Some("intro"));
         assert!(b.roles.is_empty());
         assert!(matches!(b.kind, BlockKind::Paragraph { .. }));
@@ -2107,27 +2253,27 @@ mod tests {
 
     #[test]
     fn block_attr_role_sets_roles() {
-        let b = &parse("[.lead]\nHello.").document.blocks[0];
+        let b = &parse("[.lead]\nHello.").document.into_flat_blocks()[0];
         assert!(b.id.is_none());
         assert_eq!(b.roles, ["lead"]);
     }
 
     #[test]
     fn block_attr_combined_sets_id_and_roles() {
-        let b = &parse("[#intro.lead.big]\nHi.").document.blocks[0];
+        let b = &parse("[#intro.lead.big]\nHi.").document.into_flat_blocks()[0];
         assert_eq!(b.id.as_deref(), Some("intro"));
         assert_eq!(b.roles, ["lead", "big"]);
     }
 
     #[test]
     fn block_attr_roles_accumulate_across_lines() {
-        let b = &parse("[.a]\n[.b]\nHi.").document.blocks[0];
+        let b = &parse("[.a]\n[.b]\nHi.").document.into_flat_blocks()[0];
         assert_eq!(b.roles, ["a", "b"]);
     }
 
     #[test]
     fn block_attr_floats_across_a_blank_line() {
-        let b = &parse("[.lead]\n\nHello.").document.blocks[0];
+        let b = &parse("[.lead]\n\nHello.").document.into_flat_blocks()[0];
         assert_eq!(b.roles, ["lead"]);
     }
 
@@ -2135,14 +2281,18 @@ mod tests {
     fn block_attr_id_overrides_section_auto_id() {
         // `[#id]` on a section must survive the resolve pass (which would
         // otherwise assign the auto-id `_real_title`), just like `[[id]]`.
-        let b = &parse("[#custom]\n== Real Title\n\nbody").document.blocks[0];
+        let b = &parse("[#custom]\n== Real Title\n\nbody")
+            .document
+            .into_flat_blocks()[0];
         assert!(matches!(b.kind, BlockKind::Heading { level: 1, .. }));
         assert_eq!(b.id.as_deref(), Some("custom"));
     }
 
     #[test]
     fn block_attr_role_on_section_keeps_auto_id() {
-        let b = &parse("[.notice]\n== Hello World\n\nbody").document.blocks[0];
+        let b = &parse("[.notice]\n== Hello World\n\nbody")
+            .document
+            .into_flat_blocks()[0];
         assert_eq!(b.id.as_deref(), Some("_hello_world"));
         assert_eq!(b.roles, ["notice"]);
     }
@@ -2152,14 +2302,18 @@ mod tests {
         // Shorthand after anchor wins; anchor after shorthand wins; and a role
         // line followed by an anchor keeps the roles (anchor only sets the id).
         assert_eq!(
-            parse("[[a1]]\n[#a2]\nHi.").document.blocks[0].id.as_deref(),
+            parse("[[a1]]\n[#a2]\nHi.").document.into_flat_blocks()[0]
+                .id
+                .as_deref(),
             Some("a2")
         );
         assert_eq!(
-            parse("[#a1]\n[[a2]]\nHi.").document.blocks[0].id.as_deref(),
+            parse("[#a1]\n[[a2]]\nHi.").document.into_flat_blocks()[0]
+                .id
+                .as_deref(),
             Some("a2")
         );
-        let b = &parse("[.lead]\n[[a2]]\nHi.").document.blocks[0];
+        let b = &parse("[.lead]\n[[a2]]\nHi.").document.into_flat_blocks()[0];
         assert_eq!(b.id.as_deref(), Some("a2"));
         assert_eq!(b.roles, ["lead"]);
     }
@@ -2171,8 +2325,8 @@ mod tests {
         // style/language ride on the following block. Here that is a paragraph,
         // since there is no `----` listing; id/roles stay empty.
         let doc = parse("[source,ruby]\nx = 1").document;
-        assert_eq!(doc.blocks.len(), 1);
-        let b = &doc.blocks[0];
+        assert_eq!(doc.flat_blocks().len(), 1);
+        let b = &doc.flat_blocks()[0];
         assert!(b.id.is_none());
         assert!(b.roles.is_empty());
         assert_eq!(b.attrs.style.as_deref(), Some("source"));
@@ -2191,7 +2345,7 @@ mod tests {
     #[test]
     fn attr_list_attaches_style_and_language_to_listing() {
         let doc = parse("[source,ruby]\n----\nputs 1\n----").document;
-        let b = &doc.blocks[0];
+        let b = &doc.flat_blocks()[0];
         assert!(matches!(b.kind, BlockKind::Listing { .. }));
         assert_eq!(b.attrs.style.as_deref(), Some("source"));
         assert_eq!(
@@ -2204,7 +2358,9 @@ mod tests {
     fn attr_list_named_and_options_merge_across_lines() {
         // Consecutive attribute lines merge: named accumulate (last-wins per key),
         // options accumulate, and the whole thing floats across a blank line.
-        let b = &parse("[%hardbreaks]\n[width=40]\n\nHi.").document.blocks[0];
+        let b = &parse("[%hardbreaks]\n[width=40]\n\nHi.")
+            .document
+            .into_flat_blocks()[0];
         assert_eq!(b.attrs.options, ["hardbreaks"]);
         assert_eq!(b.attrs.named.get("width").map(String::as_str), Some("40"));
         assert!(matches!(b.kind, BlockKind::Paragraph { .. }));
@@ -2215,7 +2371,7 @@ mod tests {
         let src = "....\nverbatim *not bold*\n....";
         let r = parse(src);
         assert!(r.diagnostics.is_empty());
-        let b = &r.document.blocks[0];
+        let b = &r.document.flat_blocks()[0];
         match &b.kind {
             BlockKind::Literal { text } => assert_eq!(text, "verbatim *not bold*"),
             other => panic!("expected literal, got {other:?}"),
@@ -2228,7 +2384,9 @@ mod tests {
     fn literal_style_turns_paragraph_into_literal() {
         // `[literal]` makes the following paragraph a verbatim literal block: its
         // text is the raw source (markup like `*not bold*` is NOT processed).
-        let b = &parse("[literal]\nverbatim *not bold* text").document.blocks[0];
+        let b = &parse("[literal]\nverbatim *not bold* text")
+            .document
+            .into_flat_blocks()[0];
         match &b.kind {
             BlockKind::Literal { text } => assert_eq!(text, "verbatim *not bold* text"),
             other => panic!("expected literal, got {other:?}"),
@@ -2247,11 +2405,11 @@ mod tests {
     #[test]
     fn unterminated_literal_is_a_diagnostic_not_a_failure() {
         let r = parse("....\nverbatim");
-        assert_eq!(r.document.blocks.len(), 1);
+        assert_eq!(r.document.flat_blocks().len(), 1);
         assert_eq!(r.diagnostics.len(), 1);
         assert_eq!(r.diagnostics[0].severity, Severity::Error);
         assert!(matches!(
-            r.document.blocks[0].kind,
+            r.document.flat_blocks()[0].kind,
             BlockKind::Literal { .. }
         ));
     }
@@ -2263,7 +2421,7 @@ mod tests {
         let src = "++++\n<div>{author} *b*</div>\n++++";
         let r = parse(src);
         assert!(r.diagnostics.is_empty());
-        let b = &r.document.blocks[0];
+        let b = &r.document.flat_blocks()[0];
         match &b.kind {
             BlockKind::Passthrough { text } => assert_eq!(text, "<div>{author} *b*</div>"),
             other => panic!("expected passthrough, got {other:?}"),
@@ -2277,7 +2435,7 @@ mod tests {
         // `[pass]` makes the following paragraph a raw passthrough: its text is the
         // raw source (markup like `*b*` and `{x}` is NOT processed).
         let src = "[pass]\n<b>{x}</b> *b*";
-        let b = &parse(src).document.blocks[0];
+        let b = &parse(src).document.into_flat_blocks()[0];
         match &b.kind {
             BlockKind::Passthrough { text } => assert_eq!(text, "<b>{x}</b> *b*"),
             other => panic!("expected passthrough, got {other:?}"),
@@ -2294,7 +2452,7 @@ mod tests {
         let src = "[pass]\n--\n<i>raw</i> {x}\n--";
         let r = parse(src);
         assert!(r.diagnostics.is_empty());
-        let b = &r.document.blocks[0];
+        let b = &r.document.flat_blocks()[0];
         match &b.kind {
             BlockKind::Passthrough { text } => assert_eq!(text, "<i>raw</i> {x}"),
             other => panic!("expected passthrough, got {other:?}"),
@@ -2306,11 +2464,11 @@ mod tests {
     #[test]
     fn unterminated_passthrough_is_a_diagnostic_not_a_failure() {
         let r = parse("++++\nverbatim");
-        assert_eq!(r.document.blocks.len(), 1);
+        assert_eq!(r.document.flat_blocks().len(), 1);
         assert_eq!(r.diagnostics.len(), 1);
         assert_eq!(r.diagnostics[0].severity, Severity::Error);
         assert!(matches!(
-            r.document.blocks[0].kind,
+            r.document.flat_blocks()[0].kind,
             BlockKind::Passthrough { .. }
         ));
     }
@@ -2344,7 +2502,9 @@ mod tests {
     fn note_style_turns_paragraph_into_admonition() {
         // `[NOTE]` on a paragraph makes it an admonition; inline markup is still
         // processed (unlike `[literal]`, which is verbatim).
-        let b = &parse("[NOTE]\nThis is a *note*.").document.blocks[0];
+        let b = &parse("[NOTE]\nThis is a *note*.")
+            .document
+            .into_flat_blocks()[0];
         let (kind, text) = admonition(b);
         assert_eq!(kind, AdmonitionKind::Note);
         assert_eq!(text, "This is a ");
@@ -2367,7 +2527,7 @@ mod tests {
         // span still covers the whole paragraph (label included) for source
         // fidelity, and the content's first inline starts after the prefix.
         let src = "NOTE: This is a note.";
-        let b = &parse(src).document.blocks[0];
+        let b = &parse(src).document.into_flat_blocks()[0];
         let (kind, text) = admonition(b);
         assert_eq!(kind, AdmonitionKind::Note);
         assert_eq!(text, "This is a note.");
@@ -2392,7 +2552,7 @@ mod tests {
 
     #[test]
     fn label_prefix_inline_markup_is_processed() {
-        let b = &parse("TIP: be *bold*").document.blocks[0];
+        let b = &parse("TIP: be *bold*").document.into_flat_blocks()[0];
         let (kind, inlines) = admonition_para(b);
         assert_eq!(kind, AdmonitionKind::Tip);
         assert!(inlines.iter().any(|n| matches!(n, Inline::Strong { .. })));
@@ -2407,7 +2567,7 @@ mod tests {
             ("WARNING: x", AdmonitionKind::Warning),
             ("CAUTION: x", AdmonitionKind::Caution),
         ] {
-            let b = &parse(src).document.blocks[0];
+            let b = &parse(src).document.into_flat_blocks()[0];
             let (kind, _) = admonition(b);
             assert_eq!(kind, want, "for {src:?}");
         }
@@ -2420,7 +2580,7 @@ mod tests {
         for src in ["[note]\ntext", "note: text", "NOTE:text"] {
             assert!(
                 matches!(
-                    parse(src).document.blocks[0].kind,
+                    parse(src).document.into_flat_blocks()[0].kind,
                     BlockKind::Paragraph { .. }
                 ),
                 "{src:?} should stay a paragraph"
@@ -2433,7 +2593,7 @@ mod tests {
         // A wrapped line after `NOTE: ` folds into the admonition body, as
         // asciidoctor does; the span covers both source lines.
         let src = "NOTE: first line\nsecond line";
-        let b = &parse(src).document.blocks[0];
+        let b = &parse(src).document.into_flat_blocks()[0];
         assert_eq!(admonition(b).0, AdmonitionKind::Note);
         assert_eq!(b.span, Span::new(0, src.len()));
         let (_, inlines) = admonition_para(b);
@@ -2462,7 +2622,7 @@ mod tests {
         let src = "[NOTE]\n====\nbody *strong*.\n====";
         let r = parse(src);
         assert!(r.diagnostics.is_empty());
-        let b = &r.document.blocks[0];
+        let b = &r.document.flat_blocks()[0];
         let (kind, blocks) = admonition_blocks(b);
         assert_eq!(kind, AdmonitionKind::Note);
         assert_eq!(blocks.len(), 1);
@@ -2483,7 +2643,7 @@ mod tests {
         // paragraph form.
         let src = "[WARNING]\n====\nIntro.\n\n----\ncode\n----\n====";
         let doc = parse(src).document;
-        let (kind, blocks) = admonition_blocks(&doc.blocks[0]);
+        let (kind, blocks) = admonition_blocks(doc.flat_blocks()[0]);
         assert_eq!(kind, AdmonitionKind::Warning);
         assert_eq!(blocks.len(), 2);
         assert!(matches!(blocks[0].kind, BlockKind::Paragraph { .. }));
@@ -2498,7 +2658,7 @@ mod tests {
         // Case-sensitive: `[note]` on a `====` block is a custom style, not an
         // admonition, so the block stays a plain example.
         let src = "[note]\n====\ntext\n====";
-        let b = &parse(src).document.blocks[0];
+        let b = &parse(src).document.into_flat_blocks()[0];
         assert!(matches!(b.kind, BlockKind::Example { .. }));
         assert_eq!(b.attrs.style.as_deref(), Some("note"));
     }
@@ -2508,7 +2668,7 @@ mod tests {
         // id/roles attach to the admonition container; the children carry none.
         let src = "[NOTE#warn.box]\n====\ntext\n====";
         let doc = parse(src).document;
-        let b = &doc.blocks[0];
+        let b = &doc.flat_blocks()[0];
         assert_eq!(b.id.as_deref(), Some("warn"));
         assert_eq!(b.roles, ["box"]);
         let (kind, blocks) = admonition_blocks(b);
@@ -2522,7 +2682,7 @@ mod tests {
         // example: a `<<_target>>` inside picks up the section title.
         let src = "== Target\n\n[NOTE]\n====\nSee <<_target>>.\n====";
         let doc = parse(src).document;
-        let (_, blocks) = admonition_blocks(&doc.blocks[1]);
+        let (_, blocks) = admonition_blocks(doc.flat_blocks()[1]);
         let inlines = match &blocks[0].kind {
             BlockKind::Paragraph { inlines } => inlines.clone(),
             other => panic!("expected paragraph, got {other:?}"),
@@ -2555,7 +2715,7 @@ mod tests {
         let src = "====\nHello *world*.\n====";
         let r = parse(src);
         assert!(r.diagnostics.is_empty());
-        let b = &r.document.blocks[0];
+        let b = &r.document.flat_blocks()[0];
         let kids = example_children(b);
         assert_eq!(kids.len(), 1);
         assert!(matches!(kids[0].kind, BlockKind::Paragraph { .. }));
@@ -2566,7 +2726,7 @@ mod tests {
     #[test]
     fn example_block_holds_a_nested_listing() {
         let src = "====\nIntro.\n\n----\ncode\n----\n====";
-        let kids = example_children(&parse(src).document.blocks[0]).to_vec();
+        let kids = example_children(&parse(src).document.into_flat_blocks()[0]).to_vec();
         assert_eq!(kids.len(), 2);
         assert!(matches!(kids[0].kind, BlockKind::Paragraph { .. }));
         match &kids[1].kind {
@@ -2579,7 +2739,9 @@ mod tests {
     fn example_style_wraps_paragraph_in_container() {
         // `[example]` on a paragraph yields a single-child example block; the
         // container keeps id/roles, the child is a plain paragraph.
-        let b = &parse("[#ex.box]\n[example]\nJust text.").document.blocks[0];
+        let b = &parse("[#ex.box]\n[example]\nJust text.")
+            .document
+            .into_flat_blocks()[0];
         assert_eq!(b.id.as_deref(), Some("ex"));
         assert_eq!(b.roles, ["box"]);
         let kids = example_children(b);
@@ -2594,8 +2756,8 @@ mod tests {
         // end at the fence, not fold it into the body.
         let src = "====\ntext\n====\nafter";
         let doc = parse(src).document;
-        assert_eq!(doc.blocks.len(), 2);
-        let kids = example_children(&doc.blocks[0]);
+        assert_eq!(doc.flat_blocks().len(), 2);
+        let kids = example_children(doc.flat_blocks()[0]);
         match &kids[0].kind {
             BlockKind::Paragraph { inlines } => match &inlines[0] {
                 Inline::Text { value, .. } => assert_eq!(value, "text"),
@@ -2603,7 +2765,10 @@ mod tests {
             },
             other => panic!("expected paragraph, got {other:?}"),
         }
-        assert!(matches!(doc.blocks[1].kind, BlockKind::Paragraph { .. }));
+        assert!(matches!(
+            doc.flat_blocks()[1].kind,
+            BlockKind::Paragraph { .. }
+        ));
     }
 
     #[test]
@@ -2611,7 +2776,7 @@ mod tests {
         // A `[source,rust]` style inside an example reaches the child listing —
         // proof that style fixups and pending metadata work at any depth.
         let src = "====\n[source,rust]\n----\nlet x = 1;\n----\n====";
-        let kids = example_children(&parse(src).document.blocks[0]).to_vec();
+        let kids = example_children(&parse(src).document.into_flat_blocks()[0]).to_vec();
         assert_eq!(kids.len(), 1);
         assert!(matches!(kids[0].kind, BlockKind::Listing { .. }));
         assert_eq!(kids[0].attrs.style.as_deref(), Some("source"));
@@ -2624,11 +2789,11 @@ mod tests {
     #[test]
     fn unterminated_example_is_a_diagnostic_not_a_failure() {
         let r = parse("====\nopen but never closed");
-        assert_eq!(r.document.blocks.len(), 1);
+        assert_eq!(r.document.flat_blocks().len(), 1);
         assert_eq!(r.diagnostics.len(), 1);
         assert_eq!(r.diagnostics[0].severity, Severity::Error);
         assert!(matches!(
-            r.document.blocks[0].kind,
+            r.document.flat_blocks()[0].kind,
             BlockKind::Example { .. }
         ));
     }
@@ -2638,7 +2803,7 @@ mod tests {
         // The resolve pass must descend into an example: a `<<_target>>` inside it
         // picks up the section title, just like one at the top level.
         let src = "== Target\n\n====\nSee <<_target>>.\n====";
-        let kids = example_children(&parse(src).document.blocks[1]).to_vec();
+        let kids = example_children(&parse(src).document.into_flat_blocks()[1]).to_vec();
         let inlines = match &kids[0].kind {
             BlockKind::Paragraph { inlines } => inlines.clone(),
             other => panic!("expected paragraph, got {other:?}"),
@@ -2672,7 +2837,7 @@ mod tests {
         let src = "****\nHello *world*.\n****";
         let r = parse(src);
         assert!(r.diagnostics.is_empty());
-        let b = &r.document.blocks[0];
+        let b = &r.document.flat_blocks()[0];
         let kids = sidebar_children(b);
         assert_eq!(kids.len(), 1);
         assert!(matches!(kids[0].kind, BlockKind::Paragraph { .. }));
@@ -2683,7 +2848,7 @@ mod tests {
     #[test]
     fn sidebar_block_holds_a_nested_listing() {
         let src = "****\nIntro.\n\n----\ncode\n----\n****";
-        let kids = sidebar_children(&parse(src).document.blocks[0]).to_vec();
+        let kids = sidebar_children(&parse(src).document.into_flat_blocks()[0]).to_vec();
         assert_eq!(kids.len(), 2);
         assert!(matches!(kids[0].kind, BlockKind::Paragraph { .. }));
         match &kids[1].kind {
@@ -2696,7 +2861,9 @@ mod tests {
     fn sidebar_style_wraps_paragraph_in_container() {
         // `[sidebar]` on a paragraph yields a single-child sidebar block; the
         // container keeps id/roles, the child is a plain paragraph.
-        let b = &parse("[#sb.box]\n[sidebar]\nJust text.").document.blocks[0];
+        let b = &parse("[#sb.box]\n[sidebar]\nJust text.")
+            .document
+            .into_flat_blocks()[0];
         assert_eq!(b.id.as_deref(), Some("sb"));
         assert_eq!(b.roles, ["box"]);
         let kids = sidebar_children(b);
@@ -2709,9 +2876,9 @@ mod tests {
     fn sidebar_delimiter_distinct_from_unordered_marker_run() {
         // A whole-line `****` is the sidebar fence; `**** item` (content after the
         // marker run) is *not* a delimiter and stays an unordered list.
-        let sb = &parse("****\ntext\n****").document.blocks[0];
+        let sb = &parse("****\ntext\n****").document.into_flat_blocks()[0];
         assert!(matches!(sb.kind, BlockKind::Sidebar { .. }));
-        let list = &parse("**** item").document.blocks[0];
+        let list = &parse("**** item").document.into_flat_blocks()[0];
         assert!(
             matches!(list.kind, BlockKind::List { .. }),
             "got {:?}",
@@ -2725,8 +2892,8 @@ mod tests {
         // end at the fence, not fold it into the body.
         let src = "****\ntext\n****\nafter";
         let doc = parse(src).document;
-        assert_eq!(doc.blocks.len(), 2);
-        let kids = sidebar_children(&doc.blocks[0]);
+        assert_eq!(doc.flat_blocks().len(), 2);
+        let kids = sidebar_children(doc.flat_blocks()[0]);
         match &kids[0].kind {
             BlockKind::Paragraph { inlines } => match &inlines[0] {
                 Inline::Text { value, .. } => assert_eq!(value, "text"),
@@ -2734,17 +2901,20 @@ mod tests {
             },
             other => panic!("expected paragraph, got {other:?}"),
         }
-        assert!(matches!(doc.blocks[1].kind, BlockKind::Paragraph { .. }));
+        assert!(matches!(
+            doc.flat_blocks()[1].kind,
+            BlockKind::Paragraph { .. }
+        ));
     }
 
     #[test]
     fn unterminated_sidebar_is_a_diagnostic_not_a_failure() {
         let r = parse("****\nopen but never closed");
-        assert_eq!(r.document.blocks.len(), 1);
+        assert_eq!(r.document.flat_blocks().len(), 1);
         assert_eq!(r.diagnostics.len(), 1);
         assert_eq!(r.diagnostics[0].severity, Severity::Error);
         assert!(matches!(
-            r.document.blocks[0].kind,
+            r.document.flat_blocks()[0].kind,
             BlockKind::Sidebar { .. }
         ));
     }
@@ -2753,7 +2923,9 @@ mod tests {
     fn admonition_style_on_sidebar_stays_a_sidebar() {
         // Unlike `====` (where `[NOTE]` becomes an admonition), asciidoctor leaves
         // `[NOTE]` on a `****` block a plain sidebar — the style is inert.
-        let b = &parse("[NOTE]\n****\ntext\n****").document.blocks[0];
+        let b = &parse("[NOTE]\n****\ntext\n****")
+            .document
+            .into_flat_blocks()[0];
         assert!(matches!(b.kind, BlockKind::Sidebar { .. }));
         assert_eq!(b.attrs.style.as_deref(), Some("NOTE"));
     }
@@ -2763,7 +2935,7 @@ mod tests {
         // The resolve pass must descend into a sidebar: a `<<_target>>` inside it
         // picks up the section title, just like one at the top level.
         let src = "== Target\n\n****\nSee <<_target>>.\n****";
-        let kids = sidebar_children(&parse(src).document.blocks[1]).to_vec();
+        let kids = sidebar_children(&parse(src).document.into_flat_blocks()[1]).to_vec();
         let inlines = match &kids[0].kind {
             BlockKind::Paragraph { inlines } => inlines.clone(),
             other => panic!("expected paragraph, got {other:?}"),
@@ -2798,7 +2970,7 @@ mod tests {
         let src = "--\nHello *world*.\n--";
         let r = parse(src);
         assert!(r.diagnostics.is_empty());
-        let b = &r.document.blocks[0];
+        let b = &r.document.flat_blocks()[0];
         let kids = open_children(b);
         assert_eq!(kids.len(), 1);
         assert!(matches!(kids[0].kind, BlockKind::Paragraph { .. }));
@@ -2808,7 +2980,7 @@ mod tests {
     #[test]
     fn open_block_holds_a_nested_listing() {
         let src = "--\nIntro.\n\n----\ncode\n----\n--";
-        let kids = open_children(&parse(src).document.blocks[0]).to_vec();
+        let kids = open_children(&parse(src).document.into_flat_blocks()[0]).to_vec();
         assert_eq!(kids.len(), 2);
         assert!(matches!(kids[0].kind, BlockKind::Paragraph { .. }));
         match &kids[1].kind {
@@ -2821,7 +2993,9 @@ mod tests {
     fn open_style_wraps_paragraph_in_container() {
         // `[open]` on a paragraph yields a single-child open block; the container
         // keeps id/roles, the child is a plain paragraph.
-        let b = &parse("[#o.box]\n[open]\nJust text.").document.blocks[0];
+        let b = &parse("[#o.box]\n[open]\nJust text.")
+            .document
+            .into_flat_blocks()[0];
         assert_eq!(b.id.as_deref(), Some("o"));
         assert_eq!(b.roles, ["box"]);
         let kids = open_children(b);
@@ -2834,9 +3008,9 @@ mod tests {
     fn open_delimiter_is_exactly_two_hyphens() {
         // A whole-line `--` is the open-block fence; `---` (three hyphens) is not a
         // delimiter and stays a paragraph.
-        let b = &parse("--\ntext\n--").document.blocks[0];
+        let b = &parse("--\ntext\n--").document.into_flat_blocks()[0];
         assert!(matches!(b.kind, BlockKind::Open { .. }));
-        let para = &parse("---\ntext\n---").document.blocks[0];
+        let para = &parse("---\ntext\n---").document.into_flat_blocks()[0];
         assert!(
             matches!(para.kind, BlockKind::Paragraph { .. }),
             "got {:?}",
@@ -2849,8 +3023,11 @@ mod tests {
         // Regression: an inline `--` (em dash) inside paragraph text must not be
         // mistaken for an open-block fence — the line is not a *whole-line* `--`.
         let doc = parse("an em -- dash here").document;
-        assert_eq!(doc.blocks.len(), 1);
-        assert!(matches!(doc.blocks[0].kind, BlockKind::Paragraph { .. }));
+        assert_eq!(doc.flat_blocks().len(), 1);
+        assert!(matches!(
+            doc.flat_blocks()[0].kind,
+            BlockKind::Paragraph { .. }
+        ));
     }
 
     #[test]
@@ -2859,8 +3036,8 @@ mod tests {
         // at the fence, not fold it into the body.
         let src = "--\ntext\n--\nafter";
         let doc = parse(src).document;
-        assert_eq!(doc.blocks.len(), 2);
-        let kids = open_children(&doc.blocks[0]);
+        assert_eq!(doc.flat_blocks().len(), 2);
+        let kids = open_children(doc.flat_blocks()[0]);
         match &kids[0].kind {
             BlockKind::Paragraph { inlines } => match &inlines[0] {
                 Inline::Text { value, .. } => assert_eq!(value, "text"),
@@ -2868,16 +3045,22 @@ mod tests {
             },
             other => panic!("expected paragraph, got {other:?}"),
         }
-        assert!(matches!(doc.blocks[1].kind, BlockKind::Paragraph { .. }));
+        assert!(matches!(
+            doc.flat_blocks()[1].kind,
+            BlockKind::Paragraph { .. }
+        ));
     }
 
     #[test]
     fn unterminated_open_is_a_diagnostic_not_a_failure() {
         let r = parse("--\nopen but never closed");
-        assert_eq!(r.document.blocks.len(), 1);
+        assert_eq!(r.document.flat_blocks().len(), 1);
         assert_eq!(r.diagnostics.len(), 1);
         assert_eq!(r.diagnostics[0].severity, Severity::Error);
-        assert!(matches!(r.document.blocks[0].kind, BlockKind::Open { .. }));
+        assert!(matches!(
+            r.document.flat_blocks()[0].kind,
+            BlockKind::Open { .. }
+        ));
     }
 
     #[test]
@@ -2885,7 +3068,7 @@ mod tests {
         // `[quote]` on a `--` block moves its parsed children into a quote, and the
         // positional attribution folds in just as for a `____` block.
         let src = "[quote, Anon, A Work]\n--\nMasqueraded.\n--";
-        let b = &parse(src).document.blocks[0];
+        let b = &parse(src).document.into_flat_blocks()[0];
         let (attribution, blocks) = quote_parts(b);
         let attr = attribution.as_ref().expect("expected attribution");
         assert_eq!(part_text(&attr.author).as_deref(), Some("Anon"));
@@ -2896,7 +3079,7 @@ mod tests {
 
     #[test]
     fn example_style_on_open_masquerades_to_example() {
-        let b = &parse("[example]\n--\nx\n--").document.blocks[0];
+        let b = &parse("[example]\n--\nx\n--").document.into_flat_blocks()[0];
         match &b.kind {
             BlockKind::Example { blocks } => assert_eq!(blocks.len(), 1),
             other => panic!("expected example, got {other:?}"),
@@ -2905,7 +3088,7 @@ mod tests {
 
     #[test]
     fn sidebar_style_on_open_masquerades_to_sidebar() {
-        let b = &parse("[sidebar]\n--\nx\n--").document.blocks[0];
+        let b = &parse("[sidebar]\n--\nx\n--").document.into_flat_blocks()[0];
         assert!(matches!(b.kind, BlockKind::Sidebar { .. }));
     }
 
@@ -2913,7 +3096,9 @@ mod tests {
     fn admonition_style_on_open_masquerades_to_admonition() {
         // Unlike a `****` sidebar (where `[NOTE]` is inert), `[NOTE]` on a `--` block
         // folds its children into an admonition — matching asciidoctor.
-        let b = &parse("[NOTE]\n--\nHeads up.\n--").document.blocks[0];
+        let b = &parse("[NOTE]\n--\nHeads up.\n--")
+            .document
+            .into_flat_blocks()[0];
         let (kind, blocks) = admonition_blocks(b);
         assert_eq!(kind, AdmonitionKind::Note);
         assert_eq!(blocks.len(), 1);
@@ -2927,7 +3112,7 @@ mod tests {
         let src = "[source,ruby]\n--\nputs *not bold*\n--";
         let r = parse(src);
         assert!(r.diagnostics.is_empty());
-        let b = &r.document.blocks[0];
+        let b = &r.document.flat_blocks()[0];
         match &b.kind {
             BlockKind::Listing { text } => assert_eq!(text, "puts *not bold*"),
             other => panic!("expected listing, got {other:?}"),
@@ -2946,7 +3131,7 @@ mod tests {
         // `[literal]` on a `--` block: verbatim body, no inline subs (`*not bold*`
         // stays literal).
         let src = "[literal]\n--\nverbatim *not bold*\n--";
-        let b = &parse(src).document.blocks[0];
+        let b = &parse(src).document.into_flat_blocks()[0];
         match &b.kind {
             BlockKind::Literal { text } => assert_eq!(text, "verbatim *not bold*"),
             other => panic!("expected literal, got {other:?}"),
@@ -2962,7 +3147,7 @@ mod tests {
         let src = "[verse, Carl Sandburg, Fog]\n--\nThe *fog* comes\non little cat feet.\n--";
         let r = parse(src);
         assert!(r.diagnostics.is_empty());
-        let b = &r.document.blocks[0];
+        let b = &r.document.flat_blocks()[0];
         let (attribution, inlines) = verse_parts(b);
         let attr = attribution.as_ref().expect("expected attribution");
         assert_eq!(part_text(&attr.author).as_deref(), Some("Carl Sandburg"));
@@ -2978,11 +3163,11 @@ mod tests {
         // An unterminated verbatim `--` masquerade still parses to a partial block
         // and emits one "unterminated open block" diagnostic, like the `____` forms.
         let r = parse("[literal]\n--\nopen but never closed");
-        assert_eq!(r.document.blocks.len(), 1);
+        assert_eq!(r.document.flat_blocks().len(), 1);
         assert_eq!(r.diagnostics.len(), 1);
         assert_eq!(r.diagnostics[0].severity, Severity::Error);
         assert!(matches!(
-            r.document.blocks[0].kind,
+            r.document.flat_blocks()[0].kind,
             BlockKind::Literal { .. }
         ));
     }
@@ -2992,7 +3177,7 @@ mod tests {
         // The resolve pass must descend into an open block: a `<<_target>>` inside it
         // picks up the section title, just like one at the top level.
         let src = "== Target\n\n--\nSee <<_target>>.\n--";
-        let kids = open_children(&parse(src).document.blocks[1]).to_vec();
+        let kids = open_children(&parse(src).document.into_flat_blocks()[1]).to_vec();
         let inlines = match &kids[0].kind {
             BlockKind::Paragraph { inlines } => inlines.clone(),
             other => panic!("expected paragraph, got {other:?}"),
@@ -3064,7 +3249,7 @@ mod tests {
         let src = "____\nA *bold* quote.\n____";
         let r = parse(src);
         assert!(r.diagnostics.is_empty());
-        let b = &r.document.blocks[0];
+        let b = &r.document.flat_blocks()[0];
         let (attribution, blocks) = quote_parts(b);
         assert!(attribution.is_none());
         assert_eq!(blocks.len(), 1);
@@ -3076,7 +3261,7 @@ mod tests {
     fn delimited_quote_carries_attribution() {
         let src = "[quote, Albert Einstein, Theory of Relativity]\n____\nText.\n____";
         let r = parse(src);
-        let b = &r.document.blocks[0];
+        let b = &r.document.flat_blocks()[0];
         let (attribution, blocks) = quote_parts(b);
         let attr = attribution.as_ref().expect("expected attribution");
         assert_eq!(part_text(&attr.author).as_deref(), Some("Albert Einstein"));
@@ -3092,7 +3277,7 @@ mod tests {
     #[test]
     fn quote_style_wraps_paragraph_in_container() {
         let r = parse("[#q.box]\n[quote]\nShort.");
-        let b = &r.document.blocks[0];
+        let b = &r.document.flat_blocks()[0];
         assert_eq!(b.id.as_deref(), Some("q"));
         assert_eq!(b.roles, ["box"]);
         let (attribution, blocks) = quote_parts(b);
@@ -3104,7 +3289,7 @@ mod tests {
     #[test]
     fn quote_attribution_author_only() {
         let r = parse("[quote, Carl Sandburg]\n____\nx\n____");
-        let (attribution, _) = quote_parts(&r.document.blocks[0]);
+        let (attribution, _) = quote_parts(r.document.flat_blocks()[0]);
         let attr = attribution.as_ref().expect("expected attribution");
         assert_eq!(part_text(&attr.author).as_deref(), Some("Carl Sandburg"));
         assert!(attr.citetitle.is_none());
@@ -3115,7 +3300,7 @@ mod tests {
         // `[quote, , Fog]` — an empty author slot is preserved (matching
         // asciidoctor): citetitle only, no author.
         let r = parse("[quote, , Fog]\n____\nx\n____");
-        let (attribution, _) = quote_parts(&r.document.blocks[0]);
+        let (attribution, _) = quote_parts(r.document.flat_blocks()[0]);
         let attr = attribution.as_ref().expect("expected attribution");
         assert!(attr.author.is_none());
         assert_eq!(part_text(&attr.citetitle).as_deref(), Some("Fog"));
@@ -3130,25 +3315,25 @@ mod tests {
             "[quote, role=None, Author]\nx",
         ] {
             let r = parse(src);
-            let (attribution, _) = quote_parts(&r.document.blocks[0]);
+            let (attribution, _) = quote_parts(r.document.flat_blocks()[0]);
             let attr = attribution.as_ref().expect("expected attribution");
             assert!(attr.author.is_none(), "{src}");
             assert_eq!(part_text(&attr.citetitle).as_deref(), Some("Author"));
         }
         // A later line replaces the same key; an explicit nil clears it.
         let r = parse("[quote, A, W1]\n[quote, B]\n____\nx\n____");
-        let (attribution, _) = quote_parts(&r.document.blocks[0]);
+        let (attribution, _) = quote_parts(r.document.flat_blocks()[0]);
         let attr = attribution.as_ref().unwrap();
         assert_eq!(part_text(&attr.author).as_deref(), Some("B"));
         assert_eq!(part_text(&attr.citetitle).as_deref(), Some("W1"));
         let r = parse("[quote,A]\n[,B]\n____\nx\n____");
-        let (attribution, _) = quote_parts(&r.document.blocks[0]);
+        let (attribution, _) = quote_parts(r.document.flat_blocks()[0]);
         assert_eq!(
             part_text(&attribution.as_ref().unwrap().author).as_deref(),
             Some("B")
         );
         let r = parse("[quote, A]\n[quote, , W]\n--\nx\n--");
-        let (attribution, _) = quote_parts(&r.document.blocks[0]);
+        let (attribution, _) = quote_parts(r.document.flat_blocks()[0]);
         let attr = attribution.as_ref().unwrap();
         assert!(attr.author.is_none());
         assert_eq!(part_text(&attr.citetitle).as_deref(), Some("W"));
@@ -3157,7 +3342,7 @@ mod tests {
     #[test]
     fn quoted_empty_author_is_an_empty_part() {
         let r = parse("[quote,\"\",W]\nx");
-        let (attribution, _) = quote_parts(&r.document.blocks[0]);
+        let (attribution, _) = quote_parts(r.document.flat_blocks()[0]);
         let attr = attribution.as_ref().unwrap();
         assert_eq!(attr.author.as_deref(), Some(&[][..]));
         assert_eq!(part_text(&attr.citetitle).as_deref(), Some("W"));
@@ -3169,7 +3354,7 @@ mod tests {
         // values stay raw source; single-quoted values get normal substitutions.
         let src = "Ünï\r\n\r\n[quote, *Ann* & <i>, '*Wörk*']\r\n____\r\nx\r\n____";
         let r = parse(src);
-        let (attribution, _) = quote_parts(&r.document.blocks[1]);
+        let (attribution, _) = quote_parts(r.document.flat_blocks()[1]);
         let attr = attribution.as_ref().unwrap();
         let [Inline::Raw { value, span }] = attr.author.as_deref().unwrap() else {
             panic!("expected raw author: {attr:?}");
@@ -3187,15 +3372,15 @@ mod tests {
         // `[]` is consumed metadata; a leading blank or another first
         // character leaves the line as paragraph text.
         let r = parse("[]\npara");
-        assert_eq!(r.document.blocks.len(), 1);
+        assert_eq!(r.document.flat_blocks().len(), 1);
         assert_eq!(
-            r.document.blocks[0].span,
+            r.document.flat_blocks()[0].span,
             Span::new(3, 7),
             "the consumed line is outside the paragraph"
         );
         for src in ["[ quote]\npara", "[*x]\npara", "[[x y]]\npara"] {
             let r = parse(src);
-            let BlockKind::Paragraph { inlines } = &r.document.blocks[0].kind else {
+            let BlockKind::Paragraph { inlines } = &r.document.flat_blocks()[0].kind else {
                 panic!("expected paragraph for {src}");
             };
             assert!(
@@ -3209,7 +3394,7 @@ mod tests {
     fn shorthand_warnings_point_to_the_attribute_line() {
         let src = "para\n\n[#a#b]\nx";
         let r = parse(src);
-        assert_eq!(r.document.blocks[1].id.as_deref(), Some("b"));
+        assert_eq!(r.document.flat_blocks()[1].id.as_deref(), Some("b"));
         let d = r
             .diagnostics
             .iter()
@@ -3222,7 +3407,7 @@ mod tests {
     #[test]
     fn delimited_verse_preserves_newlines() {
         let r = parse("[verse]\n____\nThe fog comes\non little cat feet.\n____");
-        let (attribution, inlines) = verse_parts(&r.document.blocks[0]);
+        let (attribution, inlines) = verse_parts(r.document.flat_blocks()[0]);
         assert!(attribution.is_none());
         assert_eq!(verse_text(inlines), "The fog comes\non little cat feet.");
     }
@@ -3230,7 +3415,7 @@ mod tests {
     #[test]
     fn verse_carries_attribution_and_inline_markup() {
         let r = parse("[verse, Carl Sandburg, Fog]\n____\nThe *fog* comes\non feet.\n____");
-        let (attribution, inlines) = verse_parts(&r.document.blocks[0]);
+        let (attribution, inlines) = verse_parts(r.document.flat_blocks()[0]);
         let attr = attribution.as_ref().expect("expected attribution");
         assert_eq!(part_text(&attr.author).as_deref(), Some("Carl Sandburg"));
         assert_eq!(part_text(&attr.citetitle).as_deref(), Some("Fog"));
@@ -3244,7 +3429,7 @@ mod tests {
         // The paragraph form re-scans without folding, so a wrapped multi-line
         // `[verse]` paragraph keeps its breaks.
         let r = parse("[verse]\nRoses are red,\nviolets are blue.");
-        let (_, inlines) = verse_parts(&r.document.blocks[0]);
+        let (_, inlines) = verse_parts(r.document.flat_blocks()[0]);
         assert_eq!(verse_text(inlines), "Roses are red,\nviolets are blue.");
     }
 
@@ -3254,7 +3439,7 @@ mod tests {
         // bytes (so the editor can locate it).
         let src = "[verse]\n____\nab\ncd\n____";
         let r = parse(src);
-        let (_, inlines) = verse_parts(&r.document.blocks[0]);
+        let (_, inlines) = verse_parts(r.document.flat_blocks()[0]);
         let body_start = src.find("ab").unwrap();
         match &inlines[0] {
             Inline::Text { value, span } => {
@@ -3268,26 +3453,32 @@ mod tests {
     #[test]
     fn unterminated_quote_is_a_diagnostic_not_a_failure() {
         let r = parse("____\nopen but never closed");
-        assert_eq!(r.document.blocks.len(), 1);
+        assert_eq!(r.document.flat_blocks().len(), 1);
         assert_eq!(r.diagnostics.len(), 1);
         assert_eq!(r.diagnostics[0].severity, Severity::Error);
-        assert!(matches!(r.document.blocks[0].kind, BlockKind::Quote { .. }));
+        assert!(matches!(
+            r.document.flat_blocks()[0].kind,
+            BlockKind::Quote { .. }
+        ));
     }
 
     #[test]
     fn unterminated_verse_is_a_diagnostic_not_a_failure() {
         let r = parse("[verse]\n____\nopen but never closed");
-        assert_eq!(r.document.blocks.len(), 1);
+        assert_eq!(r.document.flat_blocks().len(), 1);
         assert_eq!(r.diagnostics.len(), 1);
         assert_eq!(r.diagnostics[0].severity, Severity::Error);
-        assert!(matches!(r.document.blocks[0].kind, BlockKind::Verse { .. }));
+        assert!(matches!(
+            r.document.flat_blocks()[0].kind,
+            BlockKind::Verse { .. }
+        ));
     }
 
     #[test]
     fn cross_reference_inside_quote_resolves_against_whole_document() {
         let src = "== Target\n\n____\nSee <<_target>>.\n____";
         let r = parse(src);
-        let (_, blocks) = quote_parts(&r.document.blocks[1]);
+        let (_, blocks) = quote_parts(r.document.flat_blocks()[1]);
         let inlines = match &blocks[0].kind {
             BlockKind::Paragraph { inlines } => inlines.clone(),
             other => panic!("expected paragraph, got {other:?}"),
@@ -3335,7 +3526,7 @@ mod tests {
 
     #[test]
     fn block_title_attaches_to_paragraph() {
-        let b = &parse(".A caption\nBody text.").document.blocks[0];
+        let b = &parse(".A caption\nBody text.").document.into_flat_blocks()[0];
         assert_eq!(block_title_text(b).as_deref(), Some("A caption"));
         assert!(matches!(b.kind, BlockKind::Paragraph { .. }));
         // The title line is metadata; the paragraph body is just its own text.
@@ -3345,7 +3536,7 @@ mod tests {
     #[test]
     fn block_title_span_points_at_real_source() {
         // The title text begins right after the marker dot (byte offset 1).
-        let b = &parse(".Caption\nbody").document.blocks[0];
+        let b = &parse(".Caption\nbody").document.into_flat_blocks()[0];
         let title = b.title.as_ref().expect("title present");
         match &title[0] {
             Inline::Text { value, span } => {
@@ -3359,7 +3550,7 @@ mod tests {
     #[test]
     fn block_title_parses_inline_markup() {
         // Inline substitutions apply in a title (asciidoctor renders the markup).
-        let b = &parse(".A *bold* caption\nbody").document.blocks[0];
+        let b = &parse(".A *bold* caption\nbody").document.into_flat_blocks()[0];
         let title = b.title.as_ref().expect("title present");
         assert!(
             title.iter().any(|n| matches!(n, Inline::Strong { .. })),
@@ -3370,31 +3561,35 @@ mod tests {
     #[test]
     fn block_title_floats_across_a_blank_line() {
         // As with anchors / attribute lines, a blank line may sit before the block.
-        let b = &parse(".Caption\n\nbody").document.blocks[0];
+        let b = &parse(".Caption\n\nbody").document.into_flat_blocks()[0];
         assert_eq!(block_title_text(b).as_deref(), Some("Caption"));
     }
 
     #[test]
     fn second_block_title_wins() {
-        let b = &parse(".first\n.second\nbody").document.blocks[0];
+        let b = &parse(".first\n.second\nbody").document.into_flat_blocks()[0];
         assert_eq!(block_title_text(b).as_deref(), Some("second"));
     }
 
     #[test]
     fn dot_space_is_an_ordered_list_not_a_title() {
         // `. item` is an ordered-list marker, never a title.
-        let b = &parse(". item").document.blocks[0];
+        let b = &parse(". item").document.into_flat_blocks()[0];
         assert!(b.title.is_none());
         assert!(matches!(b.kind, BlockKind::List { ordered: true, .. }));
     }
 
     #[test]
     fn block_title_on_listing_and_example() {
-        let listing = &parse(".Code\n----\nx = 1\n----").document.blocks[0];
+        let listing = &parse(".Code\n----\nx = 1\n----")
+            .document
+            .into_flat_blocks()[0];
         assert_eq!(block_title_text(listing).as_deref(), Some("Code"));
         assert!(matches!(listing.kind, BlockKind::Listing { .. }));
 
-        let example = &parse(".Demo\n====\ninside\n====").document.blocks[0];
+        let example = &parse(".Demo\n====\ninside\n====")
+            .document
+            .into_flat_blocks()[0];
         assert_eq!(block_title_text(example).as_deref(), Some("Demo"));
         assert!(matches!(example.kind, BlockKind::Example { .. }));
     }
@@ -3404,7 +3599,9 @@ mod tests {
         // A `.Title` before `[NOTE]` attaches to the resulting admonition container,
         // not the wrapped child paragraph (confirmed vs asciidoctor: the block title
         // renders alongside the `Note` label).
-        let b = &parse(".My note\n[NOTE]\nNote body.").document.blocks[0];
+        let b = &parse(".My note\n[NOTE]\nNote body.")
+            .document
+            .into_flat_blocks()[0];
         assert_eq!(block_title_text(b).as_deref(), Some("My note"));
         let BlockKind::Admonition { kind, blocks, .. } = &b.kind else {
             panic!("expected admonition, got {:?}", b.kind);

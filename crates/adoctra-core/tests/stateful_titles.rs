@@ -51,11 +51,11 @@ fn unanchored_titles_share_conversion_state_and_preserve_reading_snapshots() {
     let source =
         "Before {counter:n}\n\n.T {counter:n} {set:x:yes}{x}\nBody {counter:n} {x}\n\n== S {n} {x}";
     let result = parse(source);
-    let blocks = &result.document.blocks;
-    assert_eq!(body(&blocks[0]), "Before 1");
-    assert_eq!(title(&blocks[1]), "T 2 yes");
-    assert_eq!(body(&blocks[1]), "Body 3 yes");
-    assert_eq!(body(&blocks[2]), "S {n} {x}");
+    let blocks = &result.document.flat_blocks();
+    assert_eq!(body(blocks[0]), "Before 1");
+    assert_eq!(title(blocks[1]), "T 2 yes");
+    assert_eq!(body(blocks[1]), "Body 3 yes");
+    assert_eq!(body(blocks[2]), "S {n} {x}");
     assert_eq!(blocks[1].attribute_context.get("n"), None);
     assert_eq!(result.document.attributes.get("x"), None);
     let node = blocks[1]
@@ -75,14 +75,14 @@ fn unanchored_titles_share_conversion_state_and_preserve_reading_snapshots() {
 fn anchored_titles_execute_on_completion_and_are_not_replayed() {
     let source = "[[here]]\n.T {counter:n} {v} {set:x:yes}\n====\n:v: inside\n\nBody {counter:n}\n====\n\nifdef::x[]\nPresent {x} {counter:n}\nendif::[]";
     let result = parse(source);
-    assert_eq!(title(&result.document.blocks[0]), "T 1 inside ");
-    assert_eq!(body(&result.document.blocks[0]), "Body 1");
-    assert_eq!(body(&result.document.blocks[1]), "Present {x} 2");
+    assert_eq!(title(result.document.flat_blocks()[0]), "T 1 inside ");
+    assert_eq!(body(result.document.flat_blocks()[0]), "Body 1");
+    assert_eq!(body(result.document.flat_blocks()[1]), "Present {x} 2");
     assert_eq!(
-        result.document.blocks[0].attribute_context.get("x"),
+        result.document.flat_blocks()[0].attribute_context.get("x"),
         Some("yes")
     );
-    let BlockKind::Example { blocks } = &result.document.blocks[0].kind else {
+    let BlockKind::Example { blocks } = &result.document.flat_blocks()[0].kind else {
         panic!()
     };
     assert_eq!(blocks[0].attribute_context.get("x"), None);
@@ -91,21 +91,24 @@ fn anchored_titles_execute_on_completion_and_are_not_replayed() {
 #[test]
 fn unanchored_container_titles_run_before_child_declarations() {
     let doc = parse(":v: header\n\n.T {v} {counter:n}\n====\n:v: inside\n\nBody {v} {counter:n}\n====\n\n{v} {counter:n}").document;
-    assert_eq!(title(&doc.blocks[0]), "T header 1");
-    assert_eq!(body(&doc.blocks[0]), "Body inside 2");
-    assert_eq!(body(&doc.blocks[1]), "inside 3");
-    assert_eq!(doc.blocks[0].attribute_context.get("v"), Some("inside"));
+    assert_eq!(title(doc.flat_blocks()[0]), "T header 1");
+    assert_eq!(body(doc.flat_blocks()[0]), "Body inside 2");
+    assert_eq!(body(doc.flat_blocks()[1]), "inside 3");
+    assert_eq!(
+        doc.flat_blocks()[0].attribute_context.get("v"),
+        Some("inside")
+    );
 }
 
 #[test]
 fn caption_counter_is_assigned_before_cached_title_and_replayed_before_body() {
     let doc = parse("[[here]]\n.T {counter:example-number}\n====\nBody {counter:example-number}\n====\n\n{example-number}").document;
-    assert_eq!(doc.blocks[0].caption.as_deref(), Some("Example 1. "));
-    assert_eq!(title(&doc.blocks[0]), "T 2");
-    assert_eq!(body(&doc.blocks[0]), "Body 2");
-    assert_eq!(body(&doc.blocks[1]), "2");
+    assert_eq!(doc.flat_blocks()[0].caption.as_deref(), Some("Example 1. "));
+    assert_eq!(title(doc.flat_blocks()[0]), "T 2");
+    assert_eq!(body(doc.flat_blocks()[0]), "Body 2");
+    assert_eq!(body(doc.flat_blocks()[1]), "2");
     assert_eq!(
-        doc.blocks[0].attribute_context.get("example-number"),
+        doc.flat_blocks()[0].attribute_context.get("example-number"),
         Some("2")
     );
     assert_eq!(doc.attributes.get("example-number"), None);
@@ -114,7 +117,7 @@ fn caption_counter_is_assigned_before_cached_title_and_replayed_before_body() {
 #[test]
 fn nested_caption_replay_follows_entry_order_after_child_first_assignment() {
     let doc = parse(".Outer {example-number}\n====\n.Inner {example-number}\n[example]\nx {counter:example-number}\n====\n\n{example-number}").document;
-    let outer = &doc.blocks[0];
+    let outer = &doc.flat_blocks()[0];
     assert_eq!(outer.caption.as_deref(), Some("Example 2. "));
     assert_eq!(title(outer), "Outer 2");
     let BlockKind::Example { blocks } = &outer.kind else {
@@ -123,7 +126,7 @@ fn nested_caption_replay_follows_entry_order_after_child_first_assignment() {
     assert_eq!(blocks[0].caption.as_deref(), Some("Example 1. "));
     assert_eq!(title(&blocks[0]), "Inner 1");
     assert_eq!(body(&blocks[0]), "x 2");
-    assert_eq!(body(&doc.blocks[1]), "2");
+    assert_eq!(body(doc.flat_blocks()[1]), "2");
 }
 
 #[test]
@@ -133,20 +136,20 @@ fn only_reading_title_effects_change_later_caption_prefixes() {
             "{anchor}.T {{set:example-caption:Changed}}\n====\nx\n====\n\n.Second\n====\nx\n===="
         ))
         .document;
-        assert_eq!(doc.blocks[0].caption.as_deref(), Some("Example 1. "));
-        assert_eq!(doc.blocks[1].caption.as_deref(), Some(second));
+        assert_eq!(doc.flat_blocks()[0].caption.as_deref(), Some("Example 1. "));
+        assert_eq!(doc.flat_blocks()[1].caption.as_deref(), Some(second));
     }
 }
 
 #[test]
 fn caption_replay_overrides_body_counter_changes_and_respects_declarations() {
     let doc = parse("Before {counter:example-number}\n\n.T {counter:example-number}\n====\nBody {counter:example-number}\n====\n\n:example-number: 8\n\n.U {example-number}\n====\nx\n====\n\n{counter:example-number}").document;
-    assert_eq!(body(&doc.blocks[0]), "Before 1");
-    assert_eq!(title(&doc.blocks[1]), "T 2");
-    assert_eq!(body(&doc.blocks[1]), "Body 3");
-    assert_eq!(doc.blocks[2].caption.as_deref(), Some("Example 9. "));
-    assert_eq!(title(&doc.blocks[2]), "U 9");
-    assert_eq!(body(&doc.blocks[3]), "10");
+    assert_eq!(body(doc.flat_blocks()[0]), "Before 1");
+    assert_eq!(title(doc.flat_blocks()[1]), "T 2");
+    assert_eq!(body(doc.flat_blocks()[1]), "Body 3");
+    assert_eq!(doc.flat_blocks()[2].caption.as_deref(), Some("Example 9. "));
+    assert_eq!(title(doc.flat_blocks()[2]), "U 9");
+    assert_eq!(body(doc.flat_blocks()[3]), "10");
 }
 
 #[test]
@@ -161,8 +164,8 @@ fn locked_caption_counters_keep_reading_registry_across_conversion() {
     let doc = parse_with_options(source, &options).document;
     assert_eq!(doc.attributes.get("example-number"), Some("8"));
     for (block, caption, heading, content) in [
-        (&doc.blocks[0], "Example 9. ", "A 11", "Body 12"),
-        (&doc.blocks[1], "Example 10. ", "B 13", "Body 14"),
+        (&doc.flat_blocks()[0], "Example 9. ", "A 11", "Body 12"),
+        (&doc.flat_blocks()[1], "Example 10. ", "B 13", "Body 14"),
     ] {
         assert_eq!(block.caption.as_deref(), Some(caption));
         assert_eq!(title(block), heading);
@@ -189,20 +192,23 @@ fn caption_counters_support_unicode_and_arbitrary_precision_seeds() {
         ))
         .document;
         assert_eq!(
-            doc.blocks[0].caption.as_deref(),
+            doc.flat_blocks()[0].caption.as_deref(),
             Some(format!("Example {next}. ").as_str())
         );
-        assert_eq!(title(&doc.blocks[0]), format!("T {next}"));
+        assert_eq!(title(doc.flat_blocks()[0]), format!("T {next}"));
     }
 }
 
 #[test]
 fn explicit_and_empty_captions_suppress_automatic_counter_assignment() {
     let doc = parse(":caption: Custom\n\n.A\n====\nx\n====\n\n:caption!:\n\n[caption=\"\"]\n.B\n====\nx\n====\n\n.C\n====\nx\n====").document;
-    assert_eq!(doc.blocks[0].caption.as_deref(), Some("Custom"));
-    assert_eq!(doc.blocks[1].caption.as_deref(), Some(""));
-    assert_eq!(doc.blocks[2].caption.as_deref(), Some("Example 1. "));
-    assert_eq!(doc.blocks[1].attribute_context.get("example-number"), None);
+    assert_eq!(doc.flat_blocks()[0].caption.as_deref(), Some("Custom"));
+    assert_eq!(doc.flat_blocks()[1].caption.as_deref(), Some(""));
+    assert_eq!(doc.flat_blocks()[2].caption.as_deref(), Some("Example 1. "));
+    assert_eq!(
+        doc.flat_blocks()[1].attribute_context.get("example-number"),
+        None
+    );
 }
 
 #[test]
@@ -210,8 +216,8 @@ fn overwritten_or_orphan_titles_do_not_execute_or_diagnose() {
     let source = ":attribute-missing: warn\n\n.Unused {counter:n} {missing}\n.Used {counter:n}\nBody {counter:n}\n\n.Orphan {counter:n} {missing}";
     let result = parse(source);
     assert!(result.diagnostics.is_empty(), "{result:?}");
-    assert_eq!(title(&result.document.blocks[0]), "Used 1");
-    assert_eq!(body(&result.document.blocks[0]), "Body 2");
+    assert_eq!(title(result.document.flat_blocks()[0]), "Used 1");
+    assert_eq!(body(result.document.flat_blocks()[0]), "Body 2");
 }
 
 #[test]
@@ -219,12 +225,12 @@ fn passthrough_titles_only_execute_when_cached_for_an_explicit_id() {
     for (anchor, expected) in [("", "S {x}"), ("[[here]]\n", "S yes")] {
         let source = format!("{anchor}.T {{set:x:yes}}\n[pass]\nRaw\n\n== S {{x}}\n\n{{x}}");
         let doc = parse(&source).document;
-        assert_eq!(body(&doc.blocks[1]), expected);
-        assert_eq!(body(&doc.blocks[2]), "{x}");
+        assert_eq!(body(doc.flat_blocks()[1]), expected);
+        assert_eq!(body(doc.flat_blocks()[2]), "{x}");
         if anchor.is_empty() {
-            assert_eq!(title(&doc.blocks[0]), "T {set:x:yes}");
+            assert_eq!(title(doc.flat_blocks()[0]), "T {set:x:yes}");
         } else {
-            assert_eq!(title(&doc.blocks[0]), "T ");
+            assert_eq!(title(doc.flat_blocks()[0]), "T ");
         }
     }
 }
@@ -235,10 +241,10 @@ fn title_effects_reach_body_hardbreaks_and_share_late_pass_state() {
         ".T pass:a[{counter:n}] {counter:n} {set:hardbreaks:}\nOne {counter:n}\nTwo\n\n{counter:n}",
     )
     .document;
-    assert_eq!(title(&doc.blocks[0]), "T 2 1 ");
-    let debug = format!("{:?}", doc.blocks[0].kind);
+    assert_eq!(title(doc.flat_blocks()[0]), "T 2 1 ");
+    let debug = format!("{:?}", doc.flat_blocks()[0].kind);
     assert!(debug.contains("LineBreak"), "{debug}");
-    assert_eq!(body(&doc.blocks[1]), "4");
+    assert_eq!(body(doc.flat_blocks()[1]), "4");
 }
 
 #[test]
@@ -251,10 +257,10 @@ fn title_evaluation_order_holds_for_lists_verse_and_container_styles() {
         ("[quote]\n{counter:n}", "3"),
     ] {
         let doc = parse(&format!(".T {{counter:n}}\n{block}\n\n{{counter:n}}")).document;
-        assert_eq!(title(&doc.blocks[0]), "T 1");
-        let debug = format!("{:?}", doc.blocks[0].kind);
+        assert_eq!(title(doc.flat_blocks()[0]), "T 1");
+        let debug = format!("{:?}", doc.flat_blocks()[0].kind);
         assert!(debug.contains("Raw(\"2\")"), "{debug}");
-        assert_eq!(body(&doc.blocks[1]), next);
+        assert_eq!(body(doc.flat_blocks()[1]), next);
     }
 }
 

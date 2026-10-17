@@ -91,7 +91,9 @@ pub fn walk_block_mut(visitor: &mut (impl VisitorMut + ?Sized), block: &mut Bloc
         | BlockKind::Example { blocks }
         | BlockKind::Quote { blocks, .. }
         | BlockKind::Sidebar { blocks }
-        | BlockKind::Open { blocks } => walk_blocks_mut(visitor, blocks),
+        | BlockKind::Open { blocks }
+        | BlockKind::Section { blocks, .. }
+        | BlockKind::Preamble { blocks } => walk_blocks_mut(visitor, blocks),
         BlockKind::Listing { .. } | BlockKind::Literal { .. } | BlockKind::Passthrough { .. } => {}
     }
 }

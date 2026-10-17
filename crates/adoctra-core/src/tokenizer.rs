@@ -14,7 +14,7 @@ use crate::ast::{AdmonitionKind, Inline, Span};
 use crate::context::{ParseContext, ParseOptions};
 use crate::header::collect_header;
 use crate::inline::scan_for_tokens as scan_inlines;
-use crate::parser::{parse_block_anchor, parse_block_title, parse_heading, parse_list_marker};
+use crate::parser::{parse_block_anchor, parse_block_title, parse_list_marker};
 use crate::scanner::lines_with_offsets;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -120,23 +120,24 @@ pub(crate) fn tokens_reader<'a>(
         .iter()
         .map(|(span, entry)| (processed.transformed_span(*span), entry.clone()))
         .collect();
-    let setext: Vec<_> = reader
-        .setext_lines
+    let headings: Vec<_> = reader
+        .heading_lines
         .iter()
         .map(|span| processed.transformed_span(*span))
         .collect();
-    let mut out: Vec<_> = tokens_processed(&processed.text, options, &comments, &entries, &setext)
-        .into_iter()
-        .flat_map(|token| {
-            reader
-                .token_spans(processed.original_span(token.span))
-                .into_iter()
-                .map(move |span| Token {
-                    span,
-                    kind: token.kind,
-                })
-        })
-        .collect();
+    let mut out: Vec<_> =
+        tokens_processed(&processed.text, options, &comments, &entries, &headings)
+            .into_iter()
+            .flat_map(|token| {
+                reader
+                    .token_spans(processed.original_span(token.span))
+                    .into_iter()
+                    .map(move |span| Token {
+                        span,
+                        kind: token.kind,
+                    })
+            })
+            .collect();
     for &span in &reader.metadata_references {
         out.extend(reader.token_spans(span).into_iter().map(|span| Token {
             span,
@@ -226,9 +227,10 @@ fn tokens_processed(
     options: &ParseOptions,
     comments: &[Span],
     entries: &[(Span, Option<crate::context::AttributeEntry>)],
-    // Body setext title/underline lines, classified by the structural parser:
-    // only it knows section contexts, and an underline may look like a fence.
-    setext: &[Span],
+    // Body section title lines (ATX, setext title and underline), classified by
+    // the structural parser: only it knows section contexts and paragraph
+    // continuation, and a setext underline may look like a fence.
+    headings: &[Span],
 ) -> Vec<Token> {
     // Comment classification is owned by the structural parser, including
     // verbatim styles and list continuations. Do not duplicate those rules here.
@@ -294,7 +296,9 @@ fn tokens_processed(
         }
         if header.title_line == Some(line_index)
             || header.title_underline == Some(line_index)
-            || setext.binary_search_by_key(&off, |span| span.start).is_ok()
+            || headings
+                .binary_search_by_key(&off, |span| span.start)
+                .is_ok()
         {
             out.push(Token {
                 span: line_span,
@@ -418,13 +422,6 @@ fn tokens_processed(
         }
         if line.trim().is_empty() {
             in_list = false; // a blank line ends a list (mirrors the parser)
-            continue;
-        }
-        if parse_heading(line.trim_end()).is_some() {
-            out.push(Token {
-                span: line_span,
-                kind: TokenKind::Heading,
-            });
             continue;
         }
         // A `[[id]]` / `[[id,reftext]]` block anchor: one token over the whole
