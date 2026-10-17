@@ -18232,8 +18232,7 @@
     {
       "id": "table-asciidoc-cell-include-first-line",
       "category": "tables",
-      "expect": "xfail",
-      "reason": "Ruby preprocesses the first line of an AsciiDoc cell again (include/conditional directives after the cell separator); adoctra does not yet",
+      "expect": "pass",
       "profile": "include-body-dom-v1",
       "source": "[cols=1a]\n|===\n|include::part.adoc[]\n|===\n",
       "resources": {
@@ -18335,6 +18334,32 @@
       "category": "footnotes",
       "expect": "pass",
       "source": ":compat-mode:\n\nfootnoteref:[a,compat] and footnoteref:[a].\n\n[%hardbreaks]\nfirst footnote:[multi\nline] +\nsecond\n"
+    },
+    {
+      "id": "table-asciidoc-cell-first-line-conditionals",
+      "category": "tables",
+      "expect": "pass",
+      "source": ":on:\n\n[cols=3]\n|===\na|ifdef::on[shown *text*] a|ifndef::on[hidden] a|\\ifdef::on[escaped]\n|===\n\n|===\na|ifdef::on[]\nopened\n|after\n|===\n"
+    },
+    {
+      "id": "table-asciidoc-cell-first-line-include-tags",
+      "category": "tables",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": "[cols=\"1a,1\"]\n|===\na|include::part.adoc[tag=a]\n\nmore |include::part.adoc[]\n|===\n",
+      "resources": {
+        "part.adoc": "// tag::a[]\n* tagged\n// end::a[]\noutside\n"
+      }
+    },
+    {
+      "id": "table-asciidoc-cell-first-line-missing-include",
+      "category": "tables",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": "[cols=1a]\n|===\n|include::nope.adoc[opts=optional] text\n|===\n",
+      "resources": {
+        "part.adoc": "x\n"
+      }
     }
   ]
 }

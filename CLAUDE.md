@@ -560,8 +560,12 @@ BodySubs.nested keeps its header snapshot, entries and locks per cell; body_subs
 converts the blocks with them and restores the parent (a repeated cell keeps its
 deferred fields for every copy). Inside it, psv tables use `!` (`!sv`, also for
 `|===`). HTML wraps the blocks in `<div class="content">`; JSON/WASM `blocks`.
-Ruby's second preprocessing of the cell's first line (`a|include::…[]`) is an
-XFAIL (table-asciidoc-cell-include-first-line).
+Like Ruby, the cell's first line is preprocessed again when it contains `::`
+(`a|include::…[]`, single-line `ifdef`, escapes): Reader::preprocess_cell reads
+the cell's lines again as inputs after every loaded line (only the first one
+preprocessed, with its own conditional stack and the parent's reading
+attributes), keeping increasing reader offsets and physical origins per run
+and line feed; an unchanged first line keeps the original lines.
 **Footnotes**: attribute_macros.rs apply_footnotes is Ruby's
 InlineFootnoteMacroRx, the last macro (after xrefs), over the lexical stream, also
 in pass:m and link parameter passes: `footnote:[text]`, `footnote:id[text]`,
@@ -1008,8 +1012,7 @@ Scaffold only: DOCX backend; the extension API exists but `parse`/`convert` do
 not invoke it yet.
 
 Not yet implemented (common asks — treat as roadmap, do not assume present):
-broader language coverage (first-line preprocessing of AsciiDoc table cells,
-remaining block/inline macros). The full block-attribute list is now *parsed* (style, named
+broader language coverage (remaining block/inline macros). The full block-attribute list is now *parsed* (style, named
 attributes, `%options`, id/role folding), but most of it has nothing to render
 against yet: a few **styles that change a block's type** (`[stem]`/`[latexmath]` →
 math, …) remain unimplemented — `[source,<lang>]`, `[literal]`, `[pass]`,

@@ -1397,7 +1397,11 @@ fn read_nested_document(
     context: &mut ParseContext,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Vec<Block> {
-    let mut nested = Reader::nested(text, lines.include_catalog.clone());
+    // Ruby preprocesses the first line again (`a|include::…[]`).
+    let cell = lines
+        .preprocess_cell(text, &context.attributes)
+        .unwrap_or_else(|| Reader::cell_lines(text));
+    let mut nested = Reader::nested(cell, lines.include_catalog.clone());
     let outer = context.enter_nested();
     let header = collect_header(&mut nested, context);
     context.start_body();

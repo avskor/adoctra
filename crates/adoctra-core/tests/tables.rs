@@ -491,3 +491,51 @@ fn asciidoc_cells_in_an_implicit_header_follow_ruby() {
         BlockKind::List { .. }
     ));
 }
+
+#[test]
+fn the_first_line_of_an_asciidoc_cell_is_preprocessed_again() {
+    let mut resources = MemoryResources::new();
+    resources
+        .insert(
+            "/docs/main.adoc",
+            "[cols=\"1a,1\"]\n|===\na|include::part.adoc[tag=a]\n\nmore *x* |y\n|===\n",
+        )
+        .unwrap();
+    resources
+        .insert(
+            "/docs/part.adoc",
+            "// tag::a[]\n* tagged *b*\n// end::a[]\nout\n",
+        )
+        .unwrap();
+    let mut sources = SourceMap::new();
+    let source_id = sources.load("/docs/main.adoc", None, &resources).unwrap();
+    let options = ParseOptions {
+        source_id,
+        ..Default::default()
+    };
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+    let blocks = result.document.into_flat_blocks();
+    let nested = cell_blocks(&table(&blocks[0]).body[0][0]);
+    let BlockKind::List { items, .. } = &nested[0].kind else {
+        panic!("{nested:?}")
+    };
+    let strong = items[0].inlines[1].span();
+    assert_eq!(strong.source_id, SourceId(1));
+    assert_eq!(sources.slice(strong), Some("*b*"));
+    // The rest of the cell keeps its physical source.
+    let BlockKind::Paragraph { inlines } = &nested[1].kind else {
+        panic!()
+    };
+    let x = inlines[1].span();
+    assert_eq!((x.source_id, sources.slice(x)), (source_id, Some("*x*")));
+    // Without a resource provider the include stays text; a single-line
+    // conditional is evaluated with the parent's attributes.
+    let plain = self::blocks(":on:\n\n|===\na|ifdef::on[shown] a|include::x.adoc[]\n|===\n");
+    let row = &table(&plain[0]).body[0];
+    assert_eq!(paragraph_text(&cell_blocks(&row[0])[0]), "shown");
+    assert_eq!(
+        paragraph_text(&cell_blocks(&row[1])[0]),
+        "include::x.adoc[]"
+    );
+}

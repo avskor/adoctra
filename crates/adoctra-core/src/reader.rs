@@ -129,18 +129,29 @@ impl<'a> Reader<'a> {
 
     /// The lines of an AsciiDoc table cell, already read by the parent (Ruby
     /// gives the nested document a plain `Reader`), at their reader offsets.
-    pub fn nested(text: &[(usize, char)], includes: crate::xref_target::Includes) -> Self {
+    pub fn nested(
+        lines: Vec<(usize, Arc<str>, String)>,
+        includes: crate::xref_target::Includes,
+    ) -> Self {
         let mut reader = Self::plain("");
         reader.inputs.clear();
         reader.include_catalog = includes;
+        for (off, line, eol) in lines {
+            reader.endings.push((off + line.len(), eol));
+            reader.loaded.push((off, line));
+        }
+        reader
+    }
+
+    /// The lines of a cell's text (characters at reader offsets) with their
+    /// line endings.
+    pub fn cell_lines(text: &[(usize, char)]) -> Vec<(usize, Arc<str>, String)> {
+        let mut lines = Vec::new();
         let mut start = text.first().map_or(0, |(off, _)| *off);
         let mut line = String::new();
         for &(off, c) in text {
             if c == '\n' {
-                reader.endings.push((off, "\n".into()));
-                reader
-                    .loaded
-                    .push((start, Arc::from(std::mem::take(&mut line))));
+                lines.push((start, Arc::from(std::mem::take(&mut line)), "\n".into()));
                 start = off + 1;
             } else {
                 if line.is_empty() {
@@ -150,10 +161,9 @@ impl<'a> Reader<'a> {
             }
         }
         if !text.is_empty() {
-            reader.endings.push((start + line.len(), String::new()));
-            reader.loaded.push((start, Arc::from(line)));
+            lines.push((start, Arc::from(line), String::new()));
         }
-        reader
+        lines
     }
 
     /// Keep a nested document's highlighting records. Its attribute entries
@@ -221,60 +231,172 @@ impl<'a> Reader<'a> {
             return false;
         }
         while self.loaded.len() <= index {
-            let Some(input) = self.inputs.last_mut() else {
+            if !self.step(attributes) {
                 return false;
-            };
-            let Some(source_line) = input.lines.get(input.next) else {
-                self.inputs.pop();
-                continue;
-            };
-            input.next += 1;
-            let line = source_line.text.clone();
-            let eol = source_line.eol.clone();
-            let off = self.next_offset;
-            self.next_offset += line.len() + eol.len();
-            let source_id = input.source_id;
-            let preprocess = input.preprocess;
-            for fragment in &source_line.fragments {
-                self.origins.push(Origin {
-                    start: off + fragment.start,
-                    end: off + fragment.end,
-                    span: Span::in_source(
-                        source_id,
-                        fragment.original_start,
-                        fragment.original_end,
-                    ),
-                    occurrence: input.occurrence,
-                    generated: fragment.generated,
-                    exact: fragment.exact,
-                });
             }
-            if source_line.original.is_none() {
-                self.origins.push(Origin {
-                    start: off,
-                    end: self.next_offset,
-                    span: input
-                        .generated_at
-                        .expect("generated include line has an origin"),
-                    occurrence: input.occurrence,
-                    generated: true,
-                    exact: false,
-                });
-            }
-            if preprocess {
-                if let Some(attributes) = attributes {
-                    let eol_start = off + line.len();
-                    if let Some(emitted) = self.process(off, line, attributes) {
-                        self.endings.push((eol_start, eol));
-                        self.loaded.push(emitted);
-                    }
-                    continue;
-                }
-            }
-            self.endings.push((off + line.len(), eol));
-            self.loaded.push((off, line));
         }
         true
+    }
+
+    /// Read the next line of the innermost input (dropping exhausted inputs);
+    /// false at the end of every input.
+    fn step(&mut self, attributes: Option<&Attributes>) -> bool {
+        let Some(input) = self.inputs.last_mut() else {
+            return false;
+        };
+        let Some(source_line) = input.lines.get(input.next) else {
+            self.inputs.pop();
+            return true;
+        };
+        input.next += 1;
+        let line = source_line.text.clone();
+        let eol = source_line.eol.clone();
+        let off = self.next_offset;
+        self.next_offset += line.len() + eol.len();
+        let source_id = input.source_id;
+        let preprocess = input.preprocess;
+        for fragment in &source_line.fragments {
+            self.origins.push(Origin {
+                start: off + fragment.start,
+                end: off + fragment.end,
+                span: Span::in_source(source_id, fragment.original_start, fragment.original_end),
+                occurrence: input.occurrence,
+                generated: fragment.generated,
+                exact: fragment.exact,
+            });
+        }
+        if source_line.original.is_none() {
+            self.origins.push(Origin {
+                start: off,
+                end: self.next_offset,
+                span: input
+                    .generated_at
+                    .expect("generated include line has an origin"),
+                occurrence: input.occurrence,
+                generated: true,
+                exact: false,
+            });
+        }
+        if preprocess {
+            if let Some(attributes) = attributes {
+                let eol_start = off + line.len();
+                if let Some(emitted) = self.process(off, line, attributes) {
+                    self.endings.push((eol_start, eol));
+                    self.loaded.push(emitted);
+                }
+                return true;
+            }
+        }
+        self.endings.push((off + line.len(), eol));
+        self.loaded.push((off, line));
+        true
+    }
+
+    /// Ruby preprocesses the first line of an AsciiDoc table cell again with a
+    /// fresh reader (`a|include::…[]`, a single-line `ifdef`), with its own
+    /// conditional stack. The cell's lines are read again as inputs after
+    /// every loaded line, so the nested document keeps increasing reader
+    /// offsets; only the first line is preprocessed. `None` when the first
+    /// line is unchanged.
+    pub fn preprocess_cell(
+        &mut self,
+        text: &[(usize, char)],
+        attributes: &Attributes,
+    ) -> Option<Vec<(usize, Arc<str>, String)>> {
+        // Each line's characters and the offset of the line feed ending it.
+        let mut lines: Vec<(crate::table::Chars, Option<usize>)> = vec![(Vec::new(), None)];
+        for &(off, c) in text {
+            if c == '\n' {
+                lines.last_mut().unwrap().1 = Some(off);
+                lines.push((Vec::new(), None));
+            } else {
+                lines.last_mut().unwrap().0.push((off, c));
+            }
+        }
+        let first: String = lines[0].0.iter().map(|(_, c)| c).collect();
+        if !first.contains("::") {
+            return None;
+        }
+        let depth = self.inputs.len();
+        let max_depth = self
+            .inputs
+            .first()
+            .map_or(usize::MAX, |input| input.max_depth);
+        let count = lines.len();
+        for (index, (chars, feed)) in lines.into_iter().enumerate().rev() {
+            let line: String = chars.iter().map(|(_, c)| c).collect();
+            let mut fragments = Vec::new();
+            let mut source_id = self
+                .inputs
+                .first()
+                .map_or_else(Default::default, |i| i.source_id);
+            for (run_start, run) in crate::table::fragments(&chars) {
+                let at = line.len()
+                    - chars
+                        .iter()
+                        .skip_while(|(o, _)| *o != run_start)
+                        .map(|(_, c)| c.len_utf8())
+                        .sum::<usize>();
+                let physical = self.original_spans(Span::new(run_start, run_start + run.len()));
+                let exact = physical.len() == 1 && physical[0].len() == run.len();
+                source_id = physical[0].source_id;
+                fragments.push(crate::include_indent::Fragment {
+                    start: at,
+                    end: at + run.len(),
+                    original_start: physical[0].start,
+                    original_end: physical.last().map_or(physical[0].end, |p| p.end),
+                    exact,
+                    generated: false,
+                });
+            }
+            let eol = if feed.is_some() { "\n" } else { "" };
+            if let Some(feed) = feed {
+                let physical = self.original_spans(Span::new(feed, feed + 1))[0];
+                fragments.push(crate::include_indent::Fragment {
+                    start: line.len(),
+                    end: line.len() + 1,
+                    original_start: physical.start,
+                    original_end: physical.end,
+                    exact: physical.len() == 1,
+                    generated: false,
+                });
+            }
+            let original = fragments.first().map(|f| f.original_start);
+            self.inputs.push(Input {
+                source_id,
+                lines: vec![Line {
+                    original: original.or(Some(0)),
+                    text: Arc::from(line),
+                    eol: eol.into(),
+                    fragments,
+                }],
+                max_depth: max_depth.max(depth + 1),
+                next: 0,
+                preprocess: index == 0,
+                occurrence: self.next_occurrence,
+                generated_at: None,
+            });
+            self.next_occurrence += 1;
+        }
+        let loaded = self.loaded.len();
+        let stack = std::mem::take(&mut self.stack);
+        while self.inputs.len() > depth {
+            self.step(Some(attributes));
+        }
+        self.stack = stack;
+        let endings = self.endings.split_off(loaded);
+        let processed: Vec<_> = self
+            .loaded
+            .split_off(loaded)
+            .into_iter()
+            .zip(endings)
+            .map(|((off, line), (_, eol))| (off, line, eol))
+            .collect();
+        let changed = processed.len() != count
+            || processed
+                .first()
+                .is_some_and(|(_, line, _)| **line != *first);
+        changed.then_some(processed)
     }
 
     /// Physical ranges in reading order. A return to the same file or a repeated
