@@ -14,9 +14,9 @@ fn text(nodes: &[Inline]) -> String {
             | Inline::Raw { value, .. }
             | Inline::Substituted { value, .. } => value.clone(),
             Inline::AttributeRef { value, .. } => value.clone().unwrap_or_default(),
-            Inline::Strong { children, .. } | Inline::CrossReference { children, .. } => {
-                text(children)
-            }
+            Inline::Strong { children, .. }
+            | Inline::Emphasis { children, .. }
+            | Inline::CrossReference { children, .. } => text(children),
             _ => String::new(),
         })
         .collect()
@@ -348,5 +348,135 @@ fn headings_only_see_includes_read_before_them() {
     assert_eq!(
         found.iter().map(|(t, _)| t.as_str()).collect::<Vec<_>>(),
         ["c.html#c", "#c"]
+    );
+}
+
+const EXAMPLE: &str = "[[ex]]\n.My *Example*\n====\nx\n====\n\n";
+
+#[test]
+fn xrefstyle_shapes_numbered_example_labels() {
+    let source = format!(":xrefstyle: full\n\n{EXAMPLE}A <<ex>> B xref:ex[xrefstyle=short] C xref:ex[xrefstyle=basic]");
+    let result = parse(&source);
+    assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+    let found = xrefs(&result.document.flat_blocks());
+    assert_eq!(found[1].0.xrefstyle.as_deref(), Some("short"));
+    let labels: Vec<_> = found.iter().map(|(_, label, _)| label.as_str()).collect();
+    assert_eq!(
+        labels,
+        [
+            "Example 1, \u{201c}My Example\u{201d}",
+            "Example 1",
+            "My Example"
+        ]
+    );
+    // Generated text sits on the reference; the borrowed title keeps its own.
+    let paragraph = result.document.flat_blocks().last().copied().unwrap();
+    let Inline::CrossReference { children, span, .. } = &inlines(paragraph)[1] else {
+        panic!()
+    };
+    assert_eq!(
+        children[..2]
+            .iter()
+            .map(|n| (text(std::slice::from_ref(n)), n.span()))
+            .collect::<Vec<_>>(),
+        [("Example".to_owned(), *span), (" 1".to_owned(), *span)]
+    );
+    let title = children
+        .iter()
+        .find(|n| matches!(n, Inline::Strong { .. }))
+        .unwrap();
+    assert_eq!(&source[title.span().start..title.span().end], "*Example*");
+}
+
+#[test]
+fn xrefstyle_uses_custom_captions_and_conversion_attributes() {
+    let source = ":xrefstyle: full\n\n[[a]]\n.Custom\n[caption=\"Fig A: \"]\n====\nz\n====\n\n[[b]]\n.Box\n[caption=\"Box 7. \"]\n====\nz\n====\n\nA <<a>> B xref:b[xrefstyle=short]\n\n:example-caption: Beispiel\n\n[[c]]\n.C\n====\nz\n====\n\n:example-caption: Anders\n\nC <<c>>\n\n:xrefstyle!:\n\nD <<c>>";
+    let labels: Vec<_> = targets(source)
+        .into_iter()
+        .map(|(_, label)| label)
+        .collect();
+    assert_eq!(
+        labels,
+        [
+            "Fig A: , \u{201c}Custom\u{201d}",
+            "Box 7",
+            "Anders 1, \u{201c}C\u{201d}",
+            "C"
+        ]
+    );
+}
+
+#[test]
+fn xrefstyle_emphasizes_book_chapters_only() {
+    let source = "= Book\n:doctype: book\n:xrefstyle: short\n\n[[c]]\n== Chap\n\n[[s]]\n=== Sub\n\n[discrete#d]\n== Discrete\n\nA <<c>> B <<s>> C <<d>>";
+    let doc = parse(source).document;
+    let found = xrefs(&doc.flat_blocks());
+    assert!(matches!(
+        found_children(&doc)[0].as_slice(),
+        [Inline::Emphasis { .. }]
+    ));
+    let labels: Vec<_> = found.iter().map(|(_, label, _)| label.as_str()).collect();
+    assert_eq!(labels, ["Chap", "Sub", "Discrete"]);
+    assert!(!matches!(
+        found_children(&doc)[1].as_slice(),
+        [Inline::Emphasis { .. }]
+    ));
+}
+
+fn found_children(doc: &adoctra_core::Document) -> Vec<Vec<Inline>> {
+    doc.flat_blocks()
+        .iter()
+        .filter(|b| matches!(b.kind, BlockKind::Paragraph { .. }))
+        .flat_map(|b| inlines(b).iter())
+        .filter_map(|n| match n {
+            Inline::CrossReference { children, .. } => Some(children.clone()),
+            _ => None,
+        })
+        .collect()
+}
+
+#[test]
+fn xrefstyle_applies_to_value_generated_references_and_headings() {
+    let source = format!(
+        ":xrefstyle: full\n:m: xref:ex[xrefstyle=short]\n\n{EXAMPLE}== See <<ex>>\n\nA {{m}}"
+    );
+    let doc = parse(&source).document;
+    let ids: Vec<_> = doc
+        .flat_blocks()
+        .iter()
+        .filter_map(|b| b.id.clone())
+        .collect();
+    assert_eq!(ids, ["ex", "_see_example_1_my_example"]);
+    let parts = doc
+        .flat_blocks()
+        .iter()
+        .find_map(|b| match &b.kind {
+            BlockKind::Paragraph { inlines } => inlines.iter().find_map(|n| match n {
+                Inline::AttributeRef { parts, .. } if !parts.is_empty() => Some(parts.clone()),
+                _ => None,
+            }),
+            _ => None,
+        })
+        .unwrap();
+    let mut short = Xref::to_id("ex");
+    short.xrefstyle = Some("short".into());
+    assert_eq!(
+        parts,
+        [
+            P::OpenXref(short),
+            P::Text("Example 1".into()),
+            P::CloseXref
+        ]
+    );
+}
+
+#[test]
+fn natural_references_compare_lexical_spelling_with_generated_tags() {
+    assert_eq!(
+        targets(&format!("{EXAMPLE}A <<My *Example*>> B <<My Example>>")),
+        [
+            ("#ex".into(), "My Example".into()),
+            ("#My Example".into(), "[My Example]".into())
+        ]
     );
 }

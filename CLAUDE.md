@@ -390,10 +390,17 @@ Ruby's `@reftexts` once (lexical label spelling, registration order via
 Target.order); headings at reading search the partial registry uncached. Textless
 labels: `path`, or for `#`/this document its reftext, doctitle or first top-level
 section, else `[^top]`. Character references inside decoded node fields are not
-expanded; the `title` attribute as doctitle and xrefstyle remain work.
+expanded; the `title` attribute as doctitle remains work. xrefstyle (macro
+`xrefstyle=` in `Xref.xrefstyle`, else the document attribute at the reference) is
+resolve::styled over the converted title: Target.numbering = Caption (example
+blocks: `full` → `example-caption numeral, “title”`, `short` → `prefix numeral`,
+without a numeral or prefix the caption minus `. `; empty caption → title) or Chapter
+(book level-1 section headings, emphasized by any style); natural lookup and the
+document label ignore it. Numerals come from assign_caption (ParseContext.numerals).
+Without sectnums, numbered section styles do not exist yet.
 Xref labels: resolve::register builds the registry after reading (auto ids,
 block ids, cataloged anchors in source order); body_subs Execution resolves each
-textless xref after its field's subs, like Ruby's xreftext without xrefstyle:
+textless xref after its field's subs, like Ruby's xreftext:
 nonempty reftext formatted per reference with the current attributes/counters
 (effects persist, warnings repeat), else the block/section title, else `[id]`.
 A deferred block title converts once (first reference or the block itself);

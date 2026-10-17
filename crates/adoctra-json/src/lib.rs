@@ -1002,6 +1002,20 @@ mod tests {
     }
 
     #[test]
+    fn xrefstyle_label_serializes_generated_text_and_title() {
+        let json = render(":xrefstyle: full\n\n[[ex]]\n.T\n====\nx\n====\n\n<<ex>>");
+        assert!(
+            json.contains("{\"name\":\"xref\",\"target\":\"#ex\",\"refid\":\"ex\",\"inlines\":[{\"name\":\"text\",\"value\":\"Example\"},{\"name\":\"text\",\"value\":\" 1\"},{\"name\":\"text\",\"value\":\", \u{201c}\"},{\"name\":\"text\",\"value\":\"T\"},{\"name\":\"text\",\"value\":\"\u{201d}\"}]}"),
+            "got: {json}"
+        );
+        let json = render("[[ex]]\n.T\n====\nx\n====\n\n:m: xref:ex[xrefstyle=short]\n\n{m}");
+        assert!(
+            json.contains(r##"{"kind":"open-xref","target":"#ex","refid":"ex","fragment":"ex","xrefstyle":"short"},{"kind":"text","value":"Example 1"},{"kind":"close-xref"}"##),
+            "got: {json}"
+        );
+    }
+
+    #[test]
     fn passthrough_xref_serializes_as_open_xref_parts() {
         let json = render("[[sec]]\n== T\n\npass:c,m[<<sec>>]");
         assert!(

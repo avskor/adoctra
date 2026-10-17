@@ -61,15 +61,19 @@ pub struct Xref {
     pub path: Option<String>,
     /// The id within the target document, if any.
     pub fragment: Option<String>,
-    /// A bare id outside compat mode whose lookup is pending: when the id is
-    /// unknown, Ruby looks it up as a title or reftext (a *natural*
-    /// cross-reference). Cleared once resolution has looked it up.
-    pub(crate) natural: bool,
+    /// The lexical refid of a bare id outside compat mode whose lookup is
+    /// pending: when the id is unknown, Ruby looks this spelling (with any
+    /// generated tags) up as a title or reftext (a *natural*
+    /// cross-reference). Taken once resolution has looked it up.
+    pub(crate) natural: Option<String>,
     /// `role` from the macro's attribute list.
     pub role: Option<String>,
     /// Link constraints of an interdocument reference (`window`, `opts`).
     pub window: Option<String>,
     pub rel: Option<String>,
+    /// `xrefstyle` from the macro's attribute list; otherwise the document
+    /// attribute at the reference applies.
+    pub xrefstyle: Option<String>,
 }
 
 impl Xref {
@@ -94,6 +98,7 @@ impl Xref {
             &mut self.role,
             &mut self.window,
             &mut self.rel,
+            &mut self.xrefstyle,
         ]
         .into_iter()
         .flatten()

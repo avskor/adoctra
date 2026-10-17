@@ -643,6 +643,7 @@ fn write_inlines(inlines: &[Inline], s: &mut String) {
                     ("role", &xref.role),
                     ("window", &xref.window),
                     ("rel", &xref.rel),
+                    ("xrefstyle", &xref.xrefstyle),
                 ] {
                     if let Some(value) = value {
                         s.push_str(&format!(",\"{key}\":"));
@@ -914,6 +915,18 @@ mod tests {
         );
         assert!(
             json.contains("\"target\":\"#sec\",\"refid\":\"sec\",\"fragment\":\"sec\""),
+            "got: {json}"
+        );
+    }
+
+    #[test]
+    fn xrefstyle_reference_exposes_its_style_and_generated_label_spans() {
+        let src = "[[ex]]\n.T\n====\nx\n====\n\nxref:ex[xrefstyle=short]";
+        let json = parse_json(src);
+        let start = src.find("xref:").unwrap();
+        let span = format!(r#"{{"source_id":0,"start":{start},"end":{}}}"#, src.len());
+        assert!(
+            json.contains(&format!(r##""name":"xref","target":"#ex","refid":"ex","fragment":"ex","xrefstyle":"short","inlines":[{{"span":{span},"name":"text","value":"Example"}},{{"span":{span},"name":"text","value":" 1"}}]"##)),
             "got: {json}"
         );
     }

@@ -124,7 +124,7 @@ pub(crate) fn resolve(
     let Some(name) = path else {
         let fragment = fragment.unwrap_or_default();
         return Xref {
-            natural: !compat,
+            natural: (!compat).then(|| fragment.clone()),
             ..Xref::to_id(fragment)
         };
     };
@@ -250,7 +250,10 @@ mod tests {
         assert_eq!(xref("dir/x.y/z#a", true).target, "dir/x.y/z.html#a");
         // The angle form never treats a refid without `#` as a path.
         let x = xref("other.adoc", false);
-        assert_eq!((x.target.as_str(), x.natural), ("#other.adoc", true));
+        assert_eq!(
+            (x.target.as_str(), x.natural.is_some()),
+            ("#other.adoc", true)
+        );
         let x = xref("other", true);
         assert_eq!((x.target.as_str(), x.path), ("#other", None));
     }
@@ -259,7 +262,7 @@ mod tests {
     fn this_document_and_full_includes_stay_internal() {
         let x = xref("main.adoc#top", false);
         assert_eq!(
-            (x.target.as_str(), x.path, x.natural),
+            (x.target.as_str(), x.path, x.natural.is_some()),
             ("#top", None, false)
         );
         let x = xref("main.adoc", true);
@@ -287,7 +290,10 @@ mod tests {
         assert_eq!(x.target, "../file.pdf");
         // Compat mode keeps the whole refid as an id.
         let x = resolve("other.adoc#x", false, true, &attributes, None);
-        assert_eq!((x.target.as_str(), x.natural), ("#other.adoc#x", false));
+        assert_eq!(
+            (x.target.as_str(), x.natural.is_some()),
+            ("#other.adoc#x", false)
+        );
     }
 
     #[test]

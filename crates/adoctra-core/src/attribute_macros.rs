@@ -546,6 +546,7 @@ fn xref_parts(
         let (first, mut named, _) = parse_label(&label, attributes, compat, 0, span, report);
         label = first;
         xref.role = named.remove("role");
+        xref.xrefstyle = named.remove("xrefstyle");
         // Ruby's append_link_constraint_attrs, for interdocument references.
         if xref.path.is_some() {
             let nofollow = named.contains_key("nofollow-option");

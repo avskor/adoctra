@@ -27,6 +27,78 @@ pub(crate) struct Target {
     pub title: Option<Title>,
     /// Registration order, which Ruby's `resolve_id` follows.
     pub order: usize,
+    /// What an `xrefstyle` can show besides the title.
+    pub numbering: Numbering,
+}
+
+/// Ruby's `xreftext` inputs for an xrefstyle. Only example blocks carry a
+/// caption (and its `example-caption` signifier); without `sectnums`, a
+/// book's chapter titles are emphasized by any style.
+#[derive(Default)]
+pub(crate) enum Numbering {
+    #[default]
+    None,
+    Caption {
+        caption: String,
+        numeral: Option<String>,
+    },
+    Chapter,
+}
+
+/// Apply an xrefstyle to a converted title, like `AbstractBlock#xreftext`
+/// and `Section#xreftext` without numbered sections.
+pub(crate) fn styled(
+    title: Vec<Inline>,
+    numbering: &Numbering,
+    style: Option<&str>,
+    attributes: &crate::Attributes,
+    span: Span,
+) -> Vec<Inline> {
+    let Some(style) = style else {
+        return title;
+    };
+    let text = |value: String| Inline::Text { value, span };
+    let (caption, numeral) = match numbering {
+        Numbering::Chapter => {
+            return vec![Inline::Emphasis {
+                children: title,
+                span,
+            }]
+        }
+        Numbering::Caption { caption, numeral } if !caption.is_empty() => (caption, numeral),
+        _ => return title,
+    };
+    let signifier = match (numeral, attributes.value_parts("example-caption")) {
+        (Some(numeral), Some(parts)) => {
+            let prefix = if parts
+                .iter()
+                .all(|p| matches!(p, crate::AttributePart::Text(_)))
+            {
+                text(crate::attributes::parts_text(&parts))
+            } else {
+                Inline::Substituted {
+                    value: crate::attributes::parts_text(&parts),
+                    parts,
+                    span,
+                }
+            };
+            vec![prefix, text(format!(" {numeral}"))]
+        }
+        _ => vec![text(
+            caption.strip_suffix(". ").unwrap_or(caption).to_owned(),
+        )],
+    };
+    match style {
+        "full" => {
+            let mut label = signifier;
+            label.push(text(", \u{201c}".into()));
+            label.extend(title);
+            label.push(text("\u{201d}".into()));
+            label
+        }
+        "short" => signifier,
+        _ => title,
+    }
 }
 
 /// Registered ids in registration order.
@@ -60,6 +132,7 @@ pub(crate) fn register(
     doc: &mut Document,
     mut anchors: Vec<(String, crate::anchor_catalog::Entry)>,
     mut reftexts: BTreeMap<(usize, usize), crate::reftext::Read>,
+    mut numerals: BTreeMap<(usize, usize), String>,
     early_title: &mut EarlyTitle<'_>,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> (Registry, EarlyTitles) {
@@ -76,6 +149,7 @@ pub(crate) fn register(
         doctitle,
         anchors: anchors.into_iter().peekable(),
         reftexts: &mut reftexts,
+        numerals: &mut numerals,
         early_title,
         early: EarlyTitles::new(),
         registry: Registry::new(),
@@ -90,6 +164,7 @@ struct Ids<'a> {
     doctitle: Option<Span>,
     anchors: std::iter::Peekable<std::vec::IntoIter<(String, crate::anchor_catalog::Entry)>>,
     reftexts: &'a mut BTreeMap<(usize, usize), crate::reftext::Read>,
+    numerals: &'a mut BTreeMap<(usize, usize), String>,
     early_title: &'a mut EarlyTitle<'a>,
     early: EarlyTitles,
     registry: Registry,
@@ -109,6 +184,7 @@ impl Ids<'_> {
                 reftext: entry.reftext,
                 title: None,
                 order: self.registry.len(),
+                numbering: Numbering::None,
             };
             register_id(&mut self.registry, id, target, entry.span, self.diagnostics);
         }
@@ -179,7 +255,7 @@ impl Ids<'_> {
             .map(str::to_owned)
             .collect::<Vec<_>>()
         {
-            let label = self.reading_xreftext(&id, attributes);
+            let label = self.reading_xreftext(&id, None, Span::new(0, 0), attributes);
             if label.as_deref().and_then(crate::xref_target::lexical_label)
                 == Some(fragment.clone())
             {
@@ -207,7 +283,11 @@ impl Ids<'_> {
         }
         let id = decoded_refid(xref, lexical)?;
         if self.registry.contains_key(&id) {
-            self.reading_label(&id, span, attributes)
+            let style = match &xref.xrefstyle {
+                Some(style) => Some(decoded(style, lexical)),
+                None => attributes.get("xrefstyle").map(str::to_owned),
+            };
+            self.reading_label(&id, style.as_deref(), span, attributes)
         } else if id.is_empty() {
             None
         } else {
@@ -226,23 +306,10 @@ pub(crate) fn natural_text(
     registry: &Registry,
     lexical: bool,
 ) -> Option<String> {
-    if !std::mem::take(&mut xref.natural) {
-        return None;
-    }
-    let fragment = xref.fragment.clone()?;
-    let decoded = if lexical {
-        crate::attributes::decode_special(&fragment)
-    } else {
-        fragment.clone()
-    };
-    if registry.contains_key(&decoded) || !crate::xref_target::looks_like_text(&decoded) {
-        return None;
-    }
-    Some(if lexical {
-        fragment
-    } else {
-        crate::xref_target::protect(&fragment)
-    })
+    let spelling = xref.natural.take()?;
+    let decoded = decoded(xref.fragment.as_deref()?, lexical);
+    (!registry.contains_key(&decoded) && crate::xref_target::looks_like_text(&decoded))
+        .then_some(spelling)
 }
 
 /// The decoded registry id of an internal reference (`None` for the
@@ -377,17 +444,19 @@ impl Ids<'_> {
     fn reading_label(
         &mut self,
         id: &str,
+        style: Option<&str>,
         span: Span,
         attributes: &crate::Attributes,
     ) -> Option<Vec<Inline>> {
-        self.reading_xreftext(id, attributes).or_else(|| {
-            self.registry[id].title.is_none().then(|| {
-                vec![Inline::Text {
-                    value: format!("[{id}]"),
-                    span,
-                }]
+        self.reading_xreftext(id, style, span, attributes)
+            .or_else(|| {
+                self.registry[id].title.is_none().then(|| {
+                    vec![Inline::Text {
+                        value: format!("[{id}]"),
+                        span,
+                    }]
+                })
             })
-        })
     }
 
     /// Ruby's `xreftext` while reading: a nonempty reftext, else the title;
@@ -395,6 +464,8 @@ impl Ids<'_> {
     fn reading_xreftext(
         &mut self,
         id: &str,
+        style: Option<&str>,
+        span: Span,
         attributes: &crate::Attributes,
     ) -> Option<Vec<Inline>> {
         let target = &self.registry[id];
@@ -406,7 +477,7 @@ impl Ids<'_> {
         {
             return Some(nodes);
         }
-        match &target.title {
+        let title = match &target.title {
             Some(Title::Nodes(nodes)) => match placeholder(nodes) {
                 None => Some(nodes.clone()),
                 Some(key) => {
@@ -425,7 +496,9 @@ impl Ids<'_> {
             },
             Some(Title::Heading(_, nodes)) => Some(nodes.clone()),
             Some(Title::Header) | None => None,
-        }
+        }?;
+        let numbering = &self.registry[id].numbering;
+        Some(styled(title, numbering, style, attributes, span))
     }
 }
 
@@ -453,12 +526,27 @@ impl VisitorMut for Ids<'_> {
             )),
             _ => block.title.clone().map(Title::Nodes),
         };
+        let key = (block.span.start, block.span.end);
+        let discrete = matches!(block.attrs.style.as_deref(), Some("discrete" | "float"));
+        let numbering = match (&block.kind, &block.caption) {
+            (BlockKind::Heading { level: 1, .. }, _)
+                if !doctitle && !discrete && attributes.get("doctype") == Some("book") =>
+            {
+                Numbering::Chapter
+            }
+            (_, Some(caption)) => Numbering::Caption {
+                caption: caption.clone(),
+                numeral: self.numerals.remove(&key),
+            },
+            _ => Numbering::None,
+        };
         if let Some(id) = block.id.clone() {
-            let reftext = self.reftexts.remove(&(block.span.start, block.span.end));
+            let reftext = self.reftexts.remove(&key);
             let target = Target {
                 reftext,
                 title,
                 order: self.registry.len(),
+                numbering,
             };
             register_id(&mut self.registry, id, target, block.span, self.diagnostics);
         } else if let (BlockKind::Heading { inlines, .. }, false) = (&block.kind, doctitle) {
@@ -467,6 +555,7 @@ impl VisitorMut for Ids<'_> {
                 reftext: None,
                 title,
                 order: self.registry.len(),
+                numbering,
             };
             self.registry.insert(unique.clone(), target);
             block.id = Some(unique);

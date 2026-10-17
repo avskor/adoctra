@@ -1840,6 +1840,20 @@ mod tests {
     }
 
     #[test]
+    fn xrefstyle_labels_render_captions_quotes_and_chapters() {
+        let html = render(":xrefstyle: full\n\n[[ex]]\n.My *Ex*\n====\nx\n====\n\nA <<ex>> B xref:ex[xrefstyle=short]");
+        assert!(
+            html.contains(r##"<p>A <a href="#ex">Example 1, &#8220;My <strong>Ex</strong>&#8221;</a> B <a href="#ex">Example 1</a></p>"##),
+            "{html}"
+        );
+        let html = render("= B\n:doctype: book\n:xrefstyle: basic\n\n[[c]]\n== Chap\n\n<<c>>");
+        assert!(
+            html.contains(r##"<a href="#c"><em>Chap</em></a>"##),
+            "{html}"
+        );
+    }
+
+    #[test]
     fn passthrough_macros_render_cross_references() {
         let html = render("[[sec]]\n== S&T\n\nA pass:c,m[<<sec>>] B pass:c,q,m[<<sec,*b*>>] C pass:c,m[<<other.adoc#f>>]");
         assert!(

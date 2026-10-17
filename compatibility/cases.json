@@ -17455,6 +17455,102 @@
       "expect": "xfail",
       "reason": "Cross-references created by pass:m in attribute definitions take their labels at the reference during conversion; Ruby fixes them at definition time from the partial catalog.",
       "source": ":r: pass:c,m[<<sec>>]\n:o: pass:c,m[<<other.adoc#x>>]\n\n[[sec]]\n== Sec Title\n\n:s: pass:c,m[<<sec>>]\n\nA {r} B {s} C {o}"
+    },
+    {
+      "id": "xrefstyle-example-full-short-basic",
+      "category": "references",
+      "expect": "pass",
+      "source": ":xrefstyle: full\n\n[[ex]]\n.My *Example*\n====\nx\n====\n\nA <<ex>> B xref:ex[xrefstyle=short] C xref:ex[xrefstyle=basic] D xref:ex[xrefstyle=Full] E xref:ex[xrefstyle=short,label] F xref:ex[Label,xrefstyle=full]"
+    },
+    {
+      "id": "xrefstyle-document-attribute-changes",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[ex]]\n.My *Example*\n====\nx\n====\n\nA <<ex>>\n\n:xrefstyle: short\n\nB <<ex>>\n\n:example-caption: Beispiel\n\nC <<ex>>\n\n:xrefstyle!:\n\nD <<ex>> E xref:ex[xrefstyle=full]\n\n:xrefstyle:\n\nF <<ex>>"
+    },
+    {
+      "id": "xrefstyle-captions",
+      "category": "references",
+      "expect": "pass",
+      "source": ":xrefstyle: full\n\n[[a]]\n.Custom\n[caption=\"Fig A: \"]\n====\nz\n====\n\n[[b]]\n.Dotted\n[caption=\"Box 7. \"]\n====\nz\n====\n\n[[c]]\n.Empty\n[caption=\"\"]\n====\nz\n====\n\n[[u]]\n====\nuntitled\n====\n\nA <<a>> B xref:a[xrefstyle=short] C <<b>> D xref:b[xrefstyle=short] E <<c>> F <<u>>"
+    },
+    {
+      "id": "xrefstyle-caption-unset",
+      "category": "references",
+      "expect": "pass",
+      "source": ":xrefstyle: full\n:example-caption!:\n\n[[ex]]\n.My *Example*\n====\nx\n====\n\nA <<ex>>\n\n:example-caption: Again\n\n[[ex2]]\n.Two\n====\ny\n====\n\n:example-caption!:\n\nB <<ex2>> C xref:ex2[xrefstyle=short]"
+    },
+    {
+      "id": "xrefstyle-document-caption",
+      "category": "references",
+      "expect": "pass",
+      "source": ":xrefstyle: full\n:caption: Doc: \n\n[[ex]]\n.My *Example*\n====\nx\n====\n\nA <<ex>> B xref:ex[xrefstyle=short]"
+    },
+    {
+      "id": "xrefstyle-reftext-wins",
+      "category": "references",
+      "expect": "pass",
+      "source": ":xrefstyle: full\n\n[[ex,Ref Text]]\n.T\n====\nx\n====\n\n[#ex2,reftext=\"\"]\n.Two\n====\ny\n====\n\nA <<ex>> B <<ex2>>"
+    },
+    {
+      "id": "xrefstyle-other-targets",
+      "category": "references",
+      "expect": "pass",
+      "source": ":xrefstyle: full\n\n[[sec]]\n== Sec Title\n\n[[l]]\n.Listing T\n----\ncode\n----\n\n[[q]]\n.Quote T\n____\nq\n____\n\nText [[in,Inline]] here.\n\nA <<sec>> B <<l>> C <<q>> D <<in>> E <<#>>"
+    },
+    {
+      "id": "xrefstyle-book-chapters",
+      "category": "references",
+      "expect": "pass",
+      "source": "= Book\n:doctype: book\n:xrefstyle: short\n\n[[c]]\n== Chap *One*\n\n[[s]]\n=== Sub\n\n[discrete#d]\n== Discrete\n\nA <<c>> B <<s>> C xref:c[xrefstyle=basic] D <<d>> E <<_chap_one>>\n\n[[p]]\n= Part\n\n== C2\n\nF <<p>> G <<_c2>>\n\n:xrefstyle!:\n\nH <<c>>"
+    },
+    {
+      "id": "xrefstyle-book-leveloffset",
+      "category": "references",
+      "expect": "pass",
+      "source": "= Book\n:doctype: book\n:xrefstyle: basic\n\n:leveloffset: +1\n\n[[c]]\n= Shifted\n\n:leveloffset!:\n\nA <<c>>"
+    },
+    {
+      "id": "xrefstyle-article-sections",
+      "category": "references",
+      "expect": "pass",
+      "source": ":xrefstyle: full\n\n[[s]]\n== Sec\n\nA <<s>>"
+    },
+    {
+      "id": "xrefstyle-compat-mode",
+      "category": "references",
+      "expect": "pass",
+      "source": ":compat-mode:\n:xrefstyle: full\n\n[[ex]]\n.My *Example*\n====\nx\n====\n\nA <<ex>>"
+    },
+    {
+      "id": "xrefstyle-heading-reading",
+      "category": "references",
+      "expect": "pass",
+      "source": ":xrefstyle: full\n\n[[ex]]\n.My *Example*\n====\nx\n====\n\n== See <<ex>>\n\n<<_see_example_1_my_example>> and <<_see_my_example>>"
+    },
+    {
+      "id": "xrefstyle-block-title",
+      "category": "references",
+      "expect": "pass",
+      "source": ":xrefstyle: short\n\n[[ex]]\n.My *Example*\n====\nx\n====\n\n.See <<ex>>\n----\ncode\n----\n\n[#t]\n.Ref {empty}<<ex>>\n----\ncode\n----"
+    },
+    {
+      "id": "xrefstyle-attribute-values",
+      "category": "references",
+      "expect": "pass",
+      "source": ":xrefstyle: full\n:r: <<ex>>\n:m: xref:ex[xrefstyle=short]\n\n[[ex]]\n.My *Example*\n====\nx\n====\n\nA {r} B {m} C pass:c,m[<<ex>>]"
+    },
+    {
+      "id": "xrefstyle-natural-and-forward",
+      "category": "references",
+      "expect": "pass",
+      "source": ":xrefstyle: full\n\nA <<My Example>> B <<ex>> C <<Example 1, “My Example”>>\n\n[[ex]]\n.My *Example*\n====\nx\n====\n\nD <<My *Example*>>"
+    },
+    {
+      "id": "xrefstyle-nested-numbering",
+      "category": "references",
+      "expect": "pass",
+      "source": ":xrefstyle: full\n\n[[outer]]\n.Outer\n====\n[[inner]]\n.Inner\n====\ni\n====\n====\n\nA <<outer>> B <<inner>>"
     }
   ]
 }

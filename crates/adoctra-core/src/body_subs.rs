@@ -325,7 +325,7 @@ impl Execution<'_> {
             self.reftexts = Some(BTreeMap::new());
             let registry = self.registry;
             for id in crate::resolve::ordered(registry) {
-                let label = self.xreftext(id);
+                let label = self.xreftext(id, None, Span::new(0, 0));
                 if let Some(spelling) = label.as_deref().and_then(crate::xref_target::lexical_label)
                 {
                     let table = self.reftexts.as_mut().expect("table");
@@ -346,7 +346,14 @@ impl Execution<'_> {
             }];
         }
         match crate::resolve::decoded_refid(xref, lexical) {
-            Some(id) if !id.is_empty() || self.registry.contains_key(&id) => self.label(&id, span),
+            Some(id) if !id.is_empty() || self.registry.contains_key(&id) => {
+                // Ruby's `node.attr 'xrefstyle', nil, true`.
+                let style = match &xref.xrefstyle {
+                    Some(style) => Some(crate::resolve::decoded(style, lexical)),
+                    None => self.attributes.get("xrefstyle").map(str::to_owned),
+                };
+                self.label(&id, style.as_deref(), span)
+            }
             _ => {
                 let mut label = None;
                 if !self.resolving {
@@ -374,7 +381,7 @@ impl Execution<'_> {
             .iter()
             .find(|(_, target)| matches!(target.title, Some(crate::resolve::Title::Header)));
         if let Some((id, _)) = header.filter(|(_, target)| target.reftext.is_some()) {
-            return self.xreftext(id);
+            return self.xreftext(id, None, span);
         }
         if let Some(value) = self.attributes.get("reftext").filter(|v| !v.is_empty()) {
             let mut nodes = self.reftext(crate::reftext::Read::source(value, span.start));
@@ -394,10 +401,9 @@ impl Execution<'_> {
         Some(self.heading(key, &nodes))
     }
 
-    /// Ruby's `xreftext` without an xrefstyle: a nonempty reftext, else the
-    /// title, else `[id]`. References inside a label being produced display
-    /// `[id]`.
-    fn label(&mut self, id: &str, span: Span) -> Vec<Inline> {
+    /// Ruby's `xreftext`: a nonempty reftext, else the (styled) title, else
+    /// `[id]`. References inside a label being produced display `[id]`.
+    fn label(&mut self, id: &str, style: Option<&str>, span: Span) -> Vec<Inline> {
         let fallback = || {
             vec![Inline::Text {
                 value: format!("[{id}]"),
@@ -408,7 +414,7 @@ impl Execution<'_> {
             return fallback();
         }
         self.resolving = true;
-        let label = self.xreftext(id);
+        let label = self.xreftext(id, style, span);
         self.resolving = false;
         let Some(mut label) = label else {
             return fallback();
@@ -417,8 +423,9 @@ impl Execution<'_> {
         label
     }
 
-    /// A registered node's nonempty reftext (formatted now), else its title.
-    fn xreftext(&mut self, id: &str) -> Option<Vec<Inline>> {
+    /// A registered node's nonempty reftext (formatted now), else its title
+    /// with the xrefstyle applied (see resolve::styled).
+    fn xreftext(&mut self, id: &str, style: Option<&str>, span: Span) -> Option<Vec<Inline>> {
         let registry = self.registry;
         let target = registry.get(id)?;
         let label = target
@@ -429,12 +436,19 @@ impl Execution<'_> {
         if label.is_some() {
             return label;
         }
-        match &target.title {
-            Some(crate::resolve::Title::Nodes(nodes)) => Some(self.title(nodes)),
-            Some(crate::resolve::Title::Heading(key, nodes)) => Some(self.heading(*key, nodes)),
-            Some(crate::resolve::Title::Header) => self.header_title.clone(),
-            None => None,
-        }
+        let title = match &target.title {
+            Some(crate::resolve::Title::Nodes(nodes)) => self.title(nodes),
+            Some(crate::resolve::Title::Heading(key, nodes)) => self.heading(*key, nodes),
+            Some(crate::resolve::Title::Header) => return self.header_title.clone(),
+            None => return None,
+        };
+        Some(crate::resolve::styled(
+            title,
+            &target.numbering,
+            style,
+            &self.attributes,
+            span,
+        ))
     }
 
     /// Ruby's `apply_reftext_subs`, executed again at each reference.

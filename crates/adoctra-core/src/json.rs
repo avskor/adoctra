@@ -111,6 +111,7 @@ fn write_parts_array(parts: &[crate::AttributePart], out: &mut String) {
                 ("role", &xref.role),
                 ("window", &xref.window),
                 ("rel", &xref.rel),
+                ("xrefstyle", &xref.xrefstyle),
             ] {
                 if let Some(value) = value {
                     out.push_str(&format!(",\"{key}\":"));

@@ -77,6 +77,9 @@ pub(crate) struct ParseContext {
     /// Early-expanded block reftext keyed by the completed block's reader
     /// range; references format it again during conversion.
     pub reftexts: BTreeMap<(usize, usize), crate::reftext::Read>,
+    /// Caption numerals of numbered blocks, keyed by their reader range
+    /// (Ruby's `@numeral`), for `xrefstyle`.
+    numerals: BTreeMap<(usize, usize), String>,
     /// A section-title anchor's reftext, handed from the heading parser to
     /// block completion.
     pub section_reftext: Option<crate::reftext::Read>,
@@ -125,6 +128,7 @@ impl ParseContext {
             inline_diagnostics: Vec::new(),
             anchors: Vec::new(),
             reftexts: BTreeMap::new(),
+            numerals: BTreeMap::new(),
             section_reftext: None,
             outfilesuffix: None,
         }
@@ -158,6 +162,7 @@ impl ParseContext {
     ) -> (crate::resolve::Registry, crate::resolve::EarlyTitles) {
         let anchors = std::mem::take(&mut self.anchors);
         let reftexts = std::mem::take(&mut self.reftexts);
+        let numerals = std::mem::take(&mut self.numerals);
         let (body_subs, locked, counters) = (&mut self.body_subs, &self.locked, &self.counters);
         let inline_diagnostics = &mut self.inline_diagnostics;
         let xrefs = Self::xrefs(&self.outfilesuffix, includes);
@@ -165,6 +170,7 @@ impl ParseContext {
             document,
             anchors,
             reftexts,
+            numerals,
             &mut |key, attributes| {
                 body_subs.convert_early(
                     key,
@@ -378,6 +384,8 @@ impl ParseContext {
             self.attributes = Arc::new(attributes);
         }
         block.caption = Some(format!("{prefix} {number}. "));
+        self.numerals
+            .insert((block.span.start, block.span.end), number);
         self.body_subs
             .caption_counters
             .insert((block.span.start, block.span.end), effect.parts);
