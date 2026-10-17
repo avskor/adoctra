@@ -95,7 +95,7 @@ pub(crate) fn parse_reader<'a>(
         None,
         header.pending,
     );
-    context.close_sections(0);
+    context.close_sections(0, usize::MAX);
     doc.blocks.extend(nest_sections(
         body,
         doc.has_title,
@@ -327,7 +327,7 @@ fn nest_sections(
     // Open sections, innermost last, with their children's ordinals and
     // their own `sectnum` path.
     let mut open: Vec<Block> = Vec::new();
-    let mut numbering: Vec<(Ordinals, Vec<String>)> = Vec::new();
+    let mut numbering: Vec<(Ordinals, Vec<String>, Vec<usize>)> = Vec::new();
     let mut top_ordinals = Ordinals::default();
     for block in blocks {
         let level = match section_level(&block) {
@@ -344,20 +344,41 @@ fn nest_sections(
                 continue;
             }
         };
+        // The title line's level decides nesting; a special section's own
+        // level may differ (see section_numbers.rs).
+        let key = (block.span.start, block.span.end);
+        let raw = sections
+            .get(&key)
+            .map_or(level, |section| section.raw_level);
         while matches!(
             open.last(),
-            Some(Block { kind: BlockKind::Section { level: current, .. }, .. }) if level <= *current
+            Some(Block { kind: BlockKind::Section { level: current, .. }, .. }) if raw <= *current
         ) {
             close(&mut open, &mut top);
             numbering.pop();
         }
-        let expected = match open.last() {
-            Some(Block {
-                kind: BlockKind::Section { level, .. },
-                ..
-            }) => Some(level.saturating_add(1)),
+        let parent = open.last().map(|parent| match &parent.kind {
+            BlockKind::Section { level, blocks } => (
+                *level,
+                sections.get(&(blocks[0].span.start, blocks[0].span.end)),
+            ),
+            _ => unreachable!("open blocks are sections"),
+        });
+        let expected = match parent {
+            Some((_, Some(parent))) if !parent.allows_nesting() => {
+                diagnostics.push(Diagnostic {
+                    span: block.span,
+                    severity: Severity::Error,
+                    message: format!(
+                        "{} sections do not support nested sections",
+                        parent.sectname
+                    ),
+                });
+                None
+            }
+            Some((level, _)) => Some(level.saturating_add(1)),
             _ if unchecked => None,
-            _ if level == 0 => {
+            _ if raw == 0 => {
                 if !book {
                     diagnostics.push(Diagnostic {
                         span: block.span,
@@ -369,7 +390,7 @@ fn nest_sections(
             }
             _ => Some(1),
         };
-        if let Some(expected) = expected.filter(|expected| *expected != level) {
+        if let Some(expected) = expected.filter(|expected| *expected != raw) {
             let condition = if book && open.is_empty() {
                 format!("expected levels 0 or {expected}")
             } else {
@@ -378,23 +399,26 @@ fn nest_sections(
             diagnostics.push(Diagnostic {
                 span: block.span,
                 severity: Severity::Warning,
-                message: format!("section title out of sequence: {condition}, got level {level}"),
+                message: format!("section title out of sequence: {condition}, got level {raw}"),
             });
         }
         // Ruby's `assign_numeral` among the parent's sections.
-        let mut path = Vec::new();
-        if let Some(section) = sections.get_mut(&(block.span.start, block.span.end)) {
+        let (mut path, mut closes) = (Vec::new(), Vec::new());
+        if let Some(section) = sections.get_mut(&key) {
             let ordinals = numbering
                 .last_mut()
-                .map_or(&mut top_ordinals, |(ordinals, _)| ordinals);
+                .map_or(&mut top_ordinals, |(ordinals, ..)| ordinals);
             let numeral = ordinals.assign(section);
-            if let (true, Some((_, parent))) = (level > 1, numbering.last()) {
+            if let (true, Some((_, parent, parent_closes))) = (level > 1, numbering.last()) {
                 path.clone_from(parent);
+                closes.clone_from(parent_closes);
             }
             path.push(numeral.unwrap_or_default());
+            closes.push(section.closed_at);
             section.path.clone_from(&path);
+            section.closes.clone_from(&closes);
         }
-        numbering.push((Ordinals::default(), path));
+        numbering.push((Ordinals::default(), path, closes));
         let (span, context) = (block.span, Arc::clone(&block.attribute_context));
         let blocks = vec![block];
         let mut section = Block::new(span, BlockKind::Section { level, blocks });
@@ -880,17 +904,18 @@ fn parse_block_content(
         let anchor = (!has_id).then(|| section_anchor(title)).flatten();
         let title = anchor.as_ref().map_or(title, |a| a.title);
         let base = lines[*i].0 + abs_offset(line, title);
-        if !discrete {
-            context.close_sections(level);
-        }
+        // Ruby decides the section's kind and level before converting its title.
+        let level = if discrete {
+            level
+        } else {
+            context.close_sections(level, off);
+            context.read_section((off, end), pending_style, level)
+        };
         let heading_attrs = inline_attributes(&context.attributes, pending_attrs);
         let inlines = context.reading_title(title, base, &heading_attrs, &lines.include_catalog);
         // `Block.id` is otherwise assigned later, by the resolve pass, once the
         // whole document is known (it deduplicates ids across all sections).
         let mut block = Block::new(Span::new(off, end), BlockKind::Heading { level, inlines });
-        if !discrete {
-            context.read_section((off, end), pending_style, level);
-        }
         if let Some(anchor) = anchor {
             block.id = Some(anchor.id.to_owned());
             context.section_reftext = anchor.reftext.map(|reftext| {

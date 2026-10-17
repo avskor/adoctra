@@ -250,6 +250,7 @@ pub(crate) fn register(
         anchors: anchors.into_iter().peekable(),
         definitions: definitions.into_iter().peekable(),
         fixed,
+        position: 0,
         reftexts: &mut reftexts,
         numerals: &mut numerals,
         sections,
@@ -269,6 +270,8 @@ struct Ids<'a> {
     /// Definition references in reading order.
     definitions: std::iter::Peekable<std::vec::IntoIter<Definition>>,
     fixed: FixedXrefs,
+    /// The reading position of the field whose labels are being produced.
+    position: usize,
     reftexts: &'a mut BTreeMap<(usize, usize), crate::reftext::Read>,
     numerals: &'a mut BTreeMap<(usize, usize), String>,
     sections: &'a BTreeMap<(usize, usize), crate::section_numbers::Section>,
@@ -302,6 +305,7 @@ impl Ids<'_> {
             mut xref,
             textless,
         } = self.definitions.next().unwrap();
+        self.position = span.start;
         self.reading_target(&mut xref, true, &attributes);
         let label = textless
             .then(|| self.reading_xref_label(&xref, true, span, &attributes))
@@ -632,7 +636,15 @@ impl Ids<'_> {
             Some(Title::Heading(_, nodes)) => Some(nodes.clone()),
             Some(Title::Header) | None => None,
         }?;
-        let numbering = &self.registry[id].numbering;
+        // Sections reading has not closed yet have no numerals.
+        let masked;
+        let numbering = match &self.registry[id].numbering {
+            Numbering::Section(section) => {
+                masked = Numbering::Section(section.at(self.position));
+                &masked
+            }
+            numbering => numbering,
+        };
         Some(styled(title, numbering, style, attributes, span))
     }
 }
@@ -640,6 +652,7 @@ impl Ids<'_> {
 impl VisitorMut for Ids<'_> {
     fn visit_block(&mut self, block: &mut Block) {
         self.flush(block.span.start);
+        self.position = block.span.start;
         // The document title lends its text to an explicit id but never
         // receives an automatic one.
         let doctitle = Some(block.span) == self.doctitle;

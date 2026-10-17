@@ -204,3 +204,163 @@ fn reading_time_heading_labels_use_section_numbers() {
     // Numbering adds no tokens; headings keep their own.
     assert!(tokens(source).iter().any(|t| t.kind == TokenKind::Heading));
 }
+
+/// The section tree as `(kind level, heading source)` lines.
+fn outline(blocks: &[Block], source: &str, depth: usize, out: &mut Vec<String>) {
+    for block in blocks {
+        let pad = "  ".repeat(depth);
+        match &block.kind {
+            BlockKind::Section { level, blocks } => {
+                out.push(format!("{pad}section {level}"));
+                outline(blocks, source, depth + 1, out);
+            }
+            BlockKind::Heading { level, .. } => out.push(format!(
+                "{pad}h{level} {}",
+                &source[block.span.start..block.span.end]
+            )),
+            _ => {}
+        }
+    }
+}
+
+#[test]
+fn special_sections_take_level_one_and_nest_by_their_title_line() {
+    let source = "= Doc\n\n[appendix]\n== Extra\n\n=== Inside\n\n[appendix]\n= Zero\n\n== After\n\n[glossary]\n== Gloss";
+    let result = parse(source);
+    let mut out = Vec::new();
+    outline(&result.document.blocks, source, 0, &mut out);
+    assert_eq!(
+        out,
+        [
+            "h0 = Doc",
+            "section 1",
+            "  h1 == Extra",
+            "  section 2",
+            "    h2 === Inside",
+            // A level-0 appendix is a level-1 section; the next level-1 title
+            // is its sibling.
+            "section 1",
+            "  h1 = Zero",
+            "section 1",
+            "  h1 == After",
+            "section 1",
+            "  h1 == Gloss",
+        ]
+    );
+    // The title line keeps its level for diagnostics.
+    let errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .map(|d| (d.message.as_str(), &source[d.span.start..d.span.end]))
+        .collect();
+    assert_eq!(
+        errors,
+        [(
+            "level 0 sections can only be used when doctype is book",
+            "= Zero"
+        )]
+    );
+    assert_eq!(
+        numbered(source),
+        [
+            "Doc",
+            "Appendix A: Extra",
+            "Inside",
+            "Appendix B: Zero",
+            "After",
+            "Gloss"
+        ]
+    );
+}
+
+#[test]
+fn appendix_captions_and_signifiers_are_localizable() {
+    let source = "= Книга\n:doctype: book\n:sectnums:\n:appendix-caption: Приложение\n\
+        :appendix-refsig: Прил.\n:chapter-refsig: Глава\n:section-refsig: Раздел\n:xrefstyle: full\n\n\
+        = Часть\n\n== Глава\n\n[appendix]\n== Первое\n\n=== Внутри\n\n[appendix]\n= Второе\n\n\
+        :appendix-caption!:\n\n[appendix]\n== Третье\n\n[bibliography]\n== Литература\n\n\
+        См. <<_первое>> xref:_второе[xrefstyle=short] <<_внутри>> <<_глава>> <<_третье>>";
+    assert_eq!(
+        numbered(source),
+        [
+            "Книга",
+            "Часть",
+            "1. Глава",
+            "Приложение A: Первое",
+            "A.1. Внутри",
+            // The caption is fixed when reading closes the appendix, after
+            // the unset that follows its title.
+            "B. Второе",
+            "C. Третье",
+            "Литература",
+        ]
+    );
+    assert_eq!(
+        labels(source),
+        [
+            "Прил. A, _Первое_",
+            "Прил. B",
+            "Раздел A.1, \u{201c}Внутри\u{201d}",
+            "Глава 1, _Глава_",
+            "Прил. C, _Третье_",
+        ]
+    );
+}
+
+#[test]
+fn special_section_nesting_and_numbering_follow_ruby() {
+    let source =
+        "= B\n:doctype: book\n:sectnums:\n\n[preface]\n= Pref\n\n[abstract]\n=== Abs\n\n== Ch\n\n\
+        [glossary]\n== G\n\n=== GS";
+    let result = parse(source);
+    // An abstract inside a preface is special by inheritance: unnumbered and
+    // without a chapter number.
+    assert_eq!(numbered(source), ["B", "Pref", "Abs", "1. Ch", "G", "GS"]);
+    let errors: Vec<_> = result
+        .diagnostics
+        .iter()
+        .map(|d| (d.message.as_str(), &source[d.span.start..d.span.end]))
+        .collect();
+    assert_eq!(
+        errors,
+        [("glossary sections do not support nested sections", "=== GS")]
+    );
+    let doc = result.document;
+    let levels: Vec<_> = doc
+        .flat_blocks()
+        .iter()
+        .filter_map(|b| match b.kind {
+            BlockKind::Heading { level, .. } => Some(level),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(levels, [0, 1, 1, 1, 1, 2]);
+}
+
+#[test]
+fn appendix_counter_and_reading_labels_see_sections_closed_so_far() {
+    let source = ":appendix-number: C\n:sectnums:\n\n[appendix]\n== First {appendix-number}\n\n\
+        === See xref:_first_c[xrefstyle=short]\n\n[appendix]\n== Second {appendix-number}\n\n\
+        [appendix]\n[caption=\"Custom: \"]\n== Third\n\n== One\n\n=== In xref:_one[xrefstyle=full]\n\n\
+        Body {appendix-number} <<_see_appendix>> <<_in_section_one>>";
+    assert_eq!(
+        numbered(source),
+        [
+            "Appendix D: First C",
+            // Reading has not closed the appendix yet: no letter.
+            "D.1. See Appendix ",
+            "Appendix E: Second D",
+            // A block caption attribute does not change a section caption.
+            "Appendix F: Third",
+            "1. One",
+            "1.1. In Section , \u{201c}One\u{201d}",
+        ]
+    );
+    let doc = parse(source).document;
+    // Conversion starts from the header value.
+    assert!(text(last_paragraph(&doc.blocks).unwrap()).starts_with("Body C "));
+    assert_eq!(
+        labels(source),
+        ["See Appendix ", "In Section , \u{201c}One\u{201d}"]
+    );
+}

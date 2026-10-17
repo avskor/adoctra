@@ -414,8 +414,20 @@ sectnum path (an unnumbered parent contributes ""). body_subs sets the heading's
 `Block.caption` (`1.2. `, `<chapter-signifier> 3. `, `<part-signifier> II: `) at
 conversion with `sectnumlevels`/signifiers at the section; HTML renders it inside
 `<hN>`, JSON/WASM already export caption. Built-in `*-refsig`/`appendix-caption`
-defaults match Ruby. Appendix lettering/captions and special-section levels are
-not implemented (XFAIL sectnums-appendix).
+defaults match Ruby; every label word is an attribute, so documents localize
+them (`:appendix-caption: Приложение`, `*-refsig`, `*-signifier`).
+**Special sections** (any non-`sectN` section style; a book's `[abstract]` is a
+level-1 chapter instead): level 0 becomes 1 (`Section.level`, also the Heading
+level) while the title line's `raw_level` decides nesting, out-of-sequence and
+level-0 diagnostics. `special` is inherited by nested sections (numbered only
+with a numbered parent); level-1 specials other than appendix/preface/abstract
+report "<sectname> sections do not support nested sections". An appendix is
+always numbered: closing it takes `counter:appendix-number:A` and fixes its
+caption from `appendix-caption` at that point (`Appendix A: `, else `A. `),
+shown regardless of sectnumlevels; children continue `A.1.`. Reading-time labels
+(headings, definition xrefs) see numerals only of sections closed before that
+position (Section.closes/at, Ids.position), like Ruby assigning at close.
+Manpage synopsis, book partintro and preamble special cases are not implemented.
 Xref labels: resolve::register builds the registry after reading (auto ids,
 block ids, cataloged anchors in source order); body_subs Execution resolves each
 textless xref after its field's subs, like Ruby's xreftext:
@@ -464,8 +476,8 @@ level-0-outside-book error; without a header, a body that starts with a section
 skips top-level checks. Document::flat_blocks/into_flat_blocks give the old flat
 order. HTML renders `<section class="sectN role">` (id on the heading, level 0
 unwrapped) and `<section id="preamble">`; JSON/WASM use section/preamble; the DOM
-profile treats section as div. Special sections (appendix/preface/abstract),
-book partintro are not implemented (sectnums is, see above). JSON and WASM expose header metadata;
+profile treats section as div. Book partintro is not implemented
+(sectnums and special sections are, see above). JSON and WASM expose header metadata;
 WASM includes source spans. See parser-api.adoc for remaining header limitations.
 Comments (`//`, matching slash fences of length >= 4, and `[comment]` paragraphs
 or open blocks) are omitted contextually. ParseResult.comments retains source

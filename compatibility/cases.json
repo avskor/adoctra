@@ -17500,9 +17500,38 @@
     {
       "id": "sectnums-appendix",
       "category": "sections",
-      "expect": "xfail",
-      "reason": "Special sections are not implemented: an appendix is neither lettered nor captioned (Appendix A:).",
+      "expect": "pass",
       "source": ":sectnums:\n\n== One\n\n[appendix]\n== Extra\n\nA <<_extra>> B xref:_extra[xrefstyle=full]\n"
+    },
+    {
+      "id": "special-sections-article",
+      "category": "sections",
+      "expect": "pass",
+      "source": "= Doc\n:xrefstyle: full\n\n[abstract]\n== Abs\n\ntext\n\n== One\n\n=== Sub\n\n[appendix]\n== Extra\n\n=== Inside\n\n[appendix]\n= Zero\n\n[glossary]\n== Gloss\n\n[appendix.r]\n[[cust]]\n== Custom\n\nSee <<_extra>> xref:_extra[xrefstyle=short] xref:_zero[xrefstyle=basic] <<_inside>> <<cust>> <<_gloss>> {appendix-number}\n"
+    },
+    {
+      "id": "special-sections-book-localized",
+      "category": "sections",
+      "expect": "pass",
+      "source": "= Книга\n:doctype: book\n:sectnums:\n:appendix-caption: Приложение\n:appendix-refsig: Прил.\n:chapter-refsig: Глава\n:section-refsig: Раздел\n:xrefstyle: full\n\n[preface]\n= Pref\n\n[abstract]\n=== Abs\n\n= Part\n\n== Ch\n\n[appendix]\n== AppA\n\n=== Sub\n\n[appendix]\n= AppB\n\n:appendix-caption!:\n\n[appendix]\n== AppC\n\n[bibliography]\n== Bib\n\nSee <<_appa>> xref:_appb[xrefstyle=short] <<_sub>> <<_ch>> <<_abs>> <<_pref>> <<_appc>>\n"
+    },
+    {
+      "id": "special-sections-nesting-unsupported",
+      "category": "sections",
+      "expect": "pass",
+      "source": "= B\n:doctype: book\n:sectnums:\n\n[preface]\n== Pref\n\n=== Sub\n\n[glossary]\n== G\n\n=== GS\n"
+    },
+    {
+      "id": "special-sections-abstract-in-preface",
+      "category": "sections",
+      "expect": "pass",
+      "source": "= B\n:doctype: book\n:sectnums:\n\n[preface]\n= Pref\n\n[abstract]\n=== Abs\n\n== Ch\n"
+    },
+    {
+      "id": "special-sections-appendix-counter-reading-labels",
+      "category": "sections",
+      "expect": "pass",
+      "source": ":appendix-number: C\n:sectnums:\n\n[appendix]\n== First {appendix-number}\n\n=== See xref:_first_c[xrefstyle=short] and xref:_one[xrefstyle=short]\n\n[appendix]\n== Second {appendix-number}\n\n[appendix]\n[caption=\"Custom: \"]\n== Third\n\n== One\n\n=== In xref:_one[xrefstyle=full]\n\n[bibliography]\n== Bib\n\n=== Nested\n\n[colophon]\n== Colo\n\nBody {appendix-number} <<_second_d>> <<_see_appendix_d>>\n"
     },
     {
       "id": "xrefstyle-example-full-short-basic",

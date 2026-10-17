@@ -421,30 +421,52 @@ impl ParseContext {
             .insert((block.span.start, block.span.end), effect.parts);
     }
 
-    /// Read a section title at `key` (after `close_sections`): decide its
-    /// numbering with the current attributes.
-    pub fn read_section(&mut self, key: (usize, usize), style: Option<&str>, level: u8) {
-        let section =
-            crate::section_numbers::Section::read(style, level, self.book, &self.attributes);
+    /// Read a section title line at `key` (after `close_sections`, before its
+    /// title is converted): decide its kind and numbering with the current
+    /// attributes and the enclosing section; returns the section's level.
+    pub fn read_section(&mut self, key: (usize, usize), style: Option<&str>, level: u8) -> u8 {
+        let parent = self
+            .open_sections
+            .last()
+            .and_then(|(_, parent)| self.sections.get(parent));
+        let section = crate::section_numbers::Section::read(
+            style,
+            level,
+            self.book,
+            &self.attributes,
+            parent,
+        );
+        let level = section.level;
         self.sections.insert(key, section);
         self.open_sections.push((level, key));
+        level
     }
 
     /// Close open sections at `level` or deeper (all with level 0 at the end
-    /// of the body), before the next section title is read. A closed chapter
-    /// takes the next `chapter-number` counter value, like Ruby's
+    /// of the body), before the next section title at `at` is read. A closed chapter
+    /// takes the next `chapter-number` counter value and an appendix the next
+    /// `appendix-number` (from `A`) and its caption, like Ruby's
     /// `assign_numeral`; the effect reaches later reading only (conversion
     /// starts again from the header attributes, as in Ruby).
-    pub fn close_sections(&mut self, level: u8) {
+    pub fn close_sections(&mut self, level: u8, at: usize) {
         while self
             .open_sections
             .last()
             .is_some_and(|open| open.0 >= level)
         {
             let (_, key) = self.open_sections.pop().unwrap();
-            if !self.sections.get(&key).is_some_and(|s| s.counts_chapter()) {
+            let Some(section) = self.sections.get_mut(&key) else {
                 continue;
-            }
+            };
+            section.closed_at = at;
+            let appendix = section.counts_appendix();
+            let counter = if appendix {
+                "counter:appendix-number:A"
+            } else if section.counts_chapter() {
+                "counter:chapter-number"
+            } else {
+                continue;
+            };
             let mut evaluation = crate::substitution_context::Evaluation::definition(
                 &self.attributes,
                 &self.locked,
@@ -452,7 +474,7 @@ impl ParseContext {
                 self.quote_compat,
             );
             let effect = evaluation.execute(
-                "counter:chapter-number",
+                counter,
                 crate::Span::new(key.0, key.1),
                 &mut None,
                 &mut self.inline_diagnostics,
@@ -460,8 +482,14 @@ impl ParseContext {
             if let Some(attributes) = evaluation.changed_attributes() {
                 self.attributes = Arc::new(attributes);
             }
+            let numeral = parts_text(&effect.parts);
+            let caption = appendix.then(|| match self.attributes.get("appendix-caption") {
+                Some(caption) => format!("{caption} {numeral}: "),
+                None => format!("{numeral}. "),
+            });
             if let Some(section) = self.sections.get_mut(&key) {
-                section.numeral = Some(parts_text(&effect.parts));
+                section.numeral = Some(numeral);
+                section.caption = caption;
             }
         }
     }

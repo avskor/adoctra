@@ -1049,6 +1049,15 @@ mod tests {
     }
 
     #[test]
+    fn appendix_headings_serialize_their_caption_and_level() {
+        let json = render("= Doc\n:appendix-caption: Приложение\n\n[appendix]\n= A");
+        assert!(
+            json.contains(r#""name":"heading","level":1,"id":"_a","roles":[],"style":"appendix","attributes":{},"options":[],"title":null,"caption":"Приложение A: ""#),
+            "got: {json}"
+        );
+    }
+
+    #[test]
     fn interdocument_xref_serializes_target_refid_and_path() {
         let json = render("<<other.adoc#f>> and <<Sec Title>>\n\n[[sec]]\n== Sec Title");
         assert!(

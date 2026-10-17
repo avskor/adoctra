@@ -980,6 +980,21 @@ mod tests {
     }
 
     #[test]
+    fn appendix_heading_keeps_its_line_span_and_caption() {
+        let src = "= Doc\n\n[appendix]\n= A";
+        let json = parse_json(src);
+        let start = src.find("= A").unwrap();
+        assert!(
+            json.contains(&format!(r#"{{"span":{{"source_id":0,"start":{start},"end":{}}},"name":"heading","level":1,"#, src.len())),
+            "got: {json}"
+        );
+        assert!(
+            json.contains(r#""caption":"Appendix A: ","inlines""#),
+            "got: {json}"
+        );
+    }
+
+    #[test]
     fn interdocument_xref_exposes_path_fragment_constraints_and_span() {
         let src = "A xref:other.adoc#f[T,window=_blank]";
         let json = parse_json(src);

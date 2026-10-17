@@ -1896,6 +1896,20 @@ mod tests {
     }
 
     #[test]
+    fn appendix_sections_render_localized_captions() {
+        let html = render("= Doc\n:appendix-caption: Приложение\n:appendix-refsig: Прил.\n\n[appendix]\n= A&B\n\n=== Sub\n\nSee xref:_ab[xrefstyle=full].");
+        assert!(
+            html.contains("<section class=\"sect1\">\n<h2 id=\"_ab\">Приложение A: A&amp;B</h2>"),
+            "{html}"
+        );
+        assert!(html.contains(r#"<h3 id="_sub">Sub</h3>"#), "{html}");
+        assert!(
+            html.contains(r##"<a href="#_ab">Прил. A, <em>A&amp;B</em></a>"##),
+            "{html}"
+        );
+    }
+
+    #[test]
     fn interdocument_and_natural_xrefs_render_resolved_targets() {
         let html = render(
             ":p: xref:o&p.adoc#v[V,window=_blank]\n:n: <<Sec Title>>\n\n[[sec]]\n== Sec Title\n\nA <<other.adoc#f>> B xref:other.adoc#f[T,role=r,window=_blank,opts=nofollow] C {p} D <<Sec Title>> E {n} F <<#>>",
