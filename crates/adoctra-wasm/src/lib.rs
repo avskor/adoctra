@@ -314,6 +314,34 @@ fn write_cell(cell: &adoctra_core::ast::TableCell, s: &mut String) {
     s.push('}');
 }
 
+/// A verbatim block's callout marks (omitted when there are none): number,
+/// guard, `<!--N-->` form and Ruby's id.
+fn write_callouts(callouts: &[adoctra_core::ast::Callout], s: &mut String) {
+    if callouts.is_empty() {
+        return;
+    }
+    s.push_str(",\"callouts\":[");
+    for (i, callout) in callouts.iter().enumerate() {
+        if i > 0 {
+            s.push(',');
+        }
+        s.push('{');
+        write_span_field(&callout.span, s);
+        s.push(',');
+        s.push_str("\"number\":");
+        write_str(&callout.number, s);
+        s.push_str(",\"id\":");
+        write_str(&callout.id, s);
+        s.push_str(",\"guard\":");
+        match &callout.guard {
+            Some(guard) => write_str(guard, s),
+            None => s.push_str("null"),
+        }
+        s.push_str(&format!(",\"xml\":{}}}", callout.xml));
+    }
+    s.push(']');
+}
+
 /// A list item (or a description) with its span, text, nested blocks and, in
 /// a checklist, its `checkbox` state.
 fn write_list_item(item: &adoctra_core::ast::ListItem, s: &mut String) {
@@ -369,7 +397,7 @@ fn write_block(b: &Block, s: &mut String) {
             s.push_str(",\"inlines\":");
             write_inlines(inlines, s);
         }
-        BlockKind::Listing { text } => {
+        BlockKind::Listing { text, callouts } => {
             s.push_str("\"name\":\"listing\",");
             write_id(&b.id, s);
             write_roles(&b.roles, s);
@@ -380,8 +408,9 @@ fn write_block(b: &Block, s: &mut String) {
             write_caption(&b.caption, s);
             s.push_str(",\"text\":");
             write_str(text, s);
+            write_callouts(callouts, s);
         }
-        BlockKind::Literal { text } => {
+        BlockKind::Literal { text, callouts } => {
             s.push_str("\"name\":\"literal\",");
             write_id(&b.id, s);
             write_roles(&b.roles, s);
@@ -392,6 +421,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_caption(&b.caption, s);
             s.push_str(",\"text\":");
             write_str(text, s);
+            write_callouts(callouts, s);
         }
         BlockKind::Passthrough { text } => {
             s.push_str("\"name\":\"pass\",");
@@ -498,6 +528,33 @@ fn write_block(b: &Block, s: &mut String) {
                     s.push(',');
                 }
                 write_list_item(item, s);
+            }
+            s.push(']');
+        }
+        BlockKind::CalloutList { items } => {
+            s.push_str("\"name\":\"colist\",");
+            write_id(&b.id, s);
+            write_roles(&b.roles, s);
+            write_style(&b.attrs.style, s);
+            write_attributes(&b.attrs.named, s);
+            write_options(&b.attrs.options, s);
+            write_title(&b.title, s);
+            write_caption(&b.caption, s);
+            s.push_str(",\"items\":[");
+            for (i, entry) in items.iter().enumerate() {
+                if i > 0 {
+                    s.push(',');
+                }
+                write_list_item(&entry.item, s);
+                s.pop();
+                s.push_str(",\"coids\":[");
+                for (j, id) in entry.coids.iter().enumerate() {
+                    if j > 0 {
+                        s.push(',');
+                    }
+                    write_str(id, s);
+                }
+                s.push_str("]}");
             }
             s.push(']');
         }
@@ -2517,6 +2574,19 @@ mod header_tests {
         let tokens = super::tokens_json_with_source(source, 3);
         assert!(
             tokens.contains(r#"{"span":{"source_id":3,"start":10,"end":32},"kind":"block-macro"}"#),
+            "{tokens}"
+        );
+    }
+
+    #[test]
+    fn callouts_export_spans_and_tokens() {
+        let source = "----\nx <1>\n----\n<1> one";
+        let json = super::parse_json_with_source(source, 3);
+        assert!(json.contains(r#""callouts":[{"span":{"source_id":3,"start":7,"end":10},"number":"1","id":"CO1-1","guard":null,"xml":false}]"#), "{json}");
+        assert!(json.contains(r#""blocks":[],"coids":["CO1-1"]}"#), "{json}");
+        let tokens = super::tokens_json_with_source(source, 3);
+        assert!(
+            tokens.contains(r#"{"span":{"source_id":3,"start":7,"end":10},"kind":"callout"}"#),
             "{tokens}"
         );
     }

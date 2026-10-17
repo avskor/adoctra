@@ -117,6 +117,8 @@ pub(crate) struct ParseContext {
     /// Footnotes registered while reading (section titles, anchored block
     /// titles, attribute definitions), handed to conversion.
     footnotes: crate::substitution_context::Footnotes,
+    /// Ruby's `Document#callouts`, shared with nested documents.
+    pub callouts: crate::callouts::Catalog,
 }
 
 fn root_of(
@@ -219,6 +221,7 @@ impl ParseContext {
             nested: false,
             root: None,
             footnotes: Default::default(),
+            callouts: Default::default(),
         }
     }
 

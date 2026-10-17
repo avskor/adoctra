@@ -164,7 +164,7 @@ fn conditions_process_verbatim_but_not_top_level_comment_bodies() {
     let result = parse(":a:\n\n////\nendif::[]\nifdef::missing[]\n////\n\n----\nifdef::a[shown]\nifdef::missing[hidden]\n\\ifdef::a[plain]\n----");
     assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
     assert!(
-        matches!(&result.document.blocks[0].kind, BlockKind::Listing { text } if text == "shown\nifdef::a[plain]")
+        matches!(&result.document.blocks[0].kind, BlockKind::Listing { text, .. } if text == "shown\nifdef::a[plain]")
     );
     assert_eq!(result.comments.len(), 1);
     assert_eq!(result.conditional_directives.len(), 3);
@@ -482,7 +482,7 @@ fn ifeval_header_container_and_verbatim_share_the_lazy_reader() {
     assert_eq!(result.comments.len(), 1);
     assert_eq!(result.conditional_directives.len(), 2);
     assert!(
-        matches!(&result.document.blocks[0].kind, BlockKind::Listing { text } if text == "  kept\nifeval::[1 == 1]")
+        matches!(&result.document.blocks[0].kind, BlockKind::Listing { text, .. } if text == "  kept\nifeval::[1 == 1]")
     );
 }
 

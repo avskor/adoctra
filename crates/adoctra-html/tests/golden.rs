@@ -429,6 +429,36 @@ fn html_description_lists_match_asciidoctor() {
     assert!(checked > 0, "no golden fixtures found in {dir:?}");
 }
 
+/// Callouts: the conum markup inside the first `<pre>` matches Ruby's, and
+/// the callout list items match its `colist` items.
+#[test]
+fn html_callouts_match_asciidoctor() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/callouts");
+    let mut checked = 0usize;
+    for entry in fs::read_dir(&dir).expect("golden/callouts dir is missing") {
+        let path = entry.unwrap().path();
+        if path.extension().and_then(|e| e.to_str()) != Some("adoc") {
+            continue;
+        }
+        let expected = fs::read_to_string(path.with_extension("expected.html")).unwrap();
+        let name = path.file_stem().unwrap().to_string_lossy().into_owned();
+        let doc = adoctra_core::parse(&fs::read_to_string(&path).unwrap()).document;
+        let ours = String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap();
+        assert_eq!(
+            pre_inner(&ours),
+            pre_inner(&expected),
+            "callout marks diverge for `{name}`"
+        );
+        assert_eq!(
+            flat_list(&ours),
+            flat_list(&expected),
+            "callout list diverges for `{name}`"
+        );
+        checked += 1;
+    }
+    assert!(checked > 0, "no golden fixtures found in {dir:?}");
+}
+
 #[test]
 fn html_source_blocks_match_asciidoctor() {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/blocks");

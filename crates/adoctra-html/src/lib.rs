@@ -128,7 +128,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             render_inlines(inlines, out);
             out.push_str("</p>\n");
         }
-        BlockKind::Listing { text } => {
+        BlockKind::Listing { text, callouts } => {
             render_title(&block.title, &block.caption, out);
             // A `[source]`-style listing renders as asciidoctor's highlight form:
             // `<pre class="highlight"><code class="language-LANG" data-lang="LANG">`,
@@ -149,24 +149,41 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
                     }
                     None => out.push_str("<code>"),
                 }
-                out.push_str(&escape(text));
+                render_verbatim(text, callouts, cx, out);
                 out.push_str("</code></pre>\n");
             } else {
                 let class = class_attr(&["listing"], &block.roles);
                 out.push_str(&format!("<pre{class}{id}>"));
-                out.push_str(&escape(text));
+                render_verbatim(text, callouts, cx, out);
                 out.push_str("</pre>\n");
             }
         }
-        BlockKind::Literal { text } => {
+        BlockKind::Literal { text, callouts } => {
             // A literal block: verbatim `<pre>`, like a plain listing but with the
             // `literalblock` base class. asciidoctor wraps it in a `<div>`; adoctra
             // hangs the class/id/roles on the `<pre>` itself, as for a listing.
             render_title(&block.title, &block.caption, out);
             let class = class_attr(&["literalblock"], &block.roles);
             out.push_str(&format!("<pre{class}{id}>"));
-            out.push_str(&escape(text));
+            render_verbatim(text, callouts, cx, out);
             out.push_str("</pre>\n");
+        }
+        BlockKind::CalloutList { items } => {
+            // Ruby's `div.colist` without its wrapper: an ordered list whose
+            // items explain the callout marks; the stylesheet draws the numbers.
+            render_title(&block.title, &block.caption, out);
+            let class = class_attr(&["colist", "arabic"], &block.roles);
+            out.push_str(&format!("<ol{id}{class}>\n"));
+            for entry in items {
+                out.push_str("<li>");
+                render_inlines(&entry.item.inlines, out);
+                for child in &entry.item.blocks {
+                    out.push('\n');
+                    render_block(child, cx, out);
+                }
+                out.push_str("</li>\n");
+            }
+            out.push_str("</ol>\n");
         }
         BlockKind::Passthrough { text } => {
             // Passthrough: the body is emitted *completely raw* — no escaping and
@@ -777,6 +794,43 @@ fn render_dlist(
             out.push_str("</dl>\n");
         }
     }
+}
+
+/// Verbatim text with its callout marks as Ruby's `convert_inline_callout`:
+/// the guard kept before `<b class="conum">(N)</b>` (an `<!--N-->` mark keeps
+/// its comment), or a font/image icon with `icons`.
+fn render_verbatim(text: &str, callouts: &[adoctra_core::ast::Callout], cx: &Cx, out: &mut String) {
+    let attributes = &cx.doc.attributes;
+    let mut copied = 0;
+    for callout in callouts {
+        out.push_str(&escape(&text[copied..callout.start]));
+        let n = escape(&callout.number);
+        match attributes.get("icons") {
+            Some("font") => out.push_str(&format!(
+                "<i class=\"conum\" data-value=\"{n}\"></i><b>({n})</b>"
+            )),
+            Some(_) => {
+                let dir = attributes.get("iconsdir").unwrap_or("./images/icons");
+                let ext = attributes.get("icontype").unwrap_or("png");
+                out.push_str(&format!(
+                    "<img src=\"{}/callouts/{n}.{}\" alt=\"{n}\">",
+                    attr_value(dir),
+                    attr_value(ext)
+                ));
+            }
+            None if callout.xml => {
+                out.push_str(&format!("&lt;!--<b class=\"conum\">({n})</b>--&gt;"))
+            }
+            None => {
+                if let Some(guard) = &callout.guard {
+                    out.push_str(&escape(guard));
+                }
+                out.push_str(&format!("<b class=\"conum\">({n})</b>"));
+            }
+        }
+        copied = callout.end;
+    }
+    out.push_str(&escape(&text[copied..]));
 }
 
 /// Ruby's `convert_table`: a `<table class="tableblock">` is already the
@@ -1825,6 +1879,31 @@ mod tests {
         assert!(html.contains("<ul>"), "got: {html}");
         assert!(html.contains("<li>a\n<ol class=\"arabic\">"), "got: {html}");
         assert!(html.contains("<li>b</li>"), "got: {html}");
+    }
+
+    #[test]
+    fn callouts_render_conums_and_callout_lists() {
+        let html = render(
+            "[source,ruby]\n----\nx # <1> <2>\ny <!--3-->\n----\n[.r]\n<1> one\n<2> two\n<3> three",
+        );
+        assert!(html.contains("x # <b class=\"conum\">(1)</b> <b class=\"conum\">(2)</b>\ny &lt;!--<b class=\"conum\">(3)</b>--&gt;</code></pre>"), "{html}");
+        assert!(
+            html.contains(
+                "<ol class=\"colist arabic r\">\n<li>one</li>\n<li>two</li>\n<li>three</li>\n</ol>"
+            ),
+            "{html}"
+        );
+        let html = render(":icons: font\n\n----\nx // <1>\n----");
+        assert!(
+            html.contains("x <i class=\"conum\" data-value=\"1\"></i><b>(1)</b>"),
+            "{html}"
+        );
+        let html = render(":icons:\n\n....\nx <1>\n....");
+        assert!(
+            html.contains("x <img src=\"./images/icons/callouts/1.png\" alt=\"1\">"),
+            "{html}"
+        );
+        assert!(STYLESHEET.contains(".conum"));
     }
 
     #[test]

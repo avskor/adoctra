@@ -404,7 +404,8 @@ fn asciidoc_cells_are_nested_documents_with_source_spans() {
     assert_eq!(
         nested[1].kind,
         BlockKind::Listing {
-            text: "code".into()
+            text: "code".into(),
+            callouts: Vec::new(),
         }
     );
 }

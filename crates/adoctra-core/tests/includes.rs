@@ -559,7 +559,7 @@ fn normalization_depends_on_resource_type_and_keeps_include_boundaries() {
         );
         let result = parse_resource(&mut sources, &options, &resources).unwrap();
         assert!(result.diagnostics.is_empty(), "{result:?}");
-        let BlockKind::Listing { text } = &result.document.flat_blocks()[0].kind else {
+        let BlockKind::Listing { text, .. } = &result.document.flat_blocks()[0].kind else {
             panic!("{result:?}")
         };
         assert_eq!(text, expected, "{name}");
@@ -905,7 +905,7 @@ fn non_asciidoc_includes_are_raw_but_adoc_includes_preprocess_inside_listings() 
         let result = parse_resource(&mut sources, &options, &resources).unwrap();
         assert!(result.diagnostics.is_empty());
         assert!(
-            matches!(&result.document.flat_blocks()[0].kind, BlockKind::Listing { text } if text == expected)
+            matches!(&result.document.flat_blocks()[0].kind, BlockKind::Listing { text, .. } if text == expected)
         );
         check_spans(&result, &sources);
     }
@@ -1167,7 +1167,7 @@ fn raw_tag_markers_obey_boundaries_and_are_not_required_to_be_comments() {
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
     assert!(result.diagnostics.is_empty());
     assert!(
-        matches!(&result.document.flat_blocks()[0].kind, BlockKind::Listing { text } if text == "kept\nnotag::b[]\n// tag::bad name[]\n// tag::bad[]\t\ninside")
+        matches!(&result.document.flat_blocks()[0].kind, BlockKind::Listing { text, .. } if text == "kept\nnotag::b[]\n// tag::bad name[]\n// tag::bad[]\t\ninside")
     );
     check_spans(&result, &sources);
 }
@@ -1389,7 +1389,7 @@ fn offsets_in_verbatim_remain_literal_without_synthetic_highlighting() {
     let (mut sources, resources, options) = setup(root, &[("docs/part.rs", "== Literal")]);
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
     assert!(result.diagnostics.is_empty());
-    let BlockKind::Listing { text } = &result.document.flat_blocks()[0].kind else {
+    let BlockKind::Listing { text, .. } = &result.document.flat_blocks()[0].kind else {
         panic!()
     };
     assert_eq!(text, ":leveloffset: +1\n\n== Literal\n\n:leveloffset!:");
@@ -1491,7 +1491,7 @@ fn indentation_and_tab_expansion_map_to_physical_characters() {
     );
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
     assert!(result.diagnostics.is_empty());
-    let BlockKind::Listing { text } = &result.document.flat_blocks()[0].kind else {
+    let BlockKind::Listing { text, .. } = &result.document.flat_blocks()[0].kind else {
         panic!("{result:?}")
     };
     assert_eq!(text, "  Я🙂  X\n  Z");

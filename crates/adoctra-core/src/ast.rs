@@ -379,13 +379,20 @@ pub enum BlockKind {
     Paragraph { inlines: Vec<Inline> },
     /// A listing block (verbatim, no inline substitutions), fenced by `----`.
     /// Rendered as a `listingblock`; a `[source,LANG]` style further selects the
-    /// highlight form (see [`BlockAttrs::style`]).
-    Listing { text: String },
+    /// highlight form (see [`BlockAttrs::style`]). `callouts` are the callout
+    /// marks at its line ends (Ruby's verbatim `callouts` substitution).
+    Listing {
+        text: String,
+        callouts: Vec<Callout>,
+    },
     /// A literal block: verbatim, no inline substitutions, either fenced by
     /// `....` or produced by a `[literal]` style on a paragraph. Same verbatim
     /// `text` as [`BlockKind::Listing`] but rendered as a `literalblock` — no
     /// language / `<code>` handling.
-    Literal { text: String },
+    Literal {
+        text: String,
+        callouts: Vec<Callout>,
+    },
     /// A passthrough block: verbatim, fenced by `++++` (or produced by a `[pass]`
     /// style on a paragraph or `--` block). Like [`BlockKind::Literal`] the body
     /// is the raw source `text` with no inline substitutions (`*bold*`, `{attr}`
@@ -401,6 +408,10 @@ pub enum BlockKind {
     /// `loweralpha`, …) is its [`BlockAttrs::style`]; a checklist has the
     /// `checklist` option.
     List { ordered: bool, items: Vec<ListItem> },
+    /// A callout list (`<1> text`, `<.> text`), like Ruby's
+    /// `parse_callout_list`: each item names the callout marks of the
+    /// preceding verbatim blocks with its number (`coids`).
+    CalloutList { items: Vec<CalloutListItem> },
     /// A description list (`term:: text`, also `:::`, `::::` and `;;`), like
     /// Ruby's `parse_description_list`: consecutive terms without a
     /// description share the next one. The `horizontal` and `qanda` styles
@@ -716,6 +727,30 @@ pub struct ListItem {
     /// first marker of the ordered series (`.`, `..`, `1.`, `a.`, `i)`, …);
     /// none for a description.
     pub marker: Option<String>,
+}
+
+/// A callout mark at the end of a verbatim line (`<1>`, `<.>`, `<!--1-->`),
+/// like Ruby's `sub_callouts`: `range` is the replaced bytes of the block
+/// text, from any comment `guard` (`// `, `# `, `-- `, `;; ` or the
+/// `line-comment` attribute) through the mark; `xml` marks the `<!--N-->`
+/// form. `id` is Ruby's callout id (`CO1-2`). `span` is the mark's source.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Callout {
+    pub start: usize,
+    pub end: usize,
+    pub number: String,
+    pub guard: Option<String>,
+    pub xml: bool,
+    pub id: String,
+    pub span: Span,
+}
+
+/// One item of a [`BlockKind::CalloutList`] and the ids of the callout marks
+/// it explains (Ruby's `coids`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct CalloutListItem {
+    pub item: ListItem,
+    pub coids: Vec<String>,
 }
 
 /// One entry of a [`BlockKind::DescriptionList`]: its terms and the shared

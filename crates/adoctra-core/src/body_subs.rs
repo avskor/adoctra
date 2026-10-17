@@ -597,6 +597,12 @@ impl Execution<'_> {
                         self.blocks(&mut item.blocks);
                     }
                 }
+                BlockKind::CalloutList { items } => {
+                    for entry in items {
+                        self.inlines(&mut entry.item.inlines);
+                        self.blocks(&mut entry.item.blocks);
+                    }
+                }
                 // Ruby converts each term, then the description's text and
                 // blocks.
                 BlockKind::DescriptionList { items } => {

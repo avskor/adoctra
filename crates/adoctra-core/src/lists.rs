@@ -9,6 +9,7 @@ pub(crate) enum ListType {
     Unordered,
     Ordered,
     Description,
+    Callout,
 }
 
 /// A list item line: the raw marker (or description delimiter) and byte
@@ -183,6 +184,7 @@ pub(crate) fn item(line: &str, list_type: ListType) -> Option<ItemMatch> {
         ListType::Unordered => unordered(line),
         ListType::Ordered => ordered(line),
         ListType::Description => description(line),
+        ListType::Callout => crate::callouts::list_item(line),
     }
 }
 
@@ -277,6 +279,7 @@ pub(crate) fn is_sibling(line: &str, sibling: &Sibling) -> bool {
         Sibling::Marker(ListType::Ordered, marker) => {
             ordered(line).is_some_and(|m| resolve_ordered(&m.marker).0 == *marker)
         }
+        Sibling::Marker(ListType::Callout, _) => crate::callouts::list_item(line).is_some(),
         Sibling::Marker(ListType::Description, _) => false,
     }
 }

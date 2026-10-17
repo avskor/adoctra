@@ -450,6 +450,7 @@ fn collect_blocks_in(
             complete_media(&mut block, &context.attributes);
             let attributes = inline_attributes(&context.render_attributes(), Some(&block.attrs));
             apply_style_fixup(&mut block, lines, &attributes, &pending.list, context);
+            apply_callouts(&mut block, lines, context);
             if let Some(value) = reftext {
                 context.attach_reftext(&mut block, value);
             }
@@ -964,7 +965,10 @@ fn apply_style_fixup(
             // inlines (which are discarded).
             "literal" => {
                 let text = lines.content(block.span.start, block.span.end).text;
-                block.kind = BlockKind::Literal { text };
+                block.kind = BlockKind::Literal {
+                    text,
+                    callouts: Vec::new(),
+                };
             }
             // `[pass]` on a paragraph: the raw source slice, like `[literal]` but
             // emitted unescaped and unwrapped by the backend (the inlines are
@@ -1426,6 +1430,92 @@ fn collect_footnotes(blocks: &mut [Block]) -> Vec<crate::ast::FootnoteDefinition
     collect.0.into_values().collect()
 }
 
+/// Ruby's verbatim `callouts` substitution for a listing or literal block:
+/// the marks ending its lines are cataloged (`catalog_callouts`) and replaced
+/// (`sub_callouts`, numbering `<.>` per block); an escaped mark loses its
+/// backslash. Each mark's span is found on the block's source line with the
+/// same ending.
+fn apply_callouts(block: &mut Block, lines: &Reader<'_>, context: &mut ParseContext) {
+    let line_comment = block
+        .attrs
+        .named
+        .get("line-comment")
+        .cloned()
+        .or_else(|| context.attributes.get("line-comment").map(str::to_owned));
+    let span = block.span;
+    let (BlockKind::Listing { text, callouts } | BlockKind::Literal { text, callouts }) =
+        &mut block.kind
+    else {
+        return;
+    };
+    if !text.contains('<') {
+        return;
+    }
+    // The block's source lines, to locate each mark.
+    let first = lines
+        .loaded
+        .partition_point(|(off, line)| off + line.len() < span.start);
+    let source: Vec<(usize, Arc<str>)> = lines.loaded[first..]
+        .iter()
+        .take_while(|(off, _)| *off < span.end)
+        .cloned()
+        .collect();
+    let mut source_at = 0;
+    let mut autonum = 0u64;
+    let mut out = String::with_capacity(text.len());
+    for (index, line) in text.split('\n').enumerate() {
+        if index > 0 {
+            out.push('\n');
+        }
+        let marks = crate::callouts::scan_line(line, line_comment.as_deref());
+        // The source line with this text at its end.
+        let origin = source[source_at..]
+            .iter()
+            .position(|(_, s)| s.ends_with(line))
+            .map(|k| {
+                source_at += k + 1;
+                let (off, s) = &source[source_at - 1];
+                off + s.len() - line.len()
+            });
+        let mut copied = 0;
+        for mark in marks {
+            if mark.escaped {
+                let slash = mark.start + mark.guard.as_ref().map_or(0, String::len);
+                out.push_str(&line[copied..slash]);
+                copied = slash + 1;
+                continue;
+            }
+            out.push_str(&line[copied..mark.start]);
+            let start = out.len();
+            out.push_str(&line[mark.start..mark.end]);
+            copied = mark.end;
+            let number = if mark.number == "." {
+                autonum += 1;
+                autonum.to_string()
+            } else {
+                mark.number.clone()
+            };
+            let id = context
+                .callouts
+                .register(number.parse().unwrap_or(u64::MAX));
+            let span = origin.map_or(Span::new(span.start, span.start), |o| {
+                Span::new(o + mark.start, o + mark.end)
+            });
+            callouts.push(crate::ast::Callout {
+                start,
+                end: out.len(),
+                number,
+                guard: mark.guard,
+                xml: mark.xml,
+                id,
+                span,
+            });
+        }
+        out.push_str(&line[copied..]);
+    }
+    *text = out;
+}
+
 /// Ruby's nested `Document` of an AsciiDoc table cell, read when the cell is
 /// created: its own header and body with the parent's attributes locked,
 /// sharing counters and catalogs. Its title is not shown (Ruby's `notitle`).
@@ -1698,7 +1788,10 @@ fn parse_block_content(
         }
         return Some(Block::new(
             Span::new(start, end),
-            BlockKind::Listing { text },
+            BlockKind::Listing {
+                text,
+                callouts: Vec::new(),
+            },
         ));
     }
 
@@ -1735,7 +1828,10 @@ fn parse_block_content(
         }
         return Some(Block::new(
             Span::new(start, end),
-            BlockKind::Literal { text },
+            BlockKind::Literal {
+                text,
+                callouts: Vec::new(),
+            },
         ));
     }
 
@@ -1950,8 +2046,14 @@ fn parse_block_content(
                 // Literal / source keep the body raw (no inline subs). For
                 // `[source,lang]` the `source` style and `language` attribute ride
                 // on `attrs` and drive the HTML backend's highlight rendering.
-                Some("literal") => BlockKind::Literal { text: body.text },
-                Some("source") => BlockKind::Listing { text: body.text },
+                Some("literal") => BlockKind::Literal {
+                    text: body.text,
+                    callouts: Vec::new(),
+                },
+                Some("source") => BlockKind::Listing {
+                    text: body.text,
+                    callouts: Vec::new(),
+                },
                 // `[pass]` on `--`: raw passthrough, emitted unescaped and
                 // unwrapped by the backend (no inline subs), like the `++++` fence.
                 Some("pass") => BlockKind::Passthrough { text: body.text },
@@ -2000,6 +2102,9 @@ fn parse_block_content(
         pending_style,
         Some("literal" | "listing" | "source" | "verse")
     );
+    if !verbatim_style && crate::callouts::list_item(trimmed).is_some() {
+        return Some(parse_callout_list(lines, i, context, diagnostics));
+    }
     if !verbatim_style {
         for list_type in [
             crate::lists::ListType::Unordered,
@@ -2094,7 +2199,10 @@ fn parse_block_content(
             .join("\n");
         return Some(Block::new(
             Span::new(start, end),
-            BlockKind::Literal { text },
+            BlockKind::Literal {
+                text,
+                callouts: Vec::new(),
+            },
         ));
     }
     // An admonition label prefix (`NOTE: `, …) on the first line turns the whole
@@ -2608,6 +2716,91 @@ fn parse_list(
     if checklist {
         block.attrs.options.push("checklist".into());
     }
+    block.attribute_context = Arc::clone(&context.attributes);
+    block
+}
+
+/// Ruby's `parse_callout_list`: items numbered from 1 (`<.>` counts on), each
+/// naming the marks of the current callout catalog list with its number;
+/// the catalog then moves to the next list.
+fn parse_callout_list(
+    lines: &mut Reader<'_>,
+    i: &mut usize,
+    context: &mut ParseContext,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> Block {
+    use crate::lists::{ListType, Sibling};
+    let start = lines[*i].0;
+    let mut end = start;
+    let mut items = Vec::new();
+    let mut autonum = 0u64;
+    let sibling = Sibling::Marker(ListType::Callout, "<1>".into());
+    while lines.has(*i, context) {
+        let Some(m) = crate::callouts::list_item(&lines[*i].1) else {
+            break;
+        };
+        let (off, line) = lines.line(*i);
+        let line_span = Span::new(off, off + line.len());
+        lines.list_markers.push(Span::new(
+            off + m.marker_range.start,
+            off + m.marker_range.end,
+        ));
+        let number = if m.marker == "." {
+            autonum += 1;
+            autonum.to_string()
+        } else {
+            m.marker.clone()
+        };
+        let expected = (items.len() + 1).to_string();
+        if number != expected {
+            diagnostics.push(Diagnostic {
+                span: line_span,
+                severity: Severity::Warning,
+                message: format!("callout list item index: expected {expected}, got {number}"),
+            });
+        }
+        let text = m
+            .text
+            .clone()
+            .map(|r| Span::new(off + r.start, off + r.end));
+        if let Some(text) = text {
+            lines.catalog_anchors(text.start, text.end, true, context);
+        }
+        *i += 1;
+        let buffer = read_list_item_lines(lines, i, context, ListType::Callout, &sibling, true);
+        let (blocks, folded) =
+            parse_item_blocks(lines, buffer, context, diagnostics, ListType::Callout, true);
+        let inlines = item_text(lines, text, folded, context);
+        let item_end = blocks
+            .last()
+            .map(|b| b.span.end)
+            .or(folded.map(|f| f.end))
+            .unwrap_or(line_span.end)
+            .max(line_span.end);
+        let ordinal = items.len() as u64 + 1;
+        let coids = context.callouts.ids(ordinal);
+        if coids.is_empty() {
+            diagnostics.push(Diagnostic {
+                span: line_span,
+                severity: Severity::Warning,
+                message: format!("no callout found for <{ordinal}>"),
+            });
+        }
+        items.push(crate::ast::CalloutListItem {
+            item: ListItem {
+                inlines,
+                blocks,
+                span: Span::new(off, item_end),
+                checkbox: None,
+                marker: Some("<1>".into()),
+            },
+            coids,
+        });
+        end = item_end;
+    }
+    context.callouts.next_list();
+    let mut block = Block::new(Span::new(start, end), BlockKind::CalloutList { items });
+    block.attrs.style = Some("arabic".into());
     block.attribute_context = Arc::clone(&context.attributes);
     block
 }
@@ -3220,7 +3413,7 @@ mod tests {
         assert_eq!(items[0].blocks.len(), 1);
         assert!(matches!(
             &items[0].blocks[0].kind,
-            BlockKind::Listing { text } if text == "code"
+            BlockKind::Listing { text, .. } if text == "code"
         ));
         assert_eq!(item_text(&items[1]), "two");
     }
@@ -3555,7 +3748,7 @@ mod tests {
         assert!(r.diagnostics.is_empty());
         let b = &r.document.flat_blocks()[0];
         match &b.kind {
-            BlockKind::Literal { text } => assert_eq!(text, "verbatim *not bold*"),
+            BlockKind::Literal { text, .. } => assert_eq!(text, "verbatim *not bold*"),
             other => panic!("expected literal, got {other:?}"),
         }
         // Span covers the whole block, opening through closing delimiter.
@@ -3570,7 +3763,7 @@ mod tests {
             .document
             .into_flat_blocks()[0];
         match &b.kind {
-            BlockKind::Literal { text } => assert_eq!(text, "verbatim *not bold* text"),
+            BlockKind::Literal { text, .. } => assert_eq!(text, "verbatim *not bold* text"),
             other => panic!("expected literal, got {other:?}"),
         }
         assert_eq!(b.attrs.style.as_deref(), Some("literal"));
@@ -3830,7 +4023,7 @@ mod tests {
         assert_eq!(blocks.len(), 2);
         assert!(matches!(blocks[0].kind, BlockKind::Paragraph { .. }));
         match &blocks[1].kind {
-            BlockKind::Listing { text } => assert_eq!(text, "code"),
+            BlockKind::Listing { text, .. } => assert_eq!(text, "code"),
             other => panic!("expected listing, got {other:?}"),
         }
     }
@@ -3912,7 +4105,7 @@ mod tests {
         assert_eq!(kids.len(), 2);
         assert!(matches!(kids[0].kind, BlockKind::Paragraph { .. }));
         match &kids[1].kind {
-            BlockKind::Listing { text } => assert_eq!(text, "code"),
+            BlockKind::Listing { text, .. } => assert_eq!(text, "code"),
             other => panic!("expected listing, got {other:?}"),
         }
     }
@@ -4034,7 +4227,7 @@ mod tests {
         assert_eq!(kids.len(), 2);
         assert!(matches!(kids[0].kind, BlockKind::Paragraph { .. }));
         match &kids[1].kind {
-            BlockKind::Listing { text } => assert_eq!(text, "code"),
+            BlockKind::Listing { text, .. } => assert_eq!(text, "code"),
             other => panic!("expected listing, got {other:?}"),
         }
     }
@@ -4166,7 +4359,7 @@ mod tests {
         assert_eq!(kids.len(), 2);
         assert!(matches!(kids[0].kind, BlockKind::Paragraph { .. }));
         match &kids[1].kind {
-            BlockKind::Listing { text } => assert_eq!(text, "code"),
+            BlockKind::Listing { text, .. } => assert_eq!(text, "code"),
             other => panic!("expected listing, got {other:?}"),
         }
     }
@@ -4296,7 +4489,7 @@ mod tests {
         assert!(r.diagnostics.is_empty());
         let b = &r.document.flat_blocks()[0];
         match &b.kind {
-            BlockKind::Listing { text } => assert_eq!(text, "puts *not bold*"),
+            BlockKind::Listing { text, .. } => assert_eq!(text, "puts *not bold*"),
             other => panic!("expected listing, got {other:?}"),
         }
         assert_eq!(b.attrs.style.as_deref(), Some("source"));
@@ -4315,7 +4508,7 @@ mod tests {
         let src = "[literal]\n--\nverbatim *not bold*\n--";
         let b = &parse(src).document.into_flat_blocks()[0];
         match &b.kind {
-            BlockKind::Literal { text } => assert_eq!(text, "verbatim *not bold*"),
+            BlockKind::Literal { text, .. } => assert_eq!(text, "verbatim *not bold*"),
             other => panic!("expected literal, got {other:?}"),
         }
         let fence = src.find("--").unwrap();

@@ -62,6 +62,7 @@ pub enum TokenKind {
     LineBreak,
     BlockMacro,
     InlineMacro,
+    Callout,
 }
 
 impl TokenKind {
@@ -104,6 +105,7 @@ impl TokenKind {
             TokenKind::LineBreak => "line-break",
             TokenKind::BlockMacro => "block-macro",
             TokenKind::InlineMacro => "inline-macro",
+            TokenKind::Callout => "callout",
         }
     }
 }
@@ -182,6 +184,18 @@ pub(crate) fn tokens_reader<'a>(
     // passthroughs retain their existing outer token.
     struct SourceTokens(Vec<(Span, TokenKind)>);
     impl crate::visit::VisitorMut for SourceTokens {
+        // Callout marks at the ends of verbatim lines.
+        fn visit_block(&mut self, block: &mut crate::Block) {
+            if let crate::BlockKind::Listing { callouts, .. }
+            | crate::BlockKind::Literal { callouts, .. } = &block.kind
+            {
+                for callout in callouts {
+                    self.0.push((callout.span, TokenKind::Callout));
+                }
+            }
+            crate::visit::walk_block_mut(self, block);
+        }
+
         fn visit_inline(&mut self, inline: &mut Inline) {
             use crate::AttributePart as P;
             if let Inline::Substituted { parts, span, .. } = inline {

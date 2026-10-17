@@ -90,6 +90,18 @@ pub fn walk_block_mut(visitor: &mut (impl VisitorMut + ?Sized), block: &mut Bloc
                 walk_blocks_mut(visitor, &mut item.blocks);
             }
         }
+        BlockKind::CalloutList { items } => {
+            for entry in items {
+                visitor.visit_span(&mut entry.item.span);
+                visitor.visit_inlines(&mut entry.item.inlines, InlineContext::Body);
+                walk_blocks_mut(visitor, &mut entry.item.blocks);
+            }
+        }
+        BlockKind::Listing { callouts, .. } | BlockKind::Literal { callouts, .. } => {
+            for callout in callouts {
+                visitor.visit_span(&mut callout.span);
+            }
+        }
         BlockKind::DescriptionList { items } => {
             for item in items {
                 visitor.visit_span(&mut item.span);
@@ -130,9 +142,7 @@ pub fn walk_block_mut(visitor: &mut (impl VisitorMut + ?Sized), block: &mut Bloc
                 }
             }
         }
-        BlockKind::Listing { .. }
-        | BlockKind::Literal { .. }
-        | BlockKind::Passthrough { .. }
+        BlockKind::Passthrough { .. }
         | BlockKind::Toc
         | BlockKind::Image { .. }
         | BlockKind::Video { .. }

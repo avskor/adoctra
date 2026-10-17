@@ -111,6 +111,12 @@ class ProjectionTests(unittest.TestCase):
         self.assertEqual(projection('<div class="olist loweralpha"><ol class="loweralpha"><li><p>a</p></li></ol></div>'),
                          projection('<ol class="loweralpha"><li>a</li></ol>'))
 
+    def test_callout_list_is_ruby_colist(self):
+        ruby = '<div id="c" class="colist arabic r"><ol><li><p>one</p></li></ol></div>'
+        ours = '<ol id="c" class="colist arabic r"><li>one</li></ol>'
+        self.assertEqual(projection(ruby), projection(ours))
+        self.assertNotEqual(projection(ours), projection(ours.replace(' r"', '"')))
+
     def test_horizontal_description_list_is_ruby_layout_table(self):
         ruby = ('<div class="hdlist r"><table><colgroup><col style="width: 20%;"></colgroup><tr>'
                 '<td class="hdlist1 strong">A<br>B</td><td class="hdlist2"><p>x</p></td></tr></table></div>')

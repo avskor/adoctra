@@ -152,6 +152,14 @@ def normalize(node, verbatim=False, block_kind=None):
     if node.tag == "iframe" and node.attrs.get("frameborder") == "0":
         # Ruby's obsolete frameborder="0" is adoctra's stylesheet border.
         node = Element("iframe", {k: v for k, v in node.attrs.items() if k != "frameborder"}, node.children)
+    if node.tag == "ol" and "colist" in node.attrs.get("class", "").split():
+        # adoctra's callout list is Ruby's ordered list inside div.colist.
+        attrs = dict(node.attrs)
+        classes = [c for c in attrs["class"].split() if c not in {"colist", "arabic"}]
+        attrs.pop("class")
+        if classes:
+            attrs["class"] = " ".join(classes)
+        node = Element("ol", attrs, node.children)
     tag, attrs = node.tag, dict(node.attrs)
     classes = attrs.get("class", "").split()
     wrapper = None
@@ -172,7 +180,7 @@ def normalize(node, verbatim=False, block_kind=None):
         classes = []
     if tag == "div":
         wrapper = next((c for c in classes if c in {
-            "paragraph", "ulist", "olist", "dlist", "qlist", "listingblock", "literalblock",
+            "paragraph", "ulist", "olist", "dlist", "qlist", "colist", "listingblock", "literalblock",
             "content", "sectionbody", "preamble",
         } or re.fullmatch(r"sect[1-6]", c)), None)
         if wrapper in {"listingblock", "literalblock"}:
@@ -236,7 +244,7 @@ def normalize(node, verbatim=False, block_kind=None):
     if wrapper:
         classes.remove(wrapper)
         # Asciidoctor's default ordered-list style is presentation metadata.
-        if wrapper == "olist" and "arabic" in classes:
+        if wrapper in {"olist", "colist"} and "arabic" in classes:
             classes.remove("arabic")
         attrs.pop("class", None)
         if classes:

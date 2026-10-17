@@ -214,6 +214,32 @@ fn write_cell(cell: &adoctra_core::ast::TableCell, s: &mut String) {
     s.push('}');
 }
 
+/// A verbatim block's callout marks (omitted when there are none): number,
+/// guard, `<!--N-->` form and Ruby's id.
+fn write_callouts(callouts: &[adoctra_core::ast::Callout], s: &mut String) {
+    if callouts.is_empty() {
+        return;
+    }
+    s.push_str(",\"callouts\":[");
+    for (i, callout) in callouts.iter().enumerate() {
+        if i > 0 {
+            s.push(',');
+        }
+        s.push('{');
+        s.push_str("\"number\":");
+        escape_into(&callout.number, s);
+        s.push_str(",\"id\":");
+        escape_into(&callout.id, s);
+        s.push_str(",\"guard\":");
+        match &callout.guard {
+            Some(guard) => escape_into(guard, s),
+            None => s.push_str("null"),
+        }
+        s.push_str(&format!(",\"xml\":{}}}", callout.xml));
+    }
+    s.push(']');
+}
+
 /// A list item (or a description): its text, nested blocks and, in a
 /// checklist, its `checkbox` state.
 fn write_list_item(item: &adoctra_core::ast::ListItem, s: &mut String) {
@@ -260,7 +286,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_inlines(inlines, s);
             s.push('}');
         }
-        BlockKind::Listing { text } => {
+        BlockKind::Listing { text, callouts } => {
             s.push_str("{\"name\":\"listing\",");
             write_id(&block.id, s);
             write_roles(&block.roles, s);
@@ -271,9 +297,10 @@ fn write_block(block: &Block, s: &mut String) {
             write_caption(&block.caption, s);
             s.push_str(",\"text\":");
             escape_into(text, s);
+            write_callouts(callouts, s);
             s.push('}');
         }
-        BlockKind::Literal { text } => {
+        BlockKind::Literal { text, callouts } => {
             s.push_str("{\"name\":\"literal\",");
             write_id(&block.id, s);
             write_roles(&block.roles, s);
@@ -284,6 +311,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_caption(&block.caption, s);
             s.push_str(",\"text\":");
             escape_into(text, s);
+            write_callouts(callouts, s);
             s.push('}');
         }
         BlockKind::Passthrough { text } => {
@@ -397,6 +425,33 @@ fn write_block(block: &Block, s: &mut String) {
                     s.push(',');
                 }
                 write_list_item(item, s);
+            }
+            s.push_str("]}");
+        }
+        BlockKind::CalloutList { items } => {
+            s.push_str("{\"name\":\"colist\",");
+            write_id(&block.id, s);
+            write_roles(&block.roles, s);
+            write_style(&block.attrs.style, s);
+            write_attributes(&block.attrs.named, s);
+            write_options(&block.attrs.options, s);
+            write_title(&block.title, s);
+            write_caption(&block.caption, s);
+            s.push_str(",\"items\":[");
+            for (i, entry) in items.iter().enumerate() {
+                if i > 0 {
+                    s.push(',');
+                }
+                write_list_item(&entry.item, s);
+                s.pop();
+                s.push_str(",\"coids\":[");
+                for (j, id) in entry.coids.iter().enumerate() {
+                    if j > 0 {
+                        s.push(',');
+                    }
+                    escape_into(id, s);
+                }
+                s.push_str("]}");
             }
             s.push_str("]}");
         }
@@ -1596,6 +1651,13 @@ mod tests {
         assert!(json.contains("\"blocks\":["), "got: {json}");
         assert!(json.contains("\"name\":\"paragraph\""), "got: {json}");
         assert!(json.contains("\"name\":\"strong\""), "got: {json}");
+    }
+
+    #[test]
+    fn callouts_and_callout_lists_serialize() {
+        let json = render("----\nx // <1>\n----\n<1> one");
+        assert!(json.contains(r#""text":"x // <1>","callouts":[{"number":"1","id":"CO1-1","guard":"// ","xml":false}]"#), "{json}");
+        assert!(json.contains(r#"{"name":"colist","id":null,"roles":[],"style":"arabic","attributes":{},"options":[],"title":null,"caption":null,"items":[{"inlines":[{"name":"text","value":"one"}],"blocks":[],"coids":["CO1-1"]}]}"#), "{json}");
     }
 
     #[test]

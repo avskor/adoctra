@@ -10,8 +10,8 @@ fn ascii_suffixes_are_removed_but_internal_and_unicode_whitespace_survive() {
         assert!(result.diagnostics.is_empty(), "{result:?}");
         let block = &result.document.blocks[0];
         let text = match &block.kind {
-            BlockKind::Listing { text }
-            | BlockKind::Literal { text }
+            BlockKind::Listing { text, .. }
+            | BlockKind::Literal { text, .. }
             | BlockKind::Passthrough { text } => text,
             other => panic!("{other:?}"),
         };
@@ -57,7 +57,7 @@ fn primary_reader_condenses_trailing_empty_lines_even_for_incomplete_blocks() {
     for source in ["----\nX\n\n \t\n", "----\r\nX \t\r\n\0\r\n"] {
         let result = parse(source);
         assert_eq!(result.diagnostics.len(), 1);
-        let BlockKind::Listing { text } = &result.document.blocks[0].kind else {
+        let BlockKind::Listing { text, .. } = &result.document.blocks[0].kind else {
             panic!("{result:?}")
         };
         assert_eq!(text, "X");

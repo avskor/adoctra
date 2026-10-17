@@ -199,7 +199,9 @@ fn verse_handles_newlines_before_folding_and_verbatim_is_unchanged() {
     let source = ":dash: --\n\n[verse]\n____\na\n{dash}\nb\nc\n____\n\n----\n{dash} &copy;\n----";
     let doc = parse(source).document;
     assert_eq!(text(inlines(&doc.blocks[0])), "a\u{2009}—\u{2009}b\nc");
-    assert!(matches!(&doc.blocks[1].kind, BlockKind::Listing { text } if text == "{dash} &copy;"));
+    assert!(
+        matches!(&doc.blocks[1].kind, BlockKind::Listing { text, .. } if text == "{dash} &copy;")
+    );
 }
 
 #[test]
