@@ -175,6 +175,58 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             out.push_str(text);
             out.push('\n');
         }
+        BlockKind::Image { src, alt, .. } => {
+            // A semantic `<figure class="imageblock">` holding the image (inside
+            // an `<a class="image">` with `link`) and a trailing `<figcaption>`
+            // for the captioned title. asciidoctor nests a `content` div and
+            // ends with `<div class="title">`; `float`/`align`/roles are classes
+            // as in Ruby's `convert_image` (secure mode: always an `<img>`).
+            let named = &block.attrs.named;
+            let align = named.get("align").map(|align| format!("text-{align}"));
+            let mut base = vec!["imageblock"];
+            base.extend(named.get("float").map(String::as_str));
+            base.extend(align.as_deref());
+            let class = class_attr(&base, &block.roles);
+            out.push_str(&format!("<figure{id}{class}>\n"));
+            let mut img = format!("<img src=\"{}\" alt=\"", attr_value(src));
+            for part in alt {
+                match part {
+                    adoctra_core::AttributePart::Raw(raw) => {
+                        img.push_str(&raw.replace('"', "&quot;"))
+                    }
+                    part => img.push_str(&attr_value(&adoctra_core::attributes::parts_text(
+                        std::slice::from_ref(part),
+                    ))),
+                }
+            }
+            img.push('"');
+            for key in ["width", "height"] {
+                if let Some(value) = named.get(key) {
+                    img.push_str(&format!(" {key}=\"{}\"", attr_value(value)));
+                }
+            }
+            img.push('>');
+            match named.get("link") {
+                Some(link) => out.push_str(&format!(
+                    "<a class=\"image\" href=\"{}\"{}>{img}</a>\n",
+                    attr_value(link),
+                    link_constraints(&block.attrs)
+                )),
+                None => {
+                    out.push_str(&img);
+                    out.push('\n');
+                }
+            }
+            if let Some(title) = &block.title {
+                out.push_str("<figcaption class=\"title\">");
+                if let Some(caption) = &block.caption {
+                    out.push_str(&escape(caption));
+                }
+                render_inlines(title, out);
+                out.push_str("</figcaption>\n");
+            }
+            out.push_str("</figure>\n");
+        }
         BlockKind::List { ordered, items } => {
             let tag = if *ordered { "ol" } else { "ul" };
             let class = class_attr(&[], &block.roles);
@@ -736,6 +788,32 @@ fn class_attr(base: &[&str], roles: &[String]) -> String {
         .collect::<Vec<_>>()
         .join(" ");
     format!(" class=\"{}\"", escape(&classes))
+}
+
+/// An escaped attribute value (Ruby's `encode_attribute_value` after special
+/// characters).
+fn attr_value(s: &str) -> String {
+    escape(s).replace('"', "&quot;")
+}
+
+/// Ruby's `append_link_constraint_attrs`: `window` becomes the target, with
+/// `noopener` for `_blank` (or the option) and `nofollow` from the option.
+fn link_constraints(attrs: &adoctra_core::ast::BlockAttrs) -> String {
+    let option = |name: &str| attrs.options.iter().any(|o| o == name);
+    let rel = option("nofollow").then_some("nofollow");
+    match attrs.named.get("window") {
+        Some(window) => {
+            let mut out = format!(" target=\"{}\"", attr_value(window));
+            if window == "_blank" || option("noopener") {
+                match rel {
+                    Some(rel) => out.push_str(&format!(" rel=\"{rel} noopener\"")),
+                    None => out.push_str(" rel=\"noopener\""),
+                }
+            }
+            out
+        }
+        None => rel.map(|rel| format!(" rel=\"{rel}\"")).unwrap_or_default(),
+    }
 }
 
 /// Output-encoding for HTML. Deliberately a *backend* concern: the shared model
@@ -2312,6 +2390,20 @@ mod tests {
                 r##"F <a href="#">Sec Title</a></p>"##
             )),
             "{html}"
+        );
+    }
+
+    #[test]
+    fn images_render_figures_with_links_classes_and_captions() {
+        let html = render(
+            ":imagesdir: img/\n\n.A *bold* title\n[[fig1]]\nimage::../a b.png[Alt \"q\" (C) it's,200,100,link=https://x.org,window=_blank,float=left,align=center,role=r1]\n\nimage::b.png[link=l.html,opts=nofollow]\n\nimage::c.png[link=l.html,window=w,opts=\"nofollow,noopener\"]\n\nimage::d<&>.png[]",
+        );
+        assert_eq!(
+            body(&html),
+            "<figure id=\"fig1\" class=\"imageblock left text-center r1\">\n<a class=\"image\" href=\"https://x.org\" target=\"_blank\" rel=\"noopener\"><img src=\"a%20b.png\" alt=\"Alt &quot;q&quot; &#169; it&#8217;s\" width=\"200\" height=\"100\"></a>\n<figcaption class=\"title\">Figure 1. A <strong>bold</strong> title</figcaption>\n</figure>\n\
+             <figure class=\"imageblock\">\n<a class=\"image\" href=\"l.html\" rel=\"nofollow\"><img src=\"img/b.png\" alt=\"b\"></a>\n</figure>\n\
+             <figure class=\"imageblock\">\n<a class=\"image\" href=\"l.html\" target=\"w\" rel=\"nofollow noopener\"><img src=\"img/c.png\" alt=\"c\"></a>\n</figure>\n\
+             <figure class=\"imageblock\">\n<img src=\"img/d&lt;&amp;&gt;.png\" alt=\"d&lt;&amp;&gt;\">\n</figure>\n</body>\n</html>\n"
         );
     }
 }

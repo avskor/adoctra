@@ -82,6 +82,34 @@ pub(crate) fn merge(
     context: &mut ParseContext,
     includes: &crate::xref_target::Includes,
 ) -> Vec<Span> {
+    merge_fields(pending, line, Some(line_span), &[], context, includes)
+}
+
+/// A block macro's attribute list (`image::t[…]`): Ruby's
+/// `parse_attributes(…, posattrs, sub_input: true, into:)` without
+/// `sub_result` or the style shorthand. Positional fields also take the names
+/// in `posattrs`, in field order with the named fields.
+pub(crate) fn macro_list(
+    line: AttrLine,
+    posattrs: &[&str],
+    context: &mut ParseContext,
+    includes: &crate::xref_target::Includes,
+) -> (PendingMeta, Vec<Span>) {
+    let mut pending = PendingMeta::default();
+    let references = merge_fields(&mut pending, line, None, posattrs, context, includes);
+    (pending, references)
+}
+
+/// The shared field loop: an attribute line (`line_span`) requests
+/// `sub_result` and the style shorthand; a macro list names its positionals.
+fn merge_fields(
+    pending: &mut PendingMeta,
+    line: AttrLine,
+    line_span: Option<Span>,
+    posattrs: &[&str],
+    context: &mut ParseContext,
+    includes: &crate::xref_target::Includes,
+) -> Vec<Span> {
     let mut source = Text::default();
     // sub_attributes does not protect special characters before expansion.
     source.append_source(
@@ -115,7 +143,8 @@ pub(crate) fn merge(
             }
             _ => {}
         }
-        let substitute = field.single_quoted
+        let substitute = line_span.is_some()
+            && field.single_quoted
             && !matches!(
                 name.as_deref(),
                 Some("title" | "reftext" | "opts" | "options")
@@ -130,6 +159,12 @@ pub(crate) fn merge(
             )
         });
         let Some(name) = name else {
+            if let (Some(name), Some(value)) = (posattrs.get(field.index), &value) {
+                pending
+                    .list
+                    .named
+                    .insert((*name).to_owned(), value.text.clone());
+            }
             pending.list.positional.insert(field.index + 1, value);
             continue;
         };
@@ -152,6 +187,10 @@ pub(crate) fn merge(
             }
         }
     }
+    let Some(line_span) = line_span else {
+        sync(pending);
+        return references;
+    };
     if let Some(raw) = pending.list.value(1).cloned() {
         let style = parse_style(
             pending,
@@ -302,6 +341,7 @@ fn renumber(mut text: Text, refs: &[Reference]) -> (Text, Vec<Reference>) {
                 span: r.span,
                 name: r.name.clone(),
                 missing: r.missing,
+                drops_line: r.drops_line,
             }
         })
         .collect();

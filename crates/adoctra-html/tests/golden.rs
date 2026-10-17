@@ -590,8 +590,8 @@ fn html_open_blocks_match_asciidoctor() {
     }
 }
 
-/// The whole body with structural wrappers removed: the TOC lists, headings
-/// and paragraphs in order. Fixtures have no document title (asciidoctor's
+/// The whole body with structural wrappers removed: the TOC lists, images,
+/// headings and paragraphs in order. Fixtures have no document title (asciidoctor's
 /// reference omits it), so both sides start with the same content.
 fn toc_body(html: &str) -> String {
     let body = html.split("<body>").nth(1).unwrap_or(html);
@@ -618,6 +618,34 @@ fn html_tocs_match_asciidoctor() {
             toc_body(&ours),
             toc_body(&expected),
             "HTML TOC diverges from asciidoctor for `{name}`"
+        );
+        checked += 1;
+    }
+    assert!(checked > 0, "no golden fixtures found in {dir:?}");
+}
+
+/// Images: asciidoctor's `imageblock`/`content`/`title` divs and adoctra's
+/// `<figure>`/`<figcaption>` both reduce to the image (and link) tags and the
+/// captioned title.
+#[test]
+fn html_images_match_asciidoctor() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/images");
+    let mut checked = 0usize;
+    for entry in fs::read_dir(&dir).expect("golden/images dir is missing") {
+        let path = entry.unwrap().path();
+        if path.extension().and_then(|e| e.to_str()) != Some("adoc") {
+            continue;
+        }
+        let expected_path = path.with_extension("expected.html");
+        let name = path.file_stem().unwrap().to_string_lossy().into_owned();
+        let adoc = fs::read_to_string(&path).unwrap();
+        let expected = fs::read_to_string(&expected_path).unwrap();
+        let doc = adoctra_core::parse(&adoc).document;
+        let ours = String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap();
+        assert_eq!(
+            toc_body(&ours),
+            toc_body(&expected),
+            "HTML image diverges from asciidoctor for `{name}`"
         );
         checked += 1;
     }

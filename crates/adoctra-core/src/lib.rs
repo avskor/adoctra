@@ -19,6 +19,7 @@ mod entity_references;
 pub mod error;
 pub mod extension;
 mod header;
+mod image;
 mod include_attributes;
 mod include_indent;
 mod include_selection;

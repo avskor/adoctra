@@ -290,6 +290,23 @@ fn write_block(b: &Block, s: &mut String) {
             write_title(&b.title, s);
             write_caption(&b.caption, s);
         }
+        BlockKind::Image { target, src, alt } => {
+            // The resolved image macro; its line span covers target and list.
+            s.push_str("\"name\":\"image\",\"target\":");
+            write_str(target, s);
+            s.push_str(",\"src\":");
+            write_str(src, s);
+            s.push_str(",\"alt\":");
+            write_str(&adoctra_core::attributes::parts_text(alt), s);
+            s.push(',');
+            write_id(&b.id, s);
+            write_roles(&b.roles, s);
+            write_style(&b.attrs.style, s);
+            write_attributes(&b.attrs.named, s);
+            write_options(&b.attrs.options, s);
+            write_title(&b.title, s);
+            write_caption(&b.caption, s);
+        }
         BlockKind::List { ordered, items } => {
             s.push_str(&format!("\"name\":\"list\",\"ordered\":{ordered},"));
             write_id(&b.id, s);
@@ -2279,6 +2296,21 @@ mod header_tests {
         );
         let tokens = super::tokens_json_with_source(source, 7);
         assert_eq!(tokens.matches(r#""kind":"heading""#).count(), 2, "{tokens}");
+    }
+
+    #[test]
+    fn image_macro_keeps_its_span_and_block_macro_token() {
+        let source = "Intro\n\n.T\nimage::a.png[A,link=l]";
+        let json = super::parse_json_with_source(source, 3);
+        assert!(
+            json.contains(r#"{"span":{"source_id":3,"start":10,"end":32},"name":"image","target":"a.png","src":"a.png","alt":"A","id":null,"roles":[],"style":null,"attributes":{"alt":"A","link":"l"},"options":[],"title":[{"span":{"source_id":3,"start":8,"end":9},"name":"text","value":"T"}],"caption":"Figure 1. "}"#),
+            "{json}"
+        );
+        let tokens = super::tokens_json_with_source(source, 3);
+        assert!(
+            tokens.contains(r#"{"span":{"source_id":3,"start":10,"end":32},"kind":"block-macro"}"#),
+            "{tokens}"
+        );
     }
 
     #[test]

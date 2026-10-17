@@ -39,7 +39,7 @@ pub(crate) struct BodySubs {
     header: Option<Pending>,
     pending: BTreeMap<(usize, usize), Pending>,
     pub entries: Vec<Declaration>,
-    pub caption_counters: BTreeMap<(usize, usize), Vec<AttributePart>>,
+    pub caption_counters: BTreeMap<(usize, usize), (&'static str, Vec<AttributePart>)>,
 }
 
 impl BodySubs {
@@ -188,7 +188,7 @@ impl BodySubs {
 
 struct Execution<'a> {
     pending: &'a mut BTreeMap<(usize, usize), Pending>,
-    caption_counters: &'a mut BTreeMap<(usize, usize), Vec<AttributePart>>,
+    caption_counters: &'a mut BTreeMap<(usize, usize), (&'static str, Vec<AttributePart>)>,
     entries: std::iter::Peekable<std::vec::IntoIter<Declaration>>,
     attributes: Attributes,
     locked: &'a BTreeSet<String>,
@@ -522,11 +522,17 @@ impl Execution<'_> {
     fn blocks(&mut self, blocks: &mut [Block]) {
         for block in blocks {
             self.replay(block.span.start);
-            if let Some(parts) = self
+            if let Some((context, parts)) = self
                 .caption_counters
                 .remove(&(block.span.start, block.span.end))
             {
-                self.attributes.set_parts("example-number", parts);
+                self.attributes
+                    .set_parts(format!("{context}-number"), parts);
+            }
+            // Ruby's `image_uri` reads `imagesdir` from the document at
+            // conversion.
+            if let BlockKind::Image { target, src, .. } = &mut block.kind {
+                *src = crate::image::web_path(target, self.attributes.get("imagesdir"));
             }
             if let Some(title) = &mut block.title {
                 self.inlines(title);

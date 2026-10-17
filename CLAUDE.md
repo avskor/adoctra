@@ -464,6 +464,33 @@ not macro/preamble, document has sections), at the preamble end (`toc-class`), o
 at the macro (its attribute_context; else `<!-- toc disabled -->`). Entries are
 heading caption + inlines with every `<a>` tag dropped (DropAnchorRx), nested
 while level < toclevels/levels (Ruby to_i). The DOM profile maps nav to div.
+**Images**: `BlockKind::Image { target, src, alt }` is the `image::target[…]`
+block macro (image.rs match_macro = Ruby's BlockMediaMacroRx: lazy target up to
+the first `[` after a non-blank, line ends with `]`; a block start only, text
+inside a paragraph; a literal/listing/source/verse style keeps the line as that
+verbatim paragraph, as strict_verbatim_paragraphs — also for `toc::[]`). The
+bracket list is block_attributes::macro_list: the attribute line's early a-stage
+(stateful, missing policies) without sub_result or shorthand, positional
+alt/width/height also named (field order), title/reftext/id/role/options shared
+with the metadata keys via ParseContext.block_macro (MacroMeta also carries
+reftext/options; a list continuation takes it alone). The target then gets the
+same a-stage; empty after `drop-line` (Reference.drops_line) drops the block and
+its metadata. complete_image drops the style (it becomes the alt without an
+explicit `alt`, else the basename sans extension with `_`/`-` → space), applies
+replacements to a non-default alt (generated entities Raw, apply_parts) and
+makes a unitless scaledwidth `%`. `src` is image.rs web_path (Ruby's secure-mode
+image_uri/normalize_web_path: URIs keep form with spaces as %20, else joined to
+`imagesdir`, `.`/`..` resolved) recomputed by body_subs with the conversion
+attributes. Titled images are figures: assign_caption uses caption_context
+(`figure` → `figure-caption`, built-in `Figure`, counter `figure-number`), and
+Numbering::Caption carries that context for xrefstyle (`Figure 1, “T”`/`Figure
+1`). HTML renders `<figure class="imageblock [float] [text-<align>] roles">`
+with `<img src alt width height>` (inside `<a class="image" href>` with
+`link`, window/noopener/nofollow like append_link_constraint_attrs) and a
+trailing `<figcaption class="title">`; the DOM profile maps them to Ruby's divs.
+JSON/WASM `name:"image"` with target/src/flat alt; token `block-macro`. No SVG
+inline/interactive or data-uri (the reference runs in secure mode); video/audio
+and inline `image:` remain work.
 Xref labels: resolve::register builds the registry after reading (auto ids,
 block ids, cataloged anchors in source order); body_subs Execution resolves each
 textless xref after its field's subs, like Ruby's xreftext:
@@ -750,7 +777,8 @@ a local/document `caption` replaces it without numbering. The HTML
 backend prepends it inside the `<div class="title">` (`#{caption}#{title}`), and
 JSON/WASM serialize a `caption` field (the string, or `null`). Only example blocks
 are numbered: `listing-caption` stays unset (a titled listing/literal keeps its bare
-title) and `figure-caption`/`table-caption` are moot until image/table blocks exist.
+title), images number with `figure-caption` (see **Images**) and `table-caption`
+is moot until table blocks exist.
 Snapshotted by `golden/examples/caption_numbering.adoc` and the golden oracle no
 longer strips the counter. **Quote and verse blocks** are the next type-changing
 styles. A `____` delimited block defaults to `BlockKind::Quote { attribution,
@@ -902,8 +930,8 @@ inline substitutions. For
 **delimited form** (`[NOTE]` on a `====` block) are done. **Block titles**
 (`.Title`) are kept on `Block.title` and rendered except on passthrough blocks; still missing
 here: admonitions on list items. **Caption numbering** is done for **example
-blocks** (`Example N.` via the `example-caption` attribute, on `Block.caption`); the
-`Figure N.` / `Table N.` counters await image/table blocks. The unset forms
+blocks** (`Example N.` via the `example-caption` attribute, on `Block.caption`) and
+images (`Figure N.`); the `Table N.` counter awaits table blocks. The unset forms
 `:!example-caption:` / `:example-caption!:` disable example captions and their
 counter increments; a custom per-block `caption=` or document `caption` overrides
 the prefix without incrementing the counter. Also: **indented/offset

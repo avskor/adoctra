@@ -102,6 +102,13 @@ def normalize(node, verbatim=False, block_kind=None):
     if node.tag == "nav":
         # adoctra's TOC <nav> is Ruby's <div id="toc">.
         node = Element("div", node.attrs, node.children)
+    if node.tag == "figure" and "imageblock" in node.attrs.get("class", "").split():
+        # adoctra's image <figure> is Ruby's imageblock <div>, whose <img> sits
+        # in a content wrapper that drops below.
+        node = Element("div", node.attrs, node.children)
+    if node.tag == "figcaption" and node.attrs.get("class") == "title":
+        # The image's trailing <figcaption> is Ruby's trailing title <div>.
+        node = Element("div", node.attrs, node.children)
     tag, attrs = node.tag, dict(node.attrs)
     classes = attrs.get("class", "").split()
     wrapper = None

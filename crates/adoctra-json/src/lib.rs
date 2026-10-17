@@ -192,6 +192,24 @@ fn write_block(block: &Block, s: &mut String) {
             write_caption(&block.caption, s);
             s.push('}');
         }
+        BlockKind::Image { target, src, alt } => {
+            // The resolved image: its target, web path and flat alt text.
+            s.push_str("{\"name\":\"image\",\"target\":");
+            escape_into(target, s);
+            s.push_str(",\"src\":");
+            escape_into(src, s);
+            s.push_str(",\"alt\":");
+            escape_into(&adoctra_core::attributes::parts_text(alt), s);
+            s.push(',');
+            write_id(&block.id, s);
+            write_roles(&block.roles, s);
+            write_style(&block.attrs.style, s);
+            write_attributes(&block.attrs.named, s);
+            write_options(&block.attrs.options, s);
+            write_title(&block.title, s);
+            write_caption(&block.caption, s);
+            s.push('}');
+        }
         BlockKind::List { ordered, items } => {
             s.push_str(&format!("{{\"name\":\"list\",\"ordered\":{ordered},"));
             write_id(&block.id, s);

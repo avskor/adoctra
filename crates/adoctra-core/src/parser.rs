@@ -51,7 +51,96 @@ pub(crate) struct MacroMeta {
     pub id: Option<String>,
     pub roles: Option<Vec<String>>,
     pub title: Option<PendingTitle>,
+    pub reftext: Option<crate::reftext::Read>,
     pub named: Vec<(String, String)>,
+    pub options: Vec<String>,
+}
+
+impl MacroMeta {
+    /// The fields of a macro list read like an attribute line.
+    fn from_list(list: PendingMeta) -> Self {
+        MacroMeta {
+            id: list.id,
+            roles: (!list.roles.is_empty()).then_some(list.roles),
+            title: list.title,
+            reftext: list.reftext,
+            named: list.attrs.named.into_iter().collect(),
+            options: list.attrs.options,
+        }
+    }
+
+    /// Replace the metadata of a block without preceding metadata lines (a
+    /// list continuation).
+    fn apply_alone(self, block: &mut Block) {
+        block.id = self.id;
+        block.roles = self.roles.unwrap_or_default();
+        block.attrs.named.extend(self.named);
+        block.attrs.options = self.options;
+    }
+}
+
+/// Ruby's `:image` branch of `next_block`: the macro list (positional `alt`,
+/// `width`, `height`) gets the early a-stage like an attribute line, then the
+/// target its attribute references. A target emptied by `drop-line` drops
+/// the block and its metadata.
+fn read_image_macro(
+    line: &str,
+    off: usize,
+    (target, list): (std::ops::Range<usize>, std::ops::Range<usize>),
+    context: &mut ParseContext,
+    includes: &crate::xref_target::Includes,
+) -> Option<Block> {
+    let attr_line = crate::block_attributes::AttrLine {
+        inner: line[list.clone()].to_owned(),
+        base: off + list.start,
+    };
+    let (meta, _) = crate::block_attributes::macro_list(
+        attr_line,
+        &["alt", "width", "height"],
+        context,
+        includes,
+    );
+    let mut value = line[target.clone()].to_owned();
+    if value.contains('{') {
+        let source = crate::image::target_text(&value, off + target.start);
+        let (expanded, refs) = context.block_attribute_line(source);
+        if expanded.text.is_empty() && refs.iter().any(|r| r.drops_line) {
+            return None;
+        }
+        value = expanded.text;
+    }
+    context.block_macro = Some(MacroMeta::from_list(meta));
+    Some(Block::new(
+        Span::new(off, off + line.len()),
+        BlockKind::Image {
+            target: value,
+            src: String::new(),
+            alt: Vec::new(),
+        },
+    ))
+}
+
+/// Complete an image once its metadata is merged: Ruby drops the style
+/// (which becomes the alt text without an explicit one) and makes a unitless
+/// `scaledwidth` a percentage.
+fn complete_image(block: &mut Block, attributes: &Attributes) {
+    let BlockKind::Image { target, src, alt } = &mut block.kind else {
+        return;
+    };
+    let style = block.attrs.style.take();
+    let (text, default) = match (block.attrs.named.get("alt"), style) {
+        (Some(alt), _) => (alt.clone(), false),
+        (None, Some(style)) => (style, false),
+        (None, None) => (crate::image::default_alt(target), true),
+    };
+    *alt = crate::image::alt_parts(&text, default);
+    if let Some(width) = block.attrs.named.remove("scaledwidth") {
+        if !width.is_empty() {
+            let width = crate::image::scaled_width(&width);
+            block.attrs.named.insert("scaledwidth".to_owned(), width);
+        }
+    }
+    *src = crate::image::web_path(target, attributes.get("imagesdir"));
 }
 
 /// Ruby's `BlockTocMacroRx` (`^toc::\[(.+)?\]$`). Like its
@@ -260,11 +349,14 @@ fn collect_blocks(
             // A section-title anchor supplies the id only without one from
             // metadata, but its reftext replaces a pending reftext.
             block.id = pending.id.or(block.id.take());
-            let reftext = context.section_reftext.take().or(pending.reftext);
+            let mut reftext = context.section_reftext.take().or(pending.reftext);
             block.roles = pending.roles;
             let mut title = pending.title;
-            let macro_meta = context.block_macro.take();
-            if let Some(meta) = &macro_meta {
+            let mut macro_meta = context.block_macro.take();
+            if let Some(meta) = &mut macro_meta {
+                if let Some(value) = meta.reftext.take() {
+                    reftext = Some(value);
+                }
                 if let Some(id) = &meta.id {
                     block.id = Some(id.clone());
                 }
@@ -292,7 +384,13 @@ fn collect_blocks(
             block.attrs = pending.attrs;
             if let Some(meta) = macro_meta {
                 block.attrs.named.extend(meta.named);
+                for option in meta.options {
+                    if !block.attrs.options.contains(&option) {
+                        block.attrs.options.push(option);
+                    }
+                }
             }
+            complete_image(&mut block, &context.attributes);
             let attributes = inline_attributes(&context.render_attributes(), Some(&block.attrs));
             apply_style_fixup(&mut block, lines, &attributes, &pending.list, context);
             if let Some(value) = reftext {
@@ -1174,9 +1272,18 @@ fn parse_block_content(
         return Some(block);
     }
 
-    // The `toc::[]` block macro, recognized at a block start whatever the
-    // style; its brackets supply metadata.
-    if let Some(meta) = parse_toc_macro(trimmed, off) {
+    // Block macros are recognized at a block start whatever the style, except
+    // that a verbatim style keeps the line as paragraph text (Ruby's
+    // `strict_verbatim_paragraphs`). Their brackets supply metadata.
+    let verbatim = matches!(
+        pending_style,
+        Some("literal" | "listing" | "source" | "verse")
+    );
+    if let Some(found) = crate::image::match_macro(trimmed).filter(|_| !verbatim) {
+        *i += 1;
+        return read_image_macro(trimmed, off, found, context, &lines.include_catalog);
+    }
+    if let Some(meta) = parse_toc_macro(trimmed, off).filter(|_| !verbatim) {
         context.block_macro = Some(meta);
         *i += 1;
         return Some(Block::new(
@@ -1717,10 +1824,22 @@ fn parse_list(
                             if let Some(value) = context.section_reftext.take() {
                                 context.attach_reftext(&mut b, value);
                             }
-                            if let Some(meta) = context.block_macro.take() {
-                                b.id = meta.id;
-                                b.roles = meta.roles.unwrap_or_default();
-                                b.attrs.named.extend(meta.named);
+                            if let Some(mut meta) = context.block_macro.take() {
+                                if let Some(value) = meta.reftext.take() {
+                                    context.attach_reftext(&mut b, value);
+                                }
+                                let title = meta.title.take();
+                                meta.apply_alone(&mut b);
+                                complete_image(&mut b, &context.attributes);
+                                if let Some(title) = title {
+                                    b.title = Some(context.body_subs.defer_title(
+                                        &title.text,
+                                        title.base,
+                                        title.origin,
+                                        &context.attributes,
+                                    ));
+                                    context.assign_caption(&mut b);
+                                }
                             }
                             item_end = b.span.end;
                             blocks.push(b);

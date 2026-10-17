@@ -10,6 +10,9 @@ pub(crate) struct Reference {
     pub span: Span,
     pub name: String,
     pub missing: bool,
+    /// A missing reference removed by the `drop-line` policy (its line is
+    /// dropped).
+    pub drops_line: bool,
 }
 
 /// Match only ordinary references. Stateful set/counter expressions have a
@@ -134,6 +137,7 @@ fn apply_with_policy(
                     span,
                     name: name.into(),
                     missing: false,
+                    drops_line: false,
                 });
                 for part in &effect.parts {
                     output.append_part(part, refs.len(), span);
@@ -166,6 +170,7 @@ fn apply_with_policy(
                     span,
                     name: name.into(),
                     missing: missing && !removed,
+                    drops_line: removed && policy == "drop-line",
                 });
             }
             if removed {

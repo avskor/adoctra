@@ -458,9 +458,12 @@ fn tokens_processed(
             });
             continue;
         }
-        // A `toc::[]` block macro line at a block start, recognized with the
-        // parser's grammar (inside a paragraph it stays text).
-        if at_para_start && crate::parser::parse_toc_macro(line.trim_end(), off).is_some() {
+        // A `toc::[]` or `image::target[]` block macro line at a block start,
+        // recognized with the parser's grammar (inside a paragraph it stays text).
+        if at_para_start
+            && (crate::parser::parse_toc_macro(line.trim_end(), off).is_some()
+                || crate::image::match_macro(line.trim_end()).is_some())
+        {
             out.push(Token {
                 span: Span::new(off, off + line.trim_end().len()),
                 kind: TokenKind::BlockMacro,

@@ -471,6 +471,22 @@ pub enum BlockKind {
     /// macro's brackets replace the block's metadata. Backends build the outline
     /// from the document's sections.
     Toc,
+    /// The `image::target[alt, width, height]` block macro (Ruby's `:image`
+    /// block). `target` is the macro target after its attribute references;
+    /// `src` is the resolved web path (`imagesdir`, `.`/`..` segments and
+    /// spaces, as Ruby's `image_uri` in secure mode) at the block during
+    /// conversion. `alt` is Ruby's `alt`: the explicit `alt`, else the style
+    /// of a preceding attribute line, else the target's basename with `_`/`-`
+    /// as spaces; a non-default value gets replacements (generated entities
+    /// stay [`crate::AttributePart::Raw`]). The macro's named attributes (`width`,
+    /// `height`, `link`, `window`, `float`, `align`, `scaledwidth`, …) are in
+    /// [`Block::attrs`]; a `.Title` makes it a numbered figure
+    /// (`figure-caption`, [`Block::caption`]).
+    Image {
+        target: String,
+        src: String,
+        alt: Vec<crate::AttributePart>,
+    },
 }
 
 /// One item of a [`BlockKind::List`]: its resolved inline content (the

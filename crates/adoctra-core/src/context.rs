@@ -58,6 +58,15 @@ impl ParseOptions {
     }
 }
 
+/// The caption context of a numbered block kind: `example` or `figure`.
+pub(crate) fn caption_context(kind: &crate::BlockKind) -> Option<&'static str> {
+    match kind {
+        crate::BlockKind::Example { .. } => Some("example"),
+        crate::BlockKind::Image { .. } => Some("figure"),
+        _ => None,
+    }
+}
+
 pub(crate) struct ParseContext {
     pub attributes: Arc<Attributes>,
     /// Quote/link mode is cached at document creation/header completion in Ruby;
@@ -105,6 +114,7 @@ impl ParseContext {
     pub fn new(options: &ParseOptions) -> Self {
         let mut attributes = Attributes::new();
         attributes.set("example-caption", "Example");
+        attributes.set("figure-caption", "Figure");
         // Ruby's DEFAULT_ATTRIBUTES for section and appendix signifiers.
         attributes.set("appendix-caption", "Appendix");
         for (name, value) in [
@@ -384,13 +394,14 @@ impl ParseContext {
         }
     }
 
-    /// Example captions are fixed in child-before-parent completion order.
-    /// Their counter assignment is replayed when entering the owning block,
+    /// Example and figure captions are fixed in child-before-parent completion
+    /// order (Ruby's `assign_caption` with `CAPTION_ATTRIBUTE_NAMES`). Their
+    /// counter assignment is replayed when entering the owning block,
     /// independently of source-ordered explicit attribute declarations.
     pub fn assign_caption(&mut self, block: &mut crate::Block) {
-        if !matches!(block.kind, crate::BlockKind::Example { .. }) || block.title.is_none() {
+        let Some(context) = caption_context(&block.kind).filter(|_| block.title.is_some()) else {
             return;
-        }
+        };
         if let Some(caption) = block
             .attrs
             .named
@@ -401,7 +412,11 @@ impl ParseContext {
             block.caption = Some(caption.to_owned());
             return;
         }
-        let Some(prefix) = self.attributes.get("example-caption").map(str::to_owned) else {
+        let Some(prefix) = self
+            .attributes
+            .get(&format!("{context}-caption"))
+            .map(str::to_owned)
+        else {
             return;
         };
         let mut evaluation = crate::substitution_context::Evaluation::definition(
@@ -411,7 +426,7 @@ impl ParseContext {
             self.quote_compat,
         );
         let effect = evaluation.execute(
-            "counter:example-number",
+            &format!("counter:{context}-number"),
             block.span,
             &mut None,
             &mut self.inline_diagnostics,
@@ -425,7 +440,7 @@ impl ParseContext {
             .insert((block.span.start, block.span.end), number);
         self.body_subs
             .caption_counters
-            .insert((block.span.start, block.span.end), effect.parts);
+            .insert((block.span.start, block.span.end), (context, effect.parts));
     }
 
     /// Read a section title line at `key` (after `close_sections`, before its

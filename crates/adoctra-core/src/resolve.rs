@@ -31,8 +31,9 @@ pub(crate) struct Target {
     pub numbering: Numbering,
 }
 
-/// Ruby's `xreftext` inputs for an xrefstyle. Only example blocks carry a
-/// caption (and its `example-caption` signifier); a section has its number
+/// Ruby's `xreftext` inputs for an xrefstyle. Example blocks and images carry
+/// a caption (and its `example-caption`/`figure-caption` signifier, by the
+/// caption `context`); a section has its number
 /// and `sectname` (unnumbered chapters and appendices are emphasized by any
 /// style).
 #[derive(Default)]
@@ -42,6 +43,7 @@ pub(crate) enum Numbering {
     Caption {
         caption: String,
         numeral: Option<String>,
+        context: &'static str,
     },
     Section(crate::section_numbers::Section),
 }
@@ -59,14 +61,21 @@ pub(crate) fn styled(
         return title;
     };
     let text = |value: String| Inline::Text { value, span };
-    let (caption, numeral) = match numbering {
+    let (caption, numeral, context) = match numbering {
         Numbering::Section(section) => {
             return styled_section(title, section, style, attributes, span)
         }
-        Numbering::Caption { caption, numeral } if !caption.is_empty() => (caption, numeral),
+        Numbering::Caption {
+            caption,
+            numeral,
+            context,
+        } if !caption.is_empty() => (caption, numeral, context),
         _ => return title,
     };
-    let signifier = match (numeral, attributes.value_parts("example-caption")) {
+    let signifier = match (
+        numeral,
+        attributes.value_parts(&format!("{context}-caption")),
+    ) {
         (Some(numeral), Some(parts)) => {
             vec![signifier(parts, span), text(format!(" {numeral}"))]
         }
@@ -682,9 +691,13 @@ impl VisitorMut for Ids<'_> {
                 }
                 _ => Numbering::None,
             },
-            (_, Some(caption)) => Numbering::Caption {
-                caption: caption.clone(),
-                numeral: self.numerals.remove(&key),
+            (kind, Some(caption)) => match crate::context::caption_context(kind) {
+                Some(context) => Numbering::Caption {
+                    caption: caption.clone(),
+                    numeral: self.numerals.remove(&key),
+                    context,
+                },
+                None => Numbering::None,
             },
             _ => Numbering::None,
         };

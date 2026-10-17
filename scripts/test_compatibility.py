@@ -70,6 +70,20 @@ class ProjectionTests(unittest.TestCase):
         self.assertNotEqual(projection(ours), projection(ours.replace('class="toc"', 'class="toc2"')))
         self.assertNotEqual(projection(ours), projection(ours.replace('>T<', '><')))
 
+    def test_image_figure_is_ruby_imageblock(self):
+        ruby = ('<div id="f" class="imageblock left"><div class="content"><img src="a.png" alt="A"></div>'
+                '<div class="title">Figure 1. T</div></div>')
+        ours = ('<figure id="f" class="imageblock left"><img src="a.png" alt="A">'
+                '<figcaption class="title">Figure 1. T</figcaption></figure>')
+        self.assertEqual(projection(ruby), projection(ours))
+        # The image, its classes and the caption remain observable.
+        self.assertNotEqual(projection(ours), projection(ours.replace('alt="A"', 'alt="B"')))
+        self.assertNotEqual(projection(ours), projection(ours.replace('imageblock left', 'imageblock')))
+        self.assertNotEqual(projection(ours), projection(ours.replace('Figure 1. ', '')))
+        # A quote's figcaption is still its attribution.
+        self.assertNotEqual(projection('<figcaption class="title">x</figcaption>'),
+                            projection('<figcaption>x</figcaption>'))
+
     def test_full_document_head_is_outside_body_profile(self):
         self.assertEqual(projection('<html><head><style>p {color:red}</style></head><body><p>one</p></body></html>'),
                          projection('<p>one</p>'))
