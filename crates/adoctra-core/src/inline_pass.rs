@@ -510,16 +510,13 @@ impl Passes {
                     ));
                     self.restore(children, attrs, compat);
                 }
-                Inline::Anchor { id, reftext, .. } => {
+                Inline::Anchor { id, .. } => {
                     *id = reference_text(&self.restore_evaluated(
                         vec![P::Raw(id.clone())],
                         attrs,
                         compat,
                         0,
                     ));
-                    if let Some(children) = reftext {
-                        self.restore(children, attrs, compat);
-                    }
                 }
                 _ => {}
             }

@@ -1496,4 +1496,18 @@ mod tests {
         // Verse keeps its line break — a JSON-escaped newline in the inline text.
         assert!(json.contains(r"first\nsecond"), "got: {json}");
     }
+
+    #[test]
+    fn late_anchors_serialize_as_nodes_or_attribute_parts() {
+        let json = render(":id: foo\n:a: [[q]]x\n\nA [[{id}]] {a} \\[[e]]");
+        assert!(json.contains(r#"{"name":"anchor","id":"foo"}"#), "{json}");
+        assert!(
+            json.contains(r#""parts":[{"kind":"anchor","id":"q"},{"kind":"text","value":"x"}]"#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#"{"name":"text","value":" [[e]]"}"#),
+            "{json}"
+        );
+    }
 }

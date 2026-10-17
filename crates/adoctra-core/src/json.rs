@@ -91,6 +91,12 @@ fn write_parts_array(parts: &[crate::AttributePart], out: &mut String) {
             out.push_str("{\"kind\":\"line-break\"}");
             continue;
         }
+        if let crate::AttributePart::Anchor(id) = part {
+            out.push_str("{\"kind\":\"anchor\",\"id\":");
+            escape_into(id, out);
+            out.push('}');
+            continue;
+        }
         if matches!(part, crate::AttributePart::CloseLink) {
             out.push_str("{\"kind\":\"close-link\"}");
             continue;

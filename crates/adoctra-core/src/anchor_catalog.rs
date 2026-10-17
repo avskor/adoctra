@@ -16,12 +16,12 @@ pub(crate) struct Entry {
     pub reftext: Option<crate::reftext::Read>,
 }
 
-struct Found {
-    start: usize,
-    end: usize,
-    id: Range<usize>,
-    reftext: Option<Range<usize>>,
-    shorthand: bool,
+pub(crate) struct Found {
+    pub start: usize,
+    pub end: usize,
+    pub id: Range<usize>,
+    pub reftext: Option<Range<usize>>,
+    pub shorthand: bool,
 }
 
 /// Ruby's `InlineAnchorScanRx`, scanned like `String#scan`: the character
@@ -79,7 +79,7 @@ fn id_end(text: &str, start: usize) -> Option<usize> {
 }
 
 /// `\[\[(id)(?:, *(.+?))?\]\]` within one line.
-fn shorthand_at(text: &str, at: usize) -> Option<Found> {
+pub(crate) fn shorthand_at(text: &str, at: usize) -> Option<Found> {
     let id_start = at + 2;
     let id_end = id_end(text, id_start)?;
     let rest = &text[id_end..];
@@ -95,14 +95,18 @@ fn shorthand_at(text: &str, at: usize) -> Option<Found> {
     let after = rest.strip_prefix(',')?;
     let line = &after[..after.find('\n').unwrap_or(after.len())];
     let spaces = line.len() - line.trim_start_matches(' ').len();
-    // `.+?` needs one character: it may take back the last skipped space.
-    let from = if line[spaces..].starts_with("]]") {
-        spaces.checked_sub(1)?
-    } else {
-        spaces
-    };
-    let first = from + line[from..].chars().next()?.len_utf8();
-    let close = first + line[first..].find("]]")?;
+    // ` *` is greedy and `.+?` needs one character; only when no `]]` follows
+    // that character does the regex take back the last skipped space.
+    let (from, close) = line[spaces..]
+        .chars()
+        .next()
+        .and_then(|c| {
+            let first = spaces + c.len_utf8();
+            Some((spaces, first + line[first..].find("]]")?))
+        })
+        .or_else(|| {
+            (spaces > 0 && line[spaces..].starts_with("]]")).then(|| (spaces - 1, spaces))
+        })?;
     let reftext = id_end + 1 + from..id_end + 1 + close;
     Some(Found {
         start: at,
@@ -114,7 +118,7 @@ fn shorthand_at(text: &str, at: usize) -> Option<Found> {
 }
 
 /// `anchor:(id)\[(?:\]|(.*?[^\\])\])` within one line.
-fn macro_at(text: &str, at: usize) -> Option<Found> {
+pub(crate) fn macro_at(text: &str, at: usize) -> Option<Found> {
     let id_start = at + "anchor:".len();
     let id_end = id_end(text, id_start)?;
     let rest = text[id_end..].strip_prefix('[')?;
@@ -226,6 +230,9 @@ mod tests {
         assert_eq!(ids("[[a,  R]] x]]"), [("a", Some("R"))]);
         assert_eq!(ids("[[a, ]]"), [("a", Some(" "))]);
         assert_eq!(ids("[[a,]]"), []);
+        // A closing bracket can be the one-character reftext.
+        assert_eq!(ids("[[a,]]]"), [("a", Some("]"))]);
+        assert_eq!(ids("[[a, ]]]"), [("a", Some("]"))]);
         assert_eq!(ids("[[1a]] [[Ünï:x.y-z]]"), [("Ünï:x.y-z", None)]);
         // Macro form: escaped closing brackets stay inside the reftext.
         assert_eq!(

@@ -354,8 +354,15 @@ does not need to execute it again. A named `reftext=` shares the anchor's key
 (last wins): its field from the line's early a-stage becomes the same `reftext::Read`
 (reference owners and spans kept), so formatting and header transfer are shared.
 Block.reftext is a read-only c/q/r snapshot at completion (no diagnostics);
-references format the read value again during conversion (see below). Anchor
-recognition after the attribute stage remains an explicit XFAIL.
+references format the read value again during conversion (see below).
+Inline anchor *display* is recognized by the macros stage (attribute_macros.rs
+apply_anchors, Ruby's InlineAnchorRx after links/email) over the lexical result of
+quotes/a/r: expanded values can create or break anchors, the lazy reftext may
+reach into a value and consumed quote boundaries are not rebuilt. Source-owned
+anchors are `Inline::Anchor { id, span }` (no reftext field: labels come from the
+catalog); consumed refs stay empty after it. Value-generated anchors are
+`AttributePart::Anchor(id)` (HTML `<a id>`, JSON/WASM kind:anchor), dropped from
+borrowed xref labels like link tags; pass:m and link parameter passes share it.
 Xref labels: resolve::register builds the registry after reading (auto ids,
 block ids, cataloged anchors in source order); body_subs Execution resolves each
 textless xref after its field's subs, like Ruby's xreftext without xrefstyle:
@@ -529,7 +536,7 @@ anchor *leading* a list item. Their reftext runs the stateful early a-stage with
 reading state (an empty expanded shorthand reftext skips the anchor; `\]` is
 unescaped in `anchor:`), formatted with c/q/r; the registry keys them by physical
 start and registers leftovers whose display is not an anchor. Escaped
-`\[[…]]`/`\anchor:` render as literal text; a known id with
+`\[[…]]`/`\anchor:` render as literal text without the backslash; a known id with
 no natural text falls back to `[id]` *without* a diagnostic and a duplicate id
 warns once (first definition wins). **Block attribute lists** share that
 seam (`block_attributes.rs`): a line matching Ruby's `BlockAttributeListRx`

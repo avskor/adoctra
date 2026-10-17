@@ -510,6 +510,11 @@ fn render_parts(parts: &[adoctra_core::AttributePart], out: &mut String) {
             }
             adoctra_core::AttributePart::CloseLink => out.push_str("</a>"),
             adoctra_core::AttributePart::LineBreak => out.push_str("<br>"),
+            adoctra_core::AttributePart::Anchor(id) => {
+                out.push_str("<a id=\"");
+                out.push_str(id);
+                out.push_str("\"></a>");
+            }
             adoctra_core::AttributePart::Open(format) => {
                 out.push('<');
                 out.push_str(attribute_format_tag(*format));
@@ -1717,5 +1722,16 @@ mod tests {
             html.contains("<figcaption>&#8212; Carl Sandburg<br>\n<cite>Fog</cite></figcaption>"),
             "got: {html}"
         );
+    }
+
+    #[test]
+    fn late_anchors_render_from_nodes_and_parts_and_drop_from_borrowed_labels() {
+        let html = render(":attribute-missing: drop\n:a: [[q]]x\n\nA [[b,{nope}]] z\n\nQ {a}\n\nC [[c,{nope}]] {a}\n\n[[t]]\n.T {a}\n====\nB\n====\n\n<<t>>");
+        assert!(html.contains("<p>A [[b,]] z</p>"), "{html}");
+        assert!(html.contains("<p>Q <a id=\"q\"></a>x</p>"), "{html}");
+        // As in Ruby, the lazy reftext reaches into the expanded value.
+        assert!(html.contains("<p>C <a id=\"c\"></a>x</p>"), "{html}");
+        assert!(html.contains("T <a id=\"q\"></a>x</div>"), "{html}");
+        assert!(html.contains(r##"<a href="#t">T x</a>"##), "{html}");
     }
 }

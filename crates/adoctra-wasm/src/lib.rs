@@ -2187,4 +2187,28 @@ mod ifeval_tests {
             "{json}"
         );
     }
+
+    #[test]
+    fn late_anchors_keep_spans_and_attribute_parts() {
+        let src = ":id: foo\n:a: [[q]]x\n\nA [[{id}]] {a}";
+        let json = super::parse_json(src);
+        let start = src.find("[[{id}]]").unwrap();
+        let span = format!(
+            r#"{{"span":{{"source_id":0,"start":{start},"end":{}}}"#,
+            start + 8
+        );
+        assert!(
+            json.contains(&format!(r#"{span},"name":"anchor","id":"foo"}}"#)),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""parts":[{"kind":"anchor","id":"q"},{"kind":"text","value":"x"}]"#),
+            "{json}"
+        );
+        let tokens = super::tokens_json(src);
+        assert!(
+            tokens.contains(&format!(r#"{span},"kind":"anchor"}}"#)),
+            "{tokens}"
+        );
+    }
 }

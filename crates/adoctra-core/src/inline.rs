@@ -15,7 +15,6 @@
 use crate::ast::{Inline, Span};
 use crate::attributes::Attributes;
 use crate::inline_quotes::Quotes;
-use crate::parser::is_valid_anchor_id;
 
 /// Scan inline markup with the block's effective attributes.
 #[cfg(test)]
@@ -73,16 +72,23 @@ pub(crate) fn scan_for_tokens(src: &str, base: usize, attrs: &Attributes) -> Vec
     );
     let mut syntax = scan_unprocessed(src, base, attrs, &quotes);
     let mut processed = syntax.clone();
-    for span in crate::attribute_macros::apply_inlines(
+    let matches = crate::attribute_macros::apply_inlines(
         &mut processed,
         &mut evaluation,
         true,
         &mut quotes.passes,
-    ) {
+    );
+    for span in matches.links {
         syntax.push(Inline::Link {
             target: String::new(),
             children: Vec::new(),
             bare: false,
+            span,
+        });
+    }
+    for span in matches.anchors {
+        syntax.push(Inline::Anchor {
+            id: String::new(),
             span,
         });
     }
@@ -134,22 +140,9 @@ fn try_match(
         // `xref:id[text]` macro (brackets mandatory, like `link:`).
         b'<' => match_xref_angle(src, i, base, attrs, quotes),
         b'x' => match_xref_macro(src, i, base, attrs, quotes),
-        // Inline anchors: the `[[id]]` / `[[id,reftext]]` shorthand mid-text, and
-        // the `anchor:id[reftext]` macro (brackets mandatory, like `xref:`).
-        b'[' => match_inline_anchor(src, i, base, attrs, quotes),
-        b'a' => match_anchor_macro(src, i, base, attrs, quotes),
-        // An escaped anchor is literal text without its backslash.
-        b'\\' if src[i + 1..].starts_with("[[") || src[i + 1..].starts_with("anchor:") => {
-            let (_, end) = match_inline_anchor(src, i + 1, base, attrs, quotes)
-                .or_else(|| match_anchor_macro(src, i + 1, base, attrs, quotes))?;
-            Some((
-                Inline::Text {
-                    value: src[i + 1..end].to_owned(),
-                    span: Span::new(base + i, base + end),
-                },
-                end,
-            ))
-        }
+        // Inline anchors are recognized later, by the macros stage, so that
+        // expanded references can complete or break them (see
+        // `attribute_macros::apply_anchors`).
         _ => None,
     }
 }
@@ -262,113 +255,6 @@ fn xref_children(
         Vec::new()
     } else {
         scan_unprocessed(reftext, base + reftext_off, attrs, quotes)
-    }
-}
-
-/// An inline anchor in shorthand form: `[[id]]` or `[[id,reftext]]` appearing
-/// mid-text. Requires the doubled `[[` … `]]` delimiters; the content is split on
-/// the first comma into the raw `id` and an optional reftext (the reftext is
-/// trimmed, like the angle xref form). The id must be well-formed (see
-/// [`is_valid_anchor_id`]) — otherwise the `[` stays literal text, matching
-/// asciidoctor, which treats only a well-formed anchor specially. The reftext is
-/// scanned for inline markup (`[[id,*bold*]]` works) but is **not** shown at the
-/// anchor site: the resolve pass uses it as the display text of a textless
-/// `<<id>>` to this anchor. Returns the node and the src-relative end index (one
-/// past the closing `]]`).
-fn match_inline_anchor(
-    src: &str,
-    i: usize,
-    base: usize,
-    attrs: &Attributes,
-    quotes: &Quotes,
-) -> Option<(Inline, usize)> {
-    if !src[i..].starts_with("[[") {
-        return None;
-    }
-    let inner_start = i + 2;
-    let rel_close = src[inner_start..].find("]]")?;
-    let inner = &src[inner_start..inner_start + rel_close];
-    let end = inner_start + rel_close + 2;
-    // Split id from reftext on the first comma; keep the reftext's absolute offset
-    // so its scanned children carry real source spans.
-    let (id, reftext, reftext_off) = match inner.find(',') {
-        Some(comma) => {
-            let after = &inner[comma + 1..];
-            let lead = after.len() - after.trim_start().len();
-            (
-                &inner[..comma],
-                after.trim(),
-                inner_start + comma + 1 + lead,
-            )
-        }
-        None => (inner, "", inner_start),
-    };
-    if !is_valid_anchor_id(id) {
-        return None;
-    }
-    Some((
-        Inline::Anchor {
-            id: id.to_string(),
-            reftext: anchor_reftext(reftext, reftext_off, base, attrs, quotes),
-            span: Span::new(base + i, base + end),
-        },
-        end,
-    ))
-}
-
-/// The `anchor:id[reftext]` macro — an alternative spelling of the `[[id]]`
-/// inline anchor. Brackets are mandatory (like `xref:`); `id` is the text up to
-/// `[` and must be well-formed. The bracket content is the reftext (used as-is,
-/// like the xref macro), and may be empty. Renders identically to the shorthand.
-/// Returns the node and the src-relative end index (one past the `]`).
-fn match_anchor_macro(
-    src: &str,
-    i: usize,
-    base: usize,
-    attrs: &Attributes,
-    quotes: &Quotes,
-) -> Option<(Inline, usize)> {
-    const PREFIX: &str = "anchor:";
-    if !src[i..].starts_with(PREFIX) {
-        return None;
-    }
-    let id_start = i + PREFIX.len();
-    let rel_bracket = src[id_start..].find('[')?;
-    let id = &src[id_start..id_start + rel_bracket];
-    if !is_valid_anchor_id(id) {
-        return None;
-    }
-    let text_start = id_start + rel_bracket + 1;
-    // `\[(?:\]|(.*?[^\\])\])`: an escaped `\]` does not close the reftext.
-    let bytes = src.as_bytes();
-    let close = (text_start..src.len())
-        .find(|&i| bytes[i] == b']' && (i == text_start || bytes[i - 1] != b'\\'))?;
-    let end = close + 1;
-    Some((
-        Inline::Anchor {
-            id: id.to_string(),
-            reftext: anchor_reftext(&src[text_start..close], text_start, base, attrs, quotes),
-            span: Span::new(base + i, base + end),
-        },
-        end,
-    ))
-}
-
-/// The reftext children of an inline anchor: the scanned `reftext` (at absolute
-/// offset `base + reftext_off`) when non-empty, otherwise `None`. Unlike a
-/// cross-reference, an anchor never renders this text at its own site — it only
-/// feeds the resolve pass — so an absent reftext is `None`, not an empty `Vec`.
-fn anchor_reftext(
-    reftext: &str,
-    reftext_off: usize,
-    base: usize,
-    attrs: &Attributes,
-    quotes: &Quotes,
-) -> Option<Vec<Inline>> {
-    if reftext.is_empty() {
-        None
-    } else {
-        Some(scan_unprocessed(reftext, base + reftext_off, attrs, quotes))
     }
 }
 
@@ -821,20 +707,19 @@ mod tests {
         );
     }
 
-    fn first_anchor(v: &[Inline]) -> Option<(String, Option<Vec<Inline>>, Span)> {
+    fn first_anchor(v: &[Inline]) -> Option<(String, Span)> {
         v.iter().find_map(|n| match n {
-            Inline::Anchor { id, reftext, span } => Some((id.clone(), reftext.clone(), *span)),
+            Inline::Anchor { id, span } => Some((id.clone(), *span)),
             _ => None,
         })
     }
 
     #[test]
-    fn inline_anchor_span_covers_construct_and_has_no_reftext() {
+    fn inline_anchor_span_covers_construct() {
         let src = "see [[point]]here";
         let v = scan_inlines(src, 0, &attrs());
-        let (id, reftext, span) = first_anchor(&v).expect("no anchor");
+        let (id, span) = first_anchor(&v).expect("no anchor");
         assert_eq!(id, "point");
-        assert_eq!(reftext, None);
         assert_eq!(&src[span.start..span.end], "[[point]]");
         // The text on either side stays put (the anchor renders empty in place).
         assert!(matches!(&v[0], Inline::Text { value, .. } if value == "see "));
@@ -842,34 +727,30 @@ mod tests {
     }
 
     #[test]
-    fn inline_anchor_reftext_parses_inline_markup() {
-        // The reftext after the comma is scanned recursively (markup applies) and
-        // its spans point at real bytes.
+    fn inline_anchor_consumes_formatted_reftext() {
+        // Quotes run first; the anchor then consumes the formatted reftext
+        // (registry metadata only) together with its boundaries.
         let src = "[[id,*bold* ref]]x";
         let v = scan_inlines(src, 0, &attrs());
-        let (id, reftext, span) = first_anchor(&v).expect("no anchor");
+        let (id, span) = first_anchor(&v).expect("no anchor");
         assert_eq!(id, "id");
         assert_eq!(&src[span.start..span.end], "[[id,*bold* ref]]");
-        let rt = reftext.expect("reftext");
-        assert!(rt.iter().any(|n| matches!(n, Inline::Strong { .. })));
+        assert!(
+            !v.iter().any(|n| matches!(n, Inline::Strong { .. })),
+            "{v:?}"
+        );
+        assert!(matches!(v.last(), Some(Inline::Text { value, .. }) if value == "x"));
     }
 
     #[test]
     fn anchor_macro_form_span_and_id() {
         let src = "go anchor:point[the part] now";
         let v = scan_inlines(src, 0, &attrs());
-        let (id, reftext, span) = first_anchor(&v).expect("no anchor");
+        let (id, span) = first_anchor(&v).expect("no anchor");
         assert_eq!(id, "point");
         assert_eq!(&src[span.start..span.end], "anchor:point[the part]");
-        assert!(matches!(&reftext.unwrap()[0], Inline::Text { value, .. } if value == "the part"));
-    }
-
-    #[test]
-    fn anchor_macro_empty_brackets_have_no_reftext() {
-        let v = scan_inlines("anchor:point[]", 0, &attrs());
-        let (id, reftext, _) = first_anchor(&v).expect("no anchor");
+        let (id, _) = first_anchor(&scan_inlines("anchor:point[]", 0, &attrs())).unwrap();
         assert_eq!(id, "point");
-        assert_eq!(reftext, None);
     }
 
     #[test]

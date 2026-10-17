@@ -113,12 +113,8 @@ pub fn walk_inline_mut(visitor: &mut (impl VisitorMut + ?Sized), inline: &mut In
         | Inline::Subscript { children, .. }
         | Inline::Link { children, .. }
         | Inline::CrossReference { children, .. } => walk_inlines_mut(visitor, children),
-        Inline::Anchor { reftext, .. } => {
-            if let Some(reftext) = reftext {
-                walk_inlines_mut(visitor, reftext);
-            }
-        }
-        Inline::Text { .. }
+        Inline::Anchor { .. }
+        | Inline::Text { .. }
         | Inline::Raw { .. }
         | Inline::Substituted { .. }
         | Inline::AttributeRef { .. } => {}
@@ -168,7 +164,6 @@ mod tests {
             "AUTHOR!",
             "WORK!",
             "ITEM!",
-            "ANCHOR TEXT!",
             "BODY!",
         ] {
             assert!(debug.contains(value), "missing {value}: {debug}");

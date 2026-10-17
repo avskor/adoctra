@@ -495,23 +495,21 @@ pub enum Inline {
     },
     /// An inline anchor: `[[id]]` / `[[id,reftext]]` appearing *mid-text*, or the
     /// `anchor:id[reftext]` macro. It renders as an empty `<a id="id">` right at
-    /// this point — the `reftext` is **not** shown here. Instead the resolve pass
-    /// records `id -> reftext` so a textless `<<id>>` aimed at this anchor uses
-    /// the reftext as its display text (and falls back to `[id]` when there is
-    /// none), exactly like an explicit block anchor's reftext. `reftext` is parsed
-    /// inlines (so `*bold*` etc. apply) or `None` when omitted. `span` covers the
-    /// whole construct (`[[…]]` or `anchor:…[…]`).
+    /// this point. Like Ruby, it is recognized by the macros stage, after quotes,
+    /// attribute references and replacements, so the node consumes everything in
+    /// its source range (expanded references inside it remain as empty
+    /// [`Inline::AttributeRef`] nodes after it). The reftext is not content: the
+    /// anchor catalog built while reading supplies it to a textless `<<id>>`.
+    /// `span` covers the whole construct (`[[…]]` or `anchor:…[…]`). An anchor
+    /// generated entirely by an attribute value stays an
+    /// [`AttributePart::Anchor`](crate::AttributePart::Anchor) of its reference.
     ///
     /// A *whole-line* `[[id]]` is the distinct [`block anchor`] construct, handled
     /// by the parser before inline scanning; only an anchor with other text on the
     /// line reaches here.
     ///
     /// [`block anchor`]: crate::ast::Block::id
-    Anchor {
-        id: String,
-        reftext: Option<Vec<Inline>>,
-        span: Span,
-    },
+    Anchor { id: String, span: Span },
     // TODO: block/inline macros (image:, footnote:)...
 }
 

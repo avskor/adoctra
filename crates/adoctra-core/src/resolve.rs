@@ -451,7 +451,9 @@ fn strip_attribute_links(inlines: &mut [Inline]) {
                 parts.retain(|part| {
                     !matches!(
                         part,
-                        crate::AttributePart::OpenLink(_) | crate::AttributePart::CloseLink
+                        crate::AttributePart::OpenLink(_)
+                            | crate::AttributePart::CloseLink
+                            | crate::AttributePart::Anchor(_)
                     )
                 });
             }

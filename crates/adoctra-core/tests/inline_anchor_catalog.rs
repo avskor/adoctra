@@ -90,16 +90,17 @@ fn escaped_bibliography_and_adjacent_anchors_follow_the_scan() {
     assert_eq!(xrefs(source), ["[a]", "[b]", "[c]", "[d]", "[e]"]);
     let doc = parse(source).document;
     let nodes = inlines(&doc.blocks[1]);
-    // An escaped anchor renders its source without the backslash.
+    // An escaped anchor renders its source without the backslash; the
+    // retained text keeps its own physical bytes.
     let Inline::Text { value, span } = &nodes[1] else {
         panic!("{nodes:?}");
     };
     assert_eq!(value, "[[a,R]]");
-    assert_eq!(&source[span.start..span.end], "\\[[a,R]]");
+    assert_eq!(&source[span.start..span.end], "[[a,R]]");
 }
 
 #[test]
-fn cataloged_anchors_register_even_when_the_display_is_not_an_anchor() {
+fn cataloged_anchor_with_quote_metadata_formats_per_reference() {
     let doc = parse("p\n\nA [[a,[.r]#X#]]\n\n<<a>>").document;
     let Inline::CrossReference { children, .. } = &inlines(&doc.blocks[2])[0] else {
         panic!()
@@ -179,4 +180,111 @@ fn incomplete_anchors_do_not_panic() {
             .iter()
             .all(|d| source.get(d.span.start..d.span.end).is_some()));
     }
+}
+
+#[test]
+fn anchors_are_recognized_after_the_attribute_stage() {
+    // A dropped reference leaves `[[a,]]`, which is not an anchor; the macro
+    // form with empty brackets still is.
+    let source = ":attribute-missing: drop\n\nx [[a,{nope}]] anchor:b[{nope}] y";
+    let doc = parse(source).document;
+    let nodes = inlines(&doc.blocks[0]);
+    let anchors: Vec<_> = nodes
+        .iter()
+        .filter_map(|n| match n {
+            Inline::Anchor { id, span } => Some((id.as_str(), &source[span.start..span.end])),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(anchors, [("b", "anchor:b[{nope}]")]);
+    assert_eq!(text(nodes), "x [[a,]]  y");
+
+    // An expanded id or closer completes an anchor; the consumed reference
+    // stays an empty node after it, keeping its own span.
+    let source = ":id: foo\n:c: ]]\n\nx [[{id}]] [[a,b{c} y";
+    let doc = parse(source).document;
+    let nodes = inlines(&doc.blocks[0]);
+    let mut anchors = Vec::new();
+    for (i, node) in nodes.iter().enumerate() {
+        if let Inline::Anchor { id, span } = node {
+            anchors.push((id.as_str(), &source[span.start..span.end]));
+            let Inline::AttributeRef { value, span, .. } = &nodes[i + 1] else {
+                panic!("{nodes:?}");
+            };
+            assert_eq!(value.as_deref(), Some(""));
+            assert!(source[span.start..span.end].starts_with('{'));
+        }
+    }
+    assert_eq!(anchors, [("foo", "[[{id}]]"), ("a", "[[a,b{c}")]);
+    assert_eq!(text(nodes), "x   y");
+}
+
+#[test]
+fn attribute_generated_anchors_stay_parts_of_their_reference() {
+    let source = ":a: [[q,R]]\n:x: pass:m[[[k]]z]\n\nv {a} {x}\n\n<<q>> <<k>>";
+    let result = parse(source);
+    let nodes = inlines(&result.document.blocks[0]);
+    let anchors: Vec<_> = nodes
+        .iter()
+        .filter_map(|n| match n {
+            Inline::AttributeRef { name, parts, .. } => Some((
+                name.as_str(),
+                parts
+                    .iter()
+                    .filter_map(|p| match p {
+                        adoctra_core::AttributePart::Anchor(id) => Some(id.as_str()),
+                        _ => None,
+                    })
+                    .collect::<Vec<_>>(),
+            )),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(anchors, [("a", vec!["q"]), ("x", vec!["k"])]);
+    // Neither anchor is cataloged while reading, as in Ruby.
+    assert_eq!(xrefs(source), ["[q]", "[k]"]);
+}
+
+#[test]
+fn anchor_consumes_quote_boundaries_and_formatted_reftext() {
+    let source = "p\n\nx [[a,*b* _c_]] y *d [[e]] f*\n\n<<a>> <<e>>";
+    assert_eq!(xrefs(source), ["b c", "[e]"]);
+    let doc = parse(source).document;
+    let nodes = inlines(&doc.blocks[1]);
+    let Inline::Anchor { id, span } = &nodes[1] else {
+        panic!("{nodes:?}");
+    };
+    assert_eq!(id, "a");
+    assert_eq!(&source[span.start..span.end], "[[a,*b* _c_]]");
+    let Inline::Strong { children, .. } = &nodes[3] else {
+        panic!("{nodes:?}");
+    };
+    assert!(
+        matches!(&children[1], Inline::Anchor { id, .. } if id == "e"),
+        "{children:?}"
+    );
+}
+
+#[test]
+fn bracket_reftext_matches_the_lazy_regex() {
+    assert_eq!(
+        xrefs("p\n\nx [[a, ]]] y [[b,]]] z\n\n<<a>> <<b>>"),
+        ["]", "]"]
+    );
+}
+
+#[test]
+fn late_anchor_tokens_cover_the_construct_and_keep_inner_syntax() {
+    let source = ":id: foo\n\nx [[{id},*b*]] y";
+    let tokens = tokens_with_options(source, &ParseOptions::default());
+    let find = |kind: adoctra_core::TokenKind| {
+        tokens
+            .iter()
+            .filter(|t| t.kind == kind)
+            .map(|t| &source[t.span.start..t.span.end])
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(find(adoctra_core::TokenKind::Anchor), ["[[{id},*b*]]"]);
+    assert_eq!(find(adoctra_core::TokenKind::AttributeRef), ["{id}"]);
+    assert_eq!(find(adoctra_core::TokenKind::Strong), ["*b*"]);
 }

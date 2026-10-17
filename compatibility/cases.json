@@ -16136,9 +16136,68 @@
     {
       "id": "inline-anchor-catalog-drop-empty-shorthand",
       "category": "references",
-      "expect": "xfail",
-      "reason": "Inline anchors are recognized before the attribute stage: a dropped reference leaves an anchor instead of Ruby's literal [[a,]]. The catalog already skips the registration.",
+      "expect": "pass",
       "source": ":attribute-missing: drop\n\nx [[a,{nope}]] y\n\n<<a>>"
+    },
+    {
+      "id": "inline-anchor-late-attribute-id",
+      "category": "references",
+      "source": ":id: foo\n\nx [[{id}]] anchor:{id}2[] y\n\n<<foo>> <<foo2>>",
+      "expect": "pass"
+    },
+    {
+      "id": "inline-anchor-late-attribute-value",
+      "category": "references",
+      "source": ":a: [[q,R]]\n\nx {a} y\n\n<<q>>",
+      "expect": "pass"
+    },
+    {
+      "id": "inline-anchor-late-attribute-closer",
+      "category": "references",
+      "source": ":c: ]]\n\nx [[a,b{c} y\n\n<<a>>",
+      "expect": "pass"
+    },
+    {
+      "id": "inline-anchor-late-reftext-into-value",
+      "category": "references",
+      "source": ":attribute-missing: drop\n:a: [[q]]x\n\nC [[c,{nope}]] {a} [[d]]\n\n<<c>> <<q>> <<d>>",
+      "expect": "pass"
+    },
+    {
+      "id": "inline-anchor-late-pass-macros",
+      "category": "references",
+      "source": ":x: pass:m[[[k]]z]\n\nv {x} pass:m[w [[m]]]",
+      "expect": "pass"
+    },
+    {
+      "id": "inline-anchor-late-bracket-reftext",
+      "category": "references",
+      "source": "p\n\nx [[a, ]]] y [[b,]]] z\n\n<<a>> <<b>>",
+      "expect": "pass"
+    },
+    {
+      "id": "inline-anchor-late-formatted-reftext",
+      "category": "references",
+      "source": "p\n\nx [[a,*b* _c_]] y *d [[e]] f*\n\n<<a>> <<e>>",
+      "expect": "pass"
+    },
+    {
+      "id": "inline-anchor-late-escapes",
+      "category": "references",
+      "source": "x \\[[a]] \\anchor:b[] \\[[1]] y",
+      "expect": "pass"
+    },
+    {
+      "id": "inline-anchor-late-block-title",
+      "category": "references",
+      "source": ".T [[t]] x\n====\nb\n====\n\n<<t>>",
+      "expect": "pass"
+    },
+    {
+      "id": "inline-anchor-late-link-label",
+      "category": "references",
+      "source": "x https://e.org[l [[a]] m] y link:p[[[b]]]",
+      "expect": "pass"
     },
     {
       "id": "inline-anchor-reftext-on-demand-metadata",

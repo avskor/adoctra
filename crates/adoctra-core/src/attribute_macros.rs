@@ -11,7 +11,15 @@ const SCHEMES: [&str; 5] = ["https://", "http://", "file://", "ftp://", "irc://"
 
 struct Report<'a> {
     links: Vec<Span>,
+    anchors: Vec<Span>,
     passes: &'a mut Passes,
+}
+
+/// Physical ranges of constructs consumed by the macros stage, for highlighting.
+#[derive(Default)]
+pub(crate) struct Matches {
+    pub links: Vec<Span>,
+    pub anchors: Vec<Span>,
 }
 
 pub(crate) fn apply(
@@ -24,6 +32,7 @@ pub(crate) fn apply(
 ) -> Vec<Part> {
     let mut report = Report {
         links: Vec::new(),
+        anchors: Vec::new(),
         passes,
     };
     apply_inner(parts, attributes, compat, depth, span, &mut report)
@@ -37,13 +46,17 @@ pub(crate) fn apply_inlines(
     attributes: &mut Evaluation<'_>,
     fold_newlines: bool,
     passes: &mut Passes,
-) -> Vec<Span> {
+) -> Matches {
     let mut report = Report {
         links: Vec::new(),
+        anchors: Vec::new(),
         passes,
     };
     process_inlines(nodes, attributes, true, fold_newlines, &mut report);
-    report.links
+    Matches {
+        links: report.links,
+        anchors: report.anchors,
+    }
 }
 
 fn format(node: &Inline) -> Option<AttributeFormat> {
@@ -187,10 +200,6 @@ fn process_inlines(
                 bare: false,
                 ..
             } => process_inlines(children, attributes, false, true, report),
-            Inline::Anchor {
-                reftext: Some(children),
-                ..
-            } => process_inlines(children, attributes, false, true, report),
             _ => {}
         }
         output.push(node);
@@ -262,12 +271,22 @@ fn flush_inlines(
             report,
         );
     }
+    text = apply_anchors(text, report);
     text = crate::post_replacements::apply(text, attributes.hardbreaks(), edges.1);
-    output.extend(crate::substitution_text::write_back(
-        std::mem::take(nodes),
-        text,
-        fold_newlines,
-    ));
+    let written = crate::substitution_text::write_back(std::mem::take(nodes), text, fold_newlines);
+    // A source-owned anchor keeps its spanned AST node; attribute-owned ones
+    // remain parts of their reference.
+    output.extend(written.into_iter().map(|node| match node {
+        Inline::Substituted { parts, span, .. }
+            if matches!(parts.as_slice(), [Part::Anchor(_)]) =>
+        {
+            let Some(Part::Anchor(id)) = parts.into_iter().next() else {
+                unreachable!()
+            };
+            Inline::Anchor { id, span }
+        }
+        node => node,
+    }));
 }
 
 fn apply_inner(
@@ -282,7 +301,48 @@ fn apply_inner(
     for stage in 0..3 {
         text = apply_stage(text, stage, attributes, compat, depth, true, report);
     }
-    text.into_parts()
+    apply_anchors(text, report).into_parts()
+}
+
+/// Ruby's `InlineAnchorRx` after links and emails, over the lexical result of
+/// the earlier stages: an expanded reference can complete or break an anchor.
+/// An escaped anchor loses its backslash. The reftext only feeds the catalog
+/// built while reading, so the consumed range becomes a bare anchor.
+fn apply_anchors(text: Text, report: &mut Report<'_>) -> Text {
+    let src = &text.text;
+    if !src.contains("[[") && !src.contains("anchor:") {
+        return text;
+    }
+    let mut output = Text::default();
+    let mut copied = 0;
+    let mut at = 0;
+    while at < src.len() {
+        let escaped = src.as_bytes()[at] == b'\\';
+        let start = at + usize::from(escaped);
+        let found = if src[start..].starts_with("[[") {
+            crate::anchor_catalog::shorthand_at(src, start)
+        } else if src[start..].starts_with("anchor:") {
+            crate::anchor_catalog::macro_at(src, start)
+        } else {
+            None
+        };
+        let Some(found) = found else {
+            at += src[at..].chars().next().unwrap().len_utf8();
+            continue;
+        };
+        text.copy(copied..at, &mut output);
+        if escaped {
+            text.copy(start..found.end, &mut output);
+        } else {
+            report.anchors.push(text.match_span(at..found.end));
+            let id = src[found.id].to_owned();
+            text.replace_parts(at..found.end, &[Part::Anchor(id)], &mut output);
+        }
+        copied = found.end;
+        at = found.end;
+    }
+    text.copy(copied..src.len(), &mut output);
+    output
 }
 
 fn space(ch: char) -> bool {

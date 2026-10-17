@@ -268,10 +268,6 @@ impl Execution<'_> {
                 | Inline::Superscript { children, .. }
                 | Inline::Subscript { children, .. }
                 | Inline::Link { children, .. } => self.resolve(children),
-                Inline::Anchor {
-                    reftext: Some(reftext),
-                    ..
-                } => self.resolve(reftext),
                 _ => {}
             }
         }

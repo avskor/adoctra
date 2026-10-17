@@ -578,17 +578,15 @@ pub(crate) fn flatten_inlines(inlines: &[Inline], out: &mut Vec<Token>) {
                 });
                 flatten_inlines(children, out);
             }
-            // One `Anchor` token over the whole `[[id]]` / `anchor:id[…]`, then
-            // highlight any markup in its reftext (the same kind the whole-line
-            // block anchor uses, so inline and block anchors read alike).
-            Inline::Anchor { reftext, span, .. } => {
+            // One `Anchor` token over the whole `[[id]]` / `anchor:id[…]` (the
+            // same kind the whole-line block anchor uses, so inline and block
+            // anchors read alike). Markup in its reftext keeps the tokens of the
+            // source syntax the macros stage consumed.
+            Inline::Anchor { span, .. } => {
                 out.push(Token {
                     span: *span,
                     kind: TokenKind::Anchor,
                 });
-                if let Some(rt) = reftext {
-                    flatten_inlines(rt, out);
-                }
             }
         }
     }
