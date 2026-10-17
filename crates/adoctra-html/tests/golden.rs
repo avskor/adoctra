@@ -239,9 +239,10 @@ fn normalize_container(s: &str, strip_p: bool) -> String {
         let name = bare.split_whitespace().next().unwrap_or("");
         match name {
             // Structural wrappers — drop them. `figure`/`figcaption` are adoctra's
-            // quote/verse wrappers (asciidoctor uses `div`s) and `aside` is adoctra's
-            // sidebar wrapper (asciidoctor a `div`), so both collapse alike.
-            "div" | "figure" | "figcaption" | "aside" => {}
+            // quote/verse wrappers (asciidoctor uses `div`s), `aside` is adoctra's
+            // sidebar wrapper and `section` its section wrapper (asciidoctor
+            // `div`s), so both collapse alike.
+            "div" | "figure" | "figcaption" | "aside" | "section" => {}
             "p" if strip_p => {} // admonition/quote body paragraph wrapper — drop it
             "pre" if !inner.starts_with('/') => out.push_str("<pre>"),
             _ => out.push_str(tag),

@@ -285,7 +285,10 @@ fn write_block(block: &Block, s: &mut String) {
             s.push_str("]}");
         }
         BlockKind::Preamble { blocks } => {
-            s.push_str("{\"name\":\"preamble\",\"blocks\":[");
+            // A book's preamble carries the header's `preface-title` source.
+            s.push_str("{\"name\":\"preamble\"");
+            write_title(&block.title, s);
+            s.push_str(",\"blocks\":[");
             for (i, child) in blocks.iter().enumerate() {
                 if i > 0 {
                     s.push(',');

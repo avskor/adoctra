@@ -427,7 +427,23 @@ caption from `appendix-caption` at that point (`Appendix A: `, else `A. `),
 shown regardless of sectnumlevels; children continue `A.1.`. Reading-time labels
 (headings, definition xrefs) see numerals only of sections closed before that
 position (Section.closes/at, Ids.position), like Ruby assigning at close.
-Manpage synopsis, book partintro and preamble special cases are not implemented.
+**Book parts** (nest_sections part_content, Ruby's next_section): a book part's
+content before its first chapter is wrapped in a generated `Open` with style
+`partintro` (span of the wrapped content); a plain `--`/`[open]` block becomes
+the partintro itself, an `[open]` paragraph is rebuilt into a container when a
+second block arrives (its id/roles/title/attrs move to the paragraph); after a
+`[partintro]`/`--` intro the next block errors "illegal block content outside of
+partintro block"; a part not ending in a section errors "invalid part, …".
+`[abstract]`/`[partintro]` paragraphs are open blocks with that style.
+check_open_styles reports what Ruby's HTML converter excludes (partintro not a
+direct child of a book part: error; abstract directly in a book document:
+warning) and HTML skips those blocks; abstract renders `<figure class="quoteblock
+abstract">`, other non-masquerading open styles become `openblock <style>`. A
+headerless book opens a preamble unless its first block is an abstract and keeps
+it without sections; header `preface-title` is the book preamble's `Block.title`
+(raw source Text, empty span at the preamble start, never rendered in HTML;
+JSON/WASM export preamble `title`). Ruby's simple `[open]` paragraph (text without
+`<p>`) remains an XFAIL. Manpage synopsis is not implemented.
 Xref labels: resolve::register builds the registry after reading (auto ids,
 block ids, cataloged anchors in source order); body_subs Execution resolves each
 textless xref after its field's subs, like Ruby's xreftext:
@@ -468,7 +484,7 @@ heading_lines, so highlighting emits heading tokens without its own ATX scan.
 **Section hierarchy** (parser.rs nest_sections, Ruby's next_section) runs after
 reading the body: BlockKind::Section { level, blocks } with the title Heading as
 blocks[0] (id/reftext/roles/attrs stay on it) and BlockKind::Preamble { blocks }
-(only with a document title and at least one section; a book keeps a standalone
+(only with a document title and at least one section, or in a headerless book; a book keeps a standalone
 preamble). Section spans cover title through last nested block; snapshots are the
 last block's. Discrete headings and the doctitle stay plain Headings. Diagnostics
 match Ruby: out-of-sequence warnings (book: "expected levels 0 or 1") and the
@@ -476,8 +492,8 @@ level-0-outside-book error; without a header, a body that starts with a section
 skips top-level checks. Document::flat_blocks/into_flat_blocks give the old flat
 order. HTML renders `<section class="sectN role">` (id on the heading, level 0
 unwrapped) and `<section id="preamble">`; JSON/WASM use section/preamble; the DOM
-profile treats section as div. Book partintro is not implemented
-(sectnums and special sections are, see above). JSON and WASM expose header metadata;
+profile treats section as div. Sectnums, special sections, book partintro and
+preamble cases are implemented (see above). JSON and WASM expose header metadata;
 WASM includes source spans. See parser-api.adoc for remaining header limitations.
 Comments (`//`, matching slash fences of length >= 4, and `[comment]` paragraphs
 or open blocks) are omitted contextually. ParseResult.comments retains source

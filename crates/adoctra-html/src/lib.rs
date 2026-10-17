@@ -32,11 +32,25 @@ impl Backend for HtmlBackend {
         out.push_str("<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"utf-8\">\n<style>\n");
         out.push_str(STYLESHEET);
         out.push_str("</style>\n</head>\n<body>\n");
+        let book = doc.attributes.get("doctype") == Some("book");
         for (i, block) in doc.blocks.iter().enumerate() {
             match &block.kind {
                 BlockKind::Heading { level, inlines } if i == 0 && doc.has_title => {
                     render_heading(block, *level, inlines, false, &block.roles, &mut out);
                 }
+                // Like Ruby, a partintro renders only as a child of a book part.
+                BlockKind::Section { level: 0, blocks } if book => {
+                    for child in blocks {
+                        match &child.kind {
+                            BlockKind::Open { blocks } if is_style(child, "partintro") => {
+                                render_open(child, blocks, &mut out)
+                            }
+                            _ => render_block(child, &mut out),
+                        }
+                    }
+                }
+                // Ruby excludes an abstract directly in a book (no preamble).
+                BlockKind::Open { .. } if book && is_style(block, "abstract") => {}
                 _ => render_block(block, &mut out),
             }
         }
@@ -266,23 +280,49 @@ fn render_block(block: &Block, out: &mut String) {
             }
             out.push_str("</section>\n");
         }
-        BlockKind::Open { blocks } => {
-            // A parsed container with no semantic styling of its own (a `--` block,
-            // or `[open]` on a paragraph). asciidoctor nests
-            // `<div class="openblock"><div class="content">`; adoctra keeps the
-            // no-wrapper convention — a single `<div class="openblock">` carries the
-            // id/roles, with the `.Title` and children rendered straight inside. A
-            // *container* style on a `--` block masquerades it into another kind in
-            // the parser, so this arm only ever sees a genuine open block.
-            let class = class_attr(&["openblock"], &block.roles);
-            out.push_str(&format!("<div{class}{id}>\n"));
+        // A partintro outside a book part is excluded (see `convert`).
+        BlockKind::Open { .. } if is_style(block, "partintro") => {}
+        BlockKind::Open { blocks } if is_style(block, "abstract") => {
+            // Ruby renders an abstract as a quote block with an `abstract` class;
+            // adoctra uses the same figure/blockquote idiom as quotes.
+            let class = class_attr(&["quoteblock", "abstract"], &block.roles);
+            out.push_str(&format!("<figure{class}{id}>\n"));
             render_title(&block.title, &block.caption, out);
+            out.push_str("<blockquote>\n");
             for child in blocks {
                 render_block(child, out);
             }
-            out.push_str("</div>\n");
+            out.push_str("</blockquote>\n</figure>\n");
         }
+        BlockKind::Open { blocks } => render_open(block, blocks, out),
     }
+}
+
+fn is_style(block: &Block, style: &str) -> bool {
+    block.attrs.style.as_deref() == Some(style)
+}
+
+/// A parsed container with no semantic styling of its own (a `--` block, or
+/// `[open]` on a paragraph). asciidoctor nests
+/// `<div class="openblock"><div class="content">`; adoctra keeps the
+/// no-wrapper convention — a single `<div class="openblock">` carries the
+/// id/roles, with the `.Title` and children rendered straight inside. A
+/// *container* style on a `--` block masquerades it into another kind in the
+/// parser; any other style (`partintro`, an unknown one) is a class, as in Ruby.
+fn render_open(block: &Block, blocks: &[Block], out: &mut String) {
+    let style = block
+        .attrs
+        .style
+        .as_deref()
+        .filter(|style| *style != "open");
+    let base: Vec<&str> = std::iter::once("openblock").chain(style).collect();
+    let class = class_attr(&base, &block.roles);
+    out.push_str(&format!("<div{class}{}>\n", id_attr(&block.id)));
+    render_title(&block.title, &block.caption, out);
+    for child in blocks {
+        render_block(child, out);
+    }
+    out.push_str("</div>\n");
 }
 
 /// A heading element. A discrete (`[discrete]`/`[float]`) heading carries its
@@ -1893,6 +1933,68 @@ mod tests {
             "{html}"
         );
         assert!(html.contains(r#"<h2 id="_c">1. C</h2>"#), "{html}");
+    }
+
+    #[test]
+    fn book_partintro_renders_only_inside_a_part() {
+        let html = render("= B\n:doctype: book\n\n= P\n\nIntro *a*.\n\nMore.\n\n== C\n\n[partintro]\n--\nhidden\n--");
+        assert!(
+            html.contains("<h1 id=\"_p\" class=\"sect0\">P</h1>\n<div class=\"openblock partintro\">\n<p>Intro <strong>a</strong>.</p>\n<p>More.</p>\n</div>\n<section class=\"sect1\">"),
+            "{html}"
+        );
+        // A partintro outside a part is excluded, like Ruby's converter.
+        assert!(!html.contains("hidden"), "{html}");
+        // Outside a book there is no partintro container at all.
+        let html = render("= A\n\n= P\n\n[partintro]\nhidden\n\n== C");
+        let body = html.split("<body>").nth(1).unwrap();
+        assert!(
+            !body.contains("hidden") && !body.contains("partintro"),
+            "{html}"
+        );
+    }
+
+    #[test]
+    fn abstract_and_styled_open_blocks_render_like_ruby() {
+        let html =
+            render("= A\n\n[abstract.r#a]\n.T\nAbs *b*.\n\n[foo]\n--\nx\n--\n\n[open]\n--\ny\n--");
+        assert!(
+            html.contains("<figure class=\"quoteblock abstract r\" id=\"a\">\n<div class=\"title\">T</div>\n<blockquote>\n<p>Abs <strong>b</strong>.</p>\n</blockquote>\n</figure>"),
+            "{html}"
+        );
+        // Any style that does not masquerade becomes a class; `open` does not.
+        assert!(
+            html.contains("<div class=\"openblock foo\">\n<p>x</p>"),
+            "{html}"
+        );
+        assert!(
+            html.contains("<div class=\"openblock\">\n<p>y</p>"),
+            "{html}"
+        );
+        // A headerless book starting with an abstract has no preamble, so
+        // every abstract directly in the document is excluded...
+        let html = render(":doctype: book\n\n[abstract]\nhidden\n\nx\n\n[abstract]\nhidden");
+        assert!(
+            !html.contains("hidden") && html.contains("<p>x</p>"),
+            "{html}"
+        );
+        // ...while one inside the preamble renders.
+        let html = render(":doctype: book\n\nx\n\n[abstract]\nshown");
+        assert!(
+            html.contains(
+                "<section id=\"preamble\">\n<p>x</p>\n<figure class=\"quoteblock abstract\">"
+            ),
+            "{html}"
+        );
+    }
+
+    #[test]
+    fn preface_title_is_not_rendered() {
+        let html = render("= B\n:doctype: book\n:preface-title: Fore\n\nPre\n\n== C");
+        assert!(!html.contains("Fore"), "{html}");
+        assert!(
+            html.contains("<section id=\"preamble\">\n<p>Pre</p>\n</section>"),
+            "{html}"
+        );
     }
 
     #[test]

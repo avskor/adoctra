@@ -28,6 +28,13 @@ fn outline(blocks: &[Block], source: &str, depth: usize, out: &mut Vec<String>) 
                 out.push(format!("{pad}example"));
                 outline(blocks, source, depth + 1, out);
             }
+            BlockKind::Open { blocks } => {
+                out.push(format!(
+                    "{pad}open {}",
+                    block.attrs.style.as_deref().unwrap_or("-")
+                ));
+                outline(blocks, source, depth + 1, out);
+            }
             other => out.push(format!("{pad}{other:?}")),
         }
     }
@@ -340,4 +347,193 @@ fn ids_references_captions_and_snapshots_cross_sections() {
     let section = &result.document.blocks[2];
     // A section's snapshot is the state when its last block completed.
     assert_eq!(section.attribute_context.get("v"), Some("one"));
+}
+
+#[test]
+fn book_part_content_is_wrapped_in_a_partintro_open_block() {
+    let book = "= B\n:doctype: book\n\n";
+    // Ordinary content joins one partintro container until the first chapter.
+    let source = format!("{book}= P\n\nOne\n\n----\ncode\n----\n\n== C\n\nc");
+    let parts = tree(&source);
+    assert_eq!(parts[1..4], ["section 0", "  h0 = P", "  open partintro"]);
+    assert_eq!(parts[4], "    p One");
+    assert!(parts[5].starts_with("    Listing"), "{parts:?}");
+    assert_eq!(parts[6..], ["  section 1", "    h1 == C", "    p c"]);
+    let doc = parse(&source).document;
+    let BlockKind::Section { blocks, .. } = &doc.blocks[1].kind else {
+        panic!("part")
+    };
+    // The container spans its content and is not a source construct itself.
+    let intro = &blocks[1];
+    assert_eq!(
+        &source[intro.span.start..intro.span.end],
+        "One\n\n----\ncode\n----"
+    );
+    assert!(intro.id.is_none() && intro.title.is_none());
+    assert!(messages(&source).is_empty(), "{:?}", messages(&source));
+
+    // A plain `--` block becomes the partintro itself; later content is
+    // outside it, as in Ruby.
+    let source = format!("{book}= P\n\n--\nOne\n--\n\nTwo\n\n== C");
+    assert_eq!(
+        tree(&source)[1..6],
+        [
+            "section 0",
+            "  h0 = P",
+            "  open partintro",
+            "    p One",
+            "  p Two"
+        ]
+    );
+    assert_eq!(
+        messages(&source),
+        [(
+            Severity::Error,
+            "illegal block content outside of partintro block".to_string(),
+            "Two"
+        )]
+    );
+    // So does an explicit `[partintro]` paragraph.
+    let source = format!("{book}= P\n\n[partintro]\nOne\n\nTwo\n\n== C");
+    assert_eq!(
+        tree(&source)[1..6],
+        [
+            "section 0",
+            "  h0 = P",
+            "  open partintro",
+            "    p One",
+            "  p Two"
+        ]
+    );
+    assert_eq!(messages(&source).len(), 1);
+    // An unknown style on `--` keeps its block, wrapped in a partintro.
+    let source = format!("{book}= P\n\n[foo]\n--\nOne\n--\n\n== C");
+    assert_eq!(
+        tree(&source)[1..6],
+        [
+            "section 0",
+            "  h0 = P",
+            "  open partintro",
+            "    open foo",
+            "      p One"
+        ]
+    );
+}
+
+#[test]
+fn an_open_paragraph_moves_its_metadata_into_the_rebuilt_partintro() {
+    let source = "= B\n:doctype: book\n\n= P\n\n[open#x.r]\n.T\nOne\n\nTwo <<x>>\n\n== C";
+    let result = parse(source);
+    assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+    let BlockKind::Section { blocks, .. } = &result.document.blocks[1].kind else {
+        panic!("part")
+    };
+    let intro = &blocks[1];
+    assert_eq!(intro.attrs.style.as_deref(), Some("partintro"));
+    assert!(intro.id.is_none() && intro.roles.is_empty() && intro.title.is_none());
+    let BlockKind::Open { blocks: children } = &intro.kind else {
+        panic!("intro")
+    };
+    assert_eq!(children.len(), 2);
+    let first = &children[0];
+    assert_eq!(first.id.as_deref(), Some("x"));
+    assert_eq!(first.roles, ["r"]);
+    assert!(first.title.is_some() && first.attrs.style.is_none());
+    assert!(matches!(first.kind, BlockKind::Paragraph { .. }));
+    assert_eq!(&source[first.span.start..first.span.end], "One");
+    // A lone `[open]` paragraph simply becomes the partintro.
+    let parts = tree("= B\n:doctype: book\n\n= P\n\n[open]\nOne\n\n== C");
+    assert_eq!(parts[2..5], ["  h0 = P", "  open partintro", "    p One"]);
+}
+
+#[test]
+fn book_parts_require_a_section_and_partintro_belongs_to_a_part() {
+    let source =
+        "= B\n:doctype: book\n\n= P\n\nx\n\n= Q\n\n== C\n\n[partintro]\n--\nin chapter\n--";
+    assert_eq!(
+        messages(source),
+        [
+            (
+                Severity::Error,
+                "invalid part, must have at least one section (e.g., chapter, appendix, etc.)"
+                    .to_string(),
+                "= P"
+            ),
+            (
+                Severity::Error,
+                "partintro block can only be used when doctype is book and must be a child of a book part. Excluding block content."
+                    .to_string(),
+                "--\nin chapter\n--"
+            ),
+        ]
+    );
+    // Outside a book, parts are errors and get no partintro.
+    let source = "= A\n\n= P\n\n[partintro]\nx\n\n== C";
+    assert_eq!(
+        tree(source)[1..4],
+        ["section 0", "  h0 = P", "  open partintro"]
+    );
+    let found = messages(source);
+    assert_eq!(found.len(), 2, "{found:?}");
+    assert!(found[1].1.starts_with("partintro block can only be used"));
+    // Article parts never wrap their content.
+    assert_eq!(
+        tree("= A\n\n= P\n\nx\n\n== C")[1..4],
+        ["section 0", "  h0 = P", "  p x"]
+    );
+}
+
+#[test]
+fn a_headerless_book_opens_a_preamble_unless_it_starts_with_an_abstract() {
+    assert_eq!(
+        tree(":doctype: book\n\nPre\n\n== C"),
+        ["preamble", "  p Pre", "section 1", "  h1 == C"]
+    );
+    // A book keeps a standalone preamble, even without a header.
+    assert_eq!(tree(":doctype: book\n\nPre"), ["preamble", "  p Pre"]);
+    // A leading abstract (shorthand included) stays at the top level, where
+    // Ruby's converter excludes it.
+    let source = ":doctype: book\n\n[abstract#i]\nAbs\n\nx\n\n== C";
+    assert_eq!(
+        tree(source),
+        ["open abstract", "  p Abs", "p x", "section 1", "  h1 == C"]
+    );
+    assert_eq!(
+        messages(source),
+        [(
+            Severity::Warning,
+            "abstract block cannot be used in a document without a doctitle when doctype is book. Excluding block content."
+                .to_string(),
+            "Abs"
+        )]
+    );
+    // An abstract inside the preamble is valid.
+    let source = ":doctype: book\n\nx\n\n[abstract]\n--\ny\n--";
+    assert_eq!(
+        tree(source),
+        ["preamble", "  p x", "  open abstract", "    p y"]
+    );
+    assert!(messages(source).is_empty());
+    // Without a book, a headerless document has no preamble.
+    assert_eq!(
+        tree("[abstract]\nAbs\n\n== C"),
+        ["open abstract", "  p Abs", "section 1", "  h1 == C"]
+    );
+}
+
+#[test]
+fn a_book_preamble_keeps_the_header_preface_title_source() {
+    let source = "= B\n:doctype: book\n:preface-title: Fore *word* {x}\n\nPre\n\n:preface-title: Later\n\n== C";
+    let doc = parse(source).document;
+    let preamble = &doc.blocks[1];
+    assert!(matches!(preamble.kind, BlockKind::Preamble { .. }));
+    let title = preamble.title.as_ref().expect("preface title");
+    assert!(
+        matches!(title.as_slice(), [adoctra_core::Inline::Text { value, span }]
+            if value == "Fore *word* {x}" && span.start == span.end && span.start == preamble.span.start),
+        "{title:?}"
+    );
+    // Only a book names its preamble.
+    let doc = parse("= A\n:preface-title: Fore\n\nPre\n\n== C").document;
+    assert!(doc.blocks[1].title.is_none());
 }

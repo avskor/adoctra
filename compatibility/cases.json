@@ -17534,6 +17534,61 @@
       "source": ":appendix-number: C\n:sectnums:\n\n[appendix]\n== First {appendix-number}\n\n=== See xref:_first_c[xrefstyle=short] and xref:_one[xrefstyle=short]\n\n[appendix]\n== Second {appendix-number}\n\n[appendix]\n[caption=\"Custom: \"]\n== Third\n\n== One\n\n=== In xref:_one[xrefstyle=full]\n\n[bibliography]\n== Bib\n\n=== Nested\n\n[colophon]\n== Colo\n\nBody {appendix-number} <<_second_d>> <<_see_appendix_d>>\n"
     },
     {
+      "id": "book-partintro-wrapped",
+      "category": "sections",
+      "expect": "pass",
+      "source": "= B\n:doctype: book\n\n= Part\n\nIntro *a*.\n\n----\ncode\n----\n\n.Title\n====\nex\n====\n\n== Ch\n\ntext\n\n= Part Two\n\n[partintro]\n--\nExplicit.\n--\n\n== Ch2\n"
+    },
+    {
+      "id": "book-partintro-open-paragraph-rebuild",
+      "category": "sections",
+      "expect": "pass",
+      "source": "= B\n:doctype: book\n\n= P\n\n[open#x.r]\n.T\nOne.\n\n[[y]]\nTwo <<x>> <<y>>.\n\n== C\n\n<<x>>\n\n= Q\n\n[foo]\n--\nStyled.\n--\n\n== D\n"
+    },
+    {
+      "id": "book-partintro-illegal-content-invalid-part",
+      "category": "sections",
+      "expect": "pass",
+      "source": "= B\n:doctype: book\n\n= P\n\n--\nOne.\n--\n\nTwo.\n\n= Q\n\n[partintro]\nPara.\n\nAfter.\n\n= R\n\n== C\n\n[partintro]\n--\nin chapter\n--\n"
+    },
+    {
+      "id": "book-partintro-outside-book-excluded",
+      "category": "sections",
+      "expect": "pass",
+      "source": "= A\n\n= P\n\n[partintro]\nx\n\n== C\n\ny\n"
+    },
+    {
+      "id": "book-headerless-preamble-abstract",
+      "category": "sections",
+      "expect": "pass",
+      "source": ":doctype: book\n\n[abstract]\nAbs.\n\nx\n\n== C\n\nc\n"
+    },
+    {
+      "id": "book-headerless-preamble-standalone",
+      "category": "sections",
+      "expect": "pass",
+      "source": ":doctype: book\n:preface-title: Pre\n\nx\n\n[abstract]\n--\ny\n--\n"
+    },
+    {
+      "id": "book-preface-title-not-rendered",
+      "category": "sections",
+      "expect": "pass",
+      "source": "= B\n:doctype: book\n:preface-title: Fore *word*\n\n[abstract]\n.AT\nAbs.\n\n== C\n"
+    },
+    {
+      "id": "open-abstract-and-unknown-style",
+      "category": "sections",
+      "expect": "pass",
+      "source": "= A\n\n[abstract.r#a]\n.T\nAbs *b*.\n\n[abstract]\n--\nFirst.\n\nSecond.\n--\n\n[foo]\n--\nx\n--\n"
+    },
+    {
+      "id": "open-paragraph-simple-content",
+      "category": "blocks",
+      "expect": "xfail",
+      "reason": "Ruby renders an [open] paragraph as a simple open block (text without a paragraph); adoctra wraps the paragraph in the open block.",
+      "source": "[open]\nsolo\n"
+    },
+    {
       "id": "xrefstyle-example-full-short-basic",
       "category": "references",
       "expect": "pass",

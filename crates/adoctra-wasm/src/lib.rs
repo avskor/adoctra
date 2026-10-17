@@ -392,7 +392,10 @@ fn write_block(b: &Block, s: &mut String) {
             s.push(']');
         }
         BlockKind::Preamble { blocks } => {
-            s.push_str("\"name\":\"preamble\",\"blocks\":[");
+            // A book's preamble carries the header's `preface-title` source.
+            s.push_str("\"name\":\"preamble\"");
+            write_title(&b.title, s);
+            s.push_str(",\"blocks\":[");
             for (j, child) in blocks.iter().enumerate() {
                 if j > 0 {
                     s.push(',');
@@ -2255,7 +2258,7 @@ mod header_tests {
         let source = "= Doc\r\n\r\nPre\r\n\r\n== Я\r\n\r\nx\r\n\r\nPara\r\n== T";
         let json = super::parse_json_with_source(source, 7);
         assert!(
-            json.contains(r#"{"span":{"source_id":7,"start":9,"end":12},"name":"preamble","blocks":[{"span":{"source_id":7,"start":9,"end":12},"name":"paragraph""#),
+            json.contains(r#"{"span":{"source_id":7,"start":9,"end":12},"name":"preamble","title":null,"blocks":[{"span":{"source_id":7,"start":9,"end":12},"name":"paragraph""#),
             "{json}"
         );
         // The section spans its title through the paragraph that swallowed `== T`.
@@ -2265,6 +2268,23 @@ mod header_tests {
         );
         let tokens = super::tokens_json_with_source(source, 7);
         assert_eq!(tokens.matches(r#""kind":"heading""#).count(), 2, "{tokens}");
+    }
+
+    #[test]
+    fn book_preamble_title_and_partintro_reach_the_editor() {
+        let source = "= B\n:doctype: book\n:preface-title: Fore\n\nPre\n\n= P\n\nIntro\n\n== C";
+        let json = super::parse_json_with_source(source, 3);
+        // The preface title has no source text of its own: an empty span at the
+        // preamble start.
+        assert!(
+            json.contains(r#"{"span":{"source_id":3,"start":41,"end":44},"name":"preamble","title":[{"span":{"source_id":3,"start":41,"end":41},"name":"text","value":"Fore"}],"blocks":["#),
+            "{json}"
+        );
+        // The generated partintro spans the content it wraps.
+        assert!(
+            json.contains(r#"{"span":{"source_id":3,"start":51,"end":56},"name":"open","id":null,"roles":[],"style":"partintro""#),
+            "{json}"
+        );
     }
 
     #[test]

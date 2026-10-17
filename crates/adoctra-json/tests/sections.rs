@@ -9,7 +9,7 @@ fn render(source: &str) -> String {
 fn sections_and_preamble_serialize_as_nested_containers() {
     let json = render("= Doc\n\nPre\n\n== A\n\na\n\n=== B");
     assert!(
-        json.contains(r#"{"name":"preamble","blocks":[{"name":"paragraph""#),
+        json.contains(r#"{"name":"preamble","title":null,"blocks":[{"name":"paragraph""#),
         "{json}"
     );
     assert!(
@@ -30,4 +30,20 @@ fn sections_and_preamble_serialize_as_nested_containers() {
         !json.contains("preamble") && !json.contains("section"),
         "{json}"
     );
+}
+
+#[test]
+fn book_preamble_title_and_partintro_serialize() {
+    let json = render("= B\n:doctype: book\n:preface-title: Fore\n\nPre\n\n= P\n\nIntro\n\n[abstract]\n--\nAbs\n--\n\n== C");
+    assert!(
+        json.contains(r#"{"name":"preamble","title":[{"name":"text","value":"Fore"}],"blocks":["#),
+        "{json}"
+    );
+    // The part's content is wrapped in a partintro open block; the abstract
+    // keeps its own style inside it.
+    assert!(
+        json.contains(r#"{"name":"open","id":null,"roles":[],"style":"partintro","attributes":{},"options":[],"title":null,"caption":null,"blocks":[{"name":"paragraph""#),
+        "{json}"
+    );
+    assert!(json.contains(r#""style":"abstract""#), "{json}");
 }

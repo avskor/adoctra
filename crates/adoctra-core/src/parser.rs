@@ -96,13 +96,16 @@ pub(crate) fn parse_reader<'a>(
         header.pending,
     );
     context.close_sections(0, usize::MAX);
-    doc.blocks.extend(nest_sections(
+    let body = nest_sections(
         body,
         doc.has_title,
         book,
+        doc.attributes.get("preface-title").filter(|_| book),
         &mut context.sections,
         &mut diagnostics,
-    ));
+    );
+    check_open_styles(&body, OpenParent::Document, book, &mut diagnostics);
+    doc.blocks.extend(body);
 
     let mut references = Vec::new();
     let registry = context.register_references(&mut doc, &lines.include_catalog, &mut references);
@@ -289,15 +292,30 @@ fn nest_sections(
     blocks: Vec<Block>,
     has_header: bool,
     book: bool,
+    preface_title: Option<&str>,
     sections: &mut BTreeMap<(usize, usize), crate::section_numbers::Section>,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Vec<Block> {
     use crate::section_numbers::Ordinals;
     // Close the innermost open section into its parent (or the top level).
-    fn close(open: &mut Vec<Block>, top: &mut Vec<Block>) {
+    // Like Ruby, a book part must end with a nested section.
+    fn close(
+        open: &mut Vec<Block>,
+        top: &mut Vec<Block>,
+        book: bool,
+        diagnostics: &mut Vec<Diagnostic>,
+    ) {
         let mut section = open.pop().unwrap();
-        if let BlockKind::Section { blocks, .. } = &section.kind {
+        if let BlockKind::Section { level, blocks } = &section.kind {
             let last = blocks.last().unwrap();
+            if book && *level == 0 && !matches!(last.kind, BlockKind::Section { .. }) {
+                diagnostics.push(Diagnostic {
+                    span: blocks[0].span,
+                    severity: Severity::Error,
+                    message: "invalid part, must have at least one section (e.g., chapter, appendix, etc.)"
+                        .into(),
+                });
+            }
             section.span.end = section.span.end.max(last.span.end);
             section.attribute_context = Arc::clone(&last.attribute_context);
         }
@@ -322,12 +340,21 @@ fn nest_sections(
     // Without a header, a body that starts with a section title makes Ruby
     // create every top-level section directly, without checking its level.
     let unchecked = !has_header && blocks.first().and_then(section_level).is_some();
+    // Ruby also opens a preamble for a book without a header, unless its first
+    // block is an abstract.
+    let preamble_open = has_header
+        || (book
+            && blocks.first().map_or(true, |block| {
+                block.attrs.style.as_deref() != Some("abstract")
+            }));
     let mut top = Vec::new();
     let mut preamble = Vec::new();
     // Open sections, innermost last, with their children's ordinals and
     // their own `sectnum` path.
     let mut open: Vec<Block> = Vec::new();
     let mut numbering: Vec<(Ordinals, Vec<String>, Vec<usize>)> = Vec::new();
+    // The partintro state of each open section (only parts use it).
+    let mut intros: Vec<Intro> = Vec::new();
     let mut top_ordinals = Ordinals::default();
     for block in blocks {
         let level = match section_level(&block) {
@@ -335,10 +362,16 @@ fn nest_sections(
             None => {
                 match open.last_mut() {
                     Some(Block {
+                        kind: BlockKind::Section { level: 0, blocks },
+                        ..
+                    }) if book => {
+                        part_content(blocks, intros.last_mut().unwrap(), block, diagnostics)
+                    }
+                    Some(Block {
                         kind: BlockKind::Section { blocks, .. },
                         ..
                     }) => blocks.push(block),
-                    _ if has_header => preamble.push(block),
+                    _ if preamble_open => preamble.push(block),
                     _ => top.push(block),
                 }
                 continue;
@@ -354,8 +387,9 @@ fn nest_sections(
             open.last(),
             Some(Block { kind: BlockKind::Section { level: current, .. }, .. }) if raw <= *current
         ) {
-            close(&mut open, &mut top);
+            close(&mut open, &mut top, book, diagnostics);
             numbering.pop();
+            intros.pop();
         }
         let parent = open.last().map(|parent| match &parent.kind {
             BlockKind::Section { level, blocks } => (
@@ -419,6 +453,7 @@ fn nest_sections(
             section.closes.clone_from(&closes);
         }
         numbering.push((Ordinals::default(), path, closes));
+        intros.push(Intro::None);
         let (span, context) = (block.span, Arc::clone(&block.attribute_context));
         let blocks = vec![block];
         let mut section = Block::new(span, BlockKind::Section { level, blocks });
@@ -426,7 +461,7 @@ fn nest_sections(
         open.push(section);
     }
     while !open.is_empty() {
-        close(&mut open, &mut top);
+        close(&mut open, &mut top, book, diagnostics);
     }
     if preamble.is_empty() {
         return top;
@@ -444,9 +479,165 @@ fn nest_sections(
     let context = Arc::clone(&last.attribute_context);
     let mut wrapper = Block::new(span, BlockKind::Preamble { blocks: preamble });
     wrapper.attribute_context = context;
+    // Ruby's `preface-title` from the header names a book's preamble. HTML
+    // never displays it, so its source value is kept without substitutions.
+    wrapper.title = preface_title.map(|value| {
+        vec![Inline::Text {
+            value: value.to_string(),
+            span: Span {
+                end: span.start,
+                ..span
+            },
+        }]
+    });
     let mut result = vec![wrapper];
     result.extend(top);
     result
+}
+
+/// Ruby's partintro bookkeeping for an open section: whether later content
+/// joins an intro container, or the part starts with an `[open]` paragraph
+/// that Ruby rebuilds into one when a second block arrives.
+#[derive(Clone, Copy, PartialEq)]
+enum Intro {
+    None,
+    Container,
+    OpenParagraph,
+}
+
+/// Add a content block to a book part, wrapping its intro in a `partintro`
+/// open block like Ruby's `next_section`. `blocks[0]` is the part title.
+fn part_content(
+    blocks: &mut Vec<Block>,
+    intro: &mut Intro,
+    mut block: Block,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let partintro = || Some("partintro".to_string());
+    if blocks.len() == 1 {
+        let style = block.attrs.style.as_deref();
+        match (&block.kind, style) {
+            // A `[partintro]` paragraph is already an open block holding it.
+            (_, Some("partintro")) => {}
+            (BlockKind::Open { blocks: children }, None | Some("open")) => {
+                // adoctra wraps an `[open]` paragraph in an open block with
+                // the paragraph's span; Ruby keeps one simple block.
+                if let [child] = children.as_slice() {
+                    if child.span == block.span && matches!(child.kind, BlockKind::Paragraph { .. })
+                    {
+                        *intro = Intro::OpenParagraph;
+                    }
+                }
+                block.attrs.style = partintro();
+            }
+            _ => {
+                let mut wrapper = Block::new(block.span, BlockKind::Open { blocks: Vec::new() });
+                wrapper.attrs.style = partintro();
+                blocks.push(wrapper);
+                *intro = Intro::Container;
+            }
+        }
+    } else if blocks.len() == 2 {
+        match *intro {
+            Intro::None => diagnostics.push(Diagnostic {
+                span: block.span,
+                severity: Severity::Error,
+                message: "illegal block content outside of partintro block".into(),
+            }),
+            // Ruby moves the `[open]` paragraph, metadata included, into a new
+            // partintro container as an ordinary paragraph.
+            Intro::OpenParagraph => {
+                let first = &mut blocks[1];
+                if let BlockKind::Open { blocks: children } = &mut first.kind {
+                    let paragraph = &mut children[0];
+                    paragraph.id = first.id.take();
+                    paragraph.reftext = first.reftext.take();
+                    paragraph.roles = std::mem::take(&mut first.roles);
+                    paragraph.title = first.title.take();
+                    paragraph.attrs = BlockAttrs {
+                        style: None,
+                        ..std::mem::take(&mut first.attrs)
+                    };
+                    first.attrs.style = partintro();
+                }
+                *intro = Intro::Container;
+            }
+            Intro::Container => {}
+        }
+    }
+    if *intro == Intro::Container {
+        let wrapper = blocks.last_mut().unwrap();
+        wrapper.span.end = block.span.end;
+        wrapper.attribute_context = Arc::clone(&block.attribute_context);
+        if let BlockKind::Open { blocks } = &mut wrapper.kind {
+            blocks.push(block);
+        }
+    } else {
+        blocks.push(block);
+    }
+}
+
+/// Where an open block sits, for Ruby's converter checks of its style.
+#[derive(Clone, Copy, PartialEq)]
+enum OpenParent {
+    Document,
+    Part,
+    Other,
+}
+
+/// Report the abstract and partintro blocks that Ruby's HTML converter
+/// excludes: an abstract directly in a book document (no preamble) and a
+/// partintro outside a book part. Their content is not visited.
+fn check_open_styles(
+    blocks: &[Block],
+    parent: OpenParent,
+    book: bool,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    for block in blocks {
+        let children = match &block.kind {
+            BlockKind::Open { blocks } => {
+                let excluded = match block.attrs.style.as_deref() {
+                    Some("abstract") if book && parent == OpenParent::Document => Some((
+                        Severity::Warning,
+                        "abstract block cannot be used in a document without a doctitle when doctype is book. Excluding block content.",
+                    )),
+                    Some("partintro") if !book || parent != OpenParent::Part => Some((
+                        Severity::Error,
+                        "partintro block can only be used when doctype is book and must be a child of a book part. Excluding block content.",
+                    )),
+                    _ => None,
+                };
+                if let Some((severity, message)) = excluded {
+                    diagnostics.push(Diagnostic {
+                        span: block.span,
+                        severity,
+                        message: message.into(),
+                    });
+                    continue;
+                }
+                blocks
+            }
+            BlockKind::Section { level: 0, blocks } => {
+                check_open_styles(blocks, OpenParent::Part, book, diagnostics);
+                continue;
+            }
+            BlockKind::List { items, .. } => {
+                for item in items {
+                    check_open_styles(&item.blocks, OpenParent::Other, book, diagnostics);
+                }
+                continue;
+            }
+            BlockKind::Admonition { blocks, .. }
+            | BlockKind::Example { blocks }
+            | BlockKind::Quote { blocks, .. }
+            | BlockKind::Sidebar { blocks }
+            | BlockKind::Section { blocks, .. }
+            | BlockKind::Preamble { blocks } => blocks,
+            _ => continue,
+        };
+        check_open_styles(children, OpenParent::Other, book, diagnostics);
+    }
 }
 
 /// Consume metadata once, both before header detection and at body boundaries.
@@ -631,7 +822,9 @@ fn apply_style_fixup(
             }
             // `[open]` on a paragraph wraps it the same single-child way as
             // `[example]`/`[sidebar]`; the `--` fence form is built in `parse_block`.
-            "open" => {
+            // `[abstract]`/`[partintro]` are open blocks too in Ruby (the style
+            // stays on `attrs.style`).
+            "open" | "abstract" | "partintro" => {
                 let para = new_child(
                     block.span,
                     std::mem::replace(&mut block.kind, BlockKind::Open { blocks: Vec::new() }),
