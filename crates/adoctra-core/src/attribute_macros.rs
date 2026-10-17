@@ -369,7 +369,8 @@ fn apply_inner(
     for stage in 0..3 {
         text = apply_stage(text, stage, attributes, compat, depth, true, report);
     }
-    apply_anchors(text, report).into_parts()
+    let text = apply_anchors(text, report);
+    apply_xrefs(text, attributes, report).into_parts()
 }
 
 /// Ruby's `InlineAnchorRx` after links and emails, over the lexical result of

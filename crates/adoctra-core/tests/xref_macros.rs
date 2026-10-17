@@ -339,3 +339,93 @@ fn incomplete_references_stay_text_without_panicking() {
         tokens(&source);
     }
 }
+
+#[test]
+fn passthrough_macros_stage_creates_references_in_substituted_parts() {
+    let source = format!("{SECTION}A pass:c,m[<<sec>>] B pass:c,q,m[<<sec,*b*>>] C pass:c,m[<<nope>>] D pass:m[xref:sec[x\\]]");
+    let result = parse(&source);
+    let nodes = paragraph(result.document.blocks.last().unwrap()).to_vec();
+    let substituted: Vec<_> = nodes
+        .iter()
+        .filter_map(|n| match n {
+            Inline::Substituted { parts, .. } => Some((parts.clone(), slice(&source, n))),
+            _ => None,
+        })
+        .collect();
+    let open = P::OpenXref(Xref::to_id("sec"));
+    assert_eq!(
+        substituted,
+        [
+            (
+                vec![open.clone(), P::Text("Sec Title".into()), P::CloseXref],
+                "pass:c,m[<<sec>>]".into()
+            ),
+            (
+                vec![
+                    open.clone(),
+                    P::Open(F::Strong),
+                    P::Text("b".into()),
+                    P::Close(F::Strong),
+                    P::CloseXref
+                ],
+                "pass:c,q,m[<<sec,*b*>>]".into()
+            ),
+            (
+                vec![
+                    P::OpenXref(Xref::to_id("nope")),
+                    P::Text("[nope]".into()),
+                    P::CloseXref
+                ],
+                "pass:c,m[<<nope>>]".into()
+            ),
+            (
+                // Without c the label stays raw passthrough text.
+                vec![open, P::Raw("x".into()), P::CloseXref],
+                "pass:m[xref:sec[x\\]]".into()
+            ),
+        ]
+    );
+    // The unresolved warning points at the enclosing passthrough.
+    let warnings: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.severity == Severity::Warning)
+        .map(|d| &source[d.span.start..d.span.end])
+        .collect();
+    assert_eq!(warnings, ["pass:c,m[<<nope>>]"]);
+    // Generated syntax adds no xref token; the passthrough keeps its own.
+    assert!(!tokens(&source)
+        .iter()
+        .any(|t| t.kind == TokenKind::CrossReference));
+}
+
+#[test]
+fn passthrough_references_resolve_natural_titles_and_heading_labels() {
+    let source = format!(
+        "{SECTION}== See pass:c,m[<<Sec Title>>]\n\n<<_see_sec_title>> pass:c,m[<<other.adoc#f>>]"
+    );
+    let doc = parse(&source).document;
+    let ids: Vec<_> = doc
+        .flat_blocks()
+        .iter()
+        .filter_map(|b| b.id.clone())
+        .collect();
+    assert_eq!(ids, ["sec", "_see_sec_title"]);
+    let nodes = last(&source);
+    assert_eq!(
+        xrefs(&nodes),
+        [("_see_sec_title", None, "See Sec Title".into())]
+    );
+    let interdoc = nodes
+        .iter()
+        .find_map(|n| match n {
+            Inline::Substituted { parts, .. } => match parts.first() {
+                Some(P::OpenXref(xref)) => Some(xref.clone()),
+                _ => None,
+            },
+            _ => None,
+        })
+        .unwrap();
+    assert_eq!(interdoc.target, "other.html#f");
+    assert_eq!(interdoc.path.as_deref(), Some("other.html"));
+}

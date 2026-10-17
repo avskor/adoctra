@@ -375,8 +375,10 @@ stay empty after it. Value-generated ones are `AttributePart::OpenXref(Xref)`/`C
 (lexical values; HTML `<a href>`, JSON/WASM open-xref/close-xref); `Xref` fields of
 the node are decoded. A textless pair gets its label parts and refreshed flat value from
 resolve::fill_labels (body_subs at conversion, resolve_reading for headings), with
-the unresolved warning (internal ids only) on the reference span. Not in
-pass:m/link parameters yet. Targets follow Ruby's branches (xref_target.rs):
+the unresolved warning (internal ids only) on the reference span. pass:m and
+repeated link parameter passes also run the xref stage (OpenXref parts in
+Substituted, warnings on the enclosing construct); pass:m in attribute definitions
+takes labels at use, not at definition like Ruby (explicit XFAIL). Targets follow Ruby's branches (xref_target.rs):
 `Xref.target` is the href, `refid`/`path`/`fragment` as Ruby's attrs; `doc.adoc#id`
 / `xref:doc.adoc[]` become `relfileprefix + path + (relfilesuffix || outfilesuffix
 pinned at header end, built-in .html)` unless the path is `docname` or a full include

@@ -919,6 +919,17 @@ mod tests {
     }
 
     #[test]
+    fn passthrough_xref_keeps_the_enclosing_span_and_parts() {
+        let src = "[[s]]\n== T\n\npass:c,m[<<s>>]";
+        let json = parse_json(src);
+        let start = src.find("pass:").unwrap();
+        assert!(
+            json.contains(&format!(r##"{{"span":{{"source_id":0,"start":{start},"end":{}}},"name":"substituted","value":"T","parts":[{{"kind":"open-xref","target":"#s","refid":"s","fragment":"s"}},{{"kind":"text","value":"T"}},{{"kind":"close-xref"}}]"##, src.len())),
+            "got: {json}"
+        );
+    }
+
+    #[test]
     fn interdocument_xref_exposes_path_fragment_constraints_and_span() {
         let src = "A xref:other.adoc#f[T,window=_blank]";
         let json = parse_json(src);

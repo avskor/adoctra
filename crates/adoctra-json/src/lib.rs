@@ -1002,6 +1002,15 @@ mod tests {
     }
 
     #[test]
+    fn passthrough_xref_serializes_as_open_xref_parts() {
+        let json = render("[[sec]]\n== T\n\npass:c,m[<<sec>>]");
+        assert!(
+            json.contains(r##"{"name":"substituted","value":"T","parts":[{"kind":"open-xref","target":"#sec","refid":"sec","fragment":"sec"},{"kind":"text","value":"T"},{"kind":"close-xref"}]}"##),
+            "got: {json}"
+        );
+    }
+
+    #[test]
     fn interdocument_xref_serializes_target_refid_and_path() {
         let json = render("<<other.adoc#f>> and <<Sec Title>>\n\n[[sec]]\n== Sec Title");
         assert!(

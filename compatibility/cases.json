@@ -17394,6 +17394,67 @@
       "category": "references",
       "expect": "pass",
       "source": ":reftext: R *x*\n\n== First\n\nA <<#>>"
+    },
+    {
+      "id": "xref-pass-macros-angle",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[sec]]\n== Sec Title\n\nA pass:c,m[<<sec>>] B pass:c,m[<<sec,label>>] C pass:c,q,m[<<sec,*b*>> _i_] E pass:c,m[\\<<sec>>]"
+    },
+    {
+      "id": "xref-pass-macros-macro-form",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[sec]]\n== Sec Title\n\nA pass:m[xref:sec[x\\]] B pass:m[xref:sec[\\]] C pass:q,m[xref:sec[*x*\\]] D pass:m[xref:sec[x]]"
+    },
+    {
+      "id": "xref-pass-macros-targets",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[sec]]\n== Sec Title\n\nA pass:c,m[<<other.adoc#f>>] B pass:c,m[<<Sec Title>>] C pass:c,m[<<#>>] D pass:c,m[<<nope>>] E pass:m[xref:o.adoc[T,window=_blank\\]]"
+    },
+    {
+      "id": "xref-pass-macros-normal",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[sec]]\n== Sec Title\n\nA pass:n[<<sec>>] B pass:normal[<<sec>> (C)] C pass:a,c,m[<<{id}>>]\n\n:id: sec\n\nD pass:a,c,m[<<{id}>>]"
+    },
+    {
+      "id": "xref-pass-macros-forward",
+      "category": "references",
+      "expect": "pass",
+      "source": "A pass:c,m[<<later>>] B pass:c,m[<<Later Title>>]\n\n[[later]]\n== Later Title"
+    },
+    {
+      "id": "xref-pass-macros-heading",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[sec]]\n== Sec Title\n\n== See pass:c,m[<<sec>>]\n\n<<_see_sec_title>>\n\n== Ref pass:c,m[<<Sec Title>>]\n\n<<_ref_sec_title>>"
+    },
+    {
+      "id": "xref-pass-macros-block-title",
+      "category": "references",
+      "expect": "pass",
+      "source": ".Title pass:c,m[<<sec>>]\n----\nx\n----\n\n[[sec]]\n== Sec Title\n\nbody"
+    },
+    {
+      "id": "xref-link-parameter-pass",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[sec]]\n== Sec Title\n\nA link:u['<<sec>>',role=r] B https://e.org['pass:c,m[<<sec>>]'] C link:u['xref:sec[x]']"
+    },
+    {
+      "id": "xref-pass-macros-anchor-label",
+      "category": "references",
+      "expect": "pass",
+      "source": "A pass:c,m[[[in,Ref]]<<in>>] B <<in>>"
+    },
+    {
+      "id": "xref-pass-macros-attribute-definition",
+      "category": "references",
+      "expect": "xfail",
+      "reason": "Cross-references created by pass:m in attribute definitions take their labels at the reference during conversion; Ruby fixes them at definition time from the partial catalog.",
+      "source": ":r: pass:c,m[<<sec>>]\n:o: pass:c,m[<<other.adoc#x>>]\n\n[[sec]]\n== Sec Title\n\n:s: pass:c,m[<<sec>>]\n\nA {r} B {s} C {o}"
     }
   ]
 }

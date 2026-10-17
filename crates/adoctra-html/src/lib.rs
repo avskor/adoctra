@@ -1840,6 +1840,15 @@ mod tests {
     }
 
     #[test]
+    fn passthrough_macros_render_cross_references() {
+        let html = render("[[sec]]\n== S&T\n\nA pass:c,m[<<sec>>] B pass:c,q,m[<<sec,*b*>>] C pass:c,m[<<other.adoc#f>>]");
+        assert!(
+            html.contains(r##"<p>A <a href="#sec">S&amp;T</a> B <a href="#sec"><strong>b</strong></a> C <a href="other.html#f">other.html</a></p>"##),
+            "{html}"
+        );
+    }
+
+    #[test]
     fn interdocument_and_natural_xrefs_render_resolved_targets() {
         let html = render(
             ":p: xref:o&p.adoc#v[V,window=_blank]\n:n: <<Sec Title>>\n\n[[sec]]\n== Sec Title\n\nA <<other.adoc#f>> B xref:other.adoc#f[T,role=r,window=_blank,opts=nofollow] C {p} D <<Sec Title>> E {n} F <<#>>",
