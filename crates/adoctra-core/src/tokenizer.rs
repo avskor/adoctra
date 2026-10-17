@@ -58,6 +58,7 @@ pub enum TokenKind {
     CrossReference,
     ListMarker,
     LineBreak,
+    BlockMacro,
 }
 
 impl TokenKind {
@@ -96,6 +97,7 @@ impl TokenKind {
             TokenKind::CrossReference => "xref",
             TokenKind::ListMarker => "list-marker",
             TokenKind::LineBreak => "line-break",
+            TokenKind::BlockMacro => "block-macro",
         }
     }
 }
@@ -453,6 +455,15 @@ fn tokens_processed(
             out.push(Token {
                 span: line_span,
                 kind: TokenKind::BlockTitle,
+            });
+            continue;
+        }
+        // A `toc::[]` block macro line at a block start, recognized with the
+        // parser's grammar (inside a paragraph it stays text).
+        if at_para_start && crate::parser::parse_toc_macro(line.trim_end(), off).is_some() {
+            out.push(Token {
+                span: Span::new(off, off + line.trim_end().len()),
+                kind: TokenKind::BlockMacro,
             });
             continue;
         }

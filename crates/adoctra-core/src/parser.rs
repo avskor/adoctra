@@ -44,6 +44,45 @@ pub(crate) struct PendingTitle {
     pub origin: Option<Span>,
 }
 
+/// The metadata fields of a block macro's attribute list: Ruby merges them
+/// into the block attributes over the preceding metadata lines.
+#[derive(Default)]
+pub(crate) struct MacroMeta {
+    pub id: Option<String>,
+    pub roles: Option<Vec<String>>,
+    pub title: Option<PendingTitle>,
+    pub named: Vec<(String, String)>,
+}
+
+/// Ruby's `BlockTocMacroRx` (`^toc::\[(.+)?\]$`). Like its
+/// `parse_attributes` without `sub_input`, the list gets no substitutions;
+/// positional fields have no meaning for this macro.
+pub(crate) fn parse_toc_macro(line: &str, off: usize) -> Option<MacroMeta> {
+    let inner = line.strip_prefix("toc::[")?.strip_suffix(']')?;
+    let base = off + "toc::[".len();
+    let mut meta = MacroMeta::default();
+    for field in crate::attribute_list::parse(inner) {
+        let (Some(name), Some(text)) = (field.name.clone(), field.text(inner)) else {
+            continue;
+        };
+        match &inner[name] {
+            "id" => meta.id = Some(text),
+            "role" => meta.roles = Some(text.split_whitespace().map(str::to_owned).collect()),
+            "title" => {
+                let range = field.value.clone().unwrap();
+                let exact = inner[range.clone()] == text;
+                meta.title = Some(PendingTitle {
+                    text,
+                    base: base + range.start,
+                    origin: (!exact).then(|| Span::new(base + range.start, base + range.end)),
+                });
+            }
+            name => meta.named.push((name.to_owned(), text)),
+        }
+    }
+    Some(meta)
+}
+
 pub fn parse_with_options(source: &str, options: &ParseOptions) -> ParseResult {
     parse_reader(options, Reader::new(source)).0
 }
@@ -224,6 +263,18 @@ fn collect_blocks(
             let reftext = context.section_reftext.take().or(pending.reftext);
             block.roles = pending.roles;
             let mut title = pending.title;
+            let macro_meta = context.block_macro.take();
+            if let Some(meta) = &macro_meta {
+                if let Some(id) = &meta.id {
+                    block.id = Some(id.clone());
+                }
+                if let Some(roles) = &meta.roles {
+                    block.roles.clone_from(roles);
+                }
+                if meta.title.is_some() {
+                    title.clone_from(&meta.title);
+                }
+            }
             if matches!(block.kind, BlockKind::Heading { .. }) {
                 // Ruby keeps a block title for the next content block rather
                 // than a section; a discrete heading discards it.
@@ -239,6 +290,9 @@ fn collect_blocks(
                 }]
             });
             block.attrs = pending.attrs;
+            if let Some(meta) = macro_meta {
+                block.attrs.named.extend(meta.named);
+            }
             let attributes = inline_attributes(&context.render_attributes(), Some(&block.attrs));
             apply_style_fixup(&mut block, lines, &attributes, &pending.list, context);
             if let Some(value) = reftext {
@@ -1120,6 +1174,17 @@ fn parse_block_content(
         return Some(block);
     }
 
+    // The `toc::[]` block macro, recognized at a block start whatever the
+    // style; its brackets supply metadata.
+    if let Some(meta) = parse_toc_macro(trimmed, off) {
+        context.block_macro = Some(meta);
+        *i += 1;
+        return Some(Block::new(
+            Span::new(off, off + trimmed.len()),
+            BlockKind::Toc,
+        ));
+    }
+
     // Listing block (verbatim, fenced by `----`).
     if trimmed.trim() == "----" {
         let start = off;
@@ -1651,6 +1716,11 @@ fn parse_list(
                         ) {
                             if let Some(value) = context.section_reftext.take() {
                                 context.attach_reftext(&mut b, value);
+                            }
+                            if let Some(meta) = context.block_macro.take() {
+                                b.id = meta.id;
+                                b.roles = meta.roles.unwrap_or_default();
+                                b.attrs.named.extend(meta.named);
                             }
                             item_end = b.span.end;
                             blocks.push(b);

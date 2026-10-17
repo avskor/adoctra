@@ -287,8 +287,59 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
     } else if !has_declarations {
         Arc::make_mut(&mut context.attributes).set("authorcount", "0");
     }
+    save_toc(Arc::make_mut(&mut context.attributes));
     context.quote_compat = context.attributes.get("compat-mode").is_some();
     result
+}
+
+/// Ruby's `save_attributes` at header completion: a `toc` value (or `toc2`)
+/// names the TOC position. Derived values bypass locks, as in Ruby.
+fn save_toc(attributes: &mut crate::Attributes) {
+    let toc = match attributes.remove("toc2") {
+        Some(_) => "left".to_string(),
+        None => match attributes.get("toc") {
+            Some(toc) => toc.to_owned(),
+            None => return,
+        },
+    };
+    let position = match attributes.get("toc-placement").unwrap_or("macro") {
+        "auto" => attributes
+            .get("toc-position")
+            .unwrap_or_default()
+            .to_owned(),
+        placement => placement.to_owned(),
+    };
+    if toc.is_empty() && position.is_empty() {
+        return;
+    }
+    let position = match (position.is_empty(), toc.is_empty()) {
+        (false, _) => position,
+        (true, true) => "left".to_string(),
+        (true, false) => toc,
+    };
+    attributes.set("toc", "");
+    attributes.set("toc-placement", "auto");
+    let side = match position.as_str() {
+        "left" | "<" | "&lt;" => Some("left"),
+        "right" | ">" | "&gt;" => Some("right"),
+        "top" | "^" => Some("top"),
+        "bottom" | "v" => Some("bottom"),
+        "preamble" | "macro" => {
+            attributes.set("toc-position", "content");
+            attributes.set("toc-placement", position.as_str());
+            None
+        }
+        _ => {
+            attributes.remove("toc-position");
+            None
+        }
+    };
+    if let Some(side) = side {
+        attributes.set("toc-position", side);
+        if attributes.get("toc-class").is_none() {
+            attributes.set("toc-class", "toc2");
+        }
+    }
 }
 
 /// Asciidoctor's setext_section_title?: character lengths, not byte lengths.

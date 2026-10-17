@@ -180,6 +180,18 @@ fn write_block(block: &Block, s: &mut String) {
             escape_into(text, s);
             s.push('}');
         }
+        BlockKind::Toc => {
+            // The `toc::[]` macro; consumers build the outline from sections.
+            s.push_str("{\"name\":\"toc\",");
+            write_id(&block.id, s);
+            write_roles(&block.roles, s);
+            write_style(&block.attrs.style, s);
+            write_attributes(&block.attrs.named, s);
+            write_options(&block.attrs.options, s);
+            write_title(&block.title, s);
+            write_caption(&block.caption, s);
+            s.push('}');
+        }
         BlockKind::List { ordered, items } => {
             s.push_str(&format!("{{\"name\":\"list\",\"ordered\":{ordered},"));
             write_id(&block.id, s);

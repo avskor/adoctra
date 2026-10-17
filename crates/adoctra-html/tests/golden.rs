@@ -240,9 +240,9 @@ fn normalize_container(s: &str, strip_p: bool) -> String {
         match name {
             // Structural wrappers — drop them. `figure`/`figcaption` are adoctra's
             // quote/verse wrappers (asciidoctor uses `div`s), `aside` is adoctra's
-            // sidebar wrapper and `section` its section wrapper (asciidoctor
-            // `div`s), so both collapse alike.
-            "div" | "figure" | "figcaption" | "aside" | "section" => {}
+            // sidebar wrapper, `section` its section wrapper and `nav` its TOC
+            // (asciidoctor `div`s), so both collapse alike.
+            "div" | "figure" | "figcaption" | "aside" | "section" | "nav" => {}
             "p" if strip_p => {} // admonition/quote body paragraph wrapper — drop it
             "pre" if !inner.starts_with('/') => out.push_str("<pre>"),
             _ => out.push_str(tag),
@@ -588,6 +588,40 @@ fn html_open_blocks_match_asciidoctor() {
             "HTML open-block content diverges from asciidoctor for `{name}`"
         );
     }
+}
+
+/// The whole body with structural wrappers removed: the TOC lists, headings
+/// and paragraphs in order. Fixtures have no document title (asciidoctor's
+/// reference omits it), so both sides start with the same content.
+fn toc_body(html: &str) -> String {
+    let body = html.split("<body>").nth(1).unwrap_or(html);
+    let body = body.split("</body>").next().unwrap_or(body);
+    normalize_container(body, false)
+}
+
+#[test]
+fn html_tocs_match_asciidoctor() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/toc");
+    let mut checked = 0usize;
+    for entry in fs::read_dir(&dir).expect("golden/toc dir is missing") {
+        let path = entry.unwrap().path();
+        if path.extension().and_then(|e| e.to_str()) != Some("adoc") {
+            continue;
+        }
+        let expected_path = path.with_extension("expected.html");
+        let name = path.file_stem().unwrap().to_string_lossy().into_owned();
+        let adoc = fs::read_to_string(&path).unwrap();
+        let expected = fs::read_to_string(&expected_path).unwrap();
+        let doc = adoctra_core::parse(&adoc).document;
+        let ours = String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap();
+        assert_eq!(
+            toc_body(&ours),
+            toc_body(&expected),
+            "HTML TOC diverges from asciidoctor for `{name}`"
+        );
+        checked += 1;
+    }
+    assert!(checked > 0, "no golden fixtures found in {dir:?}");
 }
 
 #[test]

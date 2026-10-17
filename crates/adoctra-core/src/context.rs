@@ -93,6 +93,9 @@ pub(crate) struct ParseContext {
     /// A section-title anchor's reftext, handed from the heading parser to
     /// block completion.
     pub section_reftext: Option<crate::reftext::Read>,
+    /// Metadata from a block macro's brackets (`toc::[id=…]`), handed from the
+    /// block parser to block completion, where it replaces the block's own.
+    pub(crate) block_macro: Option<crate::parser::MacroMeta>,
     /// `outfilesuffix` pinned when the header is complete (Ruby's
     /// `Document#outfilesuffix`), for interdocument references.
     outfilesuffix: Option<String>,
@@ -112,6 +115,9 @@ impl ParseContext {
         ] {
             attributes.set(format!("{name}-refsig"), value);
         }
+        // Ruby's DEFAULT_ATTRIBUTES for the table of contents.
+        attributes.set("toc-placement", "auto");
+        attributes.set("toc-title", "Table of Contents");
         // The HTML converter's suffix, set before the header (Ruby's init).
         attributes.set("outfilesuffix", ".html");
         for kind in [
@@ -154,6 +160,7 @@ impl ParseContext {
             open_sections: Vec::new(),
             definitions: Vec::new(),
             section_reftext: None,
+            block_macro: None,
             outfilesuffix: None,
         }
     }

@@ -444,6 +444,20 @@ it without sections; header `preface-title` is the book preamble's `Block.title`
 (raw source Text, empty span at the preamble start, never rendered in HTML;
 JSON/WASM export preamble `title`). Ruby's simple `[open]` paragraph (text without
 `<p>`) remains an XFAIL. Manpage synopsis is not implemented.
+**TOC**: built-in `toc-placement=auto`/`toc-title`; header.rs save_toc normalizes
+`toc`/`toc2` at header completion like Ruby's save_attributes (toc → "",
+toc-position left/right/top/bottom with toc-class toc2, or content with placement
+preamble/macro; explicit toc-position/placement wins; unset placement = macro;
+bypasses locks; body entries untouched). `BlockKind::Toc` is the `toc::[…]` block
+macro (parse_toc_macro, any style, text inside a paragraph): AttributeList fields
+without subs; id/role/title replace metadata via ParseContext.block_macro, other
+named fields (levels) go to attrs.named. JSON/WASM `name:"toc"`, token
+`block-macro`. HTML builds the outline from Section blocks (Cx carries the
+document): `<nav id="toc" class="toc">` after the title (header attrs, placement
+not macro/preamble, document has sections), at the preamble end (`toc-class`), or
+at the macro (its attribute_context; else `<!-- toc disabled -->`). Entries are
+heading caption + inlines with every `<a>` tag dropped (DropAnchorRx), nested
+while level < toclevels/levels (Ruby to_i). The DOM profile maps nav to div.
 Xref labels: resolve::register builds the registry after reading (auto ids,
 block ids, cataloged anchors in source order); body_subs Execution resolves each
 textless xref after its field's subs, like Ruby's xreftext:
@@ -889,7 +903,7 @@ counter increments; a custom per-block `caption=` or document `caption` override
 the prefix without incrementing the counter. Also: **indented/offset
 literal** (leading-space lines) and delimiters longer than four chars (the same
 single-length limitation applies to `====`/`____`: a nested same-length `====` /
-`____` closes the outer block); **anchors on individual list items**, TOC generation,
+`____` closes the outer block); **anchors on individual list items**,
 incremental/block reparse, and a pull/event API over the AST.
 
 When asked to "add a feature," check this list first and say plainly whether it

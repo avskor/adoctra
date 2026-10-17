@@ -461,9 +461,16 @@ pub enum BlockKind {
     /// the end of the last nested block.
     Section { level: u8, blocks: Vec<Block> },
     /// asciidoctor's preamble: the blocks between a document header and the first
-    /// section. Present only when the document has a title and at least one
-    /// section; otherwise those blocks stay at the top level.
+    /// section. Present when the document has a title and at least one section
+    /// (a book keeps it without sections, and opens one without a header unless
+    /// it starts with an abstract); otherwise those blocks stay at the top level.
     Preamble { blocks: Vec<Block> },
+    /// The `toc::[]` block macro (Ruby's `:toc` block): where the table of
+    /// contents goes when `toc-placement` is `macro`. Its named attributes
+    /// (`levels`, …) are in [`Block::attrs`]; `id`, `role` and `title` from the
+    /// macro's brackets replace the block's metadata. Backends build the outline
+    /// from the document's sections.
+    Toc,
 }
 
 /// One item of a [`BlockKind::List`]: its resolved inline content (the

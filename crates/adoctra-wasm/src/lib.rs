@@ -279,6 +279,17 @@ fn write_block(b: &Block, s: &mut String) {
             s.push_str(",\"text\":");
             write_str(text, s);
         }
+        BlockKind::Toc => {
+            // The `toc::[]` macro; the editor builds the outline from sections.
+            s.push_str("\"name\":\"toc\",");
+            write_id(&b.id, s);
+            write_roles(&b.roles, s);
+            write_style(&b.attrs.style, s);
+            write_attributes(&b.attrs.named, s);
+            write_options(&b.attrs.options, s);
+            write_title(&b.title, s);
+            write_caption(&b.caption, s);
+        }
         BlockKind::List { ordered, items } => {
             s.push_str(&format!("\"name\":\"list\",\"ordered\":{ordered},"));
             write_id(&b.id, s);
@@ -2268,6 +2279,22 @@ mod header_tests {
         );
         let tokens = super::tokens_json_with_source(source, 7);
         assert_eq!(tokens.matches(r#""kind":"heading""#).count(), 2, "{tokens}");
+    }
+
+    #[test]
+    fn toc_macro_keeps_its_span_and_block_macro_token() {
+        let source = "= D\n:toc: macro\n\ntoc::[levels=1]\n\n== A";
+        let json = super::parse_json_with_source(source, 2);
+        assert!(
+            json.contains(r#"{"span":{"source_id":2,"start":17,"end":32},"name":"toc","id":null,"roles":[],"style":null,"attributes":{"levels":"1"},"options":[],"title":null,"caption":null}"#),
+            "{json}"
+        );
+        assert!(json.contains(r#""toc-placement":"macro""#), "{json}");
+        let tokens = super::tokens_json_with_source(source, 2);
+        assert!(
+            tokens.contains(r#"{"span":{"source_id":2,"start":17,"end":32},"kind":"block-macro"}"#),
+            "{tokens}"
+        );
     }
 
     #[test]

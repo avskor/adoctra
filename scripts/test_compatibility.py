@@ -60,6 +60,16 @@ class ProjectionTests(unittest.TestCase):
         self.assertNotEqual(projection(ours), projection(ours.replace(' id="preamble"', '')))
         self.assertNotEqual(projection(ours), projection(ours.replace('sect1 r', 'sect1')))
 
+    def test_toc_nav_is_ruby_toc_div(self):
+        ruby = ('<div id="toc" class="toc"><div id="toctitle">T</div><ul class="sectlevel1">'
+                '<li><a href="#_a">A</a></li></ul></div>')
+        ours = ('<nav id="toc" class="toc"><div id="toctitle">T</div><ul class="sectlevel1">'
+                '<li><a href="#_a">A</a></li></ul></nav>')
+        self.assertEqual(projection(ruby), projection(ours))
+        # Its id, class and title remain observable.
+        self.assertNotEqual(projection(ours), projection(ours.replace('class="toc"', 'class="toc2"')))
+        self.assertNotEqual(projection(ours), projection(ours.replace('>T<', '><')))
+
     def test_full_document_head_is_outside_body_profile(self):
         self.assertEqual(projection('<html><head><style>p {color:red}</style></head><body><p>one</p></body></html>'),
                          projection('<p>one</p>'))

@@ -32,34 +32,83 @@ impl Backend for HtmlBackend {
         out.push_str("<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"utf-8\">\n<style>\n");
         out.push_str(STYLESHEET);
         out.push_str("</style>\n</head>\n<body>\n");
-        let book = doc.attributes.get("doctype") == Some("book");
+        let cx = Cx {
+            doc,
+            book: doc.attributes.get("doctype") == Some("book"),
+        };
+        let attributes = &doc.attributes;
+        // Ruby's embedded document puts an automatic TOC after the title. Like
+        // its converter, every TOC reads the header attributes except the
+        // `toc::[]` macro, which reads them at its position.
+        let auto_toc = cx.has_sections()
+            && attributes.get("toc").is_some()
+            && !matches!(attributes.get("toc-placement"), Some("macro" | "preamble"));
+        let title = usize::from(doc.has_title);
         for (i, block) in doc.blocks.iter().enumerate() {
+            if i == title && auto_toc {
+                render_toc(&cx, attributes, "toc", None, None, &mut out);
+            }
             match &block.kind {
                 BlockKind::Heading { level, inlines } if i == 0 && doc.has_title => {
                     render_heading(block, *level, inlines, false, &block.roles, &mut out);
                 }
                 // Like Ruby, a partintro renders only as a child of a book part.
-                BlockKind::Section { level: 0, blocks } if book => {
+                BlockKind::Section { level: 0, blocks } if cx.book => {
                     for child in blocks {
                         match &child.kind {
                             BlockKind::Open { blocks } if is_style(child, "partintro") => {
-                                render_open(child, blocks, &mut out)
+                                render_open(child, blocks, &cx, &mut out)
                             }
-                            _ => render_block(child, &mut out),
+                            _ => render_block(child, &cx, &mut out),
                         }
                     }
                 }
                 // Ruby excludes an abstract directly in a book (no preamble).
-                BlockKind::Open { .. } if book && is_style(block, "abstract") => {}
-                _ => render_block(block, &mut out),
+                BlockKind::Open { .. } if cx.book && is_style(block, "abstract") => {}
+                // asciidoctor's `<div id="preamble">` (without its `sectionbody`),
+                // ending with the TOC when `toc-placement` is `preamble`.
+                BlockKind::Preamble { blocks } => {
+                    out.push_str("<section id=\"preamble\">\n");
+                    for child in blocks {
+                        render_block(child, &cx, &mut out);
+                    }
+                    if cx.has_sections()
+                        && attributes.get("toc").is_some()
+                        && attributes.get("toc-placement") == Some("preamble")
+                    {
+                        let class = attributes.get("toc-class").unwrap_or("toc");
+                        render_toc(&cx, attributes, class, None, None, &mut out);
+                    }
+                    out.push_str("</section>\n");
+                }
+                _ => render_block(block, &cx, &mut out),
             }
+        }
+        if doc.blocks.len() == title && auto_toc {
+            render_toc(&cx, attributes, "toc", None, None, &mut out);
         }
         out.push_str("</body>\n</html>\n");
         Ok(out.into_bytes())
     }
 }
 
-fn render_block(block: &Block, out: &mut String) {
+/// What a block needs from its document while rendering.
+struct Cx<'a> {
+    doc: &'a Document,
+    book: bool,
+}
+
+impl Cx<'_> {
+    /// Ruby's `Document#sections?`.
+    fn has_sections(&self) -> bool {
+        self.doc
+            .blocks
+            .iter()
+            .any(|block| matches!(block.kind, BlockKind::Section { .. }))
+    }
+}
+
+fn render_block(block: &Block, cx: &Cx, out: &mut String) {
     // A block's anchor (an explicit `[[id]]`/`[#id]` or a section's auto-generated
     // id) renders as an `id` attribute on the block's element; `None` → none.
     // `[.role]` shorthand roles render as a `class` (appended to any base class
@@ -140,7 +189,7 @@ fn render_block(block: &Block, out: &mut String) {
                 // keeping the principal text from running into the block's text.
                 for child in &item.blocks {
                     out.push('\n');
-                    render_block(child, out);
+                    render_block(child, cx, out);
                 }
                 out.push_str("</li>\n");
             }
@@ -177,7 +226,7 @@ fn render_block(block: &Block, out: &mut String) {
             // asciidoctor places it in the content cell.
             render_title(&block.title, &block.caption, out);
             for child in blocks {
-                render_block(child, out);
+                render_block(child, cx, out);
             }
             out.push_str("</aside>\n");
         }
@@ -190,7 +239,7 @@ fn render_block(block: &Block, out: &mut String) {
             out.push_str(&format!("<div{class}{id}>\n"));
             render_title(&block.title, &block.caption, out);
             for child in blocks {
-                render_block(child, out);
+                render_block(child, cx, out);
             }
             out.push_str("</div>\n");
         }
@@ -204,7 +253,7 @@ fn render_block(block: &Block, out: &mut String) {
             out.push_str(&format!("<aside{class}{id}>\n"));
             render_title(&block.title, &block.caption, out);
             for child in blocks {
-                render_block(child, out);
+                render_block(child, cx, out);
             }
             out.push_str("</aside>\n");
         }
@@ -223,7 +272,7 @@ fn render_block(block: &Block, out: &mut String) {
             render_title(&block.title, &block.caption, out);
             out.push_str("<blockquote>\n");
             for child in blocks {
-                render_block(child, out);
+                render_block(child, cx, out);
             }
             out.push_str("</blockquote>\n");
             render_attribution(attribution, out);
@@ -250,7 +299,7 @@ fn render_block(block: &Block, out: &mut String) {
             // Like Ruby, a level-0 section (a part) has no wrapper: its `sect0`
             // title (carrying the roles) is followed by its content.
             for child in blocks {
-                render_block(child, out);
+                render_block(child, cx, out);
             }
         }
         BlockKind::Section { level, blocks } => {
@@ -268,7 +317,7 @@ fn render_block(block: &Block, out: &mut String) {
                 render_heading(heading, *level, inlines, true, &[], out);
             }
             for child in content {
-                render_block(child, out);
+                render_block(child, cx, out);
             }
             out.push_str("</section>\n");
         }
@@ -276,7 +325,7 @@ fn render_block(block: &Block, out: &mut String) {
             // asciidoctor's `<div id="preamble">` (without its `sectionbody`).
             out.push_str("<section id=\"preamble\">\n");
             for child in blocks {
-                render_block(child, out);
+                render_block(child, cx, out);
             }
             out.push_str("</section>\n");
         }
@@ -290,11 +339,163 @@ fn render_block(block: &Block, out: &mut String) {
             render_title(&block.title, &block.caption, out);
             out.push_str("<blockquote>\n");
             for child in blocks {
-                render_block(child, out);
+                render_block(child, cx, out);
             }
             out.push_str("</blockquote>\n</figure>\n");
         }
-        BlockKind::Open { blocks } => render_open(block, blocks, out),
+        BlockKind::Open { blocks } => render_open(block, blocks, cx, out),
+        BlockKind::Toc => {
+            // Ruby's `convert_toc`: only with `toc-placement` macro (the header
+            // value `:toc: macro`), at the attributes of its position.
+            let attributes = &block.attribute_context;
+            if attributes.get("toc-placement") != Some("macro")
+                || !cx.has_sections()
+                || attributes.get("toc").is_none()
+            {
+                out.push_str("<!-- toc disabled -->\n");
+                return;
+            }
+            let role = block.roles.join(" ");
+            let class = if role.is_empty() {
+                attributes.get("toc-class").unwrap_or("toc")
+            } else {
+                role.as_str()
+            };
+            let levels = block.attrs.named.get("levels").map(|v| ruby_to_i(v));
+            let id = block.id.as_deref().unwrap_or("toc");
+            let title = block.title.as_deref().map(|title| {
+                let mut html = String::new();
+                render_inlines(title, &mut html);
+                html
+            });
+            render_toc(cx, attributes, class, Some((id, title)), levels, out);
+        }
+    }
+}
+
+/// A table of contents: Ruby's automatic/preamble TOC (`macro` is `None`) or
+/// the `toc::[]` block (its id and converted title). adoctra uses a `<nav>`
+/// where Ruby uses a `<div>`.
+fn render_toc(
+    cx: &Cx,
+    attributes: &adoctra_core::Attributes,
+    class: &str,
+    macro_: Option<(&str, Option<String>)>,
+    levels: Option<i64>,
+    out: &mut String,
+) {
+    let (id, title_attrs, title) = match macro_ {
+        Some((id, title)) => (
+            id,
+            format!(" id=\"{}title\" class=\"title\"", escape(id)),
+            title,
+        ),
+        None => ("toc", " id=\"toctitle\"".to_string(), None),
+    };
+    out.push_str(&format!(
+        "<nav id=\"{}\" class=\"{}\">\n<div{title_attrs}>",
+        escape(id),
+        escape(class)
+    ));
+    match title {
+        Some(title) => out.push_str(&title),
+        None => match attributes.raw_parts("toc-title") {
+            Some(parts) => render_parts(parts, out),
+            None => out.push_str(&escape_text(
+                attributes.get("toc-title").unwrap_or_default(),
+            )),
+        },
+    }
+    out.push_str("</div>\n");
+    let levels = levels.unwrap_or_else(|| attributes.get("toclevels").map_or(2, ruby_to_i));
+    render_outline(&cx.doc.blocks, levels, out);
+    out.push_str("</nav>\n");
+}
+
+/// Ruby's `convert_outline`: a `sectlevelN` list of links to the sections
+/// among `blocks`, nested while a section's level is below `toclevels`.
+/// Entry text is the heading's number caption and title with every `<a>` tag
+/// removed (Ruby's `DropAnchorRx`). Returns whether there were sections.
+fn render_outline(blocks: &[Block], toclevels: i64, out: &mut String) -> bool {
+    let mut sections = blocks.iter().filter_map(|block| match &block.kind {
+        BlockKind::Section { level, blocks } => Some((*level, blocks)),
+        _ => None,
+    });
+    let Some((first, _)) = sections.clone().next() else {
+        return false;
+    };
+    out.push_str(&format!("<ul class=\"sectlevel{first}\">\n"));
+    for (level, blocks) in sections.by_ref() {
+        let heading = &blocks[0];
+        let mut title = String::new();
+        if let Some(caption) = &heading.caption {
+            title.push_str(&escape(caption));
+        }
+        if let BlockKind::Heading { inlines, .. } = &heading.kind {
+            render_inlines(inlines, &mut title);
+        }
+        let href = escape(heading.id.as_deref().unwrap_or_default());
+        out.push_str(&format!(
+            "<li><a href=\"#{href}\">{}</a>",
+            drop_anchors(&title)
+        ));
+        let mut children = String::new();
+        if i64::from(level) < toclevels && render_outline(&blocks[1..], toclevels, &mut children) {
+            out.push('\n');
+            out.push_str(&children);
+        }
+        out.push_str("</li>\n");
+    }
+    out.push_str("</ul>\n");
+    true
+}
+
+/// Remove `<a …>` and `</a>` tags, keeping their content, like Ruby's
+/// `DropAnchorRx` (`<(?:a\b[^>]*|/a)>`).
+fn drop_anchors(html: &str) -> String {
+    let mut out = String::with_capacity(html.len());
+    let mut rest = html;
+    while let Some(at) = rest.find('<') {
+        out.push_str(&rest[..at]);
+        let tag = &rest[at + 1..];
+        let open = tag.strip_prefix('a').filter(|after| {
+            !after
+                .chars()
+                .next()
+                .is_some_and(|c| c.is_alphanumeric() || c == '_')
+        });
+        let end = match (open, tag.starts_with("/a>")) {
+            (Some(after), _) => after.find('>').map(|i| at + 2 + i + 1),
+            (None, true) => Some(at + 4),
+            _ => None,
+        };
+        match end {
+            Some(end) => rest = &rest[end..],
+            None => {
+                out.push('<');
+                rest = &rest[at + 1..];
+            }
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
+/// Ruby's `String#to_i`: an optional sign and leading digits, else 0.
+fn ruby_to_i(value: &str) -> i64 {
+    let value = value.trim_start();
+    let (sign, digits) = match value.as_bytes().first() {
+        Some(b'-') => (-1, &value[1..]),
+        Some(b'+') => (1, &value[1..]),
+        _ => (1, value),
+    };
+    let end = digits
+        .find(|c: char| !c.is_ascii_digit())
+        .unwrap_or(digits.len());
+    match digits[..end].parse::<i64>() {
+        Ok(n) => sign * n,
+        Err(_) if end > 0 => sign * i64::MAX,
+        Err(_) => 0,
     }
 }
 
@@ -309,7 +510,7 @@ fn is_style(block: &Block, style: &str) -> bool {
 /// id/roles, with the `.Title` and children rendered straight inside. A
 /// *container* style on a `--` block masquerades it into another kind in the
 /// parser; any other style (`partintro`, an unknown one) is a class, as in Ruby.
-fn render_open(block: &Block, blocks: &[Block], out: &mut String) {
+fn render_open(block: &Block, blocks: &[Block], cx: &Cx, out: &mut String) {
     let style = block
         .attrs
         .style
@@ -320,7 +521,7 @@ fn render_open(block: &Block, blocks: &[Block], out: &mut String) {
     out.push_str(&format!("<div{class}{}>\n", id_attr(&block.id)));
     render_title(&block.title, &block.caption, out);
     for child in blocks {
-        render_block(child, out);
+        render_block(child, cx, out);
     }
     out.push_str("</div>\n");
 }
@@ -1933,6 +2134,92 @@ mod tests {
             "{html}"
         );
         assert!(html.contains(r#"<h2 id="_c">1. C</h2>"#), "{html}");
+    }
+
+    fn body(html: &str) -> &str {
+        html.split("<body>\n").nth(1).unwrap()
+    }
+
+    #[test]
+    fn automatic_toc_follows_the_title_and_nests_to_toclevels() {
+        let html = render("= Doc\n:toc:\n\nPre\n\n== A *b* [[x]]\n\n=== A1\n\n==== A11\n\n== B link:http://x[L] anchor:q[]");
+        assert!(
+            body(&html).starts_with(
+                "<h1>Doc</h1>\n<nav id=\"toc\" class=\"toc\">\n<div id=\"toctitle\">Table of Contents</div>\n<ul class=\"sectlevel1\">\n<li><a href=\"#x\">A <strong>b</strong></a>\n<ul class=\"sectlevel2\">\n<li><a href=\"#_a1\">A1</a></li>\n</ul>\n</li>\n<li><a href=\"#_b_l\">B L </a></li>\n</ul>\n</nav>\n<section id=\"preamble\">"
+            ),
+            "{html}"
+        );
+        // Without a title the TOC comes first; numbers and appendix captions
+        // precede the titles, and toclevels deepens the outline.
+        let html = render(":toc: left\n:toclevels: 3\n:sectnums:\n:toc-title: Содержание & co\n\n== A\n\n=== A1\n\n==== A11\n\n[appendix]\n== App");
+        assert!(
+            body(&html).starts_with("<nav id=\"toc\" class=\"toc\">\n<div id=\"toctitle\">Содержание &amp; co</div>\n<ul class=\"sectlevel1\">\n<li><a href=\"#_a\">1. A</a>\n<ul class=\"sectlevel2\">\n<li><a href=\"#_a1\">1.1. A1</a>\n<ul class=\"sectlevel3\">\n<li><a href=\"#_a11\">1.1.1. A11</a></li>"),
+            "{html}"
+        );
+        assert!(
+            html.contains("<li><a href=\"#_app\">Appendix A: App</a></li>"),
+            "{html}"
+        );
+        // A book outline starts at its parts.
+        let html = render("= B\n:doctype: book\n:toc:\n:toclevels: 1\n\n= P\n\n== C\n\n=== S");
+        assert!(
+            html.contains("<ul class=\"sectlevel0\">\n<li><a href=\"#_p\">P</a>\n<ul class=\"sectlevel1\">\n<li><a href=\"#_c\">C</a></li>\n</ul>\n</li>\n</ul>"),
+            "{html}"
+        );
+        // No sections, no TOC; a body `:toc:` does not enable it.
+        assert!(!body(&render("= D\n:toc:\n\ntext")).contains("<nav"));
+        assert!(!body(&render("= D\n\n:toc:\n\n== A")).contains("<nav"));
+    }
+
+    #[test]
+    fn preamble_toc_closes_the_preamble() {
+        let html = render("= D\n:toc: preamble\n:toc-class: side\n\nPre\n\n== A");
+        assert!(
+            html.contains("<section id=\"preamble\">\n<p>Pre</p>\n<nav id=\"toc\" class=\"side\">\n<div id=\"toctitle\">Table of Contents</div>\n<ul class=\"sectlevel1\">\n<li><a href=\"#_a\">A</a></li>\n</ul>\n</nav>\n</section>"),
+            "{html}"
+        );
+        // Without a preamble there is no TOC at all.
+        assert!(!body(&render("= D\n:toc: preamble\n\n== A")).contains("<nav"));
+    }
+
+    #[test]
+    fn toc_macro_renders_at_its_position_only_with_macro_placement() {
+        let html = render("= D\n:toc: macro\n:toc-class: tc\n\n====\n.Contents *x*\ntoc::[levels=1]\n====\n\n[[t2]]\ntoc::[role=side,title=Second]\n\n== A\n\n=== B");
+        assert!(
+            html.contains("<div class=\"exampleblock\">\n<nav id=\"toc\" class=\"tc\">\n<div id=\"toctitle\" class=\"title\">Contents <strong>x</strong></div>\n<ul class=\"sectlevel1\">\n<li><a href=\"#_a\">A</a></li>\n</ul>\n</nav>\n</div>"),
+            "{html}"
+        );
+        assert!(
+            html.contains("<nav id=\"t2\" class=\"side\">\n<div id=\"t2title\" class=\"title\">Second</div>\n<ul class=\"sectlevel1\">\n<li><a href=\"#_a\">A</a>\n<ul class=\"sectlevel2\">"),
+            "{html}"
+        );
+        // Any other placement disables the macro (and keeps the automatic TOC).
+        let html = render("= D\n:toc:\n\ntoc::[]\n\n== A");
+        assert_eq!(body(&html).matches("<nav").count(), 1, "{html}");
+        assert!(html.contains("<!-- toc disabled -->"), "{html}");
+        assert!(render("= D\n\ntoc::[]\n\n== A").contains("<!-- toc disabled -->"));
+        assert!(render("= D\n:toc: macro\n\ntoc::[]").contains("<!-- toc disabled -->"));
+    }
+
+    #[test]
+    fn toc_helpers_follow_ruby() {
+        assert_eq!(
+            drop_anchors(
+                "<a id=\"x\"></a>A <a href=\"#y\" class=\"bare\">y</a> <abbr>z</abbr> <a>w</a> <b"
+            ),
+            "A y <abbr>z</abbr> w <b"
+        );
+        for (value, expected) in [
+            ("3", 3),
+            (" 2x", 2),
+            ("-1", -1),
+            ("+4", 4),
+            ("x", 0),
+            ("", 0),
+        ] {
+            assert_eq!(ruby_to_i(value), expected, "{value}");
+        }
+        assert_eq!(ruby_to_i("99999999999999999999"), i64::MAX);
     }
 
     #[test]
