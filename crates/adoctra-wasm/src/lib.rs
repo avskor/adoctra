@@ -951,6 +951,8 @@ fn write_inlines(inlines: &[Inline], s: &mut String) {
                 s.push_str("\"name\":\"image\",");
                 adoctra_core::json::write_inline_image(image, s);
             }
+            // A keyboard, button or menu macro with its label parts.
+            Inline::Ui { ui, .. } => adoctra_core::json::write_ui(ui, "name", s),
             // A footnote marker; definitions carry their content parts.
             Inline::Footnote { footnote, .. } => {
                 s.push_str("\"name\":\"footnote\",");
@@ -2601,6 +2603,24 @@ mod header_tests {
             tokens.contains(r#"{"span":{"source_id":3,"start":3,"end":5},"kind":"list-marker"}"#),
             "{tokens}"
         );
+    }
+
+    #[test]
+    fn ui_macros_export_spans_and_inline_macro_tokens() {
+        let source = ":experimental:\n\nA kbd:[B] btn:[C] \"D > E\"";
+        let json = super::parse_json_with_source(source, 3);
+        assert!(json.contains(r#"{"span":{"source_id":3,"start":18,"end":25},"name":"kbd","keys":[[{"kind":"text","value":"B"}]]}"#), "{json}");
+        assert!(json.contains(r#"{"span":{"source_id":3,"start":26,"end":33},"name":"button","parts":[{"kind":"text","value":"C"}]}"#), "{json}");
+        assert!(json.contains(r#"{"span":{"source_id":3,"start":34,"end":41},"name":"menu","menu":[{"kind":"text","value":"D"}],"submenus":[],"item":[{"kind":"text","value":"E"}],"font":false}"#), "{json}");
+        let tokens = super::tokens_json_with_source(source, 3);
+        for span in ["18,\"end\":25", "26,\"end\":33", "34,\"end\":41"] {
+            assert!(
+                tokens.contains(&format!(
+                    "{{\"span\":{{\"source_id\":3,\"start\":{span}}},\"kind\":\"inline-macro\"}}"
+                )),
+                "{tokens}"
+            );
+        }
     }
 
     #[test]

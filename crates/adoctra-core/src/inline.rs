@@ -86,6 +86,12 @@ pub(crate) fn scan_for_tokens(src: &str, base: usize, attrs: &Attributes) -> Vec
             span,
         });
     }
+    for span in matches.ui {
+        syntax.push(Inline::Ui {
+            ui: crate::UiMacro::Button { label: Vec::new() },
+            span,
+        });
+    }
     for span in matches.images {
         syntax.push(Inline::Image {
             image: Default::default(),

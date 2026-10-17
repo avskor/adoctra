@@ -613,6 +613,20 @@ Ruby's icon/text columns (`ol.colist.icons`), so it looks like Ruby's table
 (checked with screenshots); conum styles follow Asciidoctor's default
 stylesheet. JSON/WASM `callouts` and `colist` with `coids`; tokens `callout`
 (from AST) and `list-marker`.
+**UI macros** (only with `experimental` at the substitution point):
+attribute_macros.rs apply_ui runs first in the macros stage (before images,
+also in pass:m and link parameter passes) Ruby's InlineKbdBtnMacroRx, then
+InlineMenuMacroRx, then the `"File > Save"` InlineMenuRx shorthand, each over
+the previous pass's lexical result. `UiMacro::Keyboard { keys }` (`\]`
+unescaped, strip, split at the first `,`/`+` after the first char, a trailing
+delimiter is itself the last key), `Button { label }` (normalize_text), `Menu {
+menu, submenus, item, font }` (items split at `&gt;` else `,` with Ruby's split
+dropping trailing empties; `menu:X[]` → item None = menuref; `font` = `icons`
+is `font` at the macro, picks the caret). Labels keep lexical parts. Source-owned
+`Inline::Ui { ui, span }`, attribute-owned `AttributePart::Ui` (lexical = Ruby's
+markup, so a later link inside a key breaks it into raw markup exactly like
+Ruby). HTML renders Ruby's `<kbd>`/`span.keyseq`/`b.button`/`span.menuseq`;
+JSON/WASM name/kind `kbd`/`button`/`menu`; token `inline-macro`.
 **Footnotes**: attribute_macros.rs apply_footnotes is Ruby's
 InlineFootnoteMacroRx, the last macro (after xrefs), over the lexical stream, also
 in pass:m and link parameter passes: `footnote:[text]`, `footnote:id[text]`,
@@ -1050,7 +1064,7 @@ Scaffold only: DOCX backend; the extension API exists but `parse`/`convert` do
 not invoke it yet.
 
 Not yet implemented (common asks — treat as roadmap, do not assume present):
-broader language coverage (remaining block/inline macros). The full block-attribute list is now *parsed* (style, named
+broader language coverage (remaining block/inline macros: indexterms, stem). The full block-attribute list is now *parsed* (style, named
 attributes, `%options`, id/role folding), but most of it has nothing to render
 against yet: a few **styles that change a block's type** (`[stem]`/`[latexmath]` →
 math, …) remain unimplemented — `[source,<lang>]`, `[literal]`, `[pass]`,

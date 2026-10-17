@@ -63,6 +63,51 @@ pub fn write_attribute_parts_map(attributes: &crate::Attributes, out: &mut Strin
 
 /// The fields of an inline image or icon (without braces): lexical values,
 /// the flat alt text and its parts.
+/// A keyboard, button or menu macro's fields (without braces), led by
+/// `"<key>":"kbd"|"button"|"menu"` (Ruby's node types): `keys` (parts per
+/// key), a button's label `parts`, or a menu's `menu`, `submenus` and
+/// `item` parts (`null` for a bare reference) with `font` icons.
+pub fn write_ui(ui: &crate::UiMacro, key: &str, out: &mut String) {
+    let list = |labels: &[Vec<crate::AttributePart>], out: &mut String| {
+        out.push('[');
+        for (i, label) in labels.iter().enumerate() {
+            if i > 0 {
+                out.push(',');
+            }
+            write_parts_array(label, out);
+        }
+        out.push(']');
+    };
+    escape_into(key, out);
+    match ui {
+        crate::UiMacro::Keyboard { keys } => {
+            out.push_str(":\"kbd\",\"keys\":");
+            list(keys, out);
+        }
+        crate::UiMacro::Button { label } => {
+            out.push_str(":\"button\",\"parts\":");
+            write_parts_array(label, out);
+        }
+        crate::UiMacro::Menu {
+            menu,
+            submenus,
+            item,
+            font,
+        } => {
+            out.push_str(":\"menu\",\"menu\":");
+            write_parts_array(menu, out);
+            out.push_str(",\"submenus\":");
+            list(submenus, out);
+            out.push_str(",\"item\":");
+            match item {
+                Some(item) => write_parts_array(item, out),
+                None => out.push_str("null"),
+            }
+            out.push_str(&format!(",\"font\":{font}"));
+        }
+    }
+}
+
 /// A footnote's fields (without braces): `type` (`definition`, `reference`
 /// or `unresolved`), `index`, `id` and the definition's content `parts`.
 pub fn write_footnote(footnote: &crate::Footnote, out: &mut String) {
@@ -189,6 +234,12 @@ fn write_parts_array(parts: &[crate::AttributePart], out: &mut String) {
         if let crate::AttributePart::Footnote(footnote) = part {
             out.push_str("{\"kind\":\"footnote\",");
             write_footnote(footnote, out);
+            out.push('}');
+            continue;
+        }
+        if let crate::AttributePart::Ui(ui) = part {
+            out.push('{');
+            write_ui(ui, "kind", out);
             out.push('}');
             continue;
         }

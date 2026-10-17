@@ -893,6 +893,13 @@ pub enum Inline {
         footnote: crate::Footnote,
         span: Span,
     },
+    /// A keyboard (`kbd:[Ctrl+T]`), button (`btn:[OK]`) or menu
+    /// (`menu:File[Save]`, `"File > Save"`) macro, recognized only when the
+    /// `experimental` attribute is set, like Ruby: first in the macros stage
+    /// (before images), over the lexical result of the earlier stages. `span`
+    /// covers the macro. One generated entirely by an attribute value stays an
+    /// [`AttributePart::Ui`](crate::AttributePart::Ui).
+    Ui { ui: crate::UiMacro, span: Span },
     // TODO: other inline macros (kbd:, …)
 }
 
@@ -913,7 +920,8 @@ impl Inline {
             | Inline::CrossReference { span, .. }
             | Inline::Anchor { span, .. }
             | Inline::Image { span, .. }
-            | Inline::Footnote { span, .. } => span,
+            | Inline::Footnote { span, .. }
+            | Inline::Ui { span, .. } => span,
         }
     }
 
@@ -934,7 +942,8 @@ impl Inline {
             | Inline::CrossReference { span, .. }
             | Inline::Anchor { span, .. }
             | Inline::Image { span, .. }
-            | Inline::Footnote { span, .. } => *span,
+            | Inline::Footnote { span, .. }
+            | Inline::Ui { span, .. } => *span,
         }
     }
 }

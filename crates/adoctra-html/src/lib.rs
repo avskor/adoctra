@@ -1207,6 +1207,7 @@ fn render_inlines(inlines: &[Inline], out: &mut String) {
             }
             Inline::Image { image, .. } => render_inline_image(image, out),
             Inline::Footnote { footnote, .. } => render_footnote(footnote, out),
+            Inline::Ui { ui, .. } => render_ui(ui, out),
             // Resolved in core: emit the value, or fall back to the literal
             // `{name}` for a missing attribute (asciidoctor's default).
             Inline::AttributeRef { value, parts, .. } if !parts.is_empty() && value.is_some() => {
@@ -1418,6 +1419,62 @@ fn render_footnote(footnote: &adoctra_core::Footnote, out: &mut String) {
     }
 }
 
+/// Ruby's `convert_inline_kbd`, `convert_inline_button` and
+/// `convert_inline_menu` markup.
+fn render_ui(ui: &adoctra_core::UiMacro, out: &mut String) {
+    use adoctra_core::UiMacro;
+    match ui {
+        UiMacro::Keyboard { keys } => {
+            if keys.len() > 1 {
+                out.push_str("<span class=\"keyseq\">");
+            }
+            for (i, key) in keys.iter().enumerate() {
+                if i > 0 {
+                    out.push('+');
+                }
+                out.push_str("<kbd>");
+                render_parts(key, out);
+                out.push_str("</kbd>");
+            }
+            if keys.len() > 1 {
+                out.push_str("</span>");
+            }
+        }
+        UiMacro::Button { label } => {
+            out.push_str("<b class=\"button\">");
+            render_parts(label, out);
+            out.push_str("</b>");
+        }
+        UiMacro::Menu {
+            menu,
+            submenus,
+            item,
+            font,
+        } => {
+            if submenus.is_empty() && item.is_none() {
+                out.push_str("<b class=\"menuref\">");
+                render_parts(menu, out);
+                out.push_str("</b>");
+                return;
+            }
+            let caret = UiMacro::caret(*font);
+            out.push_str("<span class=\"menuseq\"><b class=\"menu\">");
+            render_parts(menu, out);
+            out.push_str("</b>");
+            for submenu in submenus {
+                out.push_str(caret);
+                out.push_str("<b class=\"submenu\">");
+                render_parts(submenu, out);
+                out.push_str("</b>");
+            }
+            out.push_str(caret);
+            out.push_str("<b class=\"menuitem\">");
+            render_parts(item.as_deref().unwrap_or_default(), out);
+            out.push_str("</b></span>");
+        }
+    }
+}
+
 /// Ruby's footnotes list after a document's content (unless `nofootnotes`).
 fn render_footnotes(
     footnotes: &[adoctra_core::ast::FootnoteDefinition],
@@ -1487,6 +1544,7 @@ fn render_parts(parts: &[adoctra_core::AttributePart], out: &mut String) {
             adoctra_core::AttributePart::LineBreak => out.push_str("<br>"),
             adoctra_core::AttributePart::Image(image) => render_inline_image(image, out),
             adoctra_core::AttributePart::Footnote(footnote) => render_footnote(footnote, out),
+            adoctra_core::AttributePart::Ui(ui) => render_ui(ui, out),
             adoctra_core::AttributePart::Anchor(id) => {
                 out.push_str("<a id=\"");
                 out.push_str(id);
@@ -3068,6 +3126,26 @@ mod tests {
              <figure class=\"audioblock q\">\n<figcaption class=\"title\">Theme</figcaption>\n<audio src=\"m/s.ogg#t=,3\" autoplay>\nYour browser does not support the audio tag.\n</audio>\n</figure>\n\
              <figure class=\"audioblock\">\n<audio src=\"m/t.ogg\" controls>\nYour browser does not support the audio tag.\n</audio>\n</figure>\n</body>\n</html>\n"
         );
+    }
+
+    #[test]
+    fn ui_macros_render_ruby_kbd_button_and_menu_markup() {
+        let html = render(
+            ":experimental:\n:k: kbd:[Alt+<]\n\nkbd:[F1] kbd:[*Ctrl*+T] btn:[OK] menu:File[Save] menu:A[B > C] menu:Tools[] {k}\n\n:icons: font\n\n\"A > B\"",
+        );
+        assert!(
+            html.contains("<p><kbd>F1</kbd> <span class=\"keyseq\"><kbd><strong>Ctrl</strong></kbd>+<kbd>T</kbd></span> <b class=\"button\">OK</b> <span class=\"menuseq\"><b class=\"menu\">File</b>&#160;<b class=\"caret\">&#8250;</b> <b class=\"menuitem\">Save</b></span> <span class=\"menuseq\"><b class=\"menu\">A</b>&#160;<b class=\"caret\">&#8250;</b> <b class=\"submenu\">B</b>&#160;<b class=\"caret\">&#8250;</b> <b class=\"menuitem\">C</b></span> <b class=\"menuref\">Tools</b> <span class=\"keyseq\"><kbd>Alt</kbd>+<kbd>&lt;</kbd></span></p>"),
+            "{html}"
+        );
+        // Font icons switch the caret, as in Ruby.
+        assert!(
+            html.contains("<p><span class=\"menuseq\"><b class=\"menu\">A</b>&#160;<i class=\"fa fa-angle-right caret\"></i> <b class=\"menuitem\">B</b></span></p>"),
+            "{html}"
+        );
+        assert!(STYLESHEET.contains(".keyseq") && STYLESHEET.contains("b.button::before"));
+        // Without `experimental` the macros stay text.
+        let html = render("kbd:[F1] menu:A[B]");
+        assert!(html.contains("<p>kbd:[F1] menu:A[B]</p>"), "{html}");
     }
 
     #[test]

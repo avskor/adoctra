@@ -233,6 +233,11 @@ impl Passes {
                 let content = std::mem::take(&mut footnote.content);
                 footnote.content = self.restore_evaluated(content, attrs, compat, depth);
                 out.push(P::Footnote(footnote));
+            } else if let P::Ui(mut ui) = part {
+                for label in ui.labels_mut() {
+                    *label = self.restore_evaluated(std::mem::take(label), attrs, compat, depth);
+                }
+                out.push(P::Ui(ui));
             } else if part.is_boundary() {
                 push_value(
                     &mut out,
@@ -535,6 +540,11 @@ impl Passes {
                 Inline::Footnote { footnote, .. } => {
                     let content = std::mem::take(&mut footnote.content);
                     footnote.content = self.restore_evaluated(content, attrs, compat, 0);
+                }
+                Inline::Ui { ui, .. } => {
+                    for label in ui.labels_mut() {
+                        *label = self.restore_evaluated(std::mem::take(label), attrs, compat, 0);
+                    }
                 }
                 Inline::Anchor { id, .. } => {
                     *id = reference_text(&self.restore_evaluated(

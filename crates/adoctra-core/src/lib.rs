@@ -52,7 +52,7 @@ pub mod visit;
 pub use ast::{Author, Block, BlockKind, Document, DocumentHeader, Inline, Revision, Span};
 pub use attributes::{
     AttributeFormat, AttributeLink, AttributePart, Attributes, Footnote, FootnoteKind, InlineImage,
-    Xref,
+    UiMacro, Xref,
 };
 mod anchor_catalog;
 mod attribute_list;

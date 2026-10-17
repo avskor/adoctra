@@ -293,6 +293,104 @@ pub enum AttributePart {
     /// `InlineFootnoteMacroRx`), an atomic value without flat text: its
     /// marker shows inline, its content belongs to the document's footnotes.
     Footnote(Box<Footnote>),
+    /// A keyboard, button or menu macro recognized by the macros stage when
+    /// `experimental` is set (Ruby's `InlineKbdBtnMacroRx`,
+    /// `InlineMenuMacroRx` and `InlineMenuRx`), an atomic value without
+    /// flat text.
+    Ui(Box<UiMacro>),
+}
+
+/// One of Ruby's experimental UI macros (its `:kbd`, `:button` and `:menu`
+/// inline nodes). Every label keeps the lexical parts of the earlier
+/// substitutions, so formatting boundaries and raw entities survive.
+#[derive(Debug, Clone, PartialEq)]
+pub enum UiMacro {
+    /// `kbd:[Ctrl+T]`: the keys split at the first `,` or `+` after the
+    /// first character (a trailing delimiter is itself the last key).
+    Keyboard { keys: Vec<Vec<AttributePart>> },
+    /// `btn:[Save]`, whitespace normalized.
+    Button { label: Vec<AttributePart> },
+    /// `menu:File[Save]`, `menu:File[Edit > Copy]` or the `"File > Save"`
+    /// shorthand: the menu, its submenus and the item (none for a bare
+    /// `menu:File[]` reference). `font` is the document's `icons=font` at the
+    /// macro, which picks the caret glyph.
+    Menu {
+        menu: Vec<AttributePart>,
+        submenus: Vec<Vec<AttributePart>>,
+        item: Option<Vec<AttributePart>>,
+        font: bool,
+    },
+}
+
+impl UiMacro {
+    /// Every label, in output order (for passthrough restoration).
+    pub(crate) fn labels_mut(&mut self) -> Vec<&mut Vec<AttributePart>> {
+        match self {
+            Self::Keyboard { keys } => keys.iter_mut().collect(),
+            Self::Button { label } => vec![label],
+            Self::Menu {
+                menu,
+                submenus,
+                item,
+                ..
+            } => std::iter::once(menu)
+                .chain(submenus.iter_mut())
+                .chain(item.iter_mut())
+                .collect(),
+        }
+    }
+
+    /// The HTML caret between menu levels (Ruby's `convert_inline_menu`).
+    pub fn caret(font: bool) -> &'static str {
+        if font {
+            "&#160;<i class=\"fa fa-angle-right caret\"></i> "
+        } else {
+            "&#160;<b class=\"caret\">&#8250;</b> "
+        }
+    }
+
+    /// Ruby's `convert_inline_kbd`/`_button`/`_menu` markup, the lexical
+    /// spelling later stages see.
+    fn lexical(&self) -> String {
+        let text = |parts: &[AttributePart]| reference_text(parts);
+        match self {
+            Self::Keyboard { keys } if keys.len() == 1 => format!("<kbd>{}</kbd>", text(&keys[0])),
+            Self::Keyboard { keys } => format!(
+                "<span class=\"keyseq\"><kbd>{}</kbd></span>",
+                keys.iter()
+                    .map(|key| text(key))
+                    .collect::<Vec<_>>()
+                    .join("</kbd>+<kbd>")
+            ),
+            Self::Button { label } => format!("<b class=\"button\">{}</b>", text(label)),
+            Self::Menu {
+                menu,
+                submenus,
+                item,
+                font,
+            } => {
+                let caret = Self::caret(*font);
+                match (submenus.is_empty(), item) {
+                    (true, None) => format!("<b class=\"menuref\">{}</b>", text(menu)),
+                    (true, Some(item)) => format!(
+                        "<span class=\"menuseq\"><b class=\"menu\">{}</b>{caret}<b class=\"menuitem\">{}</b></span>",
+                        text(menu),
+                        text(item)
+                    ),
+                    (false, item) => format!(
+                        "<span class=\"menuseq\"><b class=\"menu\">{}</b>{caret}<b class=\"submenu\">{}</b>{caret}<b class=\"menuitem\">{}</b></span>",
+                        text(menu),
+                        submenus
+                            .iter()
+                            .map(|submenu| text(submenu))
+                            .collect::<Vec<_>>()
+                            .join(&format!("</b>{caret}<b class=\"submenu\">")),
+                        item.as_deref().map(text).unwrap_or_default()
+                    ),
+                }
+            }
+        }
+    }
 }
 
 /// What a footnote macro is (Ruby's footnote `type`).
@@ -367,7 +465,8 @@ impl AttributePart {
             | Self::OpenXref(_)
             | Self::CloseXref
             | Self::Image(_)
-            | Self::Footnote(_) => "",
+            | Self::Footnote(_)
+            | Self::Ui(_) => "",
         }
     }
 
@@ -393,6 +492,7 @@ impl AttributePart {
                 | Self::CloseXref
                 | Self::Image(_)
                 | Self::Footnote(_)
+                | Self::Ui(_)
         )
     }
 
@@ -521,6 +621,7 @@ impl AttributePart {
             Self::LineBreak => "<br>",
             Self::Image(image) => return Cow::Owned(image.lexical()),
             Self::Footnote(footnote) => return Cow::Owned(footnote.lexical()),
+            Self::Ui(ui) => return Cow::Owned(ui.lexical()),
             Self::Anchor(id) => return Cow::Owned(format!("<a id=\"{id}\"></a>")),
             Self::OpenWithAttributes { format, id, role } => {
                 let mut text = Self::Open(*format).lexical().into_owned();

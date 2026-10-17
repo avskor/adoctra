@@ -1,17 +1,20 @@
-//! Macro substitutions for pass attributes and expanded inline text: inline
-//! images and icons, links, emails, inline anchors and cross-references. Matched over
+//! Macro substitutions for pass attributes and expanded inline text: the
+//! experimental keyboard, button and menu macros, inline images and icons, links, emails, inline anchors and cross-references. Matched over
 //! the shared lexical stream; generated constructs remain backend-neutral
 //! boundaries.
 use crate::inline_pass::Passes;
 use crate::substitution_context::Evaluation;
 use crate::substitution_text::Text;
-use crate::{AttributeFormat, AttributeLink, AttributePart as Part, Inline, InlineImage, Span};
+use crate::{
+    AttributeFormat, AttributeLink, AttributePart as Part, Inline, InlineImage, Span, UiMacro,
+};
 use std::collections::BTreeMap;
 use std::ops::Range;
 
 const SCHEMES: [&str; 5] = ["https://", "http://", "file://", "ftp://", "irc://"];
 
 struct Report<'a> {
+    ui: Vec<Span>,
     images: Vec<Span>,
     links: Vec<Span>,
     anchors: Vec<Span>,
@@ -24,6 +27,7 @@ struct Report<'a> {
 impl<'a> Report<'a> {
     fn new(passes: &'a mut Passes) -> Self {
         Self {
+            ui: Vec::new(),
             images: Vec::new(),
             links: Vec::new(),
             anchors: Vec::new(),
@@ -37,6 +41,7 @@ impl<'a> Report<'a> {
 /// Physical ranges of constructs consumed by the macros stage, for highlighting.
 #[derive(Default)]
 pub(crate) struct Matches {
+    pub ui: Vec<Span>,
     pub images: Vec<Span>,
     pub links: Vec<Span>,
     pub anchors: Vec<Span>,
@@ -67,6 +72,7 @@ pub(crate) fn apply_inlines(
     let mut report = Report::new(passes);
     process_inlines(nodes, attributes, true, fold_newlines, &mut report);
     Matches {
+        ui: report.ui,
         images: report.images,
         links: report.links,
         anchors: report.anchors,
@@ -274,6 +280,7 @@ fn flush_inlines(
         }
     }
     text = crate::replacements::apply_text(text, edges.0, edges.1);
+    text = apply_ui(text, attributes, report);
     text = apply_images(text, attributes, report);
     for stage in 0..3 {
         text = apply_stage(
@@ -301,6 +308,12 @@ fn flush_inlines(
                 unreachable!()
             };
             Inline::Anchor { id, span }
+        }
+        Inline::Substituted { parts, span, .. } if matches!(parts.as_slice(), [Part::Ui(_)]) => {
+            let Some(Part::Ui(ui)) = parts.into_iter().next() else {
+                unreachable!()
+            };
+            Inline::Ui { ui: *ui, span }
         }
         Inline::Substituted { parts, span, .. } if matches!(parts.as_slice(), [Part::Image(_)]) => {
             let Some(Part::Image(image)) = parts.into_iter().next() else {
@@ -392,6 +405,7 @@ fn apply_inner(
     report: &mut Report<'_>,
 ) -> Vec<Part> {
     let mut text = Text::from_parts_at(&parts, span);
+    text = apply_ui(text, attributes, report);
     text = apply_images(text, attributes, report);
     for stage in 0..3 {
         text = apply_stage(text, stage, attributes, compat, depth, true, report);
@@ -399,6 +413,283 @@ fn apply_inner(
     let text = apply_anchors(text, report);
     let text = apply_xrefs(text, attributes, report);
     apply_footnotes(text, attributes, report).into_parts()
+}
+
+/// Ruby's experimental UI macros, the first built-in macros of `sub_macros`
+/// and only with `experimental`: `kbd:[…]`/`btn:[…]` (`InlineKbdBtnMacroRx`),
+/// then `menu:name[…]` (`InlineMenuMacroRx`), then the `"File > Save"`
+/// shorthand (`InlineMenuRx`), each over the previous pass's result (so the
+/// shorthand also sees the markup generated before it). An escaped macro
+/// loses its backslash.
+fn apply_ui(mut text: Text, attributes: &Evaluation<'_>, report: &mut Report<'_>) -> Text {
+    if attributes.get("experimental").is_none() {
+        return text;
+    }
+    let font = attributes.get("icons") == Some("font");
+    let src = &text.text;
+    let macroish = src.contains('[') && src.contains(':');
+    if macroish && src.contains(":[") && (src.contains("kbd:") || src.contains("btn:")) {
+        text = scan_ui(text, kbd_btn_at, font, report);
+    }
+    if macroish && text.text.contains("menu:") {
+        text = scan_ui(text, menu_at, font, report);
+    }
+    if text.text.contains('"') && text.text.contains("&gt;") {
+        text = scan_ui(text, menu_shorthand_at, font, report);
+    }
+    text
+}
+
+enum UiMatch {
+    Keyboard(Range<usize>),
+    Button(Range<usize>),
+    Menu(Range<usize>, Option<Range<usize>>),
+    Shorthand(Range<usize>),
+}
+
+fn scan_ui(
+    text: Text,
+    matcher: fn(&str, usize) -> Option<(usize, UiMatch)>,
+    font: bool,
+    report: &mut Report<'_>,
+) -> Text {
+    let src = &text.text;
+    let mut output = Text::default();
+    let mut copied = 0;
+    let mut at = 0;
+    while at < src.len() {
+        let escaped = src.as_bytes()[at] == b'\\';
+        let start = at + usize::from(escaped);
+        let Some((end, m)) = matcher(src, start) else {
+            at += src[at..].chars().next().unwrap().len_utf8();
+            continue;
+        };
+        text.copy(copied..at, &mut output);
+        if escaped {
+            text.copy(start..end, &mut output);
+        } else {
+            report.ui.push(text.match_span(at..end));
+            let ui = ui_macro(&text, m, font);
+            text.replace_parts(at..end, &[Part::Ui(Box::new(ui))], &mut output);
+        }
+        copied = end;
+        at = end;
+    }
+    text.copy(copied..src.len(), &mut output);
+    output
+}
+
+/// The first `]` after at least one content character that does not follow
+/// a backslash: Ruby's lazy `(CC_ALL*?[^\\])\]`.
+fn content_end(src: &str, open: usize) -> Option<usize> {
+    src[open..]
+        .match_indices(']')
+        .map(|(i, _)| open + i)
+        .find(|&close| close > open && src.as_bytes()[close - 1] != b'\\')
+}
+
+/// `(kbd|btn):\[(CC_ALL*?[^\\])\]` at `start`.
+fn kbd_btn_at(src: &str, start: usize) -> Option<(usize, UiMatch)> {
+    let rest = &src[start..];
+    let keyboard = if rest.starts_with("kbd:[") {
+        true
+    } else if rest.starts_with("btn:[") {
+        false
+    } else {
+        return None;
+    };
+    let open = start + "kbd:[".len();
+    let close = content_end(src, open)?;
+    Some((
+        close + 1,
+        if keyboard {
+            UiMatch::Keyboard(open..close)
+        } else {
+            UiMatch::Button(open..close)
+        },
+    ))
+}
+
+/// `menu:(CG_WORD|[CC_WORD&][^\n\[]*[^\s\[])\[ *(?:|(CC_ALL*?[^\\]))\]` at
+/// `start`: the name runs to the first `[` on its line, starts with a word
+/// character or `&` (a lone character must be a word character) and does not
+/// end with a blank; spaces after the bracket are skipped.
+fn menu_at(src: &str, start: usize) -> Option<(usize, UiMatch)> {
+    if !src[start..].starts_with("menu:") {
+        return None;
+    }
+    let name = start + "menu:".len();
+    let bracket = name + src[name..].find(['\n', '['])?;
+    if src.as_bytes()[bracket] != b'[' {
+        return None;
+    }
+    let first = src[name..bracket].chars().next()?;
+    let word = crate::unicode_word::is_word(first);
+    if name + first.len_utf8() == bracket {
+        if !word {
+            return None;
+        }
+    } else if !(word || first == '&') || src[name..bracket].ends_with(blank) {
+        return None;
+    }
+    let mut open = bracket + 1;
+    while src[open..].starts_with(' ') {
+        open += 1;
+    }
+    if src[open..].starts_with(']') {
+        return Some((open + 1, UiMatch::Menu(name..bracket, None)));
+    }
+    let close = content_end(src, open)?;
+    Some((close + 1, UiMatch::Menu(name..bracket, Some(open..close))))
+}
+
+/// `"([CC_WORD&][^"]*?[ \n]+&gt;[ \n]+[^"]*)"` at `start`: quoted text without
+/// quotes, starting with a word character or `&`, with a `>` between blanks
+/// after its first character.
+fn menu_shorthand_at(src: &str, start: usize) -> Option<(usize, UiMatch)> {
+    if !src[start..].starts_with('"') {
+        return None;
+    }
+    let open = start + 1;
+    let first = src[open..].chars().next()?;
+    if !(crate::unicode_word::is_word(first) || first == '&') {
+        return None;
+    }
+    let close = open + src[open..].find('"')?;
+    let content = &src[open..close];
+    let blank = |i: usize| matches!(content.as_bytes().get(i), Some(b' ' | b'\n'));
+    content
+        .match_indices("&gt;")
+        .any(|(i, _)| i > first.len_utf8() && blank(i - 1) && blank(i + "&gt;".len()))
+        .then_some((close + 1, UiMatch::Shorthand(open..close)))
+}
+
+/// Ruby's `String#strip` (or `rstrip`) of a range of `src`.
+fn strip(src: &str, range: Range<usize>, left: bool) -> Range<usize> {
+    let value = &src[range.clone()];
+    let start = if left {
+        range.start + value.len() - value.trim_start_matches(|c| blank(c) || c == '\0').len()
+    } else {
+        range.start
+    };
+    let end = range.start + value.trim_end_matches(|c| blank(c) || c == '\0').len();
+    start..end.max(start)
+}
+
+/// Ruby's `String#split(delimiter)` of a range: trailing empty pieces are
+/// dropped unless `keep_empty` (Ruby's `-1` limit).
+fn split(src: &str, range: Range<usize>, delimiter: &str, keep_empty: bool) -> Vec<Range<usize>> {
+    let mut pieces = Vec::new();
+    let mut from = range.start;
+    for (i, _) in src[range.clone()].match_indices(delimiter) {
+        pieces.push(from..range.start + i);
+        from = range.start + i + delimiter.len();
+    }
+    pieces.push(from..range.end);
+    if !keep_empty {
+        while pieces.last().is_some_and(|piece| piece.is_empty()) {
+            pieces.pop();
+        }
+    }
+    pieces
+}
+
+fn ui_macro(text: &Text, m: UiMatch, font: bool) -> UiMacro {
+    let parts = |text: &Text, range: Range<usize>| {
+        let mut piece = Text::default();
+        text.copy(range, &mut piece);
+        piece.into_parts()
+    };
+    let unescaped = |range| Text::from_parts(&slice(text, range, None, true));
+    match m {
+        UiMatch::Keyboard(range) => {
+            let keys = unescaped(range);
+            let src = &keys.text;
+            let range = strip(src, 0..src.len(), true);
+            let value = &src[range.clone()];
+            let second = value.chars().next().map_or(0, char::len_utf8);
+            let position = |c: char| value[second..].find(c).map(|i| range.start + second + i);
+            let delimiter = match (position(','), position('+')) {
+                _ if value.chars().nth(1).is_none() => None,
+                (Some(comma), plus) => Some(plus.map_or(comma, |plus| plus.min(comma))),
+                (None, plus) => plus,
+            };
+            let Some(at) = delimiter else {
+                return UiMacro::Keyboard {
+                    keys: vec![parts(&keys, range)],
+                };
+            };
+            let delimiter = &src[at..at + 1];
+            let trailing = value.ends_with(delimiter);
+            let body = range.start..range.end - usize::from(trailing);
+            let mut list: Vec<Vec<Part>> = split(src, body, delimiter, trailing)
+                .into_iter()
+                .map(|piece| parts(&keys, strip(src, piece, true)))
+                .collect();
+            if trailing {
+                if let Some(last) = list.last_mut() {
+                    crate::attributes::push_part(last, delimiter, false);
+                }
+            }
+            UiMacro::Keyboard { keys: list }
+        }
+        UiMatch::Button(range) => UiMacro::Button {
+            label: normalize_text(slice(text, range, None, true)),
+        },
+        UiMatch::Menu(name, items) => {
+            let menu = parts(text, name);
+            let (submenus, item) = match items {
+                None => (Vec::new(), None),
+                Some(items) => {
+                    let items = unescaped(items);
+                    let src = &items.text;
+                    let delimiter = if src.contains("&gt;") {
+                        Some("&gt;")
+                    } else if src.contains(',') {
+                        Some(",")
+                    } else {
+                        None
+                    };
+                    match delimiter {
+                        Some(delimiter) => {
+                            let mut list: Vec<Vec<Part>> =
+                                split(src, 0..src.len(), delimiter, false)
+                                    .into_iter()
+                                    .map(|piece| parts(&items, strip(src, piece, true)))
+                                    .collect();
+                            let item = list.pop();
+                            (list, item)
+                        }
+                        None => (
+                            Vec::new(),
+                            Some(parts(&items, strip(src, 0..src.len(), false))),
+                        ),
+                    }
+                }
+            };
+            UiMacro::Menu {
+                menu,
+                submenus,
+                item,
+                font,
+            }
+        }
+        UiMatch::Shorthand(range) => {
+            let src = &text.text;
+            let mut list = split(src, range, "&gt;", false)
+                .into_iter()
+                .map(|piece| parts(text, strip(src, piece, true)));
+            let menu = list.next().unwrap_or_default();
+            let mut submenus: Vec<Vec<Part>> = list.collect();
+            let item = submenus.pop();
+            UiMacro::Menu {
+                menu,
+                submenus,
+                item,
+                font,
+            }
+        }
+    }
 }
 
 /// Ruby's `InlineImageMacroRx`, the first built-in macro (before links) over

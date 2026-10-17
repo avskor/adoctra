@@ -570,6 +570,7 @@ pub(crate) fn label_parts(nodes: &[Inline]) -> Vec<crate::AttributePart> {
             Inline::Footnote { footnote, .. } => {
                 parts.push(Part::Footnote(Box::new(footnote.clone())))
             }
+            Inline::Ui { ui, .. } => parts.push(Part::Ui(Box::new(ui.clone()))),
             node => {
                 let format = crate::attribute_macros::format(node).expect("formatting node");
                 let (Inline::Strong { children, .. }
@@ -901,6 +902,11 @@ fn push_text(inlines: &[Inline], s: &mut String) {
             // Ruby's footnote markup leaves its `[index]` text.
             Inline::Footnote { footnote, .. } => s.push_str(&crate::attributes::reference_text(&[
                 crate::AttributePart::Footnote(Box::new(footnote.clone())),
+            ])),
+            // Ruby's keyboard/button/menu markup leaves its labels (and the
+            // caret's entities, which the sanitizer drops).
+            Inline::Ui { ui, .. } => s.push_str(&crate::attributes::reference_text(&[
+                crate::AttributePart::Ui(Box::new(ui.clone())),
             ])),
         }
     }

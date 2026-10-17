@@ -808,6 +808,11 @@ fn write_inlines(inlines: &[Inline], s: &mut String) {
                 adoctra_core::json::write_inline_image(image, s);
                 s.push('}');
             }
+            Inline::Ui { ui, .. } => {
+                s.push('{');
+                adoctra_core::json::write_ui(ui, "name", s);
+                s.push('}');
+            }
             Inline::Footnote { footnote, .. } => {
                 s.push_str("{\"name\":\"footnote\",");
                 adoctra_core::json::write_footnote(footnote, s);
@@ -1670,6 +1675,18 @@ mod tests {
             json.contains(
                 r#"{"inlines":[{"name":"text","value":"a"}],"checkbox":true,"blocks":[]}"#
             ),
+            "{json}"
+        );
+    }
+
+    #[test]
+    fn ui_macros_serialize_keys_labels_and_menus() {
+        let json = render(":experimental:\n:b: btn:[Go]\n\nkbd:[*A*+B] menu:F[S > T] menu:X[] {b}");
+        assert!(json.contains(r#"{"name":"kbd","keys":[[{"kind":"open","format":"strong"},{"kind":"text","value":"A"},{"kind":"close","format":"strong"}],[{"kind":"text","value":"B"}]]}"#), "{json}");
+        assert!(json.contains(r#"{"name":"menu","menu":[{"kind":"text","value":"F"}],"submenus":[[{"kind":"text","value":"S"}]],"item":[{"kind":"text","value":"T"}],"font":false}"#), "{json}");
+        assert!(json.contains(r#"{"name":"menu","menu":[{"kind":"text","value":"X"}],"submenus":[],"item":null,"font":false}"#), "{json}");
+        assert!(
+            json.contains(r#""parts":[{"kind":"button","parts":[{"kind":"text","value":"Go"}]}]"#),
             "{json}"
         );
     }
