@@ -393,10 +393,19 @@ pub enum BlockKind {
     /// raw**: no HTML escaping and no wrapper element at all (asciidoctor's
     /// `:pass` context), so even a block id/role is dropped on output.
     Passthrough { text: String },
-    /// An unordered (`*`/`-`) or ordered (`.`) list. `ordered` selects the
-    /// rendered list kind. Nesting is structural: a deeper level is a
-    /// [`BlockKind::List`] held in a [`ListItem`]'s `blocks`.
+    /// An unordered (`*`, `-`, `•`) or ordered (`.`, `1.`, `a.`, `A.`, `i)`,
+    /// `I)`) list, parsed like Ruby's `parse_list`: each item's lines are
+    /// collected (`read_lines_for_list_item`) and parsed as its blocks, a
+    /// paragraph adjacent to the marker line folds into the item text, and a
+    /// different marker nests. An ordered list's implicit style (`arabic`,
+    /// `loweralpha`, …) is its [`BlockAttrs::style`]; a checklist has the
+    /// `checklist` option.
     List { ordered: bool, items: Vec<ListItem> },
+    /// A description list (`term:: text`, also `:::`, `::::` and `;;`), like
+    /// Ruby's `parse_description_list`: consecutive terms without a
+    /// description share the next one. The `horizontal` and `qanda` styles
+    /// are in [`BlockAttrs::style`].
+    DescriptionList { items: Vec<DescriptionListItem> },
     /// An admonition callout (`NOTE`/`TIP`/`IMPORTANT`/`WARNING`/`CAUTION`),
     /// produced by an uppercase block style (`[NOTE]`), an uppercase label prefix
     /// (`NOTE: …`) or an uppercase style on a `====` block. Like asciidoctor, the
@@ -700,6 +709,28 @@ impl CellStyle {
 pub struct ListItem {
     pub inlines: Vec<Inline>,
     pub blocks: Vec<Block>,
+    pub span: Span,
+    /// A checklist item's state (`[x]`/`[*]` checked, `[ ]` not).
+    pub checkbox: Option<bool>,
+    /// Ruby's `ListItem#marker`: the unordered marker (`*`, `**`, `-`) or the
+    /// first marker of the ordered series (`.`, `..`, `1.`, `a.`, `i)`, …);
+    /// none for a description.
+    pub marker: Option<String>,
+}
+
+/// One entry of a [`BlockKind::DescriptionList`]: its terms and the shared
+/// description (text and blocks, like a [`ListItem`]), if any.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DescriptionListItem {
+    pub terms: Vec<ListTerm>,
+    pub description: Option<ListItem>,
+    pub span: Span,
+}
+
+/// A description list term.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ListTerm {
+    pub inlines: Vec<Inline>,
     pub span: Span,
 }
 

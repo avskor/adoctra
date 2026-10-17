@@ -100,6 +100,26 @@ class ProjectionTests(unittest.TestCase):
         # Only a zero frameborder is presentation.
         self.assertNotEqual(projection(ruby), projection(ruby.replace('frameborder="0"', 'frameborder="1"')))
 
+    def test_description_lists_project_ruby_wrappers(self):
+        ruby = ('<div id="d" class="dlist glossary r"><dl><dt>T</dt><dd><p>x</p></dd></dl></div>')
+        ours = '<dl id="d" class="glossary r"><dt>T</dt><dd><p>x</p></dd></dl>'
+        self.assertEqual(projection(ruby), projection(ours))
+        ruby = '<div class="qlist qanda"><ol><li><p><em>Q</em></p><p>A</p></li></ol></div>'
+        ours = '<ol class="qanda"><li><p><em>Q</em></p><p>A</p></li></ol>'
+        self.assertEqual(projection(ruby), projection(ours))
+        # Duplicate classes from a wrapper and its list merge once.
+        self.assertEqual(projection('<div class="olist loweralpha"><ol class="loweralpha"><li><p>a</p></li></ol></div>'),
+                         projection('<ol class="loweralpha"><li>a</li></ol>'))
+
+    def test_horizontal_description_list_is_ruby_layout_table(self):
+        ruby = ('<div class="hdlist r"><table><colgroup><col style="width: 20%;"></colgroup><tr>'
+                '<td class="hdlist1 strong">A<br>B</td><td class="hdlist2"><p>x</p></td></tr></table></div>')
+        ours = ('<dl class="hdlist r" style="grid-template-columns: 20% 1fr;"><dt class="strong">A</dt>'
+                '<dt class="strong">B</dt><dd><p>x</p></dd></dl>')
+        self.assertEqual(projection(ruby), projection(ours))
+        self.assertNotEqual(projection(ours), projection(ours.replace('<dt class="strong">B</dt>', '')))
+        self.assertNotEqual(projection(ours), projection(ours.replace('class="hdlist r"', 'class="hdlist"')))
+
     def test_full_document_head_is_outside_body_profile(self):
         self.assertEqual(projection('<html><head><style>p {color:red}</style></head><body><p>one</p></body></html>'),
                          projection('<p>one</p>'))

@@ -314,6 +314,29 @@ fn write_cell(cell: &adoctra_core::ast::TableCell, s: &mut String) {
     s.push('}');
 }
 
+/// A list item (or a description) with its span, text, nested blocks and, in
+/// a checklist, its `checkbox` state.
+fn write_list_item(item: &adoctra_core::ast::ListItem, s: &mut String) {
+    // Each item carries its own span for the editor.
+    s.push('{');
+    write_span_field(&item.span, s);
+    s.push_str(",\"inlines\":");
+    write_inlines(&item.inlines, s);
+    if let Some(checked) = item.checkbox {
+        s.push_str(&format!(",\"checkbox\":{checked}"));
+    }
+    // Nested blocks (e.g. a sublist); each carries its own spans.
+    s.push_str(",\"blocks\":[");
+    for (j, child) in item.blocks.iter().enumerate() {
+        if j > 0 {
+            s.push(',');
+        }
+        write_block(child, s);
+    }
+    s.push(']');
+    s.push('}');
+}
+
 fn write_block(b: &Block, s: &mut String) {
     s.push('{');
     write_span_field(&b.span, s);
@@ -474,20 +497,42 @@ fn write_block(b: &Block, s: &mut String) {
                 if i > 0 {
                     s.push(',');
                 }
-                // Each item carries its own span for the editor.
+                write_list_item(item, s);
+            }
+            s.push(']');
+        }
+        BlockKind::DescriptionList { items } => {
+            s.push_str("\"name\":\"dlist\",");
+            write_id(&b.id, s);
+            write_roles(&b.roles, s);
+            write_style(&b.attrs.style, s);
+            write_attributes(&b.attrs.named, s);
+            write_options(&b.attrs.options, s);
+            write_title(&b.title, s);
+            write_caption(&b.caption, s);
+            s.push_str(",\"items\":[");
+            for (i, item) in items.iter().enumerate() {
+                if i > 0 {
+                    s.push(',');
+                }
                 s.push('{');
                 write_span_field(&item.span, s);
-                s.push_str(",\"inlines\":");
-                write_inlines(&item.inlines, s);
-                // Nested blocks (e.g. a sublist); each carries its own spans.
-                s.push_str(",\"blocks\":[");
-                for (j, child) in item.blocks.iter().enumerate() {
+                s.push_str(",\"terms\":[");
+                for (j, term) in item.terms.iter().enumerate() {
                     if j > 0 {
                         s.push(',');
                     }
-                    write_block(child, s);
+                    s.push('{');
+                    write_span_field(&term.span, s);
+                    s.push_str(",\"inlines\":");
+                    write_inlines(&term.inlines, s);
+                    s.push('}');
                 }
-                s.push(']');
+                s.push_str("],\"description\":");
+                match &item.description {
+                    Some(description) => write_list_item(description, s),
+                    None => s.push_str("null"),
+                }
                 s.push('}');
             }
             s.push(']');
@@ -2472,6 +2517,18 @@ mod header_tests {
         let tokens = super::tokens_json_with_source(source, 3);
         assert!(
             tokens.contains(r#"{"span":{"source_id":3,"start":10,"end":32},"kind":"block-macro"}"#),
+            "{tokens}"
+        );
+    }
+
+    #[test]
+    fn description_lists_export_term_spans_and_marker_tokens() {
+        let source = "CPU:: brain";
+        let json = super::parse_json_with_source(source, 3);
+        assert!(json.contains(r#""items":[{"span":{"source_id":3,"start":0,"end":11},"terms":[{"span":{"source_id":3,"start":0,"end":3},"inlines":[{"span":{"source_id":3,"start":0,"end":3},"name":"text","value":"CPU"}]}],"description":{"span":{"source_id":3,"start":6,"end":11},"inlines":[{"span":{"source_id":3,"start":6,"end":11},"name":"text","value":"brain"}],"blocks":[]}}]"#), "{json}");
+        let tokens = super::tokens_json_with_source(source, 3);
+        assert!(
+            tokens.contains(r#"{"span":{"source_id":3,"start":3,"end":5},"kind":"list-marker"}"#),
             "{tokens}"
         );
     }

@@ -68,15 +68,6 @@ impl MacroMeta {
             options: list.attrs.options,
         }
     }
-
-    /// Replace the metadata of a block without preceding metadata lines (a
-    /// list continuation).
-    fn apply_alone(self, block: &mut Block) {
-        block.id = self.id;
-        block.roles = self.roles.unwrap_or_default();
-        block.attrs.named.extend(self.named);
-        block.attrs.options = self.options;
-    }
 }
 
 /// Ruby's `BlockMediaMacroRx` branch of `next_block`: the macro list (with
@@ -280,7 +271,9 @@ pub(crate) fn parse_reader<'a>(
     diagnostics.append(&mut lines.diagnostics);
     diagnostics.append(&mut context.comment_diagnostics);
     diagnostics.append(&mut context.inline_diagnostics);
-    context.comments.sort_by_key(|span| span.start);
+    context.comments.sort_by_key(|span| (span.start, span.end));
+    // A folded list paragraph is scanned again as the item text.
+    context.comments.dedup();
     lines.comments = context.comments.clone();
     for diagnostic in &mut diagnostics {
         diagnostic.span = lines.map_span(diagnostic.span, &mut provenance);
@@ -332,34 +325,69 @@ fn collect_blocks(
     context: &mut ParseContext,
     diagnostics: &mut Vec<Diagnostic>,
     stop: Option<&str>,
+    pending: PendingMeta,
+) -> Vec<Block> {
+    collect_blocks_in(lines, i, context, diagnostics, stop, pending, None)
+}
+
+/// The blocks of a container, or of a list item when `list` gives its list
+/// type and whether its first block is text only.
+fn collect_blocks_in(
+    lines: &mut Reader<'_>,
+    i: &mut usize,
+    context: &mut ParseContext,
+    diagnostics: &mut Vec<Diagnostic>,
+    stop: Option<&str>,
     mut pending: PendingMeta,
+    list: Option<(crate::lists::ListType, bool)>,
 ) -> Vec<Block> {
     // Ruby first preprocesses and captures a container up to its closing fence,
     // then parses the body. A nested comment/verbatim region cannot hide that fence.
     let previous_limit = stop.map(|fence| lines.bound(*i, context, |line| line.trim() == fence));
     let mut blocks = Vec::new();
+    let mut text_only = list.is_some_and(|(_, text_only)| text_only);
+    // Blank lines before the next block's metadata (Ruby's `skipped`).
+    let mut skipped = 0usize;
+    let mut metadata_seen = false;
     while lines.has(*i, context) {
         let (_, line_buffer) = lines.line(*i);
         let line = line_buffer.as_ref();
         if line.trim().is_empty() {
+            if !metadata_seen {
+                skipped += 1;
+            }
             *i += 1;
             continue;
         }
-        if consume_block_metadata(lines, i, context, &mut pending) {
+        // A text-only block takes no title or attribute entry (Ruby's
+        // `parse_block_metadata_line` with `:text_only`).
+        let text_only_now = text_only && skipped == 0;
+        if !(text_only_now && line.starts_with(['.', ':']))
+            && consume_block_metadata(lines, i, context, &mut pending)
+        {
+            metadata_seen = true;
             continue;
         }
         let metadata = std::mem::take(&mut pending);
         let mut carried = None;
+        let ctx = match list {
+            Some((list_type, _)) => BlockCtx::InListItem {
+                list_type,
+                text_only: text_only && skipped == 0,
+                adjacent: skipped == 0,
+            },
+            None if stop.is_none() => BlockCtx::Section,
+            None => BlockCtx::TopLevel,
+        };
+        text_only = false;
+        skipped = 0;
+        metadata_seen = false;
         if let Some(mut block) = parse_block(
             lines,
             i,
             context,
             diagnostics,
-            if stop.is_none() {
-                BlockCtx::Section
-            } else {
-                BlockCtx::TopLevel
-            },
+            ctx,
             Some(&metadata.attrs),
             metadata.id.is_some(),
         ) {
@@ -399,7 +427,18 @@ fn collect_blocks(
                         .unwrap_or(Span::new(title.base, title.base + title.text.len())),
                 }]
             });
+            // A list keeps its implicit (ordered) style without an explicit one.
+            let own_style = block.attrs.style.take();
+            let own_options = std::mem::take(&mut block.attrs.options);
             block.attrs = pending.attrs;
+            if block.attrs.style.is_none() {
+                block.attrs.style = own_style;
+            }
+            for option in own_options {
+                if !block.attrs.options.contains(&option) {
+                    block.attrs.options.push(option);
+                }
+            }
             if let Some(meta) = macro_meta {
                 block.attrs.named.extend(meta.named);
                 for option in meta.options {
@@ -1425,7 +1464,7 @@ fn read_nested_document(
         diagnostics,
     );
     context.exit_nested(outer, key, snapshot);
-    lines.absorb(nested);
+    lines.absorb(nested, true);
     blocks
 }
 
@@ -1441,7 +1480,14 @@ fn read_nested_document(
 enum BlockCtx {
     Section,
     TopLevel,
-    InListItem,
+    /// A block of a list item (Ruby's `next_block` with `:list_type`):
+    /// `text_only` for its first block, `adjacent` when no blank line
+    /// precedes it (a paragraph then also ends at a list item).
+    InListItem {
+        list_type: crate::lists::ListType,
+        text_only: bool,
+        adjacent: bool,
+    },
 }
 
 /// Parse exactly one block starting at `lines[*i]` (which the caller has ensured
@@ -1583,6 +1629,15 @@ fn parse_block_content(
         pending_style,
         Some("literal" | "listing" | "source" | "verse")
     );
+    // A list item's text-only first block is a paragraph, not a macro.
+    let text_only = matches!(
+        ctx,
+        BlockCtx::InListItem {
+            text_only: true,
+            ..
+        }
+    );
+    let verbatim = verbatim || text_only;
     if let Some(found) = crate::image::match_macro(trimmed).filter(|_| !verbatim) {
         *i += 1;
         return read_media_macro(trimmed, off, found, context, &lines.include_catalog);
@@ -1939,14 +1994,37 @@ fn parse_block_content(
     // appears. A list only *starts* at column 0 (an indented marker elsewhere is
     // ordinary text); deeper levels may be indented, handled inside `parse_list`,
     // which consumes the whole (possibly nested) list.
-    if parse_list_marker(trimmed).is_some() {
-        return Some(parse_list(lines, i, context, diagnostics, &[]));
+    // Lists (Ruby's order: unordered, ordered, description), unless a
+    // verbatim style keeps the lines as a paragraph.
+    let verbatim_style = matches!(
+        pending_style,
+        Some("literal" | "listing" | "source" | "verse")
+    );
+    if !verbatim_style {
+        for list_type in [
+            crate::lists::ListType::Unordered,
+            crate::lists::ListType::Ordered,
+            crate::lists::ListType::Description,
+        ] {
+            if crate::lists::item(trimmed, list_type).is_some() {
+                return Some(parse_list(
+                    lines,
+                    i,
+                    context,
+                    diagnostics,
+                    list_type,
+                    pending_style,
+                ));
+            }
+        }
     }
 
     // Verbatim paragraph styles retain comment-looking lines.
     let verbatim = matches!(pending_style, Some("literal" | "source" | "verse"));
 
     // Paragraph: accumulate contiguous lines until this context's terminator.
+    // Only an unstyled paragraph uses Ruby's `read_paragraph_lines`.
+    let plain = matches!(pending_style, None | Some("normal"));
     let start = off;
     let mut end = off + line.len();
     *i += 1;
@@ -1962,14 +2040,18 @@ fn parse_block_content(
         // into a `----`/`....`/`====`/`____`/`****`/`--` block (notably the closing
         // fence of an enclosing container, which would otherwise be folded in as
         // text).
+        // Ruby's `read_paragraph_lines`: a blank line, a list continuation, a
+        // delimited block or a block attribute line ends the paragraph, and in
+        // a list item directly after its marker, any list item too.
         let ends = (!verbatim && comment_fence(t).is_some())
             || t.trim().is_empty()
+            || t == "+"
             || matches!(t.trim(), "----" | "...." | "====" | "____" | "****" | "--")
-            || crate::table::delimiter(t).is_some()
-            || match ctx {
-                BlockCtx::Section | BlockCtx::TopLevel => parse_list_marker(t).is_some(),
-                BlockCtx::InListItem => t.trim() == "+" || list_marker_indented(t).is_some(),
-            };
+            || (plain
+                && (crate::lists::delimited(t).is_some()
+                    || crate::lists::block_attribute_line(t)
+                    || (matches!(ctx, BlockCtx::InListItem { adjacent: true, .. })
+                        && crate::lists::any(t))));
         if ends {
             break;
         }
@@ -1980,11 +2062,47 @@ fn parse_block_content(
         context.comments.push(Span::new(start, end));
         return None;
     }
+    // Ruby's literal paragraph: unstyled lines starting with whitespace, with
+    // their common indentation removed (`adjust_indentation!`). A list item's
+    // text-only first block, or one adjacent to a description, stays a paragraph.
+    let dlist_adjacent = matches!(
+        ctx,
+        BlockCtx::InListItem {
+            list_type: crate::lists::ListType::Description,
+            adjacent: true,
+            ..
+        }
+    );
+    if line.starts_with([' ', '\t']) && pending_style.is_none() && !text_only && !dlist_adjacent {
+        let text = lines.content(start, end).text;
+        let indent = text
+            .lines()
+            .filter(|l| !l.is_empty())
+            .map(|l| l.len() - l.trim_start().len())
+            .min()
+            .unwrap_or(0);
+        let text = text
+            .lines()
+            .map(|l| {
+                if l.is_empty() {
+                    l
+                } else {
+                    &l[indent.min(l.len())..]
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        return Some(Block::new(
+            Span::new(start, end),
+            BlockKind::Literal { text },
+        ));
+    }
     // An admonition label prefix (`NOTE: `, …) on the first line turns the whole
     // paragraph into an admonition: the prefix is stripped and the rest (incl. any
     // folded lines) is the body. The block span stays the whole paragraph. The
     // `[NOTE]` *style* form is handled later, in the pending-attrs fixup.
-    if let Some((kind, prefix_len)) = AdmonitionKind::from_label_prefix(line) {
+    if let Some((kind, prefix_len)) = AdmonitionKind::from_label_prefix(line).filter(|_| !text_only)
+    {
         let content_start = start + prefix_len;
         lines.catalog_anchors(content_start, end, false, context);
         let inlines = lines.scan_content(content_start, end, &attrs, context);
@@ -2025,246 +2143,549 @@ fn parse_block_content(
     ))
 }
 
-/// The role of a source line *relative to a list level* (its current `marker`
-/// and the `ancestors` stack). Computing it in one place lets `parse_list` read
-/// as a small state machine: for the next line it decides whether the line
-/// continues the item's text, attaches a block, opens a sublist, or ends the
-/// list.
-#[derive(Debug, PartialEq, Eq)]
-enum LineRole {
-    /// Blank line — ends the list (the current simplification).
-    Blank,
-    /// A lone `+` — a list continuation; the next block attaches to the item.
-    Continuation,
-    /// A marker identical to this level's — the next sibling item.
-    Sibling,
-    /// A marker belonging to an enclosing list — hands control back up.
-    Ancestor,
-    /// A unique, deeper marker — opens a sublist under the current item.
-    Nested,
-    /// Anything else — principal-text continuation of the current item.
-    Text,
+/// A line of a list item, as Ruby's `read_lines_for_list_item` buffers it: a
+/// continuation marker is Ruby's `ListContinuationPlaceholder` (an empty line)
+/// or `ListContinuationString` (`+`).
+#[derive(Clone)]
+struct ItemLine {
+    off: usize,
+    text: Arc<str>,
+    eol: String,
+    marker: bool,
 }
 
-/// Classify `line` against the current list `marker` and `ancestors`. Marker
-/// detection is indent-aware ([`list_marker_indented`]): asciidoctor decides
-/// nesting by marker *identity*, not indentation, so an indented `*` under a
-/// `*` list is a sibling, while `**` opens a deeper level regardless of indent.
-fn classify(line: &str, marker: MarkerId, ancestors: &[MarkerId]) -> LineRole {
-    let t = line.trim_end();
-    if t.trim().is_empty() || comment_fence(t).is_some() {
-        return LineRole::Blank;
-    }
-    if t.trim() == "+" {
-        return LineRole::Continuation;
-    }
-    match list_marker_indented(t) {
-        Some((m, _, _)) if m == marker => LineRole::Sibling,
-        Some((m, _, _)) if ancestors.contains(&m) => LineRole::Ancestor,
-        Some(_) => LineRole::Nested,
-        None => LineRole::Text,
-    }
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Continuation {
+    Inactive,
+    Active,
+    Frozen,
 }
 
-/// Parse a list — and any deeper sublists — starting at `lines[*i]`, which must
-/// carry a list marker. Advances `*i` past every consumed line.
-///
-/// `ancestors` holds the marker identities of the enclosing lists. A line whose
-/// marker matches an ancestor ends this list (returning control to that
-/// ancestor); a *unique* marker opens a sublist under the current item — this is
-/// asciidoctor's marker-stack nesting rule. Each item's principal text may wrap
-/// over several plain lines, and a `+` continuation attaches following blocks
-/// (paragraph, listing) to the item; both nested sublists and attached blocks
-/// live in `item.blocks`, in source order.
+fn read_item_line(
+    lines: &mut Reader<'_>,
+    i: &mut usize,
+    context: &ParseContext,
+) -> Option<ItemLine> {
+    if !lines.has(*i, context) {
+        return None;
+    }
+    let (off, text) = lines.line(*i);
+    let eol = lines.eol(*i);
+    *i += 1;
+    Some(ItemLine {
+        off,
+        text,
+        eol,
+        marker: false,
+    })
+}
+
+/// Ruby's `NESTABLE_LIST_CONTEXTS` (only description lists once nested):
+/// the list type a line starts and whether it is a term without text.
+fn nested_list(line: &str, within_nested: bool) -> Option<(crate::lists::ListType, bool)> {
+    use crate::lists::{description, item, ListType};
+    if !within_nested {
+        for list_type in [ListType::Unordered, ListType::Ordered] {
+            if item(line, list_type).is_some() {
+                return Some((list_type, false));
+            }
+        }
+    }
+    description(line).map(|m| (ListType::Description, m.text.is_none()))
+}
+
+/// Ruby's `read_lines_until` for a literal paragraph inside a list item: up
+/// to a blank line, a later `+` or (for a description list) a sibling.
+fn read_literal_lines(
+    lines: &mut Reader<'_>,
+    i: &mut usize,
+    context: &ParseContext,
+    sibling: Option<&crate::lists::Sibling>,
+) -> Vec<ItemLine> {
+    let mut out = Vec::new();
+    while lines.has(*i, context) {
+        let text = lines[*i].1.clone();
+        if text.is_empty()
+            || (!out.is_empty() && &*text == "+")
+            || sibling.is_some_and(|s| crate::lists::is_sibling(&text, s))
+        {
+            break;
+        }
+        out.extend(read_item_line(lines, i, context));
+    }
+    out
+}
+
+/// Ruby's `read_lines_for_list_item`: the lines after an item's marker line
+/// up to a sibling item or the end of the list, with attached blocks joined by
+/// list continuations. Leaves `*i` at the first line not taken.
+fn read_list_item_lines(
+    lines: &mut Reader<'_>,
+    i: &mut usize,
+    context: &ParseContext,
+    list_type: crate::lists::ListType,
+    sibling: &crate::lists::Sibling,
+    mut has_text: bool,
+) -> Vec<ItemLine> {
+    use crate::lists::{block_attribute_line, delimited, is_sibling, ListType};
+    let dlist = list_type == ListType::Description;
+    let mut buffer: Vec<ItemLine> = Vec::new();
+    let mut continuation = Continuation::Inactive;
+    let mut within_nested = false;
+    let mut detached = None;
+    let mut unread = false;
+    while let Some(mut line) = read_item_line(lines, i, context) {
+        if is_sibling(&line.text, sibling) {
+            unread = true;
+            break;
+        }
+        if &*line.text == "+" {
+            line.marker = true;
+        }
+        // Ruby keeps the previous line object even when it becomes a placeholder.
+        let prev = buffer.last().map(|l| (l.text.clone(), l.marker));
+        if prev.as_ref().is_some_and(|(_, marker)| *marker) {
+            if continuation == Continuation::Inactive {
+                continuation = Continuation::Active;
+                has_text = true;
+                if !within_nested {
+                    buffer.last_mut().unwrap().text = Arc::from("");
+                }
+            }
+            if line.marker {
+                if continuation != Continuation::Frozen {
+                    continuation = Continuation::Frozen;
+                    buffer.push(line);
+                }
+                continue;
+            }
+        }
+        if let Some(terminator) = delimited(&line.text) {
+            if continuation != Continuation::Active {
+                unread = true;
+                break;
+            }
+            buffer.push(line);
+            while let Some(next) = read_item_line(lines, i, context) {
+                let done = *next.text == *terminator;
+                buffer.push(next);
+                if done {
+                    break;
+                }
+            }
+            continuation = Continuation::Inactive;
+        } else if dlist
+            && continuation != Continuation::Active
+            && line.text.starts_with('[')
+            && block_attribute_line(&line.text)
+        {
+            let mut attribute_lines = vec![line];
+            let mut interrupt = false;
+            while lines.has(*i, context) {
+                let next = lines[*i].1.clone();
+                if delimited(&next).is_some() {
+                    interrupt = true;
+                } else if next.is_empty() || (next.starts_with('[') && block_attribute_line(&next))
+                {
+                    attribute_lines.extend(read_item_line(lines, i, context));
+                    continue;
+                } else if crate::lists::any(&next) && !is_sibling(&next, sibling) {
+                    buffer.append(&mut attribute_lines);
+                } else {
+                    interrupt = true;
+                }
+                break;
+            }
+            if interrupt {
+                *i -= attribute_lines.len();
+                break;
+            }
+        } else if continuation == Continuation::Active && !line.text.is_empty() {
+            if crate::lists::literal_paragraph(&line.text) {
+                *i -= 1;
+                buffer.extend(read_literal_lines(
+                    lines,
+                    i,
+                    context,
+                    dlist.then_some(sibling),
+                ));
+                continuation = Continuation::Inactive;
+            } else if (line.text.starts_with('.') && parse_block_title(&line.text).is_some())
+                || (line.text.starts_with('[') && block_attribute_line(&line.text))
+                || (line.text.starts_with(':') && crate::lists::attribute_entry(&line.text))
+            {
+                buffer.push(line);
+            } else {
+                if let Some((nested, termless)) = nested_list(&line.text, within_nested) {
+                    within_nested = true;
+                    if nested == ListType::Description && termless {
+                        has_text = false;
+                    }
+                }
+                buffer.push(line);
+                continuation = Continuation::Inactive;
+            }
+        } else if prev.as_ref().is_some_and(|(text, _)| text.is_empty()) {
+            if line.text.is_empty() {
+                while lines.has(*i, context) && lines[*i].1.is_empty() {
+                    *i += 1;
+                }
+                let Some(next) = read_item_line(lines, i, context) else {
+                    break;
+                };
+                line = next;
+                if is_sibling(&line.text, sibling) {
+                    unread = true;
+                    break;
+                }
+            }
+            if &*line.text == "+" {
+                detached = Some(buffer.len());
+                line.marker = true;
+                buffer.push(line);
+            } else if has_text {
+                if is_sibling(&line.text, sibling) {
+                    unread = true;
+                    break;
+                } else if let Some((nested, termless)) = nested_list(&line.text, false) {
+                    buffer.push(line);
+                    within_nested = true;
+                    if nested == ListType::Description && termless {
+                        has_text = false;
+                    }
+                } else if crate::lists::literal_paragraph(&line.text) {
+                    *i -= 1;
+                    buffer.extend(read_literal_lines(
+                        lines,
+                        i,
+                        context,
+                        dlist.then_some(sibling),
+                    ));
+                } else {
+                    unread = true;
+                    break;
+                }
+            } else {
+                // A description list still needs its text: take it.
+                if !within_nested {
+                    buffer.pop();
+                }
+                buffer.push(line);
+                has_text = true;
+            }
+        } else if line.marker {
+            has_text = true;
+            buffer.push(line);
+        } else {
+            if !line.text.is_empty() {
+                has_text = true;
+            }
+            if let Some((nested, termless)) = nested_list(&line.text, within_nested) {
+                within_nested = true;
+                if nested == ListType::Description && termless {
+                    has_text = false;
+                }
+            }
+            buffer.push(line);
+        }
+    }
+    if unread {
+        *i -= 1;
+    }
+    if let Some(at) = detached {
+        buffer[at].text = Arc::from("");
+    }
+    while let Some(last) = buffer.last() {
+        if last.marker {
+            buffer.pop();
+            break;
+        } else if last.text.is_empty() {
+            buffer.pop();
+        } else {
+            break;
+        }
+    }
+    buffer
+}
+
+/// Ruby's `parse_list_item` after the marker line: the item's blocks from its
+/// lines, and the range of a paragraph adjacent to the marker line that
+/// folds into the item text (Ruby's `fold_first`).
+fn parse_item_blocks(
+    lines: &mut Reader<'_>,
+    buffer: Vec<ItemLine>,
+    context: &mut ParseContext,
+    diagnostics: &mut Vec<Diagnostic>,
+    list_type: crate::lists::ListType,
+    mut has_text: bool,
+) -> (Vec<Block>, Option<Span>) {
+    if buffer.is_empty() {
+        return (Vec::new(), None);
+    }
+    // Peek past comment lines.
+    let adjacent = buffer
+        .iter()
+        .find(|l| !is_line_comment(&l.text))
+        .is_some_and(|l| !l.text.is_empty());
+    if adjacent && list_type != crate::lists::ListType::Description {
+        has_text = false;
+    }
+    let mut item_reader = Reader::nested(
+        buffer.into_iter().map(|l| (l.off, l.text, l.eol)).collect(),
+        lines.include_catalog.clone(),
+    );
+    let mut j = 0;
+    let mut blocks = collect_blocks_in(
+        &mut item_reader,
+        &mut j,
+        context,
+        diagnostics,
+        None,
+        PendingMeta::default(),
+        Some((list_type, !has_text)),
+    );
+    lines.absorb(item_reader, false);
+    let folded = if adjacent
+        && matches!(
+            blocks.first().map(|b| &b.kind),
+            Some(BlockKind::Paragraph { .. })
+        ) {
+        // Ruby removes the paragraph's indentation before folding it.
+        let span = blocks.remove(0).span;
+        let text = lines.content(span.start, span.end).text;
+        let indent = text.len() - text.trim_start_matches([' ', '\t']).len();
+        Some(Span::new(span.start + indent, span.end))
+    } else {
+        None
+    };
+    (blocks, folded)
+}
+
+/// The text of an item: the marker line's text through a folded paragraph,
+/// or that paragraph alone.
+fn item_text(
+    lines: &Reader<'_>,
+    text: Option<Span>,
+    folded: Option<Span>,
+    context: &mut ParseContext,
+) -> Vec<Inline> {
+    let (start, end) = match (text, folded) {
+        (Some(text), Some(folded)) => (text.start, folded.end),
+        (Some(text), None) => (text.start, text.end),
+        (None, Some(folded)) => (folded.start, folded.end),
+        (None, None) => return Vec::new(),
+    };
+    let attrs = context.render_attributes();
+    lines.scan_content(start, end, &attrs, context)
+}
+
+/// Ruby's `parse_list` for unordered and ordered lists, and
+/// `parse_description_list`.
 fn parse_list(
     lines: &mut Reader<'_>,
     i: &mut usize,
     context: &mut ParseContext,
     diagnostics: &mut Vec<Diagnostic>,
-    ancestors: &[MarkerId],
+    list_type: crate::lists::ListType,
+    style: Option<&str>,
 ) -> Block {
-    let (marker, ordered, _) =
-        list_marker_indented(lines[*i].1.trim_end()).expect("parse_list called on a non-list line");
+    use crate::lists::{item, resolve_ordered, ListType, Sibling};
     let start = lines[*i].0;
     let mut end = start;
-    let mut items = Vec::new();
-
-    // Only a sibling marker begins another item; everything else (a blank line,
-    // an ancestor's marker) ends this list. Deeper markers and `+` lines are
-    // folded into the item below, so they never reach this guard.
-    while lines.has(*i, context) && classify(&lines[*i].1, marker, ancestors) == LineRole::Sibling {
-        let (loff, lline_buffer) = lines.line(*i);
-        let lline = lline_buffer.as_ref();
-        let content_off = list_marker_indented(lline.trim_end())
-            .map(|(_, _, off)| off)
-            .expect("a sibling line carries a marker");
-        let item_start = loff;
-        let content_start = loff + content_off;
-        let mut principal_end = loff + lline.len();
-        *i += 1;
-
-        // Multi-line principal text: fold following plain lines into this item.
-        while lines.has(*i, context) && classify(&lines[*i].1, marker, ancestors) == LineRole::Text
-        {
-            let (toff, tline_buffer) = lines.line(*i);
-            let tline = tline_buffer.as_ref();
-            principal_end = toff + tline.len();
-            *i += 1;
-        }
-        let attrs = context.render_attributes();
-        lines.catalog_anchors(content_start, principal_end, true, context);
-        let inlines = lines.scan_content(content_start, principal_end, &attrs, context);
-
-        // Attached blocks (`+` continuations) and nested sublists, in source
-        // order, all collected into `item.blocks`.
-        let mut blocks = Vec::new();
-        let mut item_end = principal_end;
+    if list_type == ListType::Description {
+        let first = item(&lines[*i].1, list_type).expect("a description list item");
+        let delimiter = first.marker.clone();
+        let sibling = Sibling::Delimiter(delimiter.clone());
+        let mut items: Vec<crate::ast::DescriptionListItem> = Vec::new();
+        let mut current = parse_description_item(lines, i, context, diagnostics, first, &sibling);
         while lines.has(*i, context) {
-            if is_line_comment(&lines[*i].1) {
-                skip_comment(lines, i, context);
-                continue;
-            }
-            match classify(&lines[*i].1, marker, ancestors) {
-                LineRole::Continuation => {
-                    *i += 1; // consume the `+`
-                    if lines.has(*i, context) && is_line_comment(&lines[*i].1) {
-                        while skip_comment(lines, i, context) {}
-                        break;
-                    }
-                    if lines.has(*i, context) && !lines[*i].1.trim().is_empty() {
-                        if let Some(mut b) = parse_block(
-                            lines,
-                            i,
-                            context,
-                            diagnostics,
-                            BlockCtx::InListItem,
-                            None,
-                            false,
-                        ) {
-                            if let Some(value) = context.section_reftext.take() {
-                                context.attach_reftext(&mut b, value);
-                            }
-                            if let Some(mut meta) = context.block_macro.take() {
-                                if let Some(value) = meta.reftext.take() {
-                                    context.attach_reftext(&mut b, value);
-                                }
-                                let title = meta.title.take();
-                                meta.apply_alone(&mut b);
-                                complete_media(&mut b, &context.attributes);
-                                if let Some(title) = title {
-                                    b.title = Some(context.body_subs.defer_title(
-                                        &title.text,
-                                        title.base,
-                                        title.origin,
-                                        &context.attributes,
-                                    ));
-                                    context.assign_caption(&mut b);
-                                }
-                            }
-                            item_end = b.span.end;
-                            blocks.push(b);
-                        }
-                    }
-                }
-                LineRole::Nested => {
-                    let mut child_anc = ancestors.to_vec();
-                    child_anc.push(marker);
-                    let child = parse_list(lines, i, context, diagnostics, &child_anc);
-                    item_end = child.span.end;
-                    blocks.push(child);
-                }
-                _ => break,
+            let Some(next) = crate::lists::description_sibling(&lines[*i].1, &delimiter) else {
+                break;
+            };
+            let next = parse_description_item(lines, i, context, diagnostics, next, &sibling);
+            if current.description.is_some() {
+                items.push(std::mem::replace(&mut current, next));
+            } else {
+                current.terms.extend(next.terms);
+                current.description = next.description;
+                current.span.end = next.span.end;
             }
         }
-
-        end = item_end;
+        items.push(current);
+        end = items.last().map_or(end, |item| item.span.end);
+        let mut block = Block::new(Span::new(start, end), BlockKind::DescriptionList { items });
+        block.attribute_context = Arc::clone(&context.attributes);
+        return block;
+    }
+    let ordered = list_type == ListType::Ordered;
+    let mut items = Vec::new();
+    let mut implicit_style = None;
+    let mut checklist = false;
+    while lines.has(*i, context) {
+        let Some(m) = item(&lines[*i].1, list_type) else {
+            break;
+        };
+        let (off, line) = lines.line(*i);
+        let marker_span = Span::new(off + m.marker_range.start, off + m.marker_range.end);
+        lines.list_markers.push(marker_span);
+        let mut text = m
+            .text
+            .clone()
+            .map(|r| Span::new(off + r.start, off + r.end));
+        let mut checkbox = None;
+        let sibling = if ordered {
+            let (marker, style_of) = resolve_ordered(&m.marker);
+            if let Some((expected, actual)) = crate::lists::expected_ordinal(&m.marker, items.len())
+            {
+                if expected != actual {
+                    diagnostics.push(Diagnostic {
+                        span: Span::new(off, off + line.len()),
+                        severity: Severity::Warning,
+                        message: format!("list item index: expected {expected}, got {actual}"),
+                    });
+                }
+            }
+            if items.is_empty() && style.is_none() {
+                implicit_style = Some(style_of.map(str::to_owned).unwrap_or_else(|| {
+                    [
+                        "arabic",
+                        "loweralpha",
+                        "lowerroman",
+                        "upperalpha",
+                        "upperroman",
+                    ]
+                    .get(marker.len() - 1)
+                    .unwrap_or(&"arabic")
+                    .to_string()
+                }));
+            }
+            Sibling::Marker(list_type, marker)
+        } else {
+            // Ruby's checklist items.
+            if let Some(range) = &m.text {
+                let item_text = &line[range.clone()];
+                for (prefix, checked) in [("[ ] ", false), ("[x] ", true), ("[*] ", true)] {
+                    if item_text.starts_with(prefix) {
+                        checklist = true;
+                        checkbox = Some(checked);
+                        text = Some(Span::new(off + range.start + 4, off + range.end));
+                    }
+                }
+            }
+            Sibling::Marker(list_type, m.marker.clone())
+        };
+        if let Some(text) = text {
+            lines.catalog_anchors(text.start, text.end, true, context);
+        }
+        *i += 1;
+        let buffer = read_list_item_lines(lines, i, context, list_type, &sibling, true);
+        let (blocks, folded) =
+            parse_item_blocks(lines, buffer, context, diagnostics, list_type, true);
+        let inlines = item_text(lines, text, folded, context);
+        let item_end = blocks
+            .last()
+            .map(|b| b.span.end)
+            .or(folded.map(|f| f.end))
+            .unwrap_or(off + line.len())
+            .max(off + line.len());
         items.push(ListItem {
             inlines,
             blocks,
-            span: Span::new(item_start, item_end),
+            span: Span::new(off, item_end),
+            checkbox,
+            marker: Some(match &sibling {
+                Sibling::Marker(_, marker) | Sibling::Delimiter(marker) => marker.clone(),
+            }),
         });
+        end = item_end;
+        // Ruby's `reader.skip_blank_lines || break`.
+        while lines.has(*i, context) && lines[*i].1.trim().is_empty() {
+            *i += 1;
+        }
     }
-
     let mut block = Block::new(Span::new(start, end), BlockKind::List { ordered, items });
+    block.attrs.style = implicit_style;
+    if checklist {
+        block.attrs.options.push("checklist".into());
+    }
     block.attribute_context = Arc::clone(&context.attributes);
     block
+}
+
+/// One term and its description (Ruby's `parse_list_item` for a description
+/// list): a leading anchor in the term takes the rest of the term as its
+/// default reftext.
+fn parse_description_item(
+    lines: &mut Reader<'_>,
+    i: &mut usize,
+    context: &mut ParseContext,
+    diagnostics: &mut Vec<Diagnostic>,
+    m: crate::lists::ItemMatch,
+    sibling: &crate::lists::Sibling,
+) -> crate::ast::DescriptionListItem {
+    let (off, line) = lines.line(*i);
+    let term_range = m.term.clone().expect("a description term");
+    let term = Span::new(off + term_range.start, off + term_range.end);
+    lines.list_markers.push(Span::new(
+        off + m.marker_range.start,
+        off + m.marker_range.end,
+    ));
+    lines.catalog_term_anchor(term.start, term.end, context);
+    let attrs = context.render_attributes();
+    let term_inlines = lines.scan_content(term.start, term.end, &attrs, context);
+    let text = m
+        .text
+        .clone()
+        .map(|r| Span::new(off + r.start, off + r.end));
+    *i += 1;
+    let has_text = text.is_some();
+    let buffer = read_list_item_lines(
+        lines,
+        i,
+        context,
+        crate::lists::ListType::Description,
+        sibling,
+        has_text,
+    );
+    let (blocks, folded) = parse_item_blocks(
+        lines,
+        buffer,
+        context,
+        diagnostics,
+        crate::lists::ListType::Description,
+        has_text,
+    );
+    let inlines = item_text(lines, text, folded, context);
+    let item_end = blocks
+        .last()
+        .map(|b| b.span.end)
+        .or(folded.map(|f| f.end))
+        .unwrap_or(off + line.len())
+        .max(off + line.len());
+    let description = (!inlines.is_empty() || !blocks.is_empty()).then(|| ListItem {
+        inlines,
+        blocks,
+        span: Span::new(
+            text.or(folded).map_or(off + line.len(), |s| s.start),
+            item_end,
+        ),
+        checkbox: None,
+        marker: None,
+    });
+    crate::ast::DescriptionListItem {
+        terms: vec![crate::ast::ListTerm {
+            inlines: term_inlines,
+            span: term,
+        }],
+        description,
+        span: Span::new(off, item_end),
+    }
 }
 
 /// Byte offset of subslice `sub` within `source`. `sub` must be a slice that
 /// points into `source` (e.g. produced by `trim`/`strip_prefix` on a line).
 fn abs_offset(source: &str, sub: &str) -> usize {
     sub.as_ptr() as usize - source.as_ptr() as usize
-}
-
-/// Identity of a list marker. Two markers open distinct nesting levels iff they
-/// differ — this is asciidoctor's rule ("a new level for each unique marker"),
-/// so nesting works across kinds (e.g. a `.` item inside a `*` list).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum MarkerId {
-    /// A run-marker: its leading byte and how many times that byte repeats. `-`
-    /// is always width 1; `*` and `.` may repeat (`**`, `...`) to mark a deeper
-    /// level.
-    Run { byte: u8, width: usize },
-    /// An explicit-numbered ordered marker (`1.`, `2.`, `10.`, …). All of them
-    /// share one identity: the digit *value* and *count* don't affect nesting,
-    /// and the numbers are rendered positionally — so this is distinct from the
-    /// implicit ordered marker `Run { byte: b'.', .. }`, matching asciidoctor
-    /// (a `1.` item after a `.` list nests rather than continuing it).
-    OrderedExplicit,
-}
-
-/// A list marker at the very start of `line`: a run of `*` or `.`, a single
-/// `-`, or an explicit-numbered `<digits>.` — each followed by a space. Returns
-/// `(marker, ordered, marker_len_bytes)`, where `marker_len_bytes` is the byte
-/// offset at which item content begins. Markers must be at column 0: leading
-/// whitespace is not accepted. (All marker bytes are ASCII, so a run's width
-/// equals its byte length.)
-pub(crate) fn parse_list_marker(line: &str) -> Option<(MarkerId, bool, usize)> {
-    let bytes = line.as_bytes();
-    let first = *bytes.first()?;
-
-    // Explicit-numbered ordered marker: a run of ASCII digits, then `.`, then a
-    // space (e.g. `1. `, `10. `). Collapses to a single identity regardless of
-    // the digits — `1.` and `10.` are siblings of one list.
-    if first.is_ascii_digit() {
-        let mut digits = 1;
-        while matches!(bytes.get(digits), Some(b) if b.is_ascii_digit()) {
-            digits += 1;
-        }
-        if bytes.get(digits) != Some(&b'.') || bytes.get(digits + 1) != Some(&b' ') {
-            return None;
-        }
-        return Some((MarkerId::OrderedExplicit, true, digits + 2));
-    }
-
-    let (ordered, repeatable) = match first {
-        b'*' => (false, true),
-        b'.' => (true, true),
-        b'-' => (false, false),
-        _ => return None,
-    };
-    let mut width = 1;
-    if repeatable {
-        while bytes.get(width) == Some(&first) {
-            width += 1;
-        }
-    }
-    if bytes.get(width) != Some(&b' ') {
-        return None;
-    }
-    Some((MarkerId::Run { byte: first, width }, ordered, width + 1))
-}
-
-/// Like [`parse_list_marker`] but tolerant of leading ASCII spaces. Indentation
-/// is cosmetic in asciidoctor — nesting is decided by marker *identity*, not
-/// indent — so we strip leading spaces before matching and fold their width into
-/// the returned content offset. The [`MarkerId`] comes from the de-indented
-/// marker, so an indented `*` is the *same* level as a column-0 `*` (a sibling),
-/// while `**` opens a new level regardless of indent.
-pub(crate) fn list_marker_indented(line: &str) -> Option<(MarkerId, bool, usize)> {
-    let indent = line.len() - line.trim_start_matches(' ').len();
-    let (marker, ordered, mlen) = parse_list_marker(&line[indent..])?;
-    Some((marker, ordered, indent + mlen))
 }
 
 pub(crate) fn parse_heading(line: &str) -> Option<(u8, &str)> {
@@ -2711,16 +3132,13 @@ mod tests {
     }
 
     #[test]
-    fn a_list_interrupts_a_paragraph_without_a_blank_line() {
+    fn a_list_item_does_not_interrupt_a_paragraph() {
+        // Like Ruby's `read_paragraph_lines` outside a list item.
         let r = parse("text\n* item");
-        assert_eq!(r.document.flat_blocks().len(), 2);
+        assert_eq!(r.document.flat_blocks().len(), 1);
         assert!(matches!(
             r.document.flat_blocks()[0].kind,
             BlockKind::Paragraph { .. }
-        ));
-        assert!(matches!(
-            r.document.flat_blocks()[1].kind,
-            BlockKind::List { .. }
         ));
     }
 

@@ -380,6 +380,55 @@ fn html_lists_match_asciidoctor() {
     }
 }
 
+/// Description lists as (tag, text) pairs: each `<dt>` term and `<dd>`
+/// description with tags stripped and whitespace collapsed. Ruby wraps the
+/// `<dl>` in a `div.dlist` and its descriptions in `<p>`; adoctra keeps the
+/// `<dl>` alone.
+fn flat_dlist(html: &str) -> Vec<(String, String)> {
+    let body = html.split("<body>").nth(1).unwrap_or(html);
+    let mut out = Vec::new();
+    let mut rest = body;
+    while let Some(at) = ["<dt", "<dd"].iter().filter_map(|m| rest.find(m)).min() {
+        let tag = rest[at + 1..at + 3].to_owned();
+        let open_end = at + rest[at..].find('>').unwrap() + 1;
+        let close = format!("</{tag}>");
+        let end = open_end + rest[open_end..].find(&close).unwrap();
+        // A description ends at its own close; a nested list's terms follow.
+        let inner = &rest[open_end..end];
+        let inner = inner.split("<dl").next().unwrap();
+        let text = strip_tags(inner)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ");
+        out.push((tag, text));
+        rest = &rest[open_end..];
+    }
+    out
+}
+
+#[test]
+fn html_description_lists_match_asciidoctor() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/dlists");
+    let mut checked = 0usize;
+    for entry in fs::read_dir(&dir).expect("golden/dlists dir is missing") {
+        let path = entry.unwrap().path();
+        if path.extension().and_then(|e| e.to_str()) != Some("adoc") {
+            continue;
+        }
+        let expected = fs::read_to_string(path.with_extension("expected.html")).unwrap();
+        let name = path.file_stem().unwrap().to_string_lossy().into_owned();
+        let doc = adoctra_core::parse(&fs::read_to_string(&path).unwrap()).document;
+        let ours = String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap();
+        assert_eq!(
+            flat_dlist(&ours),
+            flat_dlist(&expected),
+            "HTML description list diverges from asciidoctor for `{name}`"
+        );
+        checked += 1;
+    }
+    assert!(checked > 0, "no golden fixtures found in {dir:?}");
+}
+
 #[test]
 fn html_source_blocks_match_asciidoctor() {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/blocks");

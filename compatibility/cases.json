@@ -103,8 +103,7 @@
     {
       "id": "list-blank",
       "category": "lists",
-      "expect": "xfail",
-      "reason": "A blank line incorrectly splits a list into two lists.",
+      "expect": "pass",
       "source": "* one\n\n* two"
     },
     {
@@ -18360,6 +18359,168 @@
       "resources": {
         "part.adoc": "x\n"
       }
+    },
+    {
+      "id": "list-paragraph-not-interrupted",
+      "category": "lists",
+      "expect": "pass",
+      "source": "para\n* item\n\nnext\n. one\n"
+    },
+    {
+      "id": "list-blank-lines-and-nesting",
+      "category": "lists",
+      "expect": "pass",
+      "source": "* a\nb\n* c\n\n\n* d\n\n- e\n\n* f\n"
+    },
+    {
+      "id": "list-continuations-and-detached",
+      "category": "lists",
+      "expect": "pass",
+      "source": "* item\n+\n----\ncode\n----\n+\nmore text\n\n* two\n\n+\ndetached\n\n* three\n+\n+\nfrozen\n"
+    },
+    {
+      "id": "list-attached-metadata",
+      "category": "lists",
+      "expect": "pass",
+      "source": "* item\n+\n[[blk]]\n.Title\n====\nexample\n====\n* two\n+\n[source,ruby]\n----\nputs 1\n----\n"
+    },
+    {
+      "id": "list-ordered-styles",
+      "category": "lists",
+      "expect": "pass",
+      "source": ". one\n.. nested\n... deep\n.... deeper\n..... deepest\n\n[loweralpha]\n. a\n. b\n\na. x\nb. y\n\nI) roman\nII) two\n\n[start=4%reversed]\n. four\n. three\n"
+    },
+    {
+      "id": "list-ordered-validation",
+      "category": "lists",
+      "expect": "pass",
+      "source": "1. one\n3. three\n\nb. bee\nd. dee\n"
+    },
+    {
+      "id": "list-indented-markers",
+      "category": "lists",
+      "expect": "pass",
+      "source": "  * indented start\n  * sibling\n    ** nested\n* back\n"
+    },
+    {
+      "id": "list-checklist",
+      "category": "lists",
+      "expect": "pass",
+      "source": "* [x] done\n* [ ] todo\n* [*] star\n* plain\n\n[%interactive]\n* [x] a\n* [ ] b\n"
+    },
+    {
+      "id": "list-literal-paragraph-in-item",
+      "category": "lists",
+      "expect": "pass",
+      "source": "* item\n\n  literal text\n  more\n\n* two\n+\n  attached literal\n"
+    },
+    {
+      "id": "list-item-anchors-and-comments",
+      "category": "lists",
+      "expect": "pass",
+      "source": "* [[first]]First item\n// comment\ncontinues\n* See <<first>>\n"
+    },
+    {
+      "id": "dlist-basic",
+      "category": "lists",
+      "expect": "pass",
+      "source": "CPU:: The brain\nRAM:: Memory\nwith continuation\nDisk::\nStorage on next line\n"
+    },
+    {
+      "id": "dlist-multiple-terms-and-blocks",
+      "category": "lists",
+      "expect": "pass",
+      "source": "Term A::\nTerm B:: Shared description\n+\n----\ncode\n----\n\nLone term::\n\n  Indented description\n\nLast;; semicolon\n"
+    },
+    {
+      "id": "dlist-nested-delimiters",
+      "category": "lists",
+      "expect": "pass",
+      "source": "Outer:: outer text\nInner::: inner text\nDeeper:::: deepest\nSecond inner::: two\nOuter2:: back\n* bullet in dlist\n"
+    },
+    {
+      "id": "dlist-with-nested-lists",
+      "category": "lists",
+      "expect": "pass",
+      "source": "Fruits::\n* apple\n* banana\nVegetables::\n. carrot\n. pea\n"
+    },
+    {
+      "id": "dlist-styles",
+      "category": "lists",
+      "expect": "pass",
+      "source": "[horizontal]\nCPU:: The brain\nRAM:: The memory\n\n[qanda]\nWhat is it?:: An answer\nWhy?:: Because\n\n[glossary]\nmud:: wet dirt\n"
+    },
+    {
+      "id": "dlist-term-anchors-and-xrefs",
+      "category": "lists",
+      "expect": "pass",
+      "source": "[[cpu]]CPU:: The brain\n[[ram,Memory]]RAM:: The memory\n\nSee <<cpu>> and <<ram>>.\n"
+    },
+    {
+      "id": "dlist-attribute-lines",
+      "category": "lists",
+      "expect": "pass",
+      "source": "Term:: text\n[.role]\n* nested with role\n\nFirst:: one\n[[after]]\nSecond:: two\n"
+    },
+    {
+      "id": "dlist-titled-and-roles",
+      "category": "lists",
+      "expect": "pass",
+      "source": ".Glossary\n[#gl.terms]\nA:: one\nB:: two\n"
+    },
+    {
+      "id": "literal-paragraph-indented",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "  indented *text*\n    deeper\n  back\n\n[normal]\n  normal style\n\n\tTabbed line\n"
+    },
+    {
+      "id": "dlist-horizontal-options",
+      "category": "lists",
+      "expect": "pass",
+      "source": "[horizontal,labelwidth=20,itemwidth=80%]\nA:: one\nB::\nC:: shared\n\n[horizontal%strong]\nX:: y\n"
+    },
+    {
+      "id": "dlist-qanda-with-blocks",
+      "category": "lists",
+      "expect": "pass",
+      "source": "[qanda]\nQ1::\nQ2:: Shared answer\n+\n----\ncode\n----\nQ3::\n"
+    },
+    {
+      "id": "dlist-dangling-and-adjacent-literal",
+      "category": "lists",
+      "expect": "pass",
+      "source": "Term::\n  adjacent literal\nNext:: x\nLast::\n"
+    },
+    {
+      "id": "list-text-only-first-block",
+      "category": "lists",
+      "expect": "pass",
+      "source": "* item\n.not a title\n:not: an entry\nimage::x.png[]\n* two\nNOTE: not an admonition\n"
+    },
+    {
+      "id": "list-nested-continuations",
+      "category": "lists",
+      "expect": "pass",
+      "source": "* outer\n** inner\n+\nattached to inner\n* outer two\n+\nattached to outer\n"
+    },
+    {
+      "id": "list-in-containers-and-tables",
+      "category": "lists",
+      "expect": "pass",
+      "source": "====\n* in example\n* two\n\nTerm:: def\n====\n\n|===\na|* in cell\nT:: d\n|===\n"
+    },
+    {
+      "id": "list-bullet-and-hyphen-markers",
+      "category": "lists",
+      "expect": "pass",
+      "source": "• bullet\n• two\n\n- hyphen\n-- not a marker\n- two\n"
+    },
+    {
+      "id": "list-roman-and-alpha-bounds",
+      "category": "lists",
+      "expect": "pass",
+      "source": "x) roman x\nxi) eleven\n\nZ. last\n\nA. Smith wrote\n"
     }
   ]
 }

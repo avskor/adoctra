@@ -309,11 +309,73 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
         }
         BlockKind::List { ordered, items } => {
             let tag = if *ordered { "ol" } else { "ul" };
-            let class = class_attr(&[], &block.roles);
+            let option = |name: &str| {
+                block.attrs.options.iter().any(|o| o == name)
+                    || block.attrs.named.contains_key(&format!("{name}-option"))
+            };
+            let checklist = !*ordered && option("checklist");
+            // Ruby's list class: the style (`checklist` for a checklist), then
+            // roles; an ordered style other than arabic also sets `type`.
+            let style = if checklist {
+                Some("checklist")
+            } else {
+                block.attrs.style.as_deref()
+            };
+            let class = class_attr(&style.into_iter().collect::<Vec<_>>(), &block.roles);
+            let mut extra = String::new();
+            // Ruby's implicit style from a numbered or lettered marker is a
+            // symbol without a `type` keyword.
+            let marker_style = items
+                .first()
+                .and_then(|item| item.marker.as_deref())
+                .filter(|marker| !marker.starts_with('.'))
+                .map(|marker| match marker {
+                    "a." => "loweralpha",
+                    "A." => "upperalpha",
+                    "i)" => "lowerroman",
+                    "I)" => "upperroman",
+                    _ => "arabic",
+                });
+            if *ordered {
+                let keyword = match style.filter(|s| Some(*s) != marker_style) {
+                    Some("loweralpha") => Some("a"),
+                    Some("lowerroman") => Some("i"),
+                    Some("upperalpha") => Some("A"),
+                    Some("upperroman") => Some("I"),
+                    _ => None,
+                };
+                if let Some(keyword) = keyword {
+                    extra.push_str(&format!(" type=\"{keyword}\""));
+                }
+                if let Some(start) = block.attrs.named.get("start") {
+                    extra.push_str(&format!(" start=\"{}\"", attr_value(start)));
+                }
+                if option("reversed") {
+                    extra.push_str(" reversed");
+                }
+            }
+            let (checked, unchecked) = if option("interactive") {
+                (
+                    "<input type=\"checkbox\" data-item-complete=\"1\" checked> ",
+                    "<input type=\"checkbox\" data-item-complete=\"0\"> ",
+                )
+            } else if cx.doc.attributes.get("icons") == Some("font") {
+                (
+                    "<i class=\"fa fa-check-square-o\"></i> ",
+                    "<i class=\"fa fa-square-o\"></i> ",
+                )
+            } else {
+                ("&#10003; ", "&#10063; ")
+            };
             render_title(&block.title, &block.caption, out);
-            out.push_str(&format!("<{tag}{id}{class}>\n"));
+            out.push_str(&format!("<{tag}{id}{class}{extra}>\n"));
             for item in items {
                 out.push_str("<li>");
+                match item.checkbox.filter(|_| checklist) {
+                    Some(true) => out.push_str(checked),
+                    Some(false) => out.push_str(unchecked),
+                    None => {}
+                }
                 render_inlines(&item.inlines, out);
                 // Nested blocks (a sublist, or a `+`-attached paragraph/listing)
                 // render inside the <li>, after the item's principal text. Each
@@ -327,6 +389,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             }
             out.push_str(&format!("</{tag}>\n"));
         }
+        BlockKind::DescriptionList { items } => render_dlist(block, items, cx, out),
         BlockKind::Admonition {
             kind,
             label,
@@ -611,6 +674,109 @@ fn drop_anchors(html: &str) -> String {
     }
     out.push_str(rest);
     out
+}
+
+/// A description list. The default and styled forms keep Ruby's semantic
+/// `<dl>` (without its wrapper `<div>`, so id, style and roles hang on the
+/// list); `horizontal` is a `<dl class="hdlist">` laid out by the stylesheet
+/// instead of Ruby's layout table, and `qanda` Ruby's ordered list of questions.
+fn render_dlist(
+    block: &Block,
+    items: &[adoctra_core::ast::DescriptionListItem],
+    cx: &Cx,
+    out: &mut String,
+) {
+    let id = id_attr(&block.id);
+    let style = block.attrs.style.as_deref();
+    let description = |item: &adoctra_core::ast::ListItem, out: &mut String| {
+        if !item.inlines.is_empty() {
+            out.push_str("<p>");
+            render_inlines(&item.inlines, out);
+            out.push_str("</p>\n");
+        }
+        for child in &item.blocks {
+            render_block(child, cx, out);
+        }
+    };
+    render_title(&block.title, &block.caption, out);
+    match style {
+        Some("qanda") => {
+            let class = class_attr(&["qanda"], &block.roles);
+            out.push_str(&format!("<ol{id}{class}>\n"));
+            for item in items {
+                out.push_str("<li>\n");
+                for term in &item.terms {
+                    out.push_str("<p><em>");
+                    render_inlines(&term.inlines, out);
+                    out.push_str("</em></p>\n");
+                }
+                if let Some(dd) = &item.description {
+                    description(dd, out);
+                }
+                out.push_str("</li>\n");
+            }
+            out.push_str("</ol>\n");
+        }
+        Some("horizontal") => {
+            let class = class_attr(&["hdlist"], &block.roles);
+            let named = &block.attrs.named;
+            let width = |key: &str| {
+                named
+                    .get(key)
+                    .map(|w| format!("{}%", w.trim_end_matches('%')))
+            };
+            let style_attr = match (width("labelwidth"), width("itemwidth")) {
+                (None, None) => String::new(),
+                (label, item) => format!(
+                    " style=\"grid-template-columns: {} {};\"",
+                    attr_value(&label.unwrap_or_else(|| "auto".into())),
+                    attr_value(&item.unwrap_or_else(|| "1fr".into()))
+                ),
+            };
+            let strong = block.attrs.options.iter().any(|o| o == "strong")
+                || named.contains_key("strong-option");
+            out.push_str(&format!("<dl{id}{class}{style_attr}>\n"));
+            for item in items {
+                for term in &item.terms {
+                    out.push_str(if strong {
+                        "<dt class=\"strong\">"
+                    } else {
+                        "<dt>"
+                    });
+                    render_inlines(&term.inlines, out);
+                    out.push_str("</dt>\n");
+                }
+                out.push_str("<dd>\n");
+                if let Some(dd) = &item.description {
+                    description(dd, out);
+                }
+                out.push_str("</dd>\n");
+            }
+            out.push_str("</dl>\n");
+        }
+        style => {
+            let class = class_attr(&style.into_iter().collect::<Vec<_>>(), &block.roles);
+            let dt_class = if style.is_none() {
+                " class=\"hdlist1\""
+            } else {
+                ""
+            };
+            out.push_str(&format!("<dl{id}{class}>\n"));
+            for item in items {
+                for term in &item.terms {
+                    out.push_str(&format!("<dt{dt_class}>"));
+                    render_inlines(&term.inlines, out);
+                    out.push_str("</dt>\n");
+                }
+                if let Some(dd) = &item.description {
+                    out.push_str("<dd>\n");
+                    description(dd, out);
+                    out.push_str("</dd>\n");
+                }
+            }
+            out.push_str("</dl>\n");
+        }
+    }
 }
 
 /// Ruby's `convert_table`: a `<table class="tableblock">` is already the
@@ -1617,7 +1783,7 @@ mod tests {
     #[test]
     fn renders_ordered_list() {
         let html = render(". first\n. second");
-        assert!(html.contains("<ol>"), "got: {html}");
+        assert!(html.contains("<ol class=\"arabic\">"), "got: {html}");
         assert!(html.contains("<li>first</li>"), "got: {html}");
         assert!(html.contains("</ol>"), "got: {html}");
     }
@@ -1626,7 +1792,7 @@ mod tests {
     fn explicit_numbered_list_renders_as_ol() {
         // `1.`/`2.` reuse the ordered-list node, so they render like `.`.
         let html = render("1. first\n2. second");
-        assert!(html.contains("<ol>"), "got: {html}");
+        assert!(html.contains("<ol class=\"arabic\">"), "got: {html}");
         assert!(html.contains("<li>first</li>"), "got: {html}");
         assert!(html.contains("</ol>"), "got: {html}");
     }
@@ -1657,9 +1823,40 @@ mod tests {
         // A unique marker nests across kinds: `. b` becomes an <ol> in the <li>.
         let html = render("* a\n. b");
         assert!(html.contains("<ul>"), "got: {html}");
-        assert!(html.contains("<ol>"), "got: {html}");
-        assert!(html.contains("<li>a\n<ol>"), "got: {html}");
+        assert!(html.contains("<li>a\n<ol class=\"arabic\">"), "got: {html}");
         assert!(html.contains("<li>b</li>"), "got: {html}");
+    }
+
+    #[test]
+    fn ordered_styles_checklists_and_description_lists() {
+        let html = render(". a\n.. b\n\nc. x\nd. y\n\n[%reversed,start=3]\n. z");
+        assert!(
+            html.contains("<ol class=\"loweralpha\" type=\"a\">"),
+            "{html}"
+        );
+        // A lettered marker gives Ruby's style without the `type` keyword.
+        assert!(
+            html.contains("<ol class=\"loweralpha\">\n<li>x</li>"),
+            "{html}"
+        );
+        assert!(
+            html.contains("<ol class=\"arabic\" start=\"3\" reversed>"),
+            "{html}"
+        );
+        let html = render("* [x] done\n* [ ] todo\n* plain");
+        assert!(html.contains("<ul class=\"checklist\">\n<li>&#10003; done</li>\n<li>&#10063; todo</li>\n<li>plain</li>"), "{html}");
+        let html = render("[#d.r]\nCPU:: The *brain*\nA::\nB:: shared\n+\n----\nx\n----");
+        assert!(html.contains("<dl id=\"d\" class=\"r\">\n<dt class=\"hdlist1\">CPU</dt>\n<dd>\n<p>The <strong>brain</strong></p>\n</dd>\n<dt class=\"hdlist1\">A</dt>\n<dt class=\"hdlist1\">B</dt>\n<dd>\n<p>shared</p>\n<pre class=\"listing\">x</pre>\n</dd>\n</dl>"), "{html}");
+        let html = render("[horizontal,labelwidth=25]\nA:: one");
+        assert!(html.contains("<dl class=\"hdlist\" style=\"grid-template-columns: 25% 1fr;\">\n<dt>A</dt>\n<dd>\n<p>one</p>\n</dd>\n</dl>"), "{html}");
+        let html = render("[qanda]\nWhy?:: Because");
+        assert!(
+            html.contains(
+                "<ol class=\"qanda\">\n<li>\n<p><em>Why?</em></p>\n<p>Because</p>\n</li>\n</ol>"
+            ),
+            "{html}"
+        );
+        assert!(STYLESHEET.contains("dl.hdlist"));
     }
 
     #[test]

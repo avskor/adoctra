@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CORPUS = ROOT / "compatibility"
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"}
 INLINE = {"p", "a", "strong", "em", "code", "mark", "sup", "sub", "span", "cite", "h1", "h2", "h3", "h4", "h5", "h6"}
-LIST_BLOCKS = {"ul", "ol", "p", "listing", "literal", "pre", "div", "aside", "figure", "blockquote", "table"}
+LIST_BLOCKS = {"ul", "ol", "dl", "p", "listing", "literal", "pre", "div", "aside", "figure", "blockquote", "table"}
 
 
 @dataclass
@@ -88,6 +88,34 @@ def trim_edges(children):
     return [child for child in children if child != ""]
 
 
+def hdlist(node):
+    attrs = dict(node.attrs)
+    classes = [c for c in attrs.get("class", "").split() if c != "hdlist"]
+    attrs.pop("class", None)
+    if classes:
+        attrs["class"] = " ".join(classes)
+    items = []
+    for table in (c for c in node.children if isinstance(c, Element) and c.tag == "table"):
+        rows = [r for c in table.children if isinstance(c, Element)
+                for r in ([c] if c.tag == "tr" else c.children) if isinstance(r, Element) and r.tag == "tr"]
+        for row in rows:
+            for cell in (c for c in row.children if isinstance(c, Element) and c.tag == "td"):
+                cell_classes = cell.attrs.get("class", "").split()
+                if "hdlist1" in cell_classes:
+                    dt_attrs = {"class": "strong"} if "strong" in cell_classes else {}
+                    term = []
+                    for child in cell.children:
+                        if isinstance(child, Element) and child.tag == "br":
+                            items.append(Element("dt", dict(dt_attrs), term))
+                            term = []
+                        else:
+                            term.append(child)
+                    items.append(Element("dt", dict(dt_attrs), term))
+                else:
+                    items.append(Element("dd", {}, cell.children))
+    return Element("dl", attrs, items)
+
+
 def element(tag, attrs, children):
     return {"tag": tag, "attrs": dict(sorted(attrs.items())), "children": children}
 
@@ -110,6 +138,17 @@ def normalize(node, verbatim=False, block_kind=None):
         # A media <figcaption> is Ruby's title <div> (trailing for images,
         # leading for video and audio).
         node = Element("div", node.attrs, node.children)
+    if node.tag == "div" and "hdlist" in node.attrs.get("class", "").split():
+        # Ruby's horizontal description list is a layout table; adoctra's is a
+        # <dl class="hdlist">. Rows become terms (split at <br>) and descriptions.
+        node = hdlist(node)
+    if node.tag == "dl" and "hdlist" in node.attrs.get("class", "").split():
+        attrs = {k: v for k, v in node.attrs.items() if k != "style"}
+        classes = [c for c in attrs.get("class", "").split() if c != "hdlist"]
+        attrs.pop("class", None)
+        if classes:
+            attrs["class"] = " ".join(classes)
+        node = Element("dl", attrs, node.children)
     if node.tag == "iframe" and node.attrs.get("frameborder") == "0":
         # Ruby's obsolete frameborder="0" is adoctra's stylesheet border.
         node = Element("iframe", {k: v for k, v in node.attrs.items() if k != "frameborder"}, node.children)
@@ -133,7 +172,7 @@ def normalize(node, verbatim=False, block_kind=None):
         classes = []
     if tag == "div":
         wrapper = next((c for c in classes if c in {
-            "paragraph", "ulist", "olist", "listingblock", "literalblock",
+            "paragraph", "ulist", "olist", "dlist", "qlist", "listingblock", "literalblock",
             "content", "sectionbody", "preamble",
         } or re.fullmatch(r"sect[1-6]", c)), None)
         if wrapper in {"listingblock", "literalblock"}:
@@ -191,7 +230,7 @@ def normalize(node, verbatim=False, block_kind=None):
             if isinstance(child, dict) and child["tag"] in LIST_BLOCKS:
                 if i and isinstance(children[i - 1], str):
                     children[i - 1] = children[i - 1].rstrip(" ")
-    if tag in {"p", "li", "attribution", "h1", "h2", "h3", "h4", "h5", "h6"} or "title" in classes:
+    if tag in {"p", "li", "dt", "attribution", "h1", "h2", "h3", "h4", "h5", "h6"} or "title" in classes:
         children = trim_edges(children)
 
     if wrapper:
@@ -210,7 +249,9 @@ def normalize(node, verbatim=False, block_kind=None):
             target = targets[0]
             for key, value in attrs.items():
                 if key == "class" and key in target["attrs"]:
-                    target["attrs"][key] += " " + value
+                    merged = target["attrs"][key].split()
+                    merged += [c for c in value.split() if c not in merged]
+                    target["attrs"][key] = " ".join(merged)
                 elif key in target["attrs"]:
                     raise ValueError(f"ambiguous wrapper attribute {key}")
                 else:

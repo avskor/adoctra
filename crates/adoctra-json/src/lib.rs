@@ -214,6 +214,24 @@ fn write_cell(cell: &adoctra_core::ast::TableCell, s: &mut String) {
     s.push('}');
 }
 
+/// A list item (or a description): its text, nested blocks and, in a
+/// checklist, its `checkbox` state.
+fn write_list_item(item: &adoctra_core::ast::ListItem, s: &mut String) {
+    s.push_str("{\"inlines\":");
+    write_inlines(&item.inlines, s);
+    if let Some(checked) = item.checkbox {
+        s.push_str(&format!(",\"checkbox\":{checked}"));
+    }
+    s.push_str(",\"blocks\":[");
+    for (j, child) in item.blocks.iter().enumerate() {
+        if j > 0 {
+            s.push(',');
+        }
+        write_block(child, s);
+    }
+    s.push_str("]}");
+}
+
 fn write_block(block: &Block, s: &mut String) {
     match &block.kind {
         BlockKind::Heading { level, inlines } => {
@@ -378,17 +396,37 @@ fn write_block(block: &Block, s: &mut String) {
                 if i > 0 {
                     s.push(',');
                 }
-                s.push_str("{\"inlines\":");
-                write_inlines(&item.inlines, s);
-                // Nested blocks (e.g. a sublist) under this item.
-                s.push_str(",\"blocks\":[");
-                for (j, child) in item.blocks.iter().enumerate() {
+                write_list_item(item, s);
+            }
+            s.push_str("]}");
+        }
+        BlockKind::DescriptionList { items } => {
+            s.push_str("{\"name\":\"dlist\",");
+            write_id(&block.id, s);
+            write_roles(&block.roles, s);
+            write_style(&block.attrs.style, s);
+            write_attributes(&block.attrs.named, s);
+            write_options(&block.attrs.options, s);
+            write_title(&block.title, s);
+            write_caption(&block.caption, s);
+            s.push_str(",\"items\":[");
+            for (i, item) in items.iter().enumerate() {
+                if i > 0 {
+                    s.push(',');
+                }
+                s.push_str("{\"terms\":[");
+                for (j, term) in item.terms.iter().enumerate() {
                     if j > 0 {
                         s.push(',');
                     }
-                    write_block(child, s);
+                    write_inlines(&term.inlines, s);
                 }
-                s.push_str("]}");
+                s.push_str("],\"description\":");
+                match &item.description {
+                    Some(description) => write_list_item(description, s),
+                    None => s.push_str("null"),
+                }
+                s.push('}');
             }
             s.push_str("]}");
         }
@@ -1558,6 +1596,20 @@ mod tests {
         assert!(json.contains("\"blocks\":["), "got: {json}");
         assert!(json.contains("\"name\":\"paragraph\""), "got: {json}");
         assert!(json.contains("\"name\":\"strong\""), "got: {json}");
+    }
+
+    #[test]
+    fn description_lists_and_checklists_serialize() {
+        let json = render("A::\nB:: *x*\nC::");
+        assert!(json.contains(r#"{"name":"dlist","id":null,"roles":[],"style":null,"attributes":{},"options":[],"title":null,"caption":null,"items":[{"terms":[[{"name":"text","value":"A"}],[{"name":"text","value":"B"}]],"description":{"inlines":[{"name":"strong","inlines":[{"name":"text","value":"x"}]}],"blocks":[]}},{"terms":[[{"name":"text","value":"C"}]],"description":null}]}"#), "{json}");
+        let json = render("* [x] a");
+        assert!(json.contains(r#""options":["checklist"]"#), "{json}");
+        assert!(
+            json.contains(
+                r#"{"inlines":[{"name":"text","value":"a"}],"checkbox":true,"blocks":[]}"#
+            ),
+            "{json}"
+        );
     }
 
     #[test]

@@ -70,6 +70,8 @@ pub(crate) struct Reader<'a> {
     /// for highlighting.
     pub tables: Vec<Span>,
     pub table_separators: Vec<Span>,
+    /// List markers and description list delimiters, for highlighting.
+    pub list_markers: Vec<Span>,
     endings: Vec<(usize, String)>,
     pub limit: usize,
     stack: Vec<Conditional>,
@@ -114,6 +116,7 @@ impl<'a> Reader<'a> {
             heading_lines: Vec::new(),
             tables: Vec::new(),
             table_separators: Vec::new(),
+            list_markers: Vec::new(),
             endings: Vec::new(),
             limit: usize::MAX,
             stack: Vec::new(),
@@ -166,14 +169,14 @@ impl<'a> Reader<'a> {
         lines
     }
 
-    /// Keep a nested document's highlighting records. Its attribute entries
-    /// never apply to the parent.
-    pub fn absorb(&mut self, nested: Reader<'_>) {
+    /// Keep a sub-reader's highlighting records. The attribute entries of a
+    /// nested document never apply to the parent; a list item's do.
+    pub fn absorb(&mut self, nested: Reader<'_>, document: bool) {
         self.attribute_entries.extend(
             nested
                 .attribute_entries
                 .into_iter()
-                .map(|(span, _)| (span, None)),
+                .map(|(span, entry)| (span, entry.filter(|_| !document))),
         );
         self.attribute_entries.sort_by_key(|(span, _)| span.start);
         self.metadata_references.extend(nested.metadata_references);
@@ -182,6 +185,8 @@ impl<'a> Reader<'a> {
         self.tables.extend(nested.tables);
         self.table_separators.extend(nested.table_separators);
         self.table_separators.sort_by_key(|span| span.start);
+        self.list_markers.extend(nested.list_markers);
+        self.list_markers.sort_by_key(|span| span.start);
         self.diagnostics.extend(nested.diagnostics);
     }
 
@@ -214,6 +219,11 @@ impl<'a> Reader<'a> {
     }
 
     /// Clone the shared line so callers may advance the reader while using it.
+    /// The line ending of a loaded line.
+    pub fn eol(&self, index: usize) -> String {
+        self.endings[index].1.clone()
+    }
+
     pub fn line(&self, index: usize) -> (usize, Arc<str>) {
         self.loaded[index].clone()
     }
@@ -930,6 +940,16 @@ impl<'a> Reader<'a> {
         } else {
             context.catalog_inline_anchors(&filtered.text, map);
         }
+    }
+
+    /// A description list term's leading anchor (Ruby's `catalog_inline_anchor`
+    /// with the rest of the term as the default reftext).
+    pub fn catalog_term_anchor(&self, start: usize, end: usize, context: &mut ParseContext) {
+        let content = self.content(start, end);
+        let map = |range: std::ops::Range<usize>| {
+            content.original_span(Span::new(range.start, range.end))
+        };
+        context.catalog_term_anchor(&content.text, map);
     }
 
     pub fn scan_content(

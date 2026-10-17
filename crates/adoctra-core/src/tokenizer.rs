@@ -14,7 +14,7 @@ use crate::ast::{AdmonitionKind, Inline, Span};
 use crate::context::{ParseContext, ParseOptions};
 use crate::header::collect_header;
 use crate::inline::scan_for_tokens as scan_inlines;
-use crate::parser::{parse_block_anchor, parse_block_title, parse_list_marker};
+use crate::parser::{parse_block_anchor, parse_block_title};
 use crate::scanner::lines_with_offsets;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -144,6 +144,11 @@ pub(crate) fn tokens_reader<'a>(
             .iter()
             .map(|span| processed.transformed_span(*span))
             .collect(),
+        list_markers: reader
+            .list_markers
+            .iter()
+            .map(|span| processed.transformed_span(*span))
+            .collect(),
     };
     let mut out: Vec<_> = tokens_processed(
         &processed.text,
@@ -253,10 +258,12 @@ pub(crate) fn tokens_reader<'a>(
     out
 }
 
-/// Table blocks and their cell separators, from the parser.
+/// Table blocks and their cell separators, and list markers (description
+/// list delimiters too), from the parser.
 struct Tables {
     blocks: Vec<Span>,
     separators: Vec<Span>,
+    list_markers: Vec<Span>,
 }
 
 fn tokens_processed(
@@ -283,10 +290,6 @@ fn tokens_processed(
     let mut in_listing = false;
     let mut in_literal = false;
     let mut in_passthrough = false;
-    // Whether we're inside a list (started by a column-0 marker, ended by a
-    // blank line — mirroring the parser). While set, indented markers are
-    // recognised; this is the tokenizer's share of "indented nested markers".
-    let mut in_list = false;
     // Whether the *previous* line continued a running paragraph (or list item).
     // Captured per line as `at_para_start` so an admonition label (`NOTE: `) is
     // only recognised at a paragraph start, exactly like the parser — a `NOTE:`
@@ -502,7 +505,6 @@ fn tokens_processed(
             continue;
         }
         if line.trim().is_empty() {
-            in_list = false; // a blank line ends a list (mirrors the parser)
             continue;
         }
         // A `[[id]]` / `[[id,reftext]]` block anchor: one token over the whole
@@ -549,30 +551,33 @@ fn tokens_processed(
             });
             continue;
         }
-        // List item: a marker token, then the item content flattened like any
-        // other body line — same `scan_inlines` (and base offset) the parser
-        // uses, so token spans coincide with the item's inline spans. A list
-        // starts at column 0; once inside one, a deeper marker may be indented
-        // (asciidoctor folds the indent and nests by marker identity), so we
-        // recognise an indented marker only while `in_list` and keep the indent
-        // out of the marker token.
-        let t = line.trim_end();
-        let indent = if in_list {
-            t.len() - t.trim_start_matches(' ').len()
-        } else {
-            0
-        };
-        if let Some((_, _, mlen)) = parse_list_marker(&t[indent..]) {
-            in_list = true;
+        // List items, as the parser read them: each marker (or description
+        // delimiter) is a token and the text around it is scanned like any
+        // other body line, so token spans coincide with the item's inlines.
+        let first = tables.list_markers.partition_point(|s| s.start < off);
+        let markers: Vec<Span> = tables.list_markers[first..]
+            .iter()
+            .take_while(|s| s.end <= off + line.len())
+            .copied()
+            .collect();
+        if !markers.is_empty() {
             mid_paragraph = true; // a folded line after the marker is item text
-            let mstart = off + indent;
-            out.push(Token {
-                span: Span::new(mstart, mstart + mlen),
-                kind: TokenKind::ListMarker,
-            });
+            let mut at = off;
+            for marker in markers {
+                out.extend(scan_inlines(
+                    &line[at - off..marker.start - off],
+                    at,
+                    &context.render_attributes(),
+                ));
+                out.push(Token {
+                    span: marker,
+                    kind: TokenKind::ListMarker,
+                });
+                at = marker.end;
+            }
             out.extend(scan_inlines(
-                &line[indent + mlen..],
-                off + indent + mlen,
+                &line[at - off..],
+                at,
                 &context.render_attributes(),
             ));
             continue;
@@ -765,7 +770,7 @@ mod tests {
             .iter()
             .find(|t| t.kind == TokenKind::ListMarker)
             .expect("no list marker token");
-        assert_eq!(&src[marker.span.start..marker.span.end], "* ");
+        assert_eq!(&src[marker.span.start..marker.span.end], "*");
         // Inline markup inside the item is still tokenized.
         assert!(toks.iter().any(|t| t.kind == TokenKind::Strong));
     }
@@ -782,7 +787,7 @@ mod tests {
 
     #[test]
     fn nested_marker_token_covers_the_whole_run() {
-        // A `**` marker token spans both stars plus the trailing space.
+        // A `**` marker token spans both stars.
         let src = "* one\n** deep";
         let toks = tokens(src);
         let nested = toks
@@ -790,7 +795,7 @@ mod tests {
             .filter(|t| t.kind == TokenKind::ListMarker)
             .find(|t| t.span.start == 6)
             .expect("no nested list marker token");
-        assert_eq!(&src[nested.span.start..nested.span.end], "** ");
+        assert_eq!(&src[nested.span.start..nested.span.end], "**");
     }
 
     #[test]
@@ -844,8 +849,8 @@ mod tests {
 
     #[test]
     fn indented_marker_is_tokenized_inside_a_list() {
-        // Once a list has started at column 0, an indented marker is still a
-        // marker; the marker token excludes the leading spaces.
+        // An indented marker is still a marker; the token excludes the
+        // leading spaces.
         let src = "* one\n  ** deep";
         let toks = tokens(src);
         let nested = toks
@@ -853,15 +858,33 @@ mod tests {
             .filter(|t| t.kind == TokenKind::ListMarker)
             .find(|t| t.span.start == 8) // "* one\n  " is 8 bytes
             .expect("no indented list marker token");
-        assert_eq!(&src[nested.span.start..nested.span.end], "** ");
+        assert_eq!(&src[nested.span.start..nested.span.end], "**");
     }
 
     #[test]
-    fn indented_marker_is_not_tokenized_outside_a_list() {
-        // With no list in progress, a leading-space marker is ordinary text
-        // (lists start at column 0) — no marker token at the indented position.
-        let toks = tokens("  * not a list");
-        assert!(toks.iter().all(|t| t.kind != TokenKind::ListMarker));
+    fn indented_marker_starts_a_list() {
+        // Like Ruby's `UnorderedListRx`, leading whitespace may precede a marker.
+        let src = "  * a list";
+        let toks = tokens(src);
+        let marker = toks
+            .iter()
+            .find(|t| t.kind == TokenKind::ListMarker)
+            .unwrap();
+        assert_eq!(&src[marker.span.start..marker.span.end], "*");
+    }
+
+    #[test]
+    fn description_delimiters_are_list_markers() {
+        let src = "CPU:: The *brain*
+RAM::";
+        let toks = tokens(src);
+        let markers: Vec<_> = toks
+            .iter()
+            .filter(|t| t.kind == TokenKind::ListMarker)
+            .map(|t| &src[t.span.start..t.span.end])
+            .collect();
+        assert_eq!(markers, ["::", "::"]);
+        assert!(toks.iter().any(|t| t.kind == TokenKind::Strong));
     }
 
     #[test]
@@ -874,8 +897,8 @@ mod tests {
 
     #[test]
     fn explicit_numbered_marker_is_tokenized() {
-        // The marker token covers the digits, the dot and the trailing space;
-        // multi-digit markers extend it accordingly.
+        // The marker token covers the digits and the dot; multi-digit markers
+        // extend it accordingly.
         let src = "1. one\n10. ten";
         let toks = tokens(src);
         let markers: Vec<_> = toks
@@ -883,8 +906,8 @@ mod tests {
             .filter(|t| t.kind == TokenKind::ListMarker)
             .collect();
         assert_eq!(markers.len(), 2);
-        assert_eq!(&src[markers[0].span.start..markers[0].span.end], "1. ");
-        assert_eq!(&src[markers[1].span.start..markers[1].span.end], "10. ");
+        assert_eq!(&src[markers[0].span.start..markers[0].span.end], "1.");
+        assert_eq!(&src[markers[1].span.start..markers[1].span.end], "10.");
     }
 
     #[test]

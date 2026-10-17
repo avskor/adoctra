@@ -90,6 +90,20 @@ pub fn walk_block_mut(visitor: &mut (impl VisitorMut + ?Sized), block: &mut Bloc
                 walk_blocks_mut(visitor, &mut item.blocks);
             }
         }
+        BlockKind::DescriptionList { items } => {
+            for item in items {
+                visitor.visit_span(&mut item.span);
+                for term in &mut item.terms {
+                    visitor.visit_span(&mut term.span);
+                    visitor.visit_inlines(&mut term.inlines, InlineContext::Body);
+                }
+                if let Some(description) = &mut item.description {
+                    visitor.visit_span(&mut description.span);
+                    visitor.visit_inlines(&mut description.inlines, InlineContext::Body);
+                    walk_blocks_mut(visitor, &mut description.blocks);
+                }
+            }
+        }
         BlockKind::Admonition { blocks, .. }
         | BlockKind::Example { blocks }
         | BlockKind::Quote { blocks, .. }

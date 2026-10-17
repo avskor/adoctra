@@ -201,6 +201,27 @@ impl ParseContext {
         self.register_anchor(id, map(found.start..found.end), reftext);
     }
 
+    /// Ruby's term anchor: `[[id]]` without reftext takes the rest of the term.
+    pub(crate) fn catalog_term_anchor(&mut self, text: &str, map: impl Fn(Range<usize>) -> Span) {
+        let Some(found) = text
+            .starts_with("[[")
+            .then(|| shorthand_at(text, 0))
+            .flatten()
+        else {
+            return;
+        };
+        let range = found.reftext.clone().unwrap_or_else(|| {
+            let rest = &text[found.end..];
+            found.end + (rest.len() - rest.trim_start().len())..text.len()
+        });
+        let reftext = (!range.is_empty()).then(|| {
+            let base = map(range.clone()).start;
+            self.block_reftext(&text[range], base)
+        });
+        let id = text[found.id].to_owned();
+        self.register_anchor(id, map(found.start..found.end), reftext);
+    }
+
     fn register_anchor(&mut self, id: String, span: Span, reftext: Option<crate::reftext::Read>) {
         self.anchors.push((id, Entry { span, reftext }));
     }

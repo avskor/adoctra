@@ -597,6 +597,19 @@ impl Execution<'_> {
                         self.blocks(&mut item.blocks);
                     }
                 }
+                // Ruby converts each term, then the description's text and
+                // blocks.
+                BlockKind::DescriptionList { items } => {
+                    for item in items {
+                        for term in &mut item.terms {
+                            self.inlines(&mut term.inlines);
+                        }
+                        if let Some(description) = &mut item.description {
+                            self.inlines(&mut description.inlines);
+                            self.blocks(&mut description.blocks);
+                        }
+                    }
+                }
                 BlockKind::Table(table) => self.table(table, &block.attrs, block.span),
                 BlockKind::Admonition { blocks, .. }
                 | BlockKind::Example { blocks }

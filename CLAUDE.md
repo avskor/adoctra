@@ -566,6 +566,35 @@ the cell's lines again as inputs after every loaded line (only the first one
 preprocessed, with its own conditional stack and the parent's reading
 attributes), keeping increasing reader offsets and physical origins per run
 and line feed; an unchanged first line keeps the original lines.
+**Lists**: parser.rs ports Ruby's parse_list / parse_description_list /
+parse_list_item / read_lines_for_list_item with lists.rs (UnorderedListRx `-`,
+`*`-runs, `•`; OrderedListRx `.`-runs, `1.`, `a.`/`A.`, `i)`/`I)`;
+DescriptionListRx `::`/`:::`/`::::`/`;;` and their sibling expressions;
+AnyListRx; resolve_ordered_list_marker with the "list item index: expected …"
+warning; is_delimited_block?). Leading whitespace is allowed before a marker. An
+item's lines are collected up to a sibling (blank lines, `+` continuations as
+placeholders, detached/frozen continuations, delimited blocks only after `+`,
+literal paragraphs, greedy description terms, nested lists of any other marker),
+then parsed as blocks from a `Reader::nested` sub-reader (collect_blocks_in with
+`BlockCtx::InListItem { list_type, text_only, adjacent }`: text-only first block
+— no macros, admonition labels, titles or attribute entries — and paragraphs that
+end at list lines only when adjacent); an adjacent paragraph folds into the item
+text (fold_first, indentation removed). A list line no longer interrupts a
+paragraph (Ruby), and a plain paragraph ends at a delimited block or block
+attribute line. `ListItem.marker`/`checkbox`; ordered lists get Ruby's implicit
+style in `attrs.style` (from `.`-run length or the marker), checklists the
+`checklist` option. `BlockKind::DescriptionList { items }` with
+`DescriptionListItem { terms: Vec<ListTerm>, description: Option<ListItem> }`;
+terms without a description merge into the next; a term's leading anchor takes
+the rest of the term as reftext. Unstyled indented paragraphs are literal blocks
+(adjust_indentation!) except a list item's text-only/description-adjacent one.
+HTML: `<ol class="style" type start reversed>` (no `type` for a lettered/numbered
+marker's own style, as Ruby's symbol style), checklist markers (interactive,
+font icons), `<dl>` (dt.hdlist1 without style), horizontal `<dl class="hdlist">`
+on a CSS grid (labelwidth/itemwidth) instead of Ruby's layout table, qanda
+`<ol class="qanda">`; the DOM profile maps Ruby's dlist/qlist wrappers and hdlist
+table. JSON/WASM `dlist`, item `checkbox`; parser-recorded `list-marker` tokens
+(markers and delimiters). Callout lists are not implemented yet.
 **Footnotes**: attribute_macros.rs apply_footnotes is Ruby's
 InlineFootnoteMacroRx, the last macro (after xrefs), over the lexical stream, also
 in pass:m and link parameter passes: `footnote:[text]`, `footnote:id[text]`,
@@ -734,16 +763,7 @@ fallback. set/counter side effects remain follow-up work.
 
 Working: parser for header attributes, headings, listing blocks, literal blocks
 (`....` and `[literal]`), admonitions (paragraph form), paragraphs,
-lists (unordered `*`/`-`, ordered `.` and explicit-numbered `1.` — the latter a
-marker identity *distinct* from `.` (so a `1.` after a `.` list nests), with
-digit values ignored (numbering is positional, matching asciidoctor); **nested**
-via marker runs `**`/`...` and
-across kinds, asciidoctor's "unique marker → deeper level" rule; a list starts
-at column 0 but deeper levels may be **indented** — nesting is decided by marker
-*identity*, not indent, so an indented same-marker line is a sibling;
-**multi-line** item text (wrapped plain lines fold into the item) and `+`
-**continuations** attaching blocks (paragraph, listing) to the item in source
-order; a blank line ends the list), and
+lists (see **Lists**), and
 inline `*strong*` / `_emphasis_`, `` `monospace` `` / `#mark#` (constrained)
 and `^superscript^` / `~subscript~` (unconstrained); **links** — the
 `link:target[text]` / `mailto:target[text]` macro (brackets required), the URL
@@ -1033,10 +1053,10 @@ blocks** (`Example N.` via the `example-caption` attribute, on `Block.caption`) 
 images (`Figure N.`) and tables (`Table N.`). The unset forms
 `:!example-caption:` / `:example-caption!:` disable example captions and their
 counter increments; a custom per-block `caption=` or document `caption` overrides
-the prefix without incrementing the counter. Also: **indented/offset
-literal** (leading-space lines) and delimiters longer than four chars (the same
+the prefix without incrementing the counter. Also: callout lists (`<1>`),
+bibliography lists and delimiters longer than four chars (the same
 single-length limitation applies to `====`/`____`: a nested same-length `====` /
-`____` closes the outer block); **anchors on individual list items**,
+`____` closes the outer block); ids of individual list items,
 incremental/block reparse, and a pull/event API over the AST.
 
 When asked to "add a feature," check this list first and say plainly whether it
