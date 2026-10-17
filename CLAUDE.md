@@ -345,7 +345,7 @@ Block-anchor reftext (`[[id,text]]`) executes the early a-stage during metadata
 collection, including overwritten and orphan values. Header collection consumes
 initial block metadata once before saving attributes, then transfers it to the
 document title or first body block. Body reftext effects affect reading only,
-without declaration replay. Formatting uses c/q/r at block/header completion,
+without declaration replay. Formatting uses c/q/r (snapshot and per reference),
 preserving reference owners and physical spans; attributes are not rerun and
 macros/passthroughs are not executed. Empty expanded labels fall back to a section
 title or `[id]`. Header reftext also retains its raw lexical document attribute.
@@ -353,9 +353,20 @@ Reader records early reference spans even for discarded metadata, so tokenizatio
 does not need to execute it again. A named `reftext=` shares the anchor's key
 (last wins): its field from the line's early a-stage becomes the same `reftext::Read`
 (reference owners and spans kept), so formatting and header transfer are shared.
-Reftext is formatted once at completion: Ruby's per-reference formatting with
-conversion-time state only differs for escaped references in quote metadata (an
-explicit XFAIL), as does anchor recognition after the attribute stage.
+Block.reftext is a read-only c/q/r snapshot at completion (no diagnostics);
+references format the read value again during conversion (see below). Anchor
+recognition after the attribute stage remains an explicit XFAIL.
+Xref labels: resolve::register builds the registry after reading (auto ids,
+block ids, cataloged anchors in source order); body_subs Execution resolves each
+textless xref after its field's subs, like Ruby's xreftext without xrefstyle:
+nonempty reftext formatted per reference with the current attributes/counters
+(effects persist, warnings repeat), else the block/section title, else `[id]`.
+A deferred block title converts once (first reference or the block itself);
+references inside a label being produced show `[id]` (@resolving_xref), and a
+self-reference converts the title again. Labels unwrap Link/CrossReference and
+drop anchors (DropAnchorRx). Auto-id headings and anchored `{` titles resolve
+references while reading (unregistered ids give `[id]`, a deferred target
+title converts early) and the auto id derives from that result.
 Block.attribute_context remains the reading snapshot at block completion;
 it can therefore differ from resolved inline values.
 Tokenization uses isolated contexts and the same declaration replay; it never
@@ -487,16 +498,16 @@ asciidoctor's left-boundary rule and trailing-punctuation trimming), an empty
 or omitted text rendered `class="bare"`, and inline markup inside link text;
 **cross-references** — the `<<id>>` / `<<id,text>>` angle form and the
 `xref:id[text]` macro, rendered as an internal `<a href="#id">` link, with inline
-markup parsed inside the reftext; a **post-parse resolve pass**
+markup parsed inside the reftext; a **post-read registry pass**
 (`adoctra-core/src/resolve.rs`, the first pass over the *whole* document — needed
-because a reference may point forward) builds a registry of **auto-generated
+because a reference may point forward; labels resolve during conversion) builds a registry of **auto-generated
 section ids** (asciidoctor's `sectids`: lowercase, non-alphanumerics dropped or
 folded to `_`, `_`-prefixed — `== Hello World` → `_hello_world`, with `_2`/`_3`
 deduplication) — for every heading except the document title (`Document.has_title`
 marks `blocks[0]`), so discrete (`[discrete]`/`[float]`, rendered with the style plus
 roles as class and never a section) and body level-0 headings (parts, `sect0`) get
 ids too — and resolves each reference: a textless `<<id>>` / `xref:id[]` takes
-the section's title as display text (inline formatting preserved, inline anchors
+the section's (or a titled block's) title as display text (inline formatting preserved, inline anchors
 dropped; the document title lends its text to an explicit id), an explicit
 reftext is kept verbatim, and an unknown id emits a `Warning` diagnostic and
 renders the `[id]` *unresolved* fallback (asciidoctor-compatible). A trailing

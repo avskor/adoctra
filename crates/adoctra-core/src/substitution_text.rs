@@ -26,6 +26,7 @@ impl Boundary {
     }
 }
 
+#[derive(Clone)]
 pub(crate) struct Fragment {
     pub text: String,
     pub decoded: Option<String>,
@@ -38,7 +39,7 @@ pub(crate) struct Fragment {
     extend_span: bool,
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub(crate) struct Text {
     pub text: String,
     pub fragments: Vec<(Range<usize>, Fragment)>,

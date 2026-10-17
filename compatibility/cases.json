@@ -644,9 +644,8 @@
     {
       "id": "conditional-metadata",
       "category": "conditionals",
-      "expect": "xfail",
-      "source": ":a:\n\nifdef::a[[#kept]]\nifdef::a[.Caption]\nshown\n\nifdef::missing[]\n[[hidden]]\nHidden\nendif::[]\nSee <<kept>>.",
-      "reason": "A textless reference to a titled paragraph uses the id instead of the caption, also without conditional preprocessing."
+      "expect": "pass",
+      "source": ":a:\n\nifdef::a[[#kept]]\nifdef::a[.Caption]\nshown\n\nifdef::missing[]\n[[hidden]]\nHidden\nendif::[]\nSee <<kept>>."
     },
     {
       "id": "ifeval-numbers",
@@ -16144,8 +16143,7 @@
     {
       "id": "inline-anchor-reftext-on-demand-metadata",
       "category": "references",
-      "expect": "xfail",
-      "reason": "Reftext is formatted at block completion; Ruby formats it at each reference, so escaped references in quote metadata see conversion-time attributes and counters.",
+      "expect": "pass",
       "source": "p\n\n[[b,[.r\\{x}]#X#]]\npara\n\n:x: Y\n\n<<b>>\n\n:x: Z\n\n<<b>>"
     },
     {
@@ -16267,6 +16265,180 @@
       "category": "references",
       "source": "p\n\n[[x]]\n== S [[i,I]] tail\n\n<<x>>",
       "expect": "pass"
+    },
+    {
+      "id": "xref-title-listing-backward",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[code]]\n.Sample *code*\n----\nx\n----\n\nSee <<code>>."
+    },
+    {
+      "id": "xref-title-forward-example",
+      "category": "references",
+      "expect": "pass",
+      "source": "See <<ex>>.\n\n[[ex]]\n.Example title\n====\nbody\n===="
+    },
+    {
+      "id": "xref-title-empty-reftext-falls-back",
+      "category": "references",
+      "expect": "pass",
+      "source": ":empty:\n\n[[b,{empty}]]\n.Fallback\n----\nx\n----\n\nSee <<b>>."
+    },
+    {
+      "id": "xref-title-reftext-wins",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[b,Ref]]\n.Title\n----\nx\n----\n\nSee <<b>>."
+    },
+    {
+      "id": "xref-title-untitled-block",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[b]]\n----\nx\n----\n\nSee <<b>>."
+    },
+    {
+      "id": "xref-title-named-title",
+      "category": "references",
+      "expect": "pass",
+      "source": "[#b,title=Named]\n----\nx\n----\n\nSee <<b>>."
+    },
+    {
+      "id": "xref-title-forward-counter",
+      "category": "references",
+      "expect": "pass",
+      "source": "See <<t>> and <<t>>.\n\n[[t]]\n.Item {counter:n}\n----\nx\n----\n\nAfter {counter:n}."
+    },
+    {
+      "id": "xref-title-forward-counter-unanchored-brace",
+      "category": "references",
+      "expect": "pass",
+      "source": "See <<t>>.\n\n[#t]\n.Item {counter:n}\n----\nx\n----\n\nAfter {counter:n}."
+    },
+    {
+      "id": "xref-title-forward-stateful-escape",
+      "category": "references",
+      "expect": "pass",
+      "source": "See <<t>> {counter:n}.\n\n[#t]\n.Item \\{counter:n} {set:x:1}\n----\nx\n----\n\nAfter {counter:n} {x}."
+    },
+    {
+      "id": "xref-title-nested-guard",
+      "category": "references",
+      "expect": "pass",
+      "source": "See <<t>>.\n\n[[t]]\n.About <<u>>\n----\nx\n----\n\n[[u]]\n.U title\n----\ny\n----"
+    },
+    {
+      "id": "xref-title-nested-backward",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[u]]\n.U title\n----\ny\n----\n\n[[t]]\n.About <<u>>\n----\nx\n----\n\nSee <<t>>."
+    },
+    {
+      "id": "xref-title-self-reference",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[t]]\n.Self <<t>>\n----\nx\n----\n\nSee <<t>>."
+    },
+    {
+      "id": "xref-reftext-counter-each-reference",
+      "category": "references",
+      "expect": "pass",
+      "source": "p\n\n[[b,[.r\\{counter:c}]#X#]]\npara\n\n<<b>> <<b>>\n\nc={c}"
+    },
+    {
+      "id": "xref-inline-anchor-reftext-each-reference",
+      "category": "references",
+      "expect": "pass",
+      "source": ":x: 0\n\nx [[a,[.r\\{x}]#A#]] y\n\n:x: 1\n\n<<a>>\n\n:x: 2\n\n<<a>>"
+    },
+    {
+      "id": "xref-section-reftext-each-reference",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[s,[.r\\{x}]#S#]]\n== Sec\n\n:x: 1\n\n<<s>>\n\n:x: 2\n\n<<s>>"
+    },
+    {
+      "id": "xref-doctitle-reftext-each-reference",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[d,[.r\\{x}]#D#]]\n= Doc\n\n:x: 1\n\n<<d>>"
+    },
+    {
+      "id": "xref-reftext-missing-warn-each-reference",
+      "category": "references",
+      "expect": "pass",
+      "source": ":attribute-missing: warn\n\n[[b,[.r\\{nope}]#X#]]\npara\n\n<<b>> <<b>>"
+    },
+    {
+      "id": "xref-title-self-reference-forward-counter",
+      "category": "references",
+      "expect": "pass",
+      "source": "See <<t>>.\n\n[[t]]\n.N{counter:n} <<t>> <<t>>\n----\nx\n----\n\n<<t>> {counter:n}"
+    },
+    {
+      "id": "xref-title-example-quote",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[e]]\n.Ex\n====\nx\n====\n\n[[q]]\n.Quote\n____\ny\n____\n\n<<e>> <<q>>"
+    },
+    {
+      "id": "xref-label-drops-links",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[s]]\n== See https://example.org[site] and <<t>>\n\n[[t]]\n.Target\n----\nx\n----\n\n<<s>>"
+    },
+    {
+      "id": "xref-title-cached-anchored-brace",
+      "category": "references",
+      "expect": "pass",
+      "source": ":v: one\n\nSee <<t>>.\n\n[[t]]\n.Item {v}\n----\nx\n----\n\n:v: two\n\n<<t>>"
+    },
+    {
+      "id": "xref-section-forward-in-title",
+      "category": "references",
+      "expect": "pass",
+      "source": "== See <<later>>\n\n[[later]]\n.Later\n----\nx\n----"
+    },
+    {
+      "id": "xref-section-explicit-id-forward-in-title",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[s]]\n== See <<later>>\n\n[[later]]\n.Later\n----\nx\n----"
+    },
+    {
+      "id": "xref-section-backward-in-title",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[early]]\n.Early\n----\nx\n----\n\n== See <<early>>\n\nbody"
+    },
+    {
+      "id": "xref-section-self-in-title",
+      "category": "references",
+      "expect": "pass",
+      "source": "== See <<_see_see>>\n\nbody"
+    },
+    {
+      "id": "xref-section-backward-deferred-title-counter",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[early]]\n.Early {counter:n}\n----\nx\n----\n\n== See <<early>>\n\n{counter:n}"
+    },
+    {
+      "id": "xref-section-forward-explicit-id-guard",
+      "category": "references",
+      "expect": "pass",
+      "source": "See <<s>>.\n\n[[s]]\n== Sec <<s>> <<t>>\n\n[[t]]\n.T\n----\nx\n----"
+    },
+    {
+      "id": "xref-section-auto-id-backward-section",
+      "category": "references",
+      "expect": "pass",
+      "source": "== First\n\n== See <<_first>>\n\n<<_see_first>>"
+    },
+    {
+      "id": "xref-section-auto-id-reftext",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[a,Alpha]]\n----\nx\n----\n\n== See <<a>>\n\n<<_see_alpha>>"
     }
   ]
 }

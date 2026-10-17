@@ -571,6 +571,25 @@ mod tests {
     }
 
     #[test]
+    fn xref_labels_use_titles_and_reftext_formatted_per_reference() {
+        let html = render("See <<t>>.\n\n[[t]]\n.Ж *T* https://x.org[site]\n----\nx\n----\n\n[[b,[.r\\{x}]#R#]]\npara\n\n:x: 1\n\n<<b>>\n\n:x: 2\n\n<<b>> <<none>>");
+        // A borrowed title keeps formatting but drops link tags (DropAnchorRx).
+        assert!(
+            html.contains(r##"<a href="#t">Ж <strong>T</strong> site</a>"##),
+            "{html}"
+        );
+        assert!(
+            html.contains(r##"<a href="#b"><span class="r1">R</span></a>"##),
+            "{html}"
+        );
+        assert!(
+            html.contains(r##"<a href="#b"><span class="r2">R</span></a>"##),
+            "{html}"
+        );
+        assert!(html.contains(r##"<a href="#none">[none]</a>"##), "{html}");
+    }
+
+    #[test]
     fn stateful_block_titles_render_shared_counters_and_skip_passthrough_titles() {
         let html = render(".A {counter:example-number}\n====\nBody {counter:example-number}\n====\n\n[[here]]\n.B {counter:example-number}\n====\nBody {counter:example-number}\n====");
         assert!(html.contains("Example 1. A 2</div>"), "{html}");

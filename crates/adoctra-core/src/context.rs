@@ -74,6 +74,12 @@ pub(crate) struct ParseContext {
     pub inline_diagnostics: Vec<crate::Diagnostic>,
     /// Inline anchors cataloged while reading, in reading order.
     pub anchors: Vec<(String, crate::anchor_catalog::Entry)>,
+    /// Early-expanded block reftext keyed by the completed block's reader
+    /// range; references format it again during conversion.
+    pub reftexts: BTreeMap<(usize, usize), crate::reftext::Read>,
+    /// A section-title anchor's reftext, handed from the heading parser to
+    /// block completion.
+    pub section_reftext: Option<crate::reftext::Read>,
 }
 
 impl ParseContext {
@@ -113,6 +119,8 @@ impl ParseContext {
             comment_diagnostics: Vec::new(),
             inline_diagnostics: Vec::new(),
             anchors: Vec::new(),
+            reftexts: BTreeMap::new(),
+            section_reftext: None,
         }
     }
 
@@ -124,13 +132,46 @@ impl ParseContext {
         Arc::clone(self.replay.as_ref().unwrap_or(&self.attributes))
     }
 
-    pub fn execute_body(&mut self, document: &mut crate::Document) {
+    /// Build the reference registry after reading (see resolve.rs).
+    pub fn register_references(
+        &mut self,
+        document: &mut crate::Document,
+        diagnostics: &mut Vec<crate::Diagnostic>,
+    ) -> (crate::resolve::Registry, crate::resolve::EarlyTitles) {
+        let anchors = std::mem::take(&mut self.anchors);
+        let reftexts = std::mem::take(&mut self.reftexts);
+        let (body_subs, locked, counters) = (&mut self.body_subs, &self.locked, &self.counters);
+        let inline_diagnostics = &mut self.inline_diagnostics;
+        crate::resolve::register(
+            document,
+            anchors,
+            reftexts,
+            &mut |key, attributes| {
+                body_subs.convert_early(key, attributes, locked, counters, inline_diagnostics)
+            },
+            diagnostics,
+        )
+    }
+
+    /// Convert deferred fields and resolve cross-references in document order.
+    /// Unresolved-reference warnings go to `references`.
+    pub fn execute_body(
+        &mut self,
+        document: &mut crate::Document,
+        (registry, early_titles): (crate::resolve::Registry, crate::resolve::EarlyTitles),
+        references: &mut Vec<crate::Diagnostic>,
+    ) {
         std::mem::take(&mut self.body_subs).execute(
             &mut document.blocks,
             document.attributes.clone(),
-            &self.locked,
-            &mut self.counters,
-            &mut self.inline_diagnostics,
+            crate::body_subs::Conversion {
+                locked: &self.locked,
+                counters: &mut self.counters,
+                diagnostics: &mut self.inline_diagnostics,
+                registry: &registry,
+                early_titles,
+                references,
+            },
         );
     }
 
@@ -151,6 +192,13 @@ impl ParseContext {
             self.attributes = Arc::new(attributes);
         }
         parts_text(&parts)
+    }
+
+    /// Keep the read reftext for references; the model gets a snapshot.
+    pub fn attach_reftext(&mut self, block: &mut crate::Block, value: crate::reftext::Read) {
+        block.reftext = Some(value.snapshot(&self.attributes));
+        self.reftexts
+            .insert((block.span.start, block.span.end), value);
     }
 
     pub fn block_reftext(&mut self, value: &str, base: usize) -> crate::reftext::Read {

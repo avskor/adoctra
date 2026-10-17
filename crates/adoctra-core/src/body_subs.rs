@@ -2,11 +2,14 @@
 //! declarations; the displayed document title and surviving body fields execute
 //! after the reader finishes. Section titles and eligible anchored block titles
 //! have already been cached. Captions replay their reading-time counters at entry.
+//! Cross-references resolve here too, after each field's substitutions, so a
+//! label sees the conversion state at that reference (see resolve.rs).
 use crate::scanner::FilteredSource;
 use crate::substitution_context::Evaluation;
 use crate::{AttributePart, Attributes, Block, BlockKind, Diagnostic, Inline, Span};
 use std::collections::{BTreeMap, BTreeSet};
 
+#[derive(Clone)]
 struct Pending {
     source: FilteredSource,
     filtered: Option<FilteredSource>,
@@ -16,6 +19,17 @@ struct Pending {
 }
 
 type Declaration = (usize, String, Option<Vec<AttributePart>>);
+
+/// Shared conversion state and outputs, borrowed from the parse context.
+pub(crate) struct Conversion<'a> {
+    pub locked: &'a BTreeSet<String>,
+    pub counters: &'a mut BTreeMap<String, String>,
+    pub diagnostics: &'a mut Vec<Diagnostic>,
+    pub registry: &'a crate::resolve::Registry,
+    pub early_titles: crate::resolve::EarlyTitles,
+    /// Unresolved-reference warnings.
+    pub references: &'a mut Vec<Diagnostic>,
+}
 
 #[derive(Default)]
 pub(crate) struct BodySubs {
@@ -101,29 +115,55 @@ impl BodySubs {
         }]
     }
 
-    pub fn execute(
-        mut self,
-        blocks: &mut [Block],
-        attributes: Attributes,
+    /// A deferred block title converted while reading, for a reference in a
+    /// title Ruby converts at parse time. It uses the reading attributes; its
+    /// expressions do not change later state. The registry memoizes the
+    /// result for the block's own conversion.
+    pub fn convert_early(
+        &mut self,
+        key: (usize, usize),
+        attributes: &Attributes,
         locked: &BTreeSet<String>,
-        counters: &mut BTreeMap<String, String>,
+        counters: &BTreeMap<String, String>,
         diagnostics: &mut Vec<Diagnostic>,
-    ) {
+    ) -> Option<Vec<Inline>> {
+        let pending = self.pending.remove(&key)?;
+        let mut attributes = attributes.clone();
+        attributes.local_hardbreaks = pending.hardbreaks;
+        let mut counters = counters.clone();
+        let compat = attributes.get("compat-mode").is_some();
+        let mut evaluation = Evaluation::definition(&attributes, locked, &mut counters, compat);
+        Some(run(pending, &mut evaluation, diagnostics))
+    }
+
+    pub fn execute(mut self, blocks: &mut [Block], attributes: Attributes, conversion: Conversion) {
         let mut execution = Execution {
             pending: &mut self.pending,
             caption_counters: &mut self.caption_counters,
             entries: self.entries.into_iter().peekable(),
             attributes,
-            locked,
-            counters,
-            diagnostics,
+            locked: conversion.locked,
+            counters: conversion.counters,
+            diagnostics: conversion.diagnostics,
+            registry: conversion.registry,
+            references: conversion.references,
+            titles: conversion.early_titles,
+            headings: BTreeMap::new(),
+            referable: referable_titles(conversion.registry),
+            converting: BTreeMap::new(),
+            header_title: None,
+            resolving: false,
         };
+        let mut body = 0;
         if let (Some(header), Some(block)) = (self.header, blocks.first_mut()) {
             if let BlockKind::Heading { inlines, .. } = &mut block.kind {
                 execution.evaluate(inlines, header);
+                execution.resolve(inlines);
+                execution.header_title = Some(inlines.clone());
+                body = 1;
             }
         }
-        execution.blocks(blocks);
+        execution.blocks(&mut blocks[body..]);
     }
 }
 
@@ -135,6 +175,21 @@ struct Execution<'a> {
     locked: &'a BTreeSet<String>,
     counters: &'a mut BTreeMap<String, String>,
     diagnostics: &'a mut Vec<Diagnostic>,
+    registry: &'a crate::resolve::Registry,
+    references: &'a mut Vec<Diagnostic>,
+    /// Ruby's `@converted_title` for referable block titles, keyed by their
+    /// placeholder range: the first reference or the block converts it once.
+    titles: BTreeMap<(usize, usize), Vec<Inline>>,
+    /// Section titles with resolved references, keyed by the heading range.
+    headings: BTreeMap<(usize, usize), Vec<Inline>>,
+    /// Placeholder ranges of block titles that a reference may display.
+    referable: BTreeSet<(usize, usize)>,
+    /// Titles being converted; a reference inside converts them again.
+    converting: BTreeMap<(usize, usize), Pending>,
+    header_title: Option<Vec<Inline>>,
+    /// Ruby's `@resolving_xref`: references inside a label being produced
+    /// display `[id]`.
+    resolving: bool,
 }
 
 impl Execution<'_> {
@@ -150,14 +205,155 @@ impl Execution<'_> {
     }
 
     fn inlines(&mut self, nodes: &mut Vec<Inline>) {
-        let [Inline::Text { span, .. }] = nodes.as_slice() else {
-            return;
+        let Some(key) = crate::resolve::placeholder(nodes) else {
+            return self.resolve(nodes);
         };
-        let Some(pending) = self.pending.remove(&(span.start, span.end)) else {
-            return;
+        if let Some(converted) = self.titles.get(&key) {
+            // Already converted by an earlier (forward) reference.
+            *nodes = converted.clone();
+        } else if let Some(pending) = self.pending.remove(&key) {
+            self.replay(key.0);
+            *nodes = self.convert(key, pending);
+        }
+    }
+
+    /// Convert a deferred field and resolve its references. A referable title
+    /// is cached, as Ruby memoizes `@converted_title`.
+    fn convert(&mut self, key: (usize, usize), pending: Pending) -> Vec<Inline> {
+        let referable = self.referable.contains(&key);
+        if referable {
+            self.converting.insert(key, pending.clone());
+        }
+        let mut nodes = vec![Inline::Text {
+            value: String::new(),
+            span: Span::new(key.0, key.1),
+        }];
+        self.evaluate(&mut nodes, pending);
+        self.resolve(&mut nodes);
+        if referable {
+            self.converting.remove(&key);
+            self.titles.insert(key, nodes.clone());
+        }
+        nodes
+    }
+
+    /// Resolve every cross-reference in a converted field. A textless one
+    /// takes its label now, with the current conversion state.
+    fn resolve(&mut self, nodes: &mut [Inline]) {
+        for node in nodes {
+            match node {
+                Inline::CrossReference {
+                    target,
+                    children,
+                    span,
+                } => {
+                    if !self.registry.contains_key(target.as_str()) {
+                        self.references.push(Diagnostic {
+                            span: *span,
+                            severity: crate::Severity::Warning,
+                            message: format!("unresolved cross reference: '{target}'"),
+                        });
+                    }
+                    if children.is_empty() {
+                        // Borrowed labels are not expanded again.
+                        *children = self.label(target, *span);
+                    } else {
+                        self.resolve(children);
+                    }
+                }
+                Inline::Strong { children, .. }
+                | Inline::Emphasis { children, .. }
+                | Inline::Monospace { children, .. }
+                | Inline::Mark { children, .. }
+                | Inline::Superscript { children, .. }
+                | Inline::Subscript { children, .. }
+                | Inline::Link { children, .. } => self.resolve(children),
+                Inline::Anchor {
+                    reftext: Some(reftext),
+                    ..
+                } => self.resolve(reftext),
+                _ => {}
+            }
+        }
+    }
+
+    /// Ruby's `xreftext` without an xrefstyle: a nonempty reftext, else the
+    /// title, else `[id]`.
+    fn label(&mut self, id: &str, span: Span) -> Vec<Inline> {
+        let fallback = || {
+            vec![Inline::Text {
+                value: format!("[{id}]"),
+                span,
+            }]
         };
-        self.replay(span.start);
-        self.evaluate(nodes, pending);
+        let registry = self.registry;
+        let Some(target) = registry.get(id).filter(|_| !self.resolving) else {
+            return fallback();
+        };
+        self.resolving = true;
+        let mut label = target
+            .reftext
+            .clone()
+            .map(|read| self.reftext(read))
+            .filter(|nodes| !crate::resolve::inline_text(nodes).is_empty());
+        if label.is_none() {
+            label = match &target.title {
+                Some(crate::resolve::Title::Nodes(nodes)) => Some(self.title(nodes)),
+                Some(crate::resolve::Title::Heading(key, nodes)) => Some(self.heading(*key, nodes)),
+                Some(crate::resolve::Title::Header) => self.header_title.clone(),
+                None => None,
+            };
+        }
+        self.resolving = false;
+        let Some(mut label) = label else {
+            return fallback();
+        };
+        crate::resolve::strip_label(&mut label);
+        label
+    }
+
+    /// Ruby's `apply_reftext_subs`, executed again at each reference.
+    fn reftext(&mut self, read: crate::reftext::Read) -> Vec<Inline> {
+        let compat = self.attributes.get("compat-mode").is_some();
+        let mut evaluation =
+            Evaluation::definition(&self.attributes, self.locked, self.counters, compat);
+        let nodes = read.finish(&mut evaluation, self.diagnostics);
+        if let Some(attributes) = evaluation.changed_attributes() {
+            self.attributes = attributes;
+        }
+        nodes
+    }
+
+    /// A block title converted once: the first reference converts a title
+    /// still pending, with the state at that reference and without replay. A
+    /// reference inside a title being converted converts it again, as Ruby's
+    /// memo is assigned only once the outer conversion finishes.
+    fn title(&mut self, nodes: &[Inline]) -> Vec<Inline> {
+        let Some(key) = crate::resolve::placeholder(nodes) else {
+            return nodes.to_vec();
+        };
+        if let Some(converted) = self.titles.get(&key) {
+            return converted.clone();
+        }
+        match self.pending.remove(&key) {
+            Some(pending) => self.convert(key, pending),
+            None => match self.converting.get(&key).cloned() {
+                Some(pending) => self.convert(key, pending),
+                None => nodes.to_vec(),
+            },
+        }
+    }
+
+    /// A section title referenced before its heading resolves its own
+    /// references now (inner labels display `[id]`), as Ruby memoizes it.
+    fn heading(&mut self, key: (usize, usize), nodes: &[Inline]) -> Vec<Inline> {
+        if let Some(resolved) = self.headings.get(&key) {
+            return resolved.clone();
+        }
+        let mut resolved = nodes.to_vec();
+        self.resolve(&mut resolved);
+        self.headings.insert(key, resolved.clone());
+        resolved
     }
 
     fn evaluate(&mut self, nodes: &mut Vec<Inline>, pending: Pending) {
@@ -165,39 +361,9 @@ impl Execution<'_> {
         let compat = self.attributes.get("compat-mode").is_some();
         let mut evaluation =
             Evaluation::definition(&self.attributes, self.locked, self.counters, compat);
-        let source = pending.filtered.as_ref().unwrap_or(&pending.source);
-        let before = self.diagnostics.len();
-        *nodes = crate::inline::scan_inlines_evaluated(
-            &source.text,
-            0,
-            &mut evaluation,
-            pending.fold,
-            self.diagnostics,
-        );
+        *nodes = run(pending, &mut evaluation, self.diagnostics);
         if let Some(attributes) = evaluation.changed_attributes() {
             self.attributes = attributes;
-        }
-        if let Some(filtered) = &pending.filtered {
-            filtered.restore_inlines(nodes);
-            for diagnostic in &mut self.diagnostics[before..] {
-                diagnostic.span = filtered.original_span(diagnostic.span);
-            }
-        }
-        pending.source.restore_inlines(nodes);
-        for diagnostic in &mut self.diagnostics[before..] {
-            diagnostic.span = pending.source.original_span(diagnostic.span);
-        }
-        if let Some(origin) = pending.replacement_origin {
-            struct ReplacementOrigin(Span);
-            impl crate::visit::VisitorMut for ReplacementOrigin {
-                fn visit_span(&mut self, span: &mut Span) {
-                    *span = self.0;
-                }
-            }
-            crate::visit::walk_inlines_mut(&mut ReplacementOrigin(origin), nodes);
-            for diagnostic in &mut self.diagnostics[before..] {
-                diagnostic.span = origin;
-            }
         }
     }
 
@@ -217,6 +383,18 @@ impl Execution<'_> {
                 BlockKind::Paragraph { inlines } | BlockKind::Verse { inlines, .. } => {
                     self.inlines(inlines)
                 }
+                // Section titles were converted while reading; a forward
+                // reference may already have resolved their references.
+                BlockKind::Heading { inlines, .. } => {
+                    let key = (block.span.start, block.span.end);
+                    match self.headings.get(&key) {
+                        Some(resolved) => *inlines = resolved.clone(),
+                        None => {
+                            self.resolve(inlines);
+                            self.headings.insert(key, inlines.clone());
+                        }
+                    }
+                }
                 BlockKind::List { items, .. } => {
                     for item in items {
                         self.inlines(&mut item.inlines);
@@ -232,4 +410,55 @@ impl Execution<'_> {
             }
         }
     }
+}
+
+/// Scan a deferred field with `evaluation` and map nodes and diagnostics back
+/// to their source.
+fn run(
+    pending: Pending,
+    evaluation: &mut Evaluation<'_>,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> Vec<Inline> {
+    let source = pending.filtered.as_ref().unwrap_or(&pending.source);
+    let before = diagnostics.len();
+    let mut nodes = crate::inline::scan_inlines_evaluated(
+        &source.text,
+        0,
+        evaluation,
+        pending.fold,
+        diagnostics,
+    );
+    if let Some(filtered) = &pending.filtered {
+        filtered.restore_inlines(&mut nodes);
+        for diagnostic in &mut diagnostics[before..] {
+            diagnostic.span = filtered.original_span(diagnostic.span);
+        }
+    }
+    pending.source.restore_inlines(&mut nodes);
+    for diagnostic in &mut diagnostics[before..] {
+        diagnostic.span = pending.source.original_span(diagnostic.span);
+    }
+    if let Some(origin) = pending.replacement_origin {
+        struct ReplacementOrigin(Span);
+        impl crate::visit::VisitorMut for ReplacementOrigin {
+            fn visit_span(&mut self, span: &mut Span) {
+                *span = self.0;
+            }
+        }
+        crate::visit::walk_inlines_mut(&mut ReplacementOrigin(origin), &mut nodes);
+        for diagnostic in &mut diagnostics[before..] {
+            diagnostic.span = origin;
+        }
+    }
+    nodes
+}
+
+fn referable_titles(registry: &crate::resolve::Registry) -> BTreeSet<(usize, usize)> {
+    registry
+        .values()
+        .filter_map(|target| match &target.title {
+            Some(crate::resolve::Title::Nodes(nodes)) => crate::resolve::placeholder(nodes),
+            _ => None,
+        })
+        .collect()
 }

@@ -2,19 +2,18 @@
 //! `catalog_inline_anchors` over ordinary paragraph text and
 //! `catalog_inline_anchor` for an anchor leading a list item. Only cataloged
 //! anchors join the reference registry; anchors elsewhere still render. Their
-//! reftext runs the early a-stage with reading state and is formatted with
-//! c/q/r like block-anchor reftext.
+//! reftext runs the early a-stage with reading state; like block-anchor
+//! reftext, each reference formats it with c/q/r during conversion.
 use crate::context::ParseContext;
 use crate::unicode_word::is_word;
-use crate::{Inline, Span};
+use crate::Span;
 use std::ops::Range;
 
 /// A cataloged anchor: its processed-source span (from `[[` or `anchor:` to
-/// the closing bracket) and formatted reftext.
-#[derive(Debug, Clone)]
+/// the closing bracket) and its early-expanded reftext.
 pub(crate) struct Entry {
     pub span: Span,
-    pub reftext: Option<Vec<Inline>>,
+    pub reftext: Option<crate::reftext::Read>,
 }
 
 struct Found {
@@ -199,10 +198,6 @@ impl ParseContext {
     }
 
     fn register_anchor(&mut self, id: String, span: Span, reftext: Option<crate::reftext::Read>) {
-        let reftext = reftext.map(|value| {
-            let attributes = std::sync::Arc::clone(&self.attributes);
-            value.finish(&attributes, &mut self.inline_diagnostics)
-        });
         self.anchors.push((id, Entry { span, reftext }));
     }
 }

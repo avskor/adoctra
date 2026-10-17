@@ -1436,6 +1436,27 @@ mod header_tests {
     }
 
     #[test]
+    fn xref_labels_keep_title_spans_and_per_reference_reftext() {
+        let src = "See <<t>>.\r\n\r\n[[t]]\r\n.Ж *T*\r\n----\r\nx\r\n----\r\n\r\n[[b,[.r\\{x}]#R#]]\r\npara\r\n\r\n:x: 1\r\n\r\n<<b>>\r\n\r\n:x: 2\r\n\r\n<<b>>";
+        let json = super::parse_json_with_source(src, 4);
+        // The forward label borrows the title's physical spans.
+        let at = src.find("*T*").unwrap();
+        assert_eq!(
+            json.matches(&format!(
+                "\"span\":{{\"source_id\":4,\"start\":{at},\"end\":{}}},\"name\":\"strong\"",
+                at + 3
+            ))
+            .count(),
+            2,
+            "{json}"
+        );
+        assert!(json.contains(r#""role":"r1""#), "{json}");
+        assert!(json.contains(r#""role":"r2""#), "{json}");
+        assert!(!json.contains("\"diagnostics\":[{"), "{json}");
+        assert_eq!(json, super::parse_json_with_source(src, 4));
+    }
+
+    #[test]
     fn block_reftext_exports_early_values_and_physical_expression_tokens() {
         let source = "[[here,Ж {counter:n:Я}]]\r\nBody {counter:n}\r\n\r\n<<here>>";
         let json = super::parse_json_with_source(source, 7);

@@ -76,9 +76,9 @@ pub(crate) fn parse_reader<'a>(
         if header.metadata_for_title {
             let metadata = std::mem::take(&mut header.pending);
             title.id = metadata.id.or(header.title_anchor.take());
-            title.reftext = metadata
-                .reftext
-                .map(|value| value.finish(&context.attributes, &mut context.inline_diagnostics));
+            if let Some(value) = metadata.reftext {
+                context.attach_reftext(&mut title, value);
+            }
         }
         title.attribute_context = Arc::clone(&context.attributes);
         doc.blocks.push(title);
@@ -94,7 +94,9 @@ pub(crate) fn parse_reader<'a>(
         header.pending,
     ));
 
-    context.execute_body(&mut doc);
+    let mut references = Vec::new();
+    let registry = context.register_references(&mut doc, &mut references);
+    context.execute_body(&mut doc, registry, &mut references);
 
     // All grammar operates on monotonically increasing reader coordinates.
     // Restore physical source ranges before resolution copies metadata spans.
@@ -126,23 +128,10 @@ pub(crate) fn parse_reader<'a>(
     }
     // Selection warnings already refer to physical lines, including omitted tags.
     diagnostics.append(&mut lines.resource_diagnostics);
-    let anchors = std::mem::take(&mut context.anchors)
-        .into_iter()
-        .map(|(id, mut entry)| {
-            entry.span = lines.map_span(entry.span, &mut provenance);
-            if let Some(reftext) = &mut entry.reftext {
-                crate::visit::walk_inlines_mut(
-                    &mut Origin {
-                        reader: &lines,
-                        provenance: &mut provenance,
-                    },
-                    reftext,
-                );
-            }
-            (id, entry)
-        })
-        .collect();
-    crate::resolve::resolve(&mut doc, anchors, &mut diagnostics);
+    for mut diagnostic in references {
+        diagnostic.span = lines.map_span(diagnostic.span, &mut provenance);
+        diagnostics.push(diagnostic);
+    }
     let physical = |spans: &[Span]| {
         spans
             .iter()
@@ -215,11 +204,7 @@ fn collect_blocks(
             // A section-title anchor supplies the id only without one from
             // metadata, but its reftext replaces a pending reftext.
             block.id = pending.id.or(block.id.take());
-            let reftext = block.reftext.take().map(Ok).or(pending.reftext.map(Err));
-            block.reftext = reftext.map(|value| match value {
-                Ok(nodes) => nodes,
-                Err(value) => value.finish(&context.attributes, &mut context.inline_diagnostics),
-            });
+            let reftext = context.section_reftext.take().or(pending.reftext);
             block.roles = pending.roles;
             let mut title = pending.title;
             if matches!(block.kind, BlockKind::Heading { .. }) {
@@ -239,6 +224,9 @@ fn collect_blocks(
             block.attrs = pending.attrs;
             let attributes = inline_attributes(&context.render_attributes(), Some(&block.attrs));
             apply_style_fixup(&mut block, lines, &attributes, &pending.list, context);
+            if let Some(value) = reftext {
+                context.attach_reftext(&mut block, value);
+            }
             // Caption counters are assigned on completion, before an anchored
             // title is cached. Unanchored titles run during conversion instead.
             context.assign_caption(&mut block);
@@ -702,10 +690,9 @@ fn parse_block_content(
         );
         if let Some(anchor) = anchor {
             block.id = Some(anchor.id.to_owned());
-            block.reftext = anchor.reftext.map(|reftext| {
+            context.section_reftext = anchor.reftext.map(|reftext| {
                 let base = lines[*i].0 + abs_offset(line, reftext);
                 crate::reftext::Read::source(reftext, base)
-                    .finish(&context.attributes, &mut context.inline_diagnostics)
             });
         }
         *i += 1;
@@ -1233,7 +1220,7 @@ fn parse_list(
                         break;
                     }
                     if lines.has(*i, context) && !lines[*i].1.trim().is_empty() {
-                        if let Some(b) = parse_block(
+                        if let Some(mut b) = parse_block(
                             lines,
                             i,
                             context,
@@ -1242,6 +1229,9 @@ fn parse_list(
                             None,
                             false,
                         ) {
+                            if let Some(value) = context.section_reftext.take() {
+                                context.attach_reftext(&mut b, value);
+                            }
                             item_end = b.span.end;
                             blocks.push(b);
                         }

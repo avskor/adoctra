@@ -1,10 +1,13 @@
 //! Block-anchor reftext has an early a-stage, followed by c/q/r rather than
 //! normal inline substitutions. Keep the early source map and reference owners
 //! through protection and formatting; generated syntax is never rescanned as a.
+//! Like Ruby's `reftext`, a reference formats the read value again each time,
+//! with the conversion state at that reference (see body_subs.rs).
 use crate::substitution_context::Evaluation;
 use crate::substitution_text::Text;
 use crate::{Diagnostic, Inline, Span};
 
+#[derive(Clone)]
 pub(crate) struct Read {
     expanded: Text,
     refs: Vec<crate::inline_attributes::Reference>,
@@ -50,9 +53,19 @@ impl Read {
         }
     }
 
+    /// The model's reftext, formatted once at block/header completion with
+    /// the reading attributes. Ruby formats only for a reference, so this
+    /// projection neither executes expressions nor reports diagnostics.
+    pub fn snapshot(&self, attributes: &crate::Attributes) -> Vec<Inline> {
+        self.clone()
+            .finish(&mut Evaluation::read_only(attributes), &mut Vec::new())
+    }
+
+    /// Ruby's `apply_reftext_subs`: c/q/r over the early-expanded value. Quote
+    /// metadata sees (and may change) the evaluation's attributes and counters.
     pub fn finish(
         self,
-        attributes: &crate::Attributes,
+        evaluation: &mut Evaluation<'_>,
         diagnostics: &mut Vec<Diagnostic>,
     ) -> Vec<Inline> {
         let mut protected = Text::default();
@@ -60,13 +73,11 @@ impl Read {
             protected.append_source(&fragment.text, false, fragment.owner, fragment.span);
         }
         let mut quotes = Vec::new();
-        // Reftext's quote metadata still uses the existing read-only context;
-        // on-demand reference-label evaluation is a separate conversion concern.
-        let mut attributes = Evaluation::read_only(attributes);
+        let compat = evaluation.get("compat-mode").is_some();
         let text = crate::attribute_quotes::apply_text(
             protected,
-            attributes.get("compat-mode").is_some(),
-            &mut attributes,
+            compat,
+            evaluation,
             &mut quotes,
             true,
             diagnostics,

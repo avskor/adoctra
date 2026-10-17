@@ -1,19 +1,13 @@
-//! Post-parse resolution: assign section ids and resolve cross-references.
+//! Reference registry: assign section ids and catalog every referable id.
 //!
-//! This is the first pass that needs the *whole* document at once. The inline
-//! resolution done while scanning (`{attr}` references, typographic
-//! replacements) is block-local, but a `<<id>>` may point forward to a section
-//! defined later, so the registry of section ids must be complete before any
-//! reference resolves.
-//!
-//! Two phases over the block tree:
-//!   1. give every section (`level >= 1`) an auto-generated id and record
-//!      `id -> title inlines` in a registry (asciidoctor's `sectids`);
-//!   2. walk every inline and, for each [`Inline::CrossReference`], substitute
-//!      the section's title as display text (when the reference was textless),
-//!      keep an explicit reftext, and — for an unknown id — emit a diagnostic
-//!      and fall back to the `[id]` text asciidoctor renders for unresolved
-//!      references.
+//! This is the first pass that needs the *whole* document at once: a `<<id>>`
+//! may point forward to a section defined later, so the registry must be
+//! complete before any reference resolves. It runs after reading and before
+//! conversion. Reference labels are produced during conversion
+//! (body_subs.rs), in document order and with the conversion state, like Ruby's
+//! `xreftext`: an explicit reftext is formatted again at each reference;
+//! otherwise a block's (lazily converted) title is used; otherwise `[id]`.
+//! An unknown id emits a diagnostic and also renders `[id]`.
 
 use std::collections::{btree_map::Entry, BTreeMap};
 
@@ -21,32 +15,45 @@ use crate::ast::{Block, BlockKind, Document, Inline, Span};
 use crate::diagnostic::{Diagnostic, Severity};
 use crate::visit::{self, InlineContext, VisitorMut};
 
-/// A registry of anchor ids → the inlines a *textless* reference displays. The
-/// value is `Some(text)` for a section (its title) or an explicit
-/// `[[id,reftext]]` anchor; `None` for an id whose block has no natural text
-/// (e.g. a plain paragraph anchor), where a textless reference falls back to
-/// `[id]` *without* a diagnostic. Ordered so the structure stays deterministic
-/// (like [`Attributes`]).
-type Registry = BTreeMap<String, Option<Vec<Inline>>>;
+/// What a *textless* reference to an id can display. Ordered so the structure
+/// stays deterministic (like [`Attributes`]).
+pub(crate) type Registry = BTreeMap<String, Target>;
 
-/// Inline anchors cataloged while reading, keyed by their physical start.
-type Anchors = BTreeMap<(crate::SourceId, usize), (String, Option<Vec<Inline>>)>;
+/// A referable node: its explicit reftext (formatted per reference) and, for a
+/// block, its title. Neither ⇒ a known id that displays `[id]` *without* a
+/// diagnostic (e.g. a plain paragraph anchor).
+pub(crate) struct Target {
+    pub reftext: Option<crate::reftext::Read>,
+    pub title: Option<Title>,
+}
 
-/// Assign section ids and resolve cross-references over `doc`, pushing a
-/// diagnostic for every reference whose id is not in the registry (and for a
-/// duplicate explicit id).
-pub(crate) fn resolve(
+/// Converts a deferred block title while reading (BodySubs::convert_early).
+pub(crate) type EarlyTitle<'a> =
+    dyn FnMut((usize, usize), &crate::Attributes) -> Option<Vec<Inline>> + 'a;
+
+/// Deferred block titles converted while reading, keyed by placeholder range.
+pub(crate) type EarlyTitles = BTreeMap<(usize, usize), Vec<Inline>>;
+
+pub(crate) enum Title {
+    /// A block title: final when converted while reading, otherwise a
+    /// conversion placeholder that the first reference may convert.
+    Nodes(Vec<Inline>),
+    /// A section title, keyed by the heading range; conversion memoizes it
+    /// once its references are resolved.
+    Heading((usize, usize), Vec<Inline>),
+    /// The displayed document title, converted before the body.
+    Header,
+}
+
+/// Assign section ids and register every block id and cataloged inline
+/// anchor, pushing a diagnostic for a duplicate id (the first one wins).
+pub(crate) fn register(
     doc: &mut Document,
-    anchors: Vec<(String, crate::anchor_catalog::Entry)>,
+    mut anchors: Vec<(String, crate::anchor_catalog::Entry)>,
+    mut reftexts: BTreeMap<(usize, usize), crate::reftext::Read>,
+    early_title: &mut EarlyTitle<'_>,
     diagnostics: &mut Vec<Diagnostic>,
-) {
-    let anchors = anchors
-        .into_iter()
-        .map(|(id, entry)| {
-            let span = entry.span;
-            ((span.source_id, span.start), (id, entry.reftext))
-        })
-        .collect();
+) -> (Registry, EarlyTitles) {
     // Every heading except the document title gets an automatic id, including
     // discrete and level-0 headings in the body, as in asciidoctor.
     let doctitle = doc
@@ -54,96 +61,186 @@ pub(crate) fn resolve(
         .first()
         .filter(|_| doc.has_title)
         .map(|block| block.span);
-    let mut registry = Registry::new();
-    assign_ids(
-        &mut doc.blocks,
-        anchors,
-        &mut registry,
-        diagnostics,
+    // Inline anchors join in source order, between the blocks around them.
+    anchors.sort_by_key(|(_, entry)| entry.span.start);
+    let mut ids = Ids {
         doctitle,
-    );
-    resolve_xrefs(&mut doc.blocks, &registry, diagnostics);
+        anchors: anchors.into_iter().peekable(),
+        reftexts: &mut reftexts,
+        early_title,
+        early: EarlyTitles::new(),
+        registry: Registry::new(),
+        diagnostics,
+    };
+    visit::walk_blocks_mut(&mut ids, &mut doc.blocks);
+    ids.flush(usize::MAX);
+    (ids.registry, ids.early)
 }
 
-/// Register block ids and body anchors before resolving forward references.
-fn assign_ids(
-    blocks: &mut [Block],
-    mut anchors: Anchors,
-    registry: &mut Registry,
-    diagnostics: &mut Vec<Diagnostic>,
+struct Ids<'a> {
     doctitle: Option<Span>,
-) {
-    struct Ids<'a> {
-        doctitle: Option<Span>,
-        anchors: &'a mut Anchors,
-        registry: &'a mut Registry,
-        diagnostics: &'a mut Vec<Diagnostic>,
-    }
-    impl VisitorMut for Ids<'_> {
-        fn visit_block(&mut self, block: &mut Block) {
-            let heading_title = match &block.kind {
-                BlockKind::Heading { inlines, .. } => Some(inlines.clone()),
-                _ => None,
+    anchors: std::iter::Peekable<std::vec::IntoIter<(String, crate::anchor_catalog::Entry)>>,
+    reftexts: &'a mut BTreeMap<(usize, usize), crate::reftext::Read>,
+    early_title: &'a mut EarlyTitle<'a>,
+    early: EarlyTitles,
+    registry: Registry,
+    diagnostics: &'a mut Vec<Diagnostic>,
+}
+
+impl Ids<'_> {
+    /// Register cataloged anchors that start before `position`.
+    fn flush(&mut self, position: usize) {
+        while self
+            .anchors
+            .peek()
+            .is_some_and(|(_, entry)| entry.span.start < position)
+        {
+            let (id, entry) = self.anchors.next().unwrap();
+            let target = Target {
+                reftext: entry.reftext,
+                title: None,
             };
-            // The document title lends its text to an explicit id but never
-            // receives an automatic one.
-            let automatic = Some(block.span) != self.doctitle;
-            if let Some(id) = block.id.clone() {
-                let reftext = block
-                    .reftext
-                    .clone()
-                    .filter(|nodes| !inline_text(nodes).is_empty())
-                    .or(heading_title);
-                register_id(self.registry, id, reftext, block.span, self.diagnostics);
-            } else if let Some(title) = heading_title.filter(|_| automatic) {
-                let unique = dedup(generate_id(&inline_text(&title)), self.registry);
-                self.registry.insert(unique.clone(), Some(title));
-                block.id = Some(unique);
-            }
-            visit::walk_block_mut(self, block);
+            register_id(&mut self.registry, id, target, entry.span, self.diagnostics);
         }
-        fn visit_inlines(&mut self, inlines: &mut [Inline], context: InlineContext) {
-            // Metadata follows different substitution/registration rules in Ruby.
-            // Preserve the existing body-anchor semantics until those are ported.
-            if context == InlineContext::Body {
-                visit::walk_inlines_mut(self, inlines);
-            }
-        }
-        fn visit_inline(&mut self, inline: &mut Inline) {
-            // Only anchors cataloged while reading join the registry, with
-            // their reading-time reftext; others still render.
-            if let Inline::Anchor { id, span, .. } = inline {
-                let key = (span.source_id, span.start);
-                if self
-                    .anchors
-                    .get(&key)
-                    .is_some_and(|(cataloged, _)| cataloged == id)
-                {
-                    let (id, reftext) = self.anchors.remove(&key).unwrap();
-                    register_id(self.registry, id, reftext, *span, self.diagnostics);
+    }
+}
+
+impl Ids<'_> {
+    /// Ruby converts an automatic-id heading and an anchored block title with
+    /// a literal `{` while parsing, before the block registers itself: a
+    /// reference to an id not yet registered (forward or self) displays
+    /// `[id]`; an earlier target lends its reftext or converted title. A
+    /// reference to a title deferred to conversion resolves there.
+    fn resolve_reading(&mut self, inlines: &mut [Inline], attributes: &crate::Attributes) {
+        for inline in inlines {
+            match inline {
+                Inline::CrossReference {
+                    target,
+                    children,
+                    span,
+                } if children.is_empty() => {
+                    let label = match self.registry.get(target.as_str()) {
+                        None => Some(vec![Inline::Text {
+                            value: format!("[{target}]"),
+                            span: *span,
+                        }]),
+                        Some(_) => self.reading_label(target, *span, attributes),
+                    };
+                    if let Some(mut label) = label {
+                        strip_label(&mut label);
+                        *children = label;
+                    }
                 }
+                Inline::Strong { children, .. }
+                | Inline::Emphasis { children, .. }
+                | Inline::Monospace { children, .. }
+                | Inline::Mark { children, .. }
+                | Inline::Superscript { children, .. }
+                | Inline::Subscript { children, .. }
+                | Inline::Link { children, .. }
+                | Inline::CrossReference { children, .. } => {
+                    self.resolve_reading(children, attributes)
+                }
+                _ => {}
             }
-            visit::walk_inline_mut(self, inline);
         }
     }
-    visit::walk_blocks_mut(
-        &mut Ids {
-            doctitle,
-            anchors: &mut anchors,
-            registry,
-            diagnostics,
-        },
-        blocks,
-    );
-    // Ruby registers cataloged anchors even where the rendered text does not
-    // form an anchor (for example, quote metadata inside the reftext).
-    for ((source_id, start), (id, reftext)) in anchors {
-        let span = Span {
-            source_id,
-            ..Span::new(start, start)
-        };
-        register_id(registry, id, reftext, span, diagnostics);
+}
+
+/// The range of a deferred field's private conversion placeholder.
+pub(crate) fn placeholder(nodes: &[Inline]) -> Option<(usize, usize)> {
+    match nodes {
+        [Inline::Text { value, span }] if value.is_empty() => Some((span.start, span.end)),
+        _ => None,
     }
+}
+
+impl Ids<'_> {
+    /// A label while reading. The reftext uses the reading attributes without
+    /// executing expressions; a deferred title is converted early; `None`
+    /// leaves the reference to conversion.
+    fn reading_label(
+        &mut self,
+        id: &str,
+        span: Span,
+        attributes: &crate::Attributes,
+    ) -> Option<Vec<Inline>> {
+        let target = &self.registry[id];
+        if let Some(nodes) = target
+            .reftext
+            .as_ref()
+            .map(|read| read.snapshot(attributes))
+            .filter(|nodes| !inline_text(nodes).is_empty())
+        {
+            return Some(nodes);
+        }
+        match &target.title {
+            Some(Title::Nodes(nodes)) => match placeholder(nodes) {
+                None => Some(nodes.clone()),
+                Some(key) => {
+                    let mut converted = (self.early_title)(key, attributes)?;
+                    self.resolve_reading(&mut converted, attributes);
+                    self.early.insert(key, converted.clone());
+                    if let Some(Title::Nodes(nodes)) = &mut self
+                        .registry
+                        .get_mut(id)
+                        .and_then(|target| target.title.as_mut())
+                    {
+                        *nodes = converted.clone();
+                    }
+                    Some(converted)
+                }
+            },
+            Some(Title::Heading(_, nodes)) => Some(nodes.clone()),
+            Some(Title::Header) => None,
+            None => Some(vec![Inline::Text {
+                value: format!("[{id}]"),
+                span,
+            }]),
+        }
+    }
+}
+
+impl VisitorMut for Ids<'_> {
+    fn visit_block(&mut self, block: &mut Block) {
+        self.flush(block.span.start);
+        // The document title lends its text to an explicit id but never
+        // receives an automatic one.
+        let doctitle = Some(block.span) == self.doctitle;
+        let attributes = std::sync::Arc::clone(&block.attribute_context);
+        match (&mut block.kind, &mut block.title) {
+            (BlockKind::Heading { inlines, .. }, _) if block.id.is_none() && !doctitle => {
+                self.resolve_reading(inlines, &attributes)
+            }
+            (_, Some(title)) if block.id.is_some() && placeholder(title).is_none() => {
+                self.resolve_reading(title, &attributes)
+            }
+            _ => {}
+        }
+        let title = match &block.kind {
+            BlockKind::Heading { .. } if doctitle => Some(Title::Header),
+            BlockKind::Heading { inlines, .. } => Some(Title::Heading(
+                (block.span.start, block.span.end),
+                inlines.clone(),
+            )),
+            _ => block.title.clone().map(Title::Nodes),
+        };
+        if let Some(id) = block.id.clone() {
+            let reftext = self.reftexts.remove(&(block.span.start, block.span.end));
+            let target = Target { reftext, title };
+            register_id(&mut self.registry, id, target, block.span, self.diagnostics);
+        } else if let (BlockKind::Heading { inlines, .. }, false) = (&block.kind, doctitle) {
+            let unique = dedup(generate_id(&inline_text(inlines)), &self.registry);
+            let target = Target {
+                reftext: None,
+                title,
+            };
+            self.registry.insert(unique.clone(), target);
+            block.id = Some(unique);
+        }
+        visit::walk_block_mut(self, block);
+    }
+    fn visit_inlines(&mut self, _inlines: &mut [Inline], _context: InlineContext) {}
 }
 
 /// Register `id -> reftext` in the registry, warning (at `span`) on a duplicate
@@ -153,7 +250,7 @@ fn assign_ids(
 fn register_id(
     registry: &mut Registry,
     id: String,
-    reftext: Option<Vec<Inline>>,
+    target: Target,
     span: Span,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
@@ -164,7 +261,7 @@ fn register_id(
             message: format!("id already in use: '{}'", e.key()),
         }),
         Entry::Vacant(e) => {
-            e.insert(reftext);
+            e.insert(target);
         }
     }
 }
@@ -255,7 +352,7 @@ fn generate_id(title: &str) -> String {
 
 /// A lexical view for ID derivation only. Flatten semantic formatting while
 /// preserving protection of literal characters and raw attribute boundaries.
-fn inline_text(inlines: &[Inline]) -> String {
+pub(crate) fn inline_text(inlines: &[Inline]) -> String {
     let mut s = String::new();
     push_text(inlines, &mut s);
     s
@@ -317,84 +414,32 @@ fn push_protected(text: &str, output: &mut String) {
     }
 }
 
-/// Phase 2: walk the block tree and resolve every cross-reference's display
-/// text against the registry.
-fn resolve_xrefs(blocks: &mut [Block], registry: &Registry, diagnostics: &mut Vec<Diagnostic>) {
-    struct References<'a> {
-        registry: &'a Registry,
-        diagnostics: &'a mut Vec<Diagnostic>,
-    }
-    impl VisitorMut for References<'_> {
-        fn visit_inlines(&mut self, inlines: &mut [Inline], context: InlineContext) {
-            // Titles use normal substitutions. Reftext and attribution have their
-            // own rules; the traversal exposes them without treating them as body.
-            if matches!(context, InlineContext::Body | InlineContext::Title) {
-                visit::walk_inlines_mut(self, inlines);
+/// Ruby's `DropAnchorRx` over a borrowed label: link and anchor tags are
+/// dropped, keeping their text, so a reference never nests links or repeats
+/// the target's anchors. Formatting is retained; the original heading and
+/// source reference positions remain unchanged.
+pub(crate) fn strip_label(inlines: &mut Vec<Inline>) {
+    let mut stripped = Vec::with_capacity(inlines.len());
+    for mut inline in inlines.drain(..) {
+        match &mut inline {
+            Inline::Anchor { .. } => {}
+            Inline::Link { children, .. } | Inline::CrossReference { children, .. } => {
+                strip_label(children);
+                stripped.append(children);
             }
-        }
-        fn visit_inline(&mut self, inline: &mut Inline) {
-            if let Inline::CrossReference {
-                target,
-                children,
-                span,
-            } = inline
-            {
-                let reftext = self.registry.get(target.as_str());
-                if reftext.is_none() {
-                    self.diagnostics.push(Diagnostic {
-                        span: *span,
-                        severity: Severity::Warning,
-                        message: format!("unresolved cross reference: '{target}'"),
-                    });
-                }
-                if children.is_empty() {
-                    *children = match reftext {
-                        Some(Some(text)) => {
-                            let mut label = text.clone();
-                            strip_label(&mut label);
-                            label
-                        }
-                        _ => vec![Inline::Text {
-                            value: format!("[{target}]"),
-                            span: *span,
-                        }],
-                    };
-                    // Borrowed display text can itself contain a reference to this
-                    // target. Do not recursively expand generated children.
-                    return;
-                }
+            Inline::Strong { children, .. }
+            | Inline::Emphasis { children, .. }
+            | Inline::Monospace { children, .. }
+            | Inline::Mark { children, .. }
+            | Inline::Superscript { children, .. }
+            | Inline::Subscript { children, .. } => {
+                strip_label(children);
+                stripped.push(inline);
             }
-            visit::walk_inline_mut(self, inline);
+            _ => stripped.push(inline),
         }
     }
-    visit::walk_blocks_mut(
-        &mut References {
-            registry,
-            diagnostics,
-        },
-        blocks,
-    );
-}
-
-/// Implicit xref labels retain formatting but drop generated link boundaries.
-/// The original heading and source reference positions remain unchanged.
-/// A borrowed label drops generated link boundaries and inline anchors, so the
-/// reference does not nest links or repeat the target's anchors.
-fn strip_label(inlines: &mut Vec<Inline>) {
-    inlines.retain(|inline| !matches!(inline, Inline::Anchor { .. }));
-    for inline in inlines.iter_mut() {
-        if let Inline::Strong { children, .. }
-        | Inline::Emphasis { children, .. }
-        | Inline::Monospace { children, .. }
-        | Inline::Mark { children, .. }
-        | Inline::Superscript { children, .. }
-        | Inline::Subscript { children, .. }
-        | Inline::Link { children, .. }
-        | Inline::CrossReference { children, .. } = inline
-        {
-            strip_label(children);
-        }
-    }
+    *inlines = stripped;
     strip_attribute_links(inlines);
 }
 

@@ -5,6 +5,7 @@ use crate::substitution_context::Evaluation;
 use crate::substitution_text::Text;
 use crate::{AttributePart as P, Diagnostic, Inline, Severity, Span};
 
+#[derive(Clone)]
 pub(crate) struct Reference {
     pub span: Span,
     pub name: String,

@@ -20,6 +20,7 @@ pub(crate) fn lines_with_offsets(source: &str) -> Vec<(usize, &str)> {
 
 /// Retained text fragments with a piecewise map back to the original buffer. A span across a gap encloses the removed bytes; a span on either side
 /// maps to that side. No per-byte table, padding or synthetic source positions.
+#[derive(Clone)]
 pub(crate) struct FilteredSource {
     pub text: String,
     pub removed: Vec<crate::Span>,

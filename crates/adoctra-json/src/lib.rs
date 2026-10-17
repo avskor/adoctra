@@ -1427,6 +1427,17 @@ mod tests {
     }
 
     #[test]
+    fn xref_labels_serialize_titles_and_reftext_formatted_per_reference() {
+        let json = render("[[t]]\n.Ж *T*\n----\nx\n----\n\n[[b,[.r\\{x}]#R#]]\npara\n\n:x: 1\n\n<<t>> <<b>>\n\n:x: 2\n\n<<b>>");
+        assert!(
+            json.contains(r#"{"name":"xref","target":"t","inlines":[{"name":"text","value":"Ж "},{"name":"strong","inlines":[{"name":"text","value":"T"}]}]}"#),
+            "{json}"
+        );
+        assert!(json.contains(r#""role":"r1""#), "{json}");
+        assert!(json.contains(r#""role":"r2""#), "{json}");
+    }
+
+    #[test]
     fn xrefs_use_cataloged_anchor_reftext() {
         let json = render("p\n\nA [[a,R {counter:n}]]\n\n* x [[b,L]]\n\n<<a>> <<b>>");
         assert!(
