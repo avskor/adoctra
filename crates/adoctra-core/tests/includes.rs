@@ -2871,3 +2871,33 @@ fn inline_anchor_catalog_keeps_selected_include_origins() {
     assert_eq!(sources.slice(strong.span()), Some("*x*"));
     assert!(matches!(&refs[1][0], Inline::Text { value, .. } if value == "L"));
 }
+
+#[test]
+fn body_setext_section_spans_title_and_included_underline() {
+    let root = "Intro\n\nSec *Я*\ninclude::u.adoc[]\n\n<<_sec_я>>";
+    let (mut sources, resources, options) =
+        setup(root, &[("/docs/u.adoc", "-------\r\n\r\nBody\r\n")]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+    check_spans(&result, &sources);
+    let block = &result.document.blocks[1];
+    assert!(matches!(block.kind, BlockKind::Heading { level: 1, .. }));
+    assert_eq!(block.id.as_deref(), Some("_sec_я"));
+    let fragments = &result.provenance[block.span.provenance.unwrap()];
+    assert!(sources
+        .slice(fragments[0])
+        .unwrap()
+        .starts_with("Sec *Я*\n"));
+    assert_eq!(fragments.last().unwrap().source_id, SourceId(1));
+    assert_eq!(sources.slice(*fragments.last().unwrap()), Some("-------"));
+    let highlighted = tokens_resource(&mut sources, &options, &resources).unwrap();
+    let headings: Vec<_> = highlighted
+        .iter()
+        .filter(|t| t.kind == TokenKind::Heading)
+        .map(|t| (t.span.source_id, sources.slice(t.span).unwrap()))
+        .collect();
+    assert_eq!(
+        headings,
+        [(options.source_id, "Sec *Я*"), (SourceId(1), "-------")]
+    );
+}

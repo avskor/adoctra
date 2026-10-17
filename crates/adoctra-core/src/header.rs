@@ -292,8 +292,8 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
 }
 
 /// Asciidoctor's setext_section_title?: character lengths, not byte lengths.
-/// Only header detection uses this for now; body setext sections are separate work.
-fn setext_level(title: &str, underline: &str) -> Option<u8> {
+/// Shared by header detection and body sections.
+pub(crate) fn setext_level(title: &str, underline: &str) -> Option<u8> {
     let marker = *underline.as_bytes().first()?;
     let level = match marker {
         b'=' => 0,

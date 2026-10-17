@@ -13,7 +13,7 @@ use crate::block_attributes::parse_block_attr_list;
 use crate::comments::{comment_fence, is_line_comment, skip_comment};
 use crate::context::{consume_attribute_entry, ParseContext, ParseOptions};
 use crate::diagnostic::{Diagnostic, ParseResult, Severity};
-use crate::header::collect_header;
+use crate::header::{collect_header, setext_level};
 use crate::inline::scan_inlines_report;
 use crate::reader::Reader;
 use std::sync::Arc;
@@ -196,7 +196,11 @@ fn collect_blocks(
             i,
             context,
             diagnostics,
-            BlockCtx::TopLevel,
+            if stop.is_none() {
+                BlockCtx::Section
+            } else {
+                BlockCtx::TopLevel
+            },
             Some(&metadata.attrs),
             metadata.id.is_some(),
         ) {
@@ -596,8 +600,12 @@ fn capture_verbatim_body(
 /// column-0 list marker; inside a list item (after a `+` continuation) it
 /// additionally ends at a lone `+` line or an *indented* list marker, so an
 /// attached paragraph does not swallow the next continuation or sibling item.
+/// `Section` is the top level of the document or a section, the only place where
+/// Ruby's `next_section` looks for (setext) section titles; container bodies use
+/// `TopLevel`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum BlockCtx {
+    Section,
     TopLevel,
     InListItem,
 }
@@ -663,12 +671,37 @@ fn parse_block_content(
         return None;
     }
 
-    // Heading.
-    if let Some((level, title)) = parse_heading(trimmed) {
+    // Heading. ATX takes precedence over a setext title; Ruby recognizes the
+    // two-line form where it looks for sections, and for a discrete heading anywhere.
+    let discrete = matches!(pending_style, Some("discrete" | "float"));
+    let heading = parse_heading(trimmed)
+        .map(|(level, title)| (level, title, off + line.len(), 1))
+        .or_else(|| {
+            if ctx != BlockCtx::Section && !discrete {
+                return None;
+            }
+            // Ruby peeks a comment-styled block's next line without preprocessing.
+            let has_next = if pending_style == Some("comment") {
+                lines.raw_has(*i + 1)
+            } else {
+                lines.has(*i + 1, context)
+            };
+            if !has_next {
+                return None;
+            }
+            let (underline_off, underline) = lines.line(*i + 1);
+            let level = setext_level(line, &underline)?;
+            lines.setext_lines.extend([
+                Span::new(off, off + line.len()),
+                Span::new(underline_off, underline_off + underline.len()),
+            ]);
+            Some((level, line, underline_off + underline.len(), 2))
+        });
+    if let Some((level, title, end, consumed)) = heading {
         let adjusted = context.section_level(level);
         if adjusted > u8::MAX as i128 {
             diagnostics.push(Diagnostic {
-                span: Span::new(off, off + line.len()),
+                span: Span::new(off, end),
                 severity: Severity::Warning,
                 message: "section level exceeds the supported maximum of 255".into(),
             });
@@ -684,10 +717,7 @@ fn parse_block_content(
         let inlines = context.reading_title(title, base, &heading_attrs);
         // `Block.id` is otherwise assigned later, by the resolve pass, once the
         // whole document is known (it deduplicates ids across all sections).
-        let mut block = Block::new(
-            Span::new(off, off + line.len()),
-            BlockKind::Heading { level, inlines },
-        );
+        let mut block = Block::new(Span::new(off, end), BlockKind::Heading { level, inlines });
         if let Some(anchor) = anchor {
             block.id = Some(anchor.id.to_owned());
             context.section_reftext = anchor.reftext.map(|reftext| {
@@ -695,7 +725,7 @@ fn parse_block_content(
                 crate::reftext::Read::source(reftext, base)
             });
         }
-        *i += 1;
+        *i += consumed;
         return Some(block);
     }
 
@@ -1055,7 +1085,7 @@ fn parse_block_content(
             || parse_heading(t).is_some()
             || matches!(t.trim(), "----" | "...." | "====" | "____" | "****" | "--")
             || match ctx {
-                BlockCtx::TopLevel => parse_list_marker(t).is_some(),
+                BlockCtx::Section | BlockCtx::TopLevel => parse_list_marker(t).is_some(),
                 BlockCtx::InListItem => t.trim() == "+" || list_marker_indented(t).is_some(),
             };
         if ends {

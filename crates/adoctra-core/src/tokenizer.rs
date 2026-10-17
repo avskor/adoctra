@@ -120,7 +120,12 @@ pub(crate) fn tokens_reader<'a>(
         .iter()
         .map(|(span, entry)| (processed.transformed_span(*span), entry.clone()))
         .collect();
-    let mut out: Vec<_> = tokens_processed(&processed.text, options, &comments, &entries)
+    let setext: Vec<_> = reader
+        .setext_lines
+        .iter()
+        .map(|span| processed.transformed_span(*span))
+        .collect();
+    let mut out: Vec<_> = tokens_processed(&processed.text, options, &comments, &entries, &setext)
         .into_iter()
         .flat_map(|token| {
             reader
@@ -221,6 +226,9 @@ fn tokens_processed(
     options: &ParseOptions,
     comments: &[Span],
     entries: &[(Span, Option<crate::context::AttributeEntry>)],
+    // Body setext title/underline lines, classified by the structural parser:
+    // only it knows section contexts, and an underline may look like a fence.
+    setext: &[Span],
 ) -> Vec<Token> {
     // Comment classification is owned by the structural parser, including
     // verbatim styles and list continuations. Do not duplicate those rules here.
@@ -284,7 +292,10 @@ fn tokens_processed(
             }
             continue;
         }
-        if header.title_line == Some(line_index) || header.title_underline == Some(line_index) {
+        if header.title_line == Some(line_index)
+            || header.title_underline == Some(line_index)
+            || setext.binary_search_by_key(&off, |span| span.start).is_ok()
+        {
             out.push(Token {
                 span: line_span,
                 kind: TokenKind::Heading,

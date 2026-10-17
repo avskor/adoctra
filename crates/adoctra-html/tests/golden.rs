@@ -701,6 +701,35 @@ fn offset_heading_levels_match_asciidoctor() {
 }
 
 #[test]
+fn setext_body_sections_match_asciidoctor() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden");
+    let source = fs::read_to_string(dir.join("section-setext.adoc")).unwrap();
+    let expected = fs::read_to_string(dir.join("section-setext.expected.html")).unwrap();
+    let result = adoctra_core::parse(&source);
+    assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+    let ours = String::from_utf8(HtmlBackend.convert(&result.document).unwrap()).unwrap();
+    let headings = |html: &str| -> Vec<String> {
+        html.lines()
+            .map(str::trim)
+            .filter(|line| {
+                line.starts_with("<h")
+                    && line
+                        .as_bytes()
+                        .get(2)
+                        .is_some_and(|b| (b'2'..=b'6').contains(b))
+            })
+            .map(str::to_owned)
+            .collect()
+    };
+    assert_eq!(headings(&ours), headings(&expected));
+    assert_eq!(headings(&ours).len(), 6);
+    // The resolved xref borrows the setext title; underlines never leak as text.
+    assert!(ours.contains(r##"<a href="#_deep">Deep</a>"##), "{ours}");
+    assert!(expected.contains(r##"<a href="#_deep">Deep</a>"##));
+    assert!(!ours.contains("~~~~") && !ours.contains("++++"), "{ours}");
+}
+
+#[test]
 fn setext_document_title_and_metadata_match_asciidoctor() {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden");
     let source = fs::read_to_string(dir.join("header-setext.adoc")).unwrap();

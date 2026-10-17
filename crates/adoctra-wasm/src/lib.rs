@@ -2088,6 +2088,28 @@ mod header_tests {
     }
 
     #[test]
+    fn setext_body_section_exports_two_line_span_and_heading_tokens() {
+        let source = "Intro\r\n\r\n*Я*\r\n----\r\n\r\nBody";
+        let json = super::parse_json_with_source(source, 7);
+        assert!(
+            json.contains(
+                r#"{"span":{"source_id":7,"start":9,"end":19},"name":"heading","level":1"#
+            ),
+            "{json}"
+        );
+        let tokens = super::tokens_json_with_source(source, 7);
+        for (start, end) in [(9, 13), (15, 19)] {
+            assert!(
+                tokens.contains(&format!(
+                    r#"{{"span":{{"source_id":7,"start":{start},"end":{end}}},"kind":"heading"}}"#
+                )),
+                "{tokens}"
+            );
+        }
+        assert!(!tokens.contains("listing-delimiter"), "{tokens}");
+    }
+
+    #[test]
     fn header_metadata_and_tokens_keep_source_coordinates() {
         let json =
             super::parse_json_with_source("= Doc\nJane Doe <j@example.org>\nv2\n\n{author}", 7);

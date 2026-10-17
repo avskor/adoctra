@@ -391,8 +391,15 @@ underlines and effective level zero. ATX takes precedence. The Heading/header
 title span includes both lines; inline spans cover title text only. Highlight
 both lines as separate heading tokens and retain physical source fragments across
 includes/selection/indent. Setext installs compat-mode before subsequent header
-metadata, respecting locked overrides; its substitution effects and body setext
-sections remain follow-up work. JSON and WASM expose header metadata;
+metadata, respecting locked overrides; its substitution effects remain follow-up work.
+Body setext sections share setext_level, but only where Ruby looks for sections
+(BlockCtx::Section: document level, not containers or list items); a
+discrete/float style accepts them anywhere. ATX wins; the underline wins over
+block fences (`----`/`--`/`====`/`++++`); paragraphs are not interrupted; a
+comment style peeks the underline raw. Heading spans both lines; the reader
+records them in setext_lines so highlighting emits heading tokens instead of
+fences. Section hierarchy (preamble, nesting, level-order warnings, ATX inside
+containers as paragraph text) is the next step. JSON and WASM expose header metadata;
 WASM includes source spans. See parser-api.adoc for remaining header limitations.
 Comments (`//`, matching slash fences of length >= 4, and `[comment]` paragraphs
 or open blocks) are omitted contextually. ParseResult.comments retains source
