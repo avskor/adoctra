@@ -73,6 +73,12 @@ The model serves three audiences; keep their needs in mind when changing core:
   serialization layer in `adoctra-wasm` must remain pure Rust so it compiles and
   unit-tests on the native target.
 - Run `cargo fmt` and keep `cargo clippy --workspace --all-features` clean.
+- **Localization works exactly like Asciidoctor Ruby.** Every reader-visible
+  word is a document attribute with Ruby's built-in default (`toc-title`,
+  `*-caption`, `*-refsig`, `*-signifier`, `preface-title`, …) that documents
+  override (`:toc-title: Содержание`). Never hardcode localized text or add an
+  own i18n layer/message codes; diagnostics and fixed output strings (e.g.
+  `<!-- toc disabled -->`) stay verbatim English, identical to Ruby.
 - **Test coverage is mandatory** for every change — see "Test coverage is
   mandatory" under "Build, test, run" for what that requires.
 
