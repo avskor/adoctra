@@ -288,8 +288,25 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
         Arc::make_mut(&mut context.attributes).set("authorcount", "0");
     }
     save_toc(Arc::make_mut(&mut context.attributes));
+    save_icons(Arc::make_mut(&mut context.attributes));
     context.quote_compat = context.attributes.get("compat-mode").is_some();
     result
+}
+
+/// Ruby's `save_attributes` at header completion: an `icons` value other
+/// than empty or `font` names the icon type (`image` keeps the default) and
+/// leaves image icons enabled, unless `icontype` is already set.
+fn save_icons(attributes: &mut crate::Attributes) {
+    let Some(icons) = attributes.get("icons").map(str::to_owned) else {
+        return;
+    };
+    if attributes.get("icontype").is_some() || icons.is_empty() || icons == "font" {
+        return;
+    }
+    attributes.set("icons", "");
+    if icons != "image" {
+        attributes.set("icontype", icons);
+    }
 }
 
 /// Ruby's `save_attributes` at header completion: a `toc` value (or `toc2`)

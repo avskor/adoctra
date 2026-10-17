@@ -815,6 +815,7 @@ fn render_inlines(inlines: &[Inline], out: &mut String) {
                 out.push_str(&escape(id));
                 out.push_str("\"></a>");
             }
+            Inline::Image { image, .. } => render_inline_image(image, out),
             // Resolved in core: emit the value, or fall back to the literal
             // `{name}` for a missing attribute (asciidoctor's default).
             Inline::AttributeRef { value, parts, .. } if !parts.is_empty() && value.is_some() => {
@@ -887,11 +888,17 @@ fn attr_value(s: &str) -> String {
 /// Ruby's `append_link_constraint_attrs`: `window` becomes the target, with
 /// `noopener` for `_blank` (or the option) and `nofollow` from the option.
 fn link_constraints(attrs: &adoctra_core::ast::BlockAttrs) -> String {
-    let option = |name: &str| attrs.options.iter().any(|o| o == name);
+    let window = attrs.named.get("window").map(|window| attr_value(window));
+    constraints(window.as_deref(), &attrs.options)
+}
+
+/// The constraint attributes for an already encoded `window`.
+fn constraints(window: Option<&str>, options: &[String]) -> String {
+    let option = |name: &str| options.iter().any(|o| o == name);
     let rel = option("nofollow").then_some("nofollow");
-    match attrs.named.get("window") {
+    match window {
         Some(window) => {
-            let mut out = format!(" target=\"{}\"", attr_value(window));
+            let mut out = format!(" target=\"{window}\"");
             if window == "_blank" || option("noopener") {
                 match rel {
                     Some(rel) => out.push_str(&format!(" rel=\"{rel} noopener\"")),
@@ -948,6 +955,57 @@ fn escape_text(s: &str) -> String {
     out
 }
 
+/// Ruby's `convert_inline_image`: a `<span class="image|icon …">` holding an
+/// `<img>` (an icon font `<i>` or the `[alt]` text for icons), inside an
+/// `<a class="image">` with `link`. Lexical values are inserted verbatim like
+/// Ruby's; the alt is its lexical HTML with quotes encoded.
+fn render_inline_image(image: &adoctra_core::InlineImage, out: &mut String) {
+    let attr = |key: &str| image.attributes.get(key);
+    let mut alt = String::new();
+    render_parts(&image.alt, &mut alt);
+    let inner = match (image.icon, image.icons.as_deref()) {
+        (true, Some("font")) => {
+            let mut class = format!("fa fa-{}", image.target);
+            if let Some(size) = attr("size") {
+                class.push_str(&format!(" fa-{size}"));
+            }
+            if let Some(flip) = attr("flip") {
+                class.push_str(&format!(" fa-flip-{flip}"));
+            } else if let Some(rotate) = attr("rotate") {
+                class.push_str(&format!(" fa-rotate-{rotate}"));
+            }
+            let title = attr("title")
+                .map(|title| format!(" title=\"{title}\""))
+                .unwrap_or_default();
+            format!("<i class=\"{class}\"{title}></i>")
+        }
+        (true, None) => format!("[{alt}&#93;"),
+        _ => {
+            let mut img = format!(
+                "<img src=\"{}\" alt=\"{}\"",
+                image.src,
+                alt.replace('"', "&quot;")
+            );
+            for key in ["width", "height", "title"] {
+                if let Some(value) = attr(key) {
+                    img.push_str(&format!(" {key}=\"{value}\""));
+                }
+            }
+            img.push('>');
+            img
+        }
+    };
+    out.push_str(&format!("<span class=\"{}\">", image.classes()));
+    match attr("link") {
+        Some(link) => out.push_str(&format!(
+            "<a class=\"image\" href=\"{link}\"{}>{inner}</a>",
+            constraints(attr("window").map(String::as_str), &image.options)
+        )),
+        None => out.push_str(&inner),
+    }
+    out.push_str("</span>");
+}
+
 fn render_parts(parts: &[adoctra_core::AttributePart], out: &mut String) {
     for part in parts {
         match part {
@@ -994,6 +1052,7 @@ fn render_parts(parts: &[adoctra_core::AttributePart], out: &mut String) {
                 out.push('>');
             }
             adoctra_core::AttributePart::LineBreak => out.push_str("<br>"),
+            adoctra_core::AttributePart::Image(image) => render_inline_image(image, out),
             adoctra_core::AttributePart::Anchor(id) => {
                 out.push_str("<a id=\"");
                 out.push_str(id);
@@ -2478,6 +2537,23 @@ mod tests {
                 r##"F <a href="#">Sec Title</a></p>"##
             )),
             "{html}"
+        );
+    }
+
+    #[test]
+    fn inline_images_and_icons_render_ruby_spans() {
+        let html = render(
+            ":imagesdir: img\n:img: image:v.png[V \"q\"]\n\n\
+             A image:a b.png[Alt *b* & (C),20,title=T,role=r,float=left,link=l,window=_blank,opts=nofollow] \
+             icon:heart[2x] {img}\n\n:icons: font\n\nicon:heart[2x,flip=h,title=L]\n\n\
+             :icons:\n\nicon:x[icon=y,width=5]",
+        );
+        assert_eq!(
+            body(&html),
+            "<p>A <span class=\"image left r\"><a class=\"image\" href=\"l\" target=\"_blank\" rel=\"nofollow noopener\"><img src=\"img/a%20b.png\" alt=\"Alt <strong>b</strong> &amp; &#169;\" width=\"20\" title=\"T\"></a></span> \
+             <span class=\"icon\">[heart&#93;</span> <span class=\"image\"><img src=\"img/v.png\" alt=\"V &quot;q&quot;\"></span></p>\n\
+             <p><span class=\"icon\"><i class=\"fa fa-heart fa-2x fa-flip-h\" title=\"L\"></i></span></p>\n\
+             <p><span class=\"icon\"><img src=\"./images/icons/y.png\" alt=\"x\" width=\"5\"></span></p>\n</body>\n</html>\n"
         );
     }
 

@@ -151,6 +151,11 @@ impl ParseContext {
             );
             locked.insert(effective_key.to_string());
         }
+        // Ruby's fallback icon directory, from the host's `imagesdir` only.
+        if attributes.get("iconsdir").is_none() {
+            let images = attributes.get("imagesdir").unwrap_or("./images");
+            attributes.set("iconsdir", format!("{images}/icons"));
+        }
         Self {
             quote_compat: options.attributes.get("compat-mode").is_some(),
             attributes: Arc::new(attributes),

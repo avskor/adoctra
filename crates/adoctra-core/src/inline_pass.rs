@@ -518,6 +518,16 @@ impl Passes {
                     });
                     self.restore(children, attrs, compat);
                 }
+                Inline::Image { image, .. } => {
+                    image.map_fields(|value| {
+                        reference_text(&self.restore_evaluated(
+                            vec![P::Raw(value.to_owned())],
+                            attrs,
+                            compat,
+                            0,
+                        ))
+                    });
+                }
                 Inline::Anchor { id, .. } => {
                     *id = reference_text(&self.restore_evaluated(
                         vec![P::Raw(id.clone())],

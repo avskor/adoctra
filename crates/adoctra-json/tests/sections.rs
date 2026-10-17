@@ -89,3 +89,20 @@ fn video_and_audio_serialize_target_src_poster_and_embedding() {
         "{json}"
     );
 }
+
+#[test]
+fn inline_images_serialize_lexical_fields_alt_and_parts() {
+    let json = render(":img: image:v.png[V]\n\nimage:a.png[*B*,20,opts=x] icon:i[] {img}");
+    assert!(
+        json.contains(r#"{"name":"image","icon":false,"target":"a.png","src":"a.png","alt":"B","icons":null,"attributes":{"width":"20"},"options":["x"],"parts":[{"kind":"open","format":"strong"},{"kind":"text","value":"B"},{"kind":"close","format":"strong"}]}"#),
+        "{json}"
+    );
+    assert!(
+        json.contains(r#"{"name":"image","icon":true,"target":"i","src":"","alt":"i","icons":null,"attributes":{},"options":[],"parts":[{"kind":"text","value":"i"}]}"#),
+        "{json}"
+    );
+    assert!(
+        json.contains(r#"[{"kind":"image","icon":false,"target":"v.png","src":"v.png","alt":"V","icons":null,"attributes":{},"options":[],"parts":[{"kind":"text","value":"V"}]}]"#),
+        "{json}"
+    );
+}

@@ -1,17 +1,18 @@
-//! Macro substitutions for pass attributes and expanded inline text: links,
-//! emails, inline anchors and (for inline text) cross-references. Matched over
+//! Macro substitutions for pass attributes and expanded inline text: inline
+//! images and icons, links, emails, inline anchors and cross-references. Matched over
 //! the shared lexical stream; generated constructs remain backend-neutral
 //! boundaries.
 use crate::inline_pass::Passes;
 use crate::substitution_context::Evaluation;
 use crate::substitution_text::Text;
-use crate::{AttributeFormat, AttributeLink, AttributePart as Part, Inline, Span};
+use crate::{AttributeFormat, AttributeLink, AttributePart as Part, Inline, InlineImage, Span};
 use std::collections::BTreeMap;
 use std::ops::Range;
 
 const SCHEMES: [&str; 5] = ["https://", "http://", "file://", "ftp://", "irc://"];
 
 struct Report<'a> {
+    images: Vec<Span>,
     links: Vec<Span>,
     anchors: Vec<Span>,
     xrefs: Vec<Span>,
@@ -23,6 +24,7 @@ struct Report<'a> {
 impl<'a> Report<'a> {
     fn new(passes: &'a mut Passes) -> Self {
         Self {
+            images: Vec::new(),
             links: Vec::new(),
             anchors: Vec::new(),
             xrefs: Vec::new(),
@@ -35,6 +37,7 @@ impl<'a> Report<'a> {
 /// Physical ranges of constructs consumed by the macros stage, for highlighting.
 #[derive(Default)]
 pub(crate) struct Matches {
+    pub images: Vec<Span>,
     pub links: Vec<Span>,
     pub anchors: Vec<Span>,
     pub xrefs: Vec<Span>,
@@ -64,6 +67,7 @@ pub(crate) fn apply_inlines(
     let mut report = Report::new(passes);
     process_inlines(nodes, attributes, true, fold_newlines, &mut report);
     Matches {
+        images: report.images,
         links: report.links,
         anchors: report.anchors,
         xrefs: report.xrefs,
@@ -270,6 +274,7 @@ fn flush_inlines(
         }
     }
     text = crate::replacements::apply_text(text, edges.0, edges.1);
+    text = apply_images(text, attributes, report);
     for stage in 0..3 {
         text = apply_stage(
             text,
@@ -295,6 +300,15 @@ fn flush_inlines(
                 unreachable!()
             };
             Inline::Anchor { id, span }
+        }
+        Inline::Substituted { parts, span, .. } if matches!(parts.as_slice(), [Part::Image(_)]) => {
+            let Some(Part::Image(image)) = parts.into_iter().next() else {
+                unreachable!()
+            };
+            Inline::Image {
+                image: *image,
+                span,
+            }
         }
         Inline::Substituted { parts, span, .. } if single_xref(&parts) => {
             let label = report
@@ -366,11 +380,209 @@ fn apply_inner(
     report: &mut Report<'_>,
 ) -> Vec<Part> {
     let mut text = Text::from_parts_at(&parts, span);
+    text = apply_images(text, attributes, report);
     for stage in 0..3 {
         text = apply_stage(text, stage, attributes, compat, depth, true, report);
     }
     let text = apply_anchors(text, report);
     apply_xrefs(text, attributes, report).into_parts()
+}
+
+/// Ruby's `InlineImageMacroRx`, the first built-in macro (before links) over
+/// the lexical result of the earlier stages: `image:{dir}/a.png[]` takes the
+/// expanded target. An escaped macro loses its backslash.
+fn apply_images(text: Text, attributes: &mut Evaluation<'_>, report: &mut Report<'_>) -> Text {
+    let src = &text.text;
+    if !src.contains('[') || !(src.contains("image:") || src.contains("icon:")) {
+        return text;
+    }
+    let mut output = Text::default();
+    let mut copied = 0;
+    let mut at = 0;
+    while at < src.len() {
+        let escaped = src.as_bytes()[at] == b'\\';
+        let start = at + usize::from(escaped);
+        let Some(m) = image_at(src, start) else {
+            at += src[at..].chars().next().unwrap().len_utf8();
+            continue;
+        };
+        text.copy(copied..at, &mut output);
+        if escaped {
+            text.copy(start..m.end, &mut output);
+        } else {
+            report.images.push(text.match_span(at..m.end));
+            let image = inline_image(&text, &m, attributes);
+            text.replace_parts(at..m.end, &[Part::Image(Box::new(image))], &mut output);
+        }
+        copied = m.end;
+        at = m.end;
+    }
+    text.copy(copied..src.len(), &mut output);
+    output
+}
+
+struct ImageMatch {
+    end: usize,
+    icon: bool,
+    target: Range<usize>,
+    list: Range<usize>,
+}
+
+/// Ruby's `\s`.
+fn blank(c: char) -> bool {
+    matches!(c, ' ' | '\t' | '\n' | '\r' | '\x0b' | '\x0c')
+}
+
+/// `i(?:mage|con):([^:\s\[](?:[^\n\[]*[^\s\[])?)\[(|.*?[^\\])\]` at `start`:
+/// the target runs to the first `[` on its line and neither starts with a
+/// colon or blank nor ends with a blank; the list ends at the first `]` not
+/// preceded by a backslash (it may span lines).
+fn image_at(src: &str, start: usize) -> Option<ImageMatch> {
+    let rest = &src[start..];
+    let (icon, prefix) = if rest.starts_with("image:") {
+        (false, "image:".len())
+    } else if rest.starts_with("icon:") {
+        (true, "icon:".len())
+    } else {
+        return None;
+    };
+    let target = start + prefix;
+    let first = src[target..].chars().next()?;
+    if first == ':' || first == '[' || blank(first) {
+        return None;
+    }
+    let bracket = target + src[target..].find(['\n', '['])?;
+    if src.as_bytes()[bracket] != b'[' || src[..bracket].ends_with(blank) {
+        return None;
+    }
+    let open = bracket + 1;
+    let close = src[open..]
+        .match_indices(']')
+        .map(|(i, _)| open + i)
+        .find(|&close| close == open || src.as_bytes()[close - 1] != b'\\')?;
+    Some(ImageMatch {
+        end: close + 1,
+        icon,
+        target: target..bracket,
+        list: open..close,
+    })
+}
+
+/// The `:image` inline node of Ruby's `sub_macros`: the list is parsed with
+/// `posattrs` after `normalize_text` (strip, newlines as spaces, `\]`
+/// unescaped) and without value substitutions; a missing alt is the target's
+/// basename. Sources use the document attributes at this point.
+fn inline_image(text: &Text, m: &ImageMatch, attributes: &Evaluation<'_>) -> InlineImage {
+    let target = text.text[m.target.clone()].to_owned();
+    let posattrs: &[&str] = if m.icon {
+        &["size"]
+    } else {
+        &["alt", "width", "height"]
+    };
+    let (alt, named, options) = image_attributes(text, m.list.clone(), posattrs);
+    let alt = alt.unwrap_or_else(|| {
+        let basename = crate::image::default_alt(&target);
+        vec![Part::Text(crate::attributes::decode_special(&basename))]
+    });
+    let icons = m
+        .icon
+        .then(|| attributes.get("icons").map(str::to_owned))
+        .flatten();
+    let src = if !m.icon {
+        crate::image::web_path(&target, attributes.get("imagesdir"))
+    } else if icons.as_deref().is_some_and(|icons| icons != "font") {
+        // `icon_uri`: the `icon` attribute or the target, with `icontype`
+        // unless it has an extension, under `iconsdir`.
+        let icontype = attributes.get("icontype").unwrap_or("png");
+        let icon = match named.get("icon") {
+            Some(icon) if crate::image::has_extension(icon) => icon.clone(),
+            Some(icon) => format!("{icon}.{icontype}"),
+            None => format!("{target}.{icontype}"),
+        };
+        crate::image::web_path(&icon, attributes.get("iconsdir"))
+    } else {
+        String::new()
+    };
+    InlineImage {
+        icon: m.icon,
+        target,
+        src,
+        alt,
+        icons,
+        attributes: named,
+        options,
+    }
+}
+
+/// `parse_attributes(…, posattrs, unescape_input: true)`: the alt keeps its
+/// lexical parts, other values their lexical spelling; options are split.
+fn image_attributes(
+    text: &Text,
+    list: Range<usize>,
+    posattrs: &[&str],
+) -> (Option<Vec<Part>>, BTreeMap<String, String>, Vec<String>) {
+    let mut alt = None;
+    let mut named = BTreeMap::new();
+    let mut options = Vec::new();
+    let unescaped = Text::from_parts(&slice(text, list, None, true));
+    // `normalize_text`: strip, then line feeds become spaces.
+    let src = &unescaped.text;
+    let start = src.len() - src.trim_start_matches(blank).len();
+    let end = src
+        .trim_end_matches(|c| blank(c) || c == '\0')
+        .len()
+        .max(start);
+    let mut text = Text::default();
+    let mut copied = start;
+    for (i, _) in src[start..end].match_indices('\n') {
+        unescaped.copy(copied..start + i, &mut text);
+        unescaped.replacement(start + i..start + i + 1, " ", None, &mut text);
+        copied = start + i + 1;
+    }
+    unescaped.copy(copied..end, &mut text);
+    let src = &text.text;
+    for field in crate::attribute_list::parse(src) {
+        let Some(range) = field.value.clone() else {
+            continue;
+        };
+        let value = match &field.gap {
+            Some(gap) => {
+                let mut normalized = Text::default();
+                text.copy(range.start..gap.start, &mut normalized);
+                text.replacement(gap.clone(), &" ".repeat(gap.len()), None, &mut normalized);
+                text.copy(gap.end..range.end, &mut normalized);
+                normalized.into_parts()
+            }
+            None => slice(&text, range, field.quote, false),
+        };
+        let name = match field.name(src) {
+            Some(name) => name,
+            None => match posattrs.get(field.index) {
+                Some(name) => name,
+                None => continue,
+            },
+        };
+        let lexical = crate::attributes::reference_text(&value);
+        match name {
+            "opts" | "options" => {
+                let lexical = if lexical.contains(',') {
+                    lexical.replace(' ', "")
+                } else {
+                    lexical
+                };
+                for option in lexical.split(',').filter(|s| !s.is_empty()) {
+                    if !options.iter().any(|o| o == option) {
+                        options.push(option.to_owned());
+                    }
+                }
+            }
+            "alt" => alt = Some(value),
+            _ => {
+                named.insert(name.to_owned(), lexical);
+            }
+        }
+    }
+    (alt, named, options)
 }
 
 /// Ruby's `InlineAnchorRx` after links and emails, over the lexical result of
@@ -1128,4 +1340,36 @@ fn parse_label(
         return (parts.to_vec(), BTreeMap::new(), BTreeMap::new());
     }
     (first, named, positional)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn found(src: &str) -> Option<(bool, &str, &str, usize)> {
+        let m = image_at(src, 0)?;
+        Some((m.icon, &src[m.target], &src[m.list], m.end))
+    }
+
+    #[test]
+    fn image_macro_grammar_follows_inline_image_macro_rx() {
+        assert_eq!(found("image:a b.png[x]"), Some((false, "a b.png", "x", 16)));
+        assert_eq!(found("icon:heart[]"), Some((true, "heart", "", 12)));
+        // The list ends at the first unescaped bracket and may span lines.
+        assert_eq!(found("image:a[x\\]y]z]"), Some((false, "a", "x\\]y", 13)));
+        assert_eq!(found("image:a[x[1]]"), Some((false, "a", "x[1", 12)));
+        assert_eq!(found("image:a[x\ny]"), Some((false, "a", "x\ny", 12)));
+        assert_eq!(found("image:a[\\]"), None);
+        for src in [
+            "image: a[]",
+            "image::a[]",
+            "image:[x]",
+            "image:a [x]",
+            "image:a\nb[x]",
+            "image:a",
+            "img:a[]",
+        ] {
+            assert!(found(src).is_none(), "{src}");
+        }
+    }
 }

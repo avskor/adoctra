@@ -880,8 +880,9 @@ fn push_text(inlines: &[Inline], s: &mut String) {
                 push_text(children, s);
                 s.push_str("<>");
             }
-            // An anchor has no visible text but still separates lexical runs.
-            Inline::Anchor { .. } => s.push_str("<>"),
+            // An anchor or image has no visible text (Ruby removes the
+            // generated tags) but still separates lexical runs.
+            Inline::Anchor { .. } | Inline::Image { .. } => s.push_str("<>"),
         }
     }
 }
@@ -910,6 +911,11 @@ pub(crate) fn strip_label(inlines: &mut Vec<Inline>) {
                 strip_label(children);
                 stripped.append(children);
             }
+            // An image keeps its markup without its link tag.
+            Inline::Image { image, .. } => {
+                image.attributes.remove("link");
+                stripped.push(inline);
+            }
             Inline::Strong { children, .. }
             | Inline::Emphasis { children, .. }
             | Inline::Monospace { children, .. }
@@ -931,6 +937,11 @@ fn strip_attribute_links(inlines: &mut [Inline]) {
     impl VisitorMut for Strip {
         fn visit_inline(&mut self, inline: &mut Inline) {
             if let Inline::AttributeRef { parts, .. } | Inline::Substituted { parts, .. } = inline {
+                for part in parts.iter_mut() {
+                    if let crate::AttributePart::Image(image) = part {
+                        image.attributes.remove("link");
+                    }
+                }
                 parts.retain(|part| {
                     !matches!(
                         part,

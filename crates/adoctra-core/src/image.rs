@@ -77,6 +77,12 @@ pub(crate) fn default_alt(target: &str) -> String {
     base.replace(['_', '-'], " ")
 }
 
+/// `Helpers.extname?`: a dot in the last path segment.
+pub(crate) fn has_extension(path: &str) -> bool {
+    path.rfind('.')
+        .is_some_and(|dot| !path[dot..].contains('/'))
+}
+
 /// `AbstractBlock#alt`: special characters are the backend's; a value other
 /// than the default alt also gets replacements, whose generated entities stay
 /// raw like Ruby's substituted string.

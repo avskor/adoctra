@@ -17875,6 +17875,49 @@
       "category": "blocks",
       "expect": "pass",
       "source": ":attribute-missing: drop-line\n\n.Dropped\n[[gone]]\nvideo::{nope}[]\n\n* item\n+\nvideo::v.mp4[width=10]\n* two\n+\naudio::s.ogg[title=In list]\n\n[verse]\naudio::s.ogg[]\n\n[literal]\nvideo::v.mp4[]\n\ntext\nvideo::v.mp4[]\n"
+    },
+    {
+      "id": "inline-image-alt-size-title-link-role-float",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":imagesdir: img\n:x: dir\n\nA image:a.png[*b* & \"q\" (C) {x},20,30,title=T *t*,role=r,float=left,link=https://x.org,window=_blank] b\n\nimage:x.png[opts=\"nofollow,noopener\",link=l,window=w] image:y.png[ ,30] image:z.png[alt=Named,role=r2]\n"
+    },
+    {
+      "id": "inline-image-default-alt-escapes-and-grammar",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":x: dir\n\nimage:{x}/my_pic-1.png[] image:c.png['quoted, alt',id=ii] \\image:d.png[] image:e f.png[a\\]b]\n\nimage:i.png[x[1]] image:j.png[] image: k.png[] image::nope.png[] image:multi\nline.png[]\n\nimage:a&b<c>.png[x <y> & z] xicon:b[] image:m.png[multi,\nline,title=\"a\nb\"]\n"
+    },
+    {
+      "id": "inline-icon-text-mode-and-link",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "icon:heart[] icon:heart[2x,title=Love,flip=horizontal,link=l] \\icon:c[] icon:x[alt=A *b*,role=r,float=right]\n"
+    },
+    {
+      "id": "inline-image-in-links-quotes-attributes-and-pass",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ":img: image:v.png[From *attr*]\n\nhttps://x.org[image:g.png[G]] link:u[image:h.png[]] *image:s.png[S]* {img}\n\npass:m[image:p.png[P]] pass:q[image:q.png[]] +image:r.png[]+\n"
+    },
+    {
+      "id": "inline-image-section-and-block-titles-xrefs",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "= Doc\n\n== See image:a.png[A,link=x.html] here\n\n<<_see_here>>\n\n.Title image:t.png[T]\n====\nEx\n====\n\n<<ex>>\n\n[[ex]]\n.With image:e.png[E,link=l]\n====\nX\n====\n"
+    },
+    {
+      "id": "inline-image-imagesdir-lists-and-drop-line",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "* item image:li.png[]\n\n:imagesdir: later\n\nimage:after.png[] image:https://h.org/a b.png[] image:/abs.png[]\n\n* image:{imagesdir}.png[]\n\n:attribute-missing: drop-line\n\nline image:{nope}.png[]\n\nkept\n"
+    },
+    {
+      "id": "icons-secure-mode-lock",
+      "category": "inlines",
+      "expect": "xfail",
+      "source": ":icons: font\n\nicon:heart[2x]\n",
+      "reason": "Secure mode locks icons unset; adoctra has no safe-mode attribute locks, so font/image icons render."
     }
   ]
 }

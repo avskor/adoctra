@@ -47,7 +47,9 @@ mod unicode_word;
 pub mod visit;
 
 pub use ast::{Author, Block, BlockKind, Document, DocumentHeader, Inline, Revision, Span};
-pub use attributes::{AttributeFormat, AttributeLink, AttributePart, Attributes, Xref};
+pub use attributes::{
+    AttributeFormat, AttributeLink, AttributePart, Attributes, InlineImage, Xref,
+};
 mod anchor_catalog;
 mod attribute_list;
 mod attribute_macros;

@@ -597,6 +597,11 @@ fn write_inlines(inlines: &[Inline], s: &mut String) {
                 write_inlines(children, s);
                 s.push('}');
             }
+            Inline::Image { image, .. } => {
+                s.push_str("{\"name\":\"image\",");
+                adoctra_core::json::write_inline_image(image, s);
+                s.push('}');
+            }
             Inline::CrossReference { xref, children, .. } => {
                 s.push_str("{\"name\":\"xref\",\"target\":");
                 escape_into(&xref.target, s);

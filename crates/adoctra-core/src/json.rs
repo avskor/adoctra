@@ -61,6 +61,40 @@ pub fn write_attribute_parts_map(attributes: &crate::Attributes, out: &mut Strin
     }
 }
 
+/// The fields of an inline image or icon (without braces): lexical values,
+/// the flat alt text and its parts.
+pub fn write_inline_image(image: &crate::InlineImage, out: &mut String) {
+    out.push_str(&format!("\"icon\":{},\"target\":", image.icon));
+    escape_into(&image.target, out);
+    out.push_str(",\"src\":");
+    escape_into(&image.src, out);
+    out.push_str(",\"alt\":");
+    escape_into(&crate::attributes::parts_text(&image.alt), out);
+    out.push_str(",\"icons\":");
+    match &image.icons {
+        Some(icons) => escape_into(icons, out),
+        None => out.push_str("null"),
+    }
+    out.push_str(",\"attributes\":{");
+    for (i, (key, value)) in image.attributes.iter().enumerate() {
+        if i > 0 {
+            out.push(',');
+        }
+        escape_into(key, out);
+        out.push(':');
+        escape_into(value, out);
+    }
+    out.push_str("},\"options\":[");
+    for (i, option) in image.options.iter().enumerate() {
+        if i > 0 {
+            out.push(',');
+        }
+        escape_into(option, out);
+    }
+    out.push(']');
+    write_attribute_parts(&image.alt, out);
+}
+
 fn write_parts_array(parts: &[crate::AttributePart], out: &mut String) {
     out.push('[');
     for (i, part) in parts.iter().enumerate() {
@@ -94,6 +128,12 @@ fn write_parts_array(parts: &[crate::AttributePart], out: &mut String) {
         if let crate::AttributePart::Anchor(id) = part {
             out.push_str("{\"kind\":\"anchor\",\"id\":");
             escape_into(id, out);
+            out.push('}');
+            continue;
+        }
+        if let crate::AttributePart::Image(image) = part {
+            out.push_str("{\"kind\":\"image\",");
+            write_inline_image(image, out);
             out.push('}');
             continue;
         }

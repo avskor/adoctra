@@ -86,6 +86,12 @@ pub(crate) fn scan_for_tokens(src: &str, base: usize, attrs: &Attributes) -> Vec
             span,
         });
     }
+    for span in matches.images {
+        syntax.push(Inline::Image {
+            image: Default::default(),
+            span,
+        });
+    }
     for span in matches.anchors {
         syntax.push(Inline::Anchor {
             id: String::new(),

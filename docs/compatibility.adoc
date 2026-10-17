@@ -30,7 +30,7 @@ entities и нормализует пробелы обычного текста.
 `figure.videoblock`, `figure.audioblock` и их `figcaption.title` adoctra
 проецируются в `div` и `div.title` Ruby; `frameborder="0"` у `iframe` Ruby —
 оформление (adoctra задаёт рамку стилями).
-Корпус содержит 2775 сценариев: 2770 PASS и 5 XFAIL.
+Корпус содержит 2782 сценария: 2776 PASS и 6 XFAIL.
 
 [source,sh]
 ----
@@ -75,7 +75,8 @@ Ruby-процесс явно активирует эту версию; друг�
 |Listing и literal |Частично |Нормализация конечных пробелов reader; tabsize вне include[indent=…] — XFAIL
 |Ссылки и метаданные |Частично |Ссылки в заголовках, очистка автоматических ID, грамматика, объединение и подстановки списков атрибутов блоков и атрибуции проверены; title/reftext из списков и перенос названия через разделы проверены; каталог inline-якорей проверен; подписи xref при преобразовании (reftext при каждом обращении, названия блоков, ранние ID разделов) проверены; распознавание inline-якорей и xref после a-стадии проверено; междокументные пути, каталог include и естественные xref проверены; xref в pass:m и параметрах ссылок проверены; xrefstyle для подписей примеров и глав книги проверен
 |Подписи примеров и рисунков |Частично |Изменение/удаление префикса, вложенная нумерация и контексты проверены; `figure-caption` изображений проверен
-|Изображения |Блочный макрос реализован |`image::` с alt/размерами, link/window, float/align, imagesdir, подписи и xref проверены; SVG inline/interactive и data-uri (небезопасные режимы) и inline `image:` впереди
+|Изображения |Блочный макрос реализован |`image::` с alt/размерами, link/window, float/align, imagesdir, подписи и xref проверены; SVG inline/interactive и data-uri (небезопасные режимы) впереди
+|Inline-изображения и иконки |Реализованы |`image:`/`icon:` в стадии макросов: alt/размеры/title/link/role/float, экранирование, грамматика цели и списка, imagesdir, значения атрибутов, ссылки и форматирование, заголовки/ID/xref, drop-line; режимы `icons` font/image проверены вручную в safe mode; блокировка `icons` в secure mode — XFAIL
 |Видео и аудио |Блочные макросы реализованы |`video::` (локальный, YouTube, Vimeo: poster, размеры, start/end, опции, playlist/list/hash, `asset-uri-scheme`) и `audio::` с imagesdir, названиями, xref, drop-line и продолжениями списков проверены
 |Источники и позиции |Базовая модель готова |SourceMap/source_id и provenance для диапазонов через включения; общие substitutions ещё впереди
 |Комментарии |Базовые формы реализованы |//, //// и [comment], header/list/container, verbatim, позиции и незакрытые блоки проверены
@@ -904,6 +905,21 @@ Vimeo (hash, опции, `#at=`), `asset-uri-scheme` (пустой и измен
 verbatim и строки внутри абзаца. Расхождения: символы `<&>` в параметрах
 экранируются (Ruby вставляет их как есть), `frameborder` не выводится.
 Добавлены golden fixtures; прежние эталоны и baseline не изменены.
+
+Ещё 6 PASS проверяют inline-макросы `image:`/`icon:`, как ветку
+`InlineImageMacroRx` в `sub_macros` и `convert_inline_image` Ruby: alt с
+результатами quotes/replacements, позиционные width/height, title, link с
+window/noopener/nofollow, role/float, alt по умолчанию из имени файла,
+экранированные `\image:`/`\icon:`, грамматику цели и списка (`\]`, многострочный
+список, `x[1]`, пробелы и `::`), специальные символы в цели и alt, иконки в
+текстовом режиме, изображения в метках ссылок, форматировании и значениях
+атрибутов, `pass:m`/`pass:q`, заголовки разделов и блоков (ID, подписи xref
+без ссылки изображения), imagesdir в месте макроса и drop-line. XFAIL
+`icons-secure-mode-lock`: secure mode Ruby принудительно снимает `icons`, а
+adoctra не моделирует блокировки safe mode, поэтому `:icons: font` выводит
+глиф. Режимы font/image (`iconsdir`, `icontype`, атрибут `icon`, нормализация
+`icons` в header) сверены с Ruby в safe mode в модульных тестах.
+Добавлена golden fixture; прежние эталоны и baseline не изменены.
 
 Ранние ссылки из заголовков используют reftext с атрибутами чтения без
 исполнения выражений; Ruby исполняет их при разборе. Порядок регистрации

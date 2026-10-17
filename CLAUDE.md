@@ -489,8 +489,24 @@ with `<img src alt width height>` (inside `<a class="image" href>` with
 `link`, window/noopener/nofollow like append_link_constraint_attrs) and a
 trailing `<figcaption class="title">`; the DOM profile maps them to Ruby's divs.
 JSON/WASM `name:"image"` with target/src/flat alt; token `block-macro`. No SVG
-inline/interactive or data-uri (the reference runs in secure mode); inline
-`image:` remains work.
+inline/interactive or data-uri (the reference runs in secure mode).
+**Inline images/icons**: attribute_macros.rs apply_images (Ruby's
+InlineImageMacroRx, the first built-in macro, before links) over the lexical
+result of quotes/a/r, also in pass:m and repeated link parameter passes. The
+list gets normalize_text (strip, LF → space, `\]`) and AttributeList without
+sub_result (posattrs alt,width,height / icon size; opts split). InlineImage keeps
+lexical fields (target, src, attributes; Ruby inserts them verbatim) and alt
+parts (boundaries/raw survive; default alt = basename). src is image.rs
+web_path under `imagesdir` at the macro; icons capture the `icons` mode (None →
+`[alt&#93;`, font → `<i class="fa …">`, else icon_uri: `icon` attr or target +
+`icontype` under `iconsdir`, default `<imagesdir option or ./images>/icons`);
+header save_icons normalizes `icons`/`icontype` like save_attributes. Secure
+mode's `icons` lock is not modeled (XFAIL icons-secure-mode-lock). Source-owned
+results are `Inline::Image { image, span }`, attribute-owned
+`AttributePart::Image` (lexical = Ruby's span markup). HTML renders Ruby's
+`<span class="image|icon …">`; section ids ignore it; borrowed xref labels drop
+its link (DropAnchorRx). JSON/WASM name:"image"/kind:"image"; token
+`inline-macro`.
 **Video/audio**: `BlockKind::Video { target, src, poster, embedded }` /
 `BlockKind::Audio { target, src }` share image.rs match_macro (`Media`, Ruby's
 posattrs: video `poster,width,height`, audio none), the macro list, target

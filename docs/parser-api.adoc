@@ -1259,6 +1259,22 @@ secure. Изображение с названием нумеруется `figur
 префикс. JSON/WASM экспортируют `name:"image"`, `target`, `src` и плоский `alt`,
 подсветка — `block-macro`.
 
+Inline-изображения. `Inline::Image { image, span }` — макрос `image:target[…]`
+или `icon:name[…]` (`InlineImageMacroRx`), распознанный стадией макросов перед
+ссылками над лексическим результатом quotes, атрибутов и replacements (также в
+`pass:m` и повторных проходах параметров ссылок); `\image:` теряет обратную
+косую черту. Изображение, целиком созданное значением атрибута, остаётся
+`AttributePart::Image` его ссылки. `InlineImage` хранит лексические `target`,
+`src`, `attributes` (как Ruby, вставляющий их как есть), `options` и части
+`alt` (границы форматирования и Raw сохраняются; по умолчанию — имя файла без
+расширения). Список получает `normalize_text` (strip, перевод строки — пробел,
+`\]`) и AttributeList без подстановок значений; позиционные — alt/width/height
+(у иконки size). `src` — web-путь цели относительно `imagesdir` в месте
+макроса; иконка хранит режим `icons`: без него — текст `[alt]`, `font` — глиф,
+иначе `src` по `iconsdir` (по умолчанию `./images/icons`) и `icontype`
+(нормализуется при завершении header). JSON/WASM — `name:"image"` и
+`kind:"image"` в parts, подсветка — `inline-macro`.
+
 Видео и аудио. `BlockKind::Video { target, src, poster, embedded }` и
 `BlockKind::Audio { target, src }` — блочные макросы `video::`/`audio::` той же
 грамматики (`BlockMediaMacroRx`) и с тем же чтением списка, цели, drop-line и

@@ -122,6 +122,7 @@ pub fn walk_inline_mut(visitor: &mut (impl VisitorMut + ?Sized), inline: &mut In
         | Inline::Link { children, .. }
         | Inline::CrossReference { children, .. } => walk_inlines_mut(visitor, children),
         Inline::Anchor { .. }
+        | Inline::Image { .. }
         | Inline::Text { .. }
         | Inline::Raw { .. }
         | Inline::Substituted { .. }

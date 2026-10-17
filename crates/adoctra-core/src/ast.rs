@@ -622,7 +622,19 @@ pub enum Inline {
     ///
     /// [`block anchor`]: crate::ast::Block::id
     Anchor { id: String, span: Span },
-    // TODO: block/inline macros (image:, footnote:)...
+    /// An inline `image:target[alt, width, height]` or `icon:name[size]` macro,
+    /// recognized like Ruby's `InlineImageMacroRx`: in the macros stage before
+    /// links, over the lexical result of quotes, attribute references and
+    /// replacements. Its fields keep their lexical spelling (see
+    /// [`crate::InlineImage`]); `span` covers the whole macro, and consumed
+    /// references remain empty [`Inline::AttributeRef`] nodes after it. An image
+    /// generated entirely by an attribute value stays an
+    /// [`AttributePart::Image`](crate::AttributePart::Image) of its reference.
+    Image {
+        image: crate::InlineImage,
+        span: Span,
+    },
+    // TODO: other inline macros (footnote:, kbd:, …)
 }
 
 impl Inline {
@@ -640,7 +652,8 @@ impl Inline {
             | Inline::AttributeRef { span, .. }
             | Inline::Link { span, .. }
             | Inline::CrossReference { span, .. }
-            | Inline::Anchor { span, .. } => span,
+            | Inline::Anchor { span, .. }
+            | Inline::Image { span, .. } => span,
         }
     }
 
@@ -659,7 +672,8 @@ impl Inline {
             | Inline::AttributeRef { span, .. }
             | Inline::Link { span, .. }
             | Inline::CrossReference { span, .. }
-            | Inline::Anchor { span, .. } => *span,
+            | Inline::Anchor { span, .. }
+            | Inline::Image { span, .. } => *span,
         }
     }
 }

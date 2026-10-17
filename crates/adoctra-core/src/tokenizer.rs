@@ -59,6 +59,7 @@ pub enum TokenKind {
     ListMarker,
     LineBreak,
     BlockMacro,
+    InlineMacro,
 }
 
 impl TokenKind {
@@ -98,6 +99,7 @@ impl TokenKind {
             TokenKind::ListMarker => "list-marker",
             TokenKind::LineBreak => "line-break",
             TokenKind::BlockMacro => "block-macro",
+            TokenKind::InlineMacro => "inline-macro",
         }
     }
 }
@@ -608,6 +610,13 @@ pub(crate) fn flatten_inlines(inlines: &[Inline], out: &mut Vec<Token>) {
                 out.push(Token {
                     span: *span,
                     kind: TokenKind::Anchor,
+                });
+            }
+            // One token over the whole `image:…[…]` / `icon:…[…]` macro.
+            Inline::Image { span, .. } => {
+                out.push(Token {
+                    span: *span,
+                    kind: TokenKind::InlineMacro,
                 });
             }
         }

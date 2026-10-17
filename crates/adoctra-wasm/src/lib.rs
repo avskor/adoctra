@@ -730,6 +730,11 @@ fn write_inlines(inlines: &[Inline], s: &mut String) {
                 s.push_str("\"name\":\"anchor\",\"id\":");
                 write_str(id, s);
             }
+            // An inline image or icon with its lexical fields and alt parts.
+            Inline::Image { image, .. } => {
+                s.push_str("\"name\":\"image\",");
+                adoctra_core::json::write_inline_image(image, s);
+            }
             // The editor gets the structured reference (name + resolved value),
             // unlike the backends which only need the resolved text.
             Inline::AttributeRef {
@@ -2348,6 +2353,21 @@ mod header_tests {
         let tokens = super::tokens_json_with_source(source, 3);
         assert!(
             tokens.contains(r#"{"span":{"source_id":3,"start":10,"end":32},"kind":"block-macro"}"#),
+            "{tokens}"
+        );
+    }
+
+    #[test]
+    fn inline_images_keep_their_spans_and_inline_macro_tokens() {
+        let source = "A image:a.png[B] z";
+        let json = super::parse_json_with_source(source, 3);
+        assert!(
+            json.contains(r#"{"span":{"source_id":3,"start":2,"end":16},"name":"image","icon":false,"target":"a.png","src":"a.png","alt":"B","icons":null,"attributes":{},"options":[],"parts":[{"kind":"text","value":"B"}]}"#),
+            "{json}"
+        );
+        let tokens = super::tokens_json_with_source(source, 3);
+        assert!(
+            tokens.contains(r#"{"span":{"source_id":3,"start":2,"end":16},"kind":"inline-macro"}"#),
             "{tokens}"
         );
     }
