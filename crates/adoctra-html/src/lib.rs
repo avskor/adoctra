@@ -1863,6 +1863,17 @@ mod tests {
     }
 
     #[test]
+    fn definition_cross_references_render_labels_fixed_at_the_definition() {
+        let html = render(
+            ":r: pass:c,m[<<sec>>]\n\n[[sec]]\n== S&T\n\n:s: pass:c,m[<<sec>>]\n\nA {r} B {s}",
+        );
+        assert!(
+            html.contains(r##"<p>A <a href="#sec">[sec]</a> B <a href="#sec">S&amp;T</a></p>"##),
+            "{html}"
+        );
+    }
+
+    #[test]
     fn interdocument_and_natural_xrefs_render_resolved_targets() {
         let html = render(
             ":p: xref:o&p.adoc#v[V,window=_blank]\n:n: <<Sec Title>>\n\n[[sec]]\n== Sec Title\n\nA <<other.adoc#f>> B xref:other.adoc#f[T,role=r,window=_blank,opts=nofollow] C {p} D <<Sec Title>> E {n} F <<#>>",

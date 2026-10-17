@@ -429,3 +429,125 @@ fn passthrough_references_resolve_natural_titles_and_heading_labels() {
     assert_eq!(interdoc.target, "other.html#f");
     assert_eq!(interdoc.path.as_deref(), Some("other.html"));
 }
+
+/// The attribute references of a paragraph: name, generated parts and the
+/// physical source of each reference.
+fn attribute_refs(source: &str, nodes: &[Inline]) -> Vec<(String, Vec<P>, String)> {
+    nodes
+        .iter()
+        .filter_map(|n| match n {
+            Inline::AttributeRef { name, parts, .. } => {
+                Some((name.clone(), parts.clone(), slice(source, n)))
+            }
+            _ => None,
+        })
+        .collect()
+}
+
+/// Ruby converts a `pass:m` reference in an attribute definition while
+/// defining it: natural lookup, label and xrefstyle use the ids registered
+/// before the definition and the attributes at that point.
+#[test]
+fn definition_references_fix_target_and_label_at_the_definition() {
+    let source = ":r: pass:c,m[<<sec>>]\n:n: pass:c,m[<<Sec Title>>]\n:o: pass:c,m[<<other.adoc#x>>]\n\n\
+        [[sec]]\n== Sec Title\n\n:s: pass:c,m[<<sec>>]\n:m: pass:c,m[<<Sec Title>>]\n:t: {r}\n\n\
+        [[ex]]\n.My Ex\n====\ny\n====\n\n:xrefstyle: short\n:e: pass:c,m[<<ex>>]\n:xrefstyle: full\n\n\
+        A {r} B {s} C {o} D {n} E {m} F {t} G {e}";
+    let result = parse(source);
+    let nodes = last(source);
+    let link = |id: &str, label: &str| {
+        vec![
+            P::OpenXref(Xref::to_id(id)),
+            P::Text(label.into()),
+            P::CloseXref,
+        ]
+    };
+    let mut refs = attribute_refs(source, &nodes);
+    // The interdocument path (the label) misses the suffix pinned at header end.
+    let (_, interdoc, _) = refs.remove(2);
+    let P::OpenXref(xref) = &interdoc[0] else {
+        panic!("{interdoc:?}")
+    };
+    assert_eq!(
+        (
+            xref.target.as_str(),
+            xref.refid.as_deref(),
+            xref.path.as_deref()
+        ),
+        ("other#x", Some("other#x"), Some("other"))
+    );
+    assert_eq!(interdoc[1..], [P::Text("other".into()), P::CloseXref]);
+    assert_eq!(
+        refs,
+        [
+            ("r".into(), link("sec", "[sec]"), "{r}".into()),
+            ("s".into(), link("sec", "Sec Title"), "{s}".into()),
+            ("n".into(), link("Sec Title", "[Sec Title]"), "{n}".into()),
+            ("m".into(), link("sec", "Sec Title"), "{m}".into()),
+            ("t".into(), link("sec", "[sec]"), "{t}".into()),
+            ("e".into(), link("ex", "Example 1"), "{e}".into()),
+        ]
+    );
+    // Only the natural reference that failed at its definition is unknown.
+    let warnings: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.severity == Severity::Warning)
+        .map(|d| (d.message.as_str(), &source[d.span.start..d.span.end]))
+        .collect();
+    assert_eq!(
+        warnings,
+        [("unresolved cross reference: 'Sec Title'", "{n}")]
+    );
+    tokens(source);
+}
+
+/// A heading converted while reading and a later use both show the label
+/// fixed at the definition, not the one the use would compute; an inline
+/// anchor joins the partial registry once its paragraph is read.
+#[test]
+fn definition_references_in_headings_containers_and_after_anchors() {
+    let source =
+        "= Doc\n\n:r: pass:c,m[<<later>>]\n:a: pass:c,m[<<a1>>]\n\nA [[a1,Anchor One]]x {a}\n\n\
+        :b: pass:c,m[<<a1>>]\n\n****\n:inner: pass:c,m[<<a1>>]\n{inner} {b}\n****\n\n\
+        [[later]]\n== Later\n\n== See {r} {b}\n\nL {r}";
+    let doc = parse(source).document;
+    let labels = |nodes: &[Inline]| -> Vec<String> {
+        nodes
+            .iter()
+            .filter_map(|n| match n {
+                Inline::AttributeRef { value, .. } => value.clone(),
+                _ => None,
+            })
+            .collect()
+    };
+    let blocks = doc.flat_blocks();
+    let mut paragraphs = Vec::new();
+    for block in &blocks {
+        match &block.kind {
+            BlockKind::Paragraph { inlines } => paragraphs.push(labels(inlines)),
+            BlockKind::Sidebar { blocks } => paragraphs.push(labels(paragraph(&blocks[0]))),
+            _ => {}
+        }
+    }
+    assert_eq!(
+        paragraphs,
+        [
+            vec!["[a1]".to_owned()],
+            vec!["Anchor One".into(), "Anchor One".into()],
+            vec!["[later]".into()],
+        ]
+    );
+    let heading = blocks
+        .iter()
+        .find_map(|b| match &b.kind {
+            BlockKind::Heading { inlines, .. }
+                if b.id.as_deref() == Some("_see_later_anchor_one") =>
+            {
+                Some(labels(inlines))
+            }
+            _ => None,
+        })
+        .expect("auto id derived from the fixed labels");
+    assert_eq!(heading, ["[later]", "Anchor One"]);
+}

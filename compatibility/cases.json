@@ -17452,9 +17452,20 @@
     {
       "id": "xref-pass-macros-attribute-definition",
       "category": "references",
-      "expect": "xfail",
-      "reason": "Cross-references created by pass:m in attribute definitions take their labels at the reference during conversion; Ruby fixes them at definition time from the partial catalog.",
+      "expect": "pass",
       "source": ":r: pass:c,m[<<sec>>]\n:o: pass:c,m[<<other.adoc#x>>]\n\n[[sec]]\n== Sec Title\n\n:s: pass:c,m[<<sec>>]\n\nA {r} B {s} C {o}"
+    },
+    {
+      "id": "xref-attribute-definition-natural-style-titles",
+      "category": "references",
+      "expect": "pass",
+      "source": ":n: pass:c,m[<<Sec Title>>]\n:x: pass:c,m[<<sec,Label>>]\n\n[[sec]]\n== Sec Title\n\n:m: pass:c,m[<<Sec Title>>]\n:t: {n} and {m}\n:xrefstyle: short\n\n[[ex]]\n.My Ex\n====\ny\n====\n\n:e: pass:c,m[<<ex>>]\n\n:xrefstyle: full\n\n== Head {e} and {n}\n\n.Block {r}\n====\nz {e} {x} {t}\n====\n\n:d: pass:c,m[<<#>>]\n\nD {d}\n\n[[later]]\n.Later Title\n====\nw\n====\n\n:l: pass:c,m[<<later>>]\n"
+    },
+    {
+      "id": "xref-attribute-definition-anchors-containers",
+      "category": "references",
+      "expect": "pass",
+      "source": "= Doc Title\n\n:r: pass:c,m[<<later>>]\n:u: pass:m[xref:later[]]\n:a: pass:c,m[<<a1>>]\n\nA [[a1,Anchor One]]x {a}\n\n:b: pass:c,m[<<a1>>]\n\n--\n:inner: pass:c,m[<<a1>>]\n{inner} {r} {u} {b}\n--\n\n[[later]]\n== Later\n\nL {r} {u}\n"
     },
     {
       "id": "xrefstyle-example-full-short-basic",

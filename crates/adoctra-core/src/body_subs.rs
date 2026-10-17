@@ -27,6 +27,7 @@ pub(crate) struct Conversion<'a> {
     pub diagnostics: &'a mut Vec<Diagnostic>,
     pub registry: &'a crate::resolve::Registry,
     pub early_titles: crate::resolve::EarlyTitles,
+    pub fixed: crate::resolve::FixedXrefs,
     /// Unresolved-reference warnings.
     pub references: &'a mut Vec<Diagnostic>,
     pub xrefs: crate::xref_target::Scope<'a>,
@@ -153,6 +154,7 @@ impl BodySubs {
             xrefs: conversion.xrefs,
             reftexts: None,
             titles: conversion.early_titles,
+            fixed: conversion.fixed,
             headings: BTreeMap::new(),
             referable: referable_titles(conversion.registry),
             converting: BTreeMap::new(),
@@ -199,6 +201,8 @@ struct Execution<'a> {
     /// Ruby's `@converted_title` for referable block titles, keyed by their
     /// placeholder range: the first reference or the block converts it once.
     titles: BTreeMap<(usize, usize), Vec<Inline>>,
+    /// References whose attribute definition fixed their target and label.
+    fixed: crate::resolve::FixedXrefs,
     /// Section titles with resolved references, keyed by the heading range.
     headings: BTreeMap<(usize, usize), Vec<Inline>>,
     /// Placeholder ranges of block titles that a reference may display.
@@ -289,6 +293,10 @@ impl Execution<'_> {
                 Inline::AttributeRef { span, .. } | Inline::Substituted { span, .. } => {
                     let span = *span;
                     crate::resolve::fill_labels(node, |xref, textless| {
+                        if let Some(label) = crate::resolve::apply_fixed(&self.fixed, xref) {
+                            self.target(xref, true, span);
+                            return Some(label);
+                        }
                         self.target(xref, true, span);
                         textless.then(|| self.xref_label(xref, true, span))
                     });

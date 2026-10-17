@@ -943,6 +943,28 @@ mod tests {
     }
 
     #[test]
+    fn definition_xref_keeps_the_reference_span_and_fixed_label() {
+        let src = ":r: pass:c,m[<<s>>]\n\n[[s]]\n== T\n\n:t: pass:c,m[<<s>>]\n\n{r}{t}";
+        let json = parse_json(src);
+        let start = src.rfind("{r}").unwrap();
+        for (offset, label) in [(0, "[s]"), (3, "T")] {
+            let span = format!(
+                r#"{{"source_id":0,"start":{},"end":{}}}"#,
+                start + offset,
+                start + offset + 3
+            );
+            assert!(
+                json.contains(&format!(r##"{{"span":{span},"name":"attribute-ref","##)),
+                "got: {json}"
+            );
+            assert!(
+                json.contains(&format!(r##"{{"kind":"open-xref","target":"#s","refid":"s","fragment":"s"}},{{"kind":"text","value":"{label}"}},{{"kind":"close-xref"}}"##)),
+                "got: {json}"
+            );
+        }
+    }
+
+    #[test]
     fn interdocument_xref_exposes_path_fragment_constraints_and_span() {
         let src = "A xref:other.adoc#f[T,window=_blank]";
         let json = parse_json(src);

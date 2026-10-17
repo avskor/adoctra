@@ -74,6 +74,10 @@ pub struct Xref {
     /// `xrefstyle` from the macro's attribute list; otherwise the document
     /// attribute at the reference applies.
     pub xrefstyle: Option<String>,
+    /// Index of the attribute definition that generated this reference: Ruby
+    /// converts it while defining, so its target and label are fixed there
+    /// (see resolve.rs).
+    pub(crate) definition: Option<usize>,
 }
 
 impl Xref {

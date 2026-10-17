@@ -1025,6 +1025,15 @@ mod tests {
     }
 
     #[test]
+    fn definition_xref_serializes_the_label_fixed_at_the_definition() {
+        let json = render(":r: pass:c,m[<<sec>>]\n\n[[sec]]\n== T\n\n{r}");
+        assert!(
+            json.contains(r##""parts":[{"kind":"open-xref","target":"#sec","refid":"sec","fragment":"sec"},{"kind":"text","value":"[sec]"},{"kind":"close-xref"}]"##),
+            "got: {json}"
+        );
+    }
+
+    #[test]
     fn interdocument_xref_serializes_target_refid_and_path() {
         let json = render("<<other.adoc#f>> and <<Sec Title>>\n\n[[sec]]\n== Sec Title");
         assert!(
