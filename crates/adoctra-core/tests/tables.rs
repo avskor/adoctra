@@ -24,7 +24,9 @@ fn text(inlines: &[Inline]) -> String {
         .map(|inline| match inline {
             Inline::Text { value, .. } | Inline::Raw { value, .. } => value.clone(),
             Inline::Substituted { value, .. } => value.clone(),
-            Inline::AttributeRef { value, .. } => value.clone().unwrap_or_default(),
+            Inline::AttributeRef { name, value, .. } => {
+                value.clone().unwrap_or_else(|| format!("{{{name}}}"))
+            }
             Inline::Strong { children, .. }
             | Inline::Emphasis { children, .. }
             | Inline::Monospace { children, .. }
@@ -40,6 +42,7 @@ fn paragraphs(cell: &TableCell) -> Vec<String> {
     match &cell.content {
         CellContent::Paragraphs(paragraphs) => paragraphs.iter().map(|p| text(p)).collect(),
         CellContent::Literal(text) => vec![format!("literal:{text}")],
+        CellContent::Blocks(blocks) => vec![format!("blocks:{}", blocks.len())],
     }
 }
 
@@ -364,4 +367,127 @@ fn included_rows_keep_physical_cell_spans() {
     assert!(tokens
         .iter()
         .any(|t| t.kind == TokenKind::CellSeparator && t.span.source_id == SourceId(1)));
+}
+
+/// The blocks of an AsciiDoc cell.
+fn cell_blocks(cell: &TableCell) -> &[Block] {
+    match &cell.content {
+        CellContent::Blocks(blocks) => blocks,
+        other => panic!("not an AsciiDoc cell: {other:?}"),
+    }
+}
+
+fn paragraph_text(block: &Block) -> String {
+    match &block.kind {
+        BlockKind::Paragraph { inlines } => text(inlines),
+        other => panic!("not a paragraph: {other:?}"),
+    }
+}
+
+#[test]
+fn asciidoc_cells_are_nested_documents_with_source_spans() {
+    let source = "[cols=\"1,1a\"]\n|===\n|x a|* one\n* *two*\n\n----\ncode\n----\n|===\n";
+    let blocks = blocks(source);
+    let t = table(&blocks[0]);
+    let cell = &t.body[0][1];
+    assert_eq!(cell.style, Some(CellStyle::Asciidoc));
+    let nested = cell_blocks(cell);
+    assert_eq!(nested.len(), 2);
+    let list = &nested[0];
+    assert!(matches!(list.kind, BlockKind::List { .. }));
+    assert_eq!(&source[list.span.start..list.span.end], "* one\n* *two*");
+    let BlockKind::List { items, .. } = &list.kind else {
+        panic!()
+    };
+    let strong = items[1].inlines[0].span();
+    assert_eq!(&source[strong.start..strong.end], "*two*");
+    assert_eq!(
+        nested[1].kind,
+        BlockKind::Listing {
+            text: "code".into()
+        }
+    );
+}
+
+#[test]
+fn nested_documents_share_references_counters_and_captions() {
+    let source = "See <<blk>>.\n\n.A\n====\na\n====\n\n|===\na|\n[[blk]]\n.B\n====\n{counter:c} {c}\n====\n|===\n\n.C\n====\n{c} {counter:c}\n====\n";
+    let result = parse(source);
+    assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+    let blocks = result.document.into_flat_blocks();
+    let BlockKind::Paragraph { inlines } = &blocks[0].kind else {
+        panic!()
+    };
+    assert_eq!(text(inlines), "See B.");
+    let nested = cell_blocks(&table(&blocks[2]).body[0][0]);
+    assert_eq!(nested[0].caption.as_deref(), Some("Example 2. "));
+    // The counter belongs to the root document; the nested document does
+    // not see its attribute.
+    let BlockKind::Example { blocks: inner } = &nested[0].kind else {
+        panic!()
+    };
+    assert_eq!(paragraph_text(&inner[0]), "1 {c}");
+    assert_eq!(blocks[3].caption.as_deref(), Some("Example 3. "));
+    let BlockKind::Example { blocks: last } = &blocks[3].kind else {
+        panic!()
+    };
+    assert_eq!(paragraph_text(&last[0]), "1 2");
+}
+
+#[test]
+fn nested_documents_lock_inherited_attributes_and_keep_their_entries() {
+    let source = ":foo: outer\n\n|===\na|:foo: inner\n:new: N\n\n{foo} {new}\n\n:new: changed\n\n{new}\n|===\n\n{foo} {new}\n";
+    let blocks = blocks(source);
+    let nested = cell_blocks(&table(&blocks[0]).body[0][0]);
+    let texts: Vec<_> = nested.iter().map(paragraph_text).collect();
+    assert_eq!(texts, ["outer N", "changed"]);
+    assert_eq!(paragraph_text(&blocks[1]), "outer {new}");
+}
+
+#[test]
+fn nested_tables_use_the_exclamation_separator() {
+    let source = "|===\na|\n!===\n!in 2+!wide\n!===\n|===\n";
+    let blocks = blocks(source);
+    let nested = cell_blocks(&table(&blocks[0]).body[0][0]);
+    let inner = table(&nested[0]);
+    assert_eq!(rows(&inner.body), [["in", "wide"]]);
+    assert_eq!(inner.body[0][1].colspan, Some(2));
+    let span = inner.body[0][1].span;
+    assert_eq!(&source[span.start..span.end], "2+!wide");
+    let tokens = tokens(source);
+    let kinds: Vec<_> = tokens
+        .iter()
+        .map(|t| (t.kind, &source[t.span.start..t.span.end]))
+        .collect();
+    assert_eq!(
+        kinds,
+        [
+            (TokenKind::TableDelimiter, "|==="),
+            (TokenKind::CellSeparator, "a|"),
+            (TokenKind::TableDelimiter, "!==="),
+            (TokenKind::CellSeparator, "!"),
+            (TokenKind::CellSeparator, "2+!"),
+            (TokenKind::TableDelimiter, "!==="),
+            (TokenKind::TableDelimiter, "|==="),
+        ]
+    );
+}
+
+#[test]
+fn asciidoc_cells_in_an_implicit_header_follow_ruby() {
+    // A confirmed header row keeps its text; a rejected one reads the nested
+    // document after all.
+    let blocks = blocks("[cols=\"1a,1\"]\n|===\n|*H* |I\n\n|* x |y\n|===\n\n[cols=\"1a,1\"]\n|===\n|* one\n|b\n|===\n");
+    let first = table(&blocks[0]);
+    assert_eq!(rows(&first.head), [["H", "I"]]);
+    assert!(matches!(
+        cell_blocks(&first.body[0][0])[0].kind,
+        BlockKind::List { .. }
+    ));
+    let second = table(&blocks[1]);
+    assert!(second.head.is_empty());
+    assert!(matches!(
+        cell_blocks(&second.body[0][0])[0].kind,
+        BlockKind::List { .. }
+    ));
 }

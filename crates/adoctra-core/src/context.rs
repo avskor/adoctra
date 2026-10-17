@@ -109,38 +109,71 @@ pub(crate) struct ParseContext {
     /// `outfilesuffix` pinned when the header is complete (Ruby's
     /// `Document#outfilesuffix`), for interdocument references.
     outfilesuffix: Option<String>,
+    /// Reading an AsciiDoc table cell's nested document.
+    pub nested: bool,
+    /// The root document's reading attributes and locks while nested
+    /// documents are read: their counters delegate to it.
+    root: Option<(Arc<Attributes>, BTreeSet<String>)>,
+}
+
+fn root_of(
+    root: &mut Option<(Arc<Attributes>, BTreeSet<String>)>,
+) -> Option<(&mut Attributes, &BTreeSet<String>)> {
+    root.as_mut()
+        .map(|(attributes, locked)| (Arc::make_mut(attributes), &*locked))
+}
+
+/// The parent document's reading state while a nested document is read.
+pub(crate) struct Outer {
+    attributes: Arc<Attributes>,
+    replay: Option<Arc<Attributes>>,
+    locked: BTreeSet<String>,
+    doctitle_span: Option<crate::Span>,
+    open_sections: Vec<(u8, (usize, usize))>,
+    entries: Vec<crate::body_subs::Declaration>,
+    book: bool,
+    outfilesuffix: Option<String>,
+    nested: bool,
+    /// Whether this level made the parent the root document.
+    root: bool,
+}
+
+/// Ruby's `DEFAULT_ATTRIBUTES` that adoctra models.
+fn default_attributes() -> Attributes {
+    let mut attributes = Attributes::new();
+    attributes.set("example-caption", "Example");
+    attributes.set("figure-caption", "Figure");
+    attributes.set("table-caption", "Table");
+    // Ruby's DEFAULT_ATTRIBUTES for section and appendix signifiers.
+    attributes.set("appendix-caption", "Appendix");
+    for (name, value) in [
+        ("appendix", "Appendix"),
+        ("chapter", "Chapter"),
+        ("part", "Part"),
+        ("section", "Section"),
+    ] {
+        attributes.set(format!("{name}-refsig"), value);
+    }
+    // Ruby's DEFAULT_ATTRIBUTES for the table of contents.
+    attributes.set("toc-placement", "auto");
+    attributes.set("toc-title", "Table of Contents");
+    // The HTML converter's suffix, set before the header (Ruby's init).
+    attributes.set("outfilesuffix", ".html");
+    for kind in [
+        crate::ast::AdmonitionKind::Note,
+        crate::ast::AdmonitionKind::Tip,
+        crate::ast::AdmonitionKind::Important,
+        crate::ast::AdmonitionKind::Warning,
+        crate::ast::AdmonitionKind::Caution,
+    ] {
+        attributes.set(format!("{}-caption", kind.as_str()), kind.label());
+    }
+    attributes
 }
 
 impl ParseContext {
     pub fn new(options: &ParseOptions) -> Self {
-        let mut attributes = Attributes::new();
-        attributes.set("example-caption", "Example");
-        attributes.set("figure-caption", "Figure");
-        attributes.set("table-caption", "Table");
-        // Ruby's DEFAULT_ATTRIBUTES for section and appendix signifiers.
-        attributes.set("appendix-caption", "Appendix");
-        for (name, value) in [
-            ("appendix", "Appendix"),
-            ("chapter", "Chapter"),
-            ("part", "Part"),
-            ("section", "Section"),
-        ] {
-            attributes.set(format!("{name}-refsig"), value);
-        }
-        // Ruby's DEFAULT_ATTRIBUTES for the table of contents.
-        attributes.set("toc-placement", "auto");
-        attributes.set("toc-title", "Table of Contents");
-        // The HTML converter's suffix, set before the header (Ruby's init).
-        attributes.set("outfilesuffix", ".html");
-        for kind in [
-            crate::ast::AdmonitionKind::Note,
-            crate::ast::AdmonitionKind::Tip,
-            crate::ast::AdmonitionKind::Important,
-            crate::ast::AdmonitionKind::Warning,
-            crate::ast::AdmonitionKind::Caution,
-        ] {
-            attributes.set(format!("{}-caption", kind.as_str()), kind.label());
-        }
+        let mut attributes = default_attributes();
         let mut locked = BTreeSet::new();
         for (key, value) in options.attributes.iter() {
             let effective_key = attribute_name(key);
@@ -179,7 +212,78 @@ impl ParseContext {
             section_reftext: None,
             block_macro: None,
             outfilesuffix: None,
+            nested: false,
+            root: None,
         }
+    }
+
+    /// Start reading a nested document (Ruby's `Document.new` with a parent):
+    /// the parent's attributes (without `doctitle`, `notitle`, `showtitle`,
+    /// `toc` and `toc-position`) over the defaults, all locked except
+    /// `compat-mode`, `doctype` and `toc-placement`. Counters and catalogs
+    /// stay shared.
+    pub fn enter_nested(&mut self) -> Outer {
+        let mut attributes = (*self.attributes).clone();
+        for key in ["doctitle", "notitle", "showtitle", "toc", "toc-position"] {
+            attributes.remove(key);
+        }
+        let mut locked = self.locked.clone();
+        locked.extend(
+            attributes
+                .iter()
+                .map(|(key, _)| key.to_owned())
+                .filter(|key| !matches!(key.as_str(), "compat-mode" | "doctype" | "toc-placement")),
+        );
+        for (key, value) in default_attributes().iter() {
+            if attributes.get(key).is_none() && !locked.contains(key) {
+                attributes.set(key.to_owned(), value.to_owned());
+            }
+        }
+        if attributes.get("toc-placement").is_none() {
+            attributes.set("toc-placement", "auto");
+        }
+        let root = self.root.is_none();
+        let parent = std::mem::replace(&mut self.attributes, Arc::new(attributes));
+        if root {
+            self.root = Some((Arc::clone(&parent), self.locked.clone()));
+        }
+        Outer {
+            root,
+            attributes: parent,
+            replay: self.replay.take(),
+            locked: std::mem::replace(&mut self.locked, locked),
+            doctitle_span: self.doctitle_span.take(),
+            open_sections: std::mem::take(&mut self.open_sections),
+            entries: std::mem::take(&mut self.body_subs.entries),
+            book: self.book,
+            outfilesuffix: self.outfilesuffix.clone(),
+            nested: std::mem::replace(&mut self.nested, true),
+        }
+    }
+
+    /// Finish a nested document read for the cell at `key`: keep its
+    /// conversion state and restore the parent's reading state.
+    /// `header` is the nested header snapshot taken when its body started.
+    pub fn exit_nested(&mut self, outer: Outer, key: (usize, usize), header: Attributes) {
+        let nested = crate::body_subs::Nested {
+            attributes: header,
+            entries: std::mem::replace(&mut self.body_subs.entries, outer.entries),
+            locked: std::mem::replace(&mut self.locked, outer.locked),
+        };
+        self.body_subs.nested.insert(key, nested);
+        self.attributes = if outer.root {
+            self.root
+                .take()
+                .map_or(outer.attributes, |(attributes, _)| attributes)
+        } else {
+            outer.attributes
+        };
+        self.replay = outer.replay;
+        self.doctitle_span = outer.doctitle_span;
+        self.open_sections = outer.open_sections;
+        self.book = outer.book;
+        self.outfilesuffix = outer.outfilesuffix;
+        self.nested = outer.nested;
     }
 
     pub fn start_body(&mut self) {
@@ -269,7 +373,8 @@ impl ParseContext {
             &self.locked,
             &mut self.counters,
             self.quote_compat,
-        );
+        )
+        .with_root(root_of(&mut self.root));
         let parts = crate::inline_attributes::implicit_title(
             value,
             &mut evaluation,
@@ -295,7 +400,8 @@ impl ParseContext {
             &self.locked,
             &mut self.counters,
             self.quote_compat,
-        );
+        )
+        .with_root(root_of(&mut self.root));
         let result =
             crate::reftext::read(value, base, &mut evaluation, &mut self.inline_diagnostics);
         if let Some(attributes) = evaluation.changed_attributes() {
@@ -318,7 +424,8 @@ impl ParseContext {
             &self.locked,
             &mut self.counters,
             self.quote_compat,
-        );
+        )
+        .with_root(root_of(&mut self.root));
         let result =
             crate::inline_attributes::apply(source, &mut evaluation, &mut self.inline_diagnostics);
         if let Some(attributes) = evaluation.changed_attributes() {
@@ -370,6 +477,7 @@ impl ParseContext {
             &mut self.counters,
             attributes.get("compat-mode").is_some(),
         )
+        .with_root(root_of(&mut self.root))
         .with_xrefs(Self::xrefs(&self.outfilesuffix, includes));
         let inlines = crate::inline::scan_inlines_evaluated(
             value,
@@ -431,7 +539,8 @@ impl ParseContext {
             &self.locked,
             &mut self.counters,
             self.quote_compat,
-        );
+        )
+        .with_root(root_of(&mut self.root));
         let effect = evaluation.execute(
             &format!("counter:{context}-number"),
             block.span,
@@ -501,7 +610,8 @@ impl ParseContext {
                 &self.locked,
                 &mut self.counters,
                 self.quote_compat,
-            );
+            )
+            .with_root(root_of(&mut self.root));
             let effect = evaluation.execute(
                 counter,
                 crate::Span::new(key.0, key.1),
@@ -541,7 +651,8 @@ impl ParseContext {
                 &self.locked,
                 &mut self.counters,
                 self.quote_compat,
-            );
+            )
+            .with_root(root_of(&mut self.root));
             let parts = attribute_entry_parts_report(
                 &v,
                 &mut evaluation,

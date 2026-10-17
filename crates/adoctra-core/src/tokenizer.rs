@@ -353,7 +353,13 @@ fn tokens_processed(
         }
         // A table, as the parser read it: its fences, then each line's cell
         // separators (with their specs) and the cell text between them.
-        if let Some(table) = tables.blocks.iter().find(|t| t.start <= off && off < t.end) {
+        // The innermost table: a nested one inside an AsciiDoc cell.
+        if let Some(table) = tables
+            .blocks
+            .iter()
+            .filter(|t| t.start <= off && off < t.end)
+            .max_by_key(|t| t.start)
+        {
             mid_paragraph = false;
             if (off == table.start || off + line.len() == table.end)
                 && crate::table::delimiter(line).is_some()

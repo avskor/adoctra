@@ -1201,6 +1201,7 @@ fn read_table(
         &body,
         hint,
         &crate::table::Options {
+            nested: context.nested,
             cols: named("cols"),
             format: named("format"),
             separator: named("separator"),
@@ -1213,24 +1214,51 @@ fn read_table(
     );
     lines.tables.push(Span::new(opening.start, end));
     lines.table_separators.extend(parsed.separators);
-    for text in &parsed.anchors {
-        let source = crate::table::source(text);
-        context.catalog_leading_anchor(&crate::table::text(text), |range| {
-            source.original_span(Span::new(range.start, range.end))
-        });
+    let columns = parsed.columns;
+    // Complete the cells in Ruby's order: an AsciiDoc cell reads its nested
+    // document when it is created, a leading anchor is cataloged then (or
+    // when the header row is partitioned).
+    let sections = [parsed.head, parsed.body, parsed.foot];
+    let mut order: Vec<(usize, usize, usize, usize)> = Vec::new();
+    for (s, rows) in sections.iter().enumerate() {
+        for (r, row) in rows.iter().enumerate() {
+            for (c, cell) in row.iter().enumerate() {
+                order.push((cell.order, s, r, c));
+            }
+        }
     }
+    order.sort_unstable();
+    let mut done: Vec<Vec<Vec<Option<TableCell>>>> = sections
+        .iter()
+        .map(|rows| rows.iter().map(|row| vec![None; row.len()]).collect())
+        .collect();
     let render = context.render_attributes();
-    let mut cell = |cell: crate::table::Cell, head: bool| {
+    for (_, s, r, c) in order {
+        let cell = &sections[s][r][c];
+        if cell.catalog {
+            let source = crate::table::source(&cell.text);
+            context.catalog_leading_anchor(&crate::table::text(&cell.text), |range| {
+                source.original_span(Span::new(range.start, range.end))
+            });
+        }
         let content = if cell.literal {
             CellContent::Literal(crate::table::text(&cell.text))
+        } else if cell.style == Some(crate::ast::CellStyle::Asciidoc) {
+            CellContent::Blocks(read_nested_document(
+                lines,
+                &cell.text,
+                (cell.span.start, cell.span.end),
+                context,
+                diagnostics,
+            ))
         } else {
             // A header cell (and a csv/dsv literal) is one run, like Ruby's
             // `Cell#text`; body cells split into paragraphs.
-            let single = head || cell.style == Some(crate::ast::CellStyle::Literal);
+            let single = s == 0 || cell.style == Some(crate::ast::CellStyle::Literal);
             let runs = if cell.text.is_empty() {
                 Vec::new()
             } else if single {
-                vec![cell.text]
+                vec![cell.text.clone()]
             } else {
                 crate::table::paragraphs(&cell.text)
             };
@@ -1244,7 +1272,7 @@ fn read_table(
                     .collect(),
             )
         };
-        TableCell {
+        done[s][r][c] = Some(TableCell {
             content,
             style: cell.style,
             halign: cell.halign,
@@ -1253,23 +1281,20 @@ fn read_table(
             rowspan: cell.rowspan,
             background: None,
             span: cell.span,
-        }
-    };
-    let head = parsed
-        .head
-        .into_iter()
-        .map(|row| row.into_iter().map(|c| cell(c, true)).collect())
-        .collect();
-    let mut rows = |rows: Vec<Vec<crate::table::Cell>>| -> Vec<Vec<TableCell>> {
+        });
+    }
+    let mut done = done.into_iter().map(|rows| {
         rows.into_iter()
-            .map(|row| row.into_iter().map(|c| cell(c, false)).collect())
-            .collect()
-    };
-    let body = rows(parsed.body);
-    let foot = rows(parsed.foot);
+            .map(|row| row.into_iter().flatten().collect())
+            .collect::<Vec<Vec<TableCell>>>()
+    });
+    let (head, body, foot) = (
+        done.next().unwrap_or_default(),
+        done.next().unwrap_or_default(),
+        done.next().unwrap_or_default(),
+    );
     let table = Table {
-        columns: parsed
-            .columns
+        columns: columns
             .iter()
             .map(|column| TableColumn {
                 halign: column.halign,
@@ -1291,6 +1316,44 @@ fn read_table(
         Span::new(opening.start, end),
         BlockKind::Table(Box::new(table)),
     )
+}
+
+/// Ruby's nested `Document` of an AsciiDoc table cell, read when the cell is
+/// created: its own header and body with the parent's attributes locked,
+/// sharing counters and catalogs. Its title is not shown (Ruby's `notitle`).
+fn read_nested_document(
+    lines: &mut Reader<'_>,
+    text: &[(usize, char)],
+    key: (usize, usize),
+    context: &mut ParseContext,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> Vec<Block> {
+    let mut nested = Reader::nested(text, lines.include_catalog.clone());
+    let outer = context.enter_nested();
+    let header = collect_header(&mut nested, context);
+    context.start_body();
+    let snapshot = (*context.render_attributes()).clone();
+    let mut i = header.body_start;
+    let blocks = collect_blocks(
+        &mut nested,
+        &mut i,
+        context,
+        diagnostics,
+        None,
+        header.pending,
+    );
+    context.close_sections(0, usize::MAX);
+    let blocks = nest_sections(
+        blocks,
+        false,
+        context.book,
+        None,
+        &mut context.sections,
+        diagnostics,
+    );
+    context.exit_nested(outer, key, snapshot);
+    lines.absorb(nested);
+    blocks
 }
 
 /// Where a block is being parsed. The only behavioural difference is how a

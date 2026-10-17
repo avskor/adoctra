@@ -499,6 +499,12 @@ pub(crate) struct Cell {
     pub rowspan: Option<u32>,
     pub literal: bool,
     pub span: Span,
+    /// When Ruby creates the cell's side effects (an AsciiDoc cell's nested
+    /// document) or catalogs its leading anchor: cells are completed in this
+    /// order.
+    pub order: usize,
+    /// A normal psv cell whose leading inline anchor is cataloged.
+    pub catalog: bool,
     /// The merged column and spec style (Ruby's `@attributes['style']`).
     merged_style: Option<CellStyle>,
     /// A normal psv cell in the header row catalogs its anchor later.
@@ -513,6 +519,8 @@ pub(crate) struct Options<'a> {
     pub header: bool,
     pub noheader: bool,
     pub footer: bool,
+    /// Inside an AsciiDoc cell, psv data uses `!` (Ruby's `!sv`).
+    pub nested: bool,
 }
 
 pub(crate) struct Parsed {
@@ -520,8 +528,6 @@ pub(crate) struct Parsed {
     pub head: Vec<Vec<Cell>>,
     pub body: Vec<Vec<Cell>>,
     pub foot: Vec<Vec<Cell>>,
-    /// Texts whose leading inline anchor is cataloged, in Ruby's order.
-    pub anchors: Vec<Chars>,
     /// Cell separators (with their specs) for highlighting.
     pub separators: Vec<Span>,
 }
@@ -542,7 +548,8 @@ struct Parser<'a> {
     columns: Vec<Column>,
     body: Vec<Vec<Cell>>,
     header: Header,
-    anchors: Vec<Chars>,
+    /// The next [`Cell::order`].
+    order: usize,
     separators: Vec<Span>,
     /// The table's first line, for the missing separator error.
     start: Span,
@@ -802,14 +809,9 @@ impl<'a> Parser<'a> {
                 }
             }
         }
-        let mut deferred_anchor = false;
-        if normal {
-            if header_row.is_some() {
-                deferred_anchor = true;
-            } else {
-                self.anchors.push(text.clone());
-            }
-        }
+        let deferred_anchor = normal && header_row.is_some();
+        let order = self.order;
+        self.order += 1;
         let end = text
             .last()
             .map_or(start, |(off, c)| off + c.len_utf8())
@@ -823,6 +825,8 @@ impl<'a> Parser<'a> {
             rowspan,
             literal,
             span: Span::new(start, end),
+            order,
+            catalog: normal && header_row.is_none(),
             merged_style,
             deferred_anchor,
             reinitialize,
@@ -842,7 +846,9 @@ impl<'a> Parser<'a> {
             cell.style = cell.merged_style;
         }
         if std::mem::take(&mut cell.deferred_anchor) {
-            self.anchors.push(cell.text.clone());
+            cell.catalog = true;
+            cell.order = self.order;
+            self.order += 1;
         }
         cell
     }
@@ -873,6 +879,7 @@ pub(crate) fn parse(
         None => "psv",
     };
     let (format, xsv) = match format {
+        "psv" if options.nested => (Format::Psv, "!sv"),
         "psv" => (Format::Psv, "psv"),
         "csv" => (Format::Csv, "csv"),
         "dsv" => (Format::Dsv, "dsv"),
@@ -883,13 +890,14 @@ pub(crate) fn parse(
                 severity: Severity::Error,
                 message: format!("illegal table format: {other}"),
             });
-            (Format::Psv, "psv")
+            (Format::Psv, if options.nested { "!sv" } else { "psv" })
         }
     };
     let default = match xsv {
         "csv" => ",",
         "dsv" => ":",
         "tsv" => "\t",
+        "!sv" => "!",
         _ => "|",
     };
     let delimiter = match options.separator {
@@ -920,7 +928,7 @@ pub(crate) fn parse(
         columns,
         body: Vec::new(),
         header: Header::False,
-        anchors: Vec::new(),
+        order: 0,
         separators: Vec::new(),
         start: first,
         diagnostics,
@@ -1109,7 +1117,6 @@ pub(crate) fn parse(
         head,
         body,
         foot,
-        anchors: parser.anchors,
         separators: parser.separators,
     }
 }

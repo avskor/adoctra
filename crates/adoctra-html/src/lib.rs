@@ -227,7 +227,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             }
             out.push_str("</figure>\n");
         }
-        BlockKind::Table(table) => render_table(block, table, out),
+        BlockKind::Table(table) => render_table(block, table, cx, out),
         BlockKind::Video {
             src,
             poster,
@@ -616,7 +616,7 @@ fn drop_anchors(html: &str) -> String {
 /// semantic element, so adoctra keeps its markup (frame/grid/stripes classes,
 /// a `<caption>`, the column widths in a `<colgroup>`) and styles it in the
 /// reference stylesheet.
-fn render_table(block: &Block, table: &adoctra_core::ast::Table, out: &mut String) {
+fn render_table(block: &Block, table: &adoctra_core::ast::Table, cx: &Cx, out: &mut String) {
     use adoctra_core::ast::{CellContent, CellStyle};
     let frame = format!("frame-{}", table.frame);
     let grid = format!("grid-{}", table.grid);
@@ -695,6 +695,15 @@ fn render_table(block: &Block, table: &adoctra_core::ast::Table, out: &mut Strin
                 }
                 out.push('>');
                 match &cell.content {
+                    // The nested document's blocks (Ruby's embedded inner
+                    // document).
+                    CellContent::Blocks(blocks) => {
+                        out.push_str("<div class=\"content\">");
+                        for child in blocks {
+                            render_block(child, cx, out);
+                        }
+                        out.push_str("</div>");
+                    }
                     CellContent::Literal(text) => {
                         out.push_str("<div class=\"literal\"><pre>");
                         out.push_str(&escape(text));
@@ -712,16 +721,6 @@ fn render_table(block: &Block, table: &adoctra_core::ast::Table, out: &mut Strin
                                 render_inlines(inlines, out);
                             }
                             out.push_str("</pre></div>");
-                        }
-                        // Not yet a nested document: its paragraphs.
-                        Some(CellStyle::Asciidoc) => {
-                            out.push_str("<div class=\"content\">");
-                            for inlines in paragraphs {
-                                out.push_str("<div class=\"paragraph\">\n<p>");
-                                render_inlines(inlines, out);
-                                out.push_str("</p>\n</div>");
-                            }
-                            out.push_str("</div>");
                         }
                         style => {
                             let (open, close) = match style {
@@ -2752,14 +2751,23 @@ mod tests {
     }
 
     #[test]
-    fn empty_tables_and_interim_asciidoc_cells() {
+    fn empty_tables_and_asciidoc_cells() {
         assert!(STYLESHEET.contains("table.tableblock"));
         let html = render("|===\n|===\n\n[cols=a]\n|===\n|*x*\n\ny\n|===");
         assert!(
             html.contains("<table class=\"tableblock frame-all grid-all stretch\">\n</table>"),
             "{html}"
         );
-        assert!(html.contains("<td class=\"tableblock halign-left valign-top\"><div class=\"content\"><div class=\"paragraph\">\n<p><strong>x</strong></p>\n</div><div class=\"paragraph\">\n<p>y</p>\n</div></div></td>"), "{html}");
+        // The nested document's blocks render like the parent's.
+        assert!(
+            html.contains("<td class=\"tableblock halign-left valign-top\"><div class=\"content\"><p><strong>x</strong></p>\n<p>y</p>\n</div></td>"),
+            "{html}"
+        );
+        let html = render("[cols=a]\n|===\n|\n----\n<code>\n----\n!===\n!in\n!===\n|===");
+        assert!(
+            html.contains("<div class=\"content\"><pre class=\"listing\">&lt;code&gt;</pre>\n<table class=\"tableblock frame-all grid-all stretch\">"),
+            "{html}"
+        );
         let html = render("[%autowidth]\n|===\n|a\n|===");
         assert!(
             html.contains("fit-content\">\n<colgroup>\n<col>\n</colgroup>"),

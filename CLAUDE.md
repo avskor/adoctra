@@ -544,9 +544,24 @@ content. Titles number with `table-caption`/`table-number`. HTML keeps Ruby's
 semantic `<table class="tableblock …">` markup exactly (golden/tables compares
 lines); JSON/WASM `name:"table"` with columns, head/body/foot cells (spans in
 WASM); tokens `table-delimiter`/`cell-separator` from parser spans, cell text
-scanned between separators. AsciiDoc (`a`) cells are not nested documents yet
-(their paragraphs render in Ruby's content/paragraph divs; XFAIL
-table-asciidoc-cell-blocks), so nested `!===` tables are also future work.
+scanned between separators (the innermost table decides a line).
+**AsciiDoc cells** (`a`, Ruby's inner Document) are `CellContent::Blocks`, read
+when the cell is created (cells complete in Ruby's creation order, `Cell.order`):
+parser.rs read_nested_document builds `Reader::nested` (the cell's lines at their
+reader offsets, no preprocessing; Reader::absorb keeps highlighting records, its
+entries never apply to the parent) and runs header, body and nest_sections inside
+ParseContext::enter_nested/exit_nested. The nested document starts from the
+parent's reading attributes (without doctitle/notitle/showtitle/toc/toc-position,
+defaults restored) with every inherited key locked except compat-mode, doctype
+and toc-placement; catalogs and ids are shared. Its counters (`{counter:…}`,
+caption numbers) delegate to the root document's attributes and locks, like
+Ruby's `counter` (Evaluation::with_root, both at reading and conversion).
+BodySubs.nested keeps its header snapshot, entries and locks per cell; body_subs
+converts the blocks with them and restores the parent (a repeated cell keeps its
+deferred fields for every copy). Inside it, psv tables use `!` (`!sv`, also for
+`|===`). HTML wraps the blocks in `<div class="content">`; JSON/WASM `blocks`.
+Ruby's second preprocessing of the cell's first line (`a|include::…[]`) is an
+XFAIL (table-asciidoc-cell-include-first-line).
 Xref labels: resolve::register builds the registry after reading (auto ids,
 block ids, cataloged anchors in source order); body_subs Execution resolves each
 textless xref after its field's subs, like Ruby's xreftext:
@@ -969,7 +984,7 @@ Scaffold only: DOCX backend; the extension API exists but `parse`/`convert` do
 not invoke it yet.
 
 Not yet implemented (common asks — treat as roadmap, do not assume present):
-broader language coverage (AsciiDoc table cells and nested tables, footnotes,
+broader language coverage (first-line preprocessing of AsciiDoc table cells, footnotes,
 remaining block/inline macros). The full block-attribute list is now *parsed* (style, named
 attributes, `%options`, id/role folding), but most of it has nothing to render
 against yet: a few **styles that change a block's type** (`[stem]`/`[latexmath]` →

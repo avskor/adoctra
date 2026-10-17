@@ -127,6 +127,54 @@ impl<'a> Reader<'a> {
         }
     }
 
+    /// The lines of an AsciiDoc table cell, already read by the parent (Ruby
+    /// gives the nested document a plain `Reader`), at their reader offsets.
+    pub fn nested(text: &[(usize, char)], includes: crate::xref_target::Includes) -> Self {
+        let mut reader = Self::plain("");
+        reader.inputs.clear();
+        reader.include_catalog = includes;
+        let mut start = text.first().map_or(0, |(off, _)| *off);
+        let mut line = String::new();
+        for &(off, c) in text {
+            if c == '\n' {
+                reader.endings.push((off, "\n".into()));
+                reader
+                    .loaded
+                    .push((start, Arc::from(std::mem::take(&mut line))));
+                start = off + 1;
+            } else {
+                if line.is_empty() {
+                    start = off;
+                }
+                line.push(c);
+            }
+        }
+        if !text.is_empty() {
+            reader.endings.push((start + line.len(), String::new()));
+            reader.loaded.push((start, Arc::from(line)));
+        }
+        reader
+    }
+
+    /// Keep a nested document's highlighting records. Its attribute entries
+    /// never apply to the parent.
+    pub fn absorb(&mut self, nested: Reader<'_>) {
+        self.attribute_entries.extend(
+            nested
+                .attribute_entries
+                .into_iter()
+                .map(|(span, _)| (span, None)),
+        );
+        self.attribute_entries.sort_by_key(|(span, _)| span.start);
+        self.metadata_references.extend(nested.metadata_references);
+        self.heading_lines.extend(nested.heading_lines);
+        self.heading_lines.sort_by_key(|span| span.start);
+        self.tables.extend(nested.tables);
+        self.table_separators.extend(nested.table_separators);
+        self.table_separators.sort_by_key(|span| span.start);
+        self.diagnostics.extend(nested.diagnostics);
+    }
+
     pub fn with_resources(
         sources: &'a mut crate::SourceMap,
         options: &crate::ParseOptions,

@@ -18174,9 +18174,83 @@
     {
       "id": "table-asciidoc-cell-blocks",
       "category": "tables",
-      "expect": "xfail",
-      "reason": "AsciiDoc (a) cells are not yet parsed as nested documents",
+      "expect": "pass",
       "source": "[cols=\"1a\"]\n|===\n|\n* one\n* two\n\n----\ncode\n----\n|===\n"
+    },
+    {
+      "id": "table-asciidoc-cell-counters-and-captions",
+      "category": "tables",
+      "expect": "pass",
+      "source": ".A\n====\na\n====\n\n|===\na|\n.B\n====\nb\n====\n\n{example-number} {counter:c} {c}\n|===\n\n.C\n====\nc\n====\n\n{example-number} {c} {counter:c}\n\n|===\na|{counter:c} {c}\n|===\n"
+    },
+    {
+      "id": "table-asciidoc-cell-references-and-sections",
+      "category": "tables",
+      "expect": "pass",
+      "source": "See <<blk>> and <<_sec>>.\n\n[cols=1a]\n|===\n|\n[[blk]]\n.Ex\n====\nx\n====\n\n== Sec\n\nfoo [[in1,Inner]]text\n|===\n\nAfter <<blk>>, <<_sec>> and <<in1>>.\n"
+    },
+    {
+      "id": "table-asciidoc-cell-attributes",
+      "category": "tables",
+      "expect": "pass",
+      "source": ":foo: outer\n:bar: B\n\n[cols=\"1a,1a\"]\n|===\n|:foo: inner\n:new: N\n\n{foo} {new} {bar}\n\n:new: changed\n\n{new}\n|{foo} {new}\n|===\n\n{foo} {new}\n"
+    },
+    {
+      "id": "table-asciidoc-cell-nested-table",
+      "category": "tables",
+      "expect": "pass",
+      "source": "[cols=\"1,2a\"]\n|===\n|outer\n|\n!===\n!inner a !inner b\n\n!x !y\n!===\n\n[format=csv]\n!===\nc1,c2\n!===\n|===\n"
+    },
+    {
+      "id": "table-asciidoc-cell-header-row",
+      "category": "tables",
+      "expect": "pass",
+      "source": "[cols=\"1a,1\"]\n|===\n|*Head* |H2\n\n|* item |b\n|===\n\n[cols=\"1a,1\"]\n|===\n|* one\n|b\n|* two |c\n|===\n"
+    },
+    {
+      "id": "table-asciidoc-cell-blocks-mix",
+      "category": "tables",
+      "expect": "pass",
+      "source": "[cols=1a]\n|===\n|.Listing\n----\ncode <x>\n----\n\nimage::pic.png[Alt]\n\n. first\n. second\n\n[quote,Author]\nQuoted.\n\n|\n|===\n"
+    },
+    {
+      "id": "table-asciidoc-cell-csv-and-repeat",
+      "category": "tables",
+      "expect": "pass",
+      "source": "[cols=\"1a,1\",format=csv]\n|===\n\"* a\n* b\",plain\n|===\n\n[cols=3]\n|===\n3*a|{counter:r}\n|===\n"
+    },
+    {
+      "id": "table-asciidoc-cell-include-next-line",
+      "category": "tables",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "source": "[cols=1a]\n|===\n|\ninclude::part.adoc[]\n|===\n",
+      "resources": {
+        "part.adoc": "* from include\n* second\n"
+      }
+    },
+    {
+      "id": "table-asciidoc-cell-include-first-line",
+      "category": "tables",
+      "expect": "xfail",
+      "reason": "Ruby preprocesses the first line of an AsciiDoc cell again (include/conditional directives after the cell separator); adoctra does not yet",
+      "profile": "include-body-dom-v1",
+      "source": "[cols=1a]\n|===\n|include::part.adoc[]\n|===\n",
+      "resources": {
+        "part.adoc": "* from include\n* second\n"
+      }
+    },
+    {
+      "id": "table-asciidoc-cell-document-title",
+      "category": "tables",
+      "expect": "pass",
+      "source": "[cols=1a]\n|===\n|= Inner Title\n:inner: yes\n\nBody {inner}\n|===\n"
+    },
+    {
+      "id": "table-asciidoc-cell-in-list",
+      "category": "tables",
+      "expect": "pass",
+      "source": "* item\n+\n|===\n|x a|. one\n. two\n|===\n"
     }
   ]
 }

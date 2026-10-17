@@ -18,7 +18,16 @@ struct Pending {
     replacement_origin: Option<Span>,
 }
 
-type Declaration = (usize, String, Option<Vec<AttributePart>>);
+pub(crate) type Declaration = (usize, String, Option<Vec<AttributePart>>);
+
+/// A nested document's conversion state: its header snapshot, its own
+/// attribute entries and its locked attributes (Ruby's inner document).
+#[derive(Clone)]
+pub(crate) struct Nested {
+    pub attributes: Attributes,
+    pub entries: Vec<Declaration>,
+    pub locked: BTreeSet<String>,
+}
 
 /// Shared conversion state and outputs, borrowed from the parse context.
 pub(crate) struct Conversion<'a> {
@@ -40,6 +49,8 @@ pub(crate) struct BodySubs {
     pending: BTreeMap<(usize, usize), Pending>,
     pub entries: Vec<Declaration>,
     pub caption_counters: BTreeMap<(usize, usize), (&'static str, Vec<AttributePart>)>,
+    /// AsciiDoc table cells, keyed by the cell's reader range.
+    pub nested: BTreeMap<(usize, usize), Nested>,
 }
 
 impl BodySubs {
@@ -147,7 +158,9 @@ impl BodySubs {
             caption_counters: &mut self.caption_counters,
             entries: self.entries.into_iter().peekable(),
             attributes,
-            locked: conversion.locked,
+            locked: std::borrow::Cow::Borrowed(conversion.locked),
+            nested: std::mem::take(&mut self.nested),
+            root: None,
             counters: conversion.counters,
             diagnostics: conversion.diagnostics,
             registry: conversion.registry,
@@ -191,7 +204,11 @@ struct Execution<'a> {
     caption_counters: &'a mut BTreeMap<(usize, usize), (&'static str, Vec<AttributePart>)>,
     entries: std::iter::Peekable<std::vec::IntoIter<Declaration>>,
     attributes: Attributes,
-    locked: &'a BTreeSet<String>,
+    locked: std::borrow::Cow<'a, BTreeSet<String>>,
+    nested: BTreeMap<(usize, usize), Nested>,
+    /// The root document's attributes and locks while a nested document
+    /// converts: its counters delegate there.
+    root: Option<(Attributes, std::borrow::Cow<'a, BTreeSet<String>>)>,
     counters: &'a mut BTreeMap<String, String>,
     diagnostics: &'a mut Vec<Diagnostic>,
     registry: &'a crate::resolve::Registry,
@@ -467,7 +484,8 @@ impl Execution<'_> {
     fn reftext(&mut self, read: crate::reftext::Read) -> Vec<Inline> {
         let compat = self.attributes.get("compat-mode").is_some();
         let mut evaluation =
-            Evaluation::definition(&self.attributes, self.locked, self.counters, compat);
+            Evaluation::definition(&self.attributes, &self.locked, self.counters, compat)
+                .with_root(self.root.as_mut().map(|(a, l)| (a, &**l)));
         let nodes = read.finish(&mut evaluation, self.diagnostics);
         if let Some(attributes) = evaluation.changed_attributes() {
             self.attributes = attributes;
@@ -511,7 +529,8 @@ impl Execution<'_> {
         self.attributes.local_hardbreaks = pending.hardbreaks;
         let compat = self.attributes.get("compat-mode").is_some();
         let mut evaluation =
-            Evaluation::definition(&self.attributes, self.locked, self.counters, compat)
+            Evaluation::definition(&self.attributes, &self.locked, self.counters, compat)
+                .with_root(self.root.as_mut().map(|(a, l)| (a, &**l)))
                 .with_xrefs(self.xrefs);
         *nodes = run(pending, &mut evaluation, self.diagnostics);
         if let Some(attributes) = evaluation.changed_attributes() {
@@ -568,7 +587,7 @@ impl Execution<'_> {
                         self.blocks(&mut item.blocks);
                     }
                 }
-                BlockKind::Table(table) => self.table(table, &block.attrs),
+                BlockKind::Table(table) => self.table(table, &block.attrs, block.span),
                 BlockKind::Admonition { blocks, .. }
                 | BlockKind::Example { blocks }
                 | BlockKind::Quote { blocks, .. }
@@ -587,7 +606,7 @@ impl Execution<'_> {
     /// document fallbacks, then every cell in head, body, foot order, each
     /// reading `cellbgcolor` after its content. A repeated cell (`3*|`)
     /// shares its source and converts again for every copy.
-    fn table(&mut self, table: &mut crate::ast::Table, attrs: &crate::ast::BlockAttrs) {
+    fn table(&mut self, table: &mut crate::ast::Table, attrs: &crate::ast::BlockAttrs, span: Span) {
         let value = |name: &str, fallback: &str| {
             attrs
                 .named
@@ -604,31 +623,67 @@ impl Execution<'_> {
         };
         table.grid = value("grid", "table-grid").unwrap_or_else(|| "all".into());
         table.stripes = value("stripes", "table-stripes");
-        let mut keys = Vec::new();
         let head = table.head.iter().map(Vec::len).sum::<usize>();
         for (index, cell) in table.cells_mut().enumerate() {
-            if let crate::ast::CellContent::Paragraphs(paragraphs) = &mut cell.content {
-                for nodes in paragraphs.iter_mut() {
-                    match crate::resolve::placeholder(nodes) {
-                        Some(key) => {
-                            if let Some(pending) = self.pending.get(&key).cloned() {
-                                *nodes = self.convert(key, pending);
-                                keys.push(key);
-                            }
+            // A repeated cell shares its source: keep its deferred fields for
+            // the next copy.
+            let range = (cell.span.start, 0)..=(cell.span.end, usize::MAX);
+            let saved: Vec<_> = self
+                .pending
+                .range(range)
+                .map(|(key, pending)| (*key, pending.clone()))
+                .collect();
+            match &mut cell.content {
+                crate::ast::CellContent::Paragraphs(paragraphs) => {
+                    for nodes in paragraphs.iter_mut() {
+                        self.inlines(nodes);
+                    }
+                    // Ruby splits the converted body text, which drops
+                    // trailing empty paragraphs (all of them when empty).
+                    if index >= head {
+                        while paragraphs.last().is_some_and(|nodes| blank(nodes)) {
+                            paragraphs.pop();
                         }
-                        None => self.resolve(nodes),
                     }
                 }
-                // Ruby splits the converted body text, which drops trailing
-                // empty paragraphs (all of them when the text is empty).
-                if index >= head {
-                    while paragraphs.last().is_some_and(|nodes| blank(nodes)) {
-                        paragraphs.pop();
+                // The nested document converts from its own header snapshot
+                // and entries; its effects stay inside it.
+                crate::ast::CellContent::Blocks(blocks) => {
+                    let key = (cell.span.start, cell.span.end);
+                    if let Some(nested) = self.nested.get(&key).cloned() {
+                        let mut attributes =
+                            Some(std::mem::replace(&mut self.attributes, nested.attributes));
+                        let entries = std::mem::replace(
+                            &mut self.entries,
+                            nested.entries.into_iter().peekable(),
+                        );
+                        let locked = std::mem::replace(
+                            &mut self.locked,
+                            std::borrow::Cow::Owned(nested.locked),
+                        );
+                        let root = self.root.is_none();
+                        if root {
+                            self.root = Some((attributes.take().unwrap(), locked.clone()));
+                        }
+                        self.blocks(blocks);
+                        self.attributes = match attributes {
+                            Some(attributes) => attributes,
+                            None => self.root.take().unwrap().0,
+                        };
+                        self.entries = entries;
+                        self.locked = locked;
                     }
                 }
+                crate::ast::CellContent::Literal(_) => {}
             }
+            self.pending.extend(saved);
             cell.background = self.attributes.get("cellbgcolor").map(str::to_owned);
         }
+        let keys: Vec<_> = self
+            .pending
+            .range((span.start, 0)..=(span.end, usize::MAX))
+            .map(|(key, _)| *key)
+            .collect();
         for key in keys {
             self.pending.remove(&key);
         }

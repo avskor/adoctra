@@ -213,8 +213,8 @@ fn write_header(header: &adoctra_core::DocumentHeader, s: &mut String) {
 
 /// A table: its resolved presentation (`width` percentage, `frame`, `grid`,
 /// `stripes`), the columns and the head/body/foot rows of cells. A cell has
-/// `paragraphs` (arrays of inlines; one run in the head) or verbatim `literal`
-/// text.
+/// `paragraphs` (arrays of inlines; one run in the head), the `blocks` of an
+/// AsciiDoc cell or verbatim `literal` text.
 fn write_table(table: &adoctra_core::ast::Table, s: &mut String) {
     s.push_str(&format!(",\"width\":{},\"frame\":", table.width));
     write_str(&table.frame, s);
@@ -291,6 +291,16 @@ fn write_cell(cell: &adoctra_core::ast::TableCell, s: &mut String) {
                     s.push(',');
                 }
                 write_inlines(inlines, s);
+            }
+            s.push(']');
+        }
+        adoctra_core::ast::CellContent::Blocks(blocks) => {
+            s.push_str(",\"blocks\":[");
+            for (i, block) in blocks.iter().enumerate() {
+                if i > 0 {
+                    s.push(',');
+                }
+                write_block(block, s);
             }
             s.push(']');
         }
@@ -2456,6 +2466,15 @@ mod header_tests {
         assert!(
             tokens.contains(r#"{"span":{"source_id":3,"start":10,"end":32},"kind":"block-macro"}"#),
             "{tokens}"
+        );
+    }
+
+    #[test]
+    fn asciidoc_cells_export_blocks_with_spans() {
+        let json = super::parse_json_with_source("|===\na|para\n|===", 3);
+        assert!(
+            json.contains(r#""style":"asciidoc","halign":"left","valign":"top","colspan":null,"rowspan":null,"background":null,"blocks":[{"span":{"source_id":3,"start":7,"end":11},"name":"paragraph","#),
+            "{json}"
         );
     }
 

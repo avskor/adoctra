@@ -591,9 +591,11 @@ pub struct TableCell {
 pub enum CellContent {
     /// Normal substitutions. Body and footer cells split into paragraphs at
     /// blank lines (Ruby's `Cell#content`); a header-row cell is one run.
-    /// An AsciiDoc (`a`) cell is not yet parsed as a nested document and
-    /// keeps this form too.
     Paragraphs(Vec<Vec<Inline>>),
+    /// An AsciiDoc (`a`) cell: the blocks of its nested document (Ruby's
+    /// `inner_document`), read when the cell is created with the parent's
+    /// attributes locked and converted with its own attribute entries.
+    Blocks(Vec<Block>),
     /// A literal (`l`) cell: verbatim text (Ruby's basic substitutions are
     /// output escaping).
     Literal(String),

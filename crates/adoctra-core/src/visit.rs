@@ -97,10 +97,14 @@ pub fn walk_block_mut(visitor: &mut (impl VisitorMut + ?Sized), block: &mut Bloc
         BlockKind::Table(table) => {
             for cell in table.cells_mut() {
                 visitor.visit_span(&mut cell.span);
-                if let crate::ast::CellContent::Paragraphs(paragraphs) = &mut cell.content {
-                    for inlines in paragraphs {
-                        visitor.visit_inlines(inlines, InlineContext::Body);
+                match &mut cell.content {
+                    crate::ast::CellContent::Paragraphs(paragraphs) => {
+                        for inlines in paragraphs {
+                            visitor.visit_inlines(inlines, InlineContext::Body);
+                        }
                     }
+                    crate::ast::CellContent::Blocks(blocks) => walk_blocks_mut(visitor, blocks),
+                    crate::ast::CellContent::Literal(_) => {}
                 }
             }
         }

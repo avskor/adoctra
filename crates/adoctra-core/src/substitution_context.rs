@@ -13,6 +13,9 @@ pub(crate) struct Evaluation<'a> {
     compat: bool,
     state: Option<(&'a BTreeSet<String>, &'a mut BTreeMap<String, String>)>,
     xrefs: Option<crate::xref_target::Scope<'a>>,
+    /// Inside a nested document, Ruby's `counter` delegates to the root
+    /// document: its attributes and locks.
+    root: Option<(&'a mut Attributes, &'a BTreeSet<String>)>,
 }
 
 impl Deref for Evaluation<'_> {
@@ -35,6 +38,7 @@ impl<'a> Evaluation<'a> {
             state: None,
             compat: false,
             xrefs: None,
+            root: None,
         }
     }
     pub fn definition(
@@ -48,7 +52,13 @@ impl<'a> Evaluation<'a> {
             state: Some((locked, counters)),
             compat,
             xrefs: None,
+            root: None,
         }
+    }
+    /// Counters of a nested document read and update the root document.
+    pub fn with_root(mut self, root: Option<(&'a mut Attributes, &'a BTreeSet<String>)>) -> Self {
+        self.root = root;
+        self
     }
     /// Interdocument references see the includes read so far and the pinned
     /// `outfilesuffix`.
@@ -140,7 +150,14 @@ impl<'a> Evaluation<'a> {
                     }) == "drop-line",
             };
         }
-        let locked = self.state.as_ref().unwrap().0.contains(name);
+        let locked = match &self.root {
+            Some((_, locked)) => locked.contains(name),
+            None => self.state.as_ref().unwrap().0.contains(name),
+        };
+        let value = |this: &Self| match &this.root {
+            Some((attributes, _)) => attributes.counter_value(name),
+            None => this.counter_value(name),
+        };
         let current = if locked {
             self.state
                 .as_ref()
@@ -148,9 +165,9 @@ impl<'a> Evaluation<'a> {
                 .1
                 .get(name)
                 .cloned()
-                .or_else(|| self.counter_value(name).filter(|s| !s.is_empty()))
+                .or_else(|| value(self).filter(|s| !s.is_empty()))
         } else {
-            self.counter_value(name).filter(|s| !s.is_empty())
+            value(self).filter(|s| !s.is_empty())
         };
         let next = current.map_or_else(
             || seed.unwrap_or("1").to_owned(),
@@ -162,7 +179,10 @@ impl<'a> Evaluation<'a> {
             .1
             .insert(name.into(), next.clone());
         if !locked {
-            self.attributes.to_mut().set_counter(name, &next);
+            match &mut self.root {
+                Some((attributes, _)) => attributes.set_counter(name, &next),
+                None => self.attributes.to_mut().set_counter(name, &next),
+            }
         }
         Effect {
             parts: if operation == "counter2" {
