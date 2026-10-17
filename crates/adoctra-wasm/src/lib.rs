@@ -965,6 +965,21 @@ mod tests {
     }
 
     #[test]
+    fn numbered_section_heading_keeps_its_span_and_caption() {
+        let src = ":sectnums:\n\n== A\n\n=== B";
+        let json = parse_json(src);
+        let start = src.find("=== B").unwrap();
+        assert!(
+            json.contains(&format!(r#"{{"span":{{"source_id":0,"start":{start},"end":{}}},"name":"heading","level":2,"#, src.len())),
+            "got: {json}"
+        );
+        assert!(
+            json.contains(r#""caption":"1.1. ","inlines""#),
+            "got: {json}"
+        );
+    }
+
+    #[test]
     fn interdocument_xref_exposes_path_fragment_constraints_and_span() {
         let src = "A xref:other.adoc#f[T,window=_blank]";
         let json = parse_json(src);

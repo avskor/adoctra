@@ -16,6 +16,7 @@ use crate::diagnostic::{Diagnostic, ParseResult, Severity};
 use crate::header::{collect_header, setext_level};
 use crate::inline::scan_inlines_report;
 use crate::reader::Reader;
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 /// Metadata accumulated from `[[id]]` anchor and `[style, #id.role, name=value]`
@@ -84,8 +85,7 @@ pub(crate) fn parse_reader<'a>(
         doc.blocks.push(title);
     }
     context.start_body();
-    // Ruby reads the doctype once the header is complete.
-    let book = context.attributes.get("doctype") == Some("book");
+    let book = context.book;
     let mut i = header.body_start;
     let body = collect_blocks(
         &mut lines,
@@ -95,8 +95,14 @@ pub(crate) fn parse_reader<'a>(
         None,
         header.pending,
     );
-    doc.blocks
-        .extend(nest_sections(body, doc.has_title, book, &mut diagnostics));
+    context.close_sections(0);
+    doc.blocks.extend(nest_sections(
+        body,
+        doc.has_title,
+        book,
+        &mut context.sections,
+        &mut diagnostics,
+    ));
 
     let mut references = Vec::new();
     let registry = context.register_references(&mut doc, &lines.include_catalog, &mut references);
@@ -283,8 +289,10 @@ fn nest_sections(
     blocks: Vec<Block>,
     has_header: bool,
     book: bool,
+    sections: &mut BTreeMap<(usize, usize), crate::section_numbers::Section>,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Vec<Block> {
+    use crate::section_numbers::Ordinals;
     // Close the innermost open section into its parent (or the top level).
     fn close(open: &mut Vec<Block>, top: &mut Vec<Block>) {
         let mut section = open.pop().unwrap();
@@ -316,8 +324,11 @@ fn nest_sections(
     let unchecked = !has_header && blocks.first().and_then(section_level).is_some();
     let mut top = Vec::new();
     let mut preamble = Vec::new();
-    // Open sections, innermost last.
+    // Open sections, innermost last, with their children's ordinals and
+    // their own `sectnum` path.
     let mut open: Vec<Block> = Vec::new();
+    let mut numbering: Vec<(Ordinals, Vec<String>)> = Vec::new();
+    let mut top_ordinals = Ordinals::default();
     for block in blocks {
         let level = match section_level(&block) {
             Some(level) => level,
@@ -338,6 +349,7 @@ fn nest_sections(
             Some(Block { kind: BlockKind::Section { level: current, .. }, .. }) if level <= *current
         ) {
             close(&mut open, &mut top);
+            numbering.pop();
         }
         let expected = match open.last() {
             Some(Block {
@@ -369,6 +381,20 @@ fn nest_sections(
                 message: format!("section title out of sequence: {condition}, got level {level}"),
             });
         }
+        // Ruby's `assign_numeral` among the parent's sections.
+        let mut path = Vec::new();
+        if let Some(section) = sections.get_mut(&(block.span.start, block.span.end)) {
+            let ordinals = numbering
+                .last_mut()
+                .map_or(&mut top_ordinals, |(ordinals, _)| ordinals);
+            let numeral = ordinals.assign(section);
+            if let (true, Some((_, parent))) = (level > 1, numbering.last()) {
+                path.clone_from(parent);
+            }
+            path.push(numeral.unwrap_or_default());
+            section.path.clone_from(&path);
+        }
+        numbering.push((Ordinals::default(), path));
         let (span, context) = (block.span, Arc::clone(&block.attribute_context));
         let blocks = vec![block];
         let mut section = Block::new(span, BlockKind::Section { level, blocks });
@@ -854,11 +880,17 @@ fn parse_block_content(
         let anchor = (!has_id).then(|| section_anchor(title)).flatten();
         let title = anchor.as_ref().map_or(title, |a| a.title);
         let base = lines[*i].0 + abs_offset(line, title);
+        if !discrete {
+            context.close_sections(level);
+        }
         let heading_attrs = inline_attributes(&context.attributes, pending_attrs);
         let inlines = context.reading_title(title, base, &heading_attrs, &lines.include_catalog);
         // `Block.id` is otherwise assigned later, by the resolve pass, once the
         // whole document is known (it deduplicates ids across all sections).
         let mut block = Block::new(Span::new(off, end), BlockKind::Heading { level, inlines });
+        if !discrete {
+            context.read_section((off, end), pending_style, level);
+        }
         if let Some(anchor) = anchor {
             block.id = Some(anchor.id.to_owned());
             context.section_reftext = anchor.reftext.map(|reftext| {

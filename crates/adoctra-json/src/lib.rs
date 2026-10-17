@@ -1034,6 +1034,21 @@ mod tests {
     }
 
     #[test]
+    fn numbered_section_headings_serialize_their_caption() {
+        let json = render(":sectnums:\n\n== A\n\n=== B");
+        assert!(
+            json.contains(r#""name":"heading","level":1,"id":"_a","roles":[],"style":null,"attributes":{},"options":[],"title":null,"caption":"1. ""#),
+            "got: {json}"
+        );
+        assert!(json.contains(r#""caption":"1.1. ""#), "got: {json}");
+        let json = render("== A");
+        assert!(
+            json.contains(r#""title":null,"caption":null,"inlines""#),
+            "got: {json}"
+        );
+    }
+
+    #[test]
     fn interdocument_xref_serializes_target_refid_and_path() {
         let json = render("<<other.adoc#f>> and <<Sec Title>>\n\n[[sec]]\n== Sec Title");
         assert!(

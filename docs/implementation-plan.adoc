@@ -1028,8 +1028,24 @@ Ruby API и выполнение Ruby-расширений относятся к
   и golden fixture: всего 2719 PASS и 4 XFAIL. Прежние эталоны не изменены.
   Проверены Rust-тесты, fmt, clippy с запретом warning, WASM target и тесты стенда.
 
-*Следующее изменение:* `sectnums` с нумерованными стилями разделов. Специальные разделы
-(appendix/preface/abstract и др.), partintro книги и `sectnums` — отдельная работа.
+Пятьдесят седьмой рабочий набор изменений:
+
+* Нумерация разделов, как `initialize_section`/`assign_numeral`/`convert_section`
+  Ruby (`section_numbers.rs`): решение о нумерации при чтении заголовка
+  (`sectnums`, алиас `numbered`, `partnums`, `sectnums=all` для специальных
+  разделов), порядковые номера среди нумерованных соседей и римские номера частей
+  в иерархии, глава при закрытии во время чтения берёт значение счётчика-атрибута
+  `chapter-number`. Префикс — `Block.caption` заголовка, вычисляемый при
+  преобразовании с `sectnumlevels`, `chapter-signifier` и `part-signifier`.
+* `xrefstyle` для разделов, как `Section#xreftext`: `full`/`short` с `*-refsig` и
+  номером, выделение глав и приложений; встроенные `*-refsig` и `appendix-caption`.
+* Добавлены 5 PASS, XFAIL `sectnums-appendix` и golden fixtures: всего 2724 PASS и
+  5 XFAIL. Прежние эталоны не изменены. Проверены Rust-тесты, fmt, clippy с
+  запретом warning, WASM target и тесты стенда.
+
+*Следующее изменение:* специальные разделы (appendix с буквами и
+`appendix-caption`, preface/abstract/glossary и уровни специальных разделов),
+затем partintro книги. TOC — отдельная работа.
 Исполнение выражений reftext в ранних ссылках
 заголовков и порядок регистрации контейнеров после содержимого — отдельная работа.
 Остальные производные настройки, структурные/raw caption

@@ -195,6 +195,10 @@ pub struct Block {
     /// `example-caption` attribute; an untitled example gets no caption and does
     /// not advance the counter). An explicit block/document `caption` replaces
     /// the prefix without advancing the counter, including an empty caption.
+    /// A numbered section's [`BlockKind::Heading`] carries its number prefix
+    /// here instead (`"1.2. "`, `"Chapter 3. "`, `"II: "`), computed during
+    /// conversion like asciidoctor's `convert_section` (`sectnumlevels` and
+    /// the signifiers at the section); backends render it before the inlines.
     /// `None` for every other block — a titled listing
     /// or paragraph renders its bare title, matching asciidoctor's unset
     /// `listing-caption`. Stored pre-rendered, like asciidoctor's `@caption`

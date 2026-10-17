@@ -303,8 +303,12 @@ fn render_heading(
         _ => None,
     };
     let class = class_attr(base.as_slice(), roles);
-    render_title(&block.title, &block.caption, out);
+    // A heading's caption is its section number (Ruby's `convert_section`).
+    render_title(&block.title, &None, out);
     out.push_str(&format!("<h{h}{}{class}>", id_attr(&block.id)));
+    if let Some(caption) = &block.caption {
+        out.push_str(&escape(caption));
+    }
     render_inlines(inlines, out);
     out.push_str(&format!("</h{h}>\n"));
 }
@@ -1871,6 +1875,24 @@ mod tests {
             html.contains(r##"<p>A <a href="#sec">[sec]</a> B <a href="#sec">S&amp;T</a></p>"##),
             "{html}"
         );
+    }
+
+    #[test]
+    fn numbered_sections_render_their_number_inside_the_heading() {
+        let html = render(":sectnums:\n:sectnumlevels: 2\n\n== A&B\n\n=== Sub\n\n==== Deep\n\nSee xref:_sub[xrefstyle=full].");
+        assert!(html.contains(r#"<h2 id="_ab">1. A&amp;B</h2>"#), "{html}");
+        assert!(html.contains(r#"<h3 id="_sub">1.1. Sub</h3>"#), "{html}");
+        assert!(html.contains(r#"<h4 id="_deep">Deep</h4>"#), "{html}");
+        assert!(
+            html.contains(r##"<a href="#_sub">Section 1.1, &#8220;Sub&#8221;</a>"##),
+            "{html}"
+        );
+        let html = render("= B\n:doctype: book\n:partnums:\n:sectnums:\n\n= P\n\n== C");
+        assert!(
+            html.contains(r#"<h1 id="_p" class="sect0">I: P</h1>"#),
+            "{html}"
+        );
+        assert!(html.contains(r#"<h2 id="_c">1. C</h2>"#), "{html}");
     }
 
     #[test]

@@ -398,10 +398,24 @@ expanded; the `title` attribute as doctitle remains work. xrefstyle (macro
 `xrefstyle=` in `Xref.xrefstyle`, else the document attribute at the reference) is
 resolve::styled over the converted title: Target.numbering = Caption (example
 blocks: `full` → `example-caption numeral, “title”`, `short` → `prefix numeral`,
-without a numeral or prefix the caption minus `. `; empty caption → title) or Chapter
-(book level-1 section headings, emphasized by any style); natural lookup and the
-document label ignore it. Numerals come from assign_caption (ParseContext.numerals).
-Without sectnums, numbered section styles do not exist yet.
+without a numeral or prefix the caption minus `. `; empty caption → title) or
+Section (section_numbers.rs: numbered `full` → `<sectname>-refsig N.M, “title”`
+with chapters/appendices emphasized, `short` → `refsig N.M`, unnumbered chapters
+emphasized by any style); natural lookup and the document label ignore it. Example
+numerals come from assign_caption (ParseContext.numerals).
+**Section numbering** (`sectnums`, alias `numbered`): ParseContext::read_section
+decides at the title with reading attributes (Ruby's initialize_section: sectname
+part/chapter/section or a special style; specials only with `sectnums=all`, as
+chapters at book level 1; parts with `partnums`); close_sections runs before the
+next title (and at body end) and gives a closed chapter the next `chapter-number`
+counter value (reading effect only; conversion restarts from the header like Ruby).
+nest_sections assigns ordinals among numbered siblings (Roman for parts) and the
+sectnum path (an unnumbered parent contributes ""). body_subs sets the heading's
+`Block.caption` (`1.2. `, `<chapter-signifier> 3. `, `<part-signifier> II: `) at
+conversion with `sectnumlevels`/signifiers at the section; HTML renders it inside
+`<hN>`, JSON/WASM already export caption. Built-in `*-refsig`/`appendix-caption`
+defaults match Ruby. Appendix lettering/captions and special-section levels are
+not implemented (XFAIL sectnums-appendix).
 Xref labels: resolve::register builds the registry after reading (auto ids,
 block ids, cataloged anchors in source order); body_subs Execution resolves each
 textless xref after its field's subs, like Ruby's xreftext:
@@ -451,7 +465,7 @@ skips top-level checks. Document::flat_blocks/into_flat_blocks give the old flat
 order. HTML renders `<section class="sectN role">` (id on the heading, level 0
 unwrapped) and `<section id="preamble">`; JSON/WASM use section/preamble; the DOM
 profile treats section as div. Special sections (appendix/preface/abstract),
-book partintro and sectnums are not implemented. JSON and WASM expose header metadata;
+book partintro are not implemented (sectnums is, see above). JSON and WASM expose header metadata;
 WASM includes source spans. See parser-api.adoc for remaining header limitations.
 Comments (`//`, matching slash fences of length >= 4, and `[comment]` paragraphs
 or open blocks) are omitted contextually. ParseResult.comments retains source

@@ -17468,6 +17468,43 @@
       "source": "= Doc Title\n\n:r: pass:c,m[<<later>>]\n:u: pass:m[xref:later[]]\n:a: pass:c,m[<<a1>>]\n\nA [[a1,Anchor One]]x {a}\n\n:b: pass:c,m[<<a1>>]\n\n--\n:inner: pass:c,m[<<a1>>]\n{inner} {r} {u} {b}\n--\n\n[[later]]\n== Later\n\nL {r} {u}\n"
     },
     {
+      "id": "sectnums-article-levels-toggles",
+      "category": "sections",
+      "expect": "pass",
+      "source": "= Doc\n:sectnums:\n\n== One\n\n=== One A\n\n==== Deep\n\n===== Deeper\n\n[discrete]\n== Disc\n\n:sectnums!:\n\n== Unnumbered\n\n=== Child\n\n:sectnums:\n\n=== Child Two\n\n== Two\n\nSee <<_one>>, xref:_one_a[xrefstyle=full], xref:_one_a[xrefstyle=short], xref:_two[xrefstyle=basic], xref:_child_two[xrefstyle=full].\n"
+    },
+    {
+      "id": "sectnums-book-parts-chapters",
+      "category": "sections",
+      "expect": "pass",
+      "source": "= Book\n:doctype: book\n:sectnums:\n:partnums:\n:chapter-signifier: Chapter\n:xrefstyle: full\n\n= Part A\n\n== First\n\n=== Sub\n\n== Second\n\n= Part B\n\n== Third\n\n[preface]\n== Pref\n\nSee <<_first>> xref:_sub[xrefstyle=short] xref:_part_b[xrefstyle=short] <<_part_a>> xref:_third[xrefstyle=basic].\n"
+    },
+    {
+      "id": "sectnums-refsig-levels-compat",
+      "category": "sections",
+      "expect": "pass",
+      "source": ":numbered:\n:section-refsig: *Sec*\n:xrefstyle: full\n\n== One\n\n:sectnumlevels: 1\n\n=== Sub\n\n:sectnumlevels: 2\n\n=== Sub Two\n\n== See xref:_sub_two[xrefstyle=short] now\n\n:section-refsig!:\n\nA <<_one>> B xref:_sub[xrefstyle=short] C {chapter-number} D <<_see_1_2_now>>\n\n:compat-mode:\n\nE <<_one>>\n\n[sect1]\n== Styled\n\n[glossary]\n== Gloss\n"
+    },
+    {
+      "id": "sectnums-all-special-sections",
+      "category": "sections",
+      "expect": "pass",
+      "source": "= Book\n:doctype: book\n:sectnums: all\n:part-signifier: Part\n:chapter-refsig!:\n\n[preface]\n== Pref\n\n= Part One\n\n[abstract]\n== Abs\n\n== Chap\n\n[glossary]\n=== Gloss\n\n== Chap2 {chapter-number}\n\nText <<_chap>> xref:_pref[xrefstyle=full] xref:_gloss[xrefstyle=full] xref:_chap[xrefstyle=short] xref:_part_one[xrefstyle=full].\n"
+    },
+    {
+      "id": "sectnums-chapter-number-counter",
+      "category": "sections",
+      "expect": "pass",
+      "source": "= Book\n:doctype: book\n:sectnums:\n:chapter-number: 4\n\n== Ch {chapter-number}\n\nIn {chapter-number}\n\n== Ch2 {chapter-number}\n\nIn2 {chapter-number}\n\n:sectnums!:\n\n== Ch3\n\n:sectnums:\n\n== Ch4\n\nEnd {chapter-number}\n"
+    },
+    {
+      "id": "sectnums-appendix",
+      "category": "sections",
+      "expect": "xfail",
+      "reason": "Special sections are not implemented: an appendix is neither lettered nor captioned (Appendix A:).",
+      "source": ":sectnums:\n\n== One\n\n[appendix]\n== Extra\n\nA <<_extra>> B xref:_extra[xrefstyle=full]\n"
+    },
+    {
       "id": "xrefstyle-example-full-short-basic",
       "category": "references",
       "expect": "pass",

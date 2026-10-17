@@ -28,6 +28,7 @@ pub(crate) struct Conversion<'a> {
     pub registry: &'a crate::resolve::Registry,
     pub early_titles: crate::resolve::EarlyTitles,
     pub fixed: crate::resolve::FixedXrefs,
+    pub sections: &'a BTreeMap<(usize, usize), crate::section_numbers::Section>,
     /// Unresolved-reference warnings.
     pub references: &'a mut Vec<Diagnostic>,
     pub xrefs: crate::xref_target::Scope<'a>,
@@ -155,6 +156,7 @@ impl BodySubs {
             reftexts: None,
             titles: conversion.early_titles,
             fixed: conversion.fixed,
+            sections: conversion.sections,
             headings: BTreeMap::new(),
             referable: referable_titles(conversion.registry),
             converting: BTreeMap::new(),
@@ -203,6 +205,8 @@ struct Execution<'a> {
     titles: BTreeMap<(usize, usize), Vec<Inline>>,
     /// References whose attribute definition fixed their target and label.
     fixed: crate::resolve::FixedXrefs,
+    /// Section titles and their numbers.
+    sections: &'a BTreeMap<(usize, usize), crate::section_numbers::Section>,
     /// Section titles with resolved references, keyed by the heading range.
     headings: BTreeMap<(usize, usize), Vec<Inline>>,
     /// Placeholder ranges of block titles that a reference may display.
@@ -526,6 +530,14 @@ impl Execution<'_> {
             }
             if let Some(title) = &mut block.title {
                 self.inlines(title);
+            }
+            // A section number uses the attributes at its title, like Ruby's
+            // `convert_section`.
+            if let (BlockKind::Heading { .. }, Some(section)) = (
+                &block.kind,
+                self.sections.get(&(block.span.start, block.span.end)),
+            ) {
+                block.caption = section.caption(&self.attributes);
             }
             match &mut block.kind {
                 BlockKind::Paragraph { inlines } | BlockKind::Verse { inlines, .. } => {
