@@ -2,7 +2,7 @@
 //! after quotes, attribute references, replacements, links and anchors.
 use adoctra_core::{
     parse, tokens, AttributeFormat as F, AttributePart as P, Block, BlockKind, Inline, Severity,
-    TokenKind,
+    TokenKind, Xref,
 };
 
 const SECTION: &str = "[[sec]]\n== Sec Title\n\n";
@@ -44,12 +44,11 @@ fn xrefs(nodes: &[Inline]) -> Vec<(&str, Option<&str>, String)> {
     nodes
         .iter()
         .filter_map(|n| match n {
-            Inline::CrossReference {
-                target,
-                role,
-                children,
-                ..
-            } => Some((target.as_str(), role.as_deref(), text(children))),
+            Inline::CrossReference { xref, children, .. } => Some((
+                xref.refid.as_deref().unwrap_or_default(),
+                xref.role.as_deref(),
+                text(children),
+            )),
             _ => None,
         })
         .collect()
@@ -100,10 +99,7 @@ fn value_generated_references_stay_parts_and_take_labels_at_conversion() {
             _ => None,
         })
         .collect();
-    let open = P::OpenXref {
-        target: "sec".into(),
-        role: None,
-    };
+    let open = P::OpenXref(Xref::to_id("sec"));
     assert_eq!(
         parts,
         [
@@ -272,7 +268,7 @@ fn closers_and_openers_from_values_complete_references() {
     assert_eq!(xrefs(&nodes), [("sec", None, "Sec Title".into())]);
     assert!(nodes.iter().any(|n| matches!(n,
         Inline::AttributeRef { name, parts, .. } if name == "o"
-            && parts.first() == Some(&P::OpenXref { target: "sec".into(), role: None }))));
+            && parts.first() == Some(&P::OpenXref(Xref::to_id("sec"))))));
 }
 
 #[test]

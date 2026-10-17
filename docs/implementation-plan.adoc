@@ -970,11 +970,31 @@ Ruby API и выполнение Ruby-расширений относятся к
   не изменены. Проверены Rust-тесты, fmt, clippy с запретом warning, WASM target
   и 14 тестов стенда.
 
-*Следующее изменение:* междокументные xref (пути `doc.adoc#id`, `xref:` с
-расширением, `relfileprefix`/`relfilesuffix`) и естественные ссылки по названию
-(`resolve_id`), затем xref в `pass:m`. Специальные разделы
+Пятьдесят третий рабочий набор изменений:
+
+* Цели xref вычисляются m-стадией, как ветки `InlineXrefMacroRx`: общая структура
+  `Xref` (`target` — href, `refid`, `path`, `fragment`, `role`, `window`, `rel`)
+  у `Inline::CrossReference` и `AttributePart::OpenXref`. Пути `doc.adoc#id` и
+  `xref:doc.adoc[]` с `relfileprefix`/`relfilesuffix` и `outfilesuffix`,
+  закреплённым по завершении header (встроенное значение `.html`); текущий
+  документ (`docname`) и полностью включённые файлы остаются внутренними. Reader
+  ведёт каталог include (`catalog[:includes]`, правила `partial-option`) через
+  `ResourceProvider::document_path`; заголовки при чтении видят прочитанные include.
+* Естественные ссылки (`Document#resolve_id`): неизвестный голый ID с пробелом
+  или заглавной буквой ищется по лексическому написанию подписей в порядке
+  регистрации; при преобразовании таблица строится один раз, при чтении — без
+  кэша среди уже зарегистрированных ID. Textless-подпись междокументной ссылки —
+  путь; `<<#>>` — reftext документа, его название или первый раздел, иначе `[^top]`.
+* JSON/WASM: `target` xref теперь href, добавлены `refid`/`path` (WASM — также
+  `fragment`, `window`, `rel`); HTML выводит `class`/`target`/`rel`.
+* Добавлены 43 PASS и golden fixture: всего 2691 PASS и 4 XFAIL. Прежние эталоны
+  не изменены. Проверены Rust-тесты, fmt, clippy с запретом warning, WASM target
+  и тесты стенда.
+
+*Следующее изменение:* xref в `pass:m` и параметрах ссылок, затем `xrefstyle`
+(`full`/`short`/`basic`). Специальные разделы
 (appendix/preface/abstract и др.), partintro книги и `sectnums` — отдельная работа.
-`xrefstyle`, исполнение выражений reftext в ранних ссылках
+Исполнение выражений reftext в ранних ссылках
 заголовков и порядок регистрации контейнеров после содержимого — отдельная работа.
 Остальные производные настройки, структурные/raw caption
 и семейства подписей остаются отдельной работой. Условия и include-параметры требуют своей интеграции;

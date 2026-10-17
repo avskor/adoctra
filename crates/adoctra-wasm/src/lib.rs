@@ -630,19 +630,24 @@ fn write_inlines(inlines: &[Inline], s: &mut String) {
                 s.push_str(&format!(",\"bare\":{bare},\"inlines\":"));
                 write_inlines(children, s);
             }
-            // The editor gets the raw anchor id (`target`) so it can resolve or
-            // validate the reference; the display text is in `inlines`.
-            Inline::CrossReference {
-                target,
-                role,
-                children,
-                ..
-            } => {
+            // The editor gets the resolved link `target` plus the `refid` it
+            // can resolve or validate (and an interdocument `path`/`fragment`);
+            // the display text is in `inlines`.
+            Inline::CrossReference { xref, children, .. } => {
                 s.push_str("\"name\":\"xref\",\"target\":");
-                write_str(target, s);
-                if let Some(role) = role {
-                    s.push_str(",\"role\":");
-                    write_str(role, s);
+                write_str(&xref.target, s);
+                for (key, value) in [
+                    ("refid", &xref.refid),
+                    ("path", &xref.path),
+                    ("fragment", &xref.fragment),
+                    ("role", &xref.role),
+                    ("window", &xref.window),
+                    ("rel", &xref.rel),
+                ] {
+                    if let Some(value) = value {
+                        s.push_str(&format!(",\"{key}\":"));
+                        write_str(value, s);
+                    }
                 }
                 s.push_str(",\"inlines\":");
                 write_inlines(children, s);
@@ -791,7 +796,7 @@ mod tests {
     #[test]
     fn missing_reference_in_title_exposes_fallback_and_diagnostic_span() {
         let json = parse_json(".See <<missing>>\n----\nx\n----");
-        assert!(json.contains(r#"{"span":{"source_id":0,"start":5,"end":16},"name":"xref","target":"missing","inlines":[{"span":{"source_id":0,"start":5,"end":16},"name":"text","value":"[missing]"}]}"#), "{json}");
+        assert!(json.contains(r##"{"span":{"source_id":0,"start":5,"end":16},"name":"xref","target":"#missing","refid":"missing","fragment":"missing","inlines":[{"span":{"source_id":0,"start":5,"end":16},"name":"text","value":"[missing]"}]}"##), "{json}");
         assert!(
             json.contains(
                 r#""diagnostics":[{"span":{"source_id":0,"start":5,"end":16},"severity":"warning""#
@@ -907,14 +912,37 @@ mod tests {
             json.contains("\"span\":{\"source_id\":0,\"start\":0,\"end\":11},\"name\":\"xref\""),
             "got: {json}"
         );
-        assert!(json.contains("\"target\":\"sec\""), "got: {json}");
+        assert!(
+            json.contains("\"target\":\"#sec\",\"refid\":\"sec\",\"fragment\":\"sec\""),
+            "got: {json}"
+        );
+    }
+
+    #[test]
+    fn interdocument_xref_exposes_path_fragment_constraints_and_span() {
+        let src = "A xref:other.adoc#f[T,window=_blank]";
+        let json = parse_json(src);
+        assert!(
+            json.contains(r##"{"span":{"source_id":0,"start":2,"end":36},"name":"xref","target":"other.html#f","refid":"other#f","path":"other.html","fragment":"f","window":"_blank","rel":"noopener","inlines":"##),
+            "got: {json}"
+        );
+        // No unresolved-reference warning for another document.
+        assert!(json.contains(r#""diagnostics":[]"#), "got: {json}");
+        let json = parse_json("<<#>>");
+        assert!(
+            json.contains(r##""name":"xref","target":"#","refid":"","fragment":"","inlines":[{"span":{"source_id":0,"start":0,"end":5},"name":"text","value":"[^top]"}]"##),
+            "got: {json}"
+        );
     }
 
     #[test]
     fn textless_xref_carries_target_and_bracketed_text() {
         let json = parse_json("<<sec>>");
         assert!(json.contains("\"name\":\"xref\""), "got: {json}");
-        assert!(json.contains("\"target\":\"sec\""), "got: {json}");
+        assert!(
+            json.contains("\"target\":\"#sec\",\"refid\":\"sec\",\"fragment\":\"sec\""),
+            "got: {json}"
+        );
         assert!(
             json.contains("\"name\":\"text\",\"value\":\"[sec]\""),
             "got: {json}"
@@ -1451,7 +1479,10 @@ mod header_tests {
         let source = ":v: pass:[<b>Ж</b> &copy;]\r\n\r\n== {v}\r\n\r\n<<_ж>>";
         let json = super::parse_json_with_source(source, 7);
         assert!(json.contains(r#""id":"_ж""#), "{json}");
-        assert!(json.contains(r#""target":"_ж""#), "{json}");
+        assert!(
+            json.contains(r##""target":"#_ж","refid":"_ж","fragment":"_ж""##),
+            "{json}"
+        );
         assert!(json.contains(r#""diagnostics":[]"#), "{json}");
         let start = source.find("{v}").unwrap();
         assert!(json.contains(&format!(r#""span":{{"source_id":7,"start":{start},"end":{}}},"name":"attribute-ref","attribute":"v","value":"<b>Ж</b> &copy;""#, start + 3)), "{json}");
@@ -1831,7 +1862,10 @@ mod header_tests {
             "{json}"
         );
         let json = super::parse_json(":v: pass:m[link:page[Alpha]]\n\n<<_alpha>>\n\n== {v}");
-        assert!(json.contains(r#""target":"_alpha""#), "{json}");
+        assert!(
+            json.contains(r##""target":"#_alpha","refid":"_alpha","fragment":"_alpha""##),
+            "{json}"
+        );
     }
 
     #[test]
@@ -2292,15 +2326,19 @@ mod ifeval_tests {
             start + 8
         );
         assert!(
-            json.contains(&format!(r#"{span},"name":"xref","target":"s","inlines":"#)),
+            json.contains(&format!(
+                r##"{span},"name":"xref","target":"#s","refid":"s","fragment":"s","inlines":"##
+            )),
             "{json}"
         );
         assert!(
-            json.contains(r#""parts":[{"kind":"open-xref","target":"s"},{"kind":"text","value":"T"},{"kind":"close-xref"}]"#),
+            json.contains(r##""parts":[{"kind":"open-xref","target":"#s","refid":"s","fragment":"s"},{"kind":"text","value":"T"},{"kind":"close-xref"}]"##),
             "{json}"
         );
         assert!(
-            json.contains(r#""name":"xref","target":"s","role":"r","inlines":"#),
+            json.contains(
+                r##""name":"xref","target":"#s","refid":"s","fragment":"s","role":"r","inlines":"##
+            ),
             "{json}"
         );
         let tokens = super::tokens_json(src);

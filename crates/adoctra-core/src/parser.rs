@@ -99,8 +99,8 @@ pub(crate) fn parse_reader<'a>(
         .extend(nest_sections(body, doc.has_title, book, &mut diagnostics));
 
     let mut references = Vec::new();
-    let registry = context.register_references(&mut doc, &mut references);
-    context.execute_body(&mut doc, registry, &mut references);
+    let registry = context.register_references(&mut doc, &lines.include_catalog, &mut references);
+    context.execute_body(&mut doc, registry, &lines.include_catalog, &mut references);
 
     // All grammar operates on monotonically increasing reader coordinates.
     // Restore physical source ranges before resolution copies metadata spans.
@@ -243,8 +243,12 @@ fn collect_blocks(
                     let span = title
                         .origin
                         .unwrap_or(Span::new(title.base, title.base + title.text.len()));
-                    block.title =
-                        Some(context.attribute_value(&title.text, span, title.origin.is_none()));
+                    block.title = Some(context.attribute_value(
+                        &title.text,
+                        span,
+                        title.origin.is_none(),
+                        &lines.include_catalog,
+                    ));
                 } else if !matches!(block.kind, BlockKind::Passthrough { .. }) {
                     block.title = Some(context.body_subs.defer_title(
                         &title.text,
@@ -424,7 +428,8 @@ pub(crate) fn consume_block_metadata(
     }
     if let Some(parsed) = parse_block_attr_list(line, lines[*i].0) {
         let span = Span::new(lines[*i].0, lines[*i].0 + line.len());
-        let references = crate::block_attributes::merge(pending, parsed, span, context);
+        let references =
+            crate::block_attributes::merge(pending, parsed, span, context, &lines.include_catalog);
         lines.metadata_references.extend(references);
         *i += 1;
         return true;
@@ -850,7 +855,7 @@ fn parse_block_content(
         let title = anchor.as_ref().map_or(title, |a| a.title);
         let base = lines[*i].0 + abs_offset(line, title);
         let heading_attrs = inline_attributes(&context.attributes, pending_attrs);
-        let inlines = context.reading_title(title, base, &heading_attrs);
+        let inlines = context.reading_title(title, base, &heading_attrs, &lines.include_catalog);
         // `Block.id` is otherwise assigned later, by the resolve pass, once the
         // whole document is known (it deduplicates ids across all sections).
         let mut block = Block::new(Span::new(off, end), BlockKind::Heading { level, inlines });

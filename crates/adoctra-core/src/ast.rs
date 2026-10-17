@@ -537,21 +537,24 @@ pub enum Inline {
     /// inline anchors) over the result of quotes, attribute references and
     /// replacements, so `<<{id}>>` takes the expanded id and a consumed label
     /// keeps its formatting as [`Inline::Substituted`] parts.
-    /// `target` is the anchor id (a leading `#` removed); the HTML backend
-    /// renders it as `href="#id"`. `role` comes from the macro's attribute list
-    /// (`xref:id[text,role=r]`). `children` is the display text. The parser
-    /// leaves it *empty* for a textless reference; conversion then fills it
-    /// in — with the referenced section's title inlines (formatting preserved,
-    /// like asciidoctor's `xrefstyle=basic`) when the id is known, or the literal
-    /// `[id]` text when it is not (asciidoctor's *unresolved*-reference rendering,
-    /// which also emits a diagnostic). An explicit reftext is kept verbatim.
+    /// `xref` holds the resolved target (decoded): `#id` within this document
+    /// (a leading `#` removed outside compat mode; an unknown bare id may name
+    /// a title or reftext), or another document's path (`doc.adoc#id`,
+    /// `xref:doc.adoc[]`) with `relfileprefix`/`relfilesuffix` applied, unless
+    /// it names this document or an included one. `role` comes from the
+    /// macro's attribute list (`xref:id[text,role=r]`). `children` is the
+    /// display text. The parser leaves it *empty* for a textless reference;
+    /// conversion then fills it in — with the target's reftext or title
+    /// (formatting preserved, like asciidoctor's `xrefstyle=basic`), the
+    /// interdocument path, or the literal `[id]` text when the id is unknown
+    /// (asciidoctor's *unresolved*-reference rendering, which also emits a
+    /// diagnostic). An explicit reftext is kept verbatim.
     /// `span` covers the whole construct (the `<<…>>` or `xref:…[…]`). A
     /// reference generated entirely by an attribute value stays a pair of
     /// [`AttributePart::OpenXref`](crate::AttributePart::OpenXref) /
     /// `CloseXref` parts of its reference.
     CrossReference {
-        target: String,
-        role: Option<String>,
+        xref: crate::Xref,
         children: Vec<Inline>,
         span: Span,
     },

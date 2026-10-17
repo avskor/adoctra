@@ -94,8 +94,7 @@ pub(crate) fn scan_for_tokens(src: &str, base: usize, attrs: &Attributes) -> Vec
     }
     for span in matches.xrefs {
         syntax.push(Inline::CrossReference {
-            target: String::new(),
-            role: None,
+            xref: Default::default(),
             children: Vec::new(),
             span,
         });
@@ -454,11 +453,14 @@ mod tests {
     fn first_xref(v: &[Inline]) -> Option<(String, Vec<Inline>, Span)> {
         v.iter().find_map(|n| match n {
             Inline::CrossReference {
-                target,
+                xref,
                 children,
                 span,
-                ..
-            } => Some((target.clone(), children.clone(), *span)),
+            } => Some((
+                xref.refid.clone().unwrap_or_default(),
+                children.clone(),
+                *span,
+            )),
             _ => None,
         })
     }

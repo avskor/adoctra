@@ -122,7 +122,7 @@ fn reference_in_block_title_renders_in_html_and_json() {
             .unwrap(),
     )
     .unwrap();
-    assert!(json.contains(r#""title":[{"name":"text","value":"See "},{"name":"xref","target":"_target","inlines":[{"name":"text","value":"Target"}]}]"#), "{json}");
+    assert!(json.contains(r##""title":[{"name":"text","value":"See "},{"name":"xref","target":"#_target","refid":"_target","inlines":[{"name":"text","value":"Target"}]}]"##), "{json}");
 }
 
 #[test]

@@ -44,11 +44,12 @@ mod unicode_word;
 pub mod visit;
 
 pub use ast::{Author, Block, BlockKind, Document, DocumentHeader, Inline, Revision, Span};
-pub use attributes::{AttributeFormat, AttributeLink, AttributePart, Attributes};
+pub use attributes::{AttributeFormat, AttributeLink, AttributePart, Attributes, Xref};
 mod anchor_catalog;
 mod attribute_list;
 mod attribute_macros;
 mod attribute_quotes;
+mod xref_target;
 pub use backend::Backend;
 pub use context::{IncludeLimits, ParseOptions};
 pub use diagnostic::{Diagnostic, ParseResult, Severity};

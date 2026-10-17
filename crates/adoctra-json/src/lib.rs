@@ -523,17 +523,18 @@ fn write_inlines(inlines: &[Inline], s: &mut String) {
                 write_inlines(children, s);
                 s.push('}');
             }
-            Inline::CrossReference {
-                target,
-                role,
-                children,
-                ..
-            } => {
+            Inline::CrossReference { xref, children, .. } => {
                 s.push_str("{\"name\":\"xref\",\"target\":");
-                escape_into(target, s);
-                if let Some(role) = role {
-                    s.push_str(",\"role\":");
-                    escape_into(role, s);
+                escape_into(&xref.target, s);
+                for (key, value) in [
+                    ("refid", &xref.refid),
+                    ("path", &xref.path),
+                    ("role", &xref.role),
+                ] {
+                    if let Some(value) = value {
+                        s.push_str(&format!(",\"{key}\":"));
+                        escape_into(value, s);
+                    }
                 }
                 s.push_str(",\"inlines\":");
                 write_inlines(children, s);
@@ -603,7 +604,10 @@ mod tests {
     #[test]
     fn block_reftext_exports_evaluated_values_and_literal_macros() {
         let json = render("[[here,R {counter:n} link:p[x]]]\nBody {counter:n}\n\n<<here>>");
-        assert!(json.contains(r#""name":"xref","target":"here""#), "{json}");
+        assert!(
+            json.contains(r##""name":"xref","target":"#here","refid":"here""##),
+            "{json}"
+        );
         assert!(json.contains(r#""name":"text","value":"1""#), "{json}");
         assert!(json.contains("link:p[x]"), "{json}");
         assert!(!json.contains("{counter:n}"), "{json}");
@@ -859,7 +863,10 @@ mod tests {
     fn section_ids_are_sanitized_without_changing_raw_titles_or_reference_targets() {
         let json = render(":v: pass:[<b>Alpha</b> &copy;]\n\n== {v}\n\n<<_alpha>>");
         assert!(json.contains(r#""id":"_alpha""#), "{json}");
-        assert!(json.contains(r#""target":"_alpha""#), "{json}");
+        assert!(
+            json.contains(r##""target":"#_alpha","refid":"_alpha""##),
+            "{json}"
+        );
         assert_eq!(
             json.matches(r#""value":"<b>Alpha</b> &copy;""#).count(),
             4,
@@ -921,7 +928,10 @@ mod tests {
     fn resolved_xref_serializes_section_title() {
         let json = render("== Section Two\n\nSee <<_section_two>>.");
         assert!(json.contains("\"name\":\"xref\""), "got: {json}");
-        assert!(json.contains("\"target\":\"_section_two\""), "got: {json}");
+        assert!(
+            json.contains("\"target\":\"#_section_two\",\"refid\":\"_section_two\""),
+            "got: {json}"
+        );
         assert!(
             json.contains("{\"name\":\"text\",\"value\":\"Section Two\"}"),
             "got: {json}"
@@ -981,9 +991,31 @@ mod tests {
     fn xref_serializes_with_target_and_inlines() {
         let json = render("See <<sec,Section Two>>.");
         assert!(json.contains("\"name\":\"xref\""), "got: {json}");
-        assert!(json.contains("\"target\":\"sec\""), "got: {json}");
+        assert!(
+            json.contains("\"target\":\"#sec\",\"refid\":\"sec\""),
+            "got: {json}"
+        );
         assert!(
             json.contains("{\"name\":\"text\",\"value\":\"Section Two\"}"),
+            "got: {json}"
+        );
+    }
+
+    #[test]
+    fn interdocument_xref_serializes_target_refid_and_path() {
+        let json = render("<<other.adoc#f>> and <<Sec Title>>\n\n[[sec]]\n== Sec Title");
+        assert!(
+            json.contains(r##"{"name":"xref","target":"other.html#f","refid":"other#f","path":"other.html","inlines":[{"name":"text","value":"other.html"}]}"##),
+            "got: {json}"
+        );
+        // A natural reference is retargeted to the id its title names.
+        assert!(
+            json.contains(r##"{"name":"xref","target":"#sec","refid":"sec","inlines":[{"name":"text","value":"Sec Title"}]}"##),
+            "got: {json}"
+        );
+        let json = render(":p: xref:o.adoc[]\n\n{p}");
+        assert!(
+            json.contains(r##""parts":[{"kind":"open-xref","target":"o.html","refid":"o","path":"o.html"},{"kind":"text","value":"o.html"},{"kind":"close-xref"}]"##),
             "got: {json}"
         );
     }
@@ -992,7 +1024,10 @@ mod tests {
     fn textless_xref_serializes_bracketed_id() {
         let json = render("See <<sec>>.");
         assert!(json.contains("\"name\":\"xref\""), "got: {json}");
-        assert!(json.contains("\"target\":\"sec\""), "got: {json}");
+        assert!(
+            json.contains("\"target\":\"#sec\",\"refid\":\"sec\""),
+            "got: {json}"
+        );
         assert!(
             json.contains("{\"name\":\"text\",\"value\":\"[sec]\"}"),
             "got: {json}"
@@ -1003,7 +1038,10 @@ mod tests {
     fn xref_macro_serializes_like_angle_form() {
         let json = render("See xref:sec[Mac].");
         assert!(json.contains("\"name\":\"xref\""), "got: {json}");
-        assert!(json.contains("\"target\":\"sec\""), "got: {json}");
+        assert!(
+            json.contains("\"target\":\"#sec\",\"refid\":\"sec\""),
+            "got: {json}"
+        );
         assert!(
             json.contains("{\"name\":\"text\",\"value\":\"Mac\"}"),
             "got: {json}"
@@ -1460,7 +1498,7 @@ mod tests {
     fn xref_labels_serialize_titles_and_reftext_formatted_per_reference() {
         let json = render("[[t]]\n.Ж *T*\n----\nx\n----\n\n[[b,[.r\\{x}]#R#]]\npara\n\n:x: 1\n\n<<t>> <<b>>\n\n:x: 2\n\n<<b>>");
         assert!(
-            json.contains(r#"{"name":"xref","target":"t","inlines":[{"name":"text","value":"Ж "},{"name":"strong","inlines":[{"name":"text","value":"T"}]}]}"#),
+            json.contains(r##"{"name":"xref","target":"#t","refid":"t","inlines":[{"name":"text","value":"Ж "},{"name":"strong","inlines":[{"name":"text","value":"T"}]}]}"##),
             "{json}"
         );
         assert!(json.contains(r#""role":"r1""#), "{json}");
@@ -1471,12 +1509,12 @@ mod tests {
     fn xrefs_use_cataloged_anchor_reftext() {
         let json = render("p\n\nA [[a,R {counter:n}]]\n\n* x [[b,L]]\n\n<<a>> <<b>>");
         assert!(
-            json.contains("{\"name\":\"xref\",\"target\":\"a\",\"inlines\":[{\"name\":\"text\",\"value\":\"R \"},{\"name\":\"text\",\"value\":\"1\"}]}"),
+            json.contains("{\"name\":\"xref\",\"target\":\"#a\",\"refid\":\"a\",\"inlines\":[{\"name\":\"text\",\"value\":\"R \"},{\"name\":\"text\",\"value\":\"1\"}]}"),
             "got: {json}"
         );
         // A trailing list item anchor is rendered but not cataloged.
         assert!(
-            json.contains("{\"name\":\"xref\",\"target\":\"b\",\"inlines\":[{\"name\":\"text\",\"value\":\"[b]\"}]}"),
+            json.contains("{\"name\":\"xref\",\"target\":\"#b\",\"refid\":\"b\",\"inlines\":[{\"name\":\"text\",\"value\":\"[b]\"}]}"),
             "got: {json}"
         );
     }
@@ -1546,17 +1584,17 @@ mod tests {
         let json = render(":r: <<s>>\n\n[[s]]\n== T\n\nA xref:s[x,role=r] {r}");
         assert!(
             json.contains(
-                r#"{"name":"xref","target":"s","role":"r","inlines":[{"name":"text","value":"x"}]}"#
+                r##"{"name":"xref","target":"#s","refid":"s","role":"r","inlines":[{"name":"text","value":"x"}]}"##
             ),
             "{json}"
         );
         assert!(
-            json.contains(r#""value":"T","parts":[{"kind":"open-xref","target":"s"},{"kind":"text","value":"T"},{"kind":"close-xref"}]"#),
+            json.contains(r##""value":"T","parts":[{"kind":"open-xref","target":"#s","refid":"s","fragment":"s"},{"kind":"text","value":"T"},{"kind":"close-xref"}]"##),
             "{json}"
         );
         let json = render(":r: xref:s[x,role=r]\n\n{r}");
         assert!(
-            json.contains(r#""parts":[{"kind":"open-xref","target":"s","role":"r"},{"kind":"text","value":"x"},{"kind":"close-xref"}]"#),
+            json.contains(r##""parts":[{"kind":"open-xref","target":"#s","refid":"s","fragment":"s","role":"r"},{"kind":"text","value":"x"},{"kind":"close-xref"}]"##),
             "{json}"
         );
     }

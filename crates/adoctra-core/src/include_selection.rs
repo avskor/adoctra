@@ -87,6 +87,22 @@ impl Selection {
         }
     }
 
+    /// Whether a selection keeps the include visible to interdocument
+    /// references when it selects anything: Ruby marks selected lines and
+    /// tags `partial-option`, except a bare `**` (optionally with `*`).
+    pub fn full(&self) -> bool {
+        match self {
+            Self::All => true,
+            Self::Lines { .. } => false,
+            Self::Tags(tags) => {
+                let get = |name: &str| tags.iter().find(|(key, _)| key == name).map(|t| t.1);
+                get("**") == Some(true)
+                    && get("*") != Some(false)
+                    && tags.iter().all(|(key, _)| key == "**" || key == "*")
+            }
+        }
+    }
+
     pub fn select<'a>(
         self,
         lines: impl Iterator<Item = (usize, &'a str)>,

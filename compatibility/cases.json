@@ -17098,6 +17098,302 @@
       "category": "references",
       "expect": "pass",
       "source": "[[sec]]\n== Sec Title\n\n<<sec,(C) -- x>> and xref:sec[a...b]"
+    },
+    {
+      "id": "xref-interdoc-angle-paths",
+      "category": "references",
+      "expect": "pass",
+      "source": "A <<other.adoc#frag>> B <<other#frag>> C <<other.asciidoc#x>> D <<other.md#x>> E <<other.adoc#>> F <<dir/x.y/z#a>>"
+    },
+    {
+      "id": "xref-interdoc-angle-no-hash",
+      "category": "references",
+      "expect": "pass",
+      "source": "A <<other.adoc>> B <<other.html>> C <<dir/other>>"
+    },
+    {
+      "id": "xref-interdoc-macro-paths",
+      "category": "references",
+      "expect": "pass",
+      "source": "A xref:other.adoc[] B xref:other.html[] C xref:other#[] D xref:dir/x.y/z#a[] E xref:other.md#x[] F xref:other.adoc#f[] G xref:other.pdf#p[]"
+    },
+    {
+      "id": "xref-interdoc-macro-fragment-only",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[sec]]\n== Sec Title\n\nA xref:sec[] B xref:other[] C xref:dir/other[] D xref:a.b/c[]"
+    },
+    {
+      "id": "xref-interdoc-labels",
+      "category": "references",
+      "expect": "pass",
+      "source": "A <<other.adoc#frag,See *this*>> B xref:other.adoc#f[Text] C <<other.adoc#f, >> D xref:other.adoc[With \\] bracket]"
+    },
+    {
+      "id": "xref-interdoc-link-constraints",
+      "category": "references",
+      "expect": "pass",
+      "source": "A xref:other.adoc#f[Text,window=_blank] B xref:other.adoc#f[Text,role=r,opts=nofollow] C xref:other.adoc[T,window=_self] D xref:other.adoc[T,window=_blank,opts=nofollow] E xref:other.adoc[T,window=w,opts=noopener] F xref:#x[T,window=_blank,role=q]\n\n[[x]]\n== X"
+    },
+    {
+      "id": "xref-interdoc-relfile-attributes",
+      "category": "references",
+      "expect": "pass",
+      "source": ":relfileprefix: ../\n:relfilesuffix: /\n\nA <<other.adoc#x>> B xref:other.adoc[] C xref:file.pdf[] D <<other#x>>"
+    },
+    {
+      "id": "xref-interdoc-relfile-empty-suffix",
+      "category": "references",
+      "expect": "pass",
+      "source": ":relfilesuffix:\n\nA <<other.adoc#x>> B xref:other.adoc[]\n\n:relfileprefix: pre/\n:relfilesuffix!:\n\nC <<other.adoc#x>>"
+    },
+    {
+      "id": "xref-interdoc-outfilesuffix-header",
+      "category": "references",
+      "expect": "pass",
+      "source": "= Doc\n:outfilesuffix: .htm\n\nA <<other.adoc#x>> {outfilesuffix}\n\n:outfilesuffix: .xhtml\n\nB xref:other.adoc[] {outfilesuffix}"
+    },
+    {
+      "id": "xref-interdoc-outfilesuffix-unset",
+      "category": "references",
+      "expect": "pass",
+      "source": "= Doc\n:outfilesuffix!:\n\nA <<other.adoc#x>> B xref:other.adoc[]"
+    },
+    {
+      "id": "xref-interdoc-outfilesuffix-default",
+      "category": "references",
+      "expect": "pass",
+      "source": "{outfilesuffix} <<other.adoc#x>>"
+    },
+    {
+      "id": "xref-interdoc-attribute-path",
+      "category": "references",
+      "expect": "pass",
+      "source": ":doc: other.adoc\n:p: <<other.adoc#v>>\n\nA <<{doc}#x>> B xref:{doc}[] C {p}"
+    },
+    {
+      "id": "xref-interdoc-compat",
+      "category": "references",
+      "expect": "pass",
+      "source": ":compat-mode:\n\nA <<other.adoc#x>> B xref:other.adoc[]"
+    },
+    {
+      "id": "xref-interdoc-heading",
+      "category": "references",
+      "expect": "pass",
+      "source": "== See <<other.adoc#x>>\n\n<<_see_other_html>> and <<_see_otherhtml>>"
+    },
+    {
+      "id": "xref-self-document-hash",
+      "category": "references",
+      "expect": "pass",
+      "source": "= Doc *Title*\n\nA xref:#[] B <<#>> C <<#,label>>"
+    },
+    {
+      "id": "xref-self-document-untitled",
+      "category": "references",
+      "expect": "pass",
+      "source": "A xref:#[] B <<#>>"
+    },
+    {
+      "id": "xref-self-document-reftext",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[top,Top Ref]]\n= Doc Title\n\nA <<#>> B <<top>>"
+    },
+    {
+      "id": "xref-natural-section-title",
+      "category": "references",
+      "expect": "pass",
+      "source": "== Section One\n\n== Other\n\nA <<Section One>> B xref:Section One[] C <<Section One,label>> D <<section one>> E <<Other>>"
+    },
+    {
+      "id": "xref-natural-block-titles",
+      "category": "references",
+      "expect": "pass",
+      "source": ".Titled Block\n[#tb]\n====\nx\n====\n\n.Untitled id\n====\ny\n====\n\nA <<Titled Block>> B <<Untitled id>>"
+    },
+    {
+      "id": "xref-natural-reftext",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[blk,Block Ref]]\npara\n\n[#sec2,reftext=Sec Ref]\n== Sec Title\n\nA <<Block Ref>> B <<Sec Ref>> C <<Sec Title>>"
+    },
+    {
+      "id": "xref-natural-inline-anchor-reftext",
+      "category": "references",
+      "expect": "pass",
+      "source": "Text [[in,Inline Ref]] here and anchor:m[Macro Ref].\n\nA <<Inline Ref>> B <<Macro Ref>>"
+    },
+    {
+      "id": "xref-natural-first-wins",
+      "category": "references",
+      "expect": "pass",
+      "source": "== Same\n\n== Same\n\n[[x,Same]]\npara\n\nA <<Same>>"
+    },
+    {
+      "id": "xref-natural-special-characters",
+      "category": "references",
+      "expect": "pass",
+      "source": "== A & B\n\n== Ruby's Guide\n\n== x < y\n\nA <<A & B>> B <<Ruby's Guide>> C <<x < y>>"
+    },
+    {
+      "id": "xref-natural-formatting-title",
+      "category": "references",
+      "expect": "pass",
+      "source": "== *Bold* Title\n\n== Plain `Mono`\n\nA <<Bold Title>> B <<*Bold* Title>> C <<Plain Mono>>"
+    },
+    {
+      "id": "xref-natural-explicit-forms",
+      "category": "references",
+      "expect": "pass",
+      "source": "== Section One\n\nA <<#Section One>> B xref:#Section One[]"
+    },
+    {
+      "id": "xref-natural-compat",
+      "category": "references",
+      "expect": "pass",
+      "source": ":compat-mode:\n\n== Section One\n\nA <<Section One>>"
+    },
+    {
+      "id": "xref-natural-known-id-wins",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[Title]]\npara\n\n== Title\n\nA <<Title>>"
+    },
+    {
+      "id": "xref-natural-attribute-value",
+      "category": "references",
+      "expect": "pass",
+      "source": ":r: <<Section One>>\n:t: Section One\n\n== Section One\n\nA {r} B <<{t}>> C xref:{t}[label]"
+    },
+    {
+      "id": "xref-natural-heading-reading",
+      "category": "references",
+      "expect": "pass",
+      "source": "== Earlier Title\n\n== See <<Earlier Title>>\n\n== Ref <<Later Title>>\n\n== Later Title\n\n<<_see_earlier_title>> <<_ref_later_title>> <<Later Title>>"
+    },
+    {
+      "id": "xref-natural-block-title-reference",
+      "category": "references",
+      "expect": "pass",
+      "source": ".See <<Section One>>\n----\ncode\n----\n\n== Section One"
+    },
+    {
+      "id": "xref-natural-nested-label",
+      "category": "references",
+      "expect": "pass",
+      "source": "[#a]\n.Title with <<Other Title>>\n====\nx\n====\n\n.Other Title\n[#b]\n====\ny\n====\n\nA <<a>> B <<Title with <<Other Title>>>>"
+    },
+    {
+      "id": "xref-natural-uppercase-unicode",
+      "category": "references",
+      "expect": "pass",
+      "source": "== Ärger\n\n== привет\n\nA <<Ärger>> B <<привет>>"
+    },
+    {
+      "id": "xref-include-full-internal",
+      "category": "references",
+      "profile": "include-body-dom-v1",
+      "source": "= Main\n\ninclude::chapter.adoc[]\n\nA <<chapter.adoc#c>> B xref:chapter.adoc#c[] C xref:chapter.adoc[] D <<chapter#c>>",
+      "resources": {
+        "chapter.adoc": "[[c]]\n== Chapter"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "xref-include-docname",
+      "category": "references",
+      "profile": "include-body-dom-v1",
+      "source": "= Main\n\n[[x]]\n== X\n\nA <<main.adoc#x>> B xref:main.adoc[] C xref:main#x[] D <<main#>>",
+      "resources": {},
+      "expect": "pass"
+    },
+    {
+      "id": "xref-include-partial-lines",
+      "category": "references",
+      "profile": "include-body-dom-v1",
+      "source": "include::chapter.adoc[lines=1..2]\n\nA <<chapter.adoc#c>>",
+      "resources": {
+        "chapter.adoc": "[[c]]\n== Chapter\n\nmore"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "xref-include-partial-tags",
+      "category": "references",
+      "profile": "include-body-dom-v1",
+      "source": "include::chapter.adoc[tag=t]\n\nA <<chapter.adoc#c>>\n\ninclude::full.adoc[tags=**]\n\nB <<full.adoc#f>>\n\ninclude::star.adoc[tags=**;!*]\n\nC <<star.adoc#s>>",
+      "resources": {
+        "chapter.adoc": "// tag::t[]\n[[c]]\n== Chapter\n// end::t[]",
+        "full.adoc": "[[f]]\n== Full",
+        "star.adoc": "// tag::a[]\n[[s]]\n== Star\n// end::a[]\nloose"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "xref-include-partial-then-full",
+      "category": "references",
+      "profile": "include-body-dom-v1",
+      "source": "include::chapter.adoc[lines=1]\n\nA <<chapter.adoc#c>>\n\ninclude::chapter.adoc[]\n\nB <<chapter.adoc#c>>",
+      "resources": {
+        "chapter.adoc": "[[c]]\n== Chapter"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "xref-include-nested-directory",
+      "category": "references",
+      "profile": "include-body-dom-v1",
+      "source": "include::parts/one.adoc[]\n\nA <<parts/one.adoc#p>> B <<parts/two.adoc#q>> C xref:parts/two.adoc[]",
+      "resources": {
+        "parts/one.adoc": "[[p]]\n== One\n\ninclude::two.adoc[]",
+        "parts/two.adoc": "[[q]]\n== Two"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "xref-include-non-asciidoc",
+      "category": "references",
+      "profile": "include-body-dom-v1",
+      "source": "include::data.txt[]\n\ninclude::code.rb[]\n\nA <<data.txt#x>> B <<code#x>> C xref:code.rb[]",
+      "resources": {
+        "data.txt": "text",
+        "code.rb": "puts 1"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "xref-include-heading-reading",
+      "category": "references",
+      "profile": "include-body-dom-v1",
+      "source": "== Before <<chapter.adoc#c>>\n\ninclude::chapter.adoc[]\n\n== After <<chapter.adoc#c>>",
+      "resources": {
+        "chapter.adoc": "[[c]]\n== Chapter"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "xref-include-empty-selection",
+      "category": "references",
+      "profile": "include-body-dom-v1",
+      "source": "include::chapter.adoc[lines=9]\n\nA <<chapter.adoc#c>>",
+      "resources": {
+        "chapter.adoc": "[[c]]\n== Chapter"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "xref-self-document-first-section",
+      "category": "references",
+      "expect": "pass",
+      "source": "pre\n\n== First *One*\n\n=== Sub\n\nA <<#>> B xref:#[]\n\n== Second"
+    },
+    {
+      "id": "xref-self-document-reftext-attribute",
+      "category": "references",
+      "expect": "pass",
+      "source": ":reftext: R *x*\n\n== First\n\nA <<#>>"
     }
   ]
 }

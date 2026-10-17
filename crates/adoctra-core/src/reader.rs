@@ -72,6 +72,8 @@ pub(crate) struct Reader<'a> {
     pub comments: Vec<Span>,
     pub directives: Vec<Span>,
     pub includes: Vec<Span>,
+    /// Ruby's `catalog[:includes]`, for interdocument references.
+    pub include_catalog: crate::xref_target::Includes,
     pub inactive: Vec<Span>,
     pub diagnostics: Vec<Diagnostic>,
     pub resource_diagnostics: Vec<Diagnostic>,
@@ -112,6 +114,7 @@ impl<'a> Reader<'a> {
             comments: Vec::new(),
             directives: Vec::new(),
             includes: Vec::new(),
+            include_catalog: Default::default(),
             inactive: Vec::new(),
             diagnostics: Vec::new(),
             resource_diagnostics: Vec::new(),
@@ -575,6 +578,8 @@ impl<'a> Reader<'a> {
                 .saturating_add(relative)
                 .min(resources.limits.max_depth)
         });
+        let full = selection.full();
+        let whole = matches!(selection, crate::include_selection::Selection::All);
         let selected = selection.select(
             input.lines.iter().map(|line| {
                 (
@@ -591,6 +596,24 @@ impl<'a> Reader<'a> {
                 severity: Severity::Warning,
                 message: format!("tag '{tag}' not found in include: {target}"),
             });
+        }
+        // Ruby registers an AsciiDoc include once it pushes any lines.
+        if preprocess && (whole || selected.keep.contains(&true)) {
+            let resources = self.resources.as_ref().expect("explicit resource provider");
+            let primary = self.inputs[0].source_id;
+            let path = |id| {
+                resources
+                    .sources
+                    .get(id)
+                    .and_then(|source| resources.provider.document_path(source.name()))
+            };
+            if let (Some(document), Some(include)) = (path(primary), path(id)) {
+                crate::xref_target::register_include(
+                    &mut self.include_catalog,
+                    crate::xref_target::include_key(&document, &include),
+                    full,
+                );
+            }
         }
         let mut keep = selected.keep.into_iter();
         input.lines.retain(|_| keep.next().unwrap_or(false));

@@ -80,12 +80,17 @@ pub(crate) struct ParseContext {
     /// A section-title anchor's reftext, handed from the heading parser to
     /// block completion.
     pub section_reftext: Option<crate::reftext::Read>,
+    /// `outfilesuffix` pinned when the header is complete (Ruby's
+    /// `Document#outfilesuffix`), for interdocument references.
+    outfilesuffix: Option<String>,
 }
 
 impl ParseContext {
     pub fn new(options: &ParseOptions) -> Self {
         let mut attributes = Attributes::new();
         attributes.set("example-caption", "Example");
+        // The HTML converter's suffix, set before the header (Ruby's init).
+        attributes.set("outfilesuffix", ".html");
         for kind in [
             crate::ast::AdmonitionKind::Note,
             crate::ast::AdmonitionKind::Tip,
@@ -121,11 +126,23 @@ impl ParseContext {
             anchors: Vec::new(),
             reftexts: BTreeMap::new(),
             section_reftext: None,
+            outfilesuffix: None,
         }
     }
 
     pub fn start_body(&mut self) {
         self.replay = Some(Arc::clone(&self.attributes));
+        self.outfilesuffix = self.attributes.get("outfilesuffix").map(str::to_owned);
+    }
+
+    fn xrefs<'a>(
+        outfilesuffix: &'a Option<String>,
+        includes: &'a crate::xref_target::Includes,
+    ) -> crate::xref_target::Scope<'a> {
+        crate::xref_target::Scope {
+            includes,
+            outfilesuffix: outfilesuffix.as_deref(),
+        }
     }
 
     pub fn render_attributes(&self) -> Arc<Attributes> {
@@ -136,18 +153,27 @@ impl ParseContext {
     pub fn register_references(
         &mut self,
         document: &mut crate::Document,
+        includes: &crate::xref_target::Includes,
         diagnostics: &mut Vec<crate::Diagnostic>,
     ) -> (crate::resolve::Registry, crate::resolve::EarlyTitles) {
         let anchors = std::mem::take(&mut self.anchors);
         let reftexts = std::mem::take(&mut self.reftexts);
         let (body_subs, locked, counters) = (&mut self.body_subs, &self.locked, &self.counters);
         let inline_diagnostics = &mut self.inline_diagnostics;
+        let xrefs = Self::xrefs(&self.outfilesuffix, includes);
         crate::resolve::register(
             document,
             anchors,
             reftexts,
             &mut |key, attributes| {
-                body_subs.convert_early(key, attributes, locked, counters, inline_diagnostics)
+                body_subs.convert_early(
+                    key,
+                    attributes,
+                    locked,
+                    counters,
+                    xrefs,
+                    inline_diagnostics,
+                )
             },
             diagnostics,
         )
@@ -159,6 +185,7 @@ impl ParseContext {
         &mut self,
         document: &mut crate::Document,
         (registry, early_titles): (crate::resolve::Registry, crate::resolve::EarlyTitles),
+        includes: &crate::xref_target::Includes,
         references: &mut Vec<crate::Diagnostic>,
     ) {
         std::mem::take(&mut self.body_subs).execute(
@@ -171,6 +198,7 @@ impl ParseContext {
                 registry: &registry,
                 early_titles,
                 references,
+                xrefs: Self::xrefs(&self.outfilesuffix, includes),
             },
         );
     }
@@ -247,10 +275,11 @@ impl ParseContext {
         value: &str,
         span: crate::Span,
         exact: bool,
+        includes: &crate::xref_target::Includes,
     ) -> Vec<crate::Inline> {
         let before = self.inline_diagnostics.len();
         let attributes = Arc::clone(&self.attributes);
-        let mut inlines = self.reading_title(value, span.start, &attributes);
+        let mut inlines = self.reading_title(value, span.start, &attributes, includes);
         if !exact {
             struct Origin(crate::Span);
             impl crate::visit::VisitorMut for Origin {
@@ -273,13 +302,15 @@ impl ParseContext {
         value: &str,
         base: usize,
         attributes: &Attributes,
+        includes: &crate::xref_target::Includes,
     ) -> Vec<crate::Inline> {
         let mut evaluation = crate::substitution_context::Evaluation::definition(
             attributes,
             &self.locked,
             &mut self.counters,
             attributes.get("compat-mode").is_some(),
-        );
+        )
+        .with_xrefs(Self::xrefs(&self.outfilesuffix, includes));
         let inlines = crate::inline::scan_inlines_evaluated(
             value,
             base,

@@ -507,13 +507,10 @@ fn sanitized_section_ids_keep_selected_include_title_and_reference_provenance() 
     let BlockKind::Paragraph { inlines } = &result.document.flat_blocks()[0].kind else {
         panic!()
     };
-    let Inline::CrossReference {
-        target, children, ..
-    } = &inlines[0]
-    else {
+    let Inline::CrossReference { xref, children, .. } = &inlines[0] else {
         panic!()
     };
-    assert_eq!(target, "_жёлтый");
+    assert_eq!(xref.target, "#_жёлтый");
     assert_eq!(children[0].span(), span);
     assert!(tokens_resource(&mut sources, &options, &resources)
         .unwrap()

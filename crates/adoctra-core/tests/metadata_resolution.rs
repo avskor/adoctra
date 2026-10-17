@@ -5,11 +5,14 @@ fn reference(inlines: &[Inline]) -> (&str, &[Inline], adoctra_core::Span) {
         .iter()
         .find_map(|node| match node {
             Inline::CrossReference {
-                target,
+                xref,
                 children,
                 span,
-                ..
-            } => Some((target.as_str(), children.as_slice(), *span)),
+            } => Some((
+                xref.refid.as_deref().unwrap_or_default(),
+                children.as_slice(),
+                *span,
+            )),
             _ => None,
         })
         .expect("cross-reference")

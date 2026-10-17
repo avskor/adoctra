@@ -369,14 +369,26 @@ expanded id and values may open, close or wholly create references. Escapes drop
 the backslash; outside compat-mode a leading `#` is stripped; the angle label is
 left-stripped (blank → textless); the macro label unescapes `\]` and with `=` is an
 AttributeList (first positional = label, `role`; named-only → textless). Source-owned
-references are `Inline::CrossReference { target, role, children, span }` (children:
+references are `Inline::CrossReference { xref, children, span }` (children:
 Text, or one Substituted over the label span when it holds boundaries); consumed refs
-stay empty after it. Value-generated ones are `AttributePart::OpenXref { target,
-role }`/`CloseXref` (lexical values; HTML `<a href>`, JSON/WASM open-xref/close-xref);
-a textless pair gets its label parts and refreshed flat value from
+stay empty after it. Value-generated ones are `AttributePart::OpenXref(Xref)`/`CloseXref`
+(lexical values; HTML `<a href>`, JSON/WASM open-xref/close-xref); `Xref` fields of
+the node are decoded. A textless pair gets its label parts and refreshed flat value from
 resolve::fill_labels (body_subs at conversion, resolve_reading for headings), with
-the unresolved warning on the reference span. Not in pass:m/link parameters yet;
-interdocument paths and natural (title) xrefs keep the refid unchanged.
+the unresolved warning (internal ids only) on the reference span. Not in
+pass:m/link parameters yet. Targets follow Ruby's branches (xref_target.rs):
+`Xref.target` is the href, `refid`/`path`/`fragment` as Ruby's attrs; `doc.adoc#id`
+/ `xref:doc.adoc[]` become `relfileprefix + path + (relfilesuffix || outfilesuffix
+pinned at header end, built-in .html)` unless the path is `docname` or a full include
+(Reader.include_catalog, keyed relative to the document dir via document_path;
+lines/tags selections are partial except `tags=**`). `window`/`opts` constraints
+apply only to interdocument refs. A bare unknown id with a space/uppercase is a
+natural xref (pub(crate) `Xref.natural`, cleared once looked up): conversion builds
+Ruby's `@reftexts` once (lexical label spelling, registration order via
+Target.order); headings at reading search the partial registry uncached. Textless
+labels: `path`, or for `#`/this document its reftext, doctitle or first top-level
+section, else `[^top]`. Character references inside decoded node fields are not
+expanded; the `title` attribute as doctitle and xrefstyle remain work.
 Xref labels: resolve::register builds the registry after reading (auto ids,
 block ids, cataloged anchors in source order); body_subs Execution resolves each
 textless xref after its field's subs, like Ruby's xreftext without xrefstyle:
@@ -539,7 +551,7 @@ asciidoctor's left-boundary rule and trailing-punctuation trimming), an empty
 or omitted text rendered `class="bare"`, and inline markup inside link text;
 **cross-references** — the `<<id>>` / `<<id,text>>` angle form and the
 `xref:id[text]` macro (matched by the macros stage, see above), rendered as an
-internal `<a href="#id">` link, with inline markup kept inside the reftext; a **post-read registry pass**
+`<a href>` to the resolved target (`#id`, interdocument path or natural title id), with inline markup kept inside the reftext; a **post-read registry pass**
 (`adoctra-core/src/resolve.rs`, the first pass over the *whole* document — needed
 because a reference may point forward; labels resolve during conversion) builds a registry of **auto-generated
 section ids** (asciidoctor's `sectids`: lowercase, non-alphanumerics dropped or

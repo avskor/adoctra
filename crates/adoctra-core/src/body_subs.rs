@@ -29,6 +29,7 @@ pub(crate) struct Conversion<'a> {
     pub early_titles: crate::resolve::EarlyTitles,
     /// Unresolved-reference warnings.
     pub references: &'a mut Vec<Diagnostic>,
+    pub xrefs: crate::xref_target::Scope<'a>,
 }
 
 #[derive(Default)]
@@ -125,6 +126,7 @@ impl BodySubs {
         attributes: &Attributes,
         locked: &BTreeSet<String>,
         counters: &BTreeMap<String, String>,
+        xrefs: crate::xref_target::Scope<'_>,
         diagnostics: &mut Vec<Diagnostic>,
     ) -> Option<Vec<Inline>> {
         let pending = self.pending.remove(&key)?;
@@ -132,7 +134,8 @@ impl BodySubs {
         attributes.local_hardbreaks = pending.hardbreaks;
         let mut counters = counters.clone();
         let compat = attributes.get("compat-mode").is_some();
-        let mut evaluation = Evaluation::definition(&attributes, locked, &mut counters, compat);
+        let mut evaluation =
+            Evaluation::definition(&attributes, locked, &mut counters, compat).with_xrefs(xrefs);
         Some(run(pending, &mut evaluation, diagnostics))
     }
 
@@ -147,11 +150,14 @@ impl BodySubs {
             diagnostics: conversion.diagnostics,
             registry: conversion.registry,
             references: conversion.references,
+            xrefs: conversion.xrefs,
+            reftexts: None,
             titles: conversion.early_titles,
             headings: BTreeMap::new(),
             referable: referable_titles(conversion.registry),
             converting: BTreeMap::new(),
             header_title: None,
+            first_section: None,
             resolving: false,
         };
         let mut body = 0;
@@ -163,6 +169,15 @@ impl BodySubs {
                 body = 1;
             }
         }
+        execution.first_section = blocks[body..].iter().find_map(|block| match &block.kind {
+            BlockKind::Section { blocks, .. } => match blocks.first().map(|b| (b.span, &b.kind)) {
+                Some((span, BlockKind::Heading { inlines, .. })) => {
+                    Some(((span.start, span.end), inlines.clone()))
+                }
+                _ => None,
+            },
+            _ => None,
+        });
         execution.blocks(&mut blocks[body..]);
     }
 }
@@ -177,6 +192,10 @@ struct Execution<'a> {
     diagnostics: &'a mut Vec<Diagnostic>,
     registry: &'a crate::resolve::Registry,
     references: &'a mut Vec<Diagnostic>,
+    xrefs: crate::xref_target::Scope<'a>,
+    /// Ruby's `@reftexts`: lexical label to id, built by the first natural
+    /// reference to an unknown id and kept for the rest of the conversion.
+    reftexts: Option<BTreeMap<String, String>>,
     /// Ruby's `@converted_title` for referable block titles, keyed by their
     /// placeholder range: the first reference or the block converts it once.
     titles: BTreeMap<(usize, usize), Vec<Inline>>,
@@ -187,6 +206,9 @@ struct Execution<'a> {
     /// Titles being converted; a reference inside converts them again.
     converting: BTreeMap<(usize, usize), Pending>,
     header_title: Option<Vec<Inline>>,
+    /// Without a document title, Ruby's `doctitle` is the first top-level
+    /// section's title (keyed by its heading range).
+    first_section: Option<((usize, usize), Vec<Inline>)>,
     /// Ruby's `@resolving_xref`: references inside a label being produced
     /// display `[id]`.
     resolving: bool,
@@ -237,21 +259,21 @@ impl Execution<'_> {
         nodes
     }
 
-    /// Resolve every cross-reference in a converted field. A textless one
-    /// takes its label now, with the current conversion state.
+    /// Resolve every cross-reference in a converted field, in order: look up a
+    /// natural reference, then give a textless one its label now, with the
+    /// current conversion state.
     fn resolve(&mut self, nodes: &mut [Inline]) {
         for node in nodes {
             match node {
                 Inline::CrossReference {
-                    target,
+                    xref,
                     children,
                     span,
-                    ..
                 } => {
-                    self.unresolved(target, *span);
+                    self.target(xref, false, *span);
                     if children.is_empty() {
                         // Borrowed labels are not expanded again.
-                        *children = self.label(target, *span);
+                        *children = self.xref_label(xref, false, *span);
                     } else {
                         self.resolve(children);
                     }
@@ -264,31 +286,117 @@ impl Execution<'_> {
                 | Inline::Subscript { children, .. }
                 | Inline::Link { children, .. } => self.resolve(children),
                 // References generated inside attribute values.
-                Inline::AttributeRef { parts, span, .. }
-                | Inline::Substituted { parts, span, .. } => {
+                Inline::AttributeRef { span, .. } | Inline::Substituted { span, .. } => {
                     let span = *span;
-                    for target in crate::resolve::part_targets(parts).collect::<Vec<_>>() {
-                        self.unresolved(&target, span);
-                    }
-                    crate::resolve::fill_labels(node, |target| Some(self.label(target, span)));
+                    crate::resolve::fill_labels(node, |xref, textless| {
+                        self.target(xref, true, span);
+                        textless.then(|| self.xref_label(xref, true, span))
+                    });
                 }
                 _ => {}
             }
         }
     }
 
-    fn unresolved(&mut self, target: &str, span: Span) {
-        if !self.registry.contains_key(target) {
-            self.references.push(Diagnostic {
-                span,
-                severity: crate::Severity::Warning,
-                message: format!("unresolved cross reference: '{target}'"),
-            });
+    /// A natural reference to an unknown id that resembles reftext takes the
+    /// id whose label spells it. An internal id still unknown is reported.
+    fn target(&mut self, xref: &mut crate::Xref, lexical: bool, span: Span) {
+        if let Some(text) = crate::resolve::natural_text(xref, self.registry, lexical) {
+            if let Some(id) = self.resolve_id(&text) {
+                crate::xref_target::retarget(xref, &id, lexical);
+            }
+        }
+        if let Some(id) = crate::resolve::decoded_refid(xref, lexical) {
+            if !self.registry.contains_key(&id) {
+                self.references.push(Diagnostic {
+                    span,
+                    severity: crate::Severity::Warning,
+                    message: format!("unresolved cross reference: '{id}'"),
+                });
+            }
         }
     }
 
+    /// Ruby's `Document#resolve_id` after parsing: every registered node's
+    /// label, in registration order, the first spelling winning.
+    fn resolve_id(&mut self, text: &str) -> Option<String> {
+        if self.reftexts.is_none() {
+            // Assigned eagerly: a lookup while building sees the partial table.
+            self.reftexts = Some(BTreeMap::new());
+            let registry = self.registry;
+            for id in crate::resolve::ordered(registry) {
+                let label = self.xreftext(id);
+                if let Some(spelling) = label.as_deref().and_then(crate::xref_target::lexical_label)
+                {
+                    let table = self.reftexts.as_mut().expect("table");
+                    table.entry(spelling).or_insert_with(|| id.to_owned());
+                }
+            }
+        }
+        self.reftexts.as_ref()?.get(text).cloned()
+    }
+
+    /// The label of a textless reference: another document's path, the
+    /// current document's title (`[^top]` without one), or the target's label.
+    fn xref_label(&mut self, xref: &crate::Xref, lexical: bool, span: Span) -> Vec<Inline> {
+        if let Some(path) = &xref.path {
+            return vec![Inline::Text {
+                value: crate::resolve::decoded(path, lexical),
+                span,
+            }];
+        }
+        match crate::resolve::decoded_refid(xref, lexical) {
+            Some(id) if !id.is_empty() || self.registry.contains_key(&id) => self.label(&id, span),
+            _ => {
+                let mut label = None;
+                if !self.resolving {
+                    self.resolving = true;
+                    label = self.document_xreftext(span);
+                    self.resolving = false;
+                }
+                let mut label = label.unwrap_or_else(|| {
+                    vec![Inline::Text {
+                        value: "[^top]".into(),
+                        span,
+                    }]
+                });
+                crate::resolve::strip_label(&mut label);
+                label
+            }
+        }
+    }
+
+    /// Ruby's `Document#xreftext`: the document's nonempty reftext, else its
+    /// `doctitle` (the document title, else the first section's title).
+    fn document_xreftext(&mut self, span: Span) -> Option<Vec<Inline>> {
+        let registry = self.registry;
+        let header = registry
+            .iter()
+            .find(|(_, target)| matches!(target.title, Some(crate::resolve::Title::Header)));
+        if let Some((id, _)) = header.filter(|(_, target)| target.reftext.is_some()) {
+            return self.xreftext(id);
+        }
+        if let Some(value) = self.attributes.get("reftext").filter(|v| !v.is_empty()) {
+            let mut nodes = self.reftext(crate::reftext::Read::source(value, span.start));
+            struct Origin(Span);
+            impl crate::visit::VisitorMut for Origin {
+                fn visit_span(&mut self, span: &mut Span) {
+                    *span = self.0;
+                }
+            }
+            crate::visit::walk_inlines_mut(&mut Origin(span), &mut nodes);
+            return Some(nodes);
+        }
+        if self.header_title.is_some() {
+            return self.header_title.clone();
+        }
+        let (key, nodes) = self.first_section.clone()?;
+        Some(self.heading(key, &nodes))
+    }
+
     /// Ruby's `xreftext` without an xrefstyle: a nonempty reftext, else the
-    /// title, else `[id]`.
+    /// title, else `[id]`. References inside a label being produced display
+    /// `[id]`.
     fn label(&mut self, id: &str, span: Span) -> Vec<Inline> {
         let fallback = || {
             vec![Inline::Text {
@@ -296,30 +404,37 @@ impl Execution<'_> {
                 span,
             }]
         };
-        let registry = self.registry;
-        let Some(target) = registry.get(id).filter(|_| !self.resolving) else {
+        if !self.registry.contains_key(id) || self.resolving {
             return fallback();
-        };
-        self.resolving = true;
-        let mut label = target
-            .reftext
-            .clone()
-            .map(|read| self.reftext(read))
-            .filter(|nodes| !crate::resolve::inline_text(nodes).is_empty());
-        if label.is_none() {
-            label = match &target.title {
-                Some(crate::resolve::Title::Nodes(nodes)) => Some(self.title(nodes)),
-                Some(crate::resolve::Title::Heading(key, nodes)) => Some(self.heading(*key, nodes)),
-                Some(crate::resolve::Title::Header) => self.header_title.clone(),
-                None => None,
-            };
         }
+        self.resolving = true;
+        let label = self.xreftext(id);
         self.resolving = false;
         let Some(mut label) = label else {
             return fallback();
         };
         crate::resolve::strip_label(&mut label);
         label
+    }
+
+    /// A registered node's nonempty reftext (formatted now), else its title.
+    fn xreftext(&mut self, id: &str) -> Option<Vec<Inline>> {
+        let registry = self.registry;
+        let target = registry.get(id)?;
+        let label = target
+            .reftext
+            .clone()
+            .map(|read| self.reftext(read))
+            .filter(|nodes| !crate::resolve::inline_text(nodes).is_empty());
+        if label.is_some() {
+            return label;
+        }
+        match &target.title {
+            Some(crate::resolve::Title::Nodes(nodes)) => Some(self.title(nodes)),
+            Some(crate::resolve::Title::Heading(key, nodes)) => Some(self.heading(*key, nodes)),
+            Some(crate::resolve::Title::Header) => self.header_title.clone(),
+            None => None,
+        }
     }
 
     /// Ruby's `apply_reftext_subs`, executed again at each reference.
@@ -370,7 +485,8 @@ impl Execution<'_> {
         self.attributes.local_hardbreaks = pending.hardbreaks;
         let compat = self.attributes.get("compat-mode").is_some();
         let mut evaluation =
-            Evaluation::definition(&self.attributes, self.locked, self.counters, compat);
+            Evaluation::definition(&self.attributes, self.locked, self.counters, compat)
+                .with_xrefs(self.xrefs);
         *nodes = run(pending, &mut evaluation, self.diagnostics);
         if let Some(attributes) = evaluation.changed_attributes() {
             self.attributes = attributes;

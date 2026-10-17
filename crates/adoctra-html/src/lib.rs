@@ -408,22 +408,25 @@ fn render_inlines(inlines: &[Inline], out: &mut String) {
                 render_inlines(children, out);
                 out.push_str("</a>");
             }
-            // A cross-reference renders as an internal link `href="#id"`. The
-            // display text (explicit reftext, or the core-generated `[id]`) is in
-            // `children`; no `class="bare"` (that is a link-only concern).
-            Inline::CrossReference {
-                target,
-                role,
-                children,
-                ..
-            } => {
-                out.push_str("<a href=\"#");
-                out.push_str(&escape(target));
+            // A cross-reference renders as a link to its resolved target
+            // (`#id`, or another document's path). The display text (explicit
+            // reftext, or the core-generated label) is in `children`; no
+            // `class="bare"` (that is a link-only concern). Link constraints
+            // only exist on interdocument references.
+            Inline::CrossReference { xref, children, .. } => {
+                out.push_str("<a href=\"");
+                out.push_str(&escape(&xref.target));
                 out.push('"');
-                if let Some(role) = role {
-                    out.push_str(" class=\"");
-                    out.push_str(&escape(role));
-                    out.push('"');
+                for (key, value) in [
+                    ("class", &xref.role),
+                    ("target", &xref.window),
+                    ("rel", &xref.rel),
+                ] {
+                    if let Some(value) = value {
+                        out.push_str(&format!(" {key}=\""));
+                        out.push_str(&escape(value));
+                        out.push('"');
+                    }
                 }
                 out.push('>');
                 render_inlines(children, out);
@@ -564,14 +567,18 @@ fn render_parts(parts: &[adoctra_core::AttributePart], out: &mut String) {
                 out.push_str("</a>")
             }
             // Lexical values keep their entity protection, like link fields.
-            adoctra_core::AttributePart::OpenXref { target, role } => {
-                out.push_str("<a href=\"#");
-                out.push_str(target);
+            adoctra_core::AttributePart::OpenXref(xref) => {
+                out.push_str("<a href=\"");
+                out.push_str(&xref.target);
                 out.push('"');
-                if let Some(role) = role {
-                    out.push_str(" class=\"");
-                    out.push_str(role);
-                    out.push('"');
+                for (key, value) in [
+                    ("class", &xref.role),
+                    ("target", &xref.window),
+                    ("rel", &xref.rel),
+                ] {
+                    if let Some(value) = value {
+                        out.push_str(&format!(" {key}=\"{value}\""));
+                    }
                 }
                 out.push('>');
             }
@@ -1828,6 +1835,23 @@ mod tests {
         let html = render(":r: xref:nope[]\n\n{r}");
         assert!(
             html.contains(r##"<p><a href="#nope">[nope]</a></p>"##),
+            "{html}"
+        );
+    }
+
+    #[test]
+    fn interdocument_and_natural_xrefs_render_resolved_targets() {
+        let html = render(
+            ":p: xref:o&p.adoc#v[V,window=_blank]\n:n: <<Sec Title>>\n\n[[sec]]\n== Sec Title\n\nA <<other.adoc#f>> B xref:other.adoc#f[T,role=r,window=_blank,opts=nofollow] C {p} D <<Sec Title>> E {n} F <<#>>",
+        );
+        assert!(
+            html.contains(concat!(
+                r##"<p>A <a href="other.html#f">other.html</a> "##,
+                r##"B <a href="other.html#f" class="r" target="_blank" rel="nofollow noopener">T</a> "##,
+                r##"C <a href="o&amp;p.html#v" target="_blank" rel="noopener">V</a> "##,
+                r##"D <a href="#sec">Sec Title</a> E <a href="#sec">Sec Title</a> "##,
+                r##"F <a href="#">Sec Title</a></p>"##
+            )),
             "{html}"
         );
     }

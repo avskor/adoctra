@@ -12,6 +12,7 @@ pub(crate) struct Evaluation<'a> {
     attributes: Cow<'a, Attributes>,
     compat: bool,
     state: Option<(&'a BTreeSet<String>, &'a mut BTreeMap<String, String>)>,
+    xrefs: Option<crate::xref_target::Scope<'a>>,
 }
 
 impl Deref for Evaluation<'_> {
@@ -33,6 +34,7 @@ impl<'a> Evaluation<'a> {
             attributes: Cow::Borrowed(attributes),
             state: None,
             compat: false,
+            xrefs: None,
         }
     }
     pub fn definition(
@@ -45,7 +47,17 @@ impl<'a> Evaluation<'a> {
             attributes: Cow::Borrowed(attributes),
             state: Some((locked, counters)),
             compat,
+            xrefs: None,
         }
+    }
+    /// Interdocument references see the includes read so far and the pinned
+    /// `outfilesuffix`.
+    pub fn with_xrefs(mut self, scope: crate::xref_target::Scope<'a>) -> Self {
+        self.xrefs = Some(scope);
+        self
+    }
+    pub fn xrefs(&self) -> Option<crate::xref_target::Scope<'a>> {
+        self.xrefs
     }
     pub fn changed_attributes(self) -> Option<Attributes> {
         match self.attributes {

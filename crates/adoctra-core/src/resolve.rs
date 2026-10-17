@@ -25,6 +25,15 @@ pub(crate) type Registry = BTreeMap<String, Target>;
 pub(crate) struct Target {
     pub reftext: Option<crate::reftext::Read>,
     pub title: Option<Title>,
+    /// Registration order, which Ruby's `resolve_id` follows.
+    pub order: usize,
+}
+
+/// Registered ids in registration order.
+pub(crate) fn ordered(registry: &Registry) -> Vec<&str> {
+    let mut ids: Vec<_> = registry.iter().collect();
+    ids.sort_by_key(|(_, target)| target.order);
+    ids.into_iter().map(|(id, _)| id.as_str()).collect()
 }
 
 /// Converts a deferred block title while reading (BodySubs::convert_early).
@@ -99,6 +108,7 @@ impl Ids<'_> {
             let target = Target {
                 reftext: entry.reftext,
                 title: None,
+                order: self.registry.len(),
             };
             register_id(&mut self.registry, id, target, entry.span, self.diagnostics);
         }
@@ -115,21 +125,20 @@ impl Ids<'_> {
         for inline in inlines {
             match inline {
                 Inline::CrossReference {
-                    target,
+                    xref,
                     children,
                     span,
-                    ..
-                } if children.is_empty() => {
-                    let label = match self.registry.get(target.as_str()) {
-                        None => Some(vec![Inline::Text {
-                            value: format!("[{target}]"),
-                            span: *span,
-                        }]),
-                        Some(_) => self.reading_label(target, *span, attributes),
-                    };
-                    if let Some(mut label) = label {
-                        strip_label(&mut label);
-                        *children = label;
+                } => {
+                    self.reading_target(xref, false, attributes);
+                    if children.is_empty() {
+                        if let Some(mut label) =
+                            self.reading_xref_label(xref, false, *span, attributes)
+                        {
+                            strip_label(&mut label);
+                            *children = label;
+                        }
+                    } else {
+                        self.resolve_reading(children, attributes)
                     }
                 }
                 Inline::Strong { children, .. }
@@ -138,44 +147,130 @@ impl Ids<'_> {
                 | Inline::Mark { children, .. }
                 | Inline::Superscript { children, .. }
                 | Inline::Subscript { children, .. }
-                | Inline::Link { children, .. }
-                | Inline::CrossReference { children, .. } => {
-                    self.resolve_reading(children, attributes)
-                }
+                | Inline::Link { children, .. } => self.resolve_reading(children, attributes),
                 Inline::AttributeRef { span, .. } | Inline::Substituted { span, .. } => {
                     let span = *span;
-                    fill_labels(inline, |target| {
-                        if self.registry.contains_key(target) {
-                            self.reading_label(target, span, attributes)
-                        } else {
-                            Some(vec![Inline::Text {
-                                value: format!("[{target}]"),
-                                span,
-                            }])
-                        }
+                    fill_labels(inline, |xref, textless| {
+                        self.reading_target(xref, true, attributes);
+                        textless
+                            .then(|| self.reading_xref_label(xref, true, span, attributes))
+                            .flatten()
                     });
                 }
                 _ => {}
             }
         }
     }
+
+    /// A natural reference while reading looks its text up among the ids
+    /// registered so far, without caching (Ruby's `resolve_id` before
+    /// `@parsed`): the first whose label spells it wins.
+    fn reading_target(
+        &mut self,
+        xref: &mut crate::Xref,
+        lexical: bool,
+        attributes: &crate::Attributes,
+    ) {
+        let Some(fragment) = natural_text(xref, &self.registry, lexical) else {
+            return;
+        };
+        for id in ordered(&self.registry)
+            .into_iter()
+            .map(str::to_owned)
+            .collect::<Vec<_>>()
+        {
+            let label = self.reading_xreftext(&id, attributes);
+            if label.as_deref().and_then(crate::xref_target::lexical_label)
+                == Some(fragment.clone())
+            {
+                crate::xref_target::retarget(xref, &id, lexical);
+                return;
+            }
+        }
+    }
+
+    /// A textless label while reading: an interdocument path, the referenced
+    /// node's label, or `[id]` for an id not registered yet. The current
+    /// document's title is left to conversion.
+    fn reading_xref_label(
+        &mut self,
+        xref: &crate::Xref,
+        lexical: bool,
+        span: Span,
+        attributes: &crate::Attributes,
+    ) -> Option<Vec<Inline>> {
+        if let Some(path) = &xref.path {
+            return Some(vec![Inline::Text {
+                value: decoded(path, lexical),
+                span,
+            }]);
+        }
+        let id = decoded_refid(xref, lexical)?;
+        if self.registry.contains_key(&id) {
+            self.reading_label(&id, span, attributes)
+        } else if id.is_empty() {
+            None
+        } else {
+            Some(vec![Inline::Text {
+                value: format!("[{id}]"),
+                span,
+            }])
+        }
+    }
 }
 
-/// The decoded targets of cross-references generated inside a value.
-pub(crate) fn part_targets(parts: &[crate::AttributePart]) -> impl Iterator<Item = String> + '_ {
-    parts.iter().filter_map(|part| match part {
-        crate::AttributePart::OpenXref { target, .. } => {
-            Some(crate::attributes::decode_special(target))
-        }
-        _ => None,
+/// The text of a pending natural reference to an unknown id that resembles
+/// reftext, in lexical spelling; clears the pending lookup.
+pub(crate) fn natural_text(
+    xref: &mut crate::Xref,
+    registry: &Registry,
+    lexical: bool,
+) -> Option<String> {
+    if !std::mem::take(&mut xref.natural) {
+        return None;
+    }
+    let fragment = xref.fragment.clone()?;
+    let decoded = if lexical {
+        crate::attributes::decode_special(&fragment)
+    } else {
+        fragment.clone()
+    };
+    if registry.contains_key(&decoded) || !crate::xref_target::looks_like_text(&decoded) {
+        return None;
+    }
+    Some(if lexical {
+        fragment
+    } else {
+        crate::xref_target::protect(&fragment)
     })
 }
 
-/// Textless cross-references generated inside a value: an `OpenXref` directly
-/// followed by its `CloseXref` receives the label as semantic parts, and the
-/// node's flat value follows. Labels lose their link and anchor tags, as
-/// borrowed AST labels do.
-pub(crate) fn fill_labels(node: &mut Inline, label: impl FnMut(&str) -> Option<Vec<Inline>>) {
+/// The decoded registry id of an internal reference (`None` for the
+/// current document or an interdocument path). Fields of value-generated
+/// references are lexical.
+pub(crate) fn decoded_refid(xref: &crate::Xref, lexical: bool) -> Option<String> {
+    if xref.path.is_some() {
+        return None;
+    }
+    xref.refid.as_deref().map(|refid| decoded(refid, lexical))
+}
+
+pub(crate) fn decoded(value: &str, lexical: bool) -> String {
+    if lexical {
+        crate::attributes::decode_special(value)
+    } else {
+        value.to_owned()
+    }
+}
+
+/// Cross-references generated inside a value: `f` resolves each `OpenXref`
+/// in order and, when it is directly followed by its `CloseXref` (textless),
+/// may return its label, inserted as semantic parts; the node's flat value
+/// follows. Labels lose their link and anchor tags, as borrowed AST labels do.
+pub(crate) fn fill_labels(
+    node: &mut Inline,
+    f: impl FnMut(&mut crate::Xref, bool) -> Option<Vec<Inline>>,
+) {
     match node {
         Inline::AttributeRef {
             value: Some(value),
@@ -183,7 +278,7 @@ pub(crate) fn fill_labels(node: &mut Inline, label: impl FnMut(&str) -> Option<V
             ..
         }
         | Inline::Substituted { value, parts, .. } => {
-            if fill_part_labels(parts, label) {
+            if fill_part_labels(parts, f) {
                 *value = crate::attributes::parts_text(parts);
             }
         }
@@ -193,22 +288,20 @@ pub(crate) fn fill_labels(node: &mut Inline, label: impl FnMut(&str) -> Option<V
 
 fn fill_part_labels(
     parts: &mut Vec<crate::AttributePart>,
-    mut label: impl FnMut(&str) -> Option<Vec<Inline>>,
+    mut f: impl FnMut(&mut crate::Xref, bool) -> Option<Vec<Inline>>,
 ) -> bool {
     let mut filled = false;
     let mut i = 0;
     while i < parts.len() {
-        if let crate::AttributePart::OpenXref { target, .. } = &parts[i] {
-            if matches!(parts.get(i + 1), Some(crate::AttributePart::CloseXref)) {
-                let target = crate::attributes::decode_special(target);
-                if let Some(mut nodes) = label(&target) {
-                    strip_label(&mut nodes);
-                    let inserted = label_parts(&nodes);
-                    let count = inserted.len();
-                    parts.splice(i + 1..i + 1, inserted);
-                    i += count;
-                    filled = true;
-                }
+        let textless = matches!(parts.get(i + 1), Some(crate::AttributePart::CloseXref));
+        if let crate::AttributePart::OpenXref(xref) = &mut parts[i] {
+            if let Some(mut nodes) = f(xref, textless).filter(|_| textless) {
+                strip_label(&mut nodes);
+                let inserted = label_parts(&nodes);
+                let count = inserted.len();
+                parts.splice(i + 1..i + 1, inserted);
+                i += count;
+                filled = true;
             }
         }
         i += 1;
@@ -217,7 +310,7 @@ fn fill_part_labels(
 }
 
 /// A borrowed label as semantic parts (plain formatting becomes boundaries).
-fn label_parts(nodes: &[Inline]) -> Vec<crate::AttributePart> {
+pub(crate) fn label_parts(nodes: &[Inline]) -> Vec<crate::AttributePart> {
     use crate::AttributePart as Part;
     let mut parts = Vec::new();
     for node in nodes {
@@ -287,6 +380,23 @@ impl Ids<'_> {
         span: Span,
         attributes: &crate::Attributes,
     ) -> Option<Vec<Inline>> {
+        self.reading_xreftext(id, attributes).or_else(|| {
+            self.registry[id].title.is_none().then(|| {
+                vec![Inline::Text {
+                    value: format!("[{id}]"),
+                    span,
+                }]
+            })
+        })
+    }
+
+    /// Ruby's `xreftext` while reading: a nonempty reftext, else the title;
+    /// `None` without either or for the document title (converted later).
+    fn reading_xreftext(
+        &mut self,
+        id: &str,
+        attributes: &crate::Attributes,
+    ) -> Option<Vec<Inline>> {
         let target = &self.registry[id];
         if let Some(nodes) = target
             .reftext
@@ -314,11 +424,7 @@ impl Ids<'_> {
                 }
             },
             Some(Title::Heading(_, nodes)) => Some(nodes.clone()),
-            Some(Title::Header) => None,
-            None => Some(vec![Inline::Text {
-                value: format!("[{id}]"),
-                span,
-            }]),
+            Some(Title::Header) | None => None,
         }
     }
 }
@@ -349,13 +455,18 @@ impl VisitorMut for Ids<'_> {
         };
         if let Some(id) = block.id.clone() {
             let reftext = self.reftexts.remove(&(block.span.start, block.span.end));
-            let target = Target { reftext, title };
+            let target = Target {
+                reftext,
+                title,
+                order: self.registry.len(),
+            };
             register_id(&mut self.registry, id, target, block.span, self.diagnostics);
         } else if let (BlockKind::Heading { inlines, .. }, false) = (&block.kind, doctitle) {
             let unique = dedup(generate_id(&inline_text(inlines)), &self.registry);
             let target = Target {
                 reftext: None,
                 title,
+                order: self.registry.len(),
             };
             self.registry.insert(unique.clone(), target);
             block.id = Some(unique);
@@ -576,7 +687,7 @@ fn strip_attribute_links(inlines: &mut [Inline]) {
                         crate::AttributePart::OpenLink(_)
                             | crate::AttributePart::CloseLink
                             | crate::AttributePart::Anchor(_)
-                            | crate::AttributePart::OpenXref { .. }
+                            | crate::AttributePart::OpenXref(_)
                             | crate::AttributePart::CloseXref
                     )
                 });
@@ -608,9 +719,9 @@ mod tests {
         fn find(inlines: &[Inline]) -> Option<(String, Vec<Inline>)> {
             for n in inlines {
                 match n {
-                    Inline::CrossReference {
-                        target, children, ..
-                    } => return Some((target.clone(), children.clone())),
+                    Inline::CrossReference { xref, children, .. } => {
+                        return Some((xref.refid.clone().unwrap_or_default(), children.clone()))
+                    }
                     Inline::Strong { children, .. }
                     | Inline::Emphasis { children, .. }
                     | Inline::Monospace { children, .. }

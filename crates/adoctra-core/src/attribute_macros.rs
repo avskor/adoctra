@@ -312,10 +312,10 @@ fn flush_inlines(
 fn single_xref(parts: &[Part]) -> bool {
     matches!(
         (parts.first(), parts.last()),
-        (Some(Part::OpenXref { .. }), Some(Part::CloseXref))
+        (Some(Part::OpenXref(_)), Some(Part::CloseXref))
     ) && parts
         .iter()
-        .filter(|p| matches!(p, Part::OpenXref { .. } | Part::CloseXref))
+        .filter(|p| matches!(p, Part::OpenXref(_) | Part::CloseXref))
         .count()
         == 2
 }
@@ -324,9 +324,10 @@ fn single_xref(parts: &[Part]) -> bool {
 /// its text and semantic boundaries; a textless one stays empty for conversion.
 fn xref_node(mut parts: Vec<Part>, span: Span, label: Span, fold_newlines: bool) -> Inline {
     parts.pop();
-    let Part::OpenXref { target, role } = parts.remove(0) else {
+    let Part::OpenXref(mut xref) = parts.remove(0) else {
         unreachable!()
     };
+    xref.map_fields(crate::attributes::decode_special);
     let children = if parts.iter().any(Part::is_boundary) {
         vec![Inline::Substituted {
             value: crate::attributes::parts_text(&parts),
@@ -350,8 +351,7 @@ fn xref_node(mut parts: Vec<Part>, span: Span, label: Span, fold_newlines: bool)
             .collect()
     };
     Inline::CrossReference {
-        target: crate::attributes::decode_special(&target),
-        role: role.as_deref().map(crate::attributes::decode_special),
+        xref,
         children,
         span,
     }
@@ -521,10 +521,11 @@ fn xref_at(src: &str, start: usize) -> Option<XrefMatch> {
 }
 
 /// The reference's semantic parts. Outside compat mode a leading `#` names a
-/// fragment of this document; the macro form unescapes `\]` and, with an
-/// `=`, reads its label and role from an AttributeList like Ruby's
-/// `extract_attributes_from_text`. Interdocument paths and natural (title)
-/// references keep the refid unchanged.
+/// fragment of this document and `path#id` another document (see
+/// xref_target.rs); the macro form unescapes `\]` and, with an `=`, reads its
+/// label, role and link constraints from an AttributeList like Ruby's
+/// `extract_attributes_from_text`. A natural (title) reference keeps its
+/// refid until conversion looks it up.
 fn xref_parts(
     text: &Text,
     m: &XrefMatch,
@@ -533,30 +534,42 @@ fn xref_parts(
     span: Span,
     report: &mut Report<'_>,
 ) -> Vec<Part> {
-    let mut refid = m.refid.clone();
-    if !compat
-        && text.text[refid.clone()].starts_with('#')
-        && !text.text[refid.clone()].ends_with('&')
-    {
-        refid.start += 1;
-    }
-    let target = crate::attributes::reference_text(&slice(text, refid, None, false));
+    let refid = crate::attributes::reference_text(&slice(text, m.refid.clone(), None, false));
+    let mut xref =
+        crate::xref_target::resolve(&refid, m.macro_form, compat, attributes, attributes.xrefs());
     let mut label = m
         .label
         .clone()
         .map_or_else(Vec::new, |r| slice(text, r, None, m.macro_form));
-    let mut role = None;
     if m.macro_form && !compat && crate::attributes::reference_text(&label).contains('=') {
         let (first, mut named, _) = parse_label(&label, attributes, compat, 0, span, report);
         label = first;
-        role = named.remove("role");
+        xref.role = named.remove("role");
+        // Ruby's append_link_constraint_attrs, for interdocument references.
+        if xref.path.is_some() {
+            let nofollow = named.contains_key("nofollow-option");
+            xref.window = named.remove("window");
+            xref.rel = match &xref.window {
+                Some(window) => {
+                    (window == "_blank" || named.contains_key("noopener-option")).then(|| {
+                        if nofollow {
+                            "nofollow noopener"
+                        } else {
+                            "noopener"
+                        }
+                        .into()
+                    })
+                }
+                None => nofollow.then(|| "nofollow".into()),
+            };
+        }
     }
     if let Some(range) = m.label.clone() {
         report
             .labels
             .insert((span.start, span.end), text.cover_span(range));
     }
-    let mut parts = vec![Part::OpenXref { target, role }];
+    let mut parts = vec![Part::OpenXref(xref)];
     parts.extend(label);
     parts.push(Part::CloseXref);
     parts

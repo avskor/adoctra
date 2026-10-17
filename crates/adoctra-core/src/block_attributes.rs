@@ -80,6 +80,7 @@ pub(crate) fn merge(
     line: AttrLine,
     line_span: Span,
     context: &mut ParseContext,
+    includes: &crate::xref_target::Includes,
 ) -> Vec<Span> {
     let mut source = Text::default();
     // sub_attributes does not protect special characters before expansion.
@@ -119,10 +120,15 @@ pub(crate) fn merge(
                 name.as_deref(),
                 Some("title" | "reftext" | "opts" | "options")
             );
-        let value = field
-            .value
-            .as_ref()
-            .map(|_| field_value(field_text(&expanded, &field), &refs, substitute, context));
+        let value = field.value.as_ref().map(|_| {
+            field_value(
+                field_text(&expanded, &field),
+                &refs,
+                substitute,
+                context,
+                includes,
+            )
+        });
         let Some(name) = name else {
             pending.list.positional.insert(field.index + 1, value);
             continue;
@@ -253,6 +259,7 @@ fn field_value(
     refs: &[Reference],
     substitute: bool,
     context: &mut ParseContext,
+    includes: &crate::xref_target::Includes,
 ) -> AttrValue {
     if !substitute {
         let (text, refs) = renumber(field.text, refs);
@@ -263,7 +270,7 @@ fn field_value(
         };
     }
     let (value, span, exact) = lexical(field);
-    let inlines = context.attribute_value(&value, span, exact);
+    let inlines = context.attribute_value(&value, span, exact, includes);
     AttrValue {
         text: visible_text(&inlines),
         span,
@@ -468,7 +475,13 @@ mod tests {
         let mut context = ParseContext::new(&crate::ParseOptions::default());
         for line in lines {
             let parsed = parse_block_attr_list(line, 0).expect("attribute line");
-            merge(&mut pending, parsed, Span::new(0, line.len()), &mut context);
+            merge(
+                &mut pending,
+                parsed,
+                Span::new(0, line.len()),
+                &mut context,
+                &Default::default(),
+            );
         }
         (pending, context.inline_diagnostics)
     }

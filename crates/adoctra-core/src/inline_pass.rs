@@ -498,9 +498,6 @@ impl Passes {
                 | Inline::Subscript { children, .. } => self.restore(children, attrs, compat),
                 Inline::Link {
                     target, children, ..
-                }
-                | Inline::CrossReference {
-                    target, children, ..
                 } => {
                     *target = reference_text(&self.restore_evaluated(
                         vec![P::Raw(target.clone())],
@@ -508,6 +505,17 @@ impl Passes {
                         compat,
                         0,
                     ));
+                    self.restore(children, attrs, compat);
+                }
+                Inline::CrossReference { xref, children, .. } => {
+                    xref.map_fields(|value| {
+                        reference_text(&self.restore_evaluated(
+                            vec![P::Raw(value.to_owned())],
+                            attrs,
+                            compat,
+                            0,
+                        ))
+                    });
                     self.restore(children, attrs, compat);
                 }
                 Inline::Anchor { id, .. } => {

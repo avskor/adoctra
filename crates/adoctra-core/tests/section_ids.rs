@@ -70,15 +70,14 @@ fn sanitized_ids_deduplicate_and_forward_references_keep_original_title_nodes() 
         panic!()
     };
     let Inline::CrossReference {
-        target,
+        xref,
         children,
         span,
-        ..
     } = &inlines[0]
     else {
         panic!()
     };
-    assert_eq!(target, "_alpha");
+    assert_eq!(xref.target, "#_alpha");
     assert_eq!(&source[span.start..span.end], "<<_alpha>>");
     let Inline::AttributeRef {
         value, parts, span, ..
