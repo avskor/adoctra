@@ -1320,6 +1320,23 @@ background, span }`. Диапазон ячейки — от её специфи�
 `paragraphs`, `blocks` или `literal`; WASM — с диапазонами), подсветка — `table-delimiter`
 для ограничителей и `cell-separator` для разделителей со спецификациями.
 
+Сноски. Макрос сноски распознаётся последней стадией макросов (после xref), как
+`InlineFootnoteMacroRx` Ruby. Сноска из исходного текста — `Inline::Footnote {
+footnote, span }` с диапазоном макроса, созданная значением атрибута —
+`AttributePart::Footnote`. `Footnote { kind, index, id, content }`: `kind` —
+`Definition` (`footnote:[текст]`, `footnote:id[текст]`), `Reference`
+(`footnote:id[]` или повторный id) или `Unresolved` (неизвестный id без текста,
+предупреждение `invalid footnote reference`); `index` — значение счётчика
+`footnote-number` при преобразовании (у ссылки — индекс определения); `content` —
+текст определения после предыдущих подстановок как лексические части с
+семантическими границами. `Document.footnotes` — зарегистрированные определения
+(`FootnoteDefinition { index, id, content, span }`) в порядке регистрации;
+AsciiDoc-ячейка хранит свой список в `CellContent::Blocks { footnotes }`, нумерация
+общая с корневым документом. JSON/WASM экспортируют `name:"footnote"` (части —
+`kind:"footnote"`) с `type`, `index`, `id`, `parts` и список `footnotes` документа и
+ячейки (WASM — с диапазонами); подсветка — `inline-macro`. HTML выводит маркеры и
+список `<div id="footnotes">` Ruby, если не задан `nofootnotes`.
+
 Ссылка, начатая в исходном тексте, — узел `Inline::CrossReference { xref,
 children, span }` с физическим диапазоном всей конструкции (поля `xref`
 декодированы); поглощённые AttributeRef

@@ -289,6 +289,67 @@ pub enum AttributePart {
     /// An inline image or icon recognized by the macros stage (Ruby's
     /// `InlineImageMacroRx`), an atomic value without flat text.
     Image(Box<InlineImage>),
+    /// A footnote recognized by the macros stage (Ruby's
+    /// `InlineFootnoteMacroRx`), an atomic value without flat text: its
+    /// marker shows inline, its content belongs to the document's footnotes.
+    Footnote(Box<Footnote>),
+}
+
+/// What a footnote macro is (Ruby's footnote `type`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FootnoteKind {
+    /// `footnote:[text]` or `footnote:id[text]`: registered and numbered.
+    Definition,
+    /// `footnote:id[]` (or a repeated id) naming a registered footnote.
+    Reference,
+    /// A reference to an unknown id, shown as `[id]`.
+    Unresolved,
+}
+
+/// A footnote macro's semantic value, like Ruby's footnote `Inline`:
+/// `index` is the `footnote-number` counter value at the definition (shared
+/// by references), `content` the definition's text after the earlier
+/// substitutions (whitespace normalized, `\]` unescaped), as lexical parts
+/// with semantic boundaries.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Footnote {
+    pub kind: FootnoteKind,
+    pub index: Option<String>,
+    pub id: Option<String>,
+    pub content: Vec<AttributePart>,
+    /// Registration order within its document (definitions only).
+    pub(crate) sequence: Option<usize>,
+}
+
+impl Footnote {
+    /// Ruby's `convert_inline_footnote` markup, the lexical spelling later
+    /// stages see.
+    fn lexical(&self) -> String {
+        let index = self.index.as_deref().unwrap_or_default();
+        match self.kind {
+            FootnoteKind::Definition => {
+                let id = self
+                    .id
+                    .as_ref()
+                    .map(|id| format!(" id=\"_footnote_{id}\""))
+                    .unwrap_or_default();
+                format!("<sup class=\"footnote\"{id}>[<a id=\"_footnoteref_{index}\" class=\"footnote\" href=\"#_footnotedef_{index}\" title=\"View footnote.\">{index}</a>]</sup>")
+            }
+            FootnoteKind::Reference => format!("<sup class=\"footnoteref\">[<a class=\"footnote\" href=\"#_footnotedef_{index}\" title=\"View footnote.\">{index}</a>]</sup>"),
+            FootnoteKind::Unresolved => format!(
+                "<sup class=\"footnoteref red\" title=\"Unresolved footnote reference.\">[{}]</sup>",
+                self.id.as_deref().unwrap_or_default()
+            ),
+        }
+    }
+
+    /// The marker's visible text: `[index]`, or `[id]` when unresolved.
+    pub fn marker(&self) -> String {
+        match self.kind {
+            FootnoteKind::Unresolved => format!("[{}]", self.id.as_deref().unwrap_or_default()),
+            _ => format!("[{}]", self.index.as_deref().unwrap_or_default()),
+        }
+    }
 }
 
 impl AttributePart {
@@ -305,7 +366,8 @@ impl AttributePart {
             | Self::Anchor(_)
             | Self::OpenXref(_)
             | Self::CloseXref
-            | Self::Image(_) => "",
+            | Self::Image(_)
+            | Self::Footnote(_) => "",
         }
     }
 
@@ -330,6 +392,7 @@ impl AttributePart {
                 | Self::OpenXref(_)
                 | Self::CloseXref
                 | Self::Image(_)
+                | Self::Footnote(_)
         )
     }
 
@@ -343,6 +406,11 @@ impl AttributePart {
             Self::Anchor(id) => *id = f(id),
             Self::OpenXref(xref) => xref.map_fields(f),
             Self::Image(image) => image.map_fields(f),
+            Self::Footnote(footnote) => {
+                if let Some(id) = &mut footnote.id {
+                    *id = f(id);
+                }
+            }
             Self::OpenLink(link) => {
                 link.target = f(&link.target);
                 for value in [
@@ -452,6 +520,7 @@ impl AttributePart {
             }
             Self::LineBreak => "<br>",
             Self::Image(image) => return Cow::Owned(image.lexical()),
+            Self::Footnote(footnote) => return Cow::Owned(footnote.lexical()),
             Self::Anchor(id) => return Cow::Owned(format!("<a id=\"{id}\"></a>")),
             Self::OpenWithAttributes { format, id, role } => {
                 let mut text = Self::Open(*format).lexical().into_owned();

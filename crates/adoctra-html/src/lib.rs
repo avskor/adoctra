@@ -87,6 +87,7 @@ impl Backend for HtmlBackend {
         if doc.blocks.len() == title && auto_toc {
             render_toc(&cx, attributes, "toc", None, None, &mut out);
         }
+        render_footnotes(&doc.footnotes, attributes, &mut out);
         out.push_str("</body>\n</html>\n");
         Ok(out.into_bytes())
     }
@@ -697,11 +698,12 @@ fn render_table(block: &Block, table: &adoctra_core::ast::Table, cx: &Cx, out: &
                 match &cell.content {
                     // The nested document's blocks (Ruby's embedded inner
                     // document).
-                    CellContent::Blocks(blocks) => {
+                    CellContent::Blocks { blocks, footnotes } => {
                         out.push_str("<div class=\"content\">");
                         for child in blocks {
                             render_block(child, cx, out);
                         }
+                        render_footnotes(footnotes, &cx.doc.attributes, out);
                         out.push_str("</div>");
                     }
                     CellContent::Literal(text) => {
@@ -956,6 +958,7 @@ fn render_inlines(inlines: &[Inline], out: &mut String) {
                 out.push_str("\"></a>");
             }
             Inline::Image { image, .. } => render_inline_image(image, out),
+            Inline::Footnote { footnote, .. } => render_footnote(footnote, out),
             // Resolved in core: emit the value, or fall back to the literal
             // `{name}` for a missing attribute (asciidoctor's default).
             Inline::AttributeRef { value, parts, .. } if !parts.is_empty() && value.is_some() => {
@@ -1146,6 +1149,48 @@ fn render_inline_image(image: &adoctra_core::InlineImage, out: &mut String) {
     out.push_str("</span>");
 }
 
+/// Ruby's `convert_inline_footnote`: the numbered marker linking to the
+/// footnote (a definition is also the back-link target), or the unresolved
+/// `[id]`. The content renders in the footnotes list.
+fn render_footnote(footnote: &adoctra_core::Footnote, out: &mut String) {
+    let index = escape(footnote.index.as_deref().unwrap_or_default());
+    match footnote.kind {
+        adoctra_core::FootnoteKind::Definition => {
+            out.push_str("<sup class=\"footnote\"");
+            if let Some(id) = &footnote.id {
+                out.push_str(&format!(" id=\"_footnote_{}\"", attr_value(id)));
+            }
+            out.push_str(&format!(">[<a id=\"_footnoteref_{index}\" class=\"footnote\" href=\"#_footnotedef_{index}\" title=\"View footnote.\">{index}</a>]</sup>"));
+        }
+        adoctra_core::FootnoteKind::Reference => out.push_str(&format!("<sup class=\"footnoteref\">[<a class=\"footnote\" href=\"#_footnotedef_{index}\" title=\"View footnote.\">{index}</a>]</sup>")),
+        adoctra_core::FootnoteKind::Unresolved => out.push_str(&format!(
+            "<sup class=\"footnoteref red\" title=\"Unresolved footnote reference.\">[{}]</sup>",
+            escape(footnote.id.as_deref().unwrap_or_default())
+        )),
+    }
+}
+
+/// Ruby's footnotes list after a document's content (unless `nofootnotes`).
+fn render_footnotes(
+    footnotes: &[adoctra_core::ast::FootnoteDefinition],
+    attributes: &adoctra_core::Attributes,
+    out: &mut String,
+) {
+    if footnotes.is_empty() || attributes.get("nofootnotes").is_some() {
+        return;
+    }
+    out.push_str("<div id=\"footnotes\">\n<hr>\n");
+    for footnote in footnotes {
+        let index = escape(&footnote.index);
+        out.push_str(&format!(
+            "<div class=\"footnote\" id=\"_footnotedef_{index}\">\n<a href=\"#_footnoteref_{index}\">{index}</a>. "
+        ));
+        render_parts(&footnote.content, out);
+        out.push_str("\n</div>\n");
+    }
+    out.push_str("</div>\n");
+}
+
 fn render_parts(parts: &[adoctra_core::AttributePart], out: &mut String) {
     for part in parts {
         match part {
@@ -1193,6 +1238,7 @@ fn render_parts(parts: &[adoctra_core::AttributePart], out: &mut String) {
             }
             adoctra_core::AttributePart::LineBreak => out.push_str("<br>"),
             adoctra_core::AttributePart::Image(image) => render_inline_image(image, out),
+            adoctra_core::AttributePart::Footnote(footnote) => render_footnote(footnote, out),
             adoctra_core::AttributePart::Anchor(id) => {
                 out.push_str("<a id=\"");
                 out.push_str(id);
@@ -2712,6 +2758,22 @@ mod tests {
              <figure class=\"audioblock q\">\n<figcaption class=\"title\">Theme</figcaption>\n<audio src=\"m/s.ogg#t=,3\" autoplay>\nYour browser does not support the audio tag.\n</audio>\n</figure>\n\
              <figure class=\"audioblock\">\n<audio src=\"m/t.ogg\" controls>\nYour browser does not support the audio tag.\n</audio>\n</figure>\n</body>\n</html>\n"
         );
+    }
+
+    #[test]
+    fn footnotes_render_markers_and_the_list() {
+        let html =
+            render("A footnote:[*note* <x>] B footnote:x[named] C footnote:x[] D footnote:y[]");
+        assert!(html.contains("A <sup class=\"footnote\">[<a id=\"_footnoteref_1\" class=\"footnote\" href=\"#_footnotedef_1\" title=\"View footnote.\">1</a>]</sup> B <sup class=\"footnote\" id=\"_footnote_x\">[<a id=\"_footnoteref_2\""), "{html}");
+        assert!(html.contains("C <sup class=\"footnoteref\">[<a class=\"footnote\" href=\"#_footnotedef_2\" title=\"View footnote.\">2</a>]</sup>"), "{html}");
+        assert!(html.contains("D <sup class=\"footnoteref red\" title=\"Unresolved footnote reference.\">[y]</sup>"), "{html}");
+        assert!(html.contains("<div id=\"footnotes\">\n<hr>\n<div class=\"footnote\" id=\"_footnotedef_1\">\n<a href=\"#_footnoteref_1\">1</a>. <strong>note</strong> &lt;x&gt;\n</div>\n<div class=\"footnote\" id=\"_footnotedef_2\">\n<a href=\"#_footnoteref_2\">2</a>. named\n</div>\n</div>\n</body>"), "{html}");
+        assert!(STYLESHEET.contains("#footnotes"));
+        let html = render(":nofootnotes:\n\nA footnote:[hidden]");
+        assert!(!html.contains("id=\"footnotes\""), "{html}");
+        // An AsciiDoc cell lists its nested document's footnotes inside it.
+        let html = render("|===\na|in footnote:[cell note]\n|===");
+        assert!(html.contains("</p>\n<div id=\"footnotes\">\n<hr>\n<div class=\"footnote\" id=\"_footnotedef_1\">\n<a href=\"#_footnoteref_1\">1</a>. cell note\n</div>\n</div>\n</div></td>"), "{html}");
     }
 
     #[test]

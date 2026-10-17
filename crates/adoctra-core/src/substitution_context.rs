@@ -16,6 +16,34 @@ pub(crate) struct Evaluation<'a> {
     /// Inside a nested document, Ruby's `counter` delegates to the root
     /// document: its attributes and locks.
     root: Option<(&'a mut Attributes, &'a BTreeSet<String>)>,
+    /// The document's footnote registry while fields convert (Ruby's
+    /// `Document#footnotes`); without it footnote macros stay text.
+    footnotes: Option<&'a mut Footnotes>,
+}
+
+/// Registered footnote ids (first wins) and the registration order.
+#[derive(Clone, Default, Debug)]
+pub(crate) struct Footnotes {
+    ids: Vec<(String, String)>,
+    next: usize,
+}
+
+impl Footnotes {
+    pub fn find(&self, id: &str) -> Option<&str> {
+        self.ids
+            .iter()
+            .find(|(candidate, _)| candidate == id)
+            .map(|(_, index)| index.as_str())
+    }
+
+    /// Register a definition; returns its registration sequence.
+    pub fn register(&mut self, id: Option<&str>, index: &str) -> usize {
+        if let Some(id) = id {
+            self.ids.push((id.to_owned(), index.to_owned()));
+        }
+        self.next += 1;
+        self.next - 1
+    }
 }
 
 impl Deref for Evaluation<'_> {
@@ -39,6 +67,7 @@ impl<'a> Evaluation<'a> {
             compat: false,
             xrefs: None,
             root: None,
+            footnotes: None,
         }
     }
     pub fn definition(
@@ -53,7 +82,16 @@ impl<'a> Evaluation<'a> {
             compat,
             xrefs: None,
             root: None,
+            footnotes: None,
         }
+    }
+    /// Footnote macros register in this document's footnotes.
+    pub fn with_footnotes(mut self, footnotes: &'a mut Footnotes) -> Self {
+        self.footnotes = Some(footnotes);
+        self
+    }
+    pub fn footnotes(&mut self) -> Option<&mut Footnotes> {
+        self.footnotes.as_deref_mut()
     }
     /// Counters of a nested document read and update the root document.
     pub fn with_root(mut self, root: Option<(&'a mut Attributes, &'a BTreeSet<String>)>) -> Self {

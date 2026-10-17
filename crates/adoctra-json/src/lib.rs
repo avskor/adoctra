@@ -37,6 +37,7 @@ impl Backend for JsonBackend {
             write_block(block, &mut s);
         }
         s.push(']');
+        adoctra_core::json::write_footnote_definitions(&doc.footnotes, &mut s, None);
         if let Some(header) = &doc.header {
             s.push_str(",\"header\":");
             write_header(header, &mut s);
@@ -194,7 +195,7 @@ fn write_cell(cell: &adoctra_core::ast::TableCell, s: &mut String) {
             }
             s.push(']');
         }
-        adoctra_core::ast::CellContent::Blocks(blocks) => {
+        adoctra_core::ast::CellContent::Blocks { blocks, footnotes } => {
             s.push_str(",\"blocks\":[");
             for (i, block) in blocks.iter().enumerate() {
                 if i > 0 {
@@ -203,6 +204,7 @@ fn write_cell(cell: &adoctra_core::ast::TableCell, s: &mut String) {
                 write_block(block, s);
             }
             s.push(']');
+            adoctra_core::json::write_footnote_definitions(footnotes, s, None);
         }
         adoctra_core::ast::CellContent::Literal(text) => {
             s.push_str(",\"literal\":");
@@ -711,6 +713,11 @@ fn write_inlines(inlines: &[Inline], s: &mut String) {
             Inline::Image { image, .. } => {
                 s.push_str("{\"name\":\"image\",");
                 adoctra_core::json::write_inline_image(image, s);
+                s.push('}');
+            }
+            Inline::Footnote { footnote, .. } => {
+                s.push_str("{\"name\":\"footnote\",");
+                adoctra_core::json::write_footnote(footnote, s);
                 s.push('}');
             }
             Inline::CrossReference { xref, children, .. } => {
@@ -1551,6 +1558,27 @@ mod tests {
         assert!(json.contains("\"blocks\":["), "got: {json}");
         assert!(json.contains("\"name\":\"paragraph\""), "got: {json}");
         assert!(json.contains("\"name\":\"strong\""), "got: {json}");
+    }
+
+    #[test]
+    fn footnotes_serialize_markers_and_the_document_list() {
+        let json = render("A footnote:x[*n*] B footnote:x[] C footnote:y[]");
+        assert!(json.contains(r#"{"name":"footnote","type":"definition","index":"1","id":"x","parts":[{"kind":"open","format":"strong"},{"kind":"text","value":"n"},{"kind":"close","format":"strong"}]}"#), "{json}");
+        assert!(
+            json.contains(
+                r#"{"name":"footnote","type":"reference","index":"1","id":null,"parts":[]}"#
+            ),
+            "{json}"
+        );
+        assert!(
+            json.contains(
+                r#"{"name":"footnote","type":"unresolved","index":null,"id":"y","parts":[]}"#
+            ),
+            "{json}"
+        );
+        assert!(json.contains(r#"],"footnotes":[{"index":"1","id":"x","parts":[{"kind":"open","format":"strong"},{"kind":"text","value":"n"},{"kind":"close","format":"strong"}]}]}"#), "{json}");
+        let json = render(":fn: pass:m[footnote:[a]]\n\n{fn}");
+        assert!(json.contains(r#"{"kind":"footnote","type":"definition","index":"1","id":null,"parts":[{"kind":"raw","value":"a"}]}"#), "{json}");
     }
 
     #[test]

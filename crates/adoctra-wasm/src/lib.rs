@@ -132,6 +132,7 @@ fn write_document(doc: &adoctra_core::Document, s: &mut String) {
         write_block(b, s);
     }
     s.push(']');
+    adoctra_core::json::write_footnote_definitions(&doc.footnotes, s, Some(write_span_field));
     if let Some(header) = &doc.header {
         s.push_str(",\"header\":");
         write_header(header, s);
@@ -294,7 +295,7 @@ fn write_cell(cell: &adoctra_core::ast::TableCell, s: &mut String) {
             }
             s.push(']');
         }
-        adoctra_core::ast::CellContent::Blocks(blocks) => {
+        adoctra_core::ast::CellContent::Blocks { blocks, footnotes } => {
             s.push_str(",\"blocks\":[");
             for (i, block) in blocks.iter().enumerate() {
                 if i > 0 {
@@ -303,6 +304,7 @@ fn write_cell(cell: &adoctra_core::ast::TableCell, s: &mut String) {
                 write_block(block, s);
             }
             s.push(']');
+            adoctra_core::json::write_footnote_definitions(footnotes, s, Some(write_span_field));
         }
         adoctra_core::ast::CellContent::Literal(text) => {
             s.push_str(",\"literal\":");
@@ -846,6 +848,11 @@ fn write_inlines(inlines: &[Inline], s: &mut String) {
             Inline::Image { image, .. } => {
                 s.push_str("\"name\":\"image\",");
                 adoctra_core::json::write_inline_image(image, s);
+            }
+            // A footnote marker; definitions carry their content parts.
+            Inline::Footnote { footnote, .. } => {
+                s.push_str("\"name\":\"footnote\",");
+                adoctra_core::json::write_footnote(footnote, s);
             }
             // The editor gets the structured reference (name + resolved value),
             // unlike the backends which only need the resolved text.
@@ -2465,6 +2472,19 @@ mod header_tests {
         let tokens = super::tokens_json_with_source(source, 3);
         assert!(
             tokens.contains(r#"{"span":{"source_id":3,"start":10,"end":32},"kind":"block-macro"}"#),
+            "{tokens}"
+        );
+    }
+
+    #[test]
+    fn footnotes_export_spans_and_inline_macro_tokens() {
+        let source = "A footnote:[n] z";
+        let json = super::parse_json_with_source(source, 3);
+        assert!(json.contains(r#"{"span":{"source_id":3,"start":2,"end":14},"name":"footnote","type":"definition","index":"1","id":null,"parts":[{"kind":"text","value":"n"}]}"#), "{json}");
+        assert!(json.contains(r#""footnotes":[{"span":{"source_id":3,"start":2,"end":14},"index":"1","id":null,"parts":[{"kind":"text","value":"n"}]}]"#), "{json}");
+        let tokens = super::tokens_json_with_source(source, 3);
+        assert!(
+            tokens.contains(r#"{"span":{"source_id":3,"start":2,"end":14},"kind":"inline-macro"}"#),
             "{tokens}"
         );
     }

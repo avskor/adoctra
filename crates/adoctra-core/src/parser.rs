@@ -204,6 +204,7 @@ pub(crate) fn parse_reader<'a>(
         header: header.metadata,
         blocks: Vec::new(),
         has_title: header.effective_title.is_some(),
+        footnotes: Vec::new(),
     };
     let mut diagnostics = Vec::new();
     if let Some(effective) = header.effective_title {
@@ -254,6 +255,7 @@ pub(crate) fn parse_reader<'a>(
     let mut references = Vec::new();
     let registry = context.register_references(&mut doc, &lines.include_catalog, &mut references);
     context.execute_body(&mut doc, registry, &lines.include_catalog, &mut references);
+    doc.footnotes = collect_footnotes(&mut doc.blocks);
 
     // All grammar operates on monotonically increasing reader coordinates.
     // Restore physical source ranges before resolution copies metadata spans.
@@ -1244,13 +1246,16 @@ fn read_table(
         let content = if cell.literal {
             CellContent::Literal(crate::table::text(&cell.text))
         } else if cell.style == Some(crate::ast::CellStyle::Asciidoc) {
-            CellContent::Blocks(read_nested_document(
-                lines,
-                &cell.text,
-                (cell.span.start, cell.span.end),
-                context,
-                diagnostics,
-            ))
+            CellContent::Blocks {
+                blocks: read_nested_document(
+                    lines,
+                    &cell.text,
+                    (cell.span.start, cell.span.end),
+                    context,
+                    diagnostics,
+                ),
+                footnotes: Vec::new(),
+            }
         } else {
             // A header cell (and a csv/dsv literal) is one run, like Ruby's
             // `Cell#text`; body cells split into paragraphs.
@@ -1316,6 +1321,70 @@ fn read_table(
         Span::new(opening.start, end),
         BlockKind::Table(Box::new(table)),
     )
+}
+
+/// A document's registered footnotes in registration order, from the
+/// converted fields; an AsciiDoc cell keeps its nested document's own.
+fn collect_footnotes(blocks: &mut [Block]) -> Vec<crate::ast::FootnoteDefinition> {
+    use crate::visit::{InlineContext, VisitorMut};
+    #[derive(Default)]
+    struct Collect(BTreeMap<usize, crate::ast::FootnoteDefinition>);
+    impl Collect {
+        fn add(&mut self, footnote: &crate::Footnote, span: Span) {
+            if let (Some(sequence), Some(index)) = (footnote.sequence, &footnote.index) {
+                self.0
+                    .entry(sequence)
+                    .or_insert_with(|| crate::ast::FootnoteDefinition {
+                        index: index.clone(),
+                        id: footnote.id.clone(),
+                        content: footnote.content.clone(),
+                        span,
+                    });
+            }
+        }
+    }
+    impl VisitorMut for Collect {
+        fn visit_block(&mut self, block: &mut Block) {
+            let BlockKind::Table(table) = &mut block.kind else {
+                return crate::visit::walk_block_mut(self, block);
+            };
+            if let Some(title) = &mut block.title {
+                self.visit_inlines(title, InlineContext::Title);
+            }
+            for cell in table.cells_mut() {
+                match &mut cell.content {
+                    crate::ast::CellContent::Paragraphs(paragraphs) => {
+                        for inlines in paragraphs {
+                            self.visit_inlines(inlines, InlineContext::Body);
+                        }
+                    }
+                    crate::ast::CellContent::Blocks { blocks, footnotes } => {
+                        *footnotes = collect_footnotes(blocks);
+                    }
+                    crate::ast::CellContent::Literal(_) => {}
+                }
+            }
+        }
+
+        fn visit_inline(&mut self, inline: &mut Inline) {
+            match inline {
+                Inline::Footnote { footnote, span } => self.add(footnote, *span),
+                Inline::AttributeRef { parts, span, .. }
+                | Inline::Substituted { parts, span, .. } => {
+                    for part in parts.iter() {
+                        if let crate::AttributePart::Footnote(footnote) = part {
+                            self.add(footnote, *span);
+                        }
+                    }
+                }
+                _ => {}
+            }
+            crate::visit::walk_inline_mut(self, inline);
+        }
+    }
+    let mut collect = Collect::default();
+    crate::visit::walk_blocks_mut(&mut collect, blocks);
+    collect.0.into_values().collect()
 }
 
 /// Ruby's nested `Document` of an AsciiDoc table cell, read when the cell is

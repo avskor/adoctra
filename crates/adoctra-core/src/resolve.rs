@@ -369,7 +369,9 @@ impl Ids<'_> {
                 | Inline::Superscript { children, .. }
                 | Inline::Subscript { children, .. }
                 | Inline::Link { children, .. } => self.resolve_reading(children, attributes),
-                Inline::AttributeRef { span, .. } | Inline::Substituted { span, .. } => {
+                Inline::AttributeRef { span, .. }
+                | Inline::Substituted { span, .. }
+                | Inline::Footnote { span, .. } => {
                     let span = *span;
                     fill_labels(inline, |xref, textless| {
                         if let Some(label) = apply_fixed(&self.fixed, xref) {
@@ -484,7 +486,7 @@ pub(crate) fn decoded(value: &str, lexical: bool) -> String {
 /// follows. Labels lose their link and anchor tags, as borrowed AST labels do.
 pub(crate) fn fill_labels(
     node: &mut Inline,
-    f: impl FnMut(&mut crate::Xref, bool) -> Option<Vec<Inline>>,
+    mut f: impl FnMut(&mut crate::Xref, bool) -> Option<Vec<Inline>>,
 ) {
     match node {
         Inline::AttributeRef {
@@ -493,9 +495,13 @@ pub(crate) fn fill_labels(
             ..
         }
         | Inline::Substituted { value, parts, .. } => {
-            if fill_part_labels(parts, f) {
+            if fill_part_labels(parts, &mut f) {
                 *value = crate::attributes::parts_text(parts);
             }
+        }
+        // References inside a footnote's text.
+        Inline::Footnote { footnote, .. } => {
+            fill_part_labels(&mut footnote.content, &mut f);
         }
         _ => {}
     }
@@ -503,11 +509,16 @@ pub(crate) fn fill_labels(
 
 fn fill_part_labels(
     parts: &mut Vec<crate::AttributePart>,
-    mut f: impl FnMut(&mut crate::Xref, bool) -> Option<Vec<Inline>>,
+    f: &mut impl FnMut(&mut crate::Xref, bool) -> Option<Vec<Inline>>,
 ) -> bool {
     let mut filled = false;
     let mut i = 0;
     while i < parts.len() {
+        if let crate::AttributePart::Footnote(footnote) = &mut parts[i] {
+            filled |= fill_part_labels(&mut footnote.content, f);
+            i += 1;
+            continue;
+        }
         let textless = matches!(parts.get(i + 1), Some(crate::AttributePart::CloseXref));
         if let crate::AttributePart::OpenXref(xref) = &mut parts[i] {
             if let Some(mut nodes) = f(xref, textless).filter(|_| textless) {
@@ -555,6 +566,10 @@ pub(crate) fn label_parts(nodes: &[Inline]) -> Vec<crate::AttributePart> {
                 parts.extend(label_parts(children))
             }
             Inline::Anchor { .. } => {}
+            Inline::Image { image, .. } => parts.push(Part::Image(Box::new(image.clone()))),
+            Inline::Footnote { footnote, .. } => {
+                parts.push(Part::Footnote(Box::new(footnote.clone())))
+            }
             node => {
                 let format = crate::attribute_macros::format(node).expect("formatting node");
                 let (Inline::Strong { children, .. }
@@ -883,6 +898,10 @@ fn push_text(inlines: &[Inline], s: &mut String) {
             // An anchor or image has no visible text (Ruby removes the
             // generated tags) but still separates lexical runs.
             Inline::Anchor { .. } | Inline::Image { .. } => s.push_str("<>"),
+            // Ruby's footnote markup leaves its `[index]` text.
+            Inline::Footnote { footnote, .. } => s.push_str(&crate::attributes::reference_text(&[
+                crate::AttributePart::Footnote(Box::new(footnote.clone())),
+            ])),
         }
     }
 }
@@ -910,6 +929,39 @@ pub(crate) fn strip_label(inlines: &mut Vec<Inline>) {
             Inline::Link { children, .. } | Inline::CrossReference { children, .. } => {
                 strip_label(children);
                 stripped.append(children);
+            }
+            // A footnote marker loses its link: Ruby's DropAnchorRx leaves
+            // `<sup class="footnote">[1]</sup>`.
+            Inline::Footnote { footnote, span }
+                if footnote.kind != crate::FootnoteKind::Unresolved =>
+            {
+                use crate::AttributePart as Part;
+                let definition = footnote.kind == crate::FootnoteKind::Definition;
+                let marker = footnote.marker();
+                stripped.push(Inline::Substituted {
+                    value: marker.clone(),
+                    parts: vec![
+                        Part::OpenWithAttributes {
+                            format: crate::AttributeFormat::Superscript,
+                            id: footnote
+                                .id
+                                .as_ref()
+                                .filter(|_| definition)
+                                .map(|id| format!("_footnote_{id}")),
+                            role: Some(
+                                if definition {
+                                    "footnote"
+                                } else {
+                                    "footnoteref"
+                                }
+                                .into(),
+                            ),
+                        },
+                        Part::Text(marker),
+                        Part::Close(crate::AttributeFormat::Superscript),
+                    ],
+                    span: *span,
+                });
             }
             // An image keeps its markup without its link tag.
             Inline::Image { image, .. } => {

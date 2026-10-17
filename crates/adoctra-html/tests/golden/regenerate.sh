@@ -22,8 +22,8 @@ echo "using Asciidoctor $(cat ../../../../compatibility/asciidoctor-version)"
 # under sidebars/, block titles under titles/, quote/verse blocks under quotes/
 # and verses/, open blocks under opens/, passthrough blocks under passthrough/,
 # tables of contents under toc/, images under images/, video/audio under
-# media/ and tables under tables/.
-for adoc in *.adoc lists/*.adoc blocks/*.adoc literals/*.adoc admonitions/*.adoc examples/*.adoc sidebars/*.adoc titles/*.adoc quotes/*.adoc verses/*.adoc opens/*.adoc passthrough/*.adoc toc/*.adoc images/*.adoc media/*.adoc tables/*.adoc; do
+# media/, tables under tables/ and footnotes under footnotes/.
+for adoc in *.adoc lists/*.adoc blocks/*.adoc literals/*.adoc admonitions/*.adoc examples/*.adoc sidebars/*.adoc titles/*.adoc quotes/*.adoc verses/*.adoc opens/*.adoc passthrough/*.adoc toc/*.adoc images/*.adoc media/*.adoc tables/*.adoc footnotes/*.adoc; do
   [ -e "$adoc" ] || continue
   name="${adoc%.adoc}"
   ruby "$reference" <"$adoc" >"${name}.expected.html"

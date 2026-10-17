@@ -64,6 +64,19 @@ pub struct Document {
     /// `doctitle` attribute without one. A leading level-0 heading that is not
     /// the title (for example, under a block title) is a part.
     pub has_title: bool,
+    /// The document's footnotes in registration order (Ruby's
+    /// `Document#footnotes`), rendered after the body.
+    pub footnotes: Vec<FootnoteDefinition>,
+}
+
+/// A registered footnote: its number, optional id, converted content and the
+/// source range of its definition macro.
+#[derive(Debug, Clone, PartialEq)]
+pub struct FootnoteDefinition {
+    pub index: String,
+    pub id: Option<String>,
+    pub content: Vec<crate::AttributePart>,
+    pub span: Span,
 }
 
 impl Document {
@@ -594,8 +607,12 @@ pub enum CellContent {
     Paragraphs(Vec<Vec<Inline>>),
     /// An AsciiDoc (`a`) cell: the blocks of its nested document (Ruby's
     /// `inner_document`), read when the cell is created with the parent's
-    /// attributes locked and converted with its own attribute entries.
-    Blocks(Vec<Block>),
+    /// attributes locked and converted with its own attribute entries, and
+    /// that document's own footnotes.
+    Blocks {
+        blocks: Vec<Block>,
+        footnotes: Vec<FootnoteDefinition>,
+    },
     /// A literal (`l`) cell: verbatim text (Ruby's basic substitutions are
     /// output escaping).
     Literal(String),
@@ -800,7 +817,17 @@ pub enum Inline {
         image: crate::InlineImage,
         span: Span,
     },
-    // TODO: other inline macros (footnote:, kbd:, …)
+    /// A footnote macro (`footnote:[text]`, `footnote:id[text]`,
+    /// `footnote:id[]`, legacy `footnoteref:[id,text]`) recognized like Ruby's
+    /// `InlineFootnoteMacroRx`, the last macro of the macros stage, and
+    /// numbered when converted (`footnote-number`). `span` covers the macro.
+    /// A footnote generated entirely by an attribute value stays an
+    /// [`AttributePart::Footnote`](crate::AttributePart::Footnote).
+    Footnote {
+        footnote: crate::Footnote,
+        span: Span,
+    },
+    // TODO: other inline macros (kbd:, …)
 }
 
 impl Inline {
@@ -819,7 +846,8 @@ impl Inline {
             | Inline::Link { span, .. }
             | Inline::CrossReference { span, .. }
             | Inline::Anchor { span, .. }
-            | Inline::Image { span, .. } => span,
+            | Inline::Image { span, .. }
+            | Inline::Footnote { span, .. } => span,
         }
     }
 
@@ -839,7 +867,8 @@ impl Inline {
             | Inline::Link { span, .. }
             | Inline::CrossReference { span, .. }
             | Inline::Anchor { span, .. }
-            | Inline::Image { span, .. } => *span,
+            | Inline::Image { span, .. }
+            | Inline::Footnote { span, .. } => *span,
         }
     }
 }

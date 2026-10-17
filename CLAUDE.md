@@ -562,6 +562,30 @@ deferred fields for every copy). Inside it, psv tables use `!` (`!sv`, also for
 `|===`). HTML wraps the blocks in `<div class="content">`; JSON/WASM `blocks`.
 Ruby's second preprocessing of the cell's first line (`a|include::…[]`) is an
 XFAIL (table-asciidoc-cell-include-first-line).
+**Footnotes**: attribute_macros.rs apply_footnotes is Ruby's
+InlineFootnoteMacroRx, the last macro (after xrefs), over the lexical stream, also
+in pass:m and link parameter passes: `footnote:[text]`, `footnote:id[text]`,
+`footnote:id[]`, legacy `footnoteref:[id,text]`/`[id]` (deprecation warning unless
+compat-mode), escapes, empty macros stay text, content lazy to the first unescaped
+`]` not followed by a generated `</a>`. Content keeps the earlier stages' output as
+lexical parts (normalize_text: strip, LF → space, `\]`); passthrough slots inside
+are restored with it. A definition takes `counter:footnote-number` through the
+Evaluation (so nested documents number on the root) and registers in the
+document's Footnotes registry (Evaluation::with_footnotes: ParseContext while
+reading — section titles, anchored titles, definitions — then body_subs; nested
+documents swap their own, like Ruby's `catalog.merge footnotes: []`); a known id
+is a reference, an unknown id without text warns "invalid footnote reference".
+Like Ruby, conversion restarts the counter from the header attributes. The
+atomic `AttributePart::Footnote(Box<Footnote>)` (kind/index/id/content/sequence,
+lexical = Ruby's sup markup) becomes source-owned `Inline::Footnote`. After
+conversion parser.rs collect_footnotes builds `Document.footnotes`
+(FootnoteDefinition, registration order, deduplicated by sequence) and each
+AsciiDoc cell's `CellContent::Blocks { footnotes }`. Section ids see `[N]`;
+borrowed xref labels drop the marker link (sup with role); textless xrefs inside
+the content get labels. HTML renders Ruby's markers and the `<div
+id="footnotes">` list after the body (and inside AsciiDoc cells) unless
+`nofootnotes`; JSON/WASM `name:"footnote"` / `kind:"footnote"` (type, index, id,
+parts) and a document `footnotes` list; token `inline-macro` projected from AST.
 Xref labels: resolve::register builds the registry after reading (auto ids,
 block ids, cataloged anchors in source order); body_subs Execution resolves each
 textless xref after its field's subs, like Ruby's xreftext:
@@ -984,7 +1008,7 @@ Scaffold only: DOCX backend; the extension API exists but `parse`/`convert` do
 not invoke it yet.
 
 Not yet implemented (common asks — treat as roadmap, do not assume present):
-broader language coverage (first-line preprocessing of AsciiDoc table cells, footnotes,
+broader language coverage (first-line preprocessing of AsciiDoc table cells,
 remaining block/inline macros). The full block-attribute list is now *parsed* (style, named
 attributes, `%options`, id/role folding), but most of it has nothing to render
 against yet: a few **styles that change a block's type** (`[stem]`/`[latexmath]` →

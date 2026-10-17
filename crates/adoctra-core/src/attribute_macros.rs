@@ -288,6 +288,7 @@ fn flush_inlines(
     }
     text = apply_anchors(text, report);
     text = apply_xrefs(text, attributes, report);
+    text = apply_footnotes(text, attributes, report);
     text = crate::post_replacements::apply(text, attributes.hardbreaks(), edges.1);
     let written = crate::substitution_text::write_back(std::mem::take(nodes), text, fold_newlines);
     // Source-owned anchors and cross-references keep their spanned AST nodes;
@@ -307,6 +308,17 @@ fn flush_inlines(
             };
             Inline::Image {
                 image: *image,
+                span,
+            }
+        }
+        Inline::Substituted { parts, span, .. }
+            if matches!(parts.as_slice(), [Part::Footnote(_)]) =>
+        {
+            let Some(Part::Footnote(footnote)) = parts.into_iter().next() else {
+                unreachable!()
+            };
+            Inline::Footnote {
+                footnote: *footnote,
                 span,
             }
         }
@@ -385,7 +397,8 @@ fn apply_inner(
         text = apply_stage(text, stage, attributes, compat, depth, true, report);
     }
     let text = apply_anchors(text, report);
-    apply_xrefs(text, attributes, report).into_parts()
+    let text = apply_xrefs(text, attributes, report);
+    apply_footnotes(text, attributes, report).into_parts()
 }
 
 /// Ruby's `InlineImageMacroRx`, the first built-in macro (before links) over
@@ -661,6 +674,210 @@ fn apply_xrefs(text: Text, attributes: &mut Evaluation<'_>, report: &mut Report<
     }
     text.copy(copied..src.len(), &mut output);
     output
+}
+
+/// Ruby's `InlineFootnoteMacroRx`, after cross-references: `footnote:[text]`,
+/// `footnote:id[text]`, `footnote:id[]` and the legacy `footnoteref:[id,text]`
+/// / `footnoteref:[id]`, over the lexical result of the earlier stages (the
+/// content keeps their output). A definition takes the next `footnote-number`
+/// and registers in the document; a known id is a reference, an unknown one
+/// without text warns. An escaped macro loses its backslash; an empty one,
+/// or any without a footnote registry, stays text.
+fn apply_footnotes(text: Text, attributes: &mut Evaluation<'_>, report: &mut Report<'_>) -> Text {
+    let src = &text.text;
+    if !src.contains("tnote") || !src.contains('[') || attributes.footnotes().is_none() {
+        return text;
+    }
+    let compat = attributes.get("compat-mode").is_some();
+    let mut output = Text::default();
+    let mut copied = 0;
+    let mut at = 0;
+    while at < src.len() {
+        let escaped = src.as_bytes()[at] == b'\\';
+        let start = at + usize::from(escaped);
+        let Some(m) = footnote_at(src, start) else {
+            at += src[at..].chars().next().unwrap().len_utf8();
+            continue;
+        };
+        let content = m.content.clone().map(|r| slice(&text, r, None, true));
+        let (id, content) = match (m.legacy, content) {
+            (true, None) => (None, None),
+            (true, Some(content)) => {
+                let lexical = crate::attributes::reference_text(&content);
+                let (id, rest) = match lexical.split_once(',') {
+                    Some((id, _)) => {
+                        let rest = m.content.clone().map(|r| {
+                            let comma = r.start + text.text[r.clone()].find(',').unwrap() + 1;
+                            slice(&text, comma..r.end, None, true)
+                        });
+                        (id.to_owned(), rest)
+                    }
+                    None => (lexical, None),
+                };
+                (Some(crate::attributes::decode_special(&id)), rest)
+            }
+            (false, content) => (m.id.clone().map(|r| src[r].to_owned()), content),
+        };
+        if escaped || (id.is_none() && content.is_none()) {
+            text.copy(copied..at, &mut output);
+            text.copy(start..m.end, &mut output);
+            copied = m.end;
+            at = m.end;
+            continue;
+        }
+        text.copy(copied..at, &mut output);
+        let span = text.match_span(at..m.end);
+        if m.legacy && !compat {
+            report.passes.diagnostics.push(crate::Diagnostic {
+                span,
+                severity: crate::Severity::Warning,
+                message: format!(
+                    "found deprecated footnoteref macro: {}; use footnote macro with target instead",
+                    crate::attributes::decode_special(&src[start..m.end])
+                ),
+            });
+        }
+        let known = id.as_deref().and_then(|id| {
+            attributes
+                .footnotes()
+                .and_then(|f| f.find(id).map(str::to_owned))
+        });
+        let footnote = match (known, content) {
+            (Some(index), _) => crate::Footnote {
+                kind: crate::FootnoteKind::Reference,
+                index: Some(index),
+                id: None,
+                content: Vec::new(),
+                sequence: None,
+            },
+            (None, Some(content)) => {
+                let effect = attributes.execute(
+                    "counter:footnote-number",
+                    span,
+                    &mut None,
+                    &mut report.passes.diagnostics,
+                );
+                let index = crate::attributes::parts_text(&effect.parts);
+                let sequence = attributes
+                    .footnotes()
+                    .map(|f| f.register(id.as_deref(), &index));
+                crate::Footnote {
+                    kind: crate::FootnoteKind::Definition,
+                    index: Some(index),
+                    id,
+                    content: normalize_text(content),
+                    sequence,
+                }
+            }
+            (None, None) => {
+                report.passes.diagnostics.push(crate::Diagnostic {
+                    span,
+                    severity: crate::Severity::Warning,
+                    message: format!(
+                        "invalid footnote reference: {}",
+                        id.as_deref().unwrap_or_default()
+                    ),
+                });
+                crate::Footnote {
+                    kind: crate::FootnoteKind::Unresolved,
+                    index: None,
+                    id,
+                    content: Vec::new(),
+                    sequence: None,
+                }
+            }
+        };
+        text.replace_parts(
+            at..m.end,
+            &[Part::Footnote(Box::new(footnote))],
+            &mut output,
+        );
+        copied = m.end;
+        at = m.end;
+    }
+    text.copy(copied..src.len(), &mut output);
+    output
+}
+
+/// Ruby's `normalize_text` with whitespace normalization: strip the edges
+/// (up to a generated boundary) and turn line feeds into spaces.
+fn normalize_text(parts: Vec<Part>) -> Vec<Part> {
+    let mut parts: Vec<Part> = parts
+        .into_iter()
+        .map(|part| match part {
+            Part::Text(t) => Part::Text(t.replace('\n', " ")),
+            Part::Raw(t) => Part::Raw(t.replace('\n', " ")),
+            part => part,
+        })
+        .collect();
+    let space = |c: char| matches!(c, ' ' | '\t' | '\n' | '\x0b' | '\x0c' | '\r' | '\0');
+    while let Some(Part::Text(t) | Part::Raw(t)) = parts.first_mut() {
+        *t = t.trim_start_matches(space).to_owned();
+        if !t.is_empty() {
+            break;
+        }
+        parts.remove(0);
+    }
+    while let Some(Part::Text(t) | Part::Raw(t)) = parts.last_mut() {
+        *t = t.trim_end_matches(space).to_owned();
+        if !t.is_empty() {
+            break;
+        }
+        parts.pop();
+    }
+    parts
+}
+
+struct FootnoteMatch {
+    end: usize,
+    legacy: bool,
+    id: Option<Range<usize>>,
+    content: Option<Range<usize>>,
+}
+
+/// `footnote(?:(ref):|:([\w-]+)?)\[(?:|(.*?[^\\]))\](?!</a>)`, across lines.
+fn footnote_at(src: &str, start: usize) -> Option<FootnoteMatch> {
+    let rest = src[start..].strip_prefix("footnote")?;
+    let after = start + 8;
+    let (legacy, id, bracket) = if rest.starts_with("ref:") {
+        (true, None, after + 4)
+    } else {
+        let id_start = after + rest.strip_prefix(':').map(|_| 1)?;
+        let len: usize = src[id_start..]
+            .chars()
+            .take_while(|&c| word(c) || c == '-')
+            .map(char::len_utf8)
+            .sum();
+        (
+            false,
+            (len > 0).then_some(id_start..id_start + len),
+            id_start + len,
+        )
+    };
+    if !src[bracket..].starts_with('[') {
+        return None;
+    }
+    // Not the end of a generated link label.
+    let closes = |i: usize| !src[i + 1..].starts_with("</a>");
+    if src[bracket + 1..].starts_with(']') && closes(bracket + 1) {
+        return Some(FootnoteMatch {
+            end: bracket + 2,
+            legacy,
+            id,
+            content: None,
+        });
+    }
+    let first = src[bracket + 1..].chars().next()?.len_utf8();
+    let close = src[bracket + 1 + first..]
+        .match_indices(']')
+        .map(|(i, _)| bracket + 1 + first + i)
+        .find(|&i| src.as_bytes()[i - 1] != b'\\' && closes(i))?;
+    Some(FootnoteMatch {
+        end: close + 1,
+        legacy,
+        id,
+        content: Some(bracket + 1..close),
+    })
 }
 
 struct XrefMatch {

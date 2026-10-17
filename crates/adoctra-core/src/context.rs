@@ -114,6 +114,9 @@ pub(crate) struct ParseContext {
     /// The root document's reading attributes and locks while nested
     /// documents are read: their counters delegate to it.
     root: Option<(Arc<Attributes>, BTreeSet<String>)>,
+    /// Footnotes registered while reading (section titles, anchored block
+    /// titles, attribute definitions), handed to conversion.
+    footnotes: crate::substitution_context::Footnotes,
 }
 
 fn root_of(
@@ -136,6 +139,7 @@ pub(crate) struct Outer {
     nested: bool,
     /// Whether this level made the parent the root document.
     root: bool,
+    footnotes: crate::substitution_context::Footnotes,
 }
 
 /// Ruby's `DEFAULT_ATTRIBUTES` that adoctra models.
@@ -214,6 +218,7 @@ impl ParseContext {
             outfilesuffix: None,
             nested: false,
             root: None,
+            footnotes: Default::default(),
         }
     }
 
@@ -248,6 +253,7 @@ impl ParseContext {
             self.root = Some((Arc::clone(&parent), self.locked.clone()));
         }
         Outer {
+            footnotes: std::mem::take(&mut self.footnotes),
             root,
             attributes: parent,
             replay: self.replay.take(),
@@ -269,6 +275,7 @@ impl ParseContext {
             attributes: header,
             entries: std::mem::replace(&mut self.body_subs.entries, outer.entries),
             locked: std::mem::replace(&mut self.locked, outer.locked),
+            footnotes: std::mem::replace(&mut self.footnotes, outer.footnotes),
         };
         self.body_subs.nested.insert(key, nested);
         self.attributes = if outer.root {
@@ -363,6 +370,7 @@ impl ParseContext {
                 sections: &self.sections,
                 references,
                 xrefs: Self::xrefs(&self.outfilesuffix, includes),
+                footnotes: std::mem::take(&mut self.footnotes),
             },
         );
     }
@@ -374,7 +382,8 @@ impl ParseContext {
             &mut self.counters,
             self.quote_compat,
         )
-        .with_root(root_of(&mut self.root));
+        .with_root(root_of(&mut self.root))
+        .with_footnotes(&mut self.footnotes);
         let parts = crate::inline_attributes::implicit_title(
             value,
             &mut evaluation,
@@ -401,7 +410,8 @@ impl ParseContext {
             &mut self.counters,
             self.quote_compat,
         )
-        .with_root(root_of(&mut self.root));
+        .with_root(root_of(&mut self.root))
+        .with_footnotes(&mut self.footnotes);
         let result =
             crate::reftext::read(value, base, &mut evaluation, &mut self.inline_diagnostics);
         if let Some(attributes) = evaluation.changed_attributes() {
@@ -425,7 +435,8 @@ impl ParseContext {
             &mut self.counters,
             self.quote_compat,
         )
-        .with_root(root_of(&mut self.root));
+        .with_root(root_of(&mut self.root))
+        .with_footnotes(&mut self.footnotes);
         let result =
             crate::inline_attributes::apply(source, &mut evaluation, &mut self.inline_diagnostics);
         if let Some(attributes) = evaluation.changed_attributes() {
@@ -478,6 +489,7 @@ impl ParseContext {
             attributes.get("compat-mode").is_some(),
         )
         .with_root(root_of(&mut self.root))
+        .with_footnotes(&mut self.footnotes)
         .with_xrefs(Self::xrefs(&self.outfilesuffix, includes));
         let inlines = crate::inline::scan_inlines_evaluated(
             value,
@@ -540,7 +552,8 @@ impl ParseContext {
             &mut self.counters,
             self.quote_compat,
         )
-        .with_root(root_of(&mut self.root));
+        .with_root(root_of(&mut self.root))
+        .with_footnotes(&mut self.footnotes);
         let effect = evaluation.execute(
             &format!("counter:{context}-number"),
             block.span,
@@ -611,7 +624,8 @@ impl ParseContext {
                 &mut self.counters,
                 self.quote_compat,
             )
-            .with_root(root_of(&mut self.root));
+            .with_root(root_of(&mut self.root))
+            .with_footnotes(&mut self.footnotes);
             let effect = evaluation.execute(
                 counter,
                 crate::Span::new(key.0, key.1),
@@ -652,7 +666,8 @@ impl ParseContext {
                 &mut self.counters,
                 self.quote_compat,
             )
-            .with_root(root_of(&mut self.root));
+            .with_root(root_of(&mut self.root))
+            .with_footnotes(&mut self.footnotes);
             let parts = attribute_entry_parts_report(
                 &v,
                 &mut evaluation,

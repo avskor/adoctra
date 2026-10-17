@@ -190,6 +190,11 @@ pub(crate) fn tokens_reader<'a>(
                     self.0.push((*span, TokenKind::LineBreak));
                 }
             }
+            // Footnotes are numbered during conversion; the syntax-only scan
+            // leaves their macros as text.
+            if let Inline::Footnote { span, .. } = inline {
+                self.0.push((*span, TokenKind::InlineMacro));
+            }
             if let Inline::AttributeRef { name, span, .. } = inline {
                 if name.starts_with("set:")
                     || name.starts_with("counter:")
@@ -682,6 +687,13 @@ pub(crate) fn flatten_inlines(inlines: &[Inline], out: &mut Vec<Token>) {
                 out.push(Token {
                     span: *span,
                     kind: TokenKind::Anchor,
+                });
+            }
+            // One token over the whole footnote macro.
+            Inline::Footnote { span, .. } => {
+                out.push(Token {
+                    span: *span,
+                    kind: TokenKind::InlineMacro,
                 });
             }
             // One token over the whole `image:…[…]` / `icon:…[…]` macro.

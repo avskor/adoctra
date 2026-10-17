@@ -63,6 +63,61 @@ pub fn write_attribute_parts_map(attributes: &crate::Attributes, out: &mut Strin
 
 /// The fields of an inline image or icon (without braces): lexical values,
 /// the flat alt text and its parts.
+/// A footnote's fields (without braces): `type` (`definition`, `reference`
+/// or `unresolved`), `index`, `id` and the definition's content `parts`.
+pub fn write_footnote(footnote: &crate::Footnote, out: &mut String) {
+    out.push_str(match footnote.kind {
+        crate::FootnoteKind::Definition => "\"type\":\"definition\",\"index\":",
+        crate::FootnoteKind::Reference => "\"type\":\"reference\",\"index\":",
+        crate::FootnoteKind::Unresolved => "\"type\":\"unresolved\",\"index\":",
+    });
+    match &footnote.index {
+        Some(index) => escape_into(index, out),
+        None => out.push_str("null"),
+    }
+    out.push_str(",\"id\":");
+    match &footnote.id {
+        Some(id) => escape_into(id, out),
+        None => out.push_str("null"),
+    }
+    out.push_str(",\"parts\":");
+    write_parts_array(&footnote.content, out);
+}
+
+/// A document's footnotes list (`"footnotes":[…]`, after a comma), omitted
+/// when empty. `span` writes each definition's span field, if any.
+pub fn write_footnote_definitions(
+    footnotes: &[crate::ast::FootnoteDefinition],
+    out: &mut String,
+    span: Option<fn(&crate::Span, &mut String)>,
+) {
+    if footnotes.is_empty() {
+        return;
+    }
+    out.push_str(",\"footnotes\":[");
+    for (i, footnote) in footnotes.iter().enumerate() {
+        if i > 0 {
+            out.push(',');
+        }
+        out.push('{');
+        if let Some(span_field) = span {
+            span_field(&footnote.span, out);
+            out.push(',');
+        }
+        out.push_str("\"index\":");
+        escape_into(&footnote.index, out);
+        out.push_str(",\"id\":");
+        match &footnote.id {
+            Some(id) => escape_into(id, out),
+            None => out.push_str("null"),
+        }
+        out.push_str(",\"parts\":");
+        write_parts_array(&footnote.content, out);
+        out.push('}');
+    }
+    out.push(']');
+}
+
 pub fn write_inline_image(image: &crate::InlineImage, out: &mut String) {
     out.push_str(&format!("\"icon\":{},\"target\":", image.icon));
     escape_into(&image.target, out);
@@ -128,6 +183,12 @@ fn write_parts_array(parts: &[crate::AttributePart], out: &mut String) {
         if let crate::AttributePart::Anchor(id) = part {
             out.push_str("{\"kind\":\"anchor\",\"id\":");
             escape_into(id, out);
+            out.push('}');
+            continue;
+        }
+        if let crate::AttributePart::Footnote(footnote) = part {
+            out.push_str("{\"kind\":\"footnote\",");
+            write_footnote(footnote, out);
             out.push('}');
             continue;
         }

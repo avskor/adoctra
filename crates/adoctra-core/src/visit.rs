@@ -42,6 +42,9 @@ pub fn walk_document_mut(visitor: &mut (impl VisitorMut + ?Sized), document: &mu
         }
     }
     walk_blocks_mut(visitor, &mut document.blocks);
+    for footnote in &mut document.footnotes {
+        visitor.visit_span(&mut footnote.span);
+    }
 }
 
 pub fn walk_blocks_mut(visitor: &mut (impl VisitorMut + ?Sized), blocks: &mut [Block]) {
@@ -103,7 +106,12 @@ pub fn walk_block_mut(visitor: &mut (impl VisitorMut + ?Sized), block: &mut Bloc
                             visitor.visit_inlines(inlines, InlineContext::Body);
                         }
                     }
-                    crate::ast::CellContent::Blocks(blocks) => walk_blocks_mut(visitor, blocks),
+                    crate::ast::CellContent::Blocks { blocks, footnotes } => {
+                        walk_blocks_mut(visitor, blocks);
+                        for footnote in footnotes {
+                            visitor.visit_span(&mut footnote.span);
+                        }
+                    }
                     crate::ast::CellContent::Literal(_) => {}
                 }
             }
@@ -137,6 +145,7 @@ pub fn walk_inline_mut(visitor: &mut (impl VisitorMut + ?Sized), inline: &mut In
         | Inline::CrossReference { children, .. } => walk_inlines_mut(visitor, children),
         Inline::Anchor { .. }
         | Inline::Image { .. }
+        | Inline::Footnote { .. }
         | Inline::Text { .. }
         | Inline::Raw { .. }
         | Inline::Substituted { .. }

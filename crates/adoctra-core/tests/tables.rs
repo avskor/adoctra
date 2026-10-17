@@ -42,7 +42,7 @@ fn paragraphs(cell: &TableCell) -> Vec<String> {
     match &cell.content {
         CellContent::Paragraphs(paragraphs) => paragraphs.iter().map(|p| text(p)).collect(),
         CellContent::Literal(text) => vec![format!("literal:{text}")],
-        CellContent::Blocks(blocks) => vec![format!("blocks:{}", blocks.len())],
+        CellContent::Blocks { blocks, .. } => vec![format!("blocks:{}", blocks.len())],
     }
 }
 
@@ -372,7 +372,7 @@ fn included_rows_keep_physical_cell_spans() {
 /// The blocks of an AsciiDoc cell.
 fn cell_blocks(cell: &TableCell) -> &[Block] {
     match &cell.content {
-        CellContent::Blocks(blocks) => blocks,
+        CellContent::Blocks { blocks, .. } => blocks,
         other => panic!("not an AsciiDoc cell: {other:?}"),
     }
 }

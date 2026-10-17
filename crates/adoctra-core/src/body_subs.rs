@@ -27,6 +27,7 @@ pub(crate) struct Nested {
     pub attributes: Attributes,
     pub entries: Vec<Declaration>,
     pub locked: BTreeSet<String>,
+    pub footnotes: crate::substitution_context::Footnotes,
 }
 
 /// Shared conversion state and outputs, borrowed from the parse context.
@@ -41,6 +42,8 @@ pub(crate) struct Conversion<'a> {
     /// Unresolved-reference warnings.
     pub references: &'a mut Vec<Diagnostic>,
     pub xrefs: crate::xref_target::Scope<'a>,
+    /// Footnotes registered while reading.
+    pub footnotes: crate::substitution_context::Footnotes,
 }
 
 #[derive(Default)]
@@ -161,6 +164,7 @@ impl BodySubs {
             locked: std::borrow::Cow::Borrowed(conversion.locked),
             nested: std::mem::take(&mut self.nested),
             root: None,
+            footnotes: conversion.footnotes,
             counters: conversion.counters,
             diagnostics: conversion.diagnostics,
             registry: conversion.registry,
@@ -209,6 +213,8 @@ struct Execution<'a> {
     /// The root document's attributes and locks while a nested document
     /// converts: its counters delegate there.
     root: Option<(Attributes, std::borrow::Cow<'a, BTreeSet<String>>)>,
+    /// The converting document's footnote registry.
+    footnotes: crate::substitution_context::Footnotes,
     counters: &'a mut BTreeMap<String, String>,
     diagnostics: &'a mut Vec<Diagnostic>,
     registry: &'a crate::resolve::Registry,
@@ -311,7 +317,9 @@ impl Execution<'_> {
                 | Inline::Subscript { children, .. }
                 | Inline::Link { children, .. } => self.resolve(children),
                 // References generated inside attribute values.
-                Inline::AttributeRef { span, .. } | Inline::Substituted { span, .. } => {
+                Inline::AttributeRef { span, .. }
+                | Inline::Substituted { span, .. }
+                | Inline::Footnote { span, .. } => {
                     let span = *span;
                     crate::resolve::fill_labels(node, |xref, textless| {
                         if let Some(label) = crate::resolve::apply_fixed(&self.fixed, xref) {
@@ -485,7 +493,8 @@ impl Execution<'_> {
         let compat = self.attributes.get("compat-mode").is_some();
         let mut evaluation =
             Evaluation::definition(&self.attributes, &self.locked, self.counters, compat)
-                .with_root(self.root.as_mut().map(|(a, l)| (a, &**l)));
+                .with_root(self.root.as_mut().map(|(a, l)| (a, &**l)))
+                .with_footnotes(&mut self.footnotes);
         let nodes = read.finish(&mut evaluation, self.diagnostics);
         if let Some(attributes) = evaluation.changed_attributes() {
             self.attributes = attributes;
@@ -531,6 +540,7 @@ impl Execution<'_> {
         let mut evaluation =
             Evaluation::definition(&self.attributes, &self.locked, self.counters, compat)
                 .with_root(self.root.as_mut().map(|(a, l)| (a, &**l)))
+                .with_footnotes(&mut self.footnotes)
                 .with_xrefs(self.xrefs);
         *nodes = run(pending, &mut evaluation, self.diagnostics);
         if let Some(attributes) = evaluation.changed_attributes() {
@@ -648,7 +658,7 @@ impl Execution<'_> {
                 }
                 // The nested document converts from its own header snapshot
                 // and entries; its effects stay inside it.
-                crate::ast::CellContent::Blocks(blocks) => {
+                crate::ast::CellContent::Blocks { blocks, .. } => {
                     let key = (cell.span.start, cell.span.end);
                     if let Some(nested) = self.nested.get(&key).cloned() {
                         let mut attributes =
@@ -661,6 +671,7 @@ impl Execution<'_> {
                             &mut self.locked,
                             std::borrow::Cow::Owned(nested.locked),
                         );
+                        let footnotes = std::mem::replace(&mut self.footnotes, nested.footnotes);
                         let root = self.root.is_none();
                         if root {
                             self.root = Some((attributes.take().unwrap(), locked.clone()));
@@ -672,6 +683,7 @@ impl Execution<'_> {
                         };
                         self.entries = entries;
                         self.locked = locked;
+                        self.footnotes = footnotes;
                     }
                 }
                 crate::ast::CellContent::Literal(_) => {}

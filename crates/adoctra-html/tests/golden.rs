@@ -717,6 +717,33 @@ fn html_tables_match_asciidoctor() {
     assert!(checked > 0, "no golden fixtures found in {dir:?}");
 }
 
+/// Footnotes: Ruby's markers and footnotes list are adoctra's markup; the
+/// paragraph wrappers reduce as for the other body fixtures.
+#[test]
+fn html_footnotes_match_asciidoctor() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/footnotes");
+    let mut checked = 0usize;
+    for entry in fs::read_dir(&dir).expect("golden/footnotes dir is missing") {
+        let path = entry.unwrap().path();
+        if path.extension().and_then(|e| e.to_str()) != Some("adoc") {
+            continue;
+        }
+        let expected_path = path.with_extension("expected.html");
+        let name = path.file_stem().unwrap().to_string_lossy().into_owned();
+        let adoc = fs::read_to_string(&path).unwrap();
+        let expected = fs::read_to_string(&expected_path).unwrap();
+        let doc = adoctra_core::parse(&adoc).document;
+        let ours = String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap();
+        assert_eq!(
+            toc_body(&ours),
+            toc_body(&expected),
+            "HTML footnotes diverge from asciidoctor for `{name}`"
+        );
+        checked += 1;
+    }
+    assert!(checked > 0, "no golden fixtures found in {dir:?}");
+}
+
 #[test]
 fn html_block_titles_match_asciidoctor() {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/titles");

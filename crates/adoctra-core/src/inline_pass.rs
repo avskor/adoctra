@@ -229,7 +229,11 @@ impl Passes {
     ) -> Vec<P> {
         let mut out = Vec::new();
         for part in parts {
-            if part.is_boundary() {
+            if let P::Footnote(mut footnote) = part {
+                let content = std::mem::take(&mut footnote.content);
+                footnote.content = self.restore_evaluated(content, attrs, compat, depth);
+                out.push(P::Footnote(footnote));
+            } else if part.is_boundary() {
                 push_value(
                     &mut out,
                     part.map_metadata(|s| {
@@ -527,6 +531,10 @@ impl Passes {
                             0,
                         ))
                     });
+                }
+                Inline::Footnote { footnote, .. } => {
+                    let content = std::mem::take(&mut footnote.content);
+                    footnote.content = self.restore_evaluated(content, attrs, compat, 0);
                 }
                 Inline::Anchor { id, .. } => {
                     *id = reference_text(&self.restore_evaluated(
