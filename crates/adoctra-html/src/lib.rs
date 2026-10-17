@@ -170,16 +170,39 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
         }
         BlockKind::CalloutList { items } => {
             // Ruby's `div.colist` without its wrapper: an ordered list whose
-            // items explain the callout marks; the stylesheet draws the numbers.
+            // items explain the callout marks. With `icons` Ruby lays out the
+            // number icon beside the text in a table; adoctra keeps the list
+            // and the stylesheet lays out the same icon and text columns.
             render_title(&block.title, &block.caption, out);
-            let class = class_attr(&["colist", "arabic"], &block.roles);
+            let icons = cx.doc.attributes.get("icons");
+            let base: &[&str] = if icons.is_some() {
+                &["colist", "arabic", "icons"]
+            } else {
+                &["colist", "arabic"]
+            };
+            let class = class_attr(base, &block.roles);
             out.push_str(&format!("<ol{id}{class}>\n"));
-            for entry in items {
+            for (index, entry) in items.iter().enumerate() {
+                let number = index + 1;
                 out.push_str("<li>");
+                if let Some(icons) = icons {
+                    out.push_str("<span class=\"colist-icon\">");
+                    if icons == "font" {
+                        out.push_str(&format!(
+                            "<i class=\"conum\" data-value=\"{number}\"></i><b>{number}</b>"
+                        ));
+                    } else {
+                        out.push_str(&callout_image(&number.to_string(), cx));
+                    }
+                    out.push_str("</span><div>");
+                }
                 render_inlines(&entry.item.inlines, out);
                 for child in &entry.item.blocks {
                     out.push('\n');
                     render_block(child, cx, out);
+                }
+                if icons.is_some() {
+                    out.push_str("</div>");
                 }
                 out.push_str("</li>\n");
             }
@@ -796,6 +819,19 @@ fn render_dlist(
     }
 }
 
+/// Ruby's callout image icon (`icon_uri "callouts/N"`).
+fn callout_image(number: &str, cx: &Cx) -> String {
+    let attributes = &cx.doc.attributes;
+    let dir = attributes.get("iconsdir").unwrap_or("./images/icons");
+    let ext = attributes.get("icontype").unwrap_or("png");
+    let n = escape(number);
+    format!(
+        "<img src=\"{}/callouts/{n}.{}\" alt=\"{n}\">",
+        attr_value(dir),
+        attr_value(ext)
+    )
+}
+
 /// Verbatim text with its callout marks as Ruby's `convert_inline_callout`:
 /// the guard kept before `<b class="conum">(N)</b>` (an `<!--N-->` mark keeps
 /// its comment), or a font/image icon with `icons`.
@@ -809,15 +845,7 @@ fn render_verbatim(text: &str, callouts: &[adoctra_core::ast::Callout], cx: &Cx,
             Some("font") => out.push_str(&format!(
                 "<i class=\"conum\" data-value=\"{n}\"></i><b>({n})</b>"
             )),
-            Some(_) => {
-                let dir = attributes.get("iconsdir").unwrap_or("./images/icons");
-                let ext = attributes.get("icontype").unwrap_or("png");
-                out.push_str(&format!(
-                    "<img src=\"{}/callouts/{n}.{}\" alt=\"{n}\">",
-                    attr_value(dir),
-                    attr_value(ext)
-                ));
-            }
+            Some(_) => out.push_str(&callout_image(&callout.number, cx)),
             None if callout.xml => {
                 out.push_str(&format!("&lt;!--<b class=\"conum\">({n})</b>--&gt;"))
             }
@@ -1898,11 +1926,17 @@ mod tests {
             html.contains("x <i class=\"conum\" data-value=\"1\"></i><b>(1)</b>"),
             "{html}"
         );
-        let html = render(":icons:\n\n....\nx <1>\n....");
+        // Like Ruby, the callout list shows the same icons beside its text.
+        let html = render(":icons: font\n\n----\nx // <1>\n----\n<1> one\n+\nmore");
+        assert!(html.contains("<ol class=\"colist arabic icons\">\n<li><span class=\"colist-icon\"><i class=\"conum\" data-value=\"1\"></i><b>1</b></span><div>one\n<p>more</p>\n</div></li>"), "{html}");
+        let html = render(":icons:\n\n....\nx <1>\n....\n<1> one");
         assert!(
             html.contains("x <img src=\"./images/icons/callouts/1.png\" alt=\"1\">"),
             "{html}"
         );
+        assert!(html.contains("<li><span class=\"colist-icon\"><img src=\"./images/icons/callouts/1.png\" alt=\"1\"></span><div>one</div></li>"), "{html}");
+        // As Asciidoctor's stylesheet: a plain mark is not drawn as a badge.
+        assert!(STYLESHEET.contains(".conum[data-value]::after { content: attr(data-value); }"));
         assert!(STYLESHEET.contains(".conum"));
     }
 

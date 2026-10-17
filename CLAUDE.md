@@ -594,7 +594,25 @@ font icons), `<dl>` (dt.hdlist1 without style), horizontal `<dl class="hdlist">`
 on a CSS grid (labelwidth/itemwidth) instead of Ruby's layout table, qanda
 `<ol class="qanda">`; the DOM profile maps Ruby's dlist/qlist wrappers and hdlist
 table. JSON/WASM `dlist`, item `checkbox`; parser-recorded `list-marker` tokens
-(markers and delimiters). Callout lists are not implemented yet.
+(markers and delimiters).
+**Callouts**: callouts.rs ports CalloutSourceRx (`sub_callouts`): marks ending a
+verbatim line (`<1>`, `<.>` numbered per block, `<!--N-->`, escaped `\<1>` losing
+its backslash), each chain head keeping a `// `/`# `/`-- `/`;; ` guard (or the
+block/document `line-comment` prefix, empty = none). parser.rs apply_callouts runs
+at block completion on `Listing`/`Literal` (`callouts: Vec<Callout>` with text
+ranges, guard, xml form, Ruby id `CO<list>-<n>` from ParseContext.callouts =
+Ruby's Callouts catalog, shared with nested documents, and the mark's source span
+matched on the line with the same ending). `BlockKind::CalloutList { items:
+Vec<CalloutListItem { item, coids }> }` is parse_callout_list (CalloutListRx, no
+indent; items read like other lists; "callout list item index" and "no callout
+found for <N>" warnings; the catalog moves to the next list). HTML renders Ruby's
+`<b class="conum">(N)</b>` with the guard (font/image icons with `icons`) and an
+`<ol class="colist arabic">`; with `icons` each item starts with the same number
+icon (`<span class="colist-icon">`, text in a `<div>`) and the stylesheet lays out
+Ruby's icon/text columns (`ol.colist.icons`), so it looks like Ruby's table
+(checked with screenshots); conum styles follow Asciidoctor's default
+stylesheet. JSON/WASM `callouts` and `colist` with `coids`; tokens `callout`
+(from AST) and `list-marker`.
 **Footnotes**: attribute_macros.rs apply_footnotes is Ruby's
 InlineFootnoteMacroRx, the last macro (after xrefs), over the lexical stream, also
 in pass:m and link parameter passes: `footnote:[text]`, `footnote:id[text]`,
@@ -1053,8 +1071,8 @@ blocks** (`Example N.` via the `example-caption` attribute, on `Block.caption`) 
 images (`Figure N.`) and tables (`Table N.`). The unset forms
 `:!example-caption:` / `:example-caption!:` disable example captions and their
 counter increments; a custom per-block `caption=` or document `caption` overrides
-the prefix without incrementing the counter. Also: callout lists (`<1>`),
-bibliography lists and delimiters longer than four chars (the same
+the prefix without incrementing the counter. Also: bibliography lists and
+delimiters longer than four chars (the same
 single-length limitation applies to `====`/`____`: a nested same-length `====` /
 `____` closes the outer block); ids of individual list items,
 incremental/block reparse, and a pull/event API over the AST.

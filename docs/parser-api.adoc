@@ -1342,6 +1342,18 @@ items }` разбираются как `parse_list`/`parse_description_list` Rub
 `name:"dlist"` с `terms` и `description` (WASM — с диапазонами) и `checkbox` у
 пунктов; подсветка — `list-marker` для маркеров и разделителей терминов.
 
+Callouts. `BlockKind::Listing` и `BlockKind::Literal` содержат `callouts:
+Vec<Callout>` — метки в конце строк, как `sub_callouts` Ruby: `start`/`end` —
+байтовый диапазон в `text` от префикса-комментария (`guard`: `// `, `# `, `-- `,
+`;; ` или `line-comment`) до метки, `number` (для `<.>` — номер по порядку в
+блоке), `xml` для `<!--N-->`, `id` Ruby (`CO1-2`) и `span` метки в источнике.
+Экранированная метка теряет обратную косую черту и остаётся текстом.
+`BlockKind::CalloutList { items }` — список `<1> текст` (`CalloutListItem { item,
+coids }`, где `coids` — метки текущего списка каталога с этим номером);
+предупреждения `callout list item index: expected …, got …` и `no callout found
+for <N>`. JSON/WASM экспортируют `callouts` (если есть) и `name:"colist"` с
+`coids`; подсветка — `callout` для меток и `list-marker` для номеров списка.
+
 Сноски. Макрос сноски распознаётся последней стадией макросов (после xref), как
 `InlineFootnoteMacroRx` Ruby. Сноска из исходного текста — `Inline::Footnote {
 footnote, span }` с диапазоном макроса, созданная значением атрибута —

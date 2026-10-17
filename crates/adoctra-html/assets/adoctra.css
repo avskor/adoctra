@@ -309,21 +309,32 @@ ol.qanda > li > p:first-child > em { font-weight: 600; }
 
 /* --- Callouts -------------------------------------------------------------- */
 
-/* Callout marks in verbatim blocks and the numbers of callout lists. */
-.conum,
-ol.colist > li::marker {
-  font-family: var(--adoctra-font);
-  font-weight: 600;
-}
-b.conum {
+/* As Asciidoctor's default stylesheet: a plain mark is bold text `(1)`; a
+ * font icon (`icons: font`) is a dark circle with its number. */
+b.conum * { color: inherit !important; }
+.conum:not([data-value]):empty { display: none; }
+.conum[data-value] {
   display: inline-block;
-  min-inline-size: 1.25em;
-  padding-inline: 0.2em;
-  border-radius: 999px;
-  background: var(--adoctra-fg);
-  color: var(--adoctra-bg);
-  font-size: 0.75em;
-  line-height: 1.25em;
+  color: #fff !important;
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 50%;
   text-align: center;
+  font-size: 0.75em;
+  inline-size: 1.67em;
+  block-size: 1.67em;
+  line-height: 1.67em;
+  font-family: "Open Sans", "DejaVu Sans", sans-serif;
+  font-style: normal;
+  font-weight: bold;
 }
-ol.colist { padding-inline-start: 1.75rem; }
+.conum[data-value] * { color: #fff !important; }
+.conum[data-value] + b { display: none; }
+.conum[data-value]::after { content: attr(data-value); }
+pre .conum[data-value] { position: relative; top: -0.125em; }
+pre + ol.colist { margin-block-start: -0.5em; }
+/* With icons the callout list is Ruby's two columns: the icon, then the text. */
+ol.colist.icons { list-style: none; padding-inline-start: 0; }
+ol.colist.icons > li { display: grid; grid-template-columns: auto 1fr; }
+ol.colist.icons > li > .colist-icon { padding: 0.4em 0.75em 0; line-height: 1; }
+ol.colist.icons > li > .colist-icon img { max-width: none; }
+ol.colist.icons > li > div { padding: 0.25em 0; }
