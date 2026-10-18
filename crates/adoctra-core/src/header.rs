@@ -322,10 +322,22 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
             result.pending = pending;
         }
     }
+    save_doctitle(Arc::make_mut(&mut context.attributes));
     save_toc(Arc::make_mut(&mut context.attributes));
     save_icons(Arc::make_mut(&mut context.attributes));
     context.quote_compat = context.attributes.get("compat-mode").is_some();
     result
+}
+
+/// Ruby's `save_attributes` at header completion: without a `doctitle`
+/// (a document title sets one), the `title` attribute is Ruby's `doctitle`.
+/// Bypasses locks, as in Ruby.
+fn save_doctitle(attributes: &mut crate::Attributes) {
+    if attributes.get("doctitle").is_none() {
+        if let Some(title) = attributes.value_parts("title") {
+            attributes.set_parts("doctitle", title);
+        }
+    }
 }
 
 /// Ruby's `save_attributes` at header completion: an `icons` value other

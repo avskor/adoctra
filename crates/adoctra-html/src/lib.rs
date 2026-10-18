@@ -651,8 +651,8 @@ fn render_content(cx: &Cx, embedded: bool, out: &mut String) {
     }
 }
 
-/// Ruby's manual page title: the document title with ` Manual Page`
-/// (without a title, the first section's, like Ruby's `doctitle`). Embedded
+/// Ruby's manual page title: Ruby's `doctitle` (the `title` attribute, the
+/// document title or the first section's) with ` Manual Page`. Embedded
 /// output keeps the document id on it.
 fn render_manpage_title(doc: &Document, embedded: bool, out: &mut String) {
     let first_section = first_section_title(doc);
@@ -663,6 +663,11 @@ fn render_manpage_title(doc: &Document, embedded: bool, out: &mut String) {
             (id_attr(&block.id), class_attr(&[], &block.roles))
         });
     out.push_str(&format!("<h1{id}{class}>"));
+    if let Some(value) = attribute_html(&doc.attributes, "title") {
+        out.push_str(&value);
+        out.push_str(" Manual Page</h1>\n");
+        return;
+    }
     let inlines = match title.map(|block| &block.kind) {
         Some(BlockKind::Heading { inlines, .. }) => Some(inlines),
         _ => first_section,
@@ -2579,6 +2584,15 @@ mod tests {
         );
         assert!(
             html.contains("<section class=\"sect1\">\n<h2>Nom</h2>\n<p>z - &lt;b&gt;p&lt;/b&gt;</p>\n</section>"),
+            "{html}"
+        );
+        // The `title` attribute is Ruby's doctitle, even over the document
+        // title (its value is inserted as stored).
+        let html = render(
+            "= cmd(1)\n:doctype: manpage\n:title: Other &amp; <b>x</b>\n\n== NAME\n\ncmd - does\n",
+        );
+        assert!(
+            html.contains("<h1>Other &amp;amp; &lt;b&gt;x&lt;/b&gt; Manual Page</h1>"),
             "{html}"
         );
         // Without a title, Ruby's doctitle is the first section's title.

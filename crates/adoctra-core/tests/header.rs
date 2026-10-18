@@ -914,3 +914,66 @@ fn author_override_compares_literal_protection_as_well_as_text() {
     assert_eq!(doc.attributes.get("authorinitials"), Some("JD"));
     assert_eq!(doc.header.unwrap().authors[0].firstname, "<b>John</b> Doe");
 }
+
+fn paragraph_text(block: &adoctra_core::Block) -> String {
+    match &block.kind {
+        adoctra_core::BlockKind::Paragraph { inlines } => inlines
+            .iter()
+            .map(|inline| match inline {
+                adoctra_core::Inline::Text { value, .. } => value.clone(),
+                adoctra_core::Inline::AttributeRef { value, name, .. } => {
+                    value.clone().unwrap_or_else(|| format!("{{{name}}}"))
+                }
+                other => panic!("unexpected inline {other:?}"),
+            })
+            .collect(),
+        other => panic!("expected paragraph: {other:?}"),
+    }
+}
+
+#[test]
+fn title_attribute_names_a_document_without_doctitle() {
+    // Ruby's save_attributes: no doctitle entry, so `title` is the doctitle;
+    // `Document#content` deletes `title` before the body converts.
+    let doc = parse(":title: T *b* {x}\n:x: X\n\n{doctitle} / {title}").document;
+    assert_eq!(doc.attributes.get("doctitle"), Some("T *b* {x}"));
+    assert_eq!(doc.attributes.get("title"), Some("T *b* {x}"));
+    assert_eq!(paragraph_text(&doc.blocks[0]), "T *b* {x} / {title}");
+    assert!(doc.final_attributes.get("title").is_none());
+    assert!(doc.blocks[0].conversion_attributes().get("title").is_none());
+    // The reading snapshot still has it.
+    assert_eq!(
+        doc.blocks[0].attribute_context.get("title"),
+        Some("T *b* {x}")
+    );
+
+    // An unset doctitle is no entry either; a document title or an explicit
+    // doctitle wins.
+    let doc = parse(":title: Custom\n:doctitle!:\n\n{doctitle}").document;
+    assert_eq!(doc.attributes.get("doctitle"), Some("Custom"));
+    let doc = parse("= Doc\n:title: Custom\n:doctitle!:\n\n{doctitle}").document;
+    assert_eq!(doc.attributes.get("doctitle"), Some("Doc"));
+    let doc = parse(":doctitle: D\n:title: T\n\n{doctitle}").document;
+    assert_eq!(doc.attributes.get("doctitle"), Some("D"));
+}
+
+#[test]
+fn body_title_entries_replay_after_the_deletion() {
+    let doc = parse(":title: Ti\n\nx {title}\n\n:title: Again\n\ny {title} {doctitle}").document;
+    assert_eq!(paragraph_text(&doc.blocks[0]), "x {title}");
+    assert_eq!(paragraph_text(&doc.blocks[1]), "y Again Ti");
+    assert_eq!(doc.final_attributes.get("title"), Some("Again"));
+}
+
+#[test]
+fn nested_documents_take_the_title_as_doctitle_and_delete_it() {
+    let doc = parse(":title: Ti\n\n|===\na|{title} {doctitle}\n|===").document;
+    let adoctra_core::BlockKind::Table(table) = &doc.blocks[0].kind else {
+        panic!("expected table");
+    };
+    let cell = &table.body[0][0];
+    let adoctra_core::ast::CellContent::Blocks { blocks, .. } = &cell.content else {
+        panic!("expected AsciiDoc cell");
+    };
+    assert_eq!(paragraph_text(&blocks[0]), "{title} Ti");
+}

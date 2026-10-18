@@ -263,6 +263,8 @@ impl BodySubs {
                 body = 1;
             }
         }
+        // Ruby's `Document#content` deletes `title` before the body converts.
+        execution.attributes.remove("title");
         execution.first_section = blocks[body..].iter().find_map(|block| match &block.kind {
             BlockKind::Section { blocks, .. } => match blocks.first().map(|b| (b.span, &b.kind)) {
                 Some((span, BlockKind::Heading { inlines, .. })) => {
@@ -850,6 +852,8 @@ impl Execution<'_> {
                     if let Some(nested) = self.nested.get(&key).cloned() {
                         let mut attributes =
                             Some(std::mem::replace(&mut self.attributes, nested.attributes));
+                        // The nested document's `content` deletes it too.
+                        self.attributes.remove("title");
                         let entries = std::mem::replace(
                             &mut self.entries,
                             nested.entries.into_iter().peekable(),

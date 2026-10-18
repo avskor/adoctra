@@ -415,8 +415,11 @@ that would read as one) in their HTML spelling (entity_references.rs
 decode_protection, no entity table); labels built from them (`[id]`, path) and
 inline-image default alts make them Raw (reference_parts), and HTML's
 reference_value keeps them in xref fields and raw block media `src`/`poster`/
-`link`, like Ruby inserting those values verbatim. The `title` attribute as
-doctitle remains work. xrefstyle (macro
+`link`, like Ruby inserting those values verbatim. Like Ruby's save_attributes,
+header.rs save_doctitle makes the `title` attribute the `doctitle` when no entry
+or document title set one (also in nested documents); body_subs removes `title`
+before the body converts, like `Document#content` (body entries replay it), while
+HTML `<title>` and the manpage `<h1>` read it from the header snapshot. xrefstyle (macro
 `xrefstyle=` in `Xref.xrefstyle`, else the document attribute at the reference) is
 resolve::styled over the converted title: Target.numbering = Caption (example
 blocks: `full` → `example-caption numeral, “title”`, `short` → `prefix numeral`,
