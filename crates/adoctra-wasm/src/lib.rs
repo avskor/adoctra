@@ -667,6 +667,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_title(&b.title, s);
             write_caption(&b.caption, s);
             // Children carry their own spans; recurse so the editor sees the tree.
+            write_simple(b.simple, s);
             s.push_str(",\"blocks\":[");
             for (j, child) in blocks.iter().enumerate() {
                 if j > 0 {
@@ -686,6 +687,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_title(&b.title, s);
             write_caption(&b.caption, s);
             // Children carry their own spans; recurse so the editor sees the tree.
+            write_simple(b.simple, s);
             s.push_str(",\"blocks\":[");
             for (j, child) in blocks.iter().enumerate() {
                 if j > 0 {
@@ -705,6 +707,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_title(&b.title, s);
             write_caption(&b.caption, s);
             // Children carry their own spans; recurse so the editor sees the tree.
+            write_simple(b.simple, s);
             s.push_str(",\"blocks\":[");
             for (j, child) in blocks.iter().enumerate() {
                 if j > 0 {
@@ -751,6 +754,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_title(&b.title, s);
             write_caption(&b.caption, s);
             // Children carry their own spans; recurse so the editor sees the tree.
+            write_simple(b.simple, s);
             s.push_str(",\"blocks\":[");
             for (j, child) in blocks.iter().enumerate() {
                 if j > 0 {
@@ -774,6 +778,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_caption(&b.caption, s);
             write_attribution(attribution, s);
             // Children carry their own spans; recurse so the editor sees the tree.
+            write_simple(b.simple, s);
             s.push_str(",\"blocks\":[");
             for (j, child) in blocks.iter().enumerate() {
                 if j > 0 {
@@ -914,6 +919,14 @@ fn write_caption(caption: &Option<String>, s: &mut String) {
     match caption {
         Some(c) => write_str(c, s),
         None => s.push_str("null"),
+    }
+}
+
+/// Emit `,"simple":true` for a container with Ruby's simple content model (a
+/// styled paragraph form holding its paragraph); omitted otherwise.
+fn write_simple(simple: bool, s: &mut String) {
+    if simple {
+        s.push_str(",\"simple\":true");
     }
 }
 
@@ -1186,6 +1199,16 @@ mod tests {
             ),
             "{json}"
         );
+    }
+
+    #[test]
+    fn styled_paragraph_forms_mark_simple_content() {
+        let json = parse_json("[open]\nx\n\n--\ny\n--\n");
+        assert!(
+            json.contains(r#""name":"open","id":null,"roles":[],"style":"open","attributes":{},"options":[],"title":null,"caption":null,"simple":true,"blocks":[{"span":{"source_id":0,"start":7,"end":8},"name":"paragraph""#),
+            "{json}"
+        );
+        assert_eq!(json.matches(r#""simple":true"#).count(), 1, "{json}");
     }
 
     #[test]

@@ -17581,8 +17581,7 @@
     {
       "id": "open-paragraph-simple-content",
       "category": "blocks",
-      "expect": "xfail",
-      "reason": "Ruby renders an [open] paragraph as a simple open block (text without a paragraph); adoctra wraps the paragraph in the open block.",
+      "expect": "pass",
       "source": "[open]\nsolo\n"
     },
     {
@@ -18993,8 +18992,7 @@
     {
       "id": "subs-styled-paragraph-simple-content",
       "category": "substitutions",
-      "expect": "xfail",
-      "reason": "Ruby renders [NOTE]/NOTE:/[example]/[sidebar] paragraph forms as simple content (text without a paragraph); adoctra wraps a child paragraph. The selected substitutions match.",
+      "expect": "pass",
       "source": ":v: 1.0 <b>\n:a: *x*\n:empty:\n\n[NOTE,subs=none]\n*a* {v}\n\n[subs=none]\nTIP: *a* {v}\n\n[example,subs=none]\n*a* {v}\n\n[sidebar,subs=\"attributes\"]\n*a* {v}\n"
     },
     {
@@ -19404,6 +19402,30 @@
       "category": "tables",
       "expect": "pass",
       "source": ":example-caption!:\n:toc-title!:\n:table-caption!:\n\n|===\na|\n.T\n====\nx\n====\n\n{toc-title}\n\n.Inner\n!===\n!c\n!===\n|===\n\n.After\n====\ny\n====\n"
+    },
+    {
+      "id": "simple-content-paragraph-forms",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "[NOTE]\nnote *para*\n\nTIP: label {empty}para\n\n[example]\nex\npara\n\n[example%collapsible]\n.T\ncollapsed\n\n[sidebar]\nside\n\n[open]\nopen\n\n[quote,Author,Work]\nquoted\n\n[abstract]\nabs\n\n.Title\n[#i.r]\n[example]\ntitled\n\n====\ndelimited\n====\n"
+    },
+    {
+      "id": "simple-content-options-and-subs",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "[example%hardbreaks]\none\ntwo\n\n[sidebar,subs=-quotes]\n*kept* {x}\n\n:x: X\n\n[CAUTION%hardbreaks]\na\nb\n\n[open]\nlink:u[*l*] footnote:[n]\n"
+    },
+    {
+      "id": "simple-content-in-containers",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "* item\n+\n[example]\nin list\n+\nNOTE: also\n\n|===\na|\n[sidebar]\nin cell\n\nWARNING: cell\n|===\n\n====\n[quote]\nnested\n====\n\nterm:: desc\n+\n[open]\nattached\n"
+    },
+    {
+      "id": "simple-content-book-parts",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "= Book\n:doctype: book\n\n= Part A\n\n[partintro]\nintro a\n\n== Ch\n\nx\n\n= Part B\n\n[open]\nfirst\n\nsecond\n\n== Ch2\n\ny\n\n= Part C\n\n[open]\nonly\n\n== Ch3\n\nz\n"
     }
   ]
 }

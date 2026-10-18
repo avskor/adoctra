@@ -471,8 +471,8 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             // child blocks. No table/icon-font scaffolding (asciidoctor's) — the
             // styling is the reference stylesheet's job. As elsewhere there is no
             // wrapping `<div>`: id/roles hang on the `<aside>` itself (roles append
-            // to `admonition`). The paragraph/label forms carry a single child
-            // paragraph, so their body renders as `<p>…</p>` exactly as before.
+            // to `admonition`). The paragraph/label forms are simple content:
+            // their single child paragraph renders as bare text, like Ruby.
             // The label is core's resolved `caption` / `<kind>-caption` value; an
             // unset caption leaves an empty title, as in asciidoctor.
             let class = class_attr(&["admonition"], &block.roles);
@@ -491,9 +491,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             // the `Note`/`Tip`/… label), rendered above the body — matching where
             // asciidoctor places it in the content cell.
             render_title(&block.title, &block.caption, out);
-            for child in blocks {
-                render_block(child, cx, out);
-            }
+            render_body(block, blocks, cx, out);
             out.push_str("</aside>\n");
         }
         BlockKind::Example { blocks } if has_option(block, "collapsible") => {
@@ -513,9 +511,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
                 None => out.push_str("Details"),
             }
             out.push_str("</summary>\n");
-            for child in blocks {
-                render_block(child, cx, out);
-            }
+            render_body(block, blocks, cx, out);
             out.push_str("</details>\n");
         }
         BlockKind::Example { blocks } => {
@@ -526,9 +522,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             let class = class_attr(&["exampleblock"], &block.roles);
             out.push_str(&format!("<div{class}{id}>\n"));
             render_title(&block.title, &block.caption, out);
-            for child in blocks {
-                render_block(child, cx, out);
-            }
+            render_body(block, blocks, cx, out);
             out.push_str("</div>\n");
         }
         BlockKind::Sidebar { blocks } => {
@@ -540,9 +534,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             let class = class_attr(&["sidebarblock"], &block.roles);
             out.push_str(&format!("<aside{class}{id}>\n"));
             render_title(&block.title, &block.caption, out);
-            for child in blocks {
-                render_block(child, cx, out);
-            }
+            render_body(block, blocks, cx, out);
             out.push_str("</aside>\n");
         }
         BlockKind::Quote {
@@ -559,9 +551,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             out.push_str(&format!("<figure{class}{id}>\n"));
             render_title(&block.title, &block.caption, out);
             out.push_str("<blockquote>\n");
-            for child in blocks {
-                render_block(child, cx, out);
-            }
+            render_body(block, blocks, cx, out);
             out.push_str("</blockquote>\n");
             render_attribution(attribution, out);
             out.push_str("</figure>\n");
@@ -626,9 +616,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             out.push_str(&format!("<figure{class}{id}>\n"));
             render_title(&block.title, &block.caption, out);
             out.push_str("<blockquote>\n");
-            for child in blocks {
-                render_block(child, cx, out);
-            }
+            render_body(block, blocks, cx, out);
             out.push_str("</blockquote>\n</figure>\n");
         }
         BlockKind::Open { blocks } => render_open(block, blocks, cx, out),
@@ -1150,10 +1138,28 @@ fn render_open(block: &Block, blocks: &[Block], cx: &Cx, out: &mut String) {
     let class = class_attr(&base, &block.roles);
     out.push_str(&format!("<div{class}{}>\n", id_attr(&block.id)));
     render_title(&block.title, &block.caption, out);
+    render_body(block, blocks, cx, out);
+    out.push_str("</div>\n");
+}
+
+/// A container's content: Ruby's simple content (a styled paragraph form)
+/// writes the paragraph's inlines without a paragraph element, like Ruby's
+/// `content` of a simple block; otherwise the child blocks render in order.
+fn render_body(block: &Block, blocks: &[Block], cx: &Cx, out: &mut String) {
+    if block.simple {
+        if let [Block {
+            kind: BlockKind::Paragraph { inlines },
+            ..
+        }] = blocks
+        {
+            render_inlines(inlines, out);
+            out.push('\n');
+            return;
+        }
+    }
     for child in blocks {
         render_block(child, cx, out);
     }
-    out.push_str("</div>\n");
 }
 
 /// A heading element. A discrete (`[discrete]`/`[float]`) heading carries its
@@ -2440,6 +2446,45 @@ mod tests {
     }
 
     #[test]
+    fn styled_paragraph_forms_render_simple_content_like_ruby() {
+        let html = render(
+            "[example%collapsible]\n.T\ncollapsed\n\n[quote,A]\nquoted *q*\n\n\
+             [example%hardbreaks]\none\ntwo\n\n====\ndelimited\n====\n",
+        );
+        assert!(
+            html.contains("<details>\n<summary class=\"title\">T</summary>\ncollapsed\n</details>"),
+            "{html}"
+        );
+        assert!(
+            html.contains("<blockquote>\nquoted <strong>q</strong>\n</blockquote>"),
+            "{html}"
+        );
+        assert!(
+            html.contains("<div class=\"exampleblock\">\none<br> two\n</div>"),
+            "{html}"
+        );
+        // A delimited example keeps its paragraph.
+        assert!(
+            html.contains("<div class=\"exampleblock\">\n<p>delimited</p>\n</div>"),
+            "{html}"
+        );
+        // Ruby's book partintro: a `[partintro]` paragraph is compound, a lone
+        // `[open]` paragraph stays simple.
+        let html = render(
+            "= B\n:doctype: book\n\n= A\n\n[partintro]\nintro\n\n== C\n\nx\n\n\
+             = P\n\n[open]\nonly\n\n== D\n\ny\n",
+        );
+        assert!(
+            html.contains("<div class=\"openblock partintro\">\n<p>intro</p>\n</div>"),
+            "{html}"
+        );
+        assert!(
+            html.contains("<div class=\"openblock partintro\">\nonly\n</div>"),
+            "{html}"
+        );
+    }
+
+    #[test]
     fn verbatim_blocks_get_nowrap_from_the_option_or_unset_prewrap() {
         let html = render(
             "[%nowrap]\n----\na\n----\n\n[source%nowrap,ruby]\n----\nb\n----\n\n\
@@ -2546,8 +2591,9 @@ mod tests {
             html.contains("<p class=\"admonition-title\">Note</p>"),
             "got: {html}"
         );
+        // Ruby's simple content: the paragraph text without a `<p>`.
         assert!(
-            html.contains("<p>This is a <strong>note</strong>.</p>"),
+            html.contains("</p>\nThis is a <strong>note</strong>.\n</aside>"),
             "got: {html}"
         );
     }
@@ -2561,7 +2607,7 @@ mod tests {
             "got: {html}"
         );
         assert!(
-            html.contains("<p>This is a <strong>note</strong>.</p>"),
+            html.contains("</p>\nThis is a <strong>note</strong>.\n</aside>"),
             "got: {html}"
         );
         assert!(!html.contains("NOTE:"), "label leaked into body: {html}");
@@ -2669,7 +2715,7 @@ mod tests {
     fn example_style_paragraph_renders_as_example() {
         let html = render("[example]\nJust text.");
         assert!(
-            html.contains("<div class=\"exampleblock\">\n<p>Just text.</p>\n</div>"),
+            html.contains("<div class=\"exampleblock\">\nJust text.\n</div>"),
             "got: {html}"
         );
     }
@@ -2707,7 +2753,7 @@ mod tests {
     fn sidebar_style_paragraph_renders_as_sidebar() {
         let html = render("[sidebar]\nJust text.");
         assert!(
-            html.contains("<aside class=\"sidebarblock\">\n<p>Just text.</p>\n</aside>"),
+            html.contains("<aside class=\"sidebarblock\">\nJust text.\n</aside>"),
             "got: {html}"
         );
     }
@@ -2757,7 +2803,7 @@ mod tests {
     fn open_style_paragraph_renders_as_open() {
         let html = render("[open]\nJust text.");
         assert!(
-            html.contains("<div class=\"openblock\">\n<p>Just text.</p>\n</div>"),
+            html.contains("<div class=\"openblock\">\nJust text.\n</div>"),
             "got: {html}"
         );
     }
@@ -3323,7 +3369,7 @@ mod tests {
         let html =
             render("= A\n\n[abstract.r#a]\n.T\nAbs *b*.\n\n[foo]\n--\nx\n--\n\n[open]\n--\ny\n--");
         assert!(
-            html.contains("<figure class=\"quoteblock abstract r\" id=\"a\">\n<div class=\"title\">T</div>\n<blockquote>\n<p>Abs <strong>b</strong>.</p>\n</blockquote>\n</figure>"),
+            html.contains("<figure class=\"quoteblock abstract r\" id=\"a\">\n<div class=\"title\">T</div>\n<blockquote>\nAbs <strong>b</strong>.\n</blockquote>\n</figure>"),
             "{html}"
         );
         // Any style that does not masquerade becomes a class; `open` does not.

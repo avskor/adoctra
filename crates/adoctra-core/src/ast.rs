@@ -223,6 +223,13 @@ pub struct Block {
     /// [`title`]: Block::title
     pub caption: Option<String>,
     pub attrs: BlockAttrs,
+    /// Ruby's `:simple` content model: a container built from a styled
+    /// paragraph (`[NOTE]`/`NOTE:`, `[example]`, `[sidebar]`, `[open]`,
+    /// `[abstract]`, `[partintro]`, `[quote]`) holding that paragraph as its
+    /// only child. Converters write the paragraph's inlines directly, without
+    /// a paragraph element, like Ruby's `content` of a simple block. `false`
+    /// for every delimited or other block.
+    pub simple: bool,
     pub kind: BlockKind,
 }
 
@@ -242,6 +249,7 @@ impl Block {
             title: None,
             caption: None,
             attrs: BlockAttrs::default(),
+            simple: false,
             kind,
         }
     }

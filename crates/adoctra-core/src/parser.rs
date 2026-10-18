@@ -770,8 +770,9 @@ fn part_content(
     if blocks.len() == 1 {
         let style = block.attrs.style.as_deref();
         match (&block.kind, style) {
-            // A `[partintro]` paragraph is already an open block holding it.
-            (_, Some("partintro")) => {}
+            // A `[partintro]` paragraph is already an open block holding it;
+            // Ruby makes it compound (a single paragraph).
+            (_, Some("partintro")) => block.simple = false,
             (BlockKind::Open { blocks: children }, None | Some("open")) => {
                 // adoctra wraps an `[open]` paragraph in an open block with
                 // the paragraph's span; Ruby keeps one simple block.
@@ -812,6 +813,7 @@ fn part_content(
                         ..std::mem::take(&mut first.attrs)
                     };
                     first.attrs.style = partintro();
+                    first.simple = false;
                 }
                 *intro = Intro::Container;
             }
@@ -980,6 +982,7 @@ fn apply_style_fixup(
                     label: context.admonition_label(kind, Some(&block.attrs)),
                     blocks: vec![child],
                 };
+                block.simple = true;
             }
             // A `====` example, a `____` quote and a `--` open block all fold
             // their parsed children into the admonition. A `****` sidebar is the
@@ -1112,6 +1115,14 @@ fn apply_style_fixup(
             }
             _ => {}
         }
+        // The wrapping styles keep Ruby's simple content model.
+        block.simple = matches!(
+            block.kind,
+            BlockKind::Example { .. }
+                | BlockKind::Sidebar { .. }
+                | BlockKind::Quote { .. }
+                | BlockKind::Open { .. }
+        );
     }
     // A `--` open block "masquerades" as its *container* style: move its parsed
     // children into that container kind. The admonition styles are handled by the
@@ -2718,14 +2729,16 @@ fn parse_block_content(
             BlockKind::Paragraph { inlines },
         );
         child.attribute_context = Arc::clone(&attrs);
-        return Some(Block::new(
+        let mut block = Block::new(
             Span::new(start, end),
             BlockKind::Admonition {
                 kind,
                 label: context.admonition_label(kind, pending_attrs),
                 blocks: vec![child],
             },
-        ));
+        );
+        block.simple = true;
+        return Some(block);
     }
     // Parsed text also removes comment lines; verbatim styles keep them.
     // Both paths map the preprocessed reader text to original byte spans.

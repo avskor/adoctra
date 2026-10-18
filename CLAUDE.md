@@ -448,8 +448,9 @@ abstract">`, other non-masquerading open styles become `openblock <style>`. A
 headerless book opens a preamble unless its first block is an abstract and keeps
 it without sections; header `preface-title` is the book preamble's `Block.title`
 (raw source Text, empty span at the preamble start, never rendered in HTML;
-JSON/WASM export preamble `title`). Ruby's simple `[open]` paragraph (text without
-`<p>`) remains an XFAIL. Manpage synopsis is not implemented.
+JSON/WASM export preamble `title`). A `[partintro]` paragraph is compound, a
+lone `[open]` intro paragraph stays simple (see **Simple content**). Manpage
+synopsis is not implemented.
 **TOC**: built-in `toc-placement=auto`/`toc-title`; header.rs save_toc normalizes
 `toc`/`toc2` at header completion like Ruby's save_attributes (toc → "",
 toc-position left/right/top/bottom with toc-class toc2, or content with placement
@@ -1216,6 +1217,15 @@ in ParseContext.verbatim_bodies for `subs` conversion and callout catalogs;
 verse bodies are deferred adjusted (Reader::scan_verse). Indented literal
 paragraphs keep Ruby's plain strip (no indent/tabsize). Callout spans align
 from the line end, so they survive the adjustment.
+**Simple content**: a styled paragraph form (`[NOTE]`/`NOTE:`, `[example]`,
+`[sidebar]`, `[open]`/`[abstract]`, `[quote]`) keeps its paragraph as the only
+child and sets `Block.simple` (Ruby's `content_model: :simple`); delimited
+blocks never do. part_content clears it for a `[partintro]` paragraph and a
+rebuilt `[open]` intro, like Ruby's next_section. HTML render_body writes the
+child's inlines without `<p>` (Ruby's `content`); JSON/WASM add
+`"simple":true` to such containers. The body-dom-v1 profile projects Ruby's
+admonitionblock table and adoctra's `aside.admonition` to one admonition node
+(type, id, roles, text label, body) and compares blockquote content strictly.
 **Collapsible examples and nowrap**: assign_caption gives an Example with
 the `collapsible` option (`%`, `options=`, `-option`) `caption = Some("")`
 (Ruby's `:example` branch sets caption ''), so it never numbers and

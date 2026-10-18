@@ -34,9 +34,12 @@ class ProjectionTests(unittest.TestCase):
         ruby = ('<div id="i" class="quoteblock r">\n<div class="title">T</div>\n<blockquote>\nPara <strong>b</strong>\n'
                 '</blockquote>\n<div class="attribution">\n&#8212; A<br>\n<cite>W</cite>\n</div>\n</div>')
         ours = ('<figure class="quoteblock r" id="i">\n<div class="title">T</div>\n<blockquote>\n'
-                '<p>Para <strong>b</strong></p>\n</blockquote>\n<figcaption>&#8212; A<br>\n<cite>W</cite></figcaption>\n'
+                'Para <strong>b</strong>\n</blockquote>\n<figcaption>&#8212; A<br>\n<cite>W</cite></figcaption>\n'
                 '</figure>')
         self.assertEqual(projection(ruby), projection(ours))
+        # Simple content (a quoted paragraph form) is not a compound paragraph.
+        self.assertNotEqual(projection(ruby), projection(ours.replace('Para <strong>b</strong>',
+                                                                      '<p>Para <strong>b</strong></p>')))
         verse = '<div class="verseblock"><pre class="content">a\n  b</pre><div class="attribution">\n&#8212; A\n</div></div>'
         self.assertEqual(projection(verse),
                          projection('<figure class="verseblock"><pre class="verse">a\n  b</pre>'
@@ -95,6 +98,21 @@ class ProjectionTests(unittest.TestCase):
         self.assertNotEqual(projection(ours), projection(ours.replace('<p>x</p>', '<p>y</p>')))
         # Other asides (admonitions) are not sidebars.
         self.assertNotEqual(projection(ruby), projection(ours.replace('sidebarblock r', 'admonition r')))
+
+    def test_admonition_table_and_aside_are_reconciled(self):
+        ruby = ('<div id="n" class="admonitionblock note r">\n<table>\n<tr>\n<td class="icon">\n'
+                '<div class="title">Note</div>\n</td>\n<td class="content">\n<div class="title">T</div>\n'
+                'Text <strong>b</strong>\n</td>\n</tr>\n</table>\n</div>')
+        ours = ('<aside id="n" class="admonition r" data-type="note" aria-label="Note">\n'
+                '<p class="admonition-title">Note</p>\n<div class="title">T</div>\nText <strong>b</strong>\n</aside>')
+        self.assertEqual(projection(ruby), projection(ours))
+        # Type, label, roles, id, title and body remain observable.
+        for a, b in [('data-type="note"', 'data-type="tip"'), ('>Note</p>', '>Hint</p>'), ('admonition r', 'admonition'),
+                     ('id="n"', 'id="m"'), ('>T<', '><'), ('Text <strong>', '<p>Text</p><strong>')]:
+            self.assertNotEqual(projection(ruby), projection(ours.replace(a, b)), b)
+        # Ruby's icon markup (icons mode) is not a text label.
+        icons = ruby.replace('<div class="title">Note</div>', '<i class="fa icon-note" title="Note"></i>')
+        self.assertNotEqual(projection(icons), projection(ours))
 
     def test_video_and_audio_figures_are_ruby_media_blocks(self):
         ruby = ('<div id="v" class="videoblock left"><div class="title">T</div><div class="content">'

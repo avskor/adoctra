@@ -36,8 +36,13 @@ entities и нормализует пробелы обычного текста.
 оформление). Обёртка `div.colist` снимается, а класс `colist` списка adoctra —
 оформление.
 `aside.sidebarblock` adoctra проецируется в `div.sidebarblock` Ruby, обёртка
-`div.content` снимается.
-Корпус содержит 3016 сценариев: 3012 PASS и 4 XFAIL.
+`div.content` снимается. Таблица `div.admonitionblock` Ruby и
+`aside.admonition` adoctra проецируются в общий узел: тип, id, роли, текстовая
+метка (`div.title` ячейки `icon` и `p.admonition-title`) и тело ячейки
+`content`; `aria-label` — оформление, разметка значков `icons` не сводится к
+метке. Текст `blockquote` сравнивается как есть: простое содержимое цитаты
+(абзацная форма) отличается от абзаца `<p>`.
+Корпус содержит 3027 сценариев: 3025 PASS и 2 XFAIL.
 
 [source,sh]
 ----
@@ -1171,3 +1176,12 @@ source, literal, абзаца `[literal]` и fenced code, снятие и пов
 восстанавливает снятые родителем умолчания (подписи, `toc-title`). Вид (перенос строк `pre`, маркер
 `details`) сверен со скриншотами Ruby в Chrome. Прежние эталоны и baseline
 не изменены.
+
+Простое содержимое абзацных форм добавляет 4 PASS и переводит XFAIL
+`subs-styled-paragraph-simple-content` и `open-paragraph-simple-content` в
+PASS (их baseline удалены): `[NOTE]`/`NOTE:`, `[example]` и
+`[example%collapsible]`, `[sidebar]`, `[open]`, `[quote]` и `[abstract]`
+выводят текст без абзаца, с названиями, id/ролями, `%hardbreaks`, `subs`,
+ссылками и сносками, в пунктах списков, AsciiDoc-ячейках и контейнерах;
+части книги (`[partintro]`, перестраиваемый и одиночный `[open]`) следуют
+`next_section`. Прежние эталоны не изменены.

@@ -116,6 +116,42 @@ def hdlist(node):
     return Element("dl", attrs, items)
 
 
+def admonition(node):
+    """Ruby's admonitionblock table and adoctra's <aside class="admonition">
+    project to one admonition node: type, id, roles, label, then the body."""
+    attrs = {k: v for k, v in node.attrs.items() if k in {"id"}}
+    if node.tag == "aside":
+        attrs["type"] = node.attrs.get("data-type", "")
+        roles = [c for c in node.attrs.get("class", "").split() if c != "admonition"]
+        children = [c for c in node.children if not (isinstance(c, str) and not c.strip())]
+        label = []
+        if children and isinstance(children[0], Element) and children[0].tag == "p" \
+                and children[0].attrs.get("class") == "admonition-title":
+            label, children = children[0].children, children[1:]
+    else:
+        classes = node.attrs.get("class", "").split()
+        attrs["type"] = classes[1] if len(classes) > 1 else ""
+        roles = classes[2:]
+        cells = [cell for table in node.children if isinstance(table, Element) and table.tag == "table"
+                 for row in (r for c in table.children if isinstance(c, Element)
+                             for r in ([c] if c.tag == "tr" else c.children)
+                             if isinstance(r, Element) and r.tag == "tr")
+                 for cell in row.children if isinstance(cell, Element) and cell.tag == "td"]
+        icon = next((c for c in cells if c.attrs.get("class") == "icon"), None)
+        content = next((c for c in cells if c.attrs.get("class") == "content"), None)
+        if icon is None or content is None:
+            return node
+        label = icon.children
+        titles = [c for c in label if not (isinstance(c, str) and not c.strip())]
+        if len(titles) == 1 and isinstance(titles[0], Element) and titles[0].tag == "div" \
+                and titles[0].attrs.get("class") == "title":
+            label = titles[0].children
+        children = content.children
+    if roles:
+        attrs["class"] = " ".join(roles)
+    return Element("admonition", attrs, [Element("admonition-label", {}, label)] + list(children))
+
+
 def element(tag, attrs, children):
     return {"tag": tag, "attrs": dict(sorted(attrs.items())), "children": children}
 
@@ -138,6 +174,9 @@ def normalize(node, verbatim=False, block_kind=None):
         # adoctra's sidebar <aside> is Ruby's sidebarblock <div>, whose
         # children sit in a content wrapper that drops below.
         node = Element("div", node.attrs, node.children)
+    if (node.tag == "aside" and "admonition" in node.attrs.get("class", "").split()) \
+            or (node.tag == "div" and node.attrs.get("class", "").split()[:1] == ["admonitionblock"]):
+        node = admonition(node)
     if node.tag == "figcaption" and node.attrs.get("class") == "title":
         # A media <figcaption> is Ruby's title <div> (trailing for images,
         # leading for video and audio).
@@ -225,15 +264,9 @@ def normalize(node, verbatim=False, block_kind=None):
         if children and isinstance(children[0], dict) and children[0]["tag"] == "p" and not children[0]["attrs"]:
             children = children[0]["children"] + children[1:]
 
-    if tag == "blockquote":
-        # Ruby renders a quoted paragraph's text directly; adoctra and Ruby's
-        # compound form use one paragraph. Both are the same quoted content.
-        content = [c for c in children if not (isinstance(c, str) and not c.strip())]
-        if len(content) == 1 and isinstance(content[0], dict) and content[0]["tag"] == "p" \
-                and not content[0]["attrs"]:
-            children = content[0]["children"]
-        if any(isinstance(c, str) and c.strip() for c in children):
-            children = trim_edges(compact(children, True))
+    if tag == "blockquote" and any(isinstance(c, str) and c.strip() for c in children):
+        # A quoted paragraph's simple content is prose.
+        children = trim_edges(compact(children, True))
     is_prose = tag in INLINE or tag in {"li", "attribution"} or "title" in classes
     children = compact(children, is_prose, verbatim)
     if tag == "li":

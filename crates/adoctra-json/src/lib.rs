@@ -559,6 +559,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_options(&block.attrs.options, s);
             write_title(&block.title, s);
             write_caption(&block.caption, s);
+            write_simple(block.simple, s);
             s.push_str(",\"blocks\":[");
             for (i, child) in blocks.iter().enumerate() {
                 if i > 0 {
@@ -577,6 +578,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_options(&block.attrs.options, s);
             write_title(&block.title, s);
             write_caption(&block.caption, s);
+            write_simple(block.simple, s);
             s.push_str(",\"blocks\":[");
             for (i, child) in blocks.iter().enumerate() {
                 if i > 0 {
@@ -595,6 +597,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_options(&block.attrs.options, s);
             write_title(&block.title, s);
             write_caption(&block.caption, s);
+            write_simple(block.simple, s);
             s.push_str(",\"blocks\":[");
             for (i, child) in blocks.iter().enumerate() {
                 if i > 0 {
@@ -639,6 +642,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_options(&block.attrs.options, s);
             write_title(&block.title, s);
             write_caption(&block.caption, s);
+            write_simple(block.simple, s);
             s.push_str(",\"blocks\":[");
             for (i, child) in blocks.iter().enumerate() {
                 if i > 0 {
@@ -661,6 +665,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_title(&block.title, s);
             write_caption(&block.caption, s);
             write_attribution(attribution, s);
+            write_simple(block.simple, s);
             s.push_str(",\"blocks\":[");
             for (i, child) in blocks.iter().enumerate() {
                 if i > 0 {
@@ -800,6 +805,14 @@ fn write_caption(caption: &Option<String>, s: &mut String) {
     match caption {
         Some(c) => escape_into(c, s),
         None => s.push_str("null"),
+    }
+}
+
+/// Emit `,"simple":true` for a container with Ruby's simple content model (a
+/// styled paragraph form holding its paragraph); omitted otherwise.
+fn write_simple(simple: bool, s: &mut String) {
+    if simple {
+        s.push_str(",\"simple\":true");
     }
 }
 
@@ -1776,6 +1789,26 @@ mod tests {
         );
         assert!(
             json.contains(r#""style":"source","attributes":{"language":"js","linenums":""}"#),
+            "{json}"
+        );
+    }
+
+    #[test]
+    fn styled_paragraph_forms_mark_simple_content() {
+        let json = render("[sidebar]\nx\n\n****\ny\n****\n");
+        assert!(
+            json.contains(r#""name":"sidebar","id":null,"roles":[],"style":"sidebar","attributes":{},"options":[],"title":null,"caption":null,"simple":true,"blocks":[{"name":"paragraph""#),
+            "{json}"
+        );
+        assert_eq!(json.matches(r#""simple":true"#).count(), 1, "{json}");
+        let json = render("NOTE: n\n\n[quote]\nq\n");
+        assert_eq!(
+            json.matches(r#""caption":null,"simple":true,"#).count(),
+            1,
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""caption":null,"attribution":null,"simple":true"#),
             "{json}"
         );
     }
