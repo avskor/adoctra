@@ -900,7 +900,14 @@ pub enum Inline {
     /// covers the macro. One generated entirely by an attribute value stays an
     /// [`AttributePart::Ui`](crate::AttributePart::Ui).
     Ui { ui: crate::UiMacro, span: Span },
-    // TODO: other inline macros (kbd:, …)
+    /// An index term (`((Tigers))`, `(((Big cats,Tigers)))`,
+    /// `indexterm2:[Tigers]`, `indexterm:[Big cats,Tigers]`), recognized like
+    /// Ruby's `InlineIndextermMacroRx` in the macros stage after images. A
+    /// flow term shows its text, a concealed term nothing. `span` covers the
+    /// construct; one generated entirely by an attribute value stays an
+    /// [`AttributePart::IndexTerm`](crate::AttributePart::IndexTerm).
+    IndexTerm { term: crate::IndexTerm, span: Span },
+    // TODO: other inline macros (stem:, …)
 }
 
 impl Inline {
@@ -921,7 +928,8 @@ impl Inline {
             | Inline::Anchor { span, .. }
             | Inline::Image { span, .. }
             | Inline::Footnote { span, .. }
-            | Inline::Ui { span, .. } => span,
+            | Inline::Ui { span, .. }
+            | Inline::IndexTerm { span, .. } => span,
         }
     }
 
@@ -943,7 +951,8 @@ impl Inline {
             | Inline::Anchor { span, .. }
             | Inline::Image { span, .. }
             | Inline::Footnote { span, .. }
-            | Inline::Ui { span, .. } => *span,
+            | Inline::Ui { span, .. }
+            | Inline::IndexTerm { span, .. } => *span,
         }
     }
 }

@@ -320,7 +320,8 @@ impl Execution<'_> {
                 Inline::AttributeRef { span, .. }
                 | Inline::Substituted { span, .. }
                 | Inline::Footnote { span, .. }
-                | Inline::Ui { span, .. } => {
+                | Inline::Ui { span, .. }
+                | Inline::IndexTerm { span, .. } => {
                     let span = *span;
                     crate::resolve::fill_labels(node, |xref, textless| {
                         if let Some(label) = crate::resolve::apply_fixed(&self.fixed, xref) {

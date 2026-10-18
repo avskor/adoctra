@@ -715,9 +715,11 @@ pub(crate) fn flatten_inlines(inlines: &[Inline], out: &mut Vec<Token>) {
                     kind: TokenKind::InlineMacro,
                 });
             }
-            // One token over the whole `image:…[…]` / `icon:…[…]` macro, or
-            // a keyboard, button or menu macro.
-            Inline::Image { span, .. } | Inline::Ui { span, .. } => {
+            // One token over the whole `image:…[…]` / `icon:…[…]` macro, a
+            // keyboard, button or menu macro, or an index term.
+            Inline::Image { span, .. }
+            | Inline::Ui { span, .. }
+            | Inline::IndexTerm { span, .. } => {
                 out.push(Token {
                     span: *span,
                     kind: TokenKind::InlineMacro,

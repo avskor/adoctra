@@ -92,6 +92,17 @@ pub(crate) fn scan_for_tokens(src: &str, base: usize, attrs: &Attributes) -> Vec
             span,
         });
     }
+    for span in matches.index_terms {
+        syntax.push(Inline::IndexTerm {
+            term: crate::IndexTerm {
+                text: None,
+                terms: Vec::new(),
+                see: None,
+                see_also: Vec::new(),
+            },
+            span,
+        });
+    }
     for span in matches.images {
         syntax.push(Inline::Image {
             image: Default::default(),

@@ -1384,6 +1384,11 @@ fn collect_footnotes(blocks: &mut [Block]) -> Vec<crate::ast::FootnoteDefinition
                             self.add_parts(label, span);
                         }
                     }
+                    crate::AttributePart::IndexTerm(term) => {
+                        for label in term.clone().labels_mut() {
+                            self.add_parts(label, span);
+                        }
+                    }
                     _ => {}
                 }
             }
@@ -1432,6 +1437,12 @@ fn collect_footnotes(blocks: &mut [Block]) -> Vec<crate::ast::FootnoteDefinition
                 Inline::Ui { ui, span } => {
                     let span = *span;
                     for label in ui.labels_mut() {
+                        self.add_parts(label, span);
+                    }
+                }
+                Inline::IndexTerm { term, span } => {
+                    let span = *span;
+                    for label in term.labels_mut() {
                         self.add_parts(label, span);
                     }
                 }

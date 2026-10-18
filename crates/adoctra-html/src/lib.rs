@@ -1208,6 +1208,7 @@ fn render_inlines(inlines: &[Inline], out: &mut String) {
             Inline::Image { image, .. } => render_inline_image(image, out),
             Inline::Footnote { footnote, .. } => render_footnote(footnote, out),
             Inline::Ui { ui, .. } => render_ui(ui, out),
+            Inline::IndexTerm { term, .. } => render_index_term(term, out),
             // Resolved in core: emit the value, or fall back to the literal
             // `{name}` for a missing attribute (asciidoctor's default).
             Inline::AttributeRef { value, parts, .. } if !parts.is_empty() && value.is_some() => {
@@ -1419,6 +1420,14 @@ fn render_footnote(footnote: &adoctra_core::Footnote, out: &mut String) {
     }
 }
 
+/// Ruby's `convert_inline_indexterm`: a flow term shows its text, a
+/// concealed term nothing.
+fn render_index_term(term: &adoctra_core::IndexTerm, out: &mut String) {
+    if let Some(text) = &term.text {
+        render_parts(text, out);
+    }
+}
+
 /// Ruby's `convert_inline_kbd`, `convert_inline_button` and
 /// `convert_inline_menu` markup.
 fn render_ui(ui: &adoctra_core::UiMacro, out: &mut String) {
@@ -1545,6 +1554,7 @@ fn render_parts(parts: &[adoctra_core::AttributePart], out: &mut String) {
             adoctra_core::AttributePart::Image(image) => render_inline_image(image, out),
             adoctra_core::AttributePart::Footnote(footnote) => render_footnote(footnote, out),
             adoctra_core::AttributePart::Ui(ui) => render_ui(ui, out),
+            adoctra_core::AttributePart::IndexTerm(term) => render_index_term(term, out),
             adoctra_core::AttributePart::Anchor(id) => {
                 out.push_str("<a id=\"");
                 out.push_str(id);
@@ -3126,6 +3136,15 @@ mod tests {
              <figure class=\"audioblock q\">\n<figcaption class=\"title\">Theme</figcaption>\n<audio src=\"m/s.ogg#t=,3\" autoplay>\nYour browser does not support the audio tag.\n</audio>\n</figure>\n\
              <figure class=\"audioblock\">\n<audio src=\"m/t.ogg\" controls>\nYour browser does not support the audio tag.\n</audio>\n</figure>\n</body>\n</html>\n"
         );
+    }
+
+    #[test]
+    fn index_terms_render_flow_text_and_hide_concealed_terms() {
+        let html = render(":t: ((<tag>))\n\n((A))(((B)))indexterm2:[*C*] indexterm:[D] {t} ((https://example.org))");
+        assert!(html.contains("<p>A<strong>C</strong>  &lt;tag&gt; <a href=\"https://example.org\" class=\"bare\">https://example.org</a></p>"), "{}", body(&html));
+        // Flow terms have no wrapper: formatting can cross their boundaries.
+        let html = render("*a ((b* c)) and ((d *e)) f* and https://example.org(((hidden)))/x");
+        assert!(html.contains("<p><strong>a b</strong> c and d <strong>e f</strong> and <a href=\"https://example.org/x\" class=\"bare\">https://example.org/x</a></p>"), "{}", body(&html));
     }
 
     #[test]

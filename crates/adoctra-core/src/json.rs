@@ -108,6 +108,37 @@ pub fn write_ui(ui: &crate::UiMacro, key: &str, out: &mut String) {
     }
 }
 
+/// An index term's fields (without braces), led by `"<key>":"indexterm"`
+/// (Ruby's node type): a flow term's shown `parts` (`null` when concealed),
+/// the concealed `terms`, `see` (or `null`) and `see_also`, all lexical.
+pub fn write_index_term(term: &crate::IndexTerm, key: &str, out: &mut String) {
+    let strings = |values: &[String], out: &mut String| {
+        out.push('[');
+        for (i, value) in values.iter().enumerate() {
+            if i > 0 {
+                out.push(',');
+            }
+            escape_into(value, out);
+        }
+        out.push(']');
+    };
+    escape_into(key, out);
+    out.push_str(":\"indexterm\",\"parts\":");
+    match &term.text {
+        Some(text) => write_parts_array(text, out),
+        None => out.push_str("null"),
+    }
+    out.push_str(",\"terms\":");
+    strings(&term.terms, out);
+    out.push_str(",\"see\":");
+    match &term.see {
+        Some(see) => escape_into(see, out),
+        None => out.push_str("null"),
+    }
+    out.push_str(",\"see_also\":");
+    strings(&term.see_also, out);
+}
+
 /// A footnote's fields (without braces): `type` (`definition`, `reference`
 /// or `unresolved`), `index`, `id` and the definition's content `parts`.
 pub fn write_footnote(footnote: &crate::Footnote, out: &mut String) {
@@ -240,6 +271,12 @@ fn write_parts_array(parts: &[crate::AttributePart], out: &mut String) {
         if let crate::AttributePart::Ui(ui) = part {
             out.push('{');
             write_ui(ui, "kind", out);
+            out.push('}');
+            continue;
+        }
+        if let crate::AttributePart::IndexTerm(term) = part {
+            out.push('{');
+            write_index_term(term, "kind", out);
             out.push('}');
             continue;
         }

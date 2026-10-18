@@ -813,6 +813,11 @@ fn write_inlines(inlines: &[Inline], s: &mut String) {
                 adoctra_core::json::write_ui(ui, "name", s);
                 s.push('}');
             }
+            Inline::IndexTerm { term, .. } => {
+                s.push('{');
+                adoctra_core::json::write_index_term(term, "name", s);
+                s.push('}');
+            }
             Inline::Footnote { footnote, .. } => {
                 s.push_str("{\"name\":\"footnote\",");
                 adoctra_core::json::write_footnote(footnote, s);
@@ -1677,6 +1682,21 @@ mod tests {
             ),
             "{json}"
         );
+    }
+
+    #[test]
+    fn index_terms_serialize_visible_parts_and_concealed_metadata() {
+        let json =
+            render(":t: ((Attr))\n\n((*A*)) (((B,C >> D))) indexterm2:[E,see-also=\"F,G\"] {t}");
+        assert!(json.contains(r#"{"name":"indexterm","parts":[{"kind":"open","format":"strong"},{"kind":"text","value":"A"},{"kind":"close","format":"strong"}],"terms":[],"see":null,"see_also":[]}"#), "{json}");
+        assert!(
+            json.contains(
+                r#"{"name":"indexterm","parts":null,"terms":["B","C"],"see":"D","see_also":[]}"#
+            ),
+            "{json}"
+        );
+        assert!(json.contains(r#"{"name":"indexterm","parts":[{"kind":"text","value":"E"}],"terms":[],"see":null,"see_also":["F","G"]}"#), "{json}");
+        assert!(json.contains(r#"{"kind":"indexterm","parts":[{"kind":"text","value":"Attr"}],"terms":[],"see":null,"see_also":[]}"#), "{json}");
     }
 
     #[test]

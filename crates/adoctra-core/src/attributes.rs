@@ -298,6 +298,11 @@ pub enum AttributePart {
     /// `InlineMenuMacroRx` and `InlineMenuRx`), an atomic value without
     /// flat text.
     Ui(Box<UiMacro>),
+    /// An index term recognized by the macros stage after images (Ruby's
+    /// `InlineIndextermMacroRx`), an atomic value without flat text. A
+    /// concealed term has an empty lexical spelling, like Ruby's empty
+    /// output, so the later stages see the same text as in Ruby.
+    IndexTerm(Box<IndexTerm>),
 }
 
 /// One of Ruby's experimental UI macros (its `:kbd`, `:button` and `:menu`
@@ -408,6 +413,31 @@ impl UiMacro {
     }
 }
 
+/// An index term, like Ruby's `:indexterm` inline node: a flow term
+/// (`((Tigers))`, `indexterm2:[Tigers]`) shows its text in place, a concealed
+/// term (`(((Big cats,Tigers)))`, `indexterm:[Big cats,Tigers]`) shows
+/// nothing. Values other than the shown text keep their lexical spelling
+/// (entity protection included), like Ruby's attributes.
+#[derive(Debug, Clone, PartialEq)]
+pub struct IndexTerm {
+    /// A flow term's text after the earlier substitutions (whitespace
+    /// normalized), as lexical parts; `None` for a concealed term.
+    pub text: Option<Vec<AttributePart>>,
+    /// Concealed terms in order; the attribute-list form keeps at most three.
+    pub terms: Vec<String>,
+    /// The `see` target (`((Tigers >> Big cats))`).
+    pub see: Option<String>,
+    /// The `see-also` targets (`((Tigers &> Lions &> Cats))`, `see-also=`).
+    pub see_also: Vec<String>,
+}
+
+impl IndexTerm {
+    /// The shown text (for passthrough restoration and nested labels).
+    pub(crate) fn labels_mut(&mut self) -> Vec<&mut Vec<AttributePart>> {
+        self.text.iter_mut().collect()
+    }
+}
+
 /// What a footnote macro is (Ruby's footnote `type`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FootnoteKind {
@@ -481,7 +511,8 @@ impl AttributePart {
             | Self::CloseXref
             | Self::Image(_)
             | Self::Footnote(_)
-            | Self::Ui(_) => "",
+            | Self::Ui(_)
+            | Self::IndexTerm(_) => "",
         }
     }
 
@@ -508,6 +539,7 @@ impl AttributePart {
                 | Self::Image(_)
                 | Self::Footnote(_)
                 | Self::Ui(_)
+                | Self::IndexTerm(_)
         )
     }
 
@@ -637,6 +669,9 @@ impl AttributePart {
             Self::Image(image) => return Cow::Owned(image.lexical()),
             Self::Footnote(footnote) => return Cow::Owned(footnote.lexical()),
             Self::Ui(ui) => return Cow::Owned(ui.lexical()),
+            Self::IndexTerm(term) => {
+                return Cow::Owned(term.text.as_deref().map(reference_text).unwrap_or_default())
+            }
             Self::Anchor(id) => return Cow::Owned(format!("<a id=\"{id}\"></a>")),
             Self::OpenWithAttributes { format, id, role } => {
                 let mut text = Self::Open(*format).lexical().into_owned();

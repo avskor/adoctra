@@ -51,8 +51,8 @@ pub mod visit;
 
 pub use ast::{Author, Block, BlockKind, Document, DocumentHeader, Inline, Revision, Span};
 pub use attributes::{
-    AttributeFormat, AttributeLink, AttributePart, Attributes, Footnote, FootnoteKind, InlineImage,
-    UiMacro, Xref,
+    AttributeFormat, AttributeLink, AttributePart, Attributes, Footnote, FootnoteKind, IndexTerm,
+    InlineImage, UiMacro, Xref,
 };
 mod anchor_catalog;
 mod attribute_list;

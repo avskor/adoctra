@@ -1074,8 +1074,19 @@ fixtures under `golden/tables/`).
 Scaffold only: DOCX backend; the extension API exists but `parse`/`convert` do
 not invoke it yet.
 
+Index terms (`((…))` / `indexterm2:[…]` visible, `(((…)))` /
+`indexterm:[…]` concealed) run after images and before links, as Ruby's
+`InlineIndextermMacroRx`. `Inline::IndexTerm` / `AttributePart::IndexTerm`
+keep visible text parts or concealed terms, plus `see` / `see_also` metadata.
+Concealed terms have zero-length lexical fragments; flow terms use empty
+boundary marks so later macros can nest in their text. Unlike UI macros,
+flow terms need no formatting-boundary repair because they emit no wrapper.
+HTML shows only visible text; JSON/WASM expose `indexterm` and the metadata;
+the tokenizer uses parser-reported `inline-macro` spans. Covered in core and
+all consumers, `golden/index_terms.adoc`, and the compatibility corpus.
+
 Not yet implemented (common asks — treat as roadmap, do not assume present):
-broader language coverage (remaining block/inline macros: indexterms, stem). The full block-attribute list is now *parsed* (style, named
+broader language coverage (remaining block/inline macros: stem). The full block-attribute list is now *parsed* (style, named
 attributes, `%options`, id/role folding), but most of it has nothing to render
 against yet: a few **styles that change a block's type** (`[stem]`/`[latexmath]` →
 math, …) remain unimplemented — `[source,<lang>]`, `[literal]`, `[pass]`,

@@ -1,12 +1,15 @@
 //! Macro substitutions for pass attributes and expanded inline text: the
-//! experimental keyboard, button and menu macros, inline images and icons, links, emails, inline anchors and cross-references. Matched over
+//! experimental keyboard, button and menu macros, inline images and icons,
+//! index terms, links, emails, inline anchors, cross-references and
+//! footnotes. Matched over
 //! the shared lexical stream; generated constructs remain backend-neutral
 //! boundaries.
 use crate::inline_pass::Passes;
 use crate::substitution_context::Evaluation;
-use crate::substitution_text::Text;
+use crate::substitution_text::{Marked, Text};
 use crate::{
-    AttributeFormat, AttributeLink, AttributePart as Part, Inline, InlineImage, Span, UiMacro,
+    AttributeFormat, AttributeLink, AttributePart as Part, IndexTerm, Inline, InlineImage, Span,
+    UiMacro,
 };
 use std::collections::BTreeMap;
 use std::ops::Range;
@@ -16,6 +19,7 @@ const SCHEMES: [&str; 5] = ["https://", "http://", "file://", "ftp://", "irc://"
 struct Report<'a> {
     ui: Vec<Span>,
     images: Vec<Span>,
+    index_terms: Vec<Span>,
     links: Vec<Span>,
     anchors: Vec<Span>,
     xrefs: Vec<Span>,
@@ -29,6 +33,7 @@ impl<'a> Report<'a> {
         Self {
             ui: Vec::new(),
             images: Vec::new(),
+            index_terms: Vec::new(),
             links: Vec::new(),
             anchors: Vec::new(),
             xrefs: Vec::new(),
@@ -43,6 +48,7 @@ impl<'a> Report<'a> {
 pub(crate) struct Matches {
     pub ui: Vec<Span>,
     pub images: Vec<Span>,
+    pub index_terms: Vec<Span>,
     pub links: Vec<Span>,
     pub anchors: Vec<Span>,
     pub xrefs: Vec<Span>,
@@ -74,6 +80,7 @@ pub(crate) fn apply_inlines(
     Matches {
         ui: report.ui,
         images: report.images,
+        index_terms: report.index_terms,
         links: report.links,
         anchors: report.anchors,
         xrefs: report.xrefs,
@@ -282,6 +289,7 @@ fn flush_inlines(
     text = crate::replacements::apply_text(text, edges.0, edges.1);
     text = apply_ui(text, attributes, report);
     text = apply_images(text, attributes, report);
+    text = apply_index_terms(text, attributes, 0, report);
     for stage in 0..3 {
         text = apply_stage(
             text,
@@ -323,6 +331,14 @@ fn flush_inlines(
                 image: *image,
                 span,
             }
+        }
+        Inline::Substituted { parts, span, .. }
+            if matches!(parts.as_slice(), [Part::IndexTerm(_)]) =>
+        {
+            let Some(Part::IndexTerm(term)) = parts.into_iter().next() else {
+                unreachable!()
+            };
+            Inline::IndexTerm { term: *term, span }
         }
         Inline::Substituted { parts, span, .. }
             if matches!(parts.as_slice(), [Part::Footnote(_)]) =>
@@ -407,6 +423,7 @@ fn apply_inner(
     let mut text = Text::from_parts_at(&parts, span);
     text = apply_ui(text, attributes, report);
     text = apply_images(text, attributes, report);
+    text = apply_index_terms(text, attributes, depth, report);
     for stage in 0..3 {
         text = apply_stage(text, stage, attributes, compat, depth, true, report);
     }
@@ -469,7 +486,7 @@ fn scan_ui(
             text.copy(start..end, &mut output);
         } else {
             report.ui.push(text.match_span(at..end));
-            text.replace_ui(at..end, ui_macro(&text, m, font), &mut output);
+            text.replace_ui(at..end, Marked::Ui(ui_macro(&text, m, font)), &mut output);
         }
         copied = end;
         at = end;
@@ -991,6 +1008,339 @@ fn image_attributes(
         }
     }
     (alt, named, options)
+}
+
+/// Ruby's `InlineIndextermMacroRx` after images, over the lexical result of
+/// the earlier stages. A flow term (`((Tigers))`, `indexterm2:[Tigers]`)
+/// keeps its text between empty marks, so the later macros see Ruby's text
+/// and may match inside it; a concealed term (`(((Big cats,Tigers)))`,
+/// `indexterm:[…]`) becomes an atomic value with an empty spelling. An
+/// escaped macro loses its backslash; an escaped concealed term
+/// (`\(((Tigers)))`) is a flow term between literal parentheses.
+fn apply_index_terms(
+    text: Text,
+    attributes: &mut Evaluation<'_>,
+    depth: usize,
+    report: &mut Report<'_>,
+) -> Text {
+    let src = &text.text;
+    if !(src.contains("((") && src.contains("))"))
+        && !(src.contains(":[") && src.contains("dexterm"))
+    {
+        return text;
+    }
+    let mut output = Text::default();
+    let mut copied = 0;
+    let mut at = 0;
+    while at < src.len() {
+        let escaped = src.as_bytes()[at] == b'\\';
+        let start = at + usize::from(escaped);
+        let Some(m) = index_term_at(src, start) else {
+            at += src[at..].chars().next().unwrap().len_utf8();
+            continue;
+        };
+        text.copy(copied..at, &mut output);
+        copied = m.end;
+        let content = m.content.clone();
+        let (term, before, after) = match m.kind {
+            TermKind::Macro { .. } if escaped => {
+                text.copy(start..m.end, &mut output);
+                at = m.end;
+                continue;
+            }
+            TermKind::Macro { visible } => (
+                macro_term(&text, content, visible, attributes, depth, report),
+                None,
+                None,
+            ),
+            TermKind::Parens => {
+                let opens = src[content.clone()].starts_with('(');
+                let closes = src[content.clone()].ends_with(')');
+                let open = content.start..content.start + 1;
+                let close = content.end.saturating_sub(1).max(content.start)..content.end;
+                let (content, visible, before, after) = match (escaped, opens, closes) {
+                    // Only a nested flow term is processed inside an escape.
+                    (true, true, true) if content.len() >= 2 => {
+                        (open.end..close.start, true, Some(open), Some(close))
+                    }
+                    (true, ..) => {
+                        text.copy(start..m.end, &mut output);
+                        at = m.end;
+                        continue;
+                    }
+                    (false, true, true) if content.len() >= 2 => {
+                        (open.end..close.start, false, None, None)
+                    }
+                    (false, true, _) => (open.end..content.end, true, Some(open), None),
+                    (false, false, true) => (content.start..close.start, true, None, Some(close)),
+                    (false, false, false) => (content, true, None, None),
+                };
+                (parens_term(&text, content, visible), before, after)
+            }
+        };
+        // An escape processed as a flow term is part of the construct.
+        report.index_terms.push(text.match_span(at..m.end));
+        if let Some(before) = before {
+            text.copy(before, &mut output);
+        }
+        if term.text.is_some() {
+            text.replace_ui(at..m.end, Marked::IndexTerm(term), &mut output);
+        } else {
+            text.replace_parts(at..m.end, &[Part::IndexTerm(Box::new(term))], &mut output);
+        }
+        if let Some(after) = after {
+            text.copy(after, &mut output);
+        }
+        at = m.end;
+    }
+    text.copy(copied..src.len(), &mut output);
+    output
+}
+
+struct TermMatch {
+    end: usize,
+    kind: TermKind,
+    content: Range<usize>,
+}
+
+enum TermKind {
+    /// `indexterm:[…]` (concealed) or `indexterm2:[…]` (visible).
+    Macro { visible: bool },
+    /// `((…))`, the enclosed text deciding the kind.
+    Parens,
+}
+
+/// `(indexterm2?):\[(CC_ALL*?[^\\])\]|\(\((CC_ALL+?)\)\)(?!\))` at
+/// `start`: the macro's content is not empty and ends at the first `]` not
+/// preceded by a backslash; the enclosed text is the shortest one followed
+/// by `))` but not by a third `)`. Both may span lines.
+fn index_term_at(src: &str, start: usize) -> Option<TermMatch> {
+    let rest = &src[start..];
+    for (prefix, visible) in [("indexterm:[", false), ("indexterm2:[", true)] {
+        if rest.starts_with(prefix) {
+            let open = start + prefix.len();
+            let close = src[open..]
+                .match_indices(']')
+                .map(|(i, _)| open + i)
+                .find(|&close| close > open && src.as_bytes()[close - 1] != b'\\')?;
+            return Some(TermMatch {
+                end: close + 1,
+                kind: TermKind::Macro { visible },
+                content: open..close,
+            });
+        }
+    }
+    let open = start + rest.strip_prefix("((").map(|_| 2)?;
+    let first = src[open..].chars().next()?.len_utf8();
+    // Overlapping candidates: in `x)))` the first `))` is followed by `)`.
+    let close = src[open + first..]
+        .match_indices(')')
+        .map(|(i, _)| open + first + i)
+        .find(|&close| src[close..].starts_with("))") && !src[close + 2..].starts_with(')'))?;
+    Some(TermMatch {
+        end: close + 2,
+        kind: TermKind::Parens,
+        content: open..close,
+    })
+}
+
+/// Ruby's `normalize_text` with whitespace normalization (and `\]`
+/// unescaped for the macro forms) over a range, as a new lexical text.
+fn normalized(text: &Text, range: Range<usize>, brackets: bool) -> Text {
+    // Ruby's reader removes CR in CRLF before substitutions. Source fragments
+    // keep those bytes for spans, so normalize them in the term's value only.
+    let parts = slice(text, range, None, brackets)
+        .into_iter()
+        .map(|part| match part {
+            Part::Text(value) => Part::Text(value.replace("\r\n", "\n")),
+            Part::Raw(value) => Part::Raw(value.replace("\r\n", "\n")),
+            part => part,
+        })
+        .collect();
+    let parts = normalize_text(parts);
+    Text::from_parts(&parts)
+}
+
+/// A range of a lexical text as parts, line feeds as spaces.
+fn term_parts(text: &Text, range: Range<usize>) -> Vec<Part> {
+    let mut selected = Text::default();
+    text.copy(range, &mut selected);
+    selected
+        .into_parts()
+        .into_iter()
+        .map(|part| match part {
+            Part::Text(t) => Part::Text(t.replace('\n', " ")),
+            Part::Raw(t) => Part::Raw(t.replace('\n', " ")),
+            part => part,
+        })
+        .collect()
+}
+
+/// `((Tigers))` or `(((Big cats,Tigers)))`: ` >> ` names a `see` target,
+/// ` &> ` separates `see-also` targets (in their escaped spelling).
+fn parens_term(text: &Text, range: Range<usize>, visible: bool) -> IndexTerm {
+    let normalized = normalized(text, range, false);
+    let src = normalized.text.as_str();
+    let mut end = src.len();
+    let mut see = None;
+    let mut see_also = Vec::new();
+    if src.contains(";&") {
+        if let Some(at) = src.find(" &gt;&gt; ") {
+            end = at;
+            see = Some(src[at + " &gt;&gt; ".len()..].to_owned());
+        } else if src.contains(" &amp;&gt; ") {
+            let mut pieces = ruby_split(src, " &amp;&gt; ");
+            end = pieces.first().map_or(0, |p| p.len());
+            pieces.remove(0);
+            see_also = pieces.into_iter().map(str::to_owned).collect();
+        }
+    }
+    if visible {
+        IndexTerm {
+            text: Some(term_parts(&normalized, 0..end)),
+            terms: Vec::new(),
+            see,
+            see_also,
+        }
+    } else {
+        IndexTerm {
+            text: None,
+            terms: split_simple_csv(&src[..end]),
+            see,
+            see_also,
+        }
+    }
+}
+
+/// `indexterm:[Big cats,Tigers]` or `indexterm2:[Tigers]`: with a `=` the
+/// content is an attribute list (positional terms, `see-also`), else a
+/// simple CSV of terms or the term itself.
+fn macro_term(
+    text: &Text,
+    range: Range<usize>,
+    visible: bool,
+    attributes: &mut Evaluation<'_>,
+    depth: usize,
+    report: &mut Report<'_>,
+) -> IndexTerm {
+    let span = text.match_span(range.clone());
+    let normalized = normalized(text, range, true);
+    let src = normalized.text.as_str();
+    let mut term = IndexTerm {
+        text: None,
+        terms: Vec::new(),
+        see: None,
+        see_also: Vec::new(),
+    };
+    let mut positional = BTreeMap::new();
+    let mut named = BTreeMap::new();
+    if src.contains('=') {
+        for field in crate::attribute_list::parse(src) {
+            let Some(range) = field.value.clone() else {
+                continue;
+            };
+            let name = field.name(src);
+            let mut value = match &field.gap {
+                Some(gap) if src[gap.clone()].contains('\t') => {
+                    let mut value = Text::default();
+                    normalized.copy(range.start..gap.start, &mut value);
+                    normalized.replacement(gap.clone(), &" ".repeat(gap.len()), None, &mut value);
+                    normalized.copy(gap.end..range.end, &mut value);
+                    value.into_parts()
+                }
+                _ => slice(&normalized, range, field.quote, false),
+            };
+            // AttributeList repeats normal substitutions for single-quoted
+            // fields, even unused ones, with the shared state and depth limit.
+            if field.single_quoted
+                && !matches!(name, Some("title" | "reftext" | "opts" | "options"))
+            {
+                value = report.passes.normal_parameter(
+                    crate::attributes::reference_text(&value),
+                    attributes,
+                    attributes.get("compat-mode").is_some(),
+                    span,
+                    depth,
+                );
+            }
+            if let Some(name) = name {
+                named.insert(name.to_owned(), crate::attributes::reference_text(&value));
+            } else {
+                positional.insert(field.index, value);
+            }
+        }
+    }
+    if let Some(first) = positional.get(&0) {
+        term.see = named.remove("see");
+        term.see_also = named
+            .remove("see-also")
+            .map(|value| {
+                if value.contains(',') {
+                    ruby_split(&value, ",")
+                        .into_iter()
+                        .map(|v| v.trim_start_matches(|c| blank(c) || c == '\0').to_owned())
+                        .collect()
+                } else {
+                    vec![value]
+                }
+            })
+            .unwrap_or_default();
+        if visible {
+            term.text = Some(first.clone());
+        } else {
+            term.terms = (0..3)
+                .map_while(|index| positional.get(&index))
+                .map(|parts| crate::attributes::reference_text(parts))
+                .collect();
+        }
+    } else if visible {
+        term.text = Some(term_parts(&normalized, 0..src.len()));
+    } else if src.contains('=') {
+        term.terms = vec![src.to_owned()];
+    } else {
+        term.terms = split_simple_csv(src);
+    }
+    term
+}
+
+/// Ruby's `split_simple_csv`: commas separate stripped values, except
+/// inside double quotes (which are removed).
+fn split_simple_csv(src: &str) -> Vec<String> {
+    if src.is_empty() {
+        return Vec::new();
+    }
+    if !src.contains('"') {
+        return ruby_split(src, ",")
+            .into_iter()
+            .map(|v| ruby_strip(v).to_owned())
+            .collect();
+    }
+    let mut values = Vec::new();
+    let mut accum = String::new();
+    let mut quoted = false;
+    for c in src.chars() {
+        match c {
+            ',' if !quoted => values.push(ruby_strip(&std::mem::take(&mut accum)).to_owned()),
+            '"' => quoted = !quoted,
+            c => accum.push(c),
+        }
+    }
+    values.push(ruby_strip(&accum).to_owned());
+    values
+}
+
+/// Ruby's `String#strip` (whitespace or NUL on either side).
+fn ruby_strip(value: &str) -> &str {
+    value.trim_matches(|c| blank(c) || c == '\0')
+}
+
+/// Ruby's `String#split` with a string: trailing empty fields are dropped.
+fn ruby_split<'a>(src: &'a str, separator: &str) -> Vec<&'a str> {
+    let mut pieces: Vec<&str> = src.split(separator).collect();
+    while pieces.last().is_some_and(|p| p.is_empty()) {
+        pieces.pop();
+    }
+    pieces
 }
 
 /// Ruby's `InlineAnchorRx` after links and emails, over the lexical result of

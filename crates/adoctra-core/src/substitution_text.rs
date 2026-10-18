@@ -1,6 +1,6 @@
 //! Temporary lexical text for ordered substitutions. Protection, node ownership
 //! and source ranges travel with fragments; HTML escaping stays in the backend.
-use crate::{AttributePart, Inline, Span, UiMacro};
+use crate::{AttributePart, IndexTerm, Inline, Span, UiMacro};
 use std::ops::Range;
 use std::sync::Arc;
 
@@ -26,14 +26,46 @@ impl Boundary {
     }
 }
 
-/// A piece of a keyboard, button or menu macro's markup while the later macro
-/// stages run over its labels (`index` 0 opens, the last closes, the others
-/// separate labels). Leaving the lexical text rebuilds the macro around
-/// whatever those stages made of its labels.
+/// A piece of a keyboard, button or menu macro's markup (or the empty markup
+/// around a flow index term) while the later macro stages run over its labels
+/// (`index` 0 opens, the last closes, the others separate labels). Leaving
+/// the lexical text rebuilds the macro around whatever those stages made of
+/// its labels.
 #[derive(Clone)]
 struct UiMark {
-    ui: Arc<UiMacro>,
+    ui: Arc<Marked>,
     index: usize,
+}
+
+/// A macro whose labels later macro stages see between its markup.
+#[derive(Clone)]
+pub(crate) enum Marked {
+    Ui(UiMacro),
+    IndexTerm(IndexTerm),
+}
+
+impl Marked {
+    fn pieces(&self) -> Vec<String> {
+        match self {
+            Self::Ui(ui) => ui.pieces(),
+            // Ruby's flow term is its bare text.
+            Self::IndexTerm(_) => vec![String::new(), String::new()],
+        }
+    }
+
+    fn labels_mut(&mut self) -> Vec<&mut Vec<AttributePart>> {
+        match self {
+            Self::Ui(ui) => ui.labels_mut(),
+            Self::IndexTerm(term) => term.labels_mut(),
+        }
+    }
+
+    fn into_part(self) -> AttributePart {
+        match self {
+            Self::Ui(ui) => AttributePart::Ui(Box::new(ui)),
+            Self::IndexTerm(term) => AttributePart::IndexTerm(Box::new(term)),
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -136,8 +168,11 @@ impl Text {
         parts
     }
 
+    /// Empty text is dropped, except an atomic value or mark with an empty
+    /// spelling (a concealed index term, the markup of a flow term): it stays
+    /// as a zero-length fragment, so later stages see Ruby's text.
     pub fn push(&mut self, fragment: Fragment) {
-        if fragment.text.is_empty() {
+        if fragment.text.is_empty() && fragment.part.is_none() && fragment.ui.is_none() {
             return;
         }
         let start = self.text.len();
@@ -199,12 +234,14 @@ impl Text {
         });
     }
 
+    /// A zero-length fragment belongs to the range ending at it (or the one
+    /// starting the text), so consecutive copies and replacements emit it once.
     pub fn copy(&self, range: Range<usize>, output: &mut Self) {
         let first = self
             .fragments
-            .partition_point(|(r, _)| r.end <= range.start);
+            .partition_point(|(r, _)| r.end < range.start || (r.end == range.start && r.end > 0));
         for (r, f) in &self.fragments[first..] {
-            if r.start >= range.end {
+            if r.start > range.end || (r.start == range.end && !r.is_empty()) {
                 break;
             }
             let start = range.start.max(r.start) - r.start;
@@ -298,6 +335,21 @@ impl Text {
             exact: false,
             extend_span: f.extend_span,
         });
+        self.trailing(range.end, output);
+    }
+
+    /// Zero-length fragments at the end of a replaced range follow it: the
+    /// markup closing a flow index term survives a macro consuming its text.
+    fn trailing(&self, end: usize, output: &mut Self) {
+        let first = self
+            .fragments
+            .partition_point(|(r, _)| r.end < end || (r.end == end && !r.is_empty()));
+        for (r, f) in &self.fragments[first..] {
+            if r.start > end || !r.is_empty() {
+                break;
+            }
+            output.push(f.clone());
+        }
     }
 
     /// Physical coverage of a match, using the same ownership rules as replacements.
@@ -332,19 +384,20 @@ impl Text {
     /// consumed later in the range are retained as empty nodes by write_back.
     pub fn replace_parts(&self, range: Range<usize>, parts: &[AttributePart], output: &mut Self) {
         let mut anchor = Self::default();
-        self.replacement(range, " ", None, &mut anchor);
+        self.replacement(range.clone(), " ", None, &mut anchor);
         let (_, fragment) = &anchor.fragments[0];
         for part in parts {
             output.append_part(part, fragment.owner, fragment.span);
         }
+        self.trailing(range.end, output);
     }
 
     /// A keyboard, button or menu macro replacing a range: Ruby's markup as
     /// marks around its labels, so the later macro stages see the same
     /// lexical text as in Ruby and nest what they find inside a label.
-    pub fn replace_ui(&self, range: Range<usize>, mut ui: UiMacro, output: &mut Self) {
+    pub fn replace_ui(&self, range: Range<usize>, mut ui: Marked, output: &mut Self) {
         let mut anchor = Self::default();
-        self.replacement(range, " ", None, &mut anchor);
+        self.replacement(range.clone(), " ", None, &mut anchor);
         let (owner, span) = (anchor.fragments[0].1.owner, anchor.fragments[0].1.span);
         let pieces = ui.pieces();
         let labels: Vec<Vec<AttributePart>> =
@@ -370,6 +423,7 @@ impl Text {
                 output.append_part(part, owner, span);
             }
         }
+        self.trailing(range.end, output);
     }
 
     /// Rebuild every complete keyboard, button or menu macro around its
@@ -492,7 +546,32 @@ fn rebuild_ui(
     let Some(close) = close else {
         return plain(out);
     };
-    let Some((before, labels, after)) = repair(labels) else {
+    // Flow terms have no markup of their own: formatting may cross their
+    // boundaries without needing the repairs required by UI elements.
+    let repaired = if matches!(mark.ui.as_ref(), Marked::IndexTerm(_)) {
+        let labels = labels
+            .into_iter()
+            .map(|label| {
+                let mut parts = Vec::new();
+                for (_, f) in label {
+                    if let Some(part) = f.part {
+                        crate::attributes::push_value(&mut parts, part);
+                    } else {
+                        crate::attributes::push_part(
+                            &mut parts,
+                            f.decoded.as_deref().unwrap_or(&f.text),
+                            f.raw,
+                        );
+                    }
+                }
+                parts
+            })
+            .collect();
+        Some((Vec::new(), labels, Vec::new()))
+    } else {
+        repair(labels)
+    };
+    let Some((before, labels, after)) = repaired else {
         return plain(out);
     };
     let mut ui = (*mark.ui).clone();
@@ -537,7 +616,7 @@ fn rebuild_ui(
         whole.clone(),
         Fragment {
             text: text[whole.clone()].to_owned(),
-            ..generated(AttributePart::Ui(Box::new(ui)))
+            ..generated(ui.into_part())
         },
     ));
     for part in after {

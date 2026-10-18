@@ -953,6 +953,8 @@ fn write_inlines(inlines: &[Inline], s: &mut String) {
             }
             // A keyboard, button or menu macro with its label parts.
             Inline::Ui { ui, .. } => adoctra_core::json::write_ui(ui, "name", s),
+            // An index term: a flow term's text parts, a concealed one's terms.
+            Inline::IndexTerm { term, .. } => adoctra_core::json::write_index_term(term, "name", s),
             // A footnote marker; definitions carry their content parts.
             Inline::Footnote { footnote, .. } => {
                 s.push_str("\"name\":\"footnote\",");
@@ -2603,6 +2605,26 @@ mod header_tests {
             tokens.contains(r#"{"span":{"source_id":3,"start":3,"end":5},"kind":"list-marker"}"#),
             "{tokens}"
         );
+    }
+
+    #[test]
+    fn index_terms_export_metadata_spans_and_tokens() {
+        let source = "Ж ((Лев)) (((Кот)))";
+        let json = super::parse_json_with_source(source, 3);
+        assert!(json.contains(r#"{"span":{"source_id":3,"start":3,"end":13},"name":"indexterm","parts":[{"kind":"text","value":"Лев"}],"terms":[],"see":null,"see_also":[]}"#), "{json}");
+        assert!(json.contains(r#"{"span":{"source_id":3,"start":14,"end":26},"name":"indexterm","parts":null,"terms":["Кот"],"see":null,"see_also":[]}"#), "{json}");
+        let tokens = super::tokens_json_with_source(source, 3);
+        assert!(
+            tokens.contains(r#"{"span":{"source_id":3,"start":3,"end":13},"kind":"inline-macro"}"#),
+            "{tokens}"
+        );
+        assert!(
+            tokens
+                .contains(r#"{"span":{"source_id":3,"start":14,"end":26},"kind":"inline-macro"}"#),
+            "{tokens}"
+        );
+        let json = super::parse_json(":t: ((Attr))\n\n{t}");
+        assert!(json.contains(r#"{"kind":"indexterm","parts":[{"kind":"text","value":"Attr"}],"terms":[],"see":null,"see_also":[]}"#), "{json}");
     }
 
     #[test]

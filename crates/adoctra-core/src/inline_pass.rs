@@ -238,6 +238,11 @@ impl Passes {
                     *label = self.restore_evaluated(std::mem::take(label), attrs, compat, depth);
                 }
                 out.push(P::Ui(ui));
+            } else if let P::IndexTerm(mut term) = part {
+                for label in term.labels_mut() {
+                    *label = self.restore_evaluated(std::mem::take(label), attrs, compat, depth);
+                }
+                out.push(P::IndexTerm(term));
             } else if part.is_boundary() {
                 push_value(
                     &mut out,
@@ -543,6 +548,11 @@ impl Passes {
                 }
                 Inline::Ui { ui, .. } => {
                     for label in ui.labels_mut() {
+                        *label = self.restore_evaluated(std::mem::take(label), attrs, compat, 0);
+                    }
+                }
+                Inline::IndexTerm { term, .. } => {
+                    for label in term.labels_mut() {
                         *label = self.restore_evaluated(std::mem::take(label), attrs, compat, 0);
                     }
                 }
