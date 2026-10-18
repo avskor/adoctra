@@ -29,6 +29,16 @@ pub(crate) fn register_include(includes: &mut Includes, key: String, full: bool)
 /// Ruby's `PathResolver#relative_path` of an included file against the
 /// document directory, without the AsciiDoc extension.
 pub(crate) fn include_key(document: &str, include: &str) -> String {
+    let relative = relative_path(document, include);
+    match relative.rfind('.') {
+        Some(dot) => relative[..dot].to_owned(),
+        None => relative,
+    }
+}
+
+/// Ruby's `PathResolver#relative_path` of an include from the document
+/// directory (`relpath`), `..` segments included.
+pub(crate) fn relative_path(document: &str, include: &str) -> String {
     let base: Vec<_> = document
         .rsplit_once('/')
         .map_or("", |(dir, _)| dir)
@@ -39,11 +49,7 @@ pub(crate) fn include_key(document: &str, include: &str) -> String {
     let common = base.iter().zip(&path).take_while(|(a, b)| a == b).count();
     let mut relative: Vec<&str> = vec![".."; base.len() - common];
     relative.extend(&path[common..]);
-    let relative = relative.join("/");
-    match relative.rfind('.') {
-        Some(dot) => relative[..dot].to_owned(),
-        None => relative,
-    }
+    relative.join("/")
 }
 
 /// Ruby's `Helpers.extname?`.
@@ -300,6 +306,10 @@ mod tests {
     fn include_keys_are_relative_to_the_document_directory() {
         assert_eq!(include_key("/doc/main.adoc", "/doc/ch/a.adoc"), "ch/a");
         assert_eq!(include_key("/doc/main.adoc", "/lib/a.adoc"), "../lib/a");
+        assert_eq!(
+            relative_path("/doc/main.adoc", "/lib/a.adoc"),
+            "../lib/a.adoc"
+        );
         let mut includes = Includes::new();
         register_include(&mut includes, "a".into(), false);
         register_include(&mut includes, "a".into(), true);

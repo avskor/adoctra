@@ -237,7 +237,7 @@ fn secure_mode_and_unreadable_uris_turn_includes_into_links() {
         [
             "Part",
             "<https://x.org/a.adoc>",
-            "include::{undefined}a b.adoc[]",
+            "Unresolved directive in <stdin> - include::{undefined}a b.adoc[]",
             "Part"
         ]
     );

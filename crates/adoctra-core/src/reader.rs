@@ -715,10 +715,51 @@ impl<'a> Reader<'a> {
         true
     }
 
+    /// Ruby's `replace_next_line %(Unresolved directive in #{@path} -
+    /// include::#{target}[#{attrlist}])` for an include that cannot be read:
+    /// a generated line with the directive as its origin. `@path` is the
+    /// primary document's file name (`<stdin>` without one) or an include's
+    /// path relative to the document directory.
+    fn unresolved_include(&mut self, target: &str, attrlist: &str, span: Span) -> bool {
+        let current = self.inputs.last().expect("current input").source_id;
+        let primary = self.inputs[0].source_id;
+        let path = self.resources.as_ref().and_then(|resources| {
+            let document_path = |id| {
+                resources
+                    .sources
+                    .get(id)
+                    .and_then(|source| resources.provider.document_path(source.name()))
+            };
+            let document = document_path(primary);
+            if current == primary {
+                document.map(|path| path.rsplit('/').next().unwrap_or_default().to_owned())
+            } else {
+                match (document, document_path(current)) {
+                    (Some(document), Some(include)) => {
+                        Some(crate::xref_target::relative_path(&document, &include))
+                    }
+                    _ => resources
+                        .sources
+                        .get(current)
+                        .map(|source| source.name().to_owned()),
+                }
+            }
+        });
+        let path = path.unwrap_or_else(|| "<stdin>".to_owned());
+        let mut input = Input::new("", current, true, self.next_occurrence);
+        input.lines = vec![Line::generated(format!(
+            "Unresolved directive in {path} - include::{target}[{attrlist}]"
+        ))];
+        input.generated_at = Some(self.original_spans(span)[0]);
+        self.inputs.push(input);
+        self.next_occurrence += 1;
+        true
+    }
+
     fn expand_include(
         &mut self,
         target: &str,
-        attrs: &str,
+        attrlist: &str,
         span: Span,
         attributes: &Attributes,
     ) -> bool {
@@ -745,7 +786,7 @@ impl<'a> Reader<'a> {
         if missing_target && policy == "drop-line" {
             return true;
         }
-        let (attrs, warnings) = crate::include_attributes::parse(attrs, attributes);
+        let (attrs, warnings) = crate::include_attributes::parse(attrlist, attributes);
         self.diagnostics
             .extend(warnings.into_iter().map(|message| Diagnostic {
                 span,
@@ -769,9 +810,8 @@ impl<'a> Reader<'a> {
                     }
                 ),
             });
-            // Keep the physical directive for partial output, as for provider
-            // failures. Ruby's path-bearing fallback is outside this profile.
-            return false;
+            // Ruby names the unexpanded target here.
+            return self.unresolved_include(target, attrlist, span);
         }
         // Ruby's secure mode does not process the directive; it leaves a
         // link to the target instead.
@@ -831,7 +871,13 @@ impl<'a> Reader<'a> {
             }
             Err(error) => {
                 self.error(span, format!("include failed ({:?}): {error}", error.kind));
-                return false;
+                // Ruby cannot tell a denied target (its jail resolves it to
+                // another path) from a missing or unreadable one. An encoding
+                // the provider contract does not support keeps the directive.
+                if error.kind == crate::ResourceErrorKind::InvalidEncoding {
+                    return false;
+                }
+                return self.unresolved_include(&target, attrlist, span);
             }
         };
         let file = resources.sources.get(id).expect("loaded source");

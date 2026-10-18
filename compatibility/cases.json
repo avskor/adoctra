@@ -19540,6 +19540,56 @@
       "expect": "pass"
     },
     {
+      "id": "include-unresolved-missing-file",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "before\n\ninclude::missing.adoc[lines=1, opts=x]\n\nafter",
+      "resources": {
+        "part.adoc": "x"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-unresolved-nested-path",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::ch/a.adoc[]",
+      "resources": {
+        "ch/a.adoc": "in a\n\ninclude::b.adoc[tag=x]\n"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-unresolved-blank-target",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": ":attribute-missing: warn\n:empty:\n\ninclude::{nope}[]\n\ninclude::{empty}[opts=x]\n\ninclude::{empty}x{empty}[]",
+      "resources": {
+        "part.adoc": "x"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-unresolved-in-listing",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "----\nbefore\ninclude::code.rb[]\nafter\n----\n\n[source,ruby]\n----\ninclude::{d}.rb[]\n----",
+      "resources": {
+        "part.adoc": "x"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-unresolved-optional-dropped",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::gone.adoc[opts=optional]\n\nafter\n\ninclude::{undefined}[opts=optional]",
+      "resources": {
+        "part.adoc": "x"
+      },
+      "expect": "pass"
+    },
+    {
       "id": "example-collapsible-forms",
       "category": "blocks",
       "expect": "pass",

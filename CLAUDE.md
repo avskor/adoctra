@@ -861,8 +861,15 @@ missing-reference rules: warn uses drop-line and warns instead of loading an emp
 result unless optional; drop-line skips missing targets before parameter parsing.
 Blank expanded targets never call the provider and are handled before encoding/depth
 validation. Diagnostics retain physical directive spans after selection/indent.
-Partial output still retains the original directive rather than Ruby's path-bearing
-fallback. set/counter side effects remain follow-up work.
+Like Ruby's replace_next_line, a blank target (unexpanded in the text) or a
+failed load (any kind but InvalidEncoding: Ruby's jail cannot deny) becomes a
+generated `Unresolved directive in <path> - include::<target>[<attrlist>]` line
+(reader.rs unresolved_include, origin = the directive): `<path>` is the primary
+file name (`<stdin>` without document_path) or the include's path relative to
+the document directory (xref_target::relative_path), else its source name.
+Exceeded depth, cycles, byte limits and `encoding` keep the directive; without a
+provider (stdin, string APIs) includes stay literal. set/counter side effects
+remain follow-up work.
 
 Working: parser for header attributes, headings, listing blocks, literal blocks
 (`....` and `[literal]`), admonitions (paragraph form), paragraphs,

@@ -2948,3 +2948,80 @@ fn manual_page_name_section_keeps_include_origins() {
     assert!(!ts.iter().any(|t| t.kind == TokenKind::Strong));
     check_spans(&result, &sources);
 }
+
+#[test]
+fn unreadable_includes_become_unresolved_directive_lines_like_ruby() {
+    // Ruby's `replace_next_line %(Unresolved directive in #{@path} - …)`:
+    // the primary document's file name or the include's path relative to the
+    // document directory, the expanded target (unexpanded when blank) and the
+    // raw attribute list.
+    let root = ":attribute-missing: warn\n:d: missing\n:empty:\n\n\
+                include::{d}.adoc[opts=x, lines=1]\n\ninclude::ch/a.adoc[]\n\n\
+                include::{nope}[]\n\ninclude::{empty}x{empty}[]\n\n\
+                include::gone.adoc[opts=optional]\n\n----\ninclude::code.rb[]\n----";
+    let (mut sources, resources, options) =
+        setup(root, &[("/docs/ch/a.adoc", "include::../../lib/b.adoc[]")]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    let blocks = result.document.flat_blocks();
+    let paragraphs: Vec<String> = blocks
+        .iter()
+        .filter_map(|block| match &block.kind {
+            BlockKind::Paragraph { inlines } => Some(
+                inlines
+                    .iter()
+                    .map(|inline| match inline {
+                        Inline::Text { value, .. } => value.clone(),
+                        Inline::AttributeRef { name, value, .. } => {
+                            value.clone().unwrap_or_else(|| format!("{{{name}}}"))
+                        }
+                        _ => panic!("unexpected inline {inline:?}"),
+                    })
+                    .collect(),
+            ),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        paragraphs,
+        [
+            "Unresolved directive in main.adoc - include::missing.adoc[opts=x, lines=1]",
+            "Unresolved directive in ch/a.adoc - include::../../lib/b.adoc[]",
+            // The generated line gets its own substitutions, like Ruby's.
+            "Unresolved directive in main.adoc - include::{nope}[]",
+            "Unresolved directive in main.adoc - include::x[]",
+        ]
+    );
+    let BlockKind::Listing { text, .. } = &blocks.last().unwrap().kind else {
+        panic!("{blocks:?}");
+    };
+    assert_eq!(
+        text,
+        "Unresolved directive in main.adoc - include::code.rb[]"
+    );
+    // The generated text maps to its directive and has no tokens of its own.
+    let first = blocks
+        .iter()
+        .find(|b| matches!(b.kind, BlockKind::Paragraph { .. }))
+        .unwrap();
+    assert_eq!(
+        sources.slice(first.span),
+        Some("include::{d}.adoc[opts=x, lines=1]")
+    );
+    check_spans(&result, &sources);
+    let tokens = tokens_resource(&mut sources, &options, &resources).unwrap();
+    assert!(!tokens
+        .iter()
+        .any(|t| sources.slice(t.span) == Some("Unresolved")));
+}
+
+#[test]
+fn exceeded_include_depth_keeps_the_directive_like_ruby() {
+    let (mut sources, resources, mut options) =
+        setup("include::part.adoc[]", &[("/docs/part.adoc", "content")]);
+    options.includes = IncludeLimits {
+        max_depth: 0,
+        ..IncludeLimits::default()
+    };
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(paragraphs(&result), ["include::part.adoc[]"]);
+}
