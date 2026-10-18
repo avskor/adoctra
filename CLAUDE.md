@@ -495,7 +495,7 @@ named fields (levels) go to attrs.named. JSON/WASM `name:"toc"`, token
 `block-macro`. HTML builds the outline from Section blocks (Cx carries the
 document): `<nav id="toc" class="toc">` after the title (header attrs, placement
 not macro/preamble, document has sections), at the preamble end (`toc-class`), or
-at the macro (its attribute_context; else `<!-- toc disabled -->`). Entries are
+at the macro (its conversion attributes; else `<!-- toc disabled -->`). Entries are
 heading caption + inlines with every `<a>` tag dropped (DropAnchorRx), nested
 while level < toclevels/levels (Ruby to_i). The DOM profile maps nav to div.
 **Images**: `BlockKind::Image { target, src, alt }` is the `image::target[…]`
@@ -711,7 +711,13 @@ drop anchors (DropAnchorRx). Auto-id headings and anchored `{` titles resolve
 references while reading (unregistered ids give `[id]`, a deferred target
 title converts early) and the auto id derives from that result.
 Block.attribute_context remains the reading snapshot at block completion;
-it can therefore differ from resolved inline values.
+it can therefore differ from resolved inline values. Converters read
+Block.conversion_context (Block::conversion_attributes, falling back to the
+reading snapshot for unvisited blocks): body_subs Execution takes it on block
+entry, after replay and caption counters and before title/content, sharing one
+Arc while the values are equal. It has the replayed declarations and earlier
+conversion effects (a paragraph's `{set:}`) but no reading-only effects
+(orphan declarations, section-title expressions), like Ruby's converter.
 Tokenization uses isolated contexts and the same declaration replay; it never
 mutates caller attributes or previously returned snapshots.
 Early catalog registration of anchors consumed by quote metadata, non-link pass
@@ -755,7 +761,7 @@ unwrapped) and `<section id="preamble">`; JSON/WASM use section/preamble; the DO
 profile treats section as div. Like Ruby's convert_section, a section title
 with an id (not floating/document titles) wraps its numbered title in `<a
 class="link">` with `sectlinks` and adds `<a class="anchor">` before it
-(`sectanchors=after`: after), reading the heading's attribute_context;
+(`sectanchors=after`: after), reading the heading's conversion attributes;
 adoctra.css styles them like Ruby (§ on hover, checked with screenshots). Sectnums, special sections, book partintro and
 preamble cases are implemented (see above). JSON and WASM expose header metadata;
 WASM includes source spans. See parser-api.adoc for remaining header limitations.
@@ -833,7 +839,8 @@ restores the replay when no block results (a skipped `[comment]` paragraph or
 block, a dropped block macro clear Ruby's attributes) and drops orphans at the
 collection end (container, list item, AsciiDoc cell). Section titles take them,
 so they cross section boundaries. Reading attributes keep orphan values (later
-conditions see them); Block.attribute_context, a reading snapshot, still does.
+conditions see them), as does Block.attribute_context, but not the conversion
+attributes HTML reads.
 ResourceProvider::document_path optionally supplies a slash-separated absolute
 path for primary docfile/docdir/docname/docfilesuffix attributes. MemoryResources
 and CLI opt in; opaque providers default to None. Resource parsing/highlighting
@@ -1316,7 +1323,7 @@ the `collapsible` option (`%`, `options=`, `-option`) `caption = Some("")`
 option) with `<summary class="title">` = uncaptioned title or verbatim
 `Details`, children unwrapped. `prewrap` is a core default attribute; HTML
 adds `nowrap` to listing/source/literal `<pre>` with `%nowrap` or without
-`prewrap` in the block's attribute_context. adoctra.css wraps `pre` like
+`prewrap` in the block's conversion attributes. adoctra.css wraps `pre` like
 Ruby (`pre-wrap`, `pre.nowrap` keeps lines) and styles `details` markers.
 Like Ruby's `Block#content`, parser.rs trim_verbatim_edges drops blank edge
 lines of a multi-line Listing/Literal/Passthrough `text` at block completion

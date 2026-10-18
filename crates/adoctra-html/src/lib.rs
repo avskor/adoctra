@@ -1285,7 +1285,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
         BlockKind::Toc => {
             // Ruby's `convert_toc`: only with `toc-placement` macro (the header
             // value `:toc: macro`), at the attributes of its position.
-            let attributes = &block.attribute_context;
+            let attributes = block.conversion_attributes();
             if attributes.get("toc-placement") != Some("macro")
                 || !cx.has_sections()
                 || attributes.get("toc").is_none()
@@ -1854,7 +1854,7 @@ fn render_heading(
         body && base != Some("discrete") && base != Some("float"),
         &block.id,
     ) {
-        let attributes = &block.attribute_context;
+        let attributes = block.conversion_attributes();
         let href = escape(id);
         if attributes.get("sectlinks").is_some() {
             title = format!("<a class=\"link\" href=\"#{href}\">{title}</a>");
@@ -2052,7 +2052,7 @@ fn has_option(block: &Block, name: &str) -> bool {
 /// Ruby's `nowrap` class of a listing or literal `<pre>`: with `%nowrap` or
 /// without the (default) `prewrap` attribute at the block.
 fn nowrap(block: &Block) -> &'static str {
-    if has_option(block, "nowrap") || block.attribute_context.get("prewrap").is_none() {
+    if has_option(block, "nowrap") || block.conversion_attributes().get("prewrap").is_none() {
         "nowrap"
     } else {
         ""
@@ -3599,6 +3599,24 @@ mod tests {
             html.contains("<h2 id=\"_cell\"><a class=\"anchor\" href=\"#_cell\"></a>Cell</h2>"),
             "{html}"
         );
+    }
+
+    #[test]
+    fn converter_settings_read_conversion_attributes() {
+        // An orphan entry and a section-title expression change reading only;
+        // a paragraph's expression changes the next block's conversion.
+        let html = render(":sectanchors:\n:sectlinks:\n\n====\n:sectanchors!:\n====\n\n== A {set:sectlinks!}\n\n== B\n\nPara {set:prewrap!}\n\n----\nx\n----");
+        assert!(
+            html.contains(r##"<h2 id="_b"><a class="anchor" href="#_b"></a><a class="link" href="#_b">B</a></h2>"##),
+            "{html}"
+        );
+        assert!(
+            html.contains("<pre class=\"listing nowrap\">x</pre>"),
+            "{html}"
+        );
+        let html =
+            render("= Doc\n:toc: macro\n\n== A\n\n====\n:toc-placement: auto\n====\n\ntoc::[]");
+        assert!(html.contains("<nav id=\"toc\" class=\"toc\">"), "{html}");
     }
 
     #[test]

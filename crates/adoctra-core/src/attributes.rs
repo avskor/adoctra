@@ -848,6 +848,11 @@ impl Attributes {
         self.local_hardbreaks || self.get("hardbreaks-option").is_some()
     }
 
+    /// Equal values, ignoring the transient local hardbreaks flag.
+    pub(crate) fn same_values(&self, other: &Self) -> bool {
+        self.map == other.map && self.parts == other.parts
+    }
+
     pub fn new() -> Self {
         Self::default()
     }

@@ -8,6 +8,7 @@ use crate::scanner::FilteredSource;
 use crate::substitution_context::Evaluation;
 use crate::{AttributePart, Attributes, Block, BlockKind, Diagnostic, Inline, Span};
 use std::collections::{BTreeMap, BTreeSet};
+use std::sync::Arc;
 
 #[derive(Clone)]
 struct Pending {
@@ -230,6 +231,7 @@ impl BodySubs {
             caption_counters: &mut self.caption_counters,
             entries: self.entries.into_iter().peekable(),
             attributes,
+            snapshot: None,
             locked: std::borrow::Cow::Borrowed(conversion.locked),
             nested: std::mem::take(&mut self.nested),
             root: None,
@@ -278,6 +280,8 @@ struct Execution<'a> {
     caption_counters: &'a mut BTreeMap<(usize, usize), (&'static str, Vec<AttributePart>)>,
     entries: std::iter::Peekable<std::vec::IntoIter<Declaration>>,
     attributes: Attributes,
+    /// The last conversion snapshot, shared by blocks while it stays current.
+    snapshot: Option<Arc<Attributes>>,
     locked: std::borrow::Cow<'a, BTreeSet<String>>,
     nested: BTreeMap<(usize, usize), Nested>,
     /// The root document's attributes and locks while a nested document
@@ -316,6 +320,19 @@ struct Execution<'a> {
 }
 
 impl Execution<'_> {
+    /// The current conversion attributes as a block snapshot (without the
+    /// transient local hardbreaks flag).
+    fn snapshot(&mut self) -> Arc<Attributes> {
+        match &self.snapshot {
+            Some(snapshot) if snapshot.same_values(&self.attributes) => Arc::clone(snapshot),
+            _ => {
+                let mut current = self.attributes.clone();
+                current.local_hardbreaks = false;
+                Arc::clone(self.snapshot.insert(Arc::new(current)))
+            }
+        }
+    }
+
     fn replay(&mut self, at: usize) {
         while self.entries.peek().is_some_and(|e| e.0 <= at) {
             let (_, key, parts) = self.entries.next().unwrap();
@@ -631,6 +648,7 @@ impl Execution<'_> {
                 self.attributes
                     .set_parts(format!("{context}-number"), parts);
             }
+            block.conversion_context = Some(self.snapshot());
             // Ruby's `image_uri` and `media_uri` read `imagesdir` (and
             // `asset-uri-scheme`) from the document at conversion./`asset-uri-scheme`
             if let BlockKind::Image { target, src, .. } = &mut block.kind {

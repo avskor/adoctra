@@ -2,6 +2,7 @@
 //! `:attribute_entries` in the pending block attributes: an entry with no block
 //! after it in a container, list item or table cell, or one before a skipped
 //! comment block or dropped block macro, changes reading but not conversion.
+//! Converters read `Block::conversion_attributes`, which follows conversion.
 
 use adoctra_core::{parse, Block, BlockKind, Inline, Span};
 
@@ -121,4 +122,81 @@ fn entries_carry_across_sections_but_not_out_of_table_cells() {
     assert_eq!(text(&blocks[0]), "text one");
     let start = source.find("text").unwrap();
     assert_eq!(blocks[0].span, Span::new(start, start + "text {x}".len()));
+}
+
+#[test]
+fn conversion_context_excludes_reading_only_effects() {
+    // An orphan unset changes reading (the heading's snapshot) but not the
+    // attributes the heading converts with.
+    let doc = parse(":sectanchors:\n\n====\n:sectanchors!:\n====\n\n== Sec").document;
+    let BlockKind::Section { blocks, .. } = &doc.blocks[1].kind else {
+        panic!("{:?}", doc.blocks[1].kind);
+    };
+    let heading = &blocks[0];
+    assert_eq!(heading.attribute_context.get("sectanchors"), None);
+    assert_eq!(heading.conversion_attributes().get("sectanchors"), Some(""));
+    // A section title's expression runs while reading only.
+    let doc = parse(":sectlinks:\n\n== A {set:sectlinks!}\n\n== B").document;
+    let BlockKind::Section { blocks, .. } = &doc.blocks[1].kind else {
+        panic!("{:?}", doc.blocks[1].kind);
+    };
+    assert_eq!(blocks[0].attribute_context.get("sectlinks"), None);
+    assert_eq!(blocks[0].conversion_attributes().get("sectlinks"), Some(""));
+}
+
+#[test]
+fn conversion_context_follows_replay_and_earlier_conversions() {
+    let doc = parse("Para {set:prewrap!}\n\n----\nx\n----\n\n:prewrap:\n\n----\ny\n----").document;
+    // Taken on entry: the paragraph's own expression comes after.
+    assert_eq!(
+        doc.blocks[0].conversion_attributes().get("prewrap"),
+        Some("")
+    );
+    assert_eq!(doc.blocks[1].conversion_attributes().get("prewrap"), None);
+    assert_eq!(
+        doc.blocks[2].conversion_attributes().get("prewrap"),
+        Some("")
+    );
+    // Reading never executed the paragraph's expression.
+    assert_eq!(doc.blocks[1].attribute_context.get("prewrap"), Some(""));
+    // Blocks converting with equal attributes share one snapshot.
+    let doc = parse("a\n\nb\n\n:x: 1\n\nc").document;
+    let [a, b, c] = &doc.blocks[..] else {
+        panic!("{:?}", doc.blocks);
+    };
+    let shared = |x: &Block, y: &Block| {
+        std::sync::Arc::ptr_eq(
+            x.conversion_context.as_ref().unwrap(),
+            y.conversion_context.as_ref().unwrap(),
+        )
+    };
+    assert!(shared(a, b));
+    assert!(!shared(b, c));
+    assert_eq!(c.conversion_attributes().get("x"), Some("1"));
+}
+
+#[test]
+fn conversion_context_inside_asciidoc_cells_stays_in_the_cell() {
+    // The cell inherits the parent's attributes locked, so its unset is
+    // ignored; its own declaration converts inside the cell only.
+    let source = ":sectanchors:\n\n[cols=1a]\n|===\n|\n:sectanchors!:\n:local: 1\n\n== In cell\n|===\n\n== After";
+    let doc = parse(source).document;
+    let BlockKind::Table(table) = &doc.blocks[0].kind else {
+        panic!("{:?}", doc.blocks[0].kind);
+    };
+    let adoctra_core::ast::CellContent::Blocks { blocks, .. } = &table.body[0][0].content else {
+        panic!("{:?}", table.body[0][0].content);
+    };
+    let BlockKind::Section { blocks: inner, .. } = &blocks[0].kind else {
+        panic!("{:?}", blocks[0].kind);
+    };
+    let inner = inner[0].conversion_attributes();
+    assert_eq!(inner.get("sectanchors"), Some(""));
+    assert_eq!(inner.get("local"), Some("1"));
+    let BlockKind::Section { blocks: after, .. } = &doc.blocks[1].kind else {
+        panic!("{:?}", doc.blocks[1].kind);
+    };
+    let after = after[0].conversion_attributes();
+    assert_eq!(after.get("sectanchors"), Some(""));
+    assert_eq!(after.get("local"), None);
 }

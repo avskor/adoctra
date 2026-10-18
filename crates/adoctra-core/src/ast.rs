@@ -243,6 +243,15 @@ pub struct Block {
     /// in which they were scanned.
     /// Shared until an attribute assignment changes the parse context.
     pub attribute_context: Arc<Attributes>,
+    /// The document attributes when this block converts, which Ruby's
+    /// converter reads (`sectanchors`, `prewrap`, `toc-placement`, …): the
+    /// header snapshot with the declarations replayed up to the block and the
+    /// effects of earlier conversions, taken on entry before its title and
+    /// content. Unlike [`attribute_context`](Block::attribute_context), it has
+    /// no reading-only effects (orphan declarations, section-title
+    /// expressions). `None` until conversion visits the block; see
+    /// [`Block::conversion_attributes`].
+    pub conversion_context: Option<Arc<Attributes>>,
     pub id: Option<String>,
     pub reftext: Option<Vec<Inline>>,
     pub roles: Vec<String>,
@@ -297,6 +306,7 @@ impl Block {
         Self {
             span,
             attribute_context: Arc::new(Attributes::new()),
+            conversion_context: None,
             id: None,
             reftext: None,
             roles: Vec::new(),
@@ -306,6 +316,15 @@ impl Block {
             simple: false,
             kind,
         }
+    }
+
+    /// The attributes a converter reads for this block: its
+    /// [`conversion_context`](Block::conversion_context), else (for a block
+    /// conversion did not visit) its reading snapshot.
+    pub fn conversion_attributes(&self) -> &Attributes {
+        self.conversion_context
+            .as_deref()
+            .unwrap_or(&self.attribute_context)
     }
 }
 
