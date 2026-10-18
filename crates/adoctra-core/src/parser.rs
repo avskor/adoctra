@@ -333,11 +333,23 @@ fn collect_blocks(
     stop: Option<&str>,
     pending: PendingMeta,
 ) -> Vec<Block> {
-    collect_blocks_in(lines, i, context, diagnostics, stop, pending, None)
+    collect_blocks_in(lines, i, context, diagnostics, stop, pending, Scope::Body)
 }
 
-/// The blocks of a container, or of a list item when `list` gives its list
-/// type and whether its first block is text only.
+/// Where [`collect_blocks_in`] reads blocks.
+#[derive(Clone, Copy)]
+enum Scope {
+    /// The document body (without `stop`) or a delimited container's body.
+    Body,
+    /// A list item: its list type and whether its first block is text only.
+    ListItem(crate::lists::ListType, bool),
+    /// A compound block read from its own lines (a Markdown blockquote),
+    /// where sections are not recognized.
+    Container,
+}
+
+/// The blocks of a container, of a list item, or of a compound block read
+/// from its own lines, as `scope` gives.
 fn collect_blocks_in(
     lines: &mut Reader<'_>,
     i: &mut usize,
@@ -345,13 +357,13 @@ fn collect_blocks_in(
     diagnostics: &mut Vec<Diagnostic>,
     stop: Option<&str>,
     mut pending: PendingMeta,
-    list: Option<(crate::lists::ListType, bool)>,
+    scope: Scope,
 ) -> Vec<Block> {
     // Ruby first preprocesses and captures a container up to its closing fence,
     // then parses the body. A nested comment/verbatim region cannot hide that fence.
     let previous_limit = stop.map(|fence| lines.bound(*i, context, |line| line == fence));
     let mut blocks = Vec::new();
-    let mut text_only = list.is_some_and(|(_, text_only)| text_only);
+    let mut text_only = matches!(scope, Scope::ListItem(_, true));
     // Blank lines before the next block's metadata (Ruby's `skipped`).
     let mut skipped = 0usize;
     let mut metadata_seen = false;
@@ -376,14 +388,14 @@ fn collect_blocks_in(
         }
         let metadata = std::mem::take(&mut pending);
         let mut carried = None;
-        let ctx = match list {
-            Some((list_type, _)) => BlockCtx::InListItem {
+        let ctx = match scope {
+            Scope::ListItem(list_type, _) => BlockCtx::InListItem {
                 list_type,
                 text_only: text_only && skipped == 0,
                 adjacent: skipped == 0,
             },
-            None if stop.is_none() => BlockCtx::Section,
-            None => BlockCtx::TopLevel,
+            Scope::Body if stop.is_none() => BlockCtx::Section,
+            Scope::Body | Scope::Container => BlockCtx::TopLevel,
         };
         text_only = false;
         skipped = 0;
@@ -405,6 +417,9 @@ fn collect_blocks_in(
             block.roles = pending.roles;
             let mut title = pending.title;
             let mut macro_meta = context.block_macro.take();
+            // A block that sets its own style (fenced code, a Markdown or
+            // quoted paragraph blockquote) does not rekey positional fields.
+            let restyled = macro_meta.as_ref().is_some_and(|meta| meta.style.is_some());
             // A fenced code block forces the `source` style.
             let fenced = macro_meta
                 .as_ref()
@@ -472,7 +487,14 @@ fn collect_blocks_in(
                 block.kind,
                 BlockKind::Paragraph { .. } | BlockKind::Admonition { .. }
             );
-            apply_style_fixup(&mut block, lines, &attributes, &pending.list, context);
+            apply_style_fixup(
+                &mut block,
+                lines,
+                &attributes,
+                &pending.list,
+                !restyled,
+                context,
+            );
             source_defaults(&mut block, &pending.list, fenced, &context.attributes);
             adjust_verbatim(&mut block, context);
             if let BlockKind::Stem { style, .. } = &mut block.kind {
@@ -488,6 +510,7 @@ fn collect_blocks_in(
                 block.attrs.style = Some(style.as_str().into());
             }
             trim_verbatim_edges(&mut block);
+            let simple = simple || block.simple;
             commit_subs(&mut block, simple, lines, &attributes, context, diagnostics);
             apply_callouts(&mut block, lines, context);
             if let Some(value) = reftext {
@@ -956,6 +979,8 @@ fn apply_style_fixup(
     lines: &Reader<'_>,
     attrs: &Attributes,
     list: &crate::block_attributes::BlockList,
+    // Whether positional fields rekey into a quote attribution.
+    rekey: bool,
     context: &mut ParseContext,
 ) {
     let child_attributes = Arc::clone(&block.attribute_context);
@@ -1153,10 +1178,12 @@ fn apply_style_fixup(
     // Rekey the positional attributes (`[quote, author, work]`) into the quote /
     // verse attribution — both the `____` fence form and the paragraph form land
     // here. Consumed from `attrs.positional` so they are not also surfaced raw.
-    if matches!(
-        block.kind,
-        BlockKind::Quote { .. } | BlockKind::Verse { .. }
-    ) {
+    if rekey
+        && matches!(
+            block.kind,
+            BlockKind::Quote { .. } | BlockKind::Verse { .. }
+        )
+    {
         block.attrs.positional.clear();
         let attribution = build_attribution(list.value(2), list.value(3));
         if let BlockKind::Quote {
@@ -2652,6 +2679,7 @@ fn parse_block_content(
     let plain = matches!(pending_style, None | Some("normal"));
     let start = off;
     let mut end = off + line.len();
+    let first = *i;
     *i += 1;
     while if pending_style == Some("comment") {
         lines.raw_has(*i)
@@ -2740,6 +2768,21 @@ fn parse_block_content(
         block.simple = true;
         return Some(block);
     }
+    // Ruby's ordinary paragraph branch, after the admonition label: a
+    // Markdown blockquote or a quoted paragraph with a credit line. A style
+    // Ruby does not know as a paragraph style is ignored there.
+    if !text_only && !pending_style.is_some_and(changes_paragraph_type) {
+        if let Some(block) = quote_paragraph(
+            lines,
+            first..*i,
+            Span::new(start, end),
+            &attrs,
+            context,
+            diagnostics,
+        ) {
+            return Some(block);
+        }
+    }
     // Parsed text also removes comment lines; verbatim styles keep them.
     // Both paths map the preprocessed reader text to original byte spans.
     let inlines = if verbatim {
@@ -2759,6 +2802,216 @@ fn parse_block_content(
         Span::new(start, end),
         BlockKind::Paragraph { inlines },
     ))
+}
+
+/// Ruby's Markdown blockquote and quoted paragraph (`next_block`): an
+/// unstyled paragraph whose first line starts with `> `, or with `"` when its
+/// last line is a `-- ` credit and the line before ends with `"`. The credit
+/// gets normal substitutions while reading and splits at the first `, ` into
+/// the attribution and citetitle. A blockquote parses its unmarked lines as
+/// blocks (compound); a quoted paragraph is simple content. Both catalog the
+/// inline anchors of their lines, like an ordinary paragraph.
+fn quote_paragraph(
+    lines: &mut Reader<'_>,
+    range: std::ops::Range<usize>,
+    span: Span,
+    attrs: &Arc<Attributes>,
+    context: &mut ParseContext,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> Option<Block> {
+    // Ruby's `read_paragraph_lines` skips line comments.
+    let mut comments = Vec::new();
+    let mut text = Vec::new();
+    for k in range {
+        let (off, line) = lines.line(k);
+        if crate::comments::is_line_comment(&line) {
+            comments.push(Span::new(off, off + line.len()));
+        } else {
+            text.push((off, line, lines.eol(k)));
+        }
+    }
+    let head = Arc::clone(&text.first()?.1);
+    let block = if head.starts_with("> ") {
+        let mut body: Vec<(usize, Arc<str>, String)> = Vec::new();
+        for (off, line, eol) in text {
+            let cut = if &*line == ">" {
+                1
+            } else if line.starts_with("> ") {
+                2
+            } else {
+                0
+            };
+            if cut > 0 {
+                lines.quote_markers.push(Span::new(off, off + 1));
+            }
+            body.push((off + cut, Arc::from(&line[cut..]), eol));
+        }
+        let credit = body
+            .last()
+            .filter(|(_, line, _)| line.starts_with("-- "))
+            .map(|(off, line, _)| (off + 3, line[3..].to_owned()));
+        if credit.is_some() {
+            body.pop();
+            while body.last().is_some_and(|(_, line, _)| line.is_empty()) {
+                body.pop();
+            }
+        }
+        context.comments.extend(comments);
+        let range = body
+            .first()
+            .zip(body.last())
+            .map(|(first, last)| (first.0, last.0 + last.1.len()));
+        let mut nested = Reader::nested(body, lines.include_catalog.clone());
+        let mut j = 0;
+        let blocks = collect_blocks_in(
+            &mut nested,
+            &mut j,
+            context,
+            diagnostics,
+            None,
+            PendingMeta::default(),
+            Scope::Container,
+        );
+        let attribution =
+            credit.and_then(|(off, line)| credit_attribution(&line, off, lines, context));
+        if let Some((start, end)) = range {
+            nested.catalog_anchors(start, end, false, context);
+        }
+        lines.absorb(nested, false);
+        Block::new(
+            span,
+            BlockKind::Quote {
+                attribution,
+                blocks,
+            },
+        )
+    } else if head.starts_with('"') {
+        let [.., (body_off, body, _), (credit_off, credit, _)] = text.as_slice() else {
+            return None;
+        };
+        if !credit.starts_with("-- ") || !body.ends_with('"') {
+            return None;
+        }
+        let start = text[0].0 + 1;
+        let end = (body_off + body.len() - 1).max(start);
+        context
+            .comments
+            .extend(comments.into_iter().filter(|comment| comment.start >= end));
+        let inlines = lines.scan_content(start, end, attrs, context);
+        let mut child = Block::new(Span::new(start, end), BlockKind::Paragraph { inlines });
+        child.attribute_context = Arc::clone(attrs);
+        let attribution = credit_attribution(&credit[3..], credit_off + 3, lines, context);
+        lines.catalog_anchors(start, end, false, context);
+        let mut block = Block::new(
+            span,
+            BlockKind::Quote {
+                attribution,
+                blocks: vec![child],
+            },
+        );
+        block.simple = true;
+        block
+    } else {
+        return None;
+    };
+    context.block_macro = Some(MacroMeta {
+        style: Some("quote".to_owned()),
+        ..MacroMeta::default()
+    });
+    Some(block)
+}
+
+/// A blockquote credit line: normal substitutions while reading, then Ruby's
+/// `split ', ', 2` into the attribution and citetitle (an empty result has
+/// neither).
+fn credit_attribution(
+    credit: &str,
+    base: usize,
+    lines: &Reader<'_>,
+    context: &mut ParseContext,
+) -> Option<Attribution> {
+    let attributes = Arc::clone(&context.attributes);
+    let inlines = context.reading_title(credit, base, &attributes, &lines.include_catalog);
+    let (author, citetitle) = split_credit(inlines);
+    if citetitle.is_none() && author.iter().all(empty_inline) {
+        return None;
+    }
+    Some(Attribution {
+        author: Some(author),
+        citetitle,
+    })
+}
+
+/// Whether an inline converts to nothing.
+fn empty_inline(inline: &Inline) -> bool {
+    match inline {
+        Inline::Text { value, .. } => value.is_empty(),
+        Inline::AttributeRef { value, parts, .. } => {
+            parts.is_empty() && value.as_deref() == Some("")
+        }
+        _ => false,
+    }
+}
+
+/// Split substituted credit inlines at the first `, ` of their top-level text
+/// (also inside a plain attribute value). Unlike Ruby, which splits the
+/// converted markup, a separator inside formatting does not split it.
+fn split_credit(mut inlines: Vec<Inline>) -> (Vec<Inline>, Option<Vec<Inline>>) {
+    for index in 0..inlines.len() {
+        let at = match &inlines[index] {
+            Inline::Text { value, .. } => value.find(", "),
+            Inline::AttributeRef {
+                value: Some(value),
+                parts,
+                ..
+            } if parts.is_empty() => value.find(", "),
+            _ => None,
+        };
+        let Some(at) = at else {
+            continue;
+        };
+        let mut rest = inlines.split_off(index);
+        let (head, tail) = match rest.remove(0) {
+            Inline::Text { value, span } => {
+                // Replacements may change the length of the text.
+                let exact = value.len() == span.end - span.start;
+                let part = |range: std::ops::Range<usize>| Inline::Text {
+                    value: value[range.clone()].to_owned(),
+                    span: if exact {
+                        Span {
+                            start: span.start + range.start,
+                            end: span.start + range.end,
+                            ..span
+                        }
+                    } else {
+                        span
+                    },
+                };
+                (part(0..at), part(at + 2..value.len()))
+            }
+            Inline::AttributeRef {
+                name, value, span, ..
+            } => {
+                let value = value.unwrap_or_default();
+                let part = |text: &str| Inline::AttributeRef {
+                    name: name.clone(),
+                    value: Some(text.to_owned()),
+                    parts: Vec::new(),
+                    span,
+                };
+                (part(&value[..at]), part(&value[at + 2..]))
+            }
+            _ => unreachable!("only text splits"),
+        };
+        if !empty_inline(&head) {
+            inlines.push(head);
+        }
+        if !empty_inline(&tail) {
+            rest.insert(0, tail);
+        }
+        return (inlines, Some(rest));
+    }
+    (inlines, None)
 }
 
 /// A line of a list item, as Ruby's `read_lines_for_list_item` buffers it: a
@@ -3060,7 +3313,7 @@ fn parse_item_blocks(
         diagnostics,
         None,
         PendingMeta::default(),
-        Some((list_type, !has_text)),
+        Scope::ListItem(list_type, !has_text),
     );
     lines.absorb(item_reader, false);
     let folded = if adjacent

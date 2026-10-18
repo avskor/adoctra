@@ -1226,6 +1226,25 @@ child's inlines without `<p>` (Ruby's `content`); JSON/WASM add
 `"simple":true` to such containers. The body-dom-v1 profile projects Ruby's
 admonitionblock table and adoctra's `aside.admonition` to one admonition node
 (type, id, roles, text label, body) and compares blockquote content strictly.
+**Markdown blockquotes and quoted paragraphs** (parser.rs quote_paragraph,
+Ruby's ordinary paragraph branch after the admonition label): an unstyled
+paragraph (no style, `normal`, or one Ruby does not know as a paragraph style;
+not a list item's text-only block) whose first line starts with `> ` is a
+compound `Quote`: line comments are skipped, `> `/`>` markers stripped (lazy
+lines kept), a final `-- ` credit line popped with blank lines before it, and
+the rest parsed as blocks from a `Reader::nested` at the stripped offsets
+(Scope::Container: sections are text, nested `> ` quotes need a new
+paragraph). A paragraph starting with `"` whose last line is a `-- ` credit and
+whose previous line ends with `"` is a simple `Quote` of the text between the
+quotes. Both force style `quote` via MacroMeta (positional fields are not
+rekeyed). The credit gets normal subs while reading (reading_title, effects
+reach reading only) and splits at the first top-level `, ` into
+author/citetitle (also inside a plain attribute value; an empty result has no
+attribution); its xrefs resolve after the quote's children (resolve.rs
+resolve_attribution, attribute-line attributions before them). Inline anchors
+of the stripped lines are cataloged again after the nested parse, like Ruby
+(a duplicate warns). Markers are `quote-delimiter` tokens (Reader.quote_markers;
+the tokenizer classifies the rest of the line).
 **Collapsible examples and nowrap**: assign_caption gives an Example with
 the `collapsible` option (`%`, `options=`, `-option`) `caption = Some("")`
 (Ruby's `:example` branch sets caption ''), so it never numbers and

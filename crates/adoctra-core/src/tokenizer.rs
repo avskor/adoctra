@@ -167,6 +167,11 @@ pub(crate) fn tokens_reader<'a>(
             .iter()
             .map(|span| processed.transformed_span(*span))
             .collect(),
+        quote_markers: reader
+            .quote_markers
+            .iter()
+            .map(|span| processed.transformed_span(*span))
+            .collect(),
     };
     tables.delimited.sort_by_key(|t| t.span.start);
     let custom: Vec<_> = reader
@@ -380,6 +385,8 @@ struct Tables {
     blocks: Vec<Span>,
     separators: Vec<Span>,
     list_markers: Vec<Span>,
+    /// Markdown blockquote `>` markers.
+    quote_markers: Vec<Span>,
 }
 
 fn tokens_processed(
@@ -409,7 +416,22 @@ fn tokens_processed(
     // folded into a running paragraph is plain text.
     let mut mid_paragraph = false;
 
-    for (line_index, (off, line)) in lines.into_iter().enumerate() {
+    for (line_index, (mut off, mut line)) in lines.into_iter().enumerate() {
+        // Markdown blockquote markers, as the parser stripped them (nested
+        // quotes repeat them): the rest of the line is the quote's own line.
+        let first = tables.quote_markers.partition_point(|s| s.start < off);
+        for marker in &tables.quote_markers[first..] {
+            if marker.start != off {
+                break;
+            }
+            out.push(Token {
+                span: *marker,
+                kind: TokenKind::QuoteDelimiter,
+            });
+            let cut = line.len().min(2);
+            off += cut;
+            line = &line[cut..];
+        }
         let line_span = Span::new(off, off + line.len());
         while entry_index < entries.len() && entries[entry_index].0.end <= off {
             entry_index += 1;

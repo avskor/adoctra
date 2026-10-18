@@ -781,9 +781,64 @@ impl VisitorMut for Ids<'_> {
             self.registry.insert(unique.clone(), target);
             block.id = Some(unique);
         }
+        // A quote attribution was substituted while reading: from its
+        // attribute line before the content, or from a blockquote credit
+        // line after the content was parsed.
+        let credit = match &block.kind {
+            BlockKind::Quote {
+                attribution: Some(attribution),
+                ..
+            }
+            | BlockKind::Verse {
+                attribution: Some(attribution),
+                ..
+            } => attribution_start(attribution),
+            _ => None,
+        };
+        let before = credit.filter(|&start| start < block.span.start);
+        if before.is_some() {
+            self.resolve_attribution(block);
+        }
         visit::walk_block_mut(self, block);
+        if let (Some(start), None) = (credit, before) {
+            self.flush(start);
+            self.position = start;
+            self.resolve_attribution(block);
+        }
     }
     fn visit_inlines(&mut self, _inlines: &mut [Inline], _context: InlineContext) {}
+}
+
+impl Ids<'_> {
+    fn resolve_attribution(&mut self, block: &mut Block) {
+        let attributes = std::sync::Arc::clone(&block.attribute_context);
+        if let BlockKind::Quote {
+            attribution: Some(attribution),
+            ..
+        }
+        | BlockKind::Verse {
+            attribution: Some(attribution),
+            ..
+        } = &mut block.kind
+        {
+            for part in [&mut attribution.author, &mut attribution.citetitle]
+                .into_iter()
+                .flatten()
+            {
+                self.resolve_reading(part, &attributes);
+            }
+        }
+    }
+}
+
+/// Where a quote attribution starts in the source.
+fn attribution_start(attribution: &crate::ast::Attribution) -> Option<usize> {
+    [&attribution.author, &attribution.citetitle]
+        .into_iter()
+        .flatten()
+        .filter_map(|part| part.first())
+        .map(|inline| inline.span().start)
+        .min()
 }
 
 /// Register `id -> reftext` in the registry, warning (at `span`) on a duplicate

@@ -19426,6 +19426,78 @@
       "category": "blocks",
       "expect": "pass",
       "source": "= Book\n:doctype: book\n\n= Part A\n\n[partintro]\nintro a\n\n== Ch\n\nx\n\n= Part B\n\n[open]\nfirst\n\nsecond\n\n== Ch2\n\ny\n\n= Part C\n\n[open]\nonly\n\n== Ch3\n\nz\n"
+    },
+    {
+      "id": "markdown-blockquote",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "> A *quote*\n> second line\n> -- Author, Work\n"
+    },
+    {
+      "id": "markdown-blockquote-compound",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "> para\nlazy line\n>\n> > nested\n> > more\n>\n> * item\n> ** sub\n>\n> ----\n> code <1>\n> ----\n> <1> callout\n>\n> ....\n> lit\n> ....\n"
+    },
+    {
+      "id": "markdown-blockquote-credit",
+      "category": "blocks",
+      "expect": "pass",
+      "source": ":who: Ann, Book\n\n> a\n> -- A\n\n> b\n> -- , W\n\n> c\n> -- A, \n\n> d\n> -- *A*, W, more (C)\n\n> e\n> -- {who}\n\n> f\n>\n>\n> -- after blanks\n\n> -- only credit\n\n> g\n> --no space\n\n> h\n> -- see <<t>>, link:u[*L*]\n\n[[t]]\nTarget.\n"
+    },
+    {
+      "id": "markdown-blockquote-metadata",
+      "category": "blocks",
+      "expect": "pass",
+      "source": ".Title\n[#id.role]\n> x\n\n[foo, A, B]\n> y\n\n[normal]\n> z\n\n[NOTE]\n> admonition\n\n[quote, Q]\n> styled\n\n[source]\n> verbatim\n\n[stem]\n> unknown style\n\n[subs=none]\n> *kept*\n> -- *A*\n"
+    },
+    {
+      "id": "markdown-blockquote-in-containers",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "* item\n> folded\n\n* item\n+\n> attached\n> -- A\n\n====\n> in example\n====\n\n|===\na|\n> in cell\n> -- C\n|===\n\nterm:: desc\n+\n> in dlist\n"
+    },
+    {
+      "id": "markdown-blockquote-comments-anchors",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "> before [[a,Anchor A]] after\n// a comment\n> second\n> -- A\n\n<<a>> and <<b>>\n\n> > [[b]]nested anchor\n"
+    },
+    {
+      "id": "markdown-blockquote-not-matched",
+      "category": "blocks",
+      "expect": "pass",
+      "source": ">no space\n\n>> double\n\ntext\n> continued\n\n  > indented\n\n>\n\n> \n"
+    },
+    {
+      "id": "quoted-paragraph",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "\"one\ntwo *bold*\"\n-- A, B\n\n\"single\"\n-- C\n"
+    },
+    {
+      "id": "quoted-paragraph-metadata",
+      "category": "blocks",
+      "expect": "pass",
+      "source": ".Title\n[#q.role]\n\"titled\"\n-- A\n\n[normal]\n\"normal\"\n-- N\n\n[quote, Q]\n\"styled\"\n-- S\n\n[subs=none]\n\"*kept*\"\n-- *A*\n\n[%hardbreaks]\n\"a\nb\"\n-- H\n\n\"x\"\n// comment\n-- after comment\n"
+    },
+    {
+      "id": "quoted-paragraph-not-matched",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "\"no credit\"\n\n\"a\"\n--no space\n\n\"open\nend\n-- A\n\none\n\"x\"\n-- B\n\n\"one line\" -- C\n"
+    },
+    {
+      "id": "quoted-paragraph-anchors-and-lists",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "\"see [[q,Q]]\"\n-- A\n\n<<q>>\n\n* item\n+\n\"in item\"\n-- I\n\n|===\na|\n\"cell\"\n-- C\n|===\n"
+    },
+    {
+      "id": "quote-attribution-reading-xrefs",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "[quote, '<<t>> and <<u,U>>', '<<later>>']\n____\nx [[u]]\n____\n\n[[t]]\nT\n\n[verse, '<<t>>']\n____\nv\n____\n\n[[later]]\nL\n"
     }
   ]
 }

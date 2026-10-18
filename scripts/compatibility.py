@@ -23,7 +23,8 @@ ROOT = Path(__file__).resolve().parents[1]
 CORPUS = ROOT / "compatibility"
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"}
 INLINE = {"p", "a", "strong", "em", "code", "mark", "sup", "sub", "span", "cite", "h1", "h2", "h3", "h4", "h5", "h6"}
-LIST_BLOCKS = {"ul", "ol", "dl", "p", "listing", "literal", "pre", "div", "aside", "figure", "blockquote", "table", "hr", "details"}
+LIST_BLOCKS = {"ul", "ol", "dl", "p", "listing", "literal", "pre", "div", "aside", "figure", "blockquote", "table", "hr", "details",
+               "quote", "verse"}
 
 
 @dataclass

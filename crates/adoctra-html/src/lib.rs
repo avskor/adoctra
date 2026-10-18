@@ -2446,6 +2446,23 @@ mod tests {
     }
 
     #[test]
+    fn markdown_and_quoted_paragraph_blockquotes_render_like_ruby() {
+        let html = render("> a *b*\n>\n> * item\n> -- *A*, W & X\n\n\"q\"\n-- B\n");
+        assert!(
+            html.contains(
+                "<figure class=\"quoteblock\">\n<blockquote>\n<p>a <strong>b</strong></p>\n<ul>\n<li>item</li>\n</ul>\n</blockquote>\n\
+                 <figcaption>&#8212; <strong>A</strong><br>\n<cite>W &amp; X</cite></figcaption>\n</figure>"
+            ),
+            "{html}"
+        );
+        // A quoted paragraph is simple content.
+        assert!(
+            html.contains("<blockquote>\nq\n</blockquote>\n<figcaption>&#8212; B</figcaption>"),
+            "{html}"
+        );
+    }
+
+    #[test]
     fn styled_paragraph_forms_render_simple_content_like_ruby() {
         let html = render(
             "[example%collapsible]\n.T\ncollapsed\n\n[quote,A]\nquoted *q*\n\n\

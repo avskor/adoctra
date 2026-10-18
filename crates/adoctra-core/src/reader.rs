@@ -72,6 +72,8 @@ pub(crate) struct Reader<'a> {
     pub table_separators: Vec<Span>,
     /// List markers and description list delimiters, for highlighting.
     pub list_markers: Vec<Span>,
+    /// The `>` markers of Markdown blockquote lines.
+    pub quote_markers: Vec<Span>,
     /// Delimited block fences and verbatim/raw body lines, classified during
     /// structural parsing.
     pub block_tokens: Vec<crate::Token>,
@@ -125,6 +127,7 @@ impl<'a> Reader<'a> {
             tables: Vec::new(),
             table_separators: Vec::new(),
             list_markers: Vec::new(),
+            quote_markers: Vec::new(),
             block_tokens: Vec::new(),
             custom_subs: Vec::new(),
             callout_marks: Vec::new(),
@@ -201,6 +204,8 @@ impl<'a> Reader<'a> {
         self.custom_subs.extend(nested.custom_subs);
         self.callout_marks.extend(nested.callout_marks);
         self.list_markers.sort_by_key(|span| span.start);
+        self.quote_markers.extend(nested.quote_markers);
+        self.quote_markers.sort_by_key(|span| span.start);
         self.diagnostics.extend(nested.diagnostics);
     }
 

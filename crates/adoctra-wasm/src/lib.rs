@@ -1202,6 +1202,30 @@ mod tests {
     }
 
     #[test]
+    fn markdown_blockquotes_keep_physical_spans() {
+        let json = parse_json("> a\n> -- Ann, W\n\n\"b\"\n-- B\n");
+        // Marker-stripped content and the credit keep their source ranges.
+        assert!(
+            json.contains(r#"{"span":{"source_id":0,"start":0,"end":15},"name":"quote""#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""attribution":{"author":[{"span":{"source_id":0,"start":9,"end":12},"name":"text","value":"Ann"}],"citetitle":[{"span":{"source_id":0,"start":14,"end":15},"name":"text","value":"W"}]}"#),
+            "{json}"
+        );
+        assert!(
+            json.contains(
+                r#""blocks":[{"span":{"source_id":0,"start":2,"end":3},"name":"paragraph""#
+            ),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""simple":true,"blocks":[{"span":{"source_id":0,"start":18,"end":19},"name":"paragraph""#),
+            "{json}"
+        );
+    }
+
+    #[test]
     fn styled_paragraph_forms_mark_simple_content() {
         let json = parse_json("[open]\nx\n\n--\ny\n--\n");
         assert!(

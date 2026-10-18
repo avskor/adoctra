@@ -1794,6 +1794,19 @@ mod tests {
     }
 
     #[test]
+    fn markdown_and_quoted_paragraph_blockquotes_are_quotes() {
+        let json = render("> a\n> -- *A*, W\n\n\"b\"\n-- B\n");
+        assert!(
+            json.contains(r#"{"name":"quote","id":null,"roles":[],"style":"quote","attributes":{},"options":[],"title":null,"caption":null,"attribution":{"author":[{"name":"strong","inlines":[{"name":"text","value":"A"}]}],"citetitle":[{"name":"text","value":"W"}]},"blocks":[{"name":"paragraph""#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""attribution":{"author":[{"name":"text","value":"B"}],"citetitle":null},"simple":true,"blocks":[{"name":"paragraph""#),
+            "{json}"
+        );
+    }
+
+    #[test]
     fn styled_paragraph_forms_mark_simple_content() {
         let json = render("[sidebar]\nx\n\n****\ny\n****\n");
         assert!(
