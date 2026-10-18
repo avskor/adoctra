@@ -296,7 +296,7 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
     }
     // Ruby parses a manual page's title and NAME section before saving the
     // header attributes; a nested document is never a manual page.
-    if context.attributes.get("doctype") == Some("manpage") && !context.nested {
+    if context.doctype() == Some("manpage") && !context.nested {
         let mut i = result.body_start;
         let doc_id = if result.metadata_for_title {
             result.pending.id.clone().or(result.title_anchor.clone())

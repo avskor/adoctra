@@ -12,6 +12,7 @@ pub mod backend;
 mod block_attributes;
 mod blockquote_credit;
 mod body_subs;
+mod builtin_attributes;
 mod callouts;
 mod comments;
 mod conditional_expression;

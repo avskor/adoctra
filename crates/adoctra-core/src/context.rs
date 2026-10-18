@@ -130,6 +130,11 @@ pub(crate) struct ParseContext {
     /// reader range and how its lines are adjusted (Ruby's
     /// `adjust_indentation!`). A `subs` attribute converts it on completion.
     pub verbatim_bodies: BTreeMap<usize, (usize, usize, crate::indentation::Indentation)>,
+    /// Ruby's `@backend`/`@doctype`, which own the derived attributes.
+    profile: crate::builtin_attributes::Profile,
+    /// Whether the header changed `htmlsyntax` since the last `backend`
+    /// assignment (Ruby's `@attributes_modified.delete? 'htmlsyntax'`).
+    htmlsyntax_modified: bool,
 }
 
 fn root_of(
@@ -154,11 +159,16 @@ pub(crate) struct Outer {
     /// Whether this level made the parent the root document.
     root: bool,
     footnotes: crate::substitution_context::Footnotes,
+    profile: crate::builtin_attributes::Profile,
+    htmlsyntax_modified: bool,
 }
 
-/// Ruby's `DEFAULT_ATTRIBUTES` that adoctra models.
+/// Ruby's `DEFAULT_ATTRIBUTES` that adoctra models, with the compliance
+/// defaults Ruby assigns before them.
 fn default_attributes() -> Attributes {
     let mut attributes = Attributes::new();
+    attributes.set("attribute-undefined", "drop-line");
+    attributes.set("attribute-missing", "skip");
     attributes.set("example-caption", "Example");
     attributes.set("figure-caption", "Figure");
     attributes.set("table-caption", "Table");
@@ -179,8 +189,10 @@ fn default_attributes() -> Attributes {
     attributes.set("prewrap", "");
     // Ruby's DEFAULT_ATTRIBUTES: sections get automatic ids unless unset.
     attributes.set("sectids", "");
-    // The HTML converter's suffix, set before the header (Ruby's init).
-    attributes.set("outfilesuffix", ".html");
+    // Labels of Ruby's standalone header and footer.
+    attributes.set("last-update-label", "Last updated");
+    attributes.set("untitled-label", "Untitled");
+    attributes.set("version-label", "Version");
     // Ruby sets this for a standalone document; adoctra's HTML is one.
     attributes.set("iconfont-remote", "");
     for kind in [
@@ -209,6 +221,12 @@ impl ParseContext {
                     .map_or_else(|| vec![AttributePart::Raw(value.to_owned())], <[_]>::to_vec),
             );
             locked.insert(effective_key.to_string());
+        }
+        // Ruby's initial backend and doctype (the backend's `outfilesuffix`
+        // is set before the header); the manpage backend locks the doctype.
+        let mut profile = crate::builtin_attributes::Profile::default();
+        if profile.initialize(&mut attributes, locked.contains("outfilesuffix")) {
+            locked.insert("doctype".to_owned());
         }
         // Ruby's fallback stylesheet directory.
         if attributes.get("stylesdir").is_none() {
@@ -247,6 +265,8 @@ impl ParseContext {
             footnotes: Default::default(),
             callouts: Default::default(),
             verbatim_bodies: BTreeMap::new(),
+            profile,
+            htmlsyntax_modified: false,
         }
     }
 
@@ -271,6 +291,9 @@ impl ParseContext {
         if attributes.get("toc-placement").is_none() {
             attributes.set("toc-placement", "auto");
         }
+        // After the locks: the derived keys it removes stay locked, the ones
+        // it adds do not (Ruby updates them after copying the overrides).
+        let profile = crate::builtin_attributes::Profile::nested(&mut attributes);
         let root = self.root.is_none();
         let parent = std::mem::replace(&mut self.attributes, Arc::new(attributes));
         if root {
@@ -289,6 +312,8 @@ impl ParseContext {
             manpage: self.manpage,
             outfilesuffix: self.outfilesuffix.clone(),
             nested: std::mem::replace(&mut self.nested, true),
+            profile: std::mem::replace(&mut self.profile, profile),
+            htmlsyntax_modified: std::mem::take(&mut self.htmlsyntax_modified),
         }
     }
 
@@ -317,13 +342,23 @@ impl ParseContext {
         self.manpage = outer.manpage;
         self.outfilesuffix = outer.outfilesuffix;
         self.nested = outer.nested;
+        self.profile = outer.profile;
+        self.htmlsyntax_modified = outer.htmlsyntax_modified;
+    }
+
+    /// Ruby's `Document#doctype`: the doctype the header last assigned,
+    /// even if the attribute was unset since.
+    pub fn doctype(&self) -> Option<&str> {
+        self.profile.doctype.as_deref()
     }
 
     pub fn start_body(&mut self) {
         self.replay = Some(Arc::clone(&self.attributes));
-        // Ruby reads the doctype once the header is complete.
-        self.book = self.attributes.get("doctype") == Some("book");
-        self.manpage = self.attributes.get("doctype") == Some("manpage") && !self.nested;
+        // Ruby reads the doctype (`@doctype`, not the attribute) once the
+        // header is complete.
+        let doctype = self.profile.doctype.as_deref();
+        self.book = doctype == Some("book");
+        self.manpage = doctype == Some("manpage") && !self.nested;
         self.outfilesuffix = self.attributes.get("outfilesuffix").map(str::to_owned);
     }
 
@@ -786,6 +821,27 @@ impl ParseContext {
             }
         }
         let attributes = Arc::make_mut(&mut self.attributes);
+        // In the header, Ruby's set_attribute updates the backend and doctype
+        // with their derived attributes.
+        if self.replay.is_none() {
+            match (key.as_str(), &value) {
+                ("backend", Some(parts)) => {
+                    let backend = parts_text(parts);
+                    let init = std::mem::take(&mut self.htmlsyntax_modified)
+                        && self.profile.backend.as_deref() == Some(backend.as_str());
+                    let locked = self.locked.contains("outfilesuffix");
+                    self.profile
+                        .update_backend(attributes, &backend, init, locked);
+                    return;
+                }
+                ("doctype", Some(parts)) => {
+                    self.profile.update_doctype(attributes, &parts_text(parts));
+                    return;
+                }
+                ("htmlsyntax", _) => self.htmlsyntax_modified = true,
+                _ => {}
+            }
+        }
         match value {
             Some(value) => attributes.set_parts(key, value),
             None => {

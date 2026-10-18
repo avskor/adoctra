@@ -19690,6 +19690,114 @@
       "category": "sections",
       "expect": "pass",
       "source": ":idprefix: o-\n\n|===\na|\n:idseparator: -\n\n== In Cell\n\n[discrete]\n== Cell Float\n|===\n\n== After Cell\n"
+    },
+    {
+      "id": "builtin-backend-attributes",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "{backend} {basebackend} {filetype} {htmlsyntax} {outfilesuffix} [{backend-html5}] [{basebackend-html}] [{filetype-html}] {pagewidth}\n"
+    },
+    {
+      "id": "builtin-doctype-article",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "{doctype} [{doctype-article}] [{backend-html5-doctype-article}] [{basebackend-html-doctype-article}] {doctype-book}\n"
+    },
+    {
+      "id": "builtin-doctype-book",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "= T\n:doctype: book\n\n{doctype} [{doctype-book}] [{backend-html5-doctype-book}] [{basebackend-html-doctype-book}] {doctype-article} {backend-html5-doctype-article} {basebackend-html-doctype-article}\n"
+    },
+    {
+      "id": "builtin-doctype-twice",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "= T\n:doctype: book\n:doctype: article\n\n{doctype} {doctype-book} [{doctype-article}] [{backend-html5-doctype-article}] {backend-html5-doctype-book}\n"
+    },
+    {
+      "id": "builtin-doctype-empty",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "= T\n:doctype:\n\n[{doctype}] [{doctype-}] [{backend-html5-doctype-}] {doctype-article}\n"
+    },
+    {
+      "id": "builtin-doctype-unset",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "= T\n:doctype: book\n:doctype!:\n\n{doctype} [{doctype-book}] {doctype-article}\n\n== Chapter\n\n= Part\n\n== Chapter 2\n"
+    },
+    {
+      "id": "builtin-doctype-unset-reassign",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "= T\n:doctype: book\n:doctype!:\n:doctype: article\n\n{doctype} {doctype-book} [{doctype-article}] [{backend-html5-doctype-article}]\n"
+    },
+    {
+      "id": "builtin-doctype-body",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "= T\n\n:doctype: book\n\n{doctype} {doctype-book} [{doctype-article}]\n"
+    },
+    {
+      "id": "builtin-doctype-manpage",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "= prog(1)\n:doctype: manpage\n\n== NAME\n\nprog - does things\n\n== Body\n\n{doctype} [{doctype-manpage}] [{backend-html5-doctype-manpage}] {doctype-article}\n"
+    },
+    {
+      "id": "builtin-doctype-derived-locked",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "= T\n:doctype-book: no\n:doctype: book\n:doctype-book: custom\n\n[{doctype-book}] {doctype-article}\n"
+    },
+    {
+      "id": "builtin-doctype-ifdef",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "= T\n:doctype: book\n\nifdef::doctype-book[book]\nifdef::doctype-article[article]\nifdef::backend-html5-doctype-book[html book]\nifdef::basebackend-html[html base]\nifdef::backend-docbook5[docbook]\nifndef::filetype-xml[not xml]\n"
+    },
+    {
+      "id": "builtin-doctype-cell",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "= T\n:doctype: book\n\n[cols=1a]\n|===\n|{doctype} {doctype-book} [{doctype-article}] [{backend-html5-doctype-article}] {backend-html5-doctype-book}\n\n:doctype: book\n\n{doctype} {doctype-book}\n|===\n\n{doctype} [{doctype-book}] {doctype-article}\n"
+    },
+    {
+      "id": "builtin-doctype-cell-unset-parent",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "= T\n:doctype: book\n:doctype!:\n\n[cols=1a]\n|===\n|{doctype} [{doctype-article}] {doctype-book}\n|===\n"
+    },
+    {
+      "id": "builtin-doctype-cell-locked-derived",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "= T\n:doctype: book\n\n[cols=1a]\n|===\na|\n:doctype-book: x\n:doctype-article: y\n\n{doctype-book} [{doctype-article}]\n|===\n"
+    },
+    {
+      "id": "builtin-labels",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "{last-update-label}, {untitled-label}, {version-label}\n"
+    },
+    {
+      "id": "builtin-compliance-defaults",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "{attribute-missing} {attribute-undefined}\n\n:attribute-missing!:\n\n{nope} {attribute-missing}\n"
+    },
+    {
+      "id": "builtin-htmlsyntax-override",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":htmlsyntax: xml\n\n{htmlsyntax} {backend}\n"
+    },
+    {
+      "id": "builtin-outfilesuffix-override",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "= T\n:outfilesuffix: .htm\n\n{outfilesuffix} <<other.adoc#x,X>>\n"
     }
   ]
 }

@@ -311,8 +311,16 @@ Definitions and body evaluation respect host locks and preserve the
 header snapshot; counter names are case sensitive while ordinary references and
 set names are normalized. Canonical integers increment without a fixed-width
 limit; string seeds follow Unicode successor/carry rules. set supports empty
-values, unsets, aliases and relative leveloffset; derived backend/doctype behavior
-remains outside the current built-in attribute profile.
+values, unsets, aliases and relative leveloffset. builtin_attributes.rs ports
+Ruby's backend/doctype profile (`update_backend_attributes`/
+`update_doctype_attributes`): default `html5`/`article` with `backend-*`,
+`basebackend-*`, `filetype-*`, `doctype-*` flags and combinations, `filetype`,
+`htmlsyntax`, `outfilesuffix`, `pagewidth`; header `:doctype:`/`:backend:`
+update them (body assignments are plain); ParseContext keeps Ruby's
+`@doctype`/`@backend` apart from the attributes (book/manpage decisions use it);
+nested documents reset the doctype to `article`. Compliance defaults
+(`attribute-missing`/`-undefined`) and the header/footer labels are defaults.
+Safe-mode, date, embedded and `asciidoctor*` attributes are not modeled.
 Stateful pass bodies execute lazily at restoration, after outer stages. A dropped
 slot has no body effects, while repeated slot occurrences execute independently
 (e.g. a link target and its fallback label can advance the same counter twice).

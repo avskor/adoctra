@@ -1613,6 +1613,23 @@ Ruby API и выполнение Ruby-расширений относятся к
   `section-id-policy`: всего 3069 PASS и 2 XFAIL. Прежние эталоны не
   изменены. Проверены Rust-тесты, fmt, clippy, WASM target и тесты стенда.
 
+Восемьдесят шестой рабочий набор изменений:
+
+* Встроенный профиль атрибутов, как `Document#initialize` Ruby: значения
+  compliance (`attribute-missing`, `attribute-undefined`), недостающие
+  `DEFAULT_ATTRIBUTES` (`last-update-label`, `untitled-label`,
+  `version-label`) и `update_backend_attributes` с backend `html5` и doctype
+  `article` по умолчанию: `backend`, `basebackend`, `filetype`, `htmlsyntax`,
+  `outfilesuffix`, `pagewidth` и флаги `backend-*`, `basebackend-*`,
+  `filetype-*`, `doctype-*` с их сочетаниями (`builtin_attributes.rs`).
+* `:doctype:`/`:backend:` в header обновляют флаги, в теле — нет; текущий
+  doctype хранится отдельно от атрибута, как `@doctype` (книга после
+  `:doctype!:` остаётся книгой). Host backend `manpage` фиксирует doctype.
+  Вложенные документы сбрасывают doctype на `article`.
+* Добавлены 18 сравнительных сценариев: всего 3087 PASS и 2 XFAIL. Прежние
+  эталоны не изменены. Проверены Rust-тесты, fmt, clippy, WASM target и тесты
+  стенда.
+
 *Следующее изменение:* оставшиеся блочные семейства и substitutions — по приоритетам этапов 4–6.
 Исполнение выражений reftext в ранних ссылках
 заголовков и порядок регистрации контейнеров после содержимого — отдельная работа.
@@ -1624,7 +1641,9 @@ Ruby API и выполнение Ruby-расширений относятся к
 не перенесены. Структурные значения ещё теряются у прямых строковых
 потребителей, включая замену doctitle целиком.
 Отдельно остаётся согласование Unicode word-грамматики остальных потребителей (например, include/conditional).
-Encoding, URI и safe mode требуют отдельного согласования с контрактом provider.
+Encoding, URI и safe mode (включая атрибуты `safe-mode-*`) требуют отдельного
+согласования с контрактом provider; атрибуты дат и режима embedded/standalone
+тоже впереди.
 Полная совместимость header ещё требует
 полного набора header substitutions и остальных стадий pass:. Карта фрагментов покрывает
 комментарии, условия и составные источники;

@@ -1185,6 +1185,14 @@ mod tests {
     use super::*;
 
     #[test]
+    fn builtin_backend_and_doctype_attributes_resolve() {
+        let json = parse_json("= T\n:doctype: book\n\nifdef::backend-html5-doctype-book[{backend}/{doctype}]\nifdef::doctype-article[article]\n");
+        assert!(json.contains(r#""value":"html5""#), "{json}");
+        assert!(json.contains(r#""value":"book""#), "{json}");
+        assert!(!json.contains("article"), "{json}");
+    }
+
+    #[test]
     fn section_ids_follow_the_id_policy() {
         let json =
             parse_json(":sectids!:\n\n== A\n\n:sectids:\n:idprefix:\n:idseparator: -\n\n== B C\n");

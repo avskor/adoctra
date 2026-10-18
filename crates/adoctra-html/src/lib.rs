@@ -1857,6 +1857,15 @@ mod tests {
     }
 
     #[test]
+    fn builtin_backend_and_doctype_attributes_resolve() {
+        let html = render(
+            "= T\n:doctype: book\n\nifdef::backend-html5-doctype-book[{backend}/{doctype}]\nifdef::doctype-article[article]\n",
+        );
+        assert!(html.contains("<p>html5/book</p>"), "{html}");
+        assert!(!html.contains("article"), "{html}");
+    }
+
+    #[test]
     fn section_ids_follow_the_id_policy() {
         let html = render(
             "= Doc\n:toc:\n:sectids!:\n\n== First\n\n:sectids:\n:idprefix: s-\n:idseparator:\n\n\
