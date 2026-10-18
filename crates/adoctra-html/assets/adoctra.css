@@ -278,7 +278,6 @@ table.stripes-hover tr:hover { background: color-mix(in srgb, var(--adoctra-fg) 
 
 sup.footnote, sup.footnoteref { font-size: 0.75em; line-height: 0; }
 sup:is(.footnote, .footnoteref) > a { text-decoration: none; }
-sup.footnoteref.red { color: #cf222e; }
 #footnotes { margin-block-start: 2rem; font-size: 0.9em; }
 #footnotes > hr {
   inline-size: 20%;
@@ -372,3 +371,63 @@ kbd {
 b.button::before, b.button::after { position: relative; inset-block-start: -1px; font-weight: 400; }
 b.button::before { content: "["; padding-inline: 2px 3px; }
 b.button::after { content: "]"; padding-inline: 3px 2px; }
+
+/* --- Built-in roles -------------------------------------------------------- */
+/* Ruby's text roles, last so that a role wins over component colours of the
+   same specificity (`[.red]#text#`, `[.yellow-background]`, an unresolved
+   footnote reference). Colours are Asciidoctor's. */
+
+/* Ruby hangs a block's role on a wrapper whose content sets its own colour
+   (verbatim `pre`, admonition content, quote/verse text, table cells,
+   section titles, code), so a colour role on the block does not reach that
+   text; a role on the inner element itself still applies. adoctra puts block
+   roles on the element, so these keep the content colour (and the verbatim
+   background) with a higher specificity than a role. */
+h1, h2, h3, h4, h5, h6, code { color: var(--adoctra-fg); }
+pre code { color: inherit; }
+pre:is(.listing, .literalblock, .highlight) {
+  color: var(--adoctra-fg);
+  background: var(--adoctra-code-bg);
+}
+aside.admonition { color: var(--adoctra-fg); }
+.quoteblock :is(blockquote, p),
+.verseblock pre { color: color-mix(in srgb, var(--adoctra-fg) 88%, transparent); }
+table.tableblock :is(th, td) { color: var(--adoctra-fg); }
+
+.big { font-size: larger; }
+.small { font-size: smaller; }
+.underline { text-decoration: underline; }
+.overline { text-decoration: overline; }
+.line-through { text-decoration: line-through; }
+.aqua { color: #00bfbf; }
+.aqua-background { background: #00fafa; }
+.black { color: #000; }
+.black-background { background: #000; }
+.blue { color: #0000bf; }
+.blue-background { background: #0000fa; }
+.fuchsia { color: #bf00bf; }
+.fuchsia-background { background: #fa00fa; }
+.gray { color: #606060; }
+.gray-background { background: #7d7d7d; }
+.green { color: #006000; }
+.green-background { background: #007d00; }
+.lime { color: #00bf00; }
+.lime-background { background: #00fa00; }
+.maroon { color: #600000; }
+.maroon-background { background: #7d0000; }
+.navy { color: #000060; }
+.navy-background { background: #00007d; }
+.olive { color: #606000; }
+.olive-background { background: #7d7d00; }
+.purple { color: #600060; }
+.purple-background { background: #7d007d; }
+.red { color: #bf0000; }
+.red-background { background: #fa0000; }
+.silver { color: #909090; }
+.silver-background { background: #bcbcbc; }
+.teal { color: #006060; }
+.teal-background { background: #007d7d; }
+.white { color: #bfbfbf; }
+.white-background { background: #fafafa; }
+.yellow { color: #bfbf00; }
+.yellow-background { background: #fafa00; }

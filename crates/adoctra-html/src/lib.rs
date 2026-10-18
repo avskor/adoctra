@@ -3236,6 +3236,50 @@ mod tests {
     }
 
     #[test]
+    fn built_in_roles_follow_asciidoctor_stylesheet() {
+        // Ruby's text roles with its colours, defined after the components.
+        let roles = STYLESHEET
+            .split("--- Built-in roles")
+            .nth(1)
+            .expect("roles section");
+        for rule in [
+            ".big { font-size: larger; }",
+            ".small { font-size: smaller; }",
+            ".underline { text-decoration: underline; }",
+            ".overline { text-decoration: overline; }",
+            ".line-through { text-decoration: line-through; }",
+            ".red { color: #bf0000; }",
+            ".red-background { background: #fa0000; }",
+            ".green { color: #006000; }",
+            ".yellow-background { background: #fafa00; }",
+            ".white { color: #bfbfbf; }",
+            ".black-background { background: #000; }",
+        ] {
+            assert!(roles.contains(rule), "{rule}");
+        }
+        assert_eq!(roles.matches("-background { background:").count(), 16);
+        // Content that sets its own colour in Ruby keeps it under a block role.
+        assert!(roles.contains("pre:is(.listing, .literalblock, .highlight) {"));
+        assert!(roles.contains("aside.admonition { color: var(--adoctra-fg); }"));
+        assert!(!STYLESHEET.contains("sup.footnoteref.red"));
+        // Roles reach the elements: inline spans, blocks and the unresolved
+        // footnote reference.
+        let html = render("x [.red]#a# [.white.navy-background]#b# footnote:x[]\n\n[.big.underline]\nc\n\n[.maroon]\n----\nd\n----");
+        assert!(
+            html.contains(
+                "<span class=\"red\">a</span> <span class=\"white navy-background\">b</span>"
+            ),
+            "{html}"
+        );
+        assert!(html.contains("<sup class=\"footnoteref red\""), "{html}");
+        assert!(html.contains("<p class=\"big underline\">c</p>"), "{html}");
+        assert!(
+            html.contains("<pre class=\"listing maroon\">d</pre>"),
+            "{html}"
+        );
+    }
+
+    #[test]
     fn font_icons_link_the_icon_font_stylesheet_like_ruby() {
         let link = |src: &str| {
             render(src)

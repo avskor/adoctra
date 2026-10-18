@@ -1158,6 +1158,12 @@ convert_document: Font Awesome 4.7.0 from cdnjs (`asset-uri-scheme`,
 `iconfont-cdn`) while `iconfont-remote` is set — a core default, since adoctra
 HTML is standalone — else `<iconfont-name|font-awesome>.css` under `stylesdir`
 (core fallback `.`) via the public `normalize_web_path(…, false)`.
+adoctra.css ends with Ruby's built-in roles (16 colours and `-background`s,
+big/small, underline/overline/line-through, Asciidoctor's values) plus rules
+reproducing Ruby's cascade: a colour role on a block does not recolour
+verbatim `pre` (nor its background), admonition, quote/verse text, table
+cells, section titles or code, while a role on the inner element still
+applies (checked against Ruby in Chrome).
 Highlighting keeps only inline tokens of executed stages inside such text
 (Reader.custom_subs; verbatim paragraph forms have none by default) and
 projects converted marks as `callout` (Reader.callout_marks).
