@@ -463,10 +463,10 @@ impl Ids<'_> {
         attributes: &crate::Attributes,
     ) -> Option<Vec<Inline>> {
         if let Some(path) = &xref.path {
-            return Some(vec![Inline::Text {
-                value: decoded(path, lexical),
+            return Some(crate::entity_references::reference_inlines(
+                &decoded(path, lexical),
                 span,
-            }]);
+            ));
         }
         let id = decoded_refid(xref, lexical)?;
         if self.registry.contains_key(&id) {
@@ -478,10 +478,10 @@ impl Ids<'_> {
         } else if id.is_empty() {
             None
         } else {
-            Some(vec![Inline::Text {
-                value: format!("[{id}]"),
+            Some(crate::entity_references::reference_inlines(
+                &format!("[{id}]"),
                 span,
-            }])
+            ))
         }
     }
 }
@@ -687,12 +687,10 @@ impl Ids<'_> {
     ) -> Option<Vec<Inline>> {
         self.reading_xreftext(id, style, span, attributes)
             .or_else(|| {
-                self.registry[id].title.is_none().then(|| {
-                    vec![Inline::Text {
-                        value: format!("[{id}]"),
-                        span,
-                    }]
-                })
+                self.registry[id]
+                    .title
+                    .is_none()
+                    .then(|| crate::entity_references::reference_inlines(&format!("[{id}]"), span))
             })
     }
 

@@ -962,7 +962,8 @@ pub enum Inline {
     /// inline anchors) over the result of quotes, attribute references and
     /// replacements, so `<<{id}>>` takes the expanded id and a consumed label
     /// keeps its formatting as [`Inline::Substituted`] parts.
-    /// `xref` holds the resolved target (decoded): `#id` within this document
+    /// `xref` holds the resolved target (decoded; character references keep
+    /// their spelling, as Ruby inserts them): `#id` within this document
     /// (a leading `#` removed outside compat mode; an unknown bare id may name
     /// a title or reftext), or another document's path (`doc.adoc#id`,
     /// `xref:doc.adoc[]`) with `relfileprefix`/`relfilesuffix` applied, unless

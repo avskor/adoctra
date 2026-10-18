@@ -72,6 +72,7 @@ pub use backend::Backend;
 pub use context::{DateTime, DocumentDates, IncludeLimits, ParseOptions, SafeMode};
 pub use diagnostic::{Diagnostic, ParseResult, Severity};
 pub use docinfo::{docinfo, DocinfoLocation};
+pub use entity_references::character_reference_end;
 pub use error::{Error, Result};
 pub use extension::{Registry, TreeProcessor};
 pub use image::normalize_web_path;

@@ -3345,4 +3345,20 @@ mod ifeval_tests {
             "{tokens}"
         );
     }
+
+    #[test]
+    fn xref_fields_and_labels_keep_character_references_with_spans() {
+        let json = crate::parse_json("xref:a&#38;b[]");
+        assert!(
+            json.contains(r##""name":"xref","target":"#a&#38;b","refid":"a&#38;b""##),
+            "got: {json}"
+        );
+        // Every label node carries the reference's span.
+        assert!(
+            json.contains(
+                r#"{"span":{"source_id":0,"start":0,"end":14},"name":"raw","value":"&#38;"}"#
+            ),
+            "got: {json}"
+        );
+    }
 }

@@ -916,7 +916,7 @@ fn inline_image(
     let (alt, named, options) = image_attributes(text, m.list.clone(), posattrs);
     let alt = alt.unwrap_or_else(|| {
         let basename = crate::image::default_alt(&target);
-        vec![Part::Text(crate::attributes::decode_special(&basename))]
+        crate::entity_references::reference_parts(&crate::attributes::decode_special(&basename))
     });
     let icons = m
         .icon

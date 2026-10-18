@@ -470,10 +470,10 @@ impl Execution<'_> {
     /// current document's title (`[^top]` without one), or the target's label.
     fn xref_label(&mut self, xref: &crate::Xref, lexical: bool, span: Span) -> Vec<Inline> {
         if let Some(path) = &xref.path {
-            return vec![Inline::Text {
-                value: crate::resolve::decoded(path, lexical),
+            return crate::entity_references::reference_inlines(
+                &crate::resolve::decoded(path, lexical),
                 span,
-            }];
+            );
         }
         match crate::resolve::decoded_refid(xref, lexical) {
             Some(id) if !id.is_empty() || self.registry.contains_key(&id) => {
@@ -534,12 +534,7 @@ impl Execution<'_> {
     /// Ruby's `xreftext`: a nonempty reftext, else the (styled) title, else
     /// `[id]`. References inside a label being produced display `[id]`.
     fn label(&mut self, id: &str, style: Option<&str>, span: Span) -> Vec<Inline> {
-        let fallback = || {
-            vec![Inline::Text {
-                value: format!("[{id}]"),
-                span,
-            }]
-        };
+        let fallback = || crate::entity_references::reference_inlines(&format!("[{id}]"), span);
         if !self.registry.contains_key(id) || self.resolving {
             return fallback();
         }

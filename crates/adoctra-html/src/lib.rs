@@ -947,7 +947,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             base.extend(align.as_deref());
             let class = class_attr(&base, &block.roles);
             out.push_str(&format!("<figure{id}{class}>\n"));
-            let mut img = format!("<img src=\"{}\" alt=\"", attr_value(src));
+            let mut img = format!("<img src=\"{}\" alt=\"", reference_value(src));
             for part in alt {
                 match part {
                     adoctra_core::AttributePart::Raw(raw) => {
@@ -968,7 +968,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             match named.get("link") {
                 Some(link) => out.push_str(&format!(
                     "<a class=\"image\" href=\"{}\"{}>{img}</a>\n",
-                    attr_value(link),
+                    reference_value(link),
                     link_constraints(&block.attrs)
                 )),
                 None => {
@@ -1021,12 +1021,12 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
                 };
                 out.push_str(&format!(
                     "<iframe{size} src=\"{}\"{fullscreen}></iframe>\n",
-                    attr_value(src)
+                    reference_value(src)
                 ));
             } else {
-                out.push_str(&format!("<video src=\"{}\"{size}", attr_value(src)));
+                out.push_str(&format!("<video src=\"{}\"{size}", reference_value(src)));
                 if let Some(poster) = poster {
-                    out.push_str(&format!(" poster=\"{}\"", attr_value(poster)));
+                    out.push_str(&format!(" poster=\"{}\"", reference_value(poster)));
                 }
                 for (name, on) in [
                     ("autoplay", option("autoplay")),
@@ -1052,7 +1052,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             let class = class_attr(&["audioblock"], &block.roles);
             out.push_str(&format!("<figure{id}{class}>\n"));
             render_media_title(&block.title, out);
-            out.push_str(&format!("<audio src=\"{}\"", attr_value(src)));
+            out.push_str(&format!("<audio src=\"{}\"", reference_value(src)));
             for (name, on) in [
                 ("autoplay", option("autoplay")),
                 ("controls", !option("nocontrols")),
@@ -2020,7 +2020,7 @@ fn render_inlines(inlines: &[Inline], out: &mut String) {
             // only exist on interdocument references.
             Inline::CrossReference { xref, children, .. } => {
                 out.push_str("<a href=\"");
-                out.push_str(&escape(&xref.target));
+                out.push_str(&reference_value(&xref.target));
                 out.push('"');
                 for (key, value) in [
                     ("class", &xref.role),
@@ -2029,7 +2029,7 @@ fn render_inlines(inlines: &[Inline], out: &mut String) {
                 ] {
                     if let Some(value) = value {
                         out.push_str(&format!(" {key}=\""));
-                        out.push_str(&escape(value));
+                        out.push_str(&reference_value(value));
                         out.push('"');
                     }
                 }
@@ -2134,6 +2134,35 @@ fn render_media_title(title: &Option<Vec<Inline>>, out: &mut String) {
 /// characters).
 fn attr_value(s: &str) -> String {
     escape(s).replace('"', "&quot;")
+}
+
+/// An attribute value Ruby inserts as written (a raw block attribute or
+/// target) or a decoded field: its character references stay references,
+/// any other `&` and the markup characters are encoded.
+fn reference_value(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut copied = 0;
+    for (at, c) in s.char_indices() {
+        if at < copied {
+            continue;
+        }
+        if c == '&' {
+            if let Some(end) = adoctra_core::character_reference_end(s, at) {
+                out.push_str(&s[at..end]);
+                copied = end;
+                continue;
+            }
+        }
+        match c {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '"' => out.push_str("&quot;"),
+            c => out.push(c),
+        }
+        copied = at + c.len_utf8();
+    }
+    out
 }
 
 /// Ruby's `append_link_constraint_attrs`: `window` becomes the target, with
@@ -5284,5 +5313,31 @@ mod tests {
              <figure class=\"imageblock\">\n<a class=\"image\" href=\"l.html\" target=\"w\" rel=\"nofollow noopener\"><img src=\"img/c.png\" alt=\"c\"></a>\n</figure>\n\
              <figure class=\"imageblock\">\n<img src=\"img/d&lt;&amp;&gt;.png\" alt=\"d&lt;&amp;&gt;\">\n</figure>\n"
         );
+    }
+
+    #[test]
+    fn character_references_in_fields_and_raw_targets_stay_references() {
+        // Ruby inserts lexical xref fields and raw media targets/links as
+        // written: a character reference stays one, any other `&` is encoded.
+        let html = render(
+            "xref:a&#38;b[] xref:a&amp;copy;b[] xref:x[t,role=r&#38;s]\n\n\
+             image::a&#38;b.png[link=x&#38;y]\n\n\
+             image::c&d.png[link=\"u&amp;#38;v\"]\n\n\
+             video::v&#38;w.mp4[poster=p&#38;q.png]\n\n\
+             audio::s&#38;t.ogg[]\n\n\
+             image:i&#38;j.png[]",
+        );
+        for expected in [
+            r##"<a href="#a&#38;b">[a&#38;b]</a>"##,
+            r##"<a href="#a&amp;copy;b">[a&amp;copy;b]</a>"##,
+            r##"<a href="#x" class="r&#38;s">t</a>"##,
+            r#"<a class="image" href="x&#38;y"><img src="a&#38;b.png" alt="a&amp;#38;b"></a>"#,
+            r#"<a class="image" href="u&amp;#38;v"><img src="c&amp;d.png" alt="c&amp;d"></a>"#,
+            r#"<video src="v&#38;w.mp4" poster="p&#38;q.png" controls>"#,
+            r#"<audio src="s&#38;t.ogg" controls>"#,
+            r#"<img src="i&#38;j.png" alt="i&#38;j">"#,
+        ] {
+            assert!(html.contains(expected), "{expected}\n{html}");
+        }
     }
 }

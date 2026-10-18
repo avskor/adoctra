@@ -823,12 +823,11 @@ pub fn parts_text(parts: &[AttributePart]) -> String {
     parts.iter().map(AttributePart::text).collect()
 }
 
-/// Remove the special-character protection of a lexical metadata value.
+/// Remove the special-character protection of a lexical metadata value;
+/// character references keep their spelling (see
+/// [`decode_protection`](crate::entity_references::decode_protection)).
 pub(crate) fn decode_special(lexical: &str) -> String {
-    lexical
-        .replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&amp;", "&")
+    crate::entity_references::decode_protection(lexical)
 }
 
 /// Ordered map of document attributes. `BTreeMap` keeps output deterministic,

@@ -265,7 +265,7 @@
       "id": "header-authors-attribute",
       "category": "header",
       "expect": "pass",
-      "source": ":authors: Jane Smith; Иван Петров\n\n{authors} | {authorcount} | {authorinitials_2}"
+      "source": ":authors: Jane Smith; \u0418\u0432\u0430\u043d \u041f\u0435\u0442\u0440\u043e\u0432\n\n{authors} | {authorcount} | {authorinitials_2}"
     },
     {
       "id": "header-blank-before-author",
@@ -313,7 +313,7 @@
       "id": "header-unicode-crlf",
       "category": "header",
       "expect": "pass",
-      "source": "= Документ\r\nИван Петров\r\nv1: Выпуск\r\n\r\n{author} | {authorinitials} | {revremark}"
+      "source": "= \u0414\u043e\u043a\u0443\u043c\u0435\u043d\u0442\r\n\u0418\u0432\u0430\u043d \u041f\u0435\u0442\u0440\u043e\u0432\r\nv1: \u0412\u044b\u043f\u0443\u0441\u043a\r\n\r\n{author} | {authorinitials} | {revremark}"
     },
     {
       "id": "header-email-link",
@@ -667,7 +667,7 @@
       "id": "conditional-comment-and-unicode",
       "category": "conditionals",
       "expect": "pass",
-      "source": ":a:\r\n\r\nЯ *до\r\n// удалено\r\nifdef::missing[]\r\nскрыто\r\nendif::[]\r\nifdef::a[после*]\r\n"
+      "source": ":a:\r\n\r\n\u042f *\u0434\u043e\r\n// \u0443\u0434\u0430\u043b\u0435\u043d\u043e\r\nifdef::missing[]\r\n\u0441\u043a\u0440\u044b\u0442\u043e\r\nendif::[]\r\nifdef::a[\u043f\u043e\u0441\u043b\u0435*]\r\n"
     },
     {
       "id": "conditional-generated-attribute",
@@ -715,7 +715,7 @@
       "id": "ifeval-attributes",
       "category": "conditionals",
       "expect": "pass",
-      "source": ":level: 2\n:name: Мир\n\nifeval::[{LEVEL} == 2]\nfirst\nendif::[]\n\n:level: 3\n\nifeval::[{level} == 3]\nsecond\nendif::[]\nifeval::[\"{name}\" == \"Мир\"]\nunicode\nendif::[]\n\n:level!:\n\nifeval::[\"{level}\" == \"\"]\nunset\nendif::[]"
+      "source": ":level: 2\n:name: \u041c\u0438\u0440\n\nifeval::[{LEVEL} == 2]\nfirst\nendif::[]\n\n:level: 3\n\nifeval::[{level} == 3]\nsecond\nendif::[]\nifeval::[\"{name}\" == \"\u041c\u0438\u0440\"]\nunicode\nendif::[]\n\n:level!:\n\nifeval::[\"{level}\" == \"\"]\nunset\nendif::[]"
     },
     {
       "id": "ifeval-substitution",
@@ -799,7 +799,7 @@
       "id": "ifeval-unicode-crlf",
       "category": "conditionals",
       "expect": "pass",
-      "source": ":имя: Мир\r\n\r\nЯ *до\r\n// скрытый комментарий\r\nifeval::[\"{имя}\" != \"Мир\"]\r\nскрыто\r\nendif::[]\r\nifeval::[\"{имя}\" == \"Мир\"]\r\nпосле*\r\nendif::[]"
+      "source": ":\u0438\u043c\u044f: \u041c\u0438\u0440\r\n\r\n\u042f *\u0434\u043e\r\n// \u0441\u043a\u0440\u044b\u0442\u044b\u0439 \u043a\u043e\u043c\u043c\u0435\u043d\u0442\u0430\u0440\u0438\u0439\r\nifeval::[\"{\u0438\u043c\u044f}\" != \"\u041c\u0438\u0440\"]\r\n\u0441\u043a\u0440\u044b\u0442\u043e\r\nendif::[]\r\nifeval::[\"{\u0438\u043c\u044f}\" == \"\u041c\u0438\u0440\"]\r\n\u043f\u043e\u0441\u043b\u0435*\r\nendif::[]"
     },
     {
       "id": "include-basic",
@@ -858,7 +858,7 @@
       "profile": "include-body-dom-v1",
       "source": "include::header.adoc[]\n\n{author} {revnumber}",
       "resources": {
-        "header.adoc": "= Title\nИван Иванов\nv1.0, 2026-10-11"
+        "header.adoc": "= Title\n\u0418\u0432\u0430\u043d \u0418\u0432\u0430\u043d\u043e\u0432\nv1.0, 2026-10-11"
       },
       "expect": "pass"
     },
@@ -956,9 +956,9 @@
       "id": "include-unicode-crlf",
       "category": "include",
       "profile": "include-body-dom-v1",
-      "source": "include::часть.adoc[]\r\n",
+      "source": "include::\u0447\u0430\u0441\u0442\u044c.adoc[]\r\n",
       "resources": {
-        "часть.adoc": "﻿Я *текст*\r\n"
+        "\u0447\u0430\u0441\u0442\u044c.adoc": "\ufeff\u042f *\u0442\u0435\u043a\u0441\u0442*\r\n"
       },
       "expect": "pass"
     },
@@ -1369,7 +1369,7 @@
       "profile": "include-body-dom-v1",
       "source": "----\ninclude::part.rs[lines=2;4]\n----",
       "resources": {
-        "part.rs": "﻿omitted\r\n  Я\r\nomitted\r\n\tты\r\n"
+        "part.rs": "\ufeffomitted\r\n  \u042f\r\nomitted\r\n\t\u0442\u044b\r\n"
       },
       "expect": "pass"
     },
@@ -1646,9 +1646,9 @@
       "id": "include-offset-unicode-crlf",
       "category": "include",
       "profile": "include-body-dom-v1",
-      "source": "= Основной\r\n\r\ninclude::part.adoc[leveloffset=+1]\r\n\r\n== После",
+      "source": "= \u041e\u0441\u043d\u043e\u0432\u043d\u043e\u0439\r\n\r\ninclude::part.adoc[leveloffset=+1]\r\n\r\n== \u041f\u043e\u0441\u043b\u0435",
       "resources": {
-        "part.adoc": "﻿= Глава\r\n\r\n== Раздел\r\n\r\nТекст"
+        "part.adoc": "\ufeff= \u0413\u043b\u0430\u0432\u0430\r\n\r\n== \u0420\u0430\u0437\u0434\u0435\u043b\r\n\r\n\u0422\u0435\u043a\u0441\u0442"
       },
       "expect": "pass"
     },
@@ -1768,7 +1768,7 @@
       "profile": "include-body-dom-v1",
       "source": "----\ninclude::part.rs[indent=0]\n----",
       "resources": {
-        "part.rs": "\talpha\n\t\tbeta\n\tЯ\tX"
+        "part.rs": "\talpha\n\t\tbeta\n\t\u042f\tX"
       },
       "expect": "pass"
     },
@@ -1778,7 +1778,7 @@
       "profile": "include-body-dom-v1",
       "source": ":tabsize: 4\n\n----\ninclude::part.rs[indent=1]\n----",
       "resources": {
-        "part.rs": "\talpha\n\t\tbeta\n\tЯ\tX"
+        "part.rs": "\talpha\n\t\tbeta\n\t\u042f\tX"
       },
       "expect": "pass"
     },
@@ -1788,7 +1788,7 @@
       "profile": "include-body-dom-v1",
       "source": ":tabsize: 4\n\n----\ninclude::part.rs[indent=-1]\n----",
       "resources": {
-        "part.rs": "\tЯ🙂\tX\n \tZ"
+        "part.rs": "\t\u042f\ud83d\ude42\tX\n \tZ"
       },
       "expect": "pass"
     },
@@ -1838,7 +1838,7 @@
       "profile": "include-body-dom-v1",
       "source": "----\ninclude::part.rs[indent=0]\n----",
       "resources": {
-        "part.rs": "﻿    Я\r\n      🙂\r\n    End\r\n"
+        "part.rs": "\ufeff    \u042f\r\n      \ud83d\ude42\r\n    End\r\n"
       },
       "expect": "pass"
     },
@@ -2054,37 +2054,37 @@
       "id": "reader-normalization-listing",
       "category": "reader-normalization",
       "expect": "pass",
-      "source": "---- \t\n\tЯ\tX \t\u000b\f\u0000\n \t\nZ   \t\n---- \t"
+      "source": "---- \t\n\t\u042f\tX \t\u000b\f\u0000\n \t\nZ\u00a0\u2003 \t\n---- \t"
     },
     {
       "id": "reader-normalization-literal",
       "category": "reader-normalization",
       "expect": "pass",
-      "source": ".... \t\n\tЯ\tX \t\u000b\f\u0000\n \t\nZ   \t\n.... \t"
+      "source": ".... \t\n\t\u042f\tX \t\u000b\f\u0000\n \t\nZ\u00a0\u2003 \t\n.... \t"
     },
     {
       "id": "reader-normalization-source-open",
       "category": "reader-normalization",
       "expect": "pass",
-      "source": "[source]\n-- \t\n\tЯ\tX \t\u000b\f\u0000\n \t\nZ   \t\n-- \t"
+      "source": "[source]\n-- \t\n\t\u042f\tX \t\u000b\f\u0000\n \t\nZ\u00a0\u2003 \t\n-- \t"
     },
     {
       "id": "reader-normalization-literal-open",
       "category": "reader-normalization",
       "expect": "pass",
-      "source": "[literal]\n-- \t\n\tЯ\tX \t\u000b\f\u0000\n \t\nZ   \t\n-- \t"
+      "source": "[literal]\n-- \t\n\t\u042f\tX \t\u000b\f\u0000\n \t\nZ\u00a0\u2003 \t\n-- \t"
     },
     {
       "id": "reader-normalization-passthrough",
       "category": "reader-normalization",
       "expect": "pass",
-      "source": "++++ \t\n<pre>Я \t\nX</pre> \t\n++++ \t"
+      "source": "++++ \t\n<pre>\u042f \t\nX</pre> \t\n++++ \t"
     },
     {
       "id": "reader-normalization-paragraph",
       "category": "reader-normalization",
       "expect": "pass",
-      "source": "*Я* \t\u0000\n_🙂_ \t\u0000\n\nnext"
+      "source": "*\u042f* \t\u0000\n_\ud83d\ude42_ \t\u0000\n\nnext"
     },
     {
       "id": "reader-normalization-header",
@@ -2120,13 +2120,13 @@
       "id": "reader-normalization-empty",
       "category": "reader-normalization",
       "expect": "pass",
-      "source": "﻿ \t\u0000\r\n\r\n"
+      "source": "\ufeff \t\u0000\r\n\r\n"
     },
     {
       "id": "reader-normalization-crlf",
       "category": "reader-normalization",
       "expect": "pass",
-      "source": "﻿---- \t\r\nЯ\rinside \t\r\nZ \t\r\n---- \t\r\n"
+      "source": "\ufeff---- \t\r\n\u042f\rinside \t\r\nZ \t\r\n---- \t\r\n"
     },
     {
       "id": "reader-normalization-include-adoc",
@@ -2135,7 +2135,7 @@
       "source": "----\ninclude::part.adoc[]\n----",
       "profile": "include-body-dom-v1",
       "resources": {
-        "part.adoc": "﻿\tЯ\tX \t\u0000\r\n \t\r\nZ  \t\r\n"
+        "part.adoc": "\ufeff\t\u042f\tX \t\u0000\r\n \t\r\nZ\u00a0 \t\r\n"
       }
     },
     {
@@ -2145,7 +2145,7 @@
       "source": "----\ninclude::part.txt[]\n----",
       "profile": "include-body-dom-v1",
       "resources": {
-        "part.txt": "﻿\tЯ\tX \t\u0000\r\n \t\r\nZ  \t\r\n"
+        "part.txt": "\ufeff\t\u042f\tX \t\u0000\r\n \t\r\nZ\u00a0 \t\r\n"
       }
     },
     {
@@ -2155,7 +2155,7 @@
       "source": "----\ninclude::part.rs[]\n----",
       "profile": "include-body-dom-v1",
       "resources": {
-        "part.rs": "﻿\tЯ\tX \t\u0000\r\n \t\r\nZ  \t\r\n"
+        "part.rs": "\ufeff\t\u042f\tX \t\u0000\r\n \t\r\nZ\u00a0 \t\r\n"
       }
     },
     {
@@ -2165,7 +2165,7 @@
       "source": "----\ninclude::part.adoc[lines=2;4]\n----",
       "profile": "include-body-dom-v1",
       "resources": {
-        "part.adoc": "ignored\n  Я \t\u0000\nignored\n  X \t\u0000\n"
+        "part.adoc": "ignored\n  \u042f \t\u0000\nignored\n  X \t\u0000\n"
       }
     },
     {
@@ -2175,7 +2175,7 @@
       "source": "----\ninclude::part.adoc[tag=a]\n----",
       "profile": "include-body-dom-v1",
       "resources": {
-        "part.adoc": "ignored\n// tag::a[] \t\n  Я \t\u0000\n// end::a[] \t\nignored"
+        "part.adoc": "ignored\n// tag::a[] \t\n  \u042f \t\u0000\n// end::a[] \t\nignored"
       }
     },
     {
@@ -2185,7 +2185,7 @@
       "source": "----\ninclude::part.rs[lines=2;4]\n----",
       "profile": "include-body-dom-v1",
       "resources": {
-        "part.rs": "ignored\n  Я \t\nignored\n  X \t\n"
+        "part.rs": "ignored\n  \u042f \t\nignored\n  X \t\n"
       }
     },
     {
@@ -2226,7 +2226,7 @@
       "source": "----\ninclude::part.adoc[indent=2]\n----",
       "profile": "include-body-dom-v1",
       "resources": {
-        "part.adoc": "    Я \t\u0000\n      X \t\u0000\n"
+        "part.adoc": "    \u042f \t\u0000\n      X \t\u0000\n"
       }
     },
     {
@@ -2253,7 +2253,7 @@
       "id": "reader-normalization-tabsize-substitution",
       "category": "substitutions",
       "expect": "pass",
-      "source": ":tabsize: 8\n\n----\n\tЯ\tX\n----"
+      "source": ":tabsize: 8\n\n----\n\t\u042f\tX\n----"
     },
     {
       "id": "attribute-multiline-soft",
@@ -2529,13 +2529,13 @@
       "id": "attribute-multiline-unicode-crlf",
       "category": "attributes",
       "expect": "pass",
-      "source": "﻿:x: Я \\ \t\r\n  🙂 \\ \t\r\n\tконец\r\n\r\n{x}"
+      "source": "\ufeff:x: \u042f \\ \t\r\n  \ud83d\ude42 \\ \t\r\n\t\u043a\u043e\u043d\u0435\u0446\r\n\r\n{x}"
     },
     {
       "id": "attribute-multiline-unicode-indent",
       "category": "attributes",
       "expect": "pass",
-      "source": ":x: one \\\n two\n\n{x}"
+      "source": ":x: one \\\n\u00a0two\n\n{x}"
     },
     {
       "id": "attribute-multiline-no-space",
@@ -2616,7 +2616,7 @@
       "id": "attribute-multiline-unicode-suffix",
       "category": "attributes",
       "expect": "pass",
-      "source": ":x: one \\ \n\n{x}"
+      "source": ":x: one \\\u00a0\n\n{x}"
     },
     {
       "id": "attribute-multiline-raw-suffix",
@@ -2771,9 +2771,9 @@
       "category": "attributes",
       "expect": "pass",
       "profile": "include-body-dom-v1",
-      "source": "﻿= {docname}\r\n\r\ninclude::{docdir}/часть.adoc[]",
+      "source": "\ufeff= {docname}\r\n\r\ninclude::{docdir}/\u0447\u0430\u0441\u0442\u044c.adoc[]",
       "resources": {
-        "часть.adoc": "﻿Я *{docname}* {docfilesuffix}\r\n"
+        "\u0447\u0430\u0441\u0442\u044c.adoc": "\ufeff\u042f *{docname}* {docfilesuffix}\r\n"
       }
     },
     {
@@ -3244,9 +3244,9 @@
       "category": "includes",
       "expect": "pass",
       "profile": "include-body-dom-v1",
-      "source": "﻿:selection: lines=\"2,4\"\r\n\r\ninclude::part.adoc[ignored,{selection},indent=0]",
+      "source": "\ufeff:selection: lines=\"2,4\"\r\n\r\ninclude::part.adoc[ignored,{selection},indent=0]",
       "resources": {
-        "part.adoc": "﻿omitted\r\n  *Я*\r\nomitted\r\n  _🙂_\r\n"
+        "part.adoc": "\ufeffomitted\r\n  *\u042f*\r\nomitted\r\n  _\ud83d\ude42_\r\n"
       }
     },
     {
@@ -3556,9 +3556,9 @@
       "category": "includes",
       "expect": "pass",
       "profile": "include-body-dom-v1",
-      "source": "﻿:name: часть\r\n\r\ninclude::{NAME}.adoc[lines=2;4,indent=0]",
+      "source": "\ufeff:name: \u0447\u0430\u0441\u0442\u044c\r\n\r\ninclude::{NAME}.adoc[lines=2;4,indent=0]",
       "resources": {
-        "часть.adoc": "﻿omitted\r\n  *Я*\r\nomitted\r\n  _🙂_\r\n"
+        "\u0447\u0430\u0441\u0442\u044c.adoc": "\ufeffomitted\r\n  *\u042f*\r\nomitted\r\n  _\ud83d\ude42_\r\n"
       }
     },
     {
@@ -3607,7 +3607,7 @@
       "id": "header-setext-authors-revision",
       "category": "header",
       "expect": "pass",
-      "source": "Document\n========\nJane Doe; Иван Петров\nv2, today: Release\n\n{authors} / {revnumber} / {revdate} / {revremark}"
+      "source": "Document\n========\nJane Doe; \u0418\u0432\u0430\u043d \u041f\u0435\u0442\u0440\u043e\u0432\nv2, today: Release\n\n{authors} / {revnumber} / {revdate} / {revremark}"
     },
     {
       "id": "header-setext-shorter",
@@ -3625,13 +3625,13 @@
       "id": "header-setext-one-character",
       "category": "header",
       "expect": "pass",
-      "source": "Я\n=\n\nBody"
+      "source": "\u042f\n=\n\nBody"
     },
     {
       "id": "header-setext-unicode",
       "category": "header",
       "expect": "pass",
-      "source": "Я🙂\n==\n\nBody"
+      "source": "\u042f\ud83d\ude42\n==\n\nBody"
     },
     {
       "id": "header-setext-markup",
@@ -3649,7 +3649,7 @@
       "id": "header-setext-normalization",
       "category": "header",
       "expect": "pass",
-      "source": "﻿Title \t\r\n===== \t\r\nJane Doe \t\r\nv2 \t\r\n\r\n{author} / {revnumber}"
+      "source": "\ufeffTitle \t\r\n===== \t\r\nJane Doe \t\r\nv2 \t\r\n\r\n{author} / {revnumber}"
     },
     {
       "id": "header-setext-leading-space",
@@ -3679,7 +3679,7 @@
       "id": "header-setext-non-alphanumeric",
       "category": "header",
       "expect": "pass",
-      "source": "🙂\n=\n\nBody"
+      "source": "\ud83d\ude42\n=\n\nBody"
     },
     {
       "id": "header-setext-wrong-length",
@@ -3808,38 +3808,38 @@
       "source": "include::title.adoc[lines=2;4,indent=0]\n\nBody",
       "profile": "include-body-dom-v1",
       "resources": {
-        "title.adoc": "ignored\n  *Я🙂* \t\r\nignored\n  ==== \t\r\n"
+        "title.adoc": "ignored\n  *\u042f\ud83d\ude42* \t\r\nignored\n  ==== \t\r\n"
       }
     },
     {
       "id": "header-setext-superscript",
       "category": "header",
       "expect": "pass",
-      "source": "²\n=\n\nBody"
+      "source": "\u00b2\n=\n\nBody"
     },
     {
       "id": "header-setext-fraction",
       "category": "header",
       "expect": "pass",
-      "source": "½\n=\n\nBody"
+      "source": "\u00bd\n=\n\nBody"
     },
     {
       "id": "header-setext-decimal",
       "category": "header",
       "expect": "pass",
-      "source": "١\n=\n\nBody"
+      "source": "\u0661\n=\n\nBody"
     },
     {
       "id": "header-setext-letter-number",
       "category": "header",
       "expect": "pass",
-      "source": "Ⅳ\n=\n\nBody"
+      "source": "\u2163\n=\n\nBody"
     },
     {
       "id": "header-setext-math-digit",
       "category": "header",
       "expect": "pass",
-      "source": "𝟡\n=\n\nBody"
+      "source": "\ud835\udfe1\n=\n\nBody"
     },
     {
       "id": "header-doctitle-implicit",
@@ -4031,7 +4031,7 @@
       "id": "header-doctitle-unicode",
       "category": "header",
       "expect": "pass",
-      "source": "﻿= Источник \t\r\n:doctitle: *Новое🙂* \t\r\n\r\n{doctitle}"
+      "source": "\ufeff= \u0418\u0441\u0442\u043e\u0447\u043d\u0438\u043a \t\r\n:doctitle: *\u041d\u043e\u0432\u043e\u0435\ud83d\ude42* \t\r\n\r\n{doctitle}"
     },
     {
       "id": "header-doctitle-no-source-heading",
@@ -4088,7 +4088,7 @@
       "source": "= Source\ninclude::override.adoc[lines=2..3,indent=0]\n\n{doctitle}",
       "profile": "include-body-dom-v1",
       "resources": {
-        "override.adoc": "skip\n  :doctitle: *Я🙂* \\\r\n     second\r\nskip\n"
+        "override.adoc": "skip\n  :doctitle: *\u042f\ud83d\ude42* \\\r\n     second\r\nskip\n"
       }
     },
     {
@@ -4151,7 +4151,7 @@
       "id": "header-indexed-first",
       "category": "header",
       "expect": "pass",
-      "source": ":attribute-missing: skip\n= Doc\nJohn Doe <first>; Mary_Jane Q Public <second>\n:author_1: Иван Петров\n\nauthorcount: {authorcount}\n\nauthors: {authors}\n\nauthor: {author}\n\nfirstname: {firstname}\n\nmiddlename: {middlename}\n\nlastname: {lastname}\n\nauthorinitials: {authorinitials}\n\nemail: {email}\n\nauthor 1: {author_1}\n\nfirstname 1: {firstname_1}\n\nmiddlename 1: {middlename_1}\n\nlastname 1: {lastname_1}\n\nauthorinitials 1: {authorinitials_1}\n\nemail 1: {email_1}\n\nauthor 2: {author_2}\n\nfirstname 2: {firstname_2}\n\nmiddlename 2: {middlename_2}\n\nlastname 2: {lastname_2}\n\nauthorinitials 2: {authorinitials_2}\n\nemail 2: {email_2}\n\nauthor 3: {author_3}\n\nfirstname 3: {firstname_3}\n\nmiddlename 3: {middlename_3}\n\nlastname 3: {lastname_3}\n\nauthorinitials 3: {authorinitials_3}\n\nemail 3: {email_3}"
+      "source": ":attribute-missing: skip\n= Doc\nJohn Doe <first>; Mary_Jane Q Public <second>\n:author_1: \u0418\u0432\u0430\u043d \u041f\u0435\u0442\u0440\u043e\u0432\n\nauthorcount: {authorcount}\n\nauthors: {authors}\n\nauthor: {author}\n\nfirstname: {firstname}\n\nmiddlename: {middlename}\n\nlastname: {lastname}\n\nauthorinitials: {authorinitials}\n\nemail: {email}\n\nauthor 1: {author_1}\n\nfirstname 1: {firstname_1}\n\nmiddlename 1: {middlename_1}\n\nlastname 1: {lastname_1}\n\nauthorinitials 1: {authorinitials_1}\n\nemail 1: {email_1}\n\nauthor 2: {author_2}\n\nfirstname 2: {firstname_2}\n\nmiddlename 2: {middlename_2}\n\nlastname 2: {lastname_2}\n\nauthorinitials 2: {authorinitials_2}\n\nemail 2: {email_2}\n\nauthor 3: {author_3}\n\nfirstname 3: {firstname_3}\n\nmiddlename 3: {middlename_3}\n\nlastname 3: {lastname_3}\n\nauthorinitials 3: {authorinitials_3}\n\nemail 3: {email_3}"
     },
     {
       "id": "header-indexed-both",
@@ -4331,7 +4331,7 @@
       "id": "header-indexed-unicode",
       "category": "header",
       "expect": "pass",
-      "source": ":attribute-missing: skip\n= Документ\r\nИван Петров; Анна Мария Смирнова\r\n:author_2: Ольга Иванова\n\nauthorcount: {authorcount}\n\nauthors: {authors}\n\nauthor: {author}\n\nfirstname: {firstname}\n\nmiddlename: {middlename}\n\nlastname: {lastname}\n\nauthorinitials: {authorinitials}\n\nemail: {email}\n\nauthor 1: {author_1}\n\nfirstname 1: {firstname_1}\n\nmiddlename 1: {middlename_1}\n\nlastname 1: {lastname_1}\n\nauthorinitials 1: {authorinitials_1}\n\nemail 1: {email_1}\n\nauthor 2: {author_2}\n\nfirstname 2: {firstname_2}\n\nmiddlename 2: {middlename_2}\n\nlastname 2: {lastname_2}\n\nauthorinitials 2: {authorinitials_2}\n\nemail 2: {email_2}\n\nauthor 3: {author_3}\n\nfirstname 3: {firstname_3}\n\nmiddlename 3: {middlename_3}\n\nlastname 3: {lastname_3}\n\nauthorinitials 3: {authorinitials_3}\n\nemail 3: {email_3}"
+      "source": ":attribute-missing: skip\n= \u0414\u043e\u043a\u0443\u043c\u0435\u043d\u0442\r\n\u0418\u0432\u0430\u043d \u041f\u0435\u0442\u0440\u043e\u0432; \u0410\u043d\u043d\u0430 \u041c\u0430\u0440\u0438\u044f \u0421\u043c\u0438\u0440\u043d\u043e\u0432\u0430\r\n:author_2: \u041e\u043b\u044c\u0433\u0430 \u0418\u0432\u0430\u043d\u043e\u0432\u0430\n\nauthorcount: {authorcount}\n\nauthors: {authors}\n\nauthor: {author}\n\nfirstname: {firstname}\n\nmiddlename: {middlename}\n\nlastname: {lastname}\n\nauthorinitials: {authorinitials}\n\nemail: {email}\n\nauthor 1: {author_1}\n\nfirstname 1: {firstname_1}\n\nmiddlename 1: {middlename_1}\n\nlastname 1: {lastname_1}\n\nauthorinitials 1: {authorinitials_1}\n\nemail 1: {email_1}\n\nauthor 2: {author_2}\n\nfirstname 2: {firstname_2}\n\nmiddlename 2: {middlename_2}\n\nlastname 2: {lastname_2}\n\nauthorinitials 2: {authorinitials_2}\n\nemail 2: {email_2}\n\nauthor 3: {author_3}\n\nfirstname 3: {firstname_3}\n\nmiddlename 3: {middlename_3}\n\nlastname 3: {lastname_3}\n\nauthorinitials 3: {authorinitials_3}\n\nemail 3: {email_3}"
     },
     {
       "id": "header-indexed-body",
@@ -4528,13 +4528,13 @@
       "id": "header-markup-unicode-nbsp",
       "category": "header",
       "expect": "pass",
-      "source": ":attribute-missing: skip\n:author: Иван Петров Смирнов\n\nauthorcount: {authorcount}\n\nauthors: {authors}\n\nauthor: {author}\n\nfirstname: {firstname}\n\nmiddlename: {middlename}\n\nlastname: {lastname}\n\nauthorinitials: {authorinitials}\n\nauthor 1: {author_1}\n\nfirstname 1: {firstname_1}\n\nmiddlename 1: {middlename_1}\n\nlastname 1: {lastname_1}\n\nauthorinitials 1: {authorinitials_1}\n\nauthor 2: {author_2}\n\nfirstname 2: {firstname_2}\n\nmiddlename 2: {middlename_2}\n\nlastname 2: {lastname_2}\n\nauthorinitials 2: {authorinitials_2}"
+      "source": ":attribute-missing: skip\n:author: \u0418\u0432\u0430\u043d\u00a0\u041f\u0435\u0442\u0440\u043e\u0432 \u0421\u043c\u0438\u0440\u043d\u043e\u0432\n\nauthorcount: {authorcount}\n\nauthors: {authors}\n\nauthor: {author}\n\nfirstname: {firstname}\n\nmiddlename: {middlename}\n\nlastname: {lastname}\n\nauthorinitials: {authorinitials}\n\nauthor 1: {author_1}\n\nfirstname 1: {firstname_1}\n\nmiddlename 1: {middlename_1}\n\nlastname 1: {lastname_1}\n\nauthorinitials 1: {authorinitials_1}\n\nauthor 2: {author_2}\n\nfirstname 2: {firstname_2}\n\nmiddlename 2: {middlename_2}\n\nlastname 2: {lastname_2}\n\nauthorinitials 2: {authorinitials_2}"
     },
     {
       "id": "header-markup-third-field",
       "category": "header",
       "expect": "pass",
-      "source": ":attribute-missing: skip\n:author: One Two Three Four Five\n\nauthorcount: {authorcount}\n\nauthors: {authors}\n\nauthor: {author}\n\nfirstname: {firstname}\n\nmiddlename: {middlename}\n\nlastname: {lastname}\n\nauthorinitials: {authorinitials}\n\nauthor 1: {author_1}\n\nfirstname 1: {firstname_1}\n\nmiddlename 1: {middlename_1}\n\nlastname 1: {lastname_1}\n\nauthorinitials 1: {authorinitials_1}\n\nauthor 2: {author_2}\n\nfirstname 2: {firstname_2}\n\nmiddlename 2: {middlename_2}\n\nlastname 2: {lastname_2}\n\nauthorinitials 2: {authorinitials_2}"
+      "source": ":attribute-missing: skip\n:author: One Two Three\u00a0Four Five\n\nauthorcount: {authorcount}\n\nauthors: {authors}\n\nauthor: {author}\n\nfirstname: {firstname}\n\nmiddlename: {middlename}\n\nlastname: {lastname}\n\nauthorinitials: {authorinitials}\n\nauthor 1: {author_1}\n\nfirstname 1: {firstname_1}\n\nmiddlename 1: {middlename_1}\n\nlastname 1: {lastname_1}\n\nauthorinitials 1: {authorinitials_1}\n\nauthor 2: {author_2}\n\nfirstname 2: {firstname_2}\n\nmiddlename 2: {middlename_2}\n\nlastname 2: {lastname_2}\n\nauthorinitials 2: {authorinitials_2}"
     },
     {
       "id": "header-markup-third-underscores",
@@ -4582,7 +4582,7 @@
       "id": "header-markup-setext",
       "category": "header",
       "expect": "pass",
-      "source": ":attribute-missing: skip\nDoc\n===\n:author: pass:[<b>Иван</b> Петров]\n\nauthorcount: {authorcount}\n\nauthors: {authors}\n\nauthor: {author}\n\nfirstname: {firstname}\n\nmiddlename: {middlename}\n\nlastname: {lastname}\n\nauthorinitials: {authorinitials}\n\nauthor 1: {author_1}\n\nfirstname 1: {firstname_1}\n\nmiddlename 1: {middlename_1}\n\nlastname 1: {lastname_1}\n\nauthorinitials 1: {authorinitials_1}\n\nauthor 2: {author_2}\n\nfirstname 2: {firstname_2}\n\nmiddlename 2: {middlename_2}\n\nlastname 2: {lastname_2}\n\nauthorinitials 2: {authorinitials_2}"
+      "source": ":attribute-missing: skip\nDoc\n===\n:author: pass:[<b>\u0418\u0432\u0430\u043d</b> \u041f\u0435\u0442\u0440\u043e\u0432]\n\nauthorcount: {authorcount}\n\nauthors: {authors}\n\nauthor: {author}\n\nfirstname: {firstname}\n\nmiddlename: {middlename}\n\nlastname: {lastname}\n\nauthorinitials: {authorinitials}\n\nauthor 1: {author_1}\n\nfirstname 1: {firstname_1}\n\nmiddlename 1: {middlename_1}\n\nlastname 1: {lastname_1}\n\nauthorinitials 1: {authorinitials_1}\n\nauthor 2: {author_2}\n\nfirstname 2: {firstname_2}\n\nmiddlename 2: {middlename_2}\n\nlastname 2: {lastname_2}\n\nauthorinitials 2: {authorinitials_2}"
     },
     {
       "id": "header-markup-body",
@@ -4603,7 +4603,7 @@
       "profile": "include-body-dom-v1",
       "source": ":attribute-missing: skip\n= Doc\nJohn Doe; Mary Roe\ninclude::author.adoc[lines=2..3,indent=0]\n\nauthorcount: {authorcount}\n\nauthors: {authors}\n\nauthor: {author}\n\nfirstname: {firstname}\n\nmiddlename: {middlename}\n\nlastname: {lastname}\n\nauthorinitials: {authorinitials}\n\nauthor 1: {author_1}\n\nfirstname 1: {firstname_1}\n\nmiddlename 1: {middlename_1}\n\nlastname 1: {lastname_1}\n\nauthorinitials 1: {authorinitials_1}\n\nauthor 2: {author_2}\n\nfirstname 2: {firstname_2}\n\nmiddlename 2: {middlename_2}\n\nlastname 2: {lastname_2}\n\nauthorinitials 2: {authorinitials_2}",
       "resources": {
-        "author.adoc": "ignored\r\n  :name: pass:[<b>Анна</b>]\r\n  :author_2: {name} Смирнова\r\nignored"
+        "author.adoc": "ignored\r\n  :name: pass:[<b>\u0410\u043d\u043d\u0430</b>]\r\n  :author_2: {name} \u0421\u043c\u0438\u0440\u043d\u043e\u0432\u0430\r\nignored"
       }
     },
     {
@@ -4640,7 +4640,7 @@
       "id": "attribute-entity-unicode",
       "category": "substitutions",
       "expect": "pass",
-      "source": ":value: До &copy; после &#x1F642; конец\n\n{value}"
+      "source": ":value: \u0414\u043e &copy; \u043f\u043e\u0441\u043b\u0435 &#x1F642; \u043a\u043e\u043d\u0435\u0446\n\n{value}"
     },
     {
       "id": "attribute-entity-escaped",
@@ -4808,7 +4808,7 @@
       "id": "attribute-entity-unicode-crlf",
       "category": "substitutions",
       "expect": "pass",
-      "source": "﻿:value: До &copy; после\r\n\r\n{value}"
+      "source": "\ufeff:value: \u0414\u043e &copy; \u043f\u043e\u0441\u043b\u0435\r\n\r\n{value}"
     },
     {
       "id": "attribute-entity-include",
@@ -4903,19 +4903,19 @@
       "id": "replacements-apostrophe-unicode",
       "category": "substitutions",
       "expect": "pass",
-      "source": ":v: Ж\n\né'{v} {v}'é ²'é"
+      "source": ":v: \u0416\n\n\u00e9'{v} {v}'\u00e9 \u00b2'\u00e9"
     },
     {
       "id": "replacements-word-unicode",
       "category": "substitutions",
       "expect": "pass",
-      "source": ":v: Ж\n\né--{v} é--{v} ²--{v}"
+      "source": ":v: \u0416\n\n\u00e9--{v} e\u0301--{v} \u00b2--{v}"
     },
     {
       "id": "replacements-word-connector",
       "category": "substitutions",
       "expect": "pass",
-      "source": ":v: ‿\n\na--{v} {v}--a"
+      "source": ":v: \u203f\n\na--{v} {v}--a"
     },
     {
       "id": "replacements-right-quote",
@@ -4987,7 +4987,7 @@
       "id": "replacements-entity-source",
       "category": "substitutions",
       "expect": "pass",
-      "source": "До &copy; &#65; &#x1F642; &unknown; &a; &ab123; после"
+      "source": "\u0414\u043e &copy; &#65; &#x1F642; &unknown; &a; &ab123; \u043f\u043e\u0441\u043b\u0435"
     },
     {
       "id": "replacements-entity-split",
@@ -5107,7 +5107,7 @@
       "id": "replacements-unicode-crlf",
       "category": "substitutions",
       "expect": "pass",
-      "source": "﻿:v: C\r\n:name: copy\r\n\r\nДо ({v}) &{name}; после\r\n"
+      "source": "\ufeff:v: C\r\n:name: copy\r\n\r\n\u0414\u043e ({v}) &{name}; \u043f\u043e\u0441\u043b\u0435\r\n"
     },
     {
       "id": "replacements-partial",
@@ -5122,7 +5122,7 @@
       "profile": "include-body-dom-v1",
       "source": ":v: C\n\ninclude::part.adoc[tags=body,indent=0]\n",
       "resources": {
-        "part.adoc": "// tag::body[]\n  До ({v}) &copy;...\n// end::body[]\n"
+        "part.adoc": "// tag::body[]\n  \u0414\u043e ({v}) &copy;...\n// end::body[]\n"
       }
     },
     {
@@ -5249,7 +5249,7 @@
       "id": "pass-replacements-unicode-boundaries",
       "category": "substitutions",
       "expect": "pass",
-      "source": ":x: pass:r[é--Ж é--Ж ‿--a a'1 1'a é'Ж ²'a]\n\nBefore {x} after"
+      "source": ":x: pass:r[\u00e9--\u0416 e\u0301--\u0416 \u203f--a a'1 1'a \u00e9'\u0416 \u00b2'a]\n\nBefore {x} after"
     },
     {
       "id": "pass-replacements-whitespace",
@@ -5321,7 +5321,7 @@
       "id": "pass-replacements-author",
       "category": "substitutions",
       "expect": "pass",
-      "source": "= Doc\nJohn Doe\n:author: pass:c,r[Анна--Мария O'Neil]\n\n{author} | {firstname} | {lastname} | {authorinitials}"
+      "source": "= Doc\nJohn Doe\n:author: pass:c,r[\u0410\u043d\u043d\u0430--\u041c\u0430\u0440\u0438\u044f O'Neil]\n\n{author} | {firstname} | {lastname} | {authorinitials}"
     },
     {
       "id": "pass-replacements-indexed-author",
@@ -5345,7 +5345,7 @@
       "id": "pass-replacements-unicode-crlf",
       "category": "substitutions",
       "expect": "pass",
-      "source": "﻿:x: pass:c,r[Ж (C) &copy;]\r\n\r\nДо {x} после"
+      "source": "\ufeff:x: pass:c,r[\u0416 (C) &copy;]\r\n\r\n\u0414\u043e {x} \u043f\u043e\u0441\u043b\u0435"
     },
     {
       "id": "pass-replacements-conditional",
@@ -5360,7 +5360,7 @@
       "source": "include::part.adoc[tags=body,indent=0]\n",
       "profile": "include-body-dom-v1",
       "resources": {
-        "part.adoc": "﻿// tag::body[]\r\n  :x: pass:c,r[До (C) &copy;]\r\n\r\n  {x}\r\n// end::body[]"
+        "part.adoc": "\ufeff// tag::body[]\r\n  :x: pass:c,r[\u0414\u043e (C) &copy;]\r\n\r\n  {x}\r\n// end::body[]"
       }
     },
     {
@@ -5521,7 +5521,7 @@
       "id": "section-id-unicode-crlf",
       "category": "references",
       "expect": "pass",
-      "source": "﻿:v: pass:[<b>Жёлтый</b> &#65; café]\r\n\r\n== {v}\r\n\r\n<<_жёлтый_café>>"
+      "source": "\ufeff:v: pass:[<b>\u0416\u0451\u043b\u0442\u044b\u0439</b> &#65; caf\u00e9]\r\n\r\n== {v}\r\n\r\n<<_\u0436\u0451\u043b\u0442\u044b\u0439_caf\u00e9>>"
     },
     {
       "id": "section-id-include",
@@ -5573,7 +5573,7 @@
       "id": "pass-quotes-unicode",
       "category": "attributes",
       "expect": "pass",
-      "source": ":v: pass:q[Ж*д*я é_à_é é*x*y ½*x* *Жёлтый*]\n\n{v}"
+      "source": ":v: pass:q[\u0416*\u0434*\u044f \u00e9_\u00e0_\u00e9 e\u0301*x*y \u00bd*x* *\u0416\u0451\u043b\u0442\u044b\u0439*]\n\n{v}"
     },
     {
       "id": "pass-quotes-punctuation",
@@ -5693,7 +5693,7 @@
       "id": "pass-quotes-author",
       "category": "attributes",
       "expect": "pass",
-      "source": "= Doc\nJohn Doe\n:author: pass:c,q[*Анна_Мария* _Смирнова_]\n\n{author} | {firstname} | {lastname} | {authorinitials}"
+      "source": "= Doc\nJohn Doe\n:author: pass:c,q[*\u0410\u043d\u043d\u0430_\u041c\u0430\u0440\u0438\u044f* _\u0421\u043c\u0438\u0440\u043d\u043e\u0432\u0430_]\n\n{author} | {firstname} | {lastname} | {authorinitials}"
     },
     {
       "id": "pass-quotes-authors",
@@ -5729,7 +5729,7 @@
       "id": "pass-quotes-unicode-crlf",
       "category": "attributes",
       "expect": "pass",
-      "source": "﻿:v: pass:c,q[*Жёлтый* _café_]\r\n\r\nДо {v}"
+      "source": "\ufeff:v: pass:c,q[*\u0416\u0451\u043b\u0442\u044b\u0439* _caf\u00e9_]\r\n\r\n\u0414\u043e {v}"
     },
     {
       "id": "pass-quotes-include",
@@ -5738,7 +5738,7 @@
       "source": "include::part.adoc[tags=body,indent=0]",
       "profile": "include-body-dom-v1",
       "resources": {
-        "part.adoc": "﻿// tag::body[]\r\n  :v: pass:c,q[*Жёлтый* _café_]\r\n\r\n  {v}\r\n// end::body[]"
+        "part.adoc": "\ufeff// tag::body[]\r\n  :v: pass:c,q[*\u0416\u0451\u043b\u0442\u044b\u0439* _caf\u00e9_]\r\n\r\n  {v}\r\n// end::body[]"
       }
     },
     {
@@ -5889,61 +5889,61 @@
       "id": "pass-quote-attrs-strong",
       "category": "attributes",
       "expect": "pass",
-      "source": ":v: pass:c,q[[.before#anchor.after]*Ж&*]\n\n{v}"
+      "source": ":v: pass:c,q[[.before#anchor.after]*\u0416&*]\n\n{v}"
     },
     {
       "id": "pass-quote-attrs-double-strong",
       "category": "attributes",
       "expect": "pass",
-      "source": ":v: pass:c,q[[.before#anchor.after]**Ж&**]\n\n{v}"
+      "source": ":v: pass:c,q[[.before#anchor.after]**\u0416&**]\n\n{v}"
     },
     {
       "id": "pass-quote-attrs-emphasis",
       "category": "attributes",
       "expect": "pass",
-      "source": ":v: pass:c,q[[.before#anchor.after]_Ж&_]\n\n{v}"
+      "source": ":v: pass:c,q[[.before#anchor.after]_\u0416&_]\n\n{v}"
     },
     {
       "id": "pass-quote-attrs-double-emphasis",
       "category": "attributes",
       "expect": "pass",
-      "source": ":v: pass:c,q[[.before#anchor.after]__Ж&__]\n\n{v}"
+      "source": ":v: pass:c,q[[.before#anchor.after]__\u0416&__]\n\n{v}"
     },
     {
       "id": "pass-quote-attrs-mono",
       "category": "attributes",
       "expect": "pass",
-      "source": ":v: pass:c,q[[.before#anchor.after]`Ж&`]\n\n{v}"
+      "source": ":v: pass:c,q[[.before#anchor.after]`\u0416&`]\n\n{v}"
     },
     {
       "id": "pass-quote-attrs-double-mono",
       "category": "attributes",
       "expect": "pass",
-      "source": ":v: pass:c,q[[.before#anchor.after]``Ж&``]\n\n{v}"
+      "source": ":v: pass:c,q[[.before#anchor.after]``\u0416&``]\n\n{v}"
     },
     {
       "id": "pass-quote-attrs-mark",
       "category": "attributes",
       "expect": "pass",
-      "source": ":v: pass:c,q[[.before#anchor.after]#Ж&#]\n\n{v}"
+      "source": ":v: pass:c,q[[.before#anchor.after]#\u0416&#]\n\n{v}"
     },
     {
       "id": "pass-quote-attrs-double-mark",
       "category": "attributes",
       "expect": "pass",
-      "source": ":v: pass:c,q[[.before#anchor.after]##Ж&##]\n\n{v}"
+      "source": ":v: pass:c,q[[.before#anchor.after]##\u0416&##]\n\n{v}"
     },
     {
       "id": "pass-quote-attrs-super",
       "category": "attributes",
       "expect": "pass",
-      "source": ":v: pass:c,q[[.before#anchor.after]^Ж&^]\n\n{v}"
+      "source": ":v: pass:c,q[[.before#anchor.after]^\u0416&^]\n\n{v}"
     },
     {
       "id": "pass-quote-attrs-sub",
       "category": "attributes",
       "expect": "pass",
-      "source": ":v: pass:c,q[[.before#anchor.after]~Ж&~]\n\n{v}"
+      "source": ":v: pass:c,q[[.before#anchor.after]~\u0416&~]\n\n{v}"
     },
     {
       "id": "pass-quote-attrs-double-quote",
@@ -6237,7 +6237,7 @@
       "id": "pass-quote-attrs-author",
       "category": "attributes",
       "expect": "pass",
-      "source": "= Doc\nJohn Doe; Mary Roe\n:author_2: pass:q[[.имя]*Анна_Мария* [.фамилия]_Смирнова_]\n\n{authors}\n\n{firstname_2} {lastname_2} {authorinitials_2}"
+      "source": "= Doc\nJohn Doe; Mary Roe\n:author_2: pass:q[[.\u0438\u043c\u044f]*\u0410\u043d\u043d\u0430_\u041c\u0430\u0440\u0438\u044f* [.\u0444\u0430\u043c\u0438\u043b\u0438\u044f]_\u0421\u043c\u0438\u0440\u043d\u043e\u0432\u0430_]\n\n{authors}\n\n{firstname_2} {lastname_2} {authorinitials_2}"
     },
     {
       "id": "pass-quote-attrs-snapshots",
@@ -6267,7 +6267,7 @@
       "id": "pass-quote-attrs-unicode-crlf",
       "category": "attributes",
       "expect": "pass",
-      "source": "﻿:v: pass:c,q[[#якорь.роль]*Ж&*]\r\n\r\nДо {v}"
+      "source": "\ufeff:v: pass:c,q[[#\u044f\u043a\u043e\u0440\u044c.\u0440\u043e\u043b\u044c]*\u0416&*]\r\n\r\n\u0414\u043e {v}"
     },
     {
       "id": "pass-quote-attrs-include",
@@ -6276,7 +6276,7 @@
       "source": "include::part.adoc[tags=body,indent=0]",
       "profile": "include-body-dom-v1",
       "resources": {
-        "part.adoc": "﻿// tag::body[]\r\n  :v: pass:c,q[[#якорь.роль]*Ж&*]\r\n\r\n  {v}\r\n// end::body[]"
+        "part.adoc": "\ufeff// tag::body[]\r\n  :v: pass:c,q[[#\u044f\u043a\u043e\u0440\u044c.\u0440\u043e\u043b\u044c]*\u0416&*]\r\n\r\n  {v}\r\n// end::body[]"
       }
     },
     {
@@ -6521,7 +6521,7 @@
       "id": "pass-macros-mailto-encoded",
       "category": "attributes",
       "expect": "pass",
-      "source": ":v: pass:m[mailto:a@example.org[Mail,Привет,Ж&]]\n\n{v}"
+      "source": ":v: pass:m[mailto:a@example.org[Mail,\u041f\u0440\u0438\u0432\u0435\u0442,\u0416&]]\n\n{v}"
     },
     {
       "id": "pass-macros-alias",
@@ -6701,7 +6701,7 @@
       "id": "pass-macros-unicode-crlf",
       "category": "attributes",
       "expect": "pass",
-      "source": "﻿:v: pass:c,q,m[link:страница[*Ж&*,role=роль]]\r\n\r\nДо {v}"
+      "source": "\ufeff:v: pass:c,q,m[link:\u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0430[*\u0416&*,role=\u0440\u043e\u043b\u044c]]\r\n\r\n\u0414\u043e {v}"
     },
     {
       "id": "pass-macros-multiline",
@@ -6716,7 +6716,7 @@
       "source": "include::part.adoc[tags=body,indent=0]",
       "profile": "include-body-dom-v1",
       "resources": {
-        "part.adoc": "﻿// tag::body[]\r\n  :v: pass:c,q,m[link:страница[*Ж&*,role=роль]]\r\n\r\n  {v}\r\n// end::body[]"
+        "part.adoc": "\ufeff// tag::body[]\r\n  :v: pass:c,q,m[link:\u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0430[*\u0416&*,role=\u0440\u043e\u043b\u044c]]\r\n\r\n  {v}\r\n// end::body[]"
       }
     },
     {
@@ -6823,7 +6823,7 @@
       "id": "post-macros-mail-params",
       "category": "substitutions",
       "expect": "pass",
-      "source": ":v: mailto:a@example.org[Mail,Hello world,Ж&]\n\n{v}"
+      "source": ":v: mailto:a@example.org[Mail,Hello world,\u0416&]\n\n{v}"
     },
     {
       "id": "post-macros-escape",
@@ -6889,7 +6889,7 @@
       "id": "post-macros-unicode",
       "category": "substitutions",
       "expect": "pass",
-      "source": ":v: link:страница[Жёлтый]\n\n{v}"
+      "source": ":v: link:\u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0430[\u0416\u0451\u043b\u0442\u044b\u0439]\n\n{v}"
     },
     {
       "id": "post-macros-split-scheme",
@@ -7003,7 +7003,7 @@
       "id": "post-macros-unicode-crlf",
       "category": "substitutions",
       "expect": "pass",
-      "source": "﻿:v: link:страница[Ж&]\r\n\r\nДо {v}"
+      "source": "\ufeff:v: link:\u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0430[\u0416&]\r\n\r\n\u0414\u043e {v}"
     },
     {
       "id": "post-macros-multiline",
@@ -7059,7 +7059,7 @@
       "id": "post-macros-after-replacement",
       "category": "substitutions",
       "expect": "pass",
-      "source": ":s: ttps\n\nЖ(C) h{s}://example.org"
+      "source": ":s: ttps\n\n\u0416(C) h{s}://example.org"
     },
     {
       "id": "post-macros-cross-source",
@@ -7111,7 +7111,7 @@
       "id": "direct-macros-params",
       "category": "substitutions",
       "expect": "pass",
-      "source": "link:page[Ж&,id=anchor,role=red,title=A&B,window=_blank,opts=nofollow]"
+      "source": "link:page[\u0416&,id=anchor,role=red,title=A&B,window=_blank,opts=nofollow]"
     },
     {
       "id": "direct-macros-blank",
@@ -7339,7 +7339,7 @@
       "id": "direct-macros-unicode",
       "category": "substitutions",
       "expect": "pass",
-      "source": "﻿:target: страница\r\n\r\nЖ(C) link:{target}[*Жёлтый*]"
+      "source": "\ufeff:target: \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0430\r\n\r\n\u0416(C) link:{target}[*\u0416\u0451\u043b\u0442\u044b\u0439*]"
     },
     {
       "id": "direct-macros-include",
@@ -7348,7 +7348,7 @@
       "profile": "include-body-dom-v1",
       "source": "include::part.adoc[tags=body,indent=0]",
       "resources": {
-        "part.adoc": "﻿// tag::body[]\r\n  :target: страница\r\n\r\n  Ж(C) link:{target}[*Жёлтый*]\r\n// end::body[]"
+        "part.adoc": "\ufeff// tag::body[]\r\n  :target: \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0430\r\n\r\n  \u0416(C) link:{target}[*\u0416\u0451\u043b\u0442\u044b\u0439*]\r\n// end::body[]"
       }
     },
     {
@@ -7611,7 +7611,7 @@
       "id": "inline-quotes-role-protection",
       "category": "substitutions",
       "expect": "pass",
-      "source": "Before [A&B]*Ж&* after"
+      "source": "Before [A&B]*\u0416&* after"
     },
     {
       "id": "inline-quotes-metadata-replacement",
@@ -7665,7 +7665,7 @@
       "id": "inline-quotes-unicode-boundary",
       "category": "substitutions",
       "expect": "pass",
-      "source": "Ж_Bold_é ‿*Bold* é*Bold*"
+      "source": "\u0416_Bold_\u00e9 \u203f*Bold* e\u0301*Bold*"
     },
     {
       "id": "inline-quotes-whitespace",
@@ -7737,7 +7737,7 @@
       "id": "inline-quotes-unicode-crlf",
       "category": "substitutions",
       "expect": "pass",
-      "source": "﻿:role: красный\r\n\r\nЖ(C) [{role}]*Жёлтый*"
+      "source": "\ufeff:role: \u043a\u0440\u0430\u0441\u043d\u044b\u0439\r\n\r\n\u0416(C) [{role}]*\u0416\u0451\u043b\u0442\u044b\u0439*"
     },
     {
       "id": "inline-quotes-multiline",
@@ -7785,7 +7785,7 @@
       "id": "inline-quotes-sub-nbsp",
       "category": "substitutions",
       "expect": "pass",
-      "source": "a~b c~d"
+      "source": "a~b\u00a0c~d"
     },
     {
       "id": "inline-quotes-nested-single-double",
@@ -7914,7 +7914,7 @@
       "profile": "include-body-dom-v1",
       "source": "include::part.adoc[tags=body,indent=0]",
       "resources": {
-        "part.adoc": "﻿// tag::body[]\r\n  :role: красный\r\n\r\n  Ж(C) [{role}]*Жёлтый*\r\n// end::body[]"
+        "part.adoc": "\ufeff// tag::body[]\r\n  :role: \u043a\u0440\u0430\u0441\u043d\u044b\u0439\r\n\r\n  \u0416(C) [{role}]*\u0416\u0451\u043b\u0442\u044b\u0439*\r\n// end::body[]"
       }
     },
     {
@@ -7931,469 +7931,469 @@
       "id": "inline-pass-single",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore +*Bold* {v} <b>&amp;</b> (C) https://example.org+ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore +*Bold* {v} <b>&amp;</b> (C) https://example.org+ after"
     },
     {
       "id": "inline-pass-double",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore ++*Bold* {v} <b>&amp;</b> (C) https://example.org++ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore ++*Bold* {v} <b>&amp;</b> (C) https://example.org++ after"
     },
     {
       "id": "inline-pass-triple",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore +++<b>Raw &amp;</b> {v} *Bold* (C)+++ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore +++<b>Raw &amp;</b> {v} *Bold* (C)+++ after"
     },
     {
       "id": "inline-pass-dollar",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore $$*Bold* {v} <b>&amp;</b> (C) https://example.org$$ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore $$*Bold* {v} <b>&amp;</b> (C) https://example.org$$ after"
     },
     {
       "id": "inline-pass-macro-raw",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:[<b>Raw &amp;</b> {v} *Bold* (C)] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:[<b>Raw &amp;</b> {v} *Bold* (C)] after"
     },
     {
       "id": "inline-pass-macro-specials",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:c[<b>Raw &amp;</b> {v} *Bold* (C)] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:c[<b>Raw &amp;</b> {v} *Bold* (C)] after"
     },
     {
       "id": "inline-pass-macro-order",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:q,a,r,c[*Bold* {v} (C)] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:q,a,r,c[*Bold* {v} (C)] after"
     },
     {
       "id": "inline-pass-macro-normal-stages",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:c,q,a,r,m[*Bold* {v} (C) https://example.org] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:c,q,a,r,m[*Bold* {v} (C) https://example.org] after"
     },
     {
       "id": "inline-pass-outer-quotes",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore *before +_Literal_ {v}+ after* after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore *before +_Literal_ {v}+ after* after"
     },
     {
       "id": "inline-pass-link-label",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore link:page[+A [x] & {v}+] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore link:page[+A [x] & {v}+] after"
     },
     {
       "id": "inline-pass-link-target",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore link:++https://example.org/a_b++[Label] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore link:++https://example.org/a_b++[Label] after"
     },
     {
       "id": "inline-pass-macro-link-label",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore link:page[pass:q[*Bold*]] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore link:page[pass:q[*Bold*]] after"
     },
     {
       "id": "inline-pass-escaped-bracket",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:[one\\]two] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:[one\\]two] after"
     },
     {
       "id": "inline-pass-empty-macro",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:[] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:[] after"
     },
     {
       "id": "inline-pass-empty-specials",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:c[] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:c[] after"
     },
     {
       "id": "inline-pass-nested-double",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore +one ++two++ three+ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore +one ++two++ three+ after"
     },
     {
       "id": "inline-pass-nested-single",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore ++one +two+ three++ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore ++one +two+ three++ after"
     },
     {
       "id": "inline-pass-nested-macro",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore +one pass:[<b>two</b>] three+ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore +one pass:[<b>two</b>] three+ after"
     },
     {
       "id": "inline-pass-raw-nested-dollar",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore +++one $$two$$ three+++ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore +++one $$two$$ three+++ after"
     },
     {
       "id": "inline-pass-multiline",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore +one\ntwo+ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore +one\ntwo+ after"
     },
     {
       "id": "inline-pass-word-boundaries",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore a+b+ a++b++c a+++<b>x</b>+++c after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore a+b+ a++b++c a+++<b>x</b>+++c after"
     },
     {
       "id": "inline-pass-empty-delimiters",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore ++ ++ +++ +++ $$$$ ++++ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore ++ ++ +++ +++ $$$$ ++++ after"
     },
     {
       "id": "inline-pass-metadata",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore [red]+*Bold* {v}+ [#id.role]++Text++ [red]+++<b>Raw</b>+++ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore [red]+*Bold* {v}+ [#id.role]++Text++ [red]+++<b>Raw</b>+++ after"
     },
     {
       "id": "inline-pass-dollar-metadata",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore [red]$$*Bold* {v}$$ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore [red]$$*Bold* {v}$$ after"
     },
     {
       "id": "inline-pass-legacy-plus",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore [x-]+*Bold* {v} (C)+ [red x-]++*Bold* {v} (C)++ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore [x-]+*Bold* {v} (C)+ [red x-]++*Bold* {v} (C)++ after"
     },
     {
       "id": "inline-pass-legacy-backtick",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore [x-]`*Bold* {v} (C)` after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore [x-]`*Bold* {v} (C)` after"
     },
     {
       "id": "inline-pass-escaped-plus",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore \\+*Bold* {v}+ \\++*Bold* {v}++ \\+++*Bold* {v}+++ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore \\+*Bold* {v}+ \\++*Bold* {v}++ \\+++*Bold* {v}+++ after"
     },
     {
       "id": "inline-pass-escaped-macros",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore \\$$*Bold* {v}$$ \\pass:[*Bold* {v}] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore \\$$*Bold* {v}$$ \\pass:[*Bold* {v}] after"
     },
     {
       "id": "inline-pass-escaped-markers-metadata",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore [red]\\+*Bold* {v}+ [red]\\++*Bold* {v}++ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore [red]\\+*Bold* {v}+ [red]\\++*Bold* {v}++ after"
     },
     {
       "id": "inline-pass-escaped-metadata",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore \\[red]+*Bold* {v}+ \\[red]++*Bold* {v}++ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore \\[red]+*Bold* {v}+ \\[red]++*Bold* {v}++ after"
     },
     {
       "id": "inline-pass-escaped-legacy-backtick",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore \\[x-]`*Bold* {v}` after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore \\[x-]`*Bold* {v}` after"
     },
     {
       "id": "inline-pass-adjacent-quotes",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore +x+_y_ +x+*y* after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore +x+_y_ +x+*y* after"
     },
     {
       "id": "inline-pass-adjacent-single",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore +x+ +y+ +z+ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore +x+ +y+ +z+ after"
     },
     {
       "id": "inline-pass-adjacent-double",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore ++x++++y++ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore ++x++++y++ after"
     },
     {
       "id": "inline-pass-mixed-delimiters",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore +++x+++ ++y++ +z+ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore +++x+++ ++y++ +z+ after"
     },
     {
       "id": "inline-pass-attribute-protection",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore {v} +{v}+ ++{v}++ $$&amp;$$ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore {v} +{v}+ ++{v}++ $$&amp;$$ after"
     },
     {
       "id": "inline-pass-backticks",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore `*Bold* {v} (C)` [red]`*Bold* {v} (C)` after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore `*Bold* {v} (C)` [red]`*Bold* {v} (C)` after"
     },
     {
       "id": "inline-pass-escaped-backticks",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore \\`*Bold* {v}` [red]\\`*Bold* {v}` \\[red]`*Bold* {v}` after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore \\`*Bold* {v}` [red]\\`*Bold* {v}` \\[red]`*Bold* {v}` after"
     },
     {
       "id": "inline-pass-compat-double-nested",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore ++*Bold* +Code+ `Lit`++ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore ++*Bold* +Code+ `Lit`++ after"
     },
     {
       "id": "inline-pass-incomplete",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore before +incomplete *Bold* after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore before +incomplete *Bold* after"
     },
     {
       "id": "inline-pass-single-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore +*Bold* {v} <b>&amp;</b> (C) https://example.org+ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore +*Bold* {v} <b>&amp;</b> (C) https://example.org+ after"
     },
     {
       "id": "inline-pass-double-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore ++*Bold* {v} <b>&amp;</b> (C) https://example.org++ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore ++*Bold* {v} <b>&amp;</b> (C) https://example.org++ after"
     },
     {
       "id": "inline-pass-triple-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore +++<b>Raw &amp;</b> {v} *Bold* (C)+++ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore +++<b>Raw &amp;</b> {v} *Bold* (C)+++ after"
     },
     {
       "id": "inline-pass-dollar-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore $$*Bold* {v} <b>&amp;</b> (C) https://example.org$$ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore $$*Bold* {v} <b>&amp;</b> (C) https://example.org$$ after"
     },
     {
       "id": "inline-pass-macro-raw-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore pass:[<b>Raw &amp;</b> {v} *Bold* (C)] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore pass:[<b>Raw &amp;</b> {v} *Bold* (C)] after"
     },
     {
       "id": "inline-pass-macro-specials-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore pass:c[<b>Raw &amp;</b> {v} *Bold* (C)] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore pass:c[<b>Raw &amp;</b> {v} *Bold* (C)] after"
     },
     {
       "id": "inline-pass-macro-order-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore pass:q,a,r,c[*Bold* {v} (C)] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore pass:q,a,r,c[*Bold* {v} (C)] after"
     },
     {
       "id": "inline-pass-macro-normal-stages-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore pass:c,q,a,r,m[*Bold* {v} (C) https://example.org] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore pass:c,q,a,r,m[*Bold* {v} (C) https://example.org] after"
     },
     {
       "id": "inline-pass-outer-quotes-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore *before +_Literal_ {v}+ after* after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore *before +_Literal_ {v}+ after* after"
     },
     {
       "id": "inline-pass-macro-link-label-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore link:page[pass:q[*Bold*]] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore link:page[pass:q[*Bold*]] after"
     },
     {
       "id": "inline-pass-escaped-bracket-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore pass:[one\\]two] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore pass:[one\\]two] after"
     },
     {
       "id": "inline-pass-empty-macro-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore pass:[] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore pass:[] after"
     },
     {
       "id": "inline-pass-empty-specials-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore pass:c[] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore pass:c[] after"
     },
     {
       "id": "inline-pass-nested-double-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore +one ++two++ three+ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore +one ++two++ three+ after"
     },
     {
       "id": "inline-pass-nested-single-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore ++one +two+ three++ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore ++one +two+ three++ after"
     },
     {
       "id": "inline-pass-nested-macro-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore +one pass:[<b>two</b>] three+ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore +one pass:[<b>two</b>] three+ after"
     },
     {
       "id": "inline-pass-raw-nested-dollar-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore +++one $$two$$ three+++ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore +++one $$two$$ three+++ after"
     },
     {
       "id": "inline-pass-multiline-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore +one\ntwo+ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore +one\ntwo+ after"
     },
     {
       "id": "inline-pass-word-boundaries-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore a+b+ a++b++c a+++<b>x</b>+++c after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore a+b+ a++b++c a+++<b>x</b>+++c after"
     },
     {
       "id": "inline-pass-empty-delimiters-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore ++ ++ +++ +++ $$$$ ++++ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore ++ ++ +++ +++ $$$$ ++++ after"
     },
     {
       "id": "inline-pass-metadata-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore [red]+*Bold* {v}+ [#id.role]++Text++ [red]+++<b>Raw</b>+++ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore [red]+*Bold* {v}+ [#id.role]++Text++ [red]+++<b>Raw</b>+++ after"
     },
     {
       "id": "inline-pass-dollar-metadata-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore [red]$$*Bold* {v}$$ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore [red]$$*Bold* {v}$$ after"
     },
     {
       "id": "inline-pass-legacy-plus-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore [x-]+*Bold* {v} (C)+ [red x-]++*Bold* {v} (C)++ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore [x-]+*Bold* {v} (C)+ [red x-]++*Bold* {v} (C)++ after"
     },
     {
       "id": "inline-pass-legacy-backtick-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore [x-]`*Bold* {v} (C)` after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore [x-]`*Bold* {v} (C)` after"
     },
     {
       "id": "inline-pass-escaped-plus-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore \\+*Bold* {v}+ \\++*Bold* {v}++ \\+++*Bold* {v}+++ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore \\+*Bold* {v}+ \\++*Bold* {v}++ \\+++*Bold* {v}+++ after"
     },
     {
       "id": "inline-pass-escaped-macros-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore \\$$*Bold* {v}$$ \\pass:[*Bold* {v}] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore \\$$*Bold* {v}$$ \\pass:[*Bold* {v}] after"
     },
     {
       "id": "inline-pass-escaped-markers-metadata-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore [red]\\+*Bold* {v}+ [red]\\++*Bold* {v}++ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore [red]\\+*Bold* {v}+ [red]\\++*Bold* {v}++ after"
     },
     {
       "id": "inline-pass-escaped-metadata-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore \\[red]+*Bold* {v}+ \\[red]++*Bold* {v}++ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore \\[red]+*Bold* {v}+ \\[red]++*Bold* {v}++ after"
     },
     {
       "id": "inline-pass-escaped-legacy-backtick-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore \\[x-]`*Bold* {v}` after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore \\[x-]`*Bold* {v}` after"
     },
     {
       "id": "inline-pass-adjacent-quotes-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore +x+_y_ +x+*y* after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore +x+_y_ +x+*y* after"
     },
     {
       "id": "inline-pass-adjacent-single-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore +x+ +y+ +z+ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore +x+ +y+ +z+ after"
     },
     {
       "id": "inline-pass-adjacent-double-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore ++x++++y++ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore ++x++++y++ after"
     },
     {
       "id": "inline-pass-mixed-delimiters-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore +++x+++ ++y++ +z+ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore +++x+++ ++y++ +z+ after"
     },
     {
       "id": "inline-pass-attribute-protection-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore {v} +{v}+ ++{v}++ $$&amp;$$ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore {v} +{v}+ ++{v}++ $$&amp;$$ after"
     },
     {
       "id": "inline-pass-backticks-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore `*Bold* {v} (C)` [red]`*Bold* {v} (C)` after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore `*Bold* {v} (C)` [red]`*Bold* {v} (C)` after"
     },
     {
       "id": "inline-pass-escaped-backticks-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore \\`*Bold* {v}` [red]\\`*Bold* {v}` \\[red]`*Bold* {v}` after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore \\`*Bold* {v}` [red]\\`*Bold* {v}` \\[red]`*Bold* {v}` after"
     },
     {
       "id": "inline-pass-compat-double-nested-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore ++*Bold* +Code+ `Lit`++ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore ++*Bold* +Code+ `Lit`++ after"
     },
     {
       "id": "inline-pass-incomplete-compat",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:compat-mode:\n\nBefore before +incomplete *Bold* after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:compat-mode:\n\nBefore before +incomplete *Bold* after"
     },
     {
       "id": "inline-pass-body-compat-set",
@@ -8459,13 +8459,13 @@
       "id": "inline-pass-escaped-compat-word",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":compat-mode:\n\nж\\`&amp;`"
+      "source": ":compat-mode:\n\n\u0436\\`&amp;`"
     },
     {
       "id": "inline-pass-aliases",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": ":v: Ж\n\npass:specialcharacters,quotes,attributes,replacements[*{v}* & (C)]"
+      "source": ":v: \u0416\n\npass:specialcharacters,quotes,attributes,replacements[*{v}* & (C)]"
     },
     {
       "id": "inline-pass-none",
@@ -8483,7 +8483,7 @@
       "id": "inline-pass-unicode-crlf",
       "category": "inline-passthrough",
       "expect": "pass",
-      "source": "﻿:v: Ж\r\n\r\nBefore +*Ж* {v} (C)+ after"
+      "source": "\ufeff:v: \u0416\r\n\r\nBefore +*\u0416* {v} (C)+ after"
     },
     {
       "id": "inline-pass-metadata-empty",
@@ -8497,7 +8497,7 @@
       "expect": "pass",
       "source": "include::part.adoc[tags=body,indent=0]",
       "resources": {
-        "part.adoc": "﻿// tag::body[]\r\n  Before +*Ж* {v} (C)+ after\r\n// end::body[]"
+        "part.adoc": "\ufeff// tag::body[]\r\n  Before +*\u0416* {v} (C)+ after\r\n// end::body[]"
       },
       "profile": "include-body-dom-v1"
     },
@@ -8533,229 +8533,229 @@
       "id": "pass-groups-normal",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:normal[*Bold* {v} (C) <b> &amp; link:page[Label\\]] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:normal[*Bold* {v} (C) <b> &amp; link:page[Label\\]] after"
     },
     {
       "id": "pass-groups-n",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:n[*Bold* {v} (C) <b> &amp;] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:n[*Bold* {v} (C) <b> &amp;] after"
     },
     {
       "id": "pass-groups-v",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:v[*Bold* {v} (C) <b> &amp; <1>] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:v[*Bold* {v} (C) <b> &amp; <1>] after"
     },
     {
       "id": "pass-groups-verbatim",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:verbatim[*Bold* {v} (C) <b> &amp; <1>] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:verbatim[*Bold* {v} (C) <b> &amp; <1>] after"
     },
     {
       "id": "pass-groups-basic-invalid",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:basic[<b>*Bold*</b>] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:basic[<b>*Bold*</b>] after"
     },
     {
       "id": "pass-groups-invalid",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:bad,q,bad[*Bold* &] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:bad,q,bad[*Bold* &] after"
     },
     {
       "id": "pass-groups-invalid-remove",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:bad,-bad,q[*Bold* &] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:bad,-bad,q[*Bold* &] after"
     },
     {
       "id": "pass-groups-empty",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:normal[] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:normal[] after"
     },
     {
       "id": "pass-groups-remove-quotes",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:normal,-quotes[*Bold* {v} (C)] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:normal,-quotes[*Bold* {v} (C)] after"
     },
     {
       "id": "pass-groups-remove-m",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:n,-m[+*Bold* {v}+ https://example.org] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:n,-m[+*Bold* {v}+ https://example.org] after"
     },
     {
       "id": "pass-groups-none-additive",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:q,none,c[*Bold*] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:q,none,c[*Bold*] after"
     },
     {
       "id": "pass-groups-remove-first",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:-q[*Bold*] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:-q[*Bold*] after"
     },
     {
       "id": "pass-groups-empty-stage",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:q,,c[*Bold*] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:q,,c[*Bold*] after"
     },
     {
       "id": "pass-groups-duplicates",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:c,c,q,q[*Bold* &] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:c,c,q,q[*Bold* &] after"
     },
     {
       "id": "pass-groups-group-order",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:q,n[*Bold* & (C)] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:q,n[*Bold* & (C)] after"
     },
     {
       "id": "pass-groups-group-order2",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:r,normal[(C) &] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:r,normal[(C) &] after"
     },
     {
       "id": "pass-groups-post",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:p[One +\nTwo +] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:p[One +\nTwo +] after"
     },
     {
       "id": "pass-groups-post-c",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:p,c[One +\nTwo] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:p,c[One +\nTwo] after"
     },
     {
       "id": "pass-groups-normal-break",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:normal[One +\nTwo] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:normal[One +\nTwo] after"
     },
     {
       "id": "pass-groups-normal-last-break",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:normal[One +] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:normal[One +] after"
     },
     {
       "id": "pass-groups-nested-plus",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:normal[+*Literal* {v} & (C)+ *Bold*] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:normal[+*Literal* {v} & (C)+ *Bold*] after"
     },
     {
       "id": "pass-groups-nested-m",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:m[+*Literal* {v} & (C)+ link:page[Label\\]] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:m[+*Literal* {v} & (C)+ link:page[Label\\]] after"
     },
     {
       "id": "pass-groups-nested-m-order",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:q,m[+*Literal*+ *Bold*] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:q,m[+*Literal*+ *Bold*] after"
     },
     {
       "id": "pass-groups-no-nested-without-m",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:q[+*Bold*+] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:q[+*Bold*+] after"
     },
     {
       "id": "pass-groups-nested-macro",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:normal[pass:q[*Bold*\\] {v}] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:normal[pass:q[*Bold*\\] {v}] after"
     },
     {
       "id": "pass-groups-nested-macro-deep",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:m[pass:m[pass:q[*Bold*\\\\]\\\\]] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:m[pass:m[pass:q[*Bold*\\\\]\\\\]] after"
     },
     {
       "id": "pass-groups-nested-escaped",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:normal[\\+*Bold* {v}+ \\pass:q[*Bold*\\]] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:normal[\\+*Bold* {v}+ \\pass:q[*Bold*\\]] after"
     },
     {
       "id": "pass-groups-nested-invalid",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:m[pass:bad[<b>Raw</b>\\]] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:m[pass:bad[<b>Raw</b>\\]] after"
     },
     {
       "id": "pass-groups-raw-nested",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:m[+++<b>Raw &</b>+++] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:m[+++<b>Raw &</b>+++] after"
     },
     {
       "id": "pass-groups-legacy-normal",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore [x-]+One +\nTwo+ after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore [x-]+One +\nTwo+ after"
     },
     {
       "id": "pass-groups-host-expand",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:x: +literal+\n\nBefore pass:n[{x}] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:x: +literal+\n\nBefore pass:n[{x}] after"
     },
     {
       "id": "pass-groups-attr-normal",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:x: pass:normal[*Bold* {v} (C)]\n\nBefore {x} after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:x: pass:normal[*Bold* {v} (C)]\n\nBefore {x} after"
     },
     {
       "id": "pass-groups-attr-nested",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:x: pass:m[+*Literal* {v} &+ link:page[Label]]\n\nBefore {x} after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:x: pass:m[+*Literal* {v} &+ link:page[Label]]\n\nBefore {x} after"
     },
     {
       "id": "pass-groups-attr-invalid",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:x: pass:bad,q[*Bold*]\n\nBefore {x} after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:x: pass:bad,q[*Bold*]\n\nBefore {x} after"
     },
     {
       "id": "pass-groups-attr-basic",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:x: pass:basic[<b>Raw</b>]\n\nBefore {x} after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:x: pass:basic[<b>Raw</b>]\n\nBefore {x} after"
     },
     {
       "id": "pass-groups-hardbreaks",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n:hardbreaks-option:\n\nBefore pass:n[One\nTwo +] after"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n:hardbreaks-option:\n\nBefore pass:n[One\nTwo +] after"
     },
     {
       "id": "pass-groups-mail-nested",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:m[mailto:a@b.org[Mail,+Subject+\\]] ++later++"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:m[mailto:a@b.org[Mail,+Subject+\\]] ++later++"
     },
     {
       "id": "pass-groups-outer-two",
       "category": "pass-groups",
       "expect": "pass",
-      "source": ":v: Жёлтый\n\nBefore pass:m[++inner++ link:p[+Label+\\]] ++later++"
+      "source": ":v: \u0416\u0451\u043b\u0442\u044b\u0439\n\nBefore pass:m[++inner++ link:p[+Label+\\]] ++later++"
     },
     {
       "id": "pass-groups-escaped-invalid",
@@ -8851,7 +8851,7 @@
       "id": "pass-groups-unicode-crlf",
       "category": "pass-groups",
       "expect": "pass",
-      "source": "﻿:v: Ж\r\n\r\nBefore pass:bad,n[*{v}* +\r\nNext] after"
+      "source": "\ufeff:v: \u0416\r\n\r\nBefore pass:bad,n[*{v}* +\r\nNext] after"
     },
     {
       "id": "pass-groups-empty-invalid",
@@ -8884,7 +8884,7 @@
       "profile": "include-body-dom-v1",
       "source": "include::part.adoc[tags=body,indent=0]",
       "resources": {
-        "part.adoc": "﻿// tag::body[]\r\n  Before pass:bad,n[*Ж*] after\r\n// end::body[]"
+        "part.adoc": "\ufeff// tag::body[]\r\n  Before pass:bad,n[*\u0416*] after\r\n// end::body[]"
       }
     },
     {
@@ -8894,7 +8894,7 @@
       "profile": "include-body-dom-v1",
       "source": "Before pass:m[First\n// hidden\ninclude::part.adoc[]",
       "resources": {
-        "part.adoc": "pass:bad[Ж\\]] after"
+        "part.adoc": "pass:bad[\u0416\\]] after"
       }
     },
     {
@@ -9459,13 +9459,13 @@
       "id": "inline-attrs-unicode-crlf",
       "category": "attributes",
       "expect": "pass",
-      "source": "﻿:имя: Ж\r\n:attribute-missing: drop\r\n\r\n🙂 {имя} \\{имя} {имя\\}\r\n{missing}\r\n{cpp}"
+      "source": "\ufeff:\u0438\u043c\u044f: \u0416\r\n:attribute-missing: drop\r\n\r\n\ud83d\ude42 {\u0438\u043c\u044f} \\{\u0438\u043c\u044f} {\u0438\u043c\u044f\\}\r\n{missing}\r\n{cpp}"
     },
     {
       "id": "inline-attrs-unicode-grammar",
       "category": "attributes",
       "expect": "pass",
-      "source": ":á: Accent\n:Ж: Letter\n:a-b: Hyphen\n\n{á} {Ж} {a-b} {²} {a.b}"
+      "source": ":a\u0301: Accent\n:\u0416: Letter\n:a-b: Hyphen\n\n{a\u0301} {\u0416} {a-b} {\u00b2} {a.b}"
     },
     {
       "id": "inline-attrs-heading-xref",
@@ -9483,7 +9483,7 @@
       "id": "inline-attrs-list",
       "category": "attributes",
       "expect": "pass",
-      "source": ":v: Ж\n:attribute-missing: drop\n\n* {v} \\{v} {cpp}\n* *{missing}* end"
+      "source": ":v: \u0416\n:attribute-missing: drop\n\n* {v} \\{v} {cpp}\n* *{missing}* end"
     },
     {
       "id": "inline-attrs-drop-defined-empty",
@@ -9516,7 +9516,7 @@
       "source": ":attribute-missing: warn\n\ninclude::part.adoc[lines=2,indent=0]",
       "profile": "include-body-dom-v1",
       "resources": {
-        "part.adoc": "omitted\r\n  Ж {cpp} {missing} \\{missing}\r\n"
+        "part.adoc": "omitted\r\n  \u0416 {cpp} {missing} \\{missing}\r\n"
       }
     },
     {
@@ -9526,116 +9526,116 @@
       "source": ":attribute-missing: drop-line\n\nfirst\ninclude::part.adoc[tags=body,indent=0]\nlast",
       "profile": "include-body-dom-v1",
       "resources": {
-        "part.adoc": "// tag::body[]\n  {missing}\n  Ж {cpp}\n// end::body[]"
+        "part.adoc": "// tag::body[]\n  {missing}\n  \u0416 {cpp}\n// end::body[]"
       }
     },
     {
       "id": "shared-attrs-entry-intrinsics",
       "category": "attributes",
       "expect": "pass",
-      "source": ":x: Value\n:á: Accent\n:Ж: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n:v: {cpp} {PLUS} {nbsp} {empty}\n\nBefore {v} after"
+      "source": ":x: Value\n:a\u0301: Accent\n:\u0416: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n:v: {cpp} {PLUS} {nbsp} {empty}\n\nBefore {v} after"
     },
     {
       "id": "shared-attrs-entry-protected",
       "category": "attributes",
       "expect": "pass",
-      "source": ":x: Value\n:á: Accent\n:Ж: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n:v: <b>&</b> {amp} {lt}b{gt}raw{lt}/b{gt}\n\nBefore {v} after"
+      "source": ":x: Value\n:a\u0301: Accent\n:\u0416: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n:v: <b>&</b> {amp} {lt}b{gt}raw{lt}/b{gt}\n\nBefore {v} after"
     },
     {
       "id": "shared-attrs-entry-escape",
       "category": "attributes",
       "expect": "pass",
-      "source": ":x: Value\n:á: Accent\n:Ж: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n:v: \\{x} {x\\} \\{x\\} \\\\{x}\n\nBefore {v} after"
+      "source": ":x: Value\n:a\u0301: Accent\n:\u0416: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n:v: \\{x} {x\\} \\{x\\} \\\\{x}\n\nBefore {v} after"
     },
     {
       "id": "shared-attrs-entry-grammar",
       "category": "attributes",
       "expect": "pass",
-      "source": ":x: Value\n:á: Accent\n:Ж: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n:v: {á} {Ж} {a-b} {a.b} {-x} {{x}}\n\nBefore {v} after"
+      "source": ":x: Value\n:a\u0301: Accent\n:\u0416: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n:v: {a\u0301} {\u0416} {a-b} {a.b} {-x} {{x}}\n\nBefore {v} after"
     },
     {
       "id": "shared-attrs-entry-no-rescan",
       "category": "attributes",
       "expect": "pass",
-      "source": ":x: Value\n:á: Accent\n:Ж: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n:v: {raw} {backslash}{x}\n\nBefore {v} after"
+      "source": ":x: Value\n:a\u0301: Accent\n:\u0416: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n:v: {raw} {backslash}{x}\n\nBefore {v} after"
     },
     {
       "id": "shared-attrs-entry-quotes",
       "category": "attributes",
       "expect": "pass",
-      "source": ":x: Value\n:á: Accent\n:Ж: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n:v: *{x}* {asterisk}word{asterisk}\n\nBefore {v} after"
+      "source": ":x: Value\n:a\u0301: Accent\n:\u0416: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n:v: *{x}* {asterisk}word{asterisk}\n\nBefore {v} after"
     },
     {
       "id": "shared-attrs-entry-pass-intrinsics",
       "category": "attributes",
       "expect": "pass",
-      "source": ":x: Value\n:á: Accent\n:Ж: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n:v: pass:a[{cpp} {PLUS} {nbsp} {empty}]\n\nBefore {v} after"
+      "source": ":x: Value\n:a\u0301: Accent\n:\u0416: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n:v: pass:a[{cpp} {PLUS} {nbsp} {empty}]\n\nBefore {v} after"
     },
     {
       "id": "shared-attrs-entry-pass-protected",
       "category": "attributes",
       "expect": "pass",
-      "source": ":x: Value\n:á: Accent\n:Ж: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n:v: pass:a[<b>&</b> {amp} {lt}b{gt}raw{lt}/b{gt}]\n\nBefore {v} after"
+      "source": ":x: Value\n:a\u0301: Accent\n:\u0416: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n:v: pass:a[<b>&</b> {amp} {lt}b{gt}raw{lt}/b{gt}]\n\nBefore {v} after"
     },
     {
       "id": "shared-attrs-entry-pass-escape",
       "category": "attributes",
       "expect": "pass",
-      "source": ":x: Value\n:á: Accent\n:Ж: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n:v: pass:a[\\{x} {x\\} \\{x\\} \\\\{x}]\n\nBefore {v} after"
+      "source": ":x: Value\n:a\u0301: Accent\n:\u0416: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n:v: pass:a[\\{x} {x\\} \\{x\\} \\\\{x}]\n\nBefore {v} after"
     },
     {
       "id": "shared-attrs-entry-pass-grammar",
       "category": "attributes",
       "expect": "pass",
-      "source": ":x: Value\n:á: Accent\n:Ж: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n:v: pass:a[{á} {Ж} {a-b} {a.b} {-x} {{x}}]\n\nBefore {v} after"
+      "source": ":x: Value\n:a\u0301: Accent\n:\u0416: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n:v: pass:a[{a\u0301} {\u0416} {a-b} {a.b} {-x} {{x}}]\n\nBefore {v} after"
     },
     {
       "id": "shared-attrs-entry-pass-no-rescan",
       "category": "attributes",
       "expect": "pass",
-      "source": ":x: Value\n:á: Accent\n:Ж: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n:v: pass:a[{raw} {backslash}{x}]\n\nBefore {v} after"
+      "source": ":x: Value\n:a\u0301: Accent\n:\u0416: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n:v: pass:a[{raw} {backslash}{x}]\n\nBefore {v} after"
     },
     {
       "id": "shared-attrs-entry-pass-quotes",
       "category": "attributes",
       "expect": "pass",
-      "source": ":x: Value\n:á: Accent\n:Ж: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n:v: pass:a[*{x}* {asterisk}word{asterisk}]\n\nBefore {v} after"
+      "source": ":x: Value\n:a\u0301: Accent\n:\u0416: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n:v: pass:a[*{x}* {asterisk}word{asterisk}]\n\nBefore {v} after"
     },
     {
       "id": "shared-attrs-inline-pass-intrinsics",
       "category": "attributes",
       "expect": "pass",
-      "source": ":x: Value\n:á: Accent\n:Ж: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n\nBefore pass:a[{cpp} {PLUS} {nbsp} {empty}] after"
+      "source": ":x: Value\n:a\u0301: Accent\n:\u0416: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n\nBefore pass:a[{cpp} {PLUS} {nbsp} {empty}] after"
     },
     {
       "id": "shared-attrs-inline-pass-protected",
       "category": "attributes",
       "expect": "pass",
-      "source": ":x: Value\n:á: Accent\n:Ж: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n\nBefore pass:a[<b>&</b> {amp} {lt}b{gt}raw{lt}/b{gt}] after"
+      "source": ":x: Value\n:a\u0301: Accent\n:\u0416: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n\nBefore pass:a[<b>&</b> {amp} {lt}b{gt}raw{lt}/b{gt}] after"
     },
     {
       "id": "shared-attrs-inline-pass-escape",
       "category": "attributes",
       "expect": "pass",
-      "source": ":x: Value\n:á: Accent\n:Ж: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n\nBefore pass:a[\\{x} {x\\} \\{x\\} \\\\{x}] after"
+      "source": ":x: Value\n:a\u0301: Accent\n:\u0416: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n\nBefore pass:a[\\{x} {x\\} \\{x\\} \\\\{x}] after"
     },
     {
       "id": "shared-attrs-inline-pass-grammar",
       "category": "attributes",
       "expect": "pass",
-      "source": ":x: Value\n:á: Accent\n:Ж: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n\nBefore pass:a[{á} {Ж} {a-b} {a.b} {-x} {{x}}] after"
+      "source": ":x: Value\n:a\u0301: Accent\n:\u0416: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n\nBefore pass:a[{a\u0301} {\u0416} {a-b} {a.b} {-x} {{x}}] after"
     },
     {
       "id": "shared-attrs-inline-pass-no-rescan",
       "category": "attributes",
       "expect": "pass",
-      "source": ":x: Value\n:á: Accent\n:Ж: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n\nBefore pass:a[{raw} {backslash}{x}] after"
+      "source": ":x: Value\n:a\u0301: Accent\n:\u0416: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n\nBefore pass:a[{raw} {backslash}{x}] after"
     },
     {
       "id": "shared-attrs-inline-pass-quotes",
       "category": "attributes",
       "expect": "pass",
-      "source": ":x: Value\n:á: Accent\n:Ж: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n\nBefore pass:a[*{x}* {asterisk}word{asterisk}] after"
+      "source": ":x: Value\n:a\u0301: Accent\n:\u0416: Letter\n:a-b: Hyphen\n:raw: pass:[{x}]\n\nBefore pass:a[*{x}* {asterisk}word{asterisk}] after"
     },
     {
       "id": "shared-attrs-entry-skip-basic",
@@ -10268,7 +10268,7 @@
       "source": ":attribute-missing: warn\n\ninclude::part.adoc[lines=2..4,indent=0]",
       "profile": "include-body-dom-v1",
       "resources": {
-        "part.adoc": "omitted\r\n  :v: {cpp} {missing}\r\n\r\n  Ж {v} pass:a[{other}]\r\n"
+        "part.adoc": "omitted\r\n  :v: {cpp} {missing}\r\n\r\n  \u0416 {v} pass:a[{other}]\r\n"
       }
     },
     {
@@ -10885,13 +10885,13 @@
       "id": "ordinary-post-crlf",
       "category": "inlines",
       "expect": "pass",
-      "source": "Ж +\r\nБ +"
+      "source": "\u0416 +\r\n\u0411 +"
     },
     {
       "id": "ordinary-post-global-crlf",
       "category": "inlines",
       "expect": "pass",
-      "source": ":hardbreaks:\r\n\r\nЖ\r\nБ +"
+      "source": ":hardbreaks:\r\n\r\n\u0416\r\n\u0411 +"
     },
     {
       "id": "ordinary-post-heading",
@@ -10924,7 +10924,7 @@
       "profile": "include-body-dom-v1",
       "source": "include::part.adoc[tags=body,indent=0]",
       "resources": {
-        "part.adoc": "// tag::body[]\r\n  Ж(C) +\r\n  // removed\r\n  Б +\r\n// end::body[]"
+        "part.adoc": "// tag::body[]\r\n  \u0416(C) +\r\n  // removed\r\n  \u0411 +\r\n// end::body[]"
       }
     },
     {
@@ -10932,9 +10932,9 @@
       "category": "inlines",
       "expect": "pass",
       "profile": "include-body-dom-v1",
-      "source": ":p: +\n\nЖ {p}\ninclude::part.adoc[]",
+      "source": ":p: +\n\n\u0416 {p}\ninclude::part.adoc[]",
       "resources": {
-        "part.adoc": "Б +\nВ"
+        "part.adoc": "\u0411 +\n\u0412"
       }
     },
     {
@@ -11313,181 +11313,181 @@
       "id": "metadata-subs-source-intrinsic",
       "category": "inlines",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:á: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[.{cpp}]*Text*"
+      "source": ":attribute-missing: warn\n:a\u0301: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[.{cpp}]*Text*"
     },
     {
       "id": "metadata-subs-pass-intrinsic",
       "category": "inlines",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:á: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[.{cpp}]+Text+"
+      "source": ":attribute-missing: warn\n:a\u0301: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[.{cpp}]+Text+"
     },
     {
       "id": "metadata-subs-selected-intrinsic",
       "category": "inlines",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:á: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\npass:q[[.{cpp}\\]*Text*]"
+      "source": ":attribute-missing: warn\n:a\u0301: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\npass:q[[.{cpp}\\]*Text*]"
     },
     {
       "id": "metadata-subs-source-escape",
       "category": "inlines",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:á: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[.\\{missing}]*Text*"
+      "source": ":attribute-missing: warn\n:a\u0301: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[.\\{missing}]*Text*"
     },
     {
       "id": "metadata-subs-pass-escape",
       "category": "inlines",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:á: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[.\\{missing}]+Text+"
+      "source": ":attribute-missing: warn\n:a\u0301: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[.\\{missing}]+Text+"
     },
     {
       "id": "metadata-subs-selected-escape",
       "category": "inlines",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:á: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\npass:q[[.\\{missing}\\]*Text*]"
+      "source": ":attribute-missing: warn\n:a\u0301: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\npass:q[[.\\{missing}\\]*Text*]"
     },
     {
       "id": "metadata-subs-source-trailing-escape",
       "category": "inlines",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:á: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[.{missing\\}]*Text*"
+      "source": ":attribute-missing: warn\n:a\u0301: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[.{missing\\}]*Text*"
     },
     {
       "id": "metadata-subs-pass-trailing-escape",
       "category": "inlines",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:á: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[.{missing\\}]+Text+"
+      "source": ":attribute-missing: warn\n:a\u0301: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[.{missing\\}]+Text+"
     },
     {
       "id": "metadata-subs-selected-trailing-escape",
       "category": "inlines",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:á: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\npass:q[[.{missing\\}\\]*Text*]"
+      "source": ":attribute-missing: warn\n:a\u0301: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\npass:q[[.{missing\\}\\]*Text*]"
     },
     {
       "id": "metadata-subs-source-unicode",
       "category": "inlines",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:á: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[.{á}]*Text*"
+      "source": ":attribute-missing: warn\n:a\u0301: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[.{a\u0301}]*Text*"
     },
     {
       "id": "metadata-subs-pass-unicode",
       "category": "inlines",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:á: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[.{á}]+Text+"
+      "source": ":attribute-missing: warn\n:a\u0301: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[.{a\u0301}]+Text+"
     },
     {
       "id": "metadata-subs-selected-unicode",
       "category": "inlines",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:á: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\npass:q[[.{á}\\]*Text*]"
+      "source": ":attribute-missing: warn\n:a\u0301: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\npass:q[[.{a\u0301}\\]*Text*]"
     },
     {
       "id": "metadata-subs-source-multiline",
       "category": "inlines",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:á: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[.{missing}\n.red]*Text*"
+      "source": ":attribute-missing: warn\n:a\u0301: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[.{missing}\n.red]*Text*"
     },
     {
       "id": "metadata-subs-pass-multiline",
       "category": "inlines",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:á: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[.{missing}\n.red]+Text+"
+      "source": ":attribute-missing: warn\n:a\u0301: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[.{missing}\n.red]+Text+"
     },
     {
       "id": "metadata-subs-selected-multiline",
       "category": "inlines",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:á: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\npass:q[[.{missing}\n.red\\]*Text*]"
+      "source": ":attribute-missing: warn\n:a\u0301: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\npass:q[[.{missing}\n.red\\]*Text*]"
     },
     {
       "id": "metadata-subs-source-quoted",
       "category": "inlines",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:á: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[.role,ignored={missing}]*Text*"
+      "source": ":attribute-missing: warn\n:a\u0301: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[.role,ignored={missing}]*Text*"
     },
     {
       "id": "metadata-subs-pass-quoted",
       "category": "inlines",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:á: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[.role,ignored={missing}]+Text+"
+      "source": ":attribute-missing: warn\n:a\u0301: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[.role,ignored={missing}]+Text+"
     },
     {
       "id": "metadata-subs-selected-quoted",
       "category": "inlines",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:á: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\npass:q[[.role,ignored={missing}\\]*Text*]"
+      "source": ":attribute-missing: warn\n:a\u0301: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\npass:q[[.role,ignored={missing}\\]*Text*]"
     },
     {
       "id": "metadata-subs-source-raw",
       "category": "inlines",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:á: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[.{raw}]*Text*"
+      "source": ":attribute-missing: warn\n:a\u0301: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[.{raw}]*Text*"
     },
     {
       "id": "metadata-subs-pass-raw",
       "category": "inlines",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:á: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[.{raw}]+Text+"
+      "source": ":attribute-missing: warn\n:a\u0301: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[.{raw}]+Text+"
     },
     {
       "id": "metadata-subs-selected-raw",
       "category": "inlines",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:á: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\npass:q[[.{raw}\\]*Text*]"
+      "source": ":attribute-missing: warn\n:a\u0301: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\npass:q[[.{raw}\\]*Text*]"
     },
     {
       "id": "metadata-subs-source-split",
       "category": "inlines",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:á: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[{r}{s}]*Text*"
+      "source": ":attribute-missing: warn\n:a\u0301: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[{r}{s}]*Text*"
     },
     {
       "id": "metadata-subs-pass-split",
       "category": "inlines",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:á: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[{r}{s}]+Text+"
+      "source": ":attribute-missing: warn\n:a\u0301: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[{r}{s}]+Text+"
     },
     {
       "id": "metadata-subs-selected-split",
       "category": "inlines",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:á: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\npass:q[[{r}{s}\\]*Text*]"
+      "source": ":attribute-missing: warn\n:a\u0301: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\npass:q[[{r}{s}\\]*Text*]"
     },
     {
       "id": "metadata-subs-source-many",
       "category": "inlines",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:á: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[.{missing}.{other}]*Text*"
+      "source": ":attribute-missing: warn\n:a\u0301: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[.{missing}.{other}]*Text*"
     },
     {
       "id": "metadata-subs-pass-many",
       "category": "inlines",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:á: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[.{missing}.{other}]+Text+"
+      "source": ":attribute-missing: warn\n:a\u0301: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[.{missing}.{other}]+Text+"
     },
     {
       "id": "metadata-subs-selected-many",
       "category": "inlines",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:á: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\npass:q[[.{missing}.{other}\\]*Text*]"
+      "source": ":attribute-missing: warn\n:a\u0301: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\npass:q[[.{missing}.{other}\\]*Text*]"
     },
     {
       "id": "metadata-subs-source-protected",
       "category": "inlines",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:á: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[.{protected}]*Text*"
+      "source": ":attribute-missing: warn\n:a\u0301: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[.{protected}]*Text*"
     },
     {
       "id": "metadata-subs-pass-protected",
       "category": "inlines",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:á: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[.{protected}]+Text+"
+      "source": ":attribute-missing: warn\n:a\u0301: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\n[.{protected}]+Text+"
     },
     {
       "id": "metadata-subs-selected-protected",
       "category": "inlines",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:á: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\npass:q[[.{protected}\\]*Text*]"
+      "source": ":attribute-missing: warn\n:a\u0301: accent\n:raw: pass:[<b>raw</b>]\n:r: .red\n:s: .blue\n:protected: <em>text</em>\n\npass:q[[.{protected}\\]*Text*]"
     },
     {
       "id": "metadata-subs-definition-skip-q",
@@ -11664,7 +11664,7 @@
       "profile": "include-body-dom-v1",
       "source": "include::part.adoc[tags=body,indent=0]",
       "resources": {
-        "part.adoc": "// tag::body[]\r\n  :attribute-missing: warn\r\n\r\n  Ж [.{missing}]*Text* link:https://e['\\{other}',role=x]\r\n// end::body[]"
+        "part.adoc": "// tag::body[]\r\n  :attribute-missing: warn\r\n\r\n  \u0416 [.{missing}]*Text* link:https://e['\\{other}',role=x]\r\n// end::body[]"
       }
     },
     {
@@ -11897,49 +11897,49 @@
       "id": "link-normal-warning-label",
       "category": "substitutions",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:v: pass:[pass:bad[Ж\\]]\n\nlink:https://e['{v}',role=x]"
+      "source": ":attribute-missing: warn\n:v: pass:[pass:bad[\u0416\\]]\n\nlink:https://e['{v}',role=x]"
     },
     {
       "id": "link-normal-warning-role",
       "category": "substitutions",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:v: pass:[pass:bad[Ж\\]]\n\nlink:https://e[Label,role='{v}']"
+      "source": ":attribute-missing: warn\n:v: pass:[pass:bad[\u0416\\]]\n\nlink:https://e[Label,role='{v}']"
     },
     {
       "id": "link-normal-warning-mail",
       "category": "substitutions",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:v: pass:[pass:bad[Ж\\]]\n\nmailto:a@b.org['{v}',subject]"
+      "source": ":attribute-missing: warn\n:v: pass:[pass:bad[\u0416\\]]\n\nmailto:a@b.org['{v}',subject]"
     },
     {
       "id": "link-normal-warning-selected",
       "category": "substitutions",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:v: pass:[pass:bad[Ж]]\n\npass:m[link:https://e['pass:bad[Ж\\]',role=x\\]]"
+      "source": ":attribute-missing: warn\n:v: pass:[pass:bad[\u0416]]\n\npass:m[link:https://e['pass:bad[\u0416\\]',role=x\\]]"
     },
     {
       "id": "link-normal-unicode-label",
       "category": "substitutions",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:v: pass:[+Ж & <x>+]\n\nlink:https://e['{v}',role=x]"
+      "source": ":attribute-missing: warn\n:v: pass:[+\u0416 & <x>+]\n\nlink:https://e['{v}',role=x]"
     },
     {
       "id": "link-normal-unicode-role",
       "category": "substitutions",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:v: pass:[+Ж & <x>+]\n\nlink:https://e[Label,role='{v}']"
+      "source": ":attribute-missing: warn\n:v: pass:[+\u0416 & <x>+]\n\nlink:https://e[Label,role='{v}']"
     },
     {
       "id": "link-normal-unicode-mail",
       "category": "substitutions",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:v: pass:[+Ж & <x>+]\n\nmailto:a@b.org['{v}',subject]"
+      "source": ":attribute-missing: warn\n:v: pass:[+\u0416 & <x>+]\n\nmailto:a@b.org['{v}',subject]"
     },
     {
       "id": "link-normal-unicode-selected",
       "category": "substitutions",
       "expect": "pass",
-      "source": ":attribute-missing: warn\n:v: pass:[+Ж & <x>+]\n\npass:m[link:https://e['+Ж & <x>+',role=x\\]]"
+      "source": ":attribute-missing: warn\n:v: pass:[+\u0416 & <x>+]\n\npass:m[link:https://e['+\u0416 & <x>+',role=x\\]]"
     },
     {
       "id": "link-normal-escape-label",
@@ -12161,7 +12161,7 @@
       "id": "link-normal-unicode-crlf",
       "category": "substitutions",
       "expect": "pass",
-      "source": ":v: pass:[+Ж & <x>+]\r\n\r\nЖ link:https://e['{v}',role=x]"
+      "source": ":v: pass:[+\u0416 & <x>+]\r\n\r\n\u0416 link:https://e['{v}',role=x]"
     },
     {
       "id": "link-normal-caption",
@@ -12297,25 +12297,25 @@
       "id": "stateful-definition-seed-16",
       "category": "attributes",
       "expect": "pass",
-      "source": ":first: {counter:n:Ж}\n:second: {counter:n}\n:third: {counter:n}\n\n{first}|{second}|{third}|{n}"
+      "source": ":first: {counter:n:\u0416}\n:second: {counter:n}\n:third: {counter:n}\n\n{first}|{second}|{third}|{n}"
     },
     {
       "id": "stateful-definition-seed-17",
       "category": "attributes",
       "expect": "pass",
-      "source": ":first: {counter:n:Я}\n:second: {counter:n}\n:third: {counter:n}\n\n{first}|{second}|{third}|{n}"
+      "source": ":first: {counter:n:\u042f}\n:second: {counter:n}\n:third: {counter:n}\n\n{first}|{second}|{third}|{n}"
     },
     {
       "id": "stateful-definition-seed-18",
       "category": "attributes",
       "expect": "pass",
-      "source": ":first: {counter:n:Ω}\n:second: {counter:n}\n:third: {counter:n}\n\n{first}|{second}|{third}|{n}"
+      "source": ":first: {counter:n:\u03a9}\n:second: {counter:n}\n:third: {counter:n}\n\n{first}|{second}|{third}|{n}"
     },
     {
       "id": "stateful-definition-seed-19",
       "category": "attributes",
       "expect": "pass",
-      "source": ":first: {counter:n:é}\n:second: {counter:n}\n:third: {counter:n}\n\n{first}|{second}|{third}|{n}"
+      "source": ":first: {counter:n:\u00e9}\n:second: {counter:n}\n:third: {counter:n}\n\n{first}|{second}|{third}|{n}"
     },
     {
       "id": "stateful-definition-seed-20",
@@ -13507,7 +13507,7 @@
       "id": "stateful-definition-unicode-crlf",
       "category": "attributes",
       "expect": "pass",
-      "source": ":v: {counter:число:Я}\r\n:w: {counter:число}\r\n\r\n{v} {w}"
+      "source": ":v: {counter:\u0447\u0438\u0441\u043b\u043e:\u042f}\r\n:w: {counter:\u0447\u0438\u0441\u043b\u043e}\r\n\r\n{v} {w}"
     },
     {
       "id": "stateful-definition-selected-include",
@@ -13763,25 +13763,25 @@
       "id": "stateful-inline-seed-unicode-plain",
       "category": "substitutions",
       "expect": "pass",
-      "source": "{counter:n:Ж}{counter:n}\n\nNext {n} {x} {counter:n}"
+      "source": "{counter:n:\u0416}{counter:n}\n\nNext {n} {x} {counter:n}"
     },
     {
       "id": "stateful-inline-seed-unicode-pass",
       "category": "substitutions",
       "expect": "pass",
-      "source": "pass:n[{counter:n:Ж}{counter:n}]\n\nNext {n} {x} {counter:n}"
+      "source": "pass:n[{counter:n:\u0416}{counter:n}]\n\nNext {n} {x} {counter:n}"
     },
     {
       "id": "stateful-inline-seed-unicode-selected",
       "category": "substitutions",
       "expect": "pass",
-      "source": "pass:a[{counter:n:Ж}{counter:n}]\n\nNext {n} {x} {counter:n}"
+      "source": "pass:a[{counter:n:\u0416}{counter:n}]\n\nNext {n} {x} {counter:n}"
     },
     {
       "id": "stateful-inline-seed-unicode-multi",
       "category": "substitutions",
       "expect": "pass",
-      "source": ":attribute-undefined: skip\n\n{counter:n:Ж}{counter:n}\n{counter:n:Ж}{counter:n}\n\n{n} {x}"
+      "source": ":attribute-undefined: skip\n\n{counter:n:\u0416}{counter:n}\n{counter:n:\u0416}{counter:n}\n\n{n} {x}"
     },
     {
       "id": "stateful-inline-seed-large-plain",
@@ -13943,31 +13943,31 @@
       "id": "stateful-inline-seed-70",
       "category": "substitutions",
       "expect": "pass",
-      "source": "{counter:n:Я} {counter:n}\n\n{counter:n}"
+      "source": "{counter:n:\u042f} {counter:n}\n\n{counter:n}"
     },
     {
       "id": "stateful-inline-seed-71",
       "category": "substitutions",
       "expect": "pass",
-      "source": "{counter:n:Ω} {counter:n}\n\n{counter:n}"
+      "source": "{counter:n:\u03a9} {counter:n}\n\n{counter:n}"
     },
     {
       "id": "stateful-inline-seed-72",
       "category": "substitutions",
       "expect": "pass",
-      "source": "{counter:n:９} {counter:n}\n\n{counter:n}"
+      "source": "{counter:n:\uff19} {counter:n}\n\n{counter:n}"
     },
     {
       "id": "stateful-inline-seed-73",
       "category": "substitutions",
       "expect": "pass",
-      "source": "{counter:n:٩} {counter:n}\n\n{counter:n}"
+      "source": "{counter:n:\u0669} {counter:n}\n\n{counter:n}"
     },
     {
       "id": "stateful-inline-seed-74",
       "category": "substitutions",
       "expect": "pass",
-      "source": "{counter:n:𝟡} {counter:n}\n\n{counter:n}"
+      "source": "{counter:n:\ud835\udfe1} {counter:n}\n\n{counter:n}"
     },
     {
       "id": "stateful-inline-seed-75",
@@ -14159,13 +14159,13 @@
       "id": "stateful-inline-unicode-crlf",
       "category": "substitutions",
       "expect": "pass",
-      "source": "Ж {counter:n}\r\n// пропущено\r\nБ {counter:n}\r\n\r\n{n}"
+      "source": "\u0416 {counter:n}\r\n// \u043f\u0440\u043e\u043f\u0443\u0449\u0435\u043d\u043e\r\n\u0411 {counter:n}\r\n\r\n{n}"
     },
     {
       "id": "stateful-inline-missing-diagnostic",
       "category": "substitutions",
       "expect": "pass",
-      "source": "{set:attribute-missing:warn}Ж {missing} {counter:n}\n\n{missing}"
+      "source": "{set:attribute-missing:warn}\u0416 {missing} {counter:n}\n\n{missing}"
     },
     {
       "id": "stateful-inline-include",
@@ -14184,7 +14184,7 @@
       "source": "include::part.adoc[tags=body,indent=0]\n\n{n}",
       "profile": "include-body-dom-v1",
       "resources": {
-        "part.adoc": "// tag::body[]\r\n  Ж {counter:n}\r\n  // skipped\r\n  Б {counter:n}\r\n// end::body[]"
+        "part.adoc": "// tag::body[]\r\n  \u0416 {counter:n}\r\n  // skipped\r\n  \u0411 {counter:n}\r\n// end::body[]"
       }
     },
     {
@@ -14323,13 +14323,13 @@
       "id": "stateful-heading-header-unicode",
       "category": "attributes",
       "expect": "pass",
-      "source": "= T {counter:n:Я} {counter:n}\n\n== S {n} {x}\n\nBody {n} {x} {counter:n}\n\nTail {counter:n}"
+      "source": "= T {counter:n:\u042f} {counter:n}\n\n== S {n} {x}\n\nBody {n} {x} {counter:n}\n\nTail {counter:n}"
     },
     {
       "id": "stateful-heading-section-unicode",
       "category": "attributes",
       "expect": "pass",
-      "source": "Body {counter:n}\n\n== S {counter:n:Я} {counter:n}\n\nBody {n} {x} {counter:n}\n\n== Again {n} {x}\n\nTail {counter:n}"
+      "source": "Body {counter:n}\n\n== S {counter:n:\u042f} {counter:n}\n\nBody {n} {x} {counter:n}\n\n== Again {n} {x}\n\nTail {counter:n}"
     },
     {
       "id": "stateful-heading-header-policy",
@@ -14569,25 +14569,25 @@
       "id": "stateful-heading-header-seed-61",
       "category": "attributes",
       "expect": "pass",
-      "source": "= H {counter:n:Я} {counter:n}\n\n== Next {n}\n\n{counter:n}"
+      "source": "= H {counter:n:\u042f} {counter:n}\n\n== Next {n}\n\n{counter:n}"
     },
     {
       "id": "stateful-heading-section-seed-62",
       "category": "attributes",
       "expect": "pass",
-      "source": "== S {counter:n:Я} {counter:n}\n\n== Next {n}\n\n{counter:n}"
+      "source": "== S {counter:n:\u042f} {counter:n}\n\n== Next {n}\n\n{counter:n}"
     },
     {
       "id": "stateful-heading-header-seed-63",
       "category": "attributes",
       "expect": "pass",
-      "source": "= H {counter:n:９} {counter:n}\n\n== Next {n}\n\n{counter:n}"
+      "source": "= H {counter:n:\uff19} {counter:n}\n\n== Next {n}\n\n{counter:n}"
     },
     {
       "id": "stateful-heading-section-seed-64",
       "category": "attributes",
       "expect": "pass",
-      "source": "== S {counter:n:９} {counter:n}\n\n== Next {n}\n\n{counter:n}"
+      "source": "== S {counter:n:\uff19} {counter:n}\n\n== Next {n}\n\n{counter:n}"
     },
     {
       "id": "stateful-heading-header-seed-65",
@@ -14605,13 +14605,13 @@
       "id": "stateful-heading-header-seed-67",
       "category": "attributes",
       "expect": "pass",
-      "source": "= H {counter:n:😀} {counter:n}\n\n== Next {n}\n\n{counter:n}"
+      "source": "= H {counter:n:\ud83d\ude00} {counter:n}\n\n== Next {n}\n\n{counter:n}"
     },
     {
       "id": "stateful-heading-section-seed-68",
       "category": "attributes",
       "expect": "pass",
-      "source": "== S {counter:n:😀} {counter:n}\n\n== Next {n}\n\n{counter:n}"
+      "source": "== S {counter:n:\ud83d\ude00} {counter:n}\n\n== Next {n}\n\n{counter:n}"
     },
     {
       "id": "stateful-heading-header-undefined-skip",
@@ -14707,19 +14707,19 @@
       "id": "stateful-heading-section-unicode-crlf",
       "category": "attributes",
       "expect": "pass",
-      "source": "== Ж {counter:n:Я}\r\n\r\n== Б {counter:n}\r\n\r\n{counter:n}"
+      "source": "== \u0416 {counter:n:\u042f}\r\n\r\n== \u0411 {counter:n}\r\n\r\n{counter:n}"
     },
     {
       "id": "stateful-heading-header-unicode-crlf",
       "category": "attributes",
       "expect": "pass",
-      "source": "﻿= Ж {counter:n:Я}\r\n\r\n== Б {counter:n}\r\n\r\n{counter:n}"
+      "source": "\ufeff= \u0416 {counter:n:\u042f}\r\n\r\n== \u0411 {counter:n}\r\n\r\n{counter:n}"
     },
     {
       "id": "stateful-heading-include-header-override",
       "category": "attributes",
       "expect": "pass",
-      "source": "= Original\n:doctitle: pass:none[Ж {counter:n} \\\ninclude::part.adoc[]\n\n== S {counter:n}\n\n{counter:n}",
+      "source": "= Original\n:doctitle: pass:none[\u0416 {counter:n} \\\ninclude::part.adoc[]\n\n== S {counter:n}\n\n{counter:n}",
       "profile": "include-body-dom-v1",
       "resources": {
         "part.adoc": "{set:attribute-missing:warn}{missing}]"
@@ -14729,7 +14729,7 @@
       "id": "stateful-heading-include-setext",
       "category": "attributes",
       "expect": "pass",
-      "source": "Ж {counter:n}\ninclude::underline.adoc[]\n\n{counter:n}",
+      "source": "\u0416 {counter:n}\ninclude::underline.adoc[]\n\n{counter:n}",
       "profile": "include-body-dom-v1",
       "resources": {
         "underline.adoc": "============="
@@ -14937,19 +14937,19 @@
       "id": "stateful-title-paragraph-unicode",
       "category": "attributes",
       "expect": "pass",
-      "source": "Before {counter:n}\n\n.T {counter:n:Я} {counter:n}\nBody {n} {x} {counter:n}\n\nTail {counter:n} {x} {n}\n\n== S {n} {x}"
+      "source": "Before {counter:n}\n\n.T {counter:n:\u042f} {counter:n}\nBody {n} {x} {counter:n}\n\nTail {counter:n} {x} {n}\n\n== S {n} {x}"
     },
     {
       "id": "stateful-title-example-unicode",
       "category": "attributes",
       "expect": "pass",
-      "source": "Before {counter:n}\n\n.T {counter:n:Я} {counter:n}\n====\nBody {n} {x} {counter:n}\n====\n\nTail {counter:n} {x} {n}\n\n== S {n} {x}"
+      "source": "Before {counter:n}\n\n.T {counter:n:\u042f} {counter:n}\n====\nBody {n} {x} {counter:n}\n====\n\nTail {counter:n} {x} {n}\n\n== S {n} {x}"
     },
     {
       "id": "stateful-title-anchored-unicode",
       "category": "attributes",
       "expect": "pass",
-      "source": "Before {counter:n}\n\n[[here]]\n.T {counter:n:Я} {counter:n}\n====\nBody {n} {x} {counter:n}\n====\n\nTail {counter:n} {x} {n}\n\n== S {n} {x}"
+      "source": "Before {counter:n}\n\n[[here]]\n.T {counter:n:\u042f} {counter:n}\n====\nBody {n} {x} {counter:n}\n====\n\nTail {counter:n} {x} {n}\n\n== S {n} {x}"
     },
     {
       "id": "stateful-title-paragraph-policy",
@@ -15240,7 +15240,7 @@
       "source": "include::part.adoc[tag=body,indent=0]\n\n{counter:n}",
       "profile": "include-body-dom-v1",
       "resources": {
-        "part.adoc": "// tag::body[]\n  .Ж {counter:n}\n  ====\n  Body {counter:n}\n  ====\n// end::body[]"
+        "part.adoc": "// tag::body[]\n  .\u0416 {counter:n}\n  ====\n  Body {counter:n}\n  ====\n// end::body[]"
       }
     },
     {
@@ -15295,13 +15295,13 @@
       "id": "stateful-title-title-plain-crlf",
       "category": "attributes",
       "expect": "pass",
-      "source": ".Ж {counter:n:Я}\r\nBody {counter:n}\r\n\r\n{counter:n}"
+      "source": ".\u0416 {counter:n:\u042f}\r\nBody {counter:n}\r\n\r\n{counter:n}"
     },
     {
       "id": "stateful-title-title-anchored-crlf",
       "category": "attributes",
       "expect": "pass",
-      "source": "[[here]]\r\n.Ж {counter:n:Я}\r\n====\r\nBody {counter:n}\r\n====\r\n\r\n{counter:n}"
+      "source": "[[here]]\r\n.\u0416 {counter:n:\u042f}\r\n====\r\nBody {counter:n}\r\n====\r\n\r\n{counter:n}"
     },
     {
       "id": "stateful-title-caption-header-title",
@@ -15326,7 +15326,7 @@
       "source": ":n: 8\n\ninclude::part.adoc[lines=2..6,indent=0]\n\n{counter:n}",
       "profile": "include-body-dom-v1",
       "resources": {
-        "part.adoc": "omitted\n  [[here]]\n  .Ж {counter:n}\n  ====\n  Body {counter:n}\n  ====\nomitted"
+        "part.adoc": "omitted\n  [[here]]\n  .\u0416 {counter:n}\n  ====\n  Body {counter:n}\n  ====\nomitted"
       }
     },
     {
@@ -15453,13 +15453,13 @@
       "id": "block-reftext-initial-unicode",
       "category": "attributes",
       "expect": "pass",
-      "source": ":x: value\n\n[[here,Ж {counter:n:Я} {counter:n}]]\nBody {counter:n} {x}\n\nSee <<here>> / <<here>>\n\n== S {n} {x}\n\nTail {counter:n}"
+      "source": ":x: value\n\n[[here,\u0416 {counter:n:\u042f} {counter:n}]]\nBody {counter:n} {x}\n\nSee <<here>> / <<here>>\n\n== S {n} {x}\n\nTail {counter:n}"
     },
     {
       "id": "block-reftext-body-unicode",
       "category": "attributes",
       "expect": "pass",
-      "source": ":x: value\n\nBefore {counter:n}\n\n[[here,Ж {counter:n:Я} {counter:n}]]\nBody {counter:n} {x}\n\nSee <<here>> / <<here>>\n\n== S {n} {x}\n\nTail {counter:n}"
+      "source": ":x: value\n\nBefore {counter:n}\n\n[[here,\u0416 {counter:n:\u042f} {counter:n}]]\nBody {counter:n} {x}\n\nSee <<here>> / <<here>>\n\n== S {n} {x}\n\nTail {counter:n}"
     },
     {
       "id": "block-reftext-initial-large",
@@ -15597,7 +15597,7 @@
       "id": "block-reftext-crlf",
       "category": "attributes",
       "expect": "pass",
-      "source": "[[here,Ж {counter:n:Я}]]\r\nBody {counter:n}\r\n\r\n<<here>>"
+      "source": "[[here,\u0416 {counter:n:\u042f}]]\r\nBody {counter:n}\r\n\r\n<<here>>"
     },
     {
       "id": "block-reftext-include",
@@ -15606,7 +15606,7 @@
       "source": "include::part.adoc[tag=body,indent=0]\n\nSee <<here>> {counter:n}",
       "profile": "include-body-dom-v1",
       "resources": {
-        "part.adoc": "// tag::body[]\n  [[here,Ж {counter:n:Я}]]\n  Body {counter:n}\n// end::body[]"
+        "part.adoc": "// tag::body[]\n  [[here,\u0416 {counter:n:\u042f}]]\n  Body {counter:n}\n// end::body[]"
       }
     },
     {
@@ -15709,7 +15709,7 @@
       "id": "block-reftext-expression-62",
       "category": "attributes",
       "expect": "pass",
-      "source": ":x: value\n\n[[here,R  {counter:n}]]\nBody {counter:n}\nnext\n\n<<here>>"
+      "source": ":x: value\n\n[[here,R \u0096 {counter:n}]]\nBody {counter:n}\nnext\n\n<<here>>"
     },
     {
       "id": "block-reftext-setext-reftext",
@@ -15763,7 +15763,7 @@
       "id": "block-attrs-unicode-name-slot",
       "category": "block-attributes",
       "expect": "pass",
-      "source": "[quote, Ünï=1, Ä]\npara"
+      "source": "[quote, \u00dcn\u00ef=1, \u00c4]\npara"
     },
     {
       "id": "block-attrs-merge-replaces-key",
@@ -16715,13 +16715,13 @@
       "id": "section-setext-non-alphanumeric",
       "category": "sections",
       "expect": "pass",
-      "source": "= Doc\n\n🙂!\n--\n\nx"
+      "source": "= Doc\n\n\ud83d\ude42!\n--\n\nx"
     },
     {
       "id": "section-setext-unicode",
       "category": "sections",
       "expect": "pass",
-      "source": "= Doc\n\nЯблоко\n------\n\nЯ🙂\n~~\n\nx"
+      "source": "= Doc\n\n\u042f\u0431\u043b\u043e\u043a\u043e\n------\n\n\u042f\ud83d\ude42\n~~\n\nx"
     },
     {
       "id": "section-setext-leading-space",
@@ -17201,7 +17201,7 @@
       "id": "xref-late-unicode-label",
       "category": "references",
       "expect": "pass",
-      "source": "[[sec]]\n== Sec Title\n\nxref:sec[Я] and xref:sec[+a]b+] and <<sec,Ж>>"
+      "source": "[[sec]]\n== Sec Title\n\nxref:sec[\u042f] and xref:sec[+a]b+] and <<sec,\u0416>>"
     },
     {
       "id": "xref-late-attribute-closer",
@@ -17459,7 +17459,7 @@
       "id": "xref-natural-uppercase-unicode",
       "category": "references",
       "expect": "pass",
-      "source": "== Ärger\n\n== привет\n\nA <<Ärger>> B <<привет>>"
+      "source": "== \u00c4rger\n\n== \u043f\u0440\u0438\u0432\u0435\u0442\n\nA <<\u00c4rger>> B <<\u043f\u0440\u0438\u0432\u0435\u0442>>"
     },
     {
       "id": "xref-include-full-internal",
@@ -17683,7 +17683,7 @@
       "id": "special-sections-book-localized",
       "category": "sections",
       "expect": "pass",
-      "source": "= Книга\n:doctype: book\n:sectnums:\n:appendix-caption: Приложение\n:appendix-refsig: Прил.\n:chapter-refsig: Глава\n:section-refsig: Раздел\n:xrefstyle: full\n\n[preface]\n= Pref\n\n[abstract]\n=== Abs\n\n= Part\n\n== Ch\n\n[appendix]\n== AppA\n\n=== Sub\n\n[appendix]\n= AppB\n\n:appendix-caption!:\n\n[appendix]\n== AppC\n\n[bibliography]\n== Bib\n\nSee <<_appa>> xref:_appb[xrefstyle=short] <<_sub>> <<_ch>> <<_abs>> <<_pref>> <<_appc>>\n"
+      "source": "= \u041a\u043d\u0438\u0433\u0430\n:doctype: book\n:sectnums:\n:appendix-caption: \u041f\u0440\u0438\u043b\u043e\u0436\u0435\u043d\u0438\u0435\n:appendix-refsig: \u041f\u0440\u0438\u043b.\n:chapter-refsig: \u0413\u043b\u0430\u0432\u0430\n:section-refsig: \u0420\u0430\u0437\u0434\u0435\u043b\n:xrefstyle: full\n\n[preface]\n= Pref\n\n[abstract]\n=== Abs\n\n= Part\n\n== Ch\n\n[appendix]\n== AppA\n\n=== Sub\n\n[appendix]\n= AppB\n\n:appendix-caption!:\n\n[appendix]\n== AppC\n\n[bibliography]\n== Bib\n\nSee <<_appa>> xref:_appb[xrefstyle=short] <<_sub>> <<_ch>> <<_abs>> <<_pref>> <<_appc>>\n"
     },
     {
       "id": "special-sections-nesting-unsupported",
@@ -17767,7 +17767,7 @@
       "id": "toc-auto-numbered-appendix-toclevels",
       "category": "sections",
       "expect": "pass",
-      "source": "= Doc\n:toc: left\n:toclevels: 3\n:sectnums:\n:toc-title: Содержание & <x>\n\n== A\n\n=== A1\n\n==== A11\n\n===== A111\n\n[appendix]\n== App\n\n[glossary]\n== Gloss\n"
+      "source": "= Doc\n:toc: left\n:toclevels: 3\n:sectnums:\n:toc-title: \u0421\u043e\u0434\u0435\u0440\u0436\u0430\u043d\u0438\u0435 & <x>\n\n== A\n\n=== A1\n\n==== A11\n\n===== A111\n\n[appendix]\n== App\n\n[glossary]\n== Gloss\n"
     },
     {
       "id": "toc-auto-without-title",
@@ -17929,7 +17929,7 @@
       "id": "xrefstyle-natural-and-forward",
       "category": "references",
       "expect": "pass",
-      "source": ":xrefstyle: full\n\nA <<My Example>> B <<ex>> C <<Example 1, “My Example”>>\n\n[[ex]]\n.My *Example*\n====\nx\n====\n\nD <<My *Example*>>"
+      "source": ":xrefstyle: full\n\nA <<My Example>> B <<ex>> C <<Example 1, \u201cMy Example\u201d>>\n\n[[ex]]\n.My *Example*\n====\nx\n====\n\nD <<My *Example*>>"
     },
     {
       "id": "xrefstyle-nested-numbering",
@@ -17971,7 +17971,7 @@
       "id": "image-figure-caption-localized-and-unset",
       "category": "blocks",
       "expect": "pass",
-      "source": ":figure-caption: Рис.\n\n.One\nimage::a.png[]\n\n:figure-caption!:\n\n.Two\nimage::b.png[]\n\n:figure-caption: Abb.\n\n.Three\nimage::c.png[]\n"
+      "source": ":figure-caption: \u0420\u0438\u0441.\n\n.One\nimage::a.png[]\n\n:figure-caption!:\n\n.Two\nimage::b.png[]\n\n:figure-caption: Abb.\n\n.Three\nimage::c.png[]\n"
     },
     {
       "id": "image-xref-labels-and-xrefstyle",
@@ -18163,7 +18163,7 @@
       "id": "table-caption-numbering",
       "category": "tables",
       "expect": "pass",
-      "source": ".First *table*\n|===\n|a\n|===\n\n|===\n|untitled\n|===\n\n.Second\n[caption=\"Tab A: \"]\n|===\n|b\n|===\n\n.Third\n|===\n|c\n|===\n\n:table-caption: Таблица\n\n.Fourth\n|===\n|d\n|===\n\n:table-caption!:\n\n.Fifth\n|===\n|e\n|===\n"
+      "source": ".First *table*\n|===\n|a\n|===\n\n|===\n|untitled\n|===\n\n.Second\n[caption=\"Tab A: \"]\n|===\n|b\n|===\n\n.Third\n|===\n|c\n|===\n\n:table-caption: \u0422\u0430\u0431\u043b\u0438\u0446\u0430\n\n.Fourth\n|===\n|d\n|===\n\n:table-caption!:\n\n.Fifth\n|===\n|e\n|===\n"
     },
     {
       "id": "table-xref-labels",
@@ -18187,7 +18187,7 @@
       "id": "table-custom-separator",
       "category": "tables",
       "expect": "pass",
-      "source": "[separator=¦]\n|===\n¦a ¦b\n¦c ¦d\n|===\n\n[separator=;;]\n|===\n;;x;;y\n|===\n"
+      "source": "[separator=\u00a6]\n|===\n\u00a6a \u00a6b\n\u00a6c \u00a6d\n|===\n\n[separator=;;]\n|===\n;;x;;y\n|===\n"
     },
     {
       "id": "table-malformed-rows",
@@ -18489,7 +18489,7 @@
       "id": "footnotes-ids-and-header-cells",
       "category": "footnotes",
       "expect": "pass",
-      "source": "A footnote:my-id_1[hyphen] and footnote:my-id_1[] and footnote:ид[юникод] footnote:ид[].\n\n|===\n|Head footnote:[in header] |H2\n\n|a |b\n|===\n"
+      "source": "A footnote:my-id_1[hyphen] and footnote:my-id_1[] and footnote:\u0438\u0434[\u044e\u043d\u0438\u043a\u043e\u0434] footnote:\u0438\u0434[].\n\n|===\n|Head footnote:[in header] |H2\n\n|a |b\n|===\n"
     },
     {
       "id": "footnotes-toc-and-xref-labels",
@@ -18683,7 +18683,7 @@
       "id": "list-bullet-and-hyphen-markers",
       "category": "lists",
       "expect": "pass",
-      "source": "• bullet\n• two\n\n- hyphen\n-- not a marker\n- two\n"
+      "source": "\u2022 bullet\n\u2022 two\n\n- hyphen\n-- not a marker\n- two\n"
     },
     {
       "id": "list-roman-and-alpha-bounds",
@@ -18743,7 +18743,7 @@
       "id": "ui-menu-macro-items",
       "category": "ui-macros",
       "expect": "pass",
-      "source": ":experimental:\n\nmenu:File[Save] menu:View[Zoom > Reset] menu:A[B,C,D] menu:Tools[] menu:X[ ] menu:F[Edit,] menu:G[,] menu:a b[c] menu:&amp;[a] menu:&[y] \\menu:File[Save] menu:x [y] menu:1 [y] menu:→[y] xmenu:H[I] menu:Ж[З > И]\n"
+      "source": ":experimental:\n\nmenu:File[Save] menu:View[Zoom > Reset] menu:A[B,C,D] menu:Tools[] menu:X[ ] menu:F[Edit,] menu:G[,] menu:a b[c] menu:&amp;[a] menu:&[y] \\menu:File[Save] menu:x [y] menu:1 [y] menu:\u2192[y] xmenu:H[I] menu:\u0416[\u0417 > \u0418]\n"
     },
     {
       "id": "ui-menu-shorthand",
@@ -18785,7 +18785,7 @@
       "id": "indexterms-escaping-and-parentheses",
       "category": "indexterms",
       "expect": "pass",
-      "source": "a (((x)) b ((y))) c \\((t)) d \\(((u))) e \\indexterm:[v] f ((\nspan\nlines )) g ((a\\]b)) h indexterm2:[a\\]b] i \\indexterm2:[x] (()) indexterm:[] indexterm2:[] (((Ж))) ((Ж))) (((Ж))\n"
+      "source": "a (((x)) b ((y))) c \\((t)) d \\(((u))) e \\indexterm:[v] f ((\nspan\nlines )) g ((a\\]b)) h indexterm2:[a\\]b] i \\indexterm2:[x] (()) indexterm:[] indexterm2:[] (((\u0416))) ((\u0416))) (((\u0416))\n"
     },
     {
       "id": "indexterms-later-macros",
@@ -18821,13 +18821,13 @@
       "id": "indexterms-unicode-crlf",
       "category": "indexterms",
       "expect": "pass",
-      "source": "Ж ((Лев\r\nи тигр)) (((Кошки))) indexterm2:[Ёж] ((a &> Б &> В))\r\n"
+      "source": "\u0416 ((\u041b\u0435\u0432\r\n\u0438 \u0442\u0438\u0433\u0440)) (((\u041a\u043e\u0448\u043a\u0438))) indexterm2:[\u0401\u0436] ((a &> \u0411 &> \u0412))\r\n"
     },
     {
       "id": "indexterms-incomplete",
       "category": "indexterms",
       "expect": "pass",
-      "source": "(( ((( indexterm:[ indexterm2:[Ж\\] \\\n"
+      "source": "(( ((( indexterm:[ indexterm2:[\u0416\\] \\\n"
     },
     {
       "id": "indexterms-single-quoted-substitutions",
@@ -18887,7 +18887,7 @@
       "id": "stem-unicode-crlf",
       "category": "stem",
       "expect": "pass",
-      "source": "Ж stem:[а\r\n*б* {x}] latexmath:[\\sqrt{ё} < ж] Z\r\n"
+      "source": "\u0416 stem:[\u0430\r\n*\u0431* {x}] latexmath:[\\sqrt{\u0451} < \u0436] Z\r\n"
     },
     {
       "id": "stem-stateful-order",
@@ -18905,7 +18905,7 @@
       "id": "stem-partial-and-selectors",
       "category": "stem",
       "expect": "pass",
-      "source": "stem:bogus[x] stem:c,bogus[y] stem:ABC[z] stem:q,-q[*z*]\n\nstem:[]\n\nstem:[Ж\\]\n\nstem:[ stem:[ stem:[\n"
+      "source": "stem:bogus[x] stem:c,bogus[y] stem:ABC[z] stem:q,-q[*z*]\n\nstem:[]\n\nstem:[\u0416\\]\n\nstem:[ stem:[ stem:[\n"
     },
     {
       "id": "block-stem-forms",
@@ -18941,13 +18941,13 @@
       "id": "block-stem-substitutions",
       "category": "blocks",
       "expect": "pass",
-      "source": ":a: Ж\n\n[stem,subs=\"+attributes,+quotes\"]\n++++\n{empty}\n{a} *x* <y>\n{empty}\n++++\n\n[stem,subs=\"none\"]\n++++\n<b>x</b>\n++++\n\n[latexmath,subs=\"attributes+,specialcharacters\"]\n++++\n{a} <x>\n++++"
+      "source": ":a: \u0416\n\n[stem,subs=\"+attributes,+quotes\"]\n++++\n{empty}\n{a} *x* <y>\n{empty}\n++++\n\n[stem,subs=\"none\"]\n++++\n<b>x</b>\n++++\n\n[latexmath,subs=\"attributes+,specialcharacters\"]\n++++\n{a} <x>\n++++"
     },
     {
       "id": "block-stem-substitution-order",
       "category": "blocks",
       "expect": "pass",
-      "source": ":a: *Ж* & <x>\n\n[stem,subs=\"normal,-macros\"]\n++++\n{a} *b* (C)\n++++\n\n[stem,subs=\"-specialcharacters,+attributes\"]\n++++\n{a} *b* (C)\n++++\n\n[stem,subs=\"attributes+,quotes+\"]\n++++\n{a} *b* (C)\n++++\n\n[stem,subs=\"specialcharacters,+quotes,-quotes,+replacements\"]\n++++\n{a} *b* (C)\n++++\n\n[stem,subs=\"c,basic,quotes\"]\n++++\n{a} *b* (C)\n++++\n\n[stem,subs=\"\"]\n++++\n{a} *b* (C)\n++++"
+      "source": ":a: *\u0416* & <x>\n\n[stem,subs=\"normal,-macros\"]\n++++\n{a} *b* (C)\n++++\n\n[stem,subs=\"-specialcharacters,+attributes\"]\n++++\n{a} *b* (C)\n++++\n\n[stem,subs=\"attributes+,quotes+\"]\n++++\n{a} *b* (C)\n++++\n\n[stem,subs=\"specialcharacters,+quotes,-quotes,+replacements\"]\n++++\n{a} *b* (C)\n++++\n\n[stem,subs=\"c,basic,quotes\"]\n++++\n{a} *b* (C)\n++++\n\n[stem,subs=\"\"]\n++++\n{a} *b* (C)\n++++"
     },
     {
       "id": "block-stem-passes",
@@ -18983,13 +18983,13 @@
       "id": "block-stem-unicode-crlf",
       "category": "blocks",
       "expect": "pass",
-      "source": ":stem: latex\r\n\r\n.Формула\r\n[stem#eq]\r\n++++\r\nЖ < Я\r\n\r\nЮ\r\n++++\r\n\r\n<<eq>>"
+      "source": ":stem: latex\r\n\r\n.\u0424\u043e\u0440\u043c\u0443\u043b\u0430\r\n[stem#eq]\r\n++++\r\n\u0416 < \u042f\r\n\r\n\u042e\r\n++++\r\n\r\n<<eq>>"
     },
     {
       "id": "block-stem-unclosed",
       "category": "blocks",
       "expect": "pass",
-      "source": "[stem]\n++++\nЖ *x*\n// raw"
+      "source": "[stem]\n++++\n\u0416 *x*\n// raw"
     },
     {
       "id": "block-stem-includes",
@@ -18998,7 +18998,7 @@
       "source": ":stem: tex\n\n[stem]\n++++\ninclude::formula.txt[]\n++++",
       "profile": "include-body-dom-v1",
       "resources": {
-        "formula.txt": "Ж < x\n\\sqrt{4}"
+        "formula.txt": "\u0416 < x\n\\sqrt{4}"
       }
     },
     {
@@ -19065,7 +19065,7 @@
       "id": "bibliography-ids",
       "category": "lists",
       "expect": "pass",
-      "source": "[bibliography]\n* [[[Журнал_1,Русский]]] Книга\n* [[[:item]]] Colon\n* [[[_item.2-x]]] Valid\n* [[[123]]] Invalid\n* [[[bad id]]] Invalid\n\n<<Журнал_1>> <<:item>> <<_item.2-x>>"
+      "source": "[bibliography]\n* [[[\u0416\u0443\u0440\u043d\u0430\u043b_1,\u0420\u0443\u0441\u0441\u043a\u0438\u0439]]] \u041a\u043d\u0438\u0433\u0430\n* [[[:item]]] Colon\n* [[[_item.2-x]]] Valid\n* [[[123]]] Invalid\n* [[[bad id]]] Invalid\n\n<<\u0416\u0443\u0440\u043d\u0430\u043b_1>> <<:item>> <<_item.2-x>>"
     },
     {
       "id": "bibliography-labels",
@@ -19119,7 +19119,7 @@
       "id": "bibliography-crlf",
       "category": "lists",
       "expect": "pass",
-      "source": "[bibliography]\r\n* [[[книга,Ссылка]]] Текст\r\n\r\n<<книга>>"
+      "source": "[bibliography]\r\n* [[[\u043a\u043d\u0438\u0433\u0430,\u0421\u0441\u044b\u043b\u043a\u0430]]] \u0422\u0435\u043a\u0441\u0442\r\n\r\n<<\u043a\u043d\u0438\u0433\u0430>>"
     },
     {
       "id": "bibliography-description",
@@ -19132,9 +19132,9 @@
       "category": "lists",
       "profile": "include-body-dom-v1",
       "expect": "pass",
-      "source": "[bibliography]\ninclude::refs.adoc[]\n\n<<книга>>",
+      "source": "[bibliography]\ninclude::refs.adoc[]\n\n<<\u043a\u043d\u0438\u0433\u0430>>",
       "resources": {
-        "refs.adoc": "* [[[книга,Ссылка]]] Текст"
+        "refs.adoc": "* [[[\u043a\u043d\u0438\u0433\u0430,\u0421\u0441\u044b\u043b\u043a\u0430]]] \u0422\u0435\u043a\u0441\u0442"
       }
     },
     {
@@ -19255,7 +19255,7 @@
       "id": "subs-paragraph-hardbreaks-and-unicode",
       "category": "substitutions",
       "expect": "pass",
-      "source": ":v: 1.0 <b>\n:a: *x*\n:empty:\n\n[%hardbreaks,subs=\"post_replacements,quotes\"]\nЖ *ж*\nдва\n\n[subs=\"replacements\"]\n(C) -- ... *x*\n"
+      "source": ":v: 1.0 <b>\n:a: *x*\n:empty:\n\n[%hardbreaks,subs=\"post_replacements,quotes\"]\n\u0416 *\u0436*\n\u0434\u0432\u0430\n\n[subs=\"replacements\"]\n(C) -- ... *x*\n"
     },
     {
       "id": "subs-crlf",
@@ -19495,7 +19495,7 @@
     {
       "id": "verbatim-tabsize-document",
       "category": "blocks",
-      "source": ":tabsize: 4\n\n----\n\tЯ\tX\n  \tab\na\tb🙂\tc\n----\n\n....\n\tliteral\n....\n\n[verse]\n\tx\ty\n\n[literal]\n\tparagraph\n\n  \tindented literal\n   paragraph\n\n[source,ruby,indent=0]\n----\n\t\tdeep\n\tshallow\n----\n\n[indent=-1]\n----\n\tminus\n----\n",
+      "source": ":tabsize: 4\n\n----\n\t\u042f\tX\n  \tab\na\tb\ud83d\ude42\tc\n----\n\n....\n\tliteral\n....\n\n[verse]\n\tx\ty\n\n[literal]\n\tparagraph\n\n  \tindented literal\n   paragraph\n\n[source,ruby,indent=0]\n----\n\t\tdeep\n\tshallow\n----\n\n[indent=-1]\n----\n\tminus\n----\n",
       "expect": "pass"
     },
     {
@@ -19827,37 +19827,37 @@
       "id": "section-id-idprefix-empty",
       "category": "sections",
       "expect": "pass",
-      "source": ":idprefix:\n\n== Hello World\n\n== -Lead and trail-\n\n== a. b - c__d\n\n== Über  Größe\n\n== xxlarge x y\n\n== Dup\n\n== Dup\n\n[discrete]\n=== Float It\n"
+      "source": ":idprefix:\n\n== Hello World\n\n== -Lead and trail-\n\n== a. b - c__d\n\n== \u00dcber  Gr\u00f6\u00dfe\n\n== xxlarge x y\n\n== Dup\n\n== Dup\n\n[discrete]\n=== Float It\n"
     },
     {
       "id": "section-id-idprefix-custom",
       "category": "sections",
       "expect": "pass",
-      "source": ":idprefix: Sec.\n\n== Hello World\n\n== -Lead and trail-\n\n== a. b - c__d\n\n== Über  Größe\n\n== xxlarge x y\n\n== Dup\n\n== Dup\n\n[discrete]\n=== Float It\n"
+      "source": ":idprefix: Sec.\n\n== Hello World\n\n== -Lead and trail-\n\n== a. b - c__d\n\n== \u00dcber  Gr\u00f6\u00dfe\n\n== xxlarge x y\n\n== Dup\n\n== Dup\n\n[discrete]\n=== Float It\n"
     },
     {
       "id": "section-id-idseparator-hyphen",
       "category": "sections",
       "expect": "pass",
-      "source": ":idseparator: -\n\n== Hello World\n\n== -Lead and trail-\n\n== a. b - c__d\n\n== Über  Größe\n\n== xxlarge x y\n\n== Dup\n\n== Dup\n\n[discrete]\n=== Float It\n"
+      "source": ":idseparator: -\n\n== Hello World\n\n== -Lead and trail-\n\n== a. b - c__d\n\n== \u00dcber  Gr\u00f6\u00dfe\n\n== xxlarge x y\n\n== Dup\n\n== Dup\n\n[discrete]\n=== Float It\n"
     },
     {
       "id": "section-id-idseparator-dot-no-prefix",
       "category": "sections",
       "expect": "pass",
-      "source": ":idprefix:\n:idseparator: .\n\n== Hello World\n\n== -Lead and trail-\n\n== a. b - c__d\n\n== Über  Größe\n\n== xxlarge x y\n\n== Dup\n\n== Dup\n\n[discrete]\n=== Float It\n"
+      "source": ":idprefix:\n:idseparator: .\n\n== Hello World\n\n== -Lead and trail-\n\n== a. b - c__d\n\n== \u00dcber  Gr\u00f6\u00dfe\n\n== xxlarge x y\n\n== Dup\n\n== Dup\n\n[discrete]\n=== Float It\n"
     },
     {
       "id": "section-id-idseparator-empty",
       "category": "sections",
       "expect": "pass",
-      "source": ":idprefix: sec-\n:idseparator:\n\n== Hello World\n\n== -Lead and trail-\n\n== a. b - c__d\n\n== Über  Größe\n\n== xxlarge x y\n\n== Dup\n\n== Dup\n\n[discrete]\n=== Float It\n"
+      "source": ":idprefix: sec-\n:idseparator:\n\n== Hello World\n\n== -Lead and trail-\n\n== a. b - c__d\n\n== \u00dcber  Gr\u00f6\u00dfe\n\n== xxlarge x y\n\n== Dup\n\n== Dup\n\n[discrete]\n=== Float It\n"
     },
     {
       "id": "section-id-idseparator-letter",
       "category": "sections",
       "expect": "pass",
-      "source": ":idseparator: x\n\n== Hello World\n\n== -Lead and trail-\n\n== a. b - c__d\n\n== Über  Größe\n\n== xxlarge x y\n\n== Dup\n\n== Dup\n\n[discrete]\n=== Float It\n"
+      "source": ":idseparator: x\n\n== Hello World\n\n== -Lead and trail-\n\n== a. b - c__d\n\n== \u00dcber  Gr\u00f6\u00dfe\n\n== xxlarge x y\n\n== Dup\n\n== Dup\n\n[discrete]\n=== Float It\n"
     },
     {
       "id": "section-id-idseparator-first-char",
@@ -19875,7 +19875,7 @@
       "id": "section-id-unset-defaults",
       "category": "sections",
       "expect": "pass",
-      "source": ":idprefix!:\n:idseparator!:\n\n== Hello World\n\n== -Lead and trail-\n\n== a. b - c__d\n\n== Über  Größe\n\n== xxlarge x y\n\n== Dup\n\n== Dup\n\n[discrete]\n=== Float It\n"
+      "source": ":idprefix!:\n:idseparator!:\n\n== Hello World\n\n== -Lead and trail-\n\n== a. b - c__d\n\n== \u00dcber  Gr\u00f6\u00dfe\n\n== xxlarge x y\n\n== Dup\n\n== Dup\n\n[discrete]\n=== Float It\n"
     },
     {
       "id": "section-id-sectids-unset",
@@ -20115,7 +20115,7 @@
       "id": "safe-mode-secure-attribute-value-limit",
       "category": "attributes",
       "expect": "pass",
-      "source": ":long: ééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééétail\n:short: *b*\n\n{long}\n\n{short}\n"
+      "source": ":long: \u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9tail\n:short: *b*\n\n{long}\n\n{short}\n"
     },
     {
       "id": "source-highlighter-highlightjs",
@@ -20200,7 +20200,7 @@
     {
       "id": "ifeval-stored-spelling",
       "category": "conditionals",
-      "source": ":x: a<b\n:café: 1\n\nifeval::[\"{x}\" == \"a&lt;b\"]\nstored\nendif::[]\n\nifeval::[{café} == 1]\nunicode\nendif::[]\n\nifeval::[\"{nope}\" == \"\"]\ndropped\nendif::[]",
+      "source": ":x: a<b\n:caf\u00e9: 1\n\nifeval::[\"{x}\" == \"a&lt;b\"]\nstored\nendif::[]\n\nifeval::[{caf\u00e9} == 1]\nunicode\nendif::[]\n\nifeval::[\"{nope}\" == \"\"]\ndropped\nendif::[]",
       "expect": "pass"
     },
     {
@@ -20261,6 +20261,54 @@
       "id": "include-secure-parameters",
       "category": "include",
       "source": "include::x-{counter:t}.adoc[lines={counter:s}]\n\nifndef::s[]\nno s\nendif::[]\n\nifeval::[{t} == 1]\nt one\nendif::[]",
+      "expect": "pass"
+    },
+    {
+      "id": "entity-reference-xref-targets",
+      "category": "references",
+      "source": "xref:a&#38;b[] <<x&#38;y>> <<a&copy;b>>\n\nxref:a&amp;#38;b[] <<a&amp;copy;b>> xref:a&b[]",
+      "expect": "pass"
+    },
+    {
+      "id": "entity-reference-xref-interdocument",
+      "category": "references",
+      "source": "xref:doc&#38;x.adoc#f&#38;g[] <<d&#38;e.adoc#x,lbl>>\n\nxref:x[role=r&#38;s] xref:d.adoc#x[t,window=w&#38;v]",
+      "expect": "pass"
+    },
+    {
+      "id": "entity-reference-xref-attribute",
+      "category": "references",
+      "source": "= T\n:id: a&#38;b\n\n<<{id}>> xref:{id}[]",
+      "expect": "pass"
+    },
+    {
+      "id": "entity-reference-xref-cell",
+      "category": "references",
+      "source": "[cols=\"1\"]\n|===\na|xref:x&#38;y[]\n|===",
+      "expect": "pass"
+    },
+    {
+      "id": "entity-reference-image-link",
+      "category": "blocks",
+      "source": "image::a.png[link=x&#38;y]\n\n[link=\"x&amp;#38;y\"]\nimage::b.png[]\n\nimage::c.png[link=\"https://x?a&amp;b\"]\n\nimage::d.png[link=a&#x26;b]",
+      "expect": "pass"
+    },
+    {
+      "id": "entity-reference-image-target",
+      "category": "blocks",
+      "source": "image::a&#38;b.png[]\n\nimage::a&amp;b.png[]\n\nimage::c&copy;.png[A &#38; B]",
+      "expect": "pass"
+    },
+    {
+      "id": "entity-reference-inline-image-alt",
+      "category": "inlines",
+      "source": "image:a&#38;b.png[] image:a&amp;#38;b.png[] image:a&copy;.png[] image:x.png[alt &#38; t,link=u&#38;v]",
+      "expect": "pass"
+    },
+    {
+      "id": "entity-reference-media",
+      "category": "blocks",
+      "source": "video::v&#38;w.mp4[poster=p&#38;q.png]\n\nvideo::a&#38;b[youtube]\n\naudio::s&#38;t.ogg[]",
       "expect": "pass"
     }
   ]

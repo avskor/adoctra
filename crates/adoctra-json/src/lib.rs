@@ -2421,4 +2421,21 @@ mod tests {
             "{json}"
         );
     }
+
+    #[test]
+    fn xref_fields_and_labels_keep_character_references() {
+        let json = render("xref:a&#38;b[] image:i&#38;j.png[]");
+        assert!(
+            json.contains(r##""name":"xref","target":"#a&#38;b","refid":"a&#38;b""##),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#"[{"name":"text","value":"[a"},{"name":"raw","value":"&#38;"},{"name":"text","value":"b]"}]"#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#"{"kind":"text","value":"i"},{"kind":"raw","value":"&#38;"},{"kind":"text","value":"j"}"#),
+            "{json}"
+        );
+    }
 }

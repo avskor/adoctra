@@ -410,8 +410,13 @@ natural xref (pub(crate) `Xref.natural`, cleared once looked up): conversion bui
 Ruby's `@reftexts` once (lexical label spelling, registration order via
 Target.order); headings at reading search the partial registry uncached. Textless
 labels: `path`, or for `#`/this document its reftext, doctitle or first top-level
-section, else `[^top]`. Character references inside decoded node fields are not
-expanded; the `title` attribute as doctitle remains work. xrefstyle (macro
+section, else `[^top]`. Decoded fields keep character references (and an `&amp;`
+that would read as one) in their HTML spelling (entity_references.rs
+decode_protection, no entity table); labels built from them (`[id]`, path) and
+inline-image default alts make them Raw (reference_parts), and HTML's
+reference_value keeps them in xref fields and raw block media `src`/`poster`/
+`link`, like Ruby inserting those values verbatim. The `title` attribute as
+doctitle remains work. xrefstyle (macro
 `xrefstyle=` in `Xref.xrefstyle`, else the document attribute at the reference) is
 resolve::styled over the converted title: Target.numbering = Caption (example
 blocks: `full` → `example-caption numeral, “title”`, `short` → `prefix numeral`,
