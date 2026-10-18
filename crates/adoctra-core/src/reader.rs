@@ -72,8 +72,9 @@ pub(crate) struct Reader<'a> {
     pub table_separators: Vec<Span>,
     /// List markers and description list delimiters, for highlighting.
     pub list_markers: Vec<Span>,
-    /// Raw math bodies and their fences, classified during structural parsing.
-    pub stem_tokens: Vec<crate::Token>,
+    /// Delimited block fences and verbatim/raw body lines, classified during
+    /// structural parsing.
+    pub block_tokens: Vec<crate::Token>,
     /// Text whose block selected custom substitutions, with those stages:
     /// highlighting keeps only the inline tokens of executed stages.
     pub custom_subs: Vec<(Span, Vec<crate::pass_subs::Stage>)>,
@@ -124,7 +125,7 @@ impl<'a> Reader<'a> {
             tables: Vec::new(),
             table_separators: Vec::new(),
             list_markers: Vec::new(),
-            stem_tokens: Vec::new(),
+            block_tokens: Vec::new(),
             custom_subs: Vec::new(),
             callout_marks: Vec::new(),
             endings: Vec::new(),
@@ -196,7 +197,7 @@ impl<'a> Reader<'a> {
         self.table_separators.extend(nested.table_separators);
         self.table_separators.sort_by_key(|span| span.start);
         self.list_markers.extend(nested.list_markers);
-        self.stem_tokens.extend(nested.stem_tokens);
+        self.block_tokens.extend(nested.block_tokens);
         self.custom_subs.extend(nested.custom_subs);
         self.callout_marks.extend(nested.callout_marks);
         self.list_markers.sort_by_key(|span| span.start);
@@ -225,6 +226,34 @@ impl<'a> Reader<'a> {
             bytes: 0,
         });
         Ok(reader)
+    }
+
+    /// Record the opening and (when present) closing fence of a delimited block.
+    pub fn record_fences(&mut self, opening: Span, closing: Option<Span>, kind: crate::TokenKind) {
+        for span in std::iter::once(opening).chain(closing) {
+            self.block_tokens.push(crate::Token { span, kind });
+        }
+    }
+
+    /// Record a verbatim block's fences and each non-empty body line.
+    pub fn record_verbatim(
+        &mut self,
+        opening: Span,
+        closing: Option<Span>,
+        (body_start, body_end): (usize, usize),
+        fence: crate::TokenKind,
+        text: crate::TokenKind,
+    ) {
+        self.record_fences(opening, closing, fence);
+        let source = self.content(body_start, body_end);
+        for (offset, line) in crate::scanner::lines_with_offsets(&source.text) {
+            if !line.is_empty() {
+                self.block_tokens.push(crate::Token {
+                    span: source.original_span(Span::new(offset, offset + line.len())),
+                    kind: text,
+                });
+            }
+        }
     }
 
     pub fn set_primary_id(&mut self, id: crate::SourceId) {

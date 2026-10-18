@@ -1730,6 +1730,18 @@ mod tests {
     }
 
     #[test]
+    fn longer_fences_serialize_nested_blocks_of_one_kind() {
+        let json =
+            render("======\nouter\n\n====\ninner\n====\n======\n\n------\ncode\n----\n------");
+        assert!(
+            json.contains(r#""name":"example","id":null,"roles":[],"style":null,"attributes":{},"options":[],"title":null,"caption":null,"blocks":[{"name":"paragraph""#),
+            "{json}"
+        );
+        assert_eq!(json.matches(r#""name":"example""#).count(), 2, "{json}");
+        assert!(json.contains(r#""text":"code\n----""#), "{json}");
+    }
+
+    #[test]
     fn callouts_and_callout_lists_serialize() {
         let json = render("----\nx // <1>\n----\n<1> one");
         assert!(json.contains(r#""text":"x // <1>","callouts":[{"number":"1","id":"CO1-1","guard":"// ","xml":false,"icons":null,"src":""}]"#), "{json}");

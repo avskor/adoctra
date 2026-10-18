@@ -84,6 +84,18 @@ class ProjectionTests(unittest.TestCase):
         self.assertNotEqual(projection('<figcaption class="title">x</figcaption>'),
                             projection('<figcaption>x</figcaption>'))
 
+    def test_sidebar_aside_is_ruby_sidebarblock(self):
+        ruby = ('<div id="s" class="sidebarblock r"><div class="content"><div class="title">T</div>'
+                '<div class="paragraph"><p>x</p></div></div></div>')
+        ours = '<aside id="s" class="sidebarblock r"><div class="title">T</div><p>x</p></aside>'
+        self.assertEqual(projection(ruby), projection(ours))
+        # Its id, roles, title and content remain observable.
+        self.assertNotEqual(projection(ours), projection(ours.replace('sidebarblock r', 'sidebarblock')))
+        self.assertNotEqual(projection(ours), projection(ours.replace('>T<', '><')))
+        self.assertNotEqual(projection(ours), projection(ours.replace('<p>x</p>', '<p>y</p>')))
+        # Other asides (admonitions) are not sidebars.
+        self.assertNotEqual(projection(ruby), projection(ours.replace('sidebarblock r', 'admonition r')))
+
     def test_video_and_audio_figures_are_ruby_media_blocks(self):
         ruby = ('<div id="v" class="videoblock left"><div class="title">T</div><div class="content">'
                 '<iframe src="https://y/e" frameborder="0" allowfullscreen></iframe></div></div>'

@@ -16,6 +16,7 @@ use crate::diagnostic::{Diagnostic, ParseResult, Severity};
 use crate::header::{collect_header, setext_level};
 use crate::inline::scan_inlines_report;
 use crate::reader::Reader;
+use crate::tokenizer::TokenKind;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
@@ -344,7 +345,7 @@ fn collect_blocks_in(
 ) -> Vec<Block> {
     // Ruby first preprocesses and captures a container up to its closing fence,
     // then parses the body. A nested comment/verbatim region cannot hide that fence.
-    let previous_limit = stop.map(|fence| lines.bound(*i, context, |line| line.trim() == fence));
+    let previous_limit = stop.map(|fence| lines.bound(*i, context, |line| line == fence));
     let mut blocks = Vec::new();
     let mut text_only = list.is_some_and(|(_, text_only)| text_only);
     // Blank lines before the next block's metadata (Ruby's `skipped`).
@@ -1159,10 +1160,55 @@ fn changes_paragraph_type(style: &str) -> bool {
         )
 }
 
+/// Read a compound delimited block whose opening `fence` is at `*i`: its body
+/// is parsed as blocks up to the identical closing line, like Ruby's
+/// `build_block`. Returns the blocks and the block's end offset; an
+/// unterminated block ends at its last child (or the opening fence when empty),
+/// and the missing close is a diagnostic, not a parse failure.
+fn read_container(
+    lines: &mut Reader<'_>,
+    i: &mut usize,
+    context: &mut ParseContext,
+    diagnostics: &mut Vec<Diagnostic>,
+    fence: &str,
+    block_name: &str,
+    kind: TokenKind,
+) -> (Vec<Block>, usize) {
+    let (start, opening_line) = lines.line(*i);
+    let opening = Span::new(start, start + opening_line.len());
+    *i += 1;
+    let blocks = collect_blocks(
+        lines,
+        i,
+        context,
+        diagnostics,
+        Some(fence),
+        PendingMeta::default(),
+    );
+    let closing = if lines.has(*i, context) && &*lines[*i].1 == fence {
+        let (loff, lline) = lines.line(*i);
+        *i += 1;
+        Some(Span::new(loff, loff + lline.len()))
+    } else {
+        diagnostics.push(Diagnostic {
+            span: Span::new(start, start + fence.len()),
+            severity: Severity::Error,
+            message: format!("unterminated {block_name} block (missing closing `{fence}`)"),
+        });
+        None
+    };
+    lines.record_fences(opening, closing, kind);
+    let end = closing.map_or_else(
+        || blocks.last().map_or(opening.end, |b| b.span.end),
+        |c| c.end,
+    );
+    (blocks, end)
+}
+
 /// Capture the verbatim body of a delimited block whose opening `fence` has just
 /// been consumed (so `*i` points at the first body line). Scans lines until the
-/// matching closing `fence`, returning `(body_start, body_end, block_end)` as byte
-/// offsets into the source. The body slice is taken verbatim — the caller decides
+/// identical closing `fence`, returning `(body_start, body_end, block_end)` as byte
+/// offsets into the source and the closing fence's span. The body slice is taken verbatim — the caller decides
 /// whether to inline-scan it (verse) or keep it raw (literal/source). An
 /// unterminated block pushes a `block_name` diagnostic but is never a failure.
 /// Shared by the `____` verse branch and the `--` verbatim masquerades.
@@ -1174,7 +1220,7 @@ fn capture_verbatim_body(
     block_name: &str,
     context: &ParseContext,
     diagnostics: &mut Vec<Diagnostic>,
-) -> (usize, usize, usize) {
+) -> (usize, usize, usize, Option<Span>) {
     let body_start = if lines.has(*i, context) {
         lines[*i].0
     } else {
@@ -1186,7 +1232,7 @@ fn capture_verbatim_body(
     while lines.has(*i, context) {
         let (loff, lline_buffer) = lines.line(*i);
         let lline = lline_buffer.as_ref();
-        if lline.trim() == fence {
+        if lline == fence {
             end = loff + lline.len();
             *i += 1;
             closed = true;
@@ -1203,7 +1249,8 @@ fn capture_verbatim_body(
             message: format!("unterminated {block_name} block (missing closing `{fence}`)"),
         });
     }
-    (body_start, body_end, end)
+    let closing = closed.then(|| Span::new(end - fence.len(), end));
+    (body_start, body_end, end, closing)
 }
 
 /// Whether a block has an option (`%name`, `options=name` or `name-option`).
@@ -1939,6 +1986,17 @@ fn parse_block_content(
         ));
     }
 
+    // Ruby's `is_delimited_block?` on the unindented line: a fence longer than
+    // the minimum closes only with the identical line, so blocks of one kind
+    // nest with fences of different lengths.
+    let delimiter = crate::lists::delimiter(line);
+    let fence = |tip: &str| {
+        delimiter
+            .as_ref()
+            .filter(|d| d.tip == tip)
+            .map(|d| d.terminator.clone())
+    };
+
     // A table (`|===`, `,===`, `:===`, `!===`) whatever the style, like Ruby's
     // delimited blocks without masquerades.
     if let Some(hint) = crate::table::delimiter(trimmed) {
@@ -1954,8 +2012,16 @@ fn parse_block_content(
         ));
     }
 
-    // Listing block (verbatim, fenced by `----`).
-    if trimmed.trim() == "----" {
+    // Listing (`----`) and literal (`....`) blocks: verbatim bodies up to the
+    // identical closing fence. Like Ruby's `DELIMITED_BLOCKS` masquerades, a
+    // `[literal]` style turns a listing fence into a literal block and a
+    // `[listing]`/`[source]` style turns a literal fence into a listing.
+    let verbatim_fence = fence("----")
+        .map(|fence| (fence, pending_style == Some("literal")))
+        .or_else(|| {
+            fence("....").map(|fence| (fence, !matches!(pending_style, Some("listing" | "source"))))
+        });
+    if let Some((fence, literal)) = verbatim_fence {
         let start = off;
         let mut end = off + line.len();
         *i += 1;
@@ -1965,7 +2031,7 @@ fn parse_block_content(
         while lines.has(*i, context) {
             let (loff, lline_buffer) = lines.line(*i);
             let lline = lline_buffer.as_ref();
-            if lline.trim() == "----" {
+            if lline == fence {
                 end = loff + lline.len();
                 *i += 1;
                 closed = true;
@@ -1983,68 +2049,48 @@ fn parse_block_content(
         context
             .verbatim_bodies
             .insert(start, (body_start, body_end, 0));
+        let (delimiter, body_kind, name) = if literal {
+            (
+                TokenKind::LiteralDelimiter,
+                TokenKind::LiteralText,
+                "literal",
+            )
+        } else {
+            (
+                TokenKind::ListingDelimiter,
+                TokenKind::ListingText,
+                "listing",
+            )
+        };
+        lines.record_verbatim(
+            Span::new(start, off + line.len()),
+            closed.then(|| Span::new(end - fence.len(), end)),
+            (body_start, body_end),
+            delimiter,
+            body_kind,
+        );
         if !closed {
             diagnostics.push(Diagnostic {
-                span: Span::new(start, start + 4),
+                span: Span::new(start, start + fence.len()),
                 severity: Severity::Error,
-                message: "unterminated listing block (missing closing `----`)".to_string(),
+                message: format!("unterminated {name} block (missing closing `{fence}`)"),
             });
         }
-        return Some(Block::new(
-            Span::new(start, end),
-            BlockKind::Listing {
-                text,
-                callouts: Vec::new(),
-                inlines: None,
-            },
-        ));
-    }
-
-    // Literal block (verbatim, fenced by `....`). Same shape as the `----`
-    // listing above, but yields a `Literal` (rendered as a `literalblock`).
-    if trimmed.trim() == "...." {
-        let start = off;
-        let mut end = off + line.len();
-        *i += 1;
-        let mut text = String::new();
-        let mut closed = false;
-        let mut body: Option<(usize, usize)> = None;
-        while lines.has(*i, context) {
-            let (loff, lline_buffer) = lines.line(*i);
-            let lline = lline_buffer.as_ref();
-            if lline.trim() == "...." {
-                end = loff + lline.len();
-                *i += 1;
-                closed = true;
-                break;
-            }
-            if !text.is_empty() {
-                text.push('\n');
-            }
-            text.push_str(lline);
-            end = loff + lline.len();
-            body = Some((body.map_or(loff, |(s, _)| s), end));
-            *i += 1;
-        }
-        let (body_start, body_end) = body.unwrap_or((off + line.len(), off + line.len()));
-        context
-            .verbatim_bodies
-            .insert(start, (body_start, body_end, 0));
-        if !closed {
-            diagnostics.push(Diagnostic {
-                span: Span::new(start, start + 4),
-                severity: Severity::Error,
-                message: "unterminated literal block (missing closing `....`)".to_string(),
-            });
-        }
-        return Some(Block::new(
-            Span::new(start, end),
+        let callouts = Vec::new();
+        let kind = if literal {
             BlockKind::Literal {
                 text,
-                callouts: Vec::new(),
+                callouts,
                 inlines: None,
-            },
-        ));
+            }
+        } else {
+            BlockKind::Listing {
+                text,
+                callouts,
+                inlines: None,
+            }
+        };
+        return Some(Block::new(Span::new(start, end), kind));
     }
 
     // Passthrough block (verbatim, fenced by `++++`). Like `....`/`----` the body
@@ -2052,14 +2098,15 @@ fn parse_block_content(
     // backend, which emits the text *completely raw* (no escaping, no wrapper).
     // The whole trimmed line must be exactly `++++`; inline passthrough
     // delimiters are handled only within parsed inline content.
-    if trimmed.trim() == "++++" {
+    if let Some(fence) = fence("++++") {
         let start = off;
         *i += 1;
-        let (body_start, body_end, end) = capture_verbatim_body(
+        let opening = Span::new(start, off + line.len());
+        let (body_start, body_end, end, closing) = capture_verbatim_body(
             lines,
             i,
-            Span::new(start, off + line.len()),
-            "++++",
+            opening,
+            &fence,
             "passthrough",
             context,
             diagnostics,
@@ -2071,25 +2118,14 @@ fn parse_block_content(
             // Generic STEM is selected from the original positional list on
             // block completion, where absent and quoted-empty fields differ.
             let style = crate::StemStyle::from_alias(pending_style);
+            lines.record_verbatim(
+                opening,
+                closing,
+                (body_start, body_end),
+                TokenKind::StemDelimiter,
+                TokenKind::StemText,
+            );
             let source = lines.content(body_start, body_end);
-            lines.stem_tokens.push(crate::Token {
-                span: Span::new(start, off + line.len()),
-                kind: crate::TokenKind::StemDelimiter,
-            });
-            for (offset, text) in crate::scanner::lines_with_offsets(&source.text) {
-                if !text.is_empty() {
-                    lines.stem_tokens.push(crate::Token {
-                        span: source.original_span(Span::new(offset, offset + text.len())),
-                        kind: crate::TokenKind::StemText,
-                    });
-                }
-            }
-            if end > body_end {
-                lines.stem_tokens.push(crate::Token {
-                    span: Span::new(end - 4, end),
-                    kind: crate::TokenKind::StemDelimiter,
-                });
-            }
             // A `subs` attribute is committed on completion.
             let inlines = context.body_subs.defer_block(
                 source,
@@ -2099,6 +2135,13 @@ fn parse_block_content(
             );
             BlockKind::Stem { style, inlines }
         } else {
+            lines.record_verbatim(
+                opening,
+                closing,
+                (body_start, body_end),
+                TokenKind::PassthroughDelimiter,
+                TokenKind::PassthroughText,
+            );
             BlockKind::Passthrough {
                 text: lines.content(body_start, body_end).text,
                 inlines: None,
@@ -2109,38 +2152,20 @@ fn parse_block_content(
 
     // Example block (a parsed container, fenced by `====`). Unlike the verbatim
     // `----`/`....` blocks above, the body is parsed *as blocks* via the shared
-    // `collect_blocks` (so nested blocks, inline subs and anchors all apply). A
-    // same-length `====` inside closes the outer block (delimiter-length nesting
-    // is not implemented), matching the single-length limitation of `----`/`....`.
-    if trimmed.trim() == "====" {
-        let start = off;
-        *i += 1;
-        let blocks = collect_blocks(
+    // `collect_blocks` (so nested blocks, inline subs and anchors all apply).
+    // Only the identical fence closes it, so a longer or shorter `====` nests.
+    if let Some(fence) = fence("====") {
+        let (blocks, end) = read_container(
             lines,
             i,
             context,
             diagnostics,
-            Some("===="),
-            PendingMeta::default(),
+            &fence,
+            "example",
+            TokenKind::ExampleDelimiter,
         );
-        let end;
-        if lines.has(*i, context) && lines[*i].1.trim() == "====" {
-            let (loff, lline_buffer) = lines.line(*i);
-            let lline = lline_buffer.as_ref();
-            end = loff + lline.len();
-            *i += 1;
-        } else {
-            // Unterminated: span ends at the last child (or the opening fence when
-            // empty); the missing close is a diagnostic, not a parse failure.
-            end = blocks.last().map_or(off + line.len(), |b| b.span.end);
-            diagnostics.push(Diagnostic {
-                span: Span::new(start, start + 4),
-                severity: Severity::Error,
-                message: "unterminated example block (missing closing `====`)".to_string(),
-            });
-        }
         return Some(Block::new(
-            Span::new(start, end),
+            Span::new(off, end),
             BlockKind::Example { blocks },
         ));
     }
@@ -2151,22 +2176,17 @@ fn parse_block_content(
     // inline substitutions. The style arrives via `pending_style` (the `[verse]`
     // attribute line precedes the fence). The positional attribution
     // (`[quote, author, work]`) is folded in afterwards by `apply_style_fixup`.
-    if trimmed.trim() == "____" {
+    if let Some(fence) = fence("____") {
         let start = off;
         // Verse: verbatim body. Capture the exact source slice (so internal line
         // breaks survive) and inline-scan it — verse keeps newlines but still
         // formats `*bold*`, unlike the no-subs `Literal`/`Listing`.
         if pending_style == Some("verse") {
             *i += 1;
-            let (body_start, body_end, end) = capture_verbatim_body(
-                lines,
-                i,
-                Span::new(start, off + line.len()),
-                "____",
-                "verse",
-                context,
-                diagnostics,
-            );
+            let opening = Span::new(start, off + line.len());
+            let (body_start, body_end, end, closing) =
+                capture_verbatim_body(lines, i, opening, &fence, "verse", context, diagnostics);
+            lines.record_fences(opening, closing, TokenKind::QuoteDelimiter);
             // Verse keeps its line breaks — scan without folding newlines.
             let inlines = lines.scan(body_start, body_end, &attrs, false, context);
             return Some(Block::new(
@@ -2178,29 +2198,15 @@ fn parse_block_content(
             ));
         }
         // Quote (default): a parsed container, mirror of the `====` example block.
-        *i += 1;
-        let blocks = collect_blocks(
+        let (blocks, end) = read_container(
             lines,
             i,
             context,
             diagnostics,
-            Some("____"),
-            PendingMeta::default(),
+            &fence,
+            "quote",
+            TokenKind::QuoteDelimiter,
         );
-        let end;
-        if lines.has(*i, context) && lines[*i].1.trim() == "____" {
-            let (loff, lline_buffer) = lines.line(*i);
-            let lline = lline_buffer.as_ref();
-            end = loff + lline.len();
-            *i += 1;
-        } else {
-            end = blocks.last().map_or(off + line.len(), |b| b.span.end);
-            diagnostics.push(Diagnostic {
-                span: Span::new(start, start + 4),
-                severity: Severity::Error,
-                message: "unterminated quote block (missing closing `____`)".to_string(),
-            });
-        }
         return Some(Block::new(
             Span::new(start, end),
             BlockKind::Quote {
@@ -2214,37 +2220,20 @@ fn parse_block_content(
     // example above: the body is parsed *as blocks* via `collect_blocks`. The check
     // requires the *whole* trimmed line to be `****`, so it precedes (and is
     // distinct from) the `**` unordered-list marker runs — a `**** item` line keeps
-    // its content and stays a 4-level list item. A same-length `****` inside closes
-    // the outer block (delimiter-length nesting is not implemented).
-    if trimmed.trim() == "****" {
-        let start = off;
-        *i += 1;
-        let blocks = collect_blocks(
+    // its content and stays a 4-level list item. Only the identical fence closes
+    // the block.
+    if let Some(fence) = fence("****") {
+        let (blocks, end) = read_container(
             lines,
             i,
             context,
             diagnostics,
-            Some("****"),
-            PendingMeta::default(),
+            &fence,
+            "sidebar",
+            TokenKind::SidebarDelimiter,
         );
-        let end;
-        if lines.has(*i, context) && lines[*i].1.trim() == "****" {
-            let (loff, lline_buffer) = lines.line(*i);
-            let lline = lline_buffer.as_ref();
-            end = loff + lline.len();
-            *i += 1;
-        } else {
-            // Unterminated: span ends at the last child (or the opening fence when
-            // empty); the missing close is a diagnostic, not a parse failure.
-            end = blocks.last().map_or(off + line.len(), |b| b.span.end);
-            diagnostics.push(Diagnostic {
-                span: Span::new(start, start + 4),
-                severity: Severity::Error,
-                message: "unterminated sidebar block (missing closing `****`)".to_string(),
-            });
-        }
         return Some(Block::new(
-            Span::new(start, end),
+            Span::new(off, end),
             BlockKind::Sidebar { blocks },
         ));
     }
@@ -2257,9 +2246,9 @@ fn parse_block_content(
     // above as a listing fence, `---` falls through to a paragraph, and an inline
     // `--` (em dash) never reaches here — it lives inside paragraph text, scanned
     // after block detection. A same-length `--` inside closes the outer block.
-    if trimmed.trim() == "--" {
+    if let Some(fence) = fence("--") {
         if pending_style == Some("comment") {
-            crate::comments::consume_delimited_comment(lines, i, context, "--");
+            crate::comments::consume_delimited_comment(lines, i, context, &fence);
             return None;
         }
         let start = off;
@@ -2272,15 +2261,25 @@ fn parse_block_content(
         // on `attrs`, applied to the block after this returns.)
         if matches!(pending_style, Some("source" | "literal" | "verse" | "pass")) {
             *i += 1;
-            let (body_start, body_end, end) = capture_verbatim_body(
-                lines,
-                i,
-                Span::new(start, off + line.len()),
-                "--",
-                "open",
-                context,
-                diagnostics,
-            );
+            let opening = Span::new(start, off + line.len());
+            let (body_start, body_end, end, closing) =
+                capture_verbatim_body(lines, i, opening, &fence, "open", context, diagnostics);
+            let text = match pending_style {
+                Some("literal") => Some(TokenKind::LiteralText),
+                Some("source") => Some(TokenKind::ListingText),
+                Some("pass") => Some(TokenKind::PassthroughText),
+                _ => None,
+            };
+            match text {
+                Some(text) => lines.record_verbatim(
+                    opening,
+                    closing,
+                    (body_start, body_end),
+                    TokenKind::OpenDelimiter,
+                    text,
+                ),
+                None => lines.record_fences(opening, closing, TokenKind::OpenDelimiter),
+            }
             let body = lines.content(body_start, body_end);
             context
                 .verbatim_bodies
@@ -2316,31 +2315,15 @@ fn parse_block_content(
             };
             return Some(Block::new(Span::new(start, end), kind));
         }
-        *i += 1;
-        let blocks = collect_blocks(
+        let (blocks, end) = read_container(
             lines,
             i,
             context,
             diagnostics,
-            Some("--"),
-            PendingMeta::default(),
+            &fence,
+            "open",
+            TokenKind::OpenDelimiter,
         );
-        let end;
-        if lines.has(*i, context) && lines[*i].1.trim() == "--" {
-            let (loff, lline_buffer) = lines.line(*i);
-            let lline = lline_buffer.as_ref();
-            end = loff + lline.len();
-            *i += 1;
-        } else {
-            // Unterminated: span ends at the last child (or the opening fence when
-            // empty); the missing close is a diagnostic, not a parse failure.
-            end = blocks.last().map_or(off + line.len(), |b| b.span.end);
-            diagnostics.push(Diagnostic {
-                span: Span::new(start, start + 2),
-                severity: Severity::Error,
-                message: "unterminated open block (missing closing `--`)".to_string(),
-            });
-        }
         return Some(Block::new(
             Span::new(start, end),
             BlockKind::Open { blocks },
@@ -2395,22 +2378,19 @@ fn parse_block_content(
         let (loff, lline_buffer) = lines.line(*i);
         let lline = lline_buffer.as_ref();
         let t = lline.trim_end();
-        // A paragraph also ends at any block delimiter line, so it never spans
-        // into a `----`/`....`/`====`/`____`/`****`/`--` block (notably the closing
-        // fence of an enclosing container, which would otherwise be folded in as
-        // text).
         // Ruby's `read_paragraph_lines`: a blank line, a list continuation, a
         // delimited block or a block attribute line ends the paragraph, and in
-        // a list item directly after its marker, any list item too.
+        // a list item directly after its marker, any list item too. A verbatim
+        // paragraph (`[literal]`, `[source]`, `[verse]`) ends only at a blank
+        // line or a list continuation, so it keeps fence-looking lines.
         let ends = (!verbatim && comment_fence(t).is_some())
             || t.trim().is_empty()
             || t == "+"
-            || matches!(t.trim(), "----" | "...." | "====" | "____" | "****" | "--")
+            || (!verbatim
+                && (crate::lists::delimited(t).is_some() || crate::lists::block_attribute_line(t)))
             || (plain
-                && (crate::lists::delimited(t).is_some()
-                    || crate::lists::block_attribute_line(t)
-                    || (matches!(ctx, BlockCtx::InListItem { adjacent: true, .. })
-                        && crate::lists::any(t))));
+                && matches!(ctx, BlockCtx::InListItem { adjacent: true, .. })
+                && crate::lists::any(t));
         if ends {
             break;
         }

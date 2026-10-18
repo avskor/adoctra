@@ -286,6 +286,19 @@ pub(crate) fn is_sibling(line: &str, sibling: &Sibling) -> bool {
 
 /// Ruby's `is_delimited_block?`: the closing line of a delimited block.
 pub(crate) fn delimited(line: &str) -> Option<String> {
+    delimiter(line).map(|d| d.terminator)
+}
+
+/// Ruby's `BlockMatchData`: the `DELIMITED_BLOCKS` key of a delimiter line
+/// and the line that closes the block (the opening line itself, except for
+/// fenced code).
+pub(crate) struct Delimiter {
+    pub tip: &'static str,
+    pub terminator: String,
+}
+
+/// Ruby's `is_delimited_block?` with match data.
+pub(crate) fn delimiter(line: &str) -> Option<Delimiter> {
     let chars: Vec<char> = line.chars().collect();
     let len = chars.len();
     const HEADS: [&str; 12] = [
@@ -295,7 +308,10 @@ pub(crate) fn delimited(line: &str) -> Option<String> {
         return None;
     }
     if len == 2 {
-        return (line == "--").then(|| line.to_owned());
+        return (line == "--").then(|| Delimiter {
+            tip: "--",
+            terminator: line.to_owned(),
+        });
     }
     let mut tip: String = chars.iter().take(4).collect();
     let mut tip_len = len.min(4);
@@ -320,12 +336,10 @@ pub(crate) fn delimited(line: &str) -> Option<String> {
         "--", "----", "....", "====", "****", "____", "++++", "|===", ",===", ":===", "!===",
         "////", "```",
     ];
-    if !KEYS.contains(&tip.as_str()) {
-        return None;
-    }
+    let tip = KEYS.into_iter().find(|key| *key == tip)?;
     let tail = tip.chars().last().unwrap();
     (line_len == tip_len || (tip_len == 4 && chars[1..].iter().all(|&c| c == tail)))
-        .then_some(terminator)
+        .then_some(Delimiter { tip, terminator })
 }
 
 /// Ruby's `BlockAttributeLineRx`: an attribute list or block anchor line.

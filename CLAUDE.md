@@ -1168,6 +1168,21 @@ Highlighting keeps only inline tokens of executed stages inside such text
 (Reader.custom_subs; verbatim paragraph forms have none by default) and
 projects converted marks as `callout` (Reader.callout_marks).
 
+**Delimiter lengths**: lists.rs `delimiter` is Ruby's `is_delimited_block?` with
+`BlockMatchData` (tip + terminator), checked on the unindented line (an indented
+fence is a literal paragraph). `----`/`....`/`====`/`****`/`____`/`++++` may be
+longer uniform runs; only the identical line closes a block (collect_blocks
+bounds a container by it, read_container/capture_verbatim_body compare exactly),
+so blocks of one kind nest by fence length. DELIMITED_BLOCKS masquerades:
+`[literal]` on `----` is a Literal, `[listing]`/`[source]` on `....` a Listing.
+Styled non-verbatim paragraphs end at delimiters and block attribute lines like
+plain ones (StartOfBlockProc); verbatim paragraphs (`[literal]`/`[source]`/
+`[verse]`) only at a blank line or `+`. The parser records every fence and verbatim
+body line in Reader.block_tokens; the tokenizer projects them instead of its own
+fence toggles (masquerade bodies are text tokens of their kind, AsciiDoc cells
+and includes too). Markdown fenced code (```` ``` ````) and `---` thematic
+breaks remain work.
+
 Not yet implemented (common asks — treat as roadmap, do not assume present):
 broader language coverage. The full block-attribute list is now *parsed* (style, named
 attributes, `%options`, id/role folding), but most of it has nothing to render
@@ -1190,9 +1205,7 @@ blocks** (`Example N.` via the `example-caption` attribute, on `Block.caption`) 
 images (`Figure N.`) and tables (`Table N.`). The unset forms
 `:!example-caption:` / `:example-caption!:` disable example captions and their
 counter increments; a custom per-block `caption=` or document `caption` overrides
-the prefix without incrementing the counter. Also: delimiters longer than four chars (the same
-single-length limitation applies to `====`/`____`: a nested same-length `====` /
-`____` closes the outer block); ids of individual list items,
+the prefix without incrementing the counter. Also: ids of individual list items,
 incremental/block reparse, and a pull/event API over the AST.
 
 When asked to "add a feature," check this list first and say plainly whether it

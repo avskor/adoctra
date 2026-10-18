@@ -140,8 +140,8 @@ pub(crate) fn tokens_reader<'a>(
         .map(|span| processed.transformed_span(*span))
         .collect();
     let mut tables = Tables {
-        stems: reader
-            .stem_tokens
+        delimited: reader
+            .block_tokens
             .iter()
             .map(|t| Token {
                 span: processed.transformed_span(t.span),
@@ -164,7 +164,7 @@ pub(crate) fn tokens_reader<'a>(
             .map(|span| processed.transformed_span(*span))
             .collect(),
     };
-    tables.stems.sort_by_key(|t| t.span.start);
+    tables.delimited.sort_by_key(|t| t.span.start);
     let custom: Vec<_> = reader
         .custom_subs
         .iter()
@@ -372,7 +372,7 @@ fn inline_stage(kind: TokenKind) -> Option<crate::pass_subs::Stage> {
 /// Table blocks and their cell separators, and list markers (description
 /// list delimiters too), from the parser.
 struct Tables {
-    stems: Vec<Token>,
+    delimited: Vec<Token>,
     blocks: Vec<Span>,
     separators: Vec<Span>,
     list_markers: Vec<Span>,
@@ -399,9 +399,6 @@ fn tokens_processed(
     let header = collect_header(&mut crate::reader::Reader::plain(source), &mut context);
     context.start_body();
     let mut out = Vec::new();
-    let mut in_listing = false;
-    let mut in_literal = false;
-    let mut in_passthrough = false;
     // Whether the *previous* line continued a running paragraph (or list item).
     // Captured per line as `at_para_start` so an admonition label (`NOTE: `) is
     // only recognised at a paragraph start, exactly like the parser — a `NOTE:`
@@ -471,26 +468,27 @@ fn tokens_processed(
             });
             continue;
         }
-        // Formula bodies and delimiters come from the parser, including
-        // formulas in list continuations and AsciiDoc table cells. Never
-        // reinterpret raw math as formatting, comments or attribute entries.
-        let stem_start = tables.stems.partition_point(|t| t.span.end <= off);
-        let stem_end = tables
-            .stems
+        // Delimited block fences and verbatim/raw bodies come from the parser,
+        // including blocks in list continuations and AsciiDoc table cells. Only
+        // it knows which fence closes a block; never reinterpret verbatim text
+        // or raw math as formatting, comments or attribute entries.
+        let delimited_start = tables.delimited.partition_point(|t| t.span.end <= off);
+        let delimited_end = tables
+            .delimited
             .partition_point(|t| t.span.start < line_span.end);
-        let stems = &tables.stems[stem_start..stem_end];
-        if !stems.is_empty() {
+        let delimited = &tables.delimited[delimited_start..delimited_end];
+        if !delimited.is_empty() {
             out.extend(
                 tables
                     .separators
                     .iter()
-                    .filter(|s| s.start >= off && s.end <= stems[0].span.start)
+                    .filter(|s| s.start >= off && s.end <= delimited[0].span.start)
                     .map(|span| Token {
                         span: *span,
                         kind: TokenKind::CellSeparator,
                     }),
             );
-            out.extend_from_slice(stems);
+            out.extend_from_slice(delimited);
             mid_paragraph = false;
             continue;
         }
@@ -543,102 +541,6 @@ fn tokens_processed(
         // back to `true`.
         mid_paragraph = false;
 
-        // `++++` passthrough is a verbatim region, like `----`/`....`. Checked
-        // first so that once it is open, *every* line — including a `----`/`....`
-        // delimiter — is passthrough text until the matching `++++` (the toggle
-        // only opens when no other verbatim region is active, mirroring how the
-        // `----`/`....` toggles guard against each other).
-        if !in_listing && !in_literal && line.trim() == "++++" {
-            out.push(Token {
-                span: line_span,
-                kind: TokenKind::PassthroughDelimiter,
-            });
-            in_passthrough = !in_passthrough;
-            continue;
-        }
-        if in_passthrough {
-            out.push(Token {
-                span: line_span,
-                kind: TokenKind::PassthroughText,
-            });
-            continue;
-        }
-        // `----` listing and `....` literal are verbatim regions. Each opens and
-        // closes only its own kind, and inside one the other delimiter is just
-        // verbatim text — so a `....` inside a `----` block (and vice versa) is
-        // text, matching the parser.
-        if !in_literal && line.trim() == "----" {
-            out.push(Token {
-                span: line_span,
-                kind: TokenKind::ListingDelimiter,
-            });
-            in_listing = !in_listing;
-            continue;
-        }
-        if in_listing {
-            out.push(Token {
-                span: line_span,
-                kind: TokenKind::ListingText,
-            });
-            continue;
-        }
-        if line.trim() == "...." {
-            out.push(Token {
-                span: line_span,
-                kind: TokenKind::LiteralDelimiter,
-            });
-            in_literal = !in_literal;
-            continue;
-        }
-        if in_literal {
-            out.push(Token {
-                span: line_span,
-                kind: TokenKind::LiteralText,
-            });
-            continue;
-        }
-        // `====` example delimiter. Unlike `----`/`....`, the body is *not*
-        // verbatim — we only mark the fence and let the lines inside tokenize
-        // normally (so `*strong*` in an example stays highlighted).
-        if line.trim() == "====" {
-            out.push(Token {
-                span: line_span,
-                kind: TokenKind::ExampleDelimiter,
-            });
-            continue;
-        }
-        // `____` quote / verse delimiter. Like `====`, the body is *not* verbatim:
-        // a quote's children and a verse's text both carry inline markup, so we
-        // mark only the fence and let the lines inside tokenize normally.
-        if line.trim() == "____" {
-            out.push(Token {
-                span: line_span,
-                kind: TokenKind::QuoteDelimiter,
-            });
-            continue;
-        }
-        // `****` sidebar delimiter. Like `====`, the body is a parsed container —
-        // not verbatim — so we mark only the fence. The whole-line `****` is checked
-        // before the inline scan, so it never collides with a `**` strong run.
-        if line.trim() == "****" {
-            out.push(Token {
-                span: line_span,
-                kind: TokenKind::SidebarDelimiter,
-            });
-            continue;
-        }
-        // `--` open-block delimiter. Like the other container fences the body is a
-        // parsed container (not verbatim), so we mark only the fence and let the
-        // lines inside tokenize normally. The exact whole-line `--` is checked here,
-        // before the inline scan, so it never collides with an inline `--` (em dash)
-        // inside paragraph text.
-        if line.trim() == "--" {
-            out.push(Token {
-                span: line_span,
-                kind: TokenKind::OpenDelimiter,
-            });
-            continue;
-        }
         if line.trim().is_empty() {
             continue;
         }

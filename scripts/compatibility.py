@@ -134,6 +134,10 @@ def normalize(node, verbatim=False, block_kind=None):
         # adoctra's media <figure> is Ruby's imageblock/videoblock/audioblock
         # <div>, whose player sits in a content wrapper that drops below.
         node = Element("div", node.attrs, node.children)
+    if node.tag == "aside" and "sidebarblock" in node.attrs.get("class", "").split():
+        # adoctra's sidebar <aside> is Ruby's sidebarblock <div>, whose
+        # children sit in a content wrapper that drops below.
+        node = Element("div", node.attrs, node.children)
     if node.tag == "figcaption" and node.attrs.get("class") == "title":
         # A media <figcaption> is Ruby's title <div> (trailing for images,
         # leading for video and audio).

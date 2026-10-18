@@ -1692,6 +1692,29 @@ mod tests {
     }
 
     #[test]
+    fn longer_fences_export_nested_spans_and_fence_tokens() {
+        let source = "======\n====\nx\n====\n======";
+        let json = parse_json(source);
+        assert!(
+            json.contains(r#""span":{"source_id":0,"start":0,"end":25},"name":"example""#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""span":{"source_id":0,"start":7,"end":18},"name":"example""#),
+            "{json}"
+        );
+        let tokens = tokens_json(source);
+        for (start, end) in [(0, 6), (7, 11), (14, 18), (19, 25)] {
+            assert!(
+                tokens.contains(&format!(
+                    r#"{{"span":{{"source_id":0,"start":{start},"end":{end}}},"kind":"example-delimiter"}}"#
+                )),
+                "{tokens}"
+            );
+        }
+    }
+
+    #[test]
     fn block_title_serializes_as_inlines_with_spans() {
         // The editor gets the title as parsed inlines, each carrying its span.
         let json = parse_json(".A *bold* caption\nBody.");
