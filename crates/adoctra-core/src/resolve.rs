@@ -272,7 +272,24 @@ pub(crate) fn register(
         registry: Registry::new(),
         diagnostics,
     };
-    visit::walk_blocks_mut(&mut ids, &mut doc.blocks);
+    // A manual page's NAME section registers in the header, after the
+    // document title; Ruby converts its title there, whatever its id.
+    let title = usize::from(doc.has_title).min(doc.blocks.len());
+    let (head, body) = doc.blocks.split_at_mut(title);
+    visit::walk_blocks_mut(&mut ids, head);
+    if let Some(heading) = doc
+        .manpage
+        .as_mut()
+        .and_then(|manpage| manpage.name_section.as_mut())
+        .map(|section| &mut section.heading)
+    {
+        let attributes = std::sync::Arc::clone(&heading.attribute_context);
+        if let (Some(_), BlockKind::Heading { inlines, .. }) = (&heading.id, &mut heading.kind) {
+            ids.resolve_reading(inlines, &attributes);
+        }
+        ids.visit_block(heading);
+    }
+    visit::walk_blocks_mut(&mut ids, body);
     ids.flush(usize::MAX);
     (ids.registry, ids.early, ids.fixed)
 }
@@ -902,6 +919,20 @@ fn register_id(
         Entry::Vacant(e) => {
             e.insert(target);
         }
+    }
+}
+
+/// The automatic id of a manual page's NAME section, read when only the
+/// document's id can be registered.
+pub(crate) fn section_id(heading: &Block, doc_id: Option<&str>) -> String {
+    let BlockKind::Heading { inlines, .. } = &heading.kind else {
+        unreachable!("a section title")
+    };
+    let id = generate_id(&inline_text(inlines));
+    if doc_id == Some(id.as_str()) {
+        format!("{id}_2")
+    } else {
+        id
     }
 }
 

@@ -49,11 +49,17 @@ impl Backend for HtmlBackend {
             && attributes.get("toc").is_some()
             && !matches!(attributes.get("toc-placement"), Some("macro" | "preamble"));
         let title = usize::from(doc.has_title);
+        if doc.manpage.is_some() && !doc.has_title {
+            render_manpage_header(doc, &mut out);
+        }
         for (i, block) in doc.blocks.iter().enumerate() {
             if i == title && auto_toc {
                 render_toc(&cx, attributes, "toc", None, None, &mut out);
             }
             match &block.kind {
+                BlockKind::Heading { .. } if i == 0 && doc.manpage.is_some() && doc.has_title => {
+                    render_manpage_header(doc, &mut out);
+                }
                 BlockKind::Heading { level, inlines } if i == 0 && doc.has_title => {
                     render_heading(block, *level, inlines, false, &block.roles, &mut out);
                 }
@@ -96,6 +102,109 @@ impl Backend for HtmlBackend {
         out.push_str("</body>\n</html>\n");
         Ok(out.into_bytes())
     }
+}
+
+/// Ruby's manual page header (`convert_embedded`): the document title with
+/// ` Manual Page` (without a title, the first section's, like Ruby's
+/// `doctitle`), then the NAME section from the header attributes when it has
+/// a purpose (`generate_manname_section`), before an automatic TOC. adoctra
+/// renders that section like the others.
+fn render_manpage_header(doc: &Document, out: &mut String) {
+    let first_section = doc.blocks.iter().find_map(|block| match &block.kind {
+        BlockKind::Section { blocks, .. } => match blocks.first().map(|b| &b.kind) {
+            Some(BlockKind::Heading { inlines, .. }) => Some(inlines),
+            _ => None,
+        },
+        _ => None,
+    });
+    let title = doc.blocks.first().filter(|_| doc.has_title);
+    let (id, class) = title.map_or_else(Default::default, |block| {
+        (id_attr(&block.id), class_attr(&[], &block.roles))
+    });
+    out.push_str(&format!("<h1{id}{class}>"));
+    let inlines = match title.map(|block| &block.kind) {
+        Some(BlockKind::Heading { inlines, .. }) => Some(inlines),
+        _ => first_section,
+    };
+    if let Some(inlines) = inlines {
+        render_inlines(inlines, out);
+    }
+    out.push_str(" Manual Page</h1>\n");
+    let attributes = &doc.attributes;
+    let (Some(manpage), Some(_)) = (&doc.manpage, attributes.get("manpurpose")) else {
+        return;
+    };
+    let section = manpage
+        .name_section
+        .as_ref()
+        .filter(|_| manpage.section_title)
+        .map(|section| &section.heading.kind);
+    let mut name_title = match section {
+        Some(BlockKind::Heading { inlines, .. }) => {
+            let mut title = String::new();
+            render_inlines(inlines, &mut title);
+            title
+        }
+        _ => attribute_html(attributes, "manname-title").unwrap_or("Name".into()),
+    };
+    // Ruby upcases the label when the first section's converted title is
+    // uppercase; adoctra leaves markup and character references alone.
+    if let Some(inlines) = first_section {
+        let mut converted = String::new();
+        render_inlines(inlines, &mut converted);
+        if converted == converted.to_uppercase() {
+            name_title = upcase_text(&name_title);
+        }
+    }
+    let id = id_attr(&attributes.get("manname-id").map(str::to_owned));
+    out.push_str(&format!(
+        "<section class=\"sect1\">\n<h2{id}>{name_title}</h2>\n<p>{} - {}</p>\n</section>\n",
+        manpage.names.join(", "),
+        attribute_html(attributes, "manpurpose").unwrap_or_default(),
+    ));
+}
+
+/// An attribute value as HTML: its parts, or escaped text.
+fn attribute_html(attributes: &adoctra_core::Attributes, key: &str) -> Option<String> {
+    let value = attributes.get(key)?;
+    let mut out = String::new();
+    match attributes.raw_parts(key) {
+        Some(parts) => render_parts(parts, &mut out),
+        None => out.push_str(&escape_text(value)),
+    }
+    Some(out)
+}
+
+/// Uppercase the text of an HTML fragment outside tags and character
+/// references.
+fn upcase_text(html: &str) -> String {
+    let mut out = String::with_capacity(html.len());
+    let mut rest = html;
+    while let Some(ch) = rest.chars().next() {
+        let end = match ch {
+            '<' => rest.find('>').map(|end| end + 1),
+            '&' => rest
+                .find(';')
+                .filter(|&end| {
+                    rest[1..end]
+                        .chars()
+                        .all(|c| c.is_ascii_alphanumeric() || c == '#')
+                })
+                .map(|end| end + 1),
+            _ => None,
+        };
+        match end {
+            Some(end) => {
+                out.push_str(&rest[..end]);
+                rest = &rest[end..];
+            }
+            None => {
+                out.extend(ch.to_uppercase());
+                rest = &rest[ch.len_utf8()..];
+            }
+        }
+    }
+    out
 }
 
 /// What a block needs from its document while rendering.
@@ -1745,6 +1854,57 @@ mod tests {
     fn render(src: &str) -> String {
         let doc = adoctra_core::parse(src).document;
         String::from_utf8(HtmlBackend.convert(&doc).unwrap()).unwrap()
+    }
+
+    #[test]
+    fn manual_pages_render_the_name_section_after_the_title() {
+        let html = render(
+            "= git-foo(1)\n:doctype: manpage\n:toc:\n\n== NAME\n\n\
+             git-foo, git-bar - does <b>it</b> & {doctype}\n\n== SYNOPSIS\n\n*git foo*\n",
+        );
+        assert!(
+            html.contains(
+                "<body>\n<h1>git-foo(1) Manual Page</h1>\n<section class=\"sect1\">\n\
+                 <h2 id=\"_name\">NAME</h2>\n<p>git-foo, git-bar - does <b>it</b> & manpage</p>\n\
+                 </section>\n<nav id=\"toc\" class=\"toc\">"
+            ),
+            "{html}"
+        );
+        // The TOC lists the body's sections only.
+        assert_eq!(html.matches("href=\"#_name\"").count(), 0, "{html}");
+        assert!(
+            html.contains("<h2 id=\"_synopsis\">SYNOPSIS</h2>"),
+            "{html}"
+        );
+    }
+
+    #[test]
+    fn manual_page_name_titles_follow_the_first_section() {
+        // Uppercase when the first section's converted title is. Unlike
+        // Ruby, markup and character references keep their case.
+        let html = render(
+            "= x(1)\n:doctype: manpage\n\n[[t]]\n== Name of <<t>> &amp;\n\nx - y\n\n== DESC\n",
+        );
+        assert!(
+            html.contains("<h2 id=\"_name_of_t\">NAME OF <a href=\"#t\">[T]</a> &amp;</h2>"),
+            "{html}"
+        );
+        let html = render("= x(1)\n:doctype: manpage\n\n== Name\n\nx - y\n\n== Desc\n");
+        assert!(html.contains("<h2 id=\"_name\">Name</h2>"), "{html}");
+        // Header attributes name the page; the definition protected the value.
+        let html = render(
+            "= x(1)\n:doctype: manpage\n:manname: z\n:manpurpose: <b>p</b>\n:manname-title: Nom\n",
+        );
+        assert!(
+            html.contains("<section class=\"sect1\">\n<h2>Nom</h2>\n<p>z - &lt;b&gt;p&lt;/b&gt;</p>\n</section>"),
+            "{html}"
+        );
+        // Without a title, Ruby's doctitle is the first section's title.
+        let html = render(":doctype: manpage\n\n== NAME\n\nx - y\n\n== Synopsis\n");
+        assert!(html.contains("<body>\n<h1>Synopsis Manual Page</h1>\n<section class=\"sect1\">\n<h2 id=\"_name\">NAME</h2>"), "{html}");
+        // A nonconforming NAME section stays in the body.
+        let html = render("= x(1)\n:doctype: manpage\n\n== NAME\n\nx y\n");
+        assert!(html.contains("<h1>x(1) Manual Page</h1>\n<section class=\"sect1\">\n<h2 id=\"_name_2\">NAME</h2>\n<p>x y</p>"), "{html}");
     }
 
     #[test]

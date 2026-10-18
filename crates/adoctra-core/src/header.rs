@@ -30,6 +30,11 @@ pub(crate) struct Header {
     pub metadata_for_title: bool,
     /// The id of a trailing ` [[id]]` on the document title.
     pub title_anchor: Option<String>,
+    /// A manual page's names, read at the end of the header.
+    pub manpage: Option<crate::Manpage>,
+    /// Metadata read before a manual page's NAME section after the document
+    /// title took `pending`: it belongs to the first body block.
+    pub body_pending: Option<crate::parser::PendingMeta>,
 }
 
 pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext) -> Header {
@@ -52,6 +57,8 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
         metadata: None,
         metadata_for_title: false,
         title_anchor: None,
+        manpage: None,
+        body_pending: None,
         pending,
         effective_title: context
             .attributes
@@ -286,6 +293,34 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
         }
     } else if !has_declarations {
         Arc::make_mut(&mut context.attributes).set("authorcount", "0");
+    }
+    // Ruby parses a manual page's title and NAME section before saving the
+    // header attributes; a nested document is never a manual page.
+    if context.attributes.get("doctype") == Some("manpage") && !context.nested {
+        let mut i = result.body_start;
+        let doc_id = if result.metadata_for_title {
+            result.pending.id.clone().or(result.title_anchor.clone())
+        } else {
+            None
+        };
+        let mut pending = if result.metadata_for_title {
+            crate::parser::PendingMeta::default()
+        } else {
+            std::mem::take(&mut result.pending)
+        };
+        result.manpage = Some(crate::manpage::read(
+            lines,
+            &mut i,
+            context,
+            &mut pending,
+            doc_id.as_deref(),
+        ));
+        result.body_start = i;
+        if result.metadata_for_title {
+            result.body_pending = Some(pending);
+        } else {
+            result.pending = pending;
+        }
     }
     save_toc(Arc::make_mut(&mut context.attributes));
     save_icons(Arc::make_mut(&mut context.attributes));

@@ -51,11 +51,13 @@ pub(crate) enum Numbered {
 
 impl Section {
     /// Ruby's `initialize_section` for a title line at `raw_level` with block
-    /// `style`, nested in `parent` (`None` for the document).
+    /// `style`, nested in `parent` (`None` for the document). `synopsis`
+    /// marks a manual page's SYNOPSIS title, special without a style.
     pub fn read(
         style: Option<&str>,
         raw_level: u8,
         book: bool,
+        synopsis: bool,
         attributes: &Attributes,
         parent: Option<&Section>,
     ) -> Self {
@@ -77,9 +79,11 @@ impl Section {
                 .to_owned(),
                 false,
             ),
+            // A manual page's unstyled SYNOPSIS section.
+            None if synopsis => ("synopsis".to_owned(), true),
             None => ("section".to_owned(), false),
         };
-        if special {
+        if special && style.is_some() {
             level = level.max(1);
         }
         let inherited = parent.is_some_and(|parent| parent.special);
@@ -280,7 +284,7 @@ mod tests {
         let on = attributes(&[("sectnums", "")]);
         let all = attributes(&[("sectnums", "all"), ("partnums", "")]);
         let read = |style, level, book, attrs: &Attributes| {
-            let section = Section::read(style, level, book, attrs, None);
+            let section = Section::read(style, level, book, false, attrs, None);
             (section.sectname, section.numbered)
         };
         assert_eq!(read(None, 1, false, &on), ("section".into(), Numbered::Yes));
@@ -317,11 +321,11 @@ mod tests {
     #[test]
     fn special_sections_adjust_levels_and_pass_specialness_to_children() {
         let on = attributes(&[("sectnums", "")]);
-        let appendix = Section::read(Some("appendix"), 0, false, &Attributes::new(), None);
+        let appendix = Section::read(Some("appendix"), 0, false, false, &Attributes::new(), None);
         assert_eq!((appendix.level, appendix.raw_level), (1, 0));
         assert!(appendix.special && appendix.counts_appendix());
         assert!(!appendix.counts_chapter());
-        let abstract_ = Section::read(Some("abstract"), 3, true, &on, None);
+        let abstract_ = Section::read(Some("abstract"), 3, true, false, &on, None);
         assert_eq!(
             (abstract_.level, abstract_.sectname.as_str()),
             (1, "chapter")
@@ -329,20 +333,27 @@ mod tests {
         assert!(!abstract_.special && abstract_.counts_chapter());
         // A child of a special section is special; it is numbered only when
         // its parent is.
-        let child = Section::read(None, 2, false, &on, Some(&appendix));
+        let child = Section::read(None, 2, false, false, &on, Some(&appendix));
         assert!(child.special && child.is_numbered());
-        let preface = Section::read(Some("preface"), 1, true, &on, None);
-        let child = Section::read(None, 2, true, &on, Some(&preface));
+        let preface = Section::read(Some("preface"), 1, true, false, &on, None);
+        let child = Section::read(None, 2, true, false, &on, Some(&preface));
         assert!(child.special && !child.is_numbered());
         // Only appendices, prefaces and abstracts contain sections.
         assert!(preface.allows_nesting() && appendix.allows_nesting());
-        assert!(!Section::read(Some("glossary"), 1, false, &on, None).allows_nesting());
-        assert!(Section::read(Some("glossary"), 2, false, &on, None).allows_nesting());
+        assert!(!Section::read(Some("glossary"), 1, false, false, &on, None).allows_nesting());
+        assert!(Section::read(Some("glossary"), 2, false, false, &on, None).allows_nesting());
     }
 
     #[test]
     fn labels_while_reading_see_only_closed_sections() {
-        let mut section = Section::read(None, 2, false, &attributes(&[("sectnums", "")]), None);
+        let mut section = Section::read(
+            None,
+            2,
+            false,
+            false,
+            &attributes(&[("sectnums", "")]),
+            None,
+        );
         section.path = vec!["1".into(), "2".into()];
         section.closes = vec![50, 20];
         assert_eq!(section.at(30).sectnum(".", ""), ".2");
@@ -352,7 +363,14 @@ mod tests {
 
     #[test]
     fn captions_follow_levels_and_signifiers() {
-        let mut section = Section::read(None, 2, false, &attributes(&[("sectnums", "")]), None);
+        let mut section = Section::read(
+            None,
+            2,
+            false,
+            false,
+            &attributes(&[("sectnums", "")]),
+            None,
+        );
         section.path = vec!["1".into(), "2".into()];
         assert_eq!(
             section.caption(&Attributes::new()).as_deref(),
@@ -361,15 +379,17 @@ mod tests {
         let one = attributes(&[("sectnumlevels", "1")]);
         assert_eq!(section.caption(&one), None);
         assert_eq!(section.sectnum(".", ","), "1.2,");
-        let mut chapter = Section::read(None, 1, true, &attributes(&[("sectnums", "")]), None);
+        let mut chapter =
+            Section::read(None, 1, true, false, &attributes(&[("sectnums", "")]), None);
         chapter.path = vec!["3".into()];
         let signifier = attributes(&[("chapter-signifier", "Chapter")]);
         assert_eq!(chapter.caption(&signifier).as_deref(), Some("Chapter 3. "));
-        let mut part = Section::read(None, 0, true, &attributes(&[("partnums", "")]), None);
+        let mut part = Section::read(None, 0, true, false, &attributes(&[("partnums", "")]), None);
         part.path = vec!["II".into()];
         assert_eq!(part.caption(&Attributes::new()).as_deref(), Some("II: "));
         // An appendix caption is fixed at closing, beyond sectnumlevels.
-        let mut appendix = Section::read(Some("appendix"), 1, false, &Attributes::new(), None);
+        let mut appendix =
+            Section::read(Some("appendix"), 1, false, false, &Attributes::new(), None);
         appendix.caption = Some("Приложение A: ".into());
         let none = attributes(&[("sectnumlevels", "0")]);
         assert_eq!(appendix.caption(&none).as_deref(), Some("Приложение A: "));

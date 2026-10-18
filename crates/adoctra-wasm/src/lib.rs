@@ -112,6 +112,33 @@ fn serialize_parse_result(r: &ParseResult) -> String {
     s
 }
 
+/// A manual page's names and the NAME section its header read, with the
+/// range of its name and purpose lines (`null` when they do not conform).
+fn write_manpage(manpage: &adoctra_core::Manpage, s: &mut String) {
+    s.push_str(",\"manpage\":{\"names\":[");
+    for (i, name) in manpage.names.iter().enumerate() {
+        if i > 0 {
+            s.push(',');
+        }
+        write_str(name, s);
+    }
+    s.push_str("],\"name_section\":");
+    match &manpage.name_section {
+        Some(section) => {
+            s.push_str("{\"heading\":");
+            write_block(&section.heading, s);
+            s.push_str(",\"body\":");
+            match &section.body {
+                Some(body) => write_span(body, s),
+                None => s.push_str("null"),
+            }
+            s.push('}');
+        }
+        None => s.push_str("null"),
+    }
+    s.push('}');
+}
+
 fn write_document(doc: &adoctra_core::Document, s: &mut String) {
     s.push_str("{\"attributes\":{");
     for (i, (k, v)) in doc.attributes.iter().enumerate() {
@@ -136,6 +163,9 @@ fn write_document(doc: &adoctra_core::Document, s: &mut String) {
     if let Some(header) = &doc.header {
         s.push_str(",\"header\":");
         write_header(header, s);
+    }
+    if let Some(manpage) = &doc.manpage {
+        write_manpage(manpage, s);
     }
     s.push('}');
 }
@@ -2949,6 +2979,21 @@ mod header_tests {
         );
         let json = super::parse_json(":t: ((Attr))\n\n{t}");
         assert!(json.contains(r#"{"kind":"indexterm","parts":[{"kind":"text","value":"Attr"}],"terms":[],"see":null,"see_also":[]}"#), "{json}");
+    }
+
+    #[test]
+    fn manual_pages_export_the_name_section_with_spans_and_tokens() {
+        let source = "= x(1)\n:doctype: manpage\n\n== NAME\n\n*a* - {doctype}\n";
+        let json = super::parse_json_with_source(source, 3);
+        assert!(json.contains(r#","manpage":{"names":["*a*"],"name_section":{"heading":{"span":{"source_id":3,"start":26,"end":33},"name":"heading","level":1,"id":"_name","#), "{json}");
+        assert!(
+            json.contains(r#""body":{"source_id":3,"start":35,"end":50}}}"#),
+            "{json}"
+        );
+        assert!(json.contains(r#""manpurpose":"manpage""#), "{json}");
+        let tokens = super::tokens_json_with_source(source, 3);
+        assert!(tokens.contains(r#"{"span":{"source_id":3,"start":26,"end":33},"kind":"heading"},{"span":{"source_id":3,"start":41,"end":50},"kind":"attribute-ref"}"#), "{tokens}");
+        assert!(!tokens.contains("strong"), "{tokens}");
     }
 
     #[test]

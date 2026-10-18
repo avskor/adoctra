@@ -32,6 +32,7 @@ mod inline_pass;
 mod inline_quotes;
 pub mod json;
 mod lists;
+mod manpage;
 mod media;
 mod parser;
 mod pass_subs;
@@ -51,7 +52,10 @@ mod tokenizer;
 mod unicode_word;
 pub mod visit;
 
-pub use ast::{Author, Block, BlockKind, Document, DocumentHeader, Inline, Revision, Span};
+pub use ast::{
+    Author, Block, BlockKind, Document, DocumentHeader, Inline, Manpage, NameSection, Revision,
+    Span,
+};
 pub use attributes::{
     AttributeFormat, AttributeLink, AttributePart, Attributes, Footnote, FootnoteKind, IndexTerm,
     InlineCallout, InlineImage, Stem, StemStyle, UiMacro, Xref,

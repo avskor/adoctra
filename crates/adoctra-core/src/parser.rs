@@ -202,6 +202,7 @@ pub(crate) fn parse_reader<'a>(
         blocks: Vec::new(),
         has_title: header.effective_title.is_some(),
         footnotes: Vec::new(),
+        manpage: header.manpage.take(),
     };
     let mut diagnostics = Vec::new();
     if let Some(effective) = header.effective_title {
@@ -235,7 +236,7 @@ pub(crate) fn parse_reader<'a>(
         &mut context,
         &mut diagnostics,
         None,
-        header.pending,
+        header.body_pending.unwrap_or(header.pending),
     );
     context.close_sections(0, usize::MAX);
     let body = nest_sections(
@@ -251,8 +252,14 @@ pub(crate) fn parse_reader<'a>(
 
     let mut references = Vec::new();
     let registry = context.register_references(&mut doc, &lines.include_catalog, &mut references);
+    name_attributes(&mut doc);
     context.execute_body(&mut doc, registry, &lines.include_catalog, &mut references);
-    doc.footnotes = collect_footnotes(&mut doc.blocks);
+    let name_heading = doc
+        .manpage
+        .as_mut()
+        .and_then(|manpage| manpage.name_section.as_mut())
+        .map(|section| &mut section.heading);
+    doc.footnotes = collect_footnotes_after(name_heading, &mut doc.blocks);
 
     // All grammar operates on monotonically increasing reader coordinates.
     // Restore physical source ranges before resolution copies metadata spans.
@@ -312,6 +319,27 @@ pub(crate) fn parse_reader<'a>(
         },
         lines,
     )
+}
+
+/// A manual page's NAME section resolves its references with the registry
+/// (before the body, like Ruby converting it in the header): its id and,
+/// when the header took it from the section, its title become `manname-id`
+/// and `manname-title`.
+fn name_attributes(doc: &mut Document) {
+    let Some((section, title)) = doc.manpage.as_ref().and_then(|manpage| {
+        let section = manpage.name_section.as_ref()?;
+        section.body.map(|_| (section, manpage.section_title))
+    }) else {
+        return;
+    };
+    let heading = &section.heading;
+    if let Some(id) = &heading.id {
+        doc.attributes.set("manname-id", id.clone());
+    }
+    if let (true, BlockKind::Heading { inlines, .. }) = (title, &heading.kind) {
+        doc.attributes
+            .set_parts("manname-title", crate::resolve::label_parts(inlines));
+    }
 }
 
 /// Collect a run of blocks, draining `lines` from `*i` until `stop` matches a
@@ -1688,6 +1716,15 @@ fn read_table(
 /// A document's registered footnotes in registration order, from the
 /// converted fields; an AsciiDoc cell keeps its nested document's own.
 fn collect_footnotes(blocks: &mut [Block]) -> Vec<crate::ast::FootnoteDefinition> {
+    collect_footnotes_after(None, blocks)
+}
+
+/// Footnotes of `blocks`, after those of a block read before them (a manual
+/// page's NAME title).
+fn collect_footnotes_after(
+    first: Option<&mut Block>,
+    blocks: &mut [Block],
+) -> Vec<crate::ast::FootnoteDefinition> {
     use crate::visit::{InlineContext, VisitorMut};
     #[derive(Default)]
     struct Collect(BTreeMap<usize, crate::ast::FootnoteDefinition>);
@@ -1773,6 +1810,9 @@ fn collect_footnotes(blocks: &mut [Block]) -> Vec<crate::ast::FootnoteDefinition
         }
     }
     let mut collect = Collect::default();
+    if let Some(first) = first {
+        collect.visit_block(first);
+    }
     crate::visit::walk_blocks_mut(&mut collect, blocks);
     collect.0.into_values().collect()
 }
@@ -2196,7 +2236,7 @@ fn parse_block_content(
             level
         } else {
             context.close_sections(level, off);
-            context.read_section((off, end), pending_style, level)
+            context.read_section((off, end), pending_style, level, title)
         };
         let heading_attrs = inline_attributes(&context.attributes, pending_attrs);
         let inlines = context.reading_title(title, base, &heading_attrs, &lines.include_catalog);

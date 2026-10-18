@@ -449,8 +449,30 @@ headerless book opens a preamble unless its first block is an abstract and keeps
 it without sections; header `preface-title` is the book preamble's `Block.title`
 (raw source Text, empty span at the preamble start, never rendered in HTML;
 JSON/WASM export preamble `title`). A `[partintro]` paragraph is compound, a
-lone `[open]` intro paragraph stays simple (see **Simple content**). Manpage
-synopsis is not implemented.
+lone `[open]` intro paragraph stays simple (see **Simple content**).
+**Manual pages** (manpage.rs, Ruby's parse_manpage_header, at the end of
+collect_header, never in nested documents): `doctitle` gives `mantitle`
+(a-stage, lowercase) and `manvolnum` (ManpageTitleVolnumRx, else "non-conforming
+manpage title" and fallbacks). Unless `manname` and `manpurpose` are both set,
+the header consumes the NAME section: metadata before it goes to the first body
+block (Header.body_pending), a level-1 title (converted while reading), then
+the lines up to a blank line (line comments skipped, lstripped, joined by a
+space) split by ManpageNamePurposeRx; name and purpose get the a-stage only.
+Values are header attributes (`manname`, `mannames` as Ruby's Array#inspect,
+raw `manpurpose`, `manname-title`, `manname-id`). Errors ("name section
+expected", "… must be at level 1", "non-conforming name section body") rewind
+to the line after the blanks, so the body reads metadata again (roles double,
+like Ruby); a nonconforming body keeps the title registered (`_name_2` in the
+body). `Document.manpage` = Manpage { names, name_section: Option<NameSection
+{ heading, body: Option<Span> }>, section_title }; resolve::register visits the
+heading after the doctitle (labels resolved as while reading), parse_reader
+name_attributes refreshes `manname-id`/`manname-title`, footnotes include it,
+visit maps its spans. An unstyled `SYNOPSIS` title (ASCII case-insensitive) is
+the special `synopsis` section. HTML: `<h1>… Manual Page</h1>` (without a title
+the first section's title) and, with `manpurpose`, `<section class="sect1">`
+h2/p before the auto TOC (title upcased like Ruby when the first section's is,
+markup untouched); JSON/WASM `manpage`; tokens: heading, attribute-ref only in
+the name lines (Reader.custom_subs).
 **TOC**: built-in `toc-placement=auto`/`toc-title`; header.rs save_toc normalizes
 `toc`/`toc2` at header completion like Ruby's save_attributes (toc → "",
 toc-position left/right/top/bottom with toc-class toc2, or content with placement
@@ -1074,7 +1096,8 @@ admonition fixtures under `golden/admonitions/`, example-block fixtures under
 `golden/examples/`, block-title fixtures under `golden/titles/`, quote/verse
 fixtures under `golden/quotes/` and `golden/verses/`, open-block fixtures under
 `golden/opens/`, passthrough fixtures under `golden/passthrough/`, table
-fixtures under `golden/tables/` and break fixtures under `golden/breaks/`).
+fixtures under `golden/tables/`, break fixtures under `golden/breaks/` and
+manual page fixtures under `golden/manpage/`).
 
 Scaffold only: DOCX backend; the extension API exists but `parse`/`convert` do
 not invoke it yet.

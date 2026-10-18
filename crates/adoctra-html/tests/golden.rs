@@ -1272,3 +1272,52 @@ fn pass_link_macros_match_reference_and_preserve_ordered_protection() {
     assert!(ours.contains("<a href=\"#_alpha\">Alpha</a>"));
     assert!(ours.contains("<h2 id=\"_alpha\"><a href=\"page\">Alpha</a></h2>"));
 }
+
+/// Manual pages: the NAME section (in Ruby's header, in adoctra a section),
+/// the body's section titles and paragraphs, in order. The references are
+/// embedded without the document title, which adoctra always renders.
+#[test]
+fn html_manual_pages_match_asciidoctor() {
+    fn elements(html: &str) -> Vec<String> {
+        let mut found = Vec::new();
+        let mut rest = html;
+        while let Some(start) = rest.find('<') {
+            rest = &rest[start..];
+            let tag = ["h2", "h3", "p"].into_iter().find(|tag| {
+                rest[1..].starts_with(tag)
+                    && matches!(rest.as_bytes().get(1 + tag.len()), Some(b'>' | b' '))
+            });
+            let Some(tag) = tag else {
+                rest = &rest[1..];
+                continue;
+            };
+            let close = format!("</{tag}>");
+            let end = rest.find(&close).unwrap() + close.len();
+            found.push(rest[..end].split_whitespace().collect::<Vec<_>>().join(" "));
+            rest = &rest[end..];
+        }
+        found
+    }
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/manpage");
+    let mut checked = 0usize;
+    for entry in fs::read_dir(&dir).expect("golden/manpage dir is missing") {
+        let path = entry.unwrap().path();
+        if path.extension().and_then(|e| e.to_str()) != Some("adoc") {
+            continue;
+        }
+        let name = path.file_stem().unwrap().to_string_lossy().into_owned();
+        let adoc = fs::read_to_string(&path).unwrap();
+        let expected = fs::read_to_string(path.with_extension("expected.html")).unwrap();
+        let doc = adoctra_core::parse(&adoc).document;
+        let ours = String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap();
+        assert!(ours.contains(" Manual Page</h1>"), "{ours}");
+        assert!(!elements(&expected).is_empty());
+        assert_eq!(
+            elements(&ours),
+            elements(&expected),
+            "HTML manual page diverges from asciidoctor for `{name}`"
+        );
+        checked += 1;
+    }
+    assert!(checked > 0, "no golden fixtures found in {dir:?}");
+}

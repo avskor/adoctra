@@ -2916,3 +2916,35 @@ fn body_setext_section_spans_title_and_included_underline() {
         [(options.source_id, "Sec *Я*"), (SourceId(1), "-------")]
     );
 }
+
+#[test]
+fn manual_page_name_section_keeps_include_origins() {
+    let root =
+        "= x(1)\n:doctype: manpage\n:attribute-missing: warn\n\ninclude::name.adoc[]\n\n== DESC";
+    let name = "== NAME\r\n\r\n*a* - {missing}\r\n  more";
+    let (mut sources, resources, options) = setup(root, &[("/docs/name.adoc", name)]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    let section = result
+        .document
+        .manpage
+        .as_ref()
+        .and_then(|manpage| manpage.name_section.as_ref())
+        .unwrap();
+    assert_eq!(section.heading.span.source_id, SourceId(1));
+    assert_eq!(sources.slice(section.heading.span), Some("== NAME"));
+    let body = section.body.unwrap();
+    assert_eq!(body.source_id, SourceId(1));
+    assert_eq!(sources.slice(body), Some("*a* - {missing}\r\n  more"));
+    assert_eq!(
+        result.document.attributes.get("manpurpose"),
+        Some("{missing} more")
+    );
+    assert_eq!(result.diagnostics.len(), 1, "{:?}", result.diagnostics);
+    assert_eq!(sources.slice(result.diagnostics[0].span), Some("{missing}"));
+    let ts = tokens_resource(&mut sources, &options, &resources).unwrap();
+    assert!(ts
+        .iter()
+        .any(|t| t.kind == TokenKind::Heading && t.span == section.heading.span));
+    assert!(!ts.iter().any(|t| t.kind == TokenKind::Strong));
+    check_spans(&result, &sources);
+}

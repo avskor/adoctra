@@ -42,9 +42,34 @@ impl Backend for JsonBackend {
             s.push_str(",\"header\":");
             write_header(header, &mut s);
         }
+        if let Some(manpage) = &doc.manpage {
+            write_manpage(manpage, &mut s);
+        }
         s.push('}');
         Ok(s.into_bytes())
     }
+}
+
+/// A manual page's names and the NAME section its header read (`null` when
+/// the names come from attributes); the values stay in the attributes.
+fn write_manpage(manpage: &adoctra_core::Manpage, s: &mut String) {
+    s.push_str(",\"manpage\":{\"names\":[");
+    for (i, name) in manpage.names.iter().enumerate() {
+        if i > 0 {
+            s.push(',');
+        }
+        escape_into(name, s);
+    }
+    s.push_str("],\"name_section\":");
+    match &manpage.name_section {
+        Some(section) => {
+            s.push_str("{\"heading\":");
+            write_block(&section.heading, s);
+            s.push_str(&format!(",\"conforming\":{}}}", section.body.is_some()));
+        }
+        None => s.push_str("null"),
+    }
+    s.push('}');
 }
 
 // Header declarations share the core model; effective overrides remain attributes.
@@ -962,6 +987,21 @@ mod tests {
     fn render(src: &str) -> String {
         let doc = adoctra_core::parse(src).document;
         String::from_utf8(JsonBackend.convert(&doc).unwrap()).unwrap()
+    }
+
+    #[test]
+    fn manual_pages_export_names_and_the_name_section() {
+        let json = render("= x(1)\n:doctype: manpage\n\n== NAME\n\na, b - p\n");
+        assert!(json.ends_with(r#","manpage":{"names":["a","b"],"name_section":{"heading":{"name":"heading","level":1,"id":"_name","roles":[],"style":null,"attributes":{},"options":[],"title":null,"caption":null,"inlines":[{"name":"text","value":"NAME"}]},"conforming":true}}}"#), "{json}");
+        let json = render("= x(1)\n:doctype: manpage\n\n== NAME\n\na b\n");
+        assert!(json.contains(r#""manpage":{"names":["command"],"name_section":{"heading":{"name":"heading","level":1,"id":"_name","#), "{json}");
+        assert!(json.ends_with(r#""conforming":false}}}"#), "{json}");
+        let json = render("= x(1)\n:doctype: manpage\n:manname: a\n:manpurpose: p\n");
+        assert!(
+            json.ends_with(r#","manpage":{"names":["a"],"name_section":null}}"#),
+            "{json}"
+        );
+        assert!(!render("= x(1)\n\n== NAME\n\na - p\n").contains("manpage"));
     }
 
     #[test]

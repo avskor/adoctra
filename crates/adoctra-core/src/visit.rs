@@ -41,6 +41,16 @@ pub fn walk_document_mut(visitor: &mut (impl VisitorMut + ?Sized), document: &mu
             visitor.visit_span(&mut revision.span);
         }
     }
+    if let Some(section) = document
+        .manpage
+        .as_mut()
+        .and_then(|manpage| manpage.name_section.as_mut())
+    {
+        visitor.visit_block(&mut section.heading);
+        if let Some(body) = &mut section.body {
+            visitor.visit_span(body);
+        }
+    }
     walk_blocks_mut(visitor, &mut document.blocks);
     for footnote in &mut document.footnotes {
         visitor.visit_span(&mut footnote.span);

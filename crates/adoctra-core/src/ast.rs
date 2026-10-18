@@ -70,6 +70,38 @@ pub struct Document {
     /// The document's footnotes in registration order (Ruby's
     /// `Document#footnotes`), rendered after the body.
     pub footnotes: Vec<FootnoteDefinition>,
+    /// A manual page's names (doctype `manpage`), read by the header.
+    pub manpage: Option<Manpage>,
+}
+
+/// The names of a manual page, like Ruby's `parse_manpage_header`. The header
+/// attributes keep the values (`mantitle`, `manvolnum`, `manname`,
+/// `mannames`, `manpurpose`, `manname-title`, `manname-id`); this keeps the
+/// name list and the NAME section the header consumed.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Manpage {
+    /// Ruby's `mannames`, in lexical spelling (the attribute holds Ruby's
+    /// array inspection).
+    pub names: Vec<String>,
+    /// The NAME section, when its name and purpose come from the source.
+    pub name_section: Option<NameSection>,
+    /// Whether `manname-title` is that section's title (the header did not
+    /// set it). The attribute holds its flat label parts; the HTML backend
+    /// renders the heading's inlines, links included.
+    pub section_title: bool,
+}
+
+/// The NAME section read by a manual page's header: its title (a level-1
+/// heading with the section's id, registered for references) and the range
+/// of the name and purpose lines.
+#[derive(Debug, Clone, PartialEq)]
+pub struct NameSection {
+    pub heading: Block,
+    /// `None` when the lines do not conform to `name - purpose`: the body
+    /// then reads the section again, while its title stays registered under
+    /// its id (Ruby's registration before the check), so a duplicate
+    /// automatic id gets a suffix.
+    pub body: Option<Span>,
 }
 
 /// A registered footnote: its number, optional id, converted content and the
