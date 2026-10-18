@@ -14,6 +14,7 @@ use crate::comments::{comment_fence, is_line_comment, skip_comment};
 use crate::context::{consume_attribute_entry, ParseContext, ParseOptions};
 use crate::diagnostic::{Diagnostic, ParseResult, Severity};
 use crate::header::{collect_header, setext_level};
+use crate::indentation::Indentation;
 use crate::inline::scan_inlines_report;
 use crate::reader::Reader;
 use crate::tokenizer::TokenKind;
@@ -404,6 +405,11 @@ fn collect_blocks_in(
             block.roles = pending.roles;
             let mut title = pending.title;
             let mut macro_meta = context.block_macro.take();
+            // A fenced code block forces the `source` style.
+            let fenced = macro_meta
+                .as_ref()
+                .filter(|meta| meta.style.as_deref() == Some("source"))
+                .map(|meta| meta.named.iter().any(|(key, _)| key == "language"));
             if let Some(meta) = &mut macro_meta {
                 if let Some(value) = meta.reftext.take() {
                     reftext = Some(value);
@@ -467,6 +473,8 @@ fn collect_blocks_in(
                 BlockKind::Paragraph { .. } | BlockKind::Admonition { .. }
             );
             apply_style_fixup(&mut block, lines, &attributes, &pending.list, context);
+            source_defaults(&mut block, &pending.list, fenced, &context.attributes);
+            adjust_verbatim(&mut block, context);
             if let BlockKind::Stem { style, .. } = &mut block.kind {
                 if block.attrs.style.as_deref() == Some("stem") {
                     *style = crate::StemStyle::from_alias(
@@ -1006,6 +1014,16 @@ fn apply_style_fixup(
                     inlines: None,
                 };
             }
+            // `[listing]`/`[source]` on a paragraph: a listing block with the
+            // same verbatim body (Ruby's strict verbatim paragraphs).
+            "listing" | "source" => {
+                let text = lines.content(block.span.start, block.span.end).text;
+                block.kind = BlockKind::Listing {
+                    text,
+                    callouts: Vec::new(),
+                    inlines: None,
+                };
+            }
             // `[pass]` on a paragraph: the raw source slice, like `[literal]` but
             // emitted unescaped and unwrapped by the backend (the inlines are
             // discarded). The delimited `++++` and `--` masquerade forms are built
@@ -1066,7 +1084,14 @@ fn apply_style_fixup(
             // paragraph must keep its breaks). The already-scanned (folded) inlines
             // are discarded.
             "verse" => {
-                let inlines = lines.scan(block.span.start, block.span.end, attrs, false, context);
+                let indentation = Indentation::of_block(&block.attrs.named, &context.attributes);
+                let inlines = lines.scan_verse(
+                    block.span.start,
+                    block.span.end,
+                    attrs,
+                    indentation,
+                    context,
+                );
                 block.kind = BlockKind::Verse {
                     attribution: None,
                     inlines,
@@ -1173,6 +1198,94 @@ fn changes_paragraph_type(style: &str) -> bool {
                 | "source"
                 | "verse"
         )
+}
+
+/// Ruby's `build_block` for verbatim content: the pending block's `indent`
+/// and (else the document's) `tabsize`.
+fn verbatim_indentation(pending_attrs: Option<&BlockAttrs>, context: &ParseContext) -> Indentation {
+    let empty = BTreeMap::new();
+    let named = pending_attrs.map_or(&empty, |attrs| &attrs.named);
+    Indentation::of_block(named, &context.attributes)
+}
+
+/// Ruby's `:listing`/`:source` and `:fenced_code` branches of `next_block`.
+/// A listing without a style becomes a source block when its second
+/// positional or the document's `source-language` gives a language. A source
+/// block takes `source-language` without a language of its own (a fence's
+/// metadata `language` is replaced), `linenums` from the `linenums` option or
+/// `source-linenums-option`, and `indent` from `source-indent`. `fenced` tells
+/// whether a fence line gave the language.
+fn source_defaults(
+    block: &mut Block,
+    list: &crate::block_attributes::BlockList,
+    fenced: Option<bool>,
+    document: &Attributes,
+) {
+    if !matches!(block.kind, BlockKind::Listing { .. }) {
+        return;
+    }
+    let named = &mut block.attrs.named;
+    let default_language = document.get("source-language").map(str::to_owned);
+    match fenced {
+        Some(has_language) => {
+            if let Some(language) = default_language.filter(|_| !has_language) {
+                named.insert("language".to_owned(), language);
+            }
+        }
+        None => match block.attrs.style.as_deref() {
+            Some("source") => {
+                if let Some(language) = default_language.filter(|_| !named.contains_key("language"))
+                {
+                    named.insert("language".to_owned(), language);
+                }
+            }
+            None => {
+                let Some(language) = list.value(2).map(|v| v.text.clone()).or(default_language)
+                else {
+                    return;
+                };
+                block.attrs.style = Some("source".to_owned());
+                named.insert("language".to_owned(), language);
+                crate::block_attributes::rekey_linenums(list, named);
+            }
+            Some(_) => return,
+        },
+    }
+    if !named.contains_key("linenums")
+        && (block.attrs.options.iter().any(|o| o == "linenums")
+            || named.contains_key("linenums-option")
+            || document.get("source-linenums-option").is_some())
+    {
+        named.insert("linenums".to_owned(), String::new());
+    }
+    if !named.contains_key("indent") {
+        if let Some(indent) = document.get("source-indent") {
+            named.insert("indent".to_owned(), indent.to_owned());
+        }
+    }
+}
+
+/// Ruby's `build_block` adjusts the lines of a listing or literal block
+/// (`indent`, `tabsize`); an indented literal paragraph keeps its own
+/// adjustment. A `subs` attribute converts the adjusted body.
+fn adjust_verbatim(block: &mut Block, context: &mut ParseContext) {
+    let literal = matches!(block.kind, BlockKind::Literal { .. });
+    let (BlockKind::Listing { text, .. } | BlockKind::Literal { text, .. }) = &mut block.kind
+    else {
+        return;
+    };
+    let span = block.span;
+    let entry = context.verbatim_bodies.entry(span.start).or_insert((
+        span.start,
+        span.end,
+        Indentation::default(),
+    ));
+    if literal && block.attrs.style.is_none() && entry.0 == span.start {
+        return;
+    }
+    let indentation = Indentation::of_block(&block.attrs.named, &context.attributes);
+    entry.2 = indentation;
+    *text = indentation.apply_text(text);
 }
 
 /// Ruby's `Block#content` for verbatim and raw blocks: blank lines at either
@@ -1680,19 +1793,18 @@ fn commit_subs(
         block.span,
         matches!(block.kind, BlockKind::Passthrough { .. }),
     );
-    let source =
-        |lines: &Reader<'_>, context: &ParseContext| match context.verbatim_bodies.get(&span.start)
-        {
-            Some(&(start, end, indent)) if !simple => {
-                (lines.content_indented(start, end, indent), None)
-            }
-            _ => {
-                let content = lines.content(span.start, span.end);
-                // A passthrough paragraph skips line comments, like other text.
-                let filtered = pass.then(|| crate::comments::filtered_text(&content.text, 0));
-                (content, filtered)
-            }
-        };
+    let source = |lines: &Reader<'_>, context: &ParseContext| match context
+        .verbatim_bodies
+        .get(&span.start)
+    {
+        Some(&(start, end, indentation)) => (indentation.apply(&lines.content(start, end)), None),
+        _ => {
+            let content = lines.content(span.start, span.end);
+            // A passthrough paragraph skips line comments, like other text.
+            let filtered = pass.then(|| crate::comments::filtered_text(&content.text, 0));
+            (content, filtered)
+        }
+    };
     use crate::pass_subs::Stage;
     let mut callout_ids = Vec::new();
     let mut marks = Vec::new();
@@ -1808,15 +1920,21 @@ fn apply_callouts(block: &mut Block, lines: &Reader<'_>, context: &mut ParseCont
             out.push('\n');
         }
         let marks = crate::callouts::scan_line(line, line_comment.as_deref());
-        // The source line with this text at its end.
-        let origin = source[source_at..]
-            .iter()
-            .position(|(_, s)| s.ends_with(line))
-            .map(|k| {
-                source_at += k + 1;
-                let (off, s) = &source[source_at - 1];
-                off + s.len() - line.len()
-            });
+        // The source line ending with this line's marks (the adjusted
+        // indentation and expanded tabs precede them): the end of the line.
+        let tail = &line[marks.first().map_or(line.len(), |mark| mark.start)..];
+        let origin = (!marks.is_empty())
+            .then(|| {
+                source[source_at..]
+                    .iter()
+                    .position(|(_, s)| s.ends_with(tail))
+                    .map(|k| {
+                        source_at += k + 1;
+                        let (off, s) = &source[source_at - 1];
+                        off + s.len()
+                    })
+            })
+            .flatten();
         let mut copied = 0;
         for mark in marks {
             if mark.escaped {
@@ -1838,8 +1956,8 @@ fn apply_callouts(block: &mut Block, lines: &Reader<'_>, context: &mut ParseCont
             let id = context
                 .callouts
                 .register(number.parse().unwrap_or(u64::MAX));
-            let span = origin.map_or(Span::new(span.start, span.start), |o| {
-                Span::new(o + mark.start, o + mark.end)
+            let span = origin.map_or(Span::new(span.start, span.start), |end| {
+                Span::new(end + mark.start - line.len(), end + mark.end - line.len())
             });
             callouts.push(crate::ast::Callout {
                 start,
@@ -2129,7 +2247,7 @@ fn parse_block_content(
             capture_verbatim_body(lines, i, opening, &fence, "listing", context, diagnostics);
         context
             .verbatim_bodies
-            .insert(off, (body_start, body_end, 0));
+            .insert(off, (body_start, body_end, Indentation::default()));
         lines.record_verbatim(
             opening,
             closing,
@@ -2189,7 +2307,7 @@ fn parse_block_content(
         let (body_start, body_end) = body.unwrap_or((off + line.len(), off + line.len()));
         context
             .verbatim_bodies
-            .insert(start, (body_start, body_end, 0));
+            .insert(start, (body_start, body_end, Indentation::default()));
         let (delimiter, body_kind, name) = if literal {
             (
                 TokenKind::LiteralDelimiter,
@@ -2254,7 +2372,7 @@ fn parse_block_content(
         );
         context
             .verbatim_bodies
-            .insert(start, (body_start, body_end, 0));
+            .insert(start, (body_start, body_end, Indentation::default()));
         let kind = if matches!(pending_style, Some("stem" | "asciimath" | "latexmath")) {
             // Generic STEM is selected from the original positional list on
             // block completion, where absent and quoted-empty fields differ.
@@ -2329,7 +2447,8 @@ fn parse_block_content(
                 capture_verbatim_body(lines, i, opening, &fence, "verse", context, diagnostics);
             lines.record_fences(opening, closing, TokenKind::QuoteDelimiter);
             // Verse keeps its line breaks — scan without folding newlines.
-            let inlines = lines.scan(body_start, body_end, &attrs, false, context);
+            let indentation = verbatim_indentation(pending_attrs, context);
+            let inlines = lines.scan_verse(body_start, body_end, &attrs, indentation, context);
             return Some(Block::new(
                 Span::new(start, end),
                 BlockKind::Verse {
@@ -2393,21 +2512,24 @@ fn parse_block_content(
             return None;
         }
         let start = off;
-        // Verbatim masquerades: a `[source]` / `[literal]` / `[verse]` style
+        // Verbatim masquerades: a `[source]` / `[listing]` / `[literal]` / `[verse]` style
         // switches the open block's content model from "parsed blocks" to
         // *verbatim*, mirroring how `____` above picks Verse over Quote. The body
         // must not be parsed as blocks, so the choice is made here at the fence —
         // not later in `apply_style_fixup`, which only ever sees an already-parsed
         // body. (The `language` for `[source,lang]` and the verse attribution ride
         // on `attrs`, applied to the block after this returns.)
-        if matches!(pending_style, Some("source" | "literal" | "verse" | "pass")) {
+        if matches!(
+            pending_style,
+            Some("source" | "listing" | "literal" | "verse" | "pass")
+        ) {
             *i += 1;
             let opening = Span::new(start, off + line.len());
             let (body_start, body_end, end, closing) =
                 capture_verbatim_body(lines, i, opening, &fence, "open", context, diagnostics);
             let text = match pending_style {
                 Some("literal") => Some(TokenKind::LiteralText),
-                Some("source") => Some(TokenKind::ListingText),
+                Some("source" | "listing") => Some(TokenKind::ListingText),
                 Some("pass") => Some(TokenKind::PassthroughText),
                 _ => None,
             };
@@ -2424,14 +2546,20 @@ fn parse_block_content(
             let body = lines.content(body_start, body_end);
             context
                 .verbatim_bodies
-                .insert(start, (body_start, body_end, 0));
+                .insert(start, (body_start, body_end, Indentation::default()));
             let kind = match pending_style {
                 // Verse keeps its line breaks but still applies inline subs; the
                 // positional attribution (`[verse, author, work]`) is folded in
                 // afterwards by `apply_style_fixup`, exactly like the `____` form.
                 Some("verse") => BlockKind::Verse {
                     attribution: None,
-                    inlines: lines.scan(body_start, body_end, &attrs, false, context),
+                    inlines: lines.scan_verse(
+                        body_start,
+                        body_end,
+                        &attrs,
+                        verbatim_indentation(pending_attrs, context),
+                        context,
+                    ),
                 },
                 // Literal / source keep the body raw (no inline subs). For
                 // `[source,lang]` the `source` style and `language` attribute ride
@@ -2441,7 +2569,7 @@ fn parse_block_content(
                     callouts: Vec::new(),
                     inlines: None,
                 },
-                Some("source") => BlockKind::Listing {
+                Some("source" | "listing") => BlockKind::Listing {
                     text: body.text,
                     callouts: Vec::new(),
                     inlines: None,
@@ -2503,7 +2631,10 @@ fn parse_block_content(
     }
 
     // Verbatim paragraph styles retain comment-looking lines.
-    let verbatim = matches!(pending_style, Some("literal" | "source" | "verse"));
+    let verbatim = matches!(
+        pending_style,
+        Some("literal" | "listing" | "source" | "verse")
+    );
 
     // Paragraph: accumulate contiguous lines until this context's terminator.
     // Only an unstyled paragraph uses Ruby's `read_paragraph_lines`.
@@ -2522,7 +2653,7 @@ fn parse_block_content(
         // Ruby's `read_paragraph_lines`: a blank line, a list continuation, a
         // delimited block or a block attribute line ends the paragraph, and in
         // a list item directly after its marker, any list item too. A verbatim
-        // paragraph (`[literal]`, `[source]`, `[verse]`) ends only at a blank
+        // paragraph (`[literal]`, `[listing]`, `[source]`, `[verse]`) ends only at a blank
         // line or a list continuation, so it keeps fence-looking lines.
         let ends = (!verbatim && comment_fence(t).is_some())
             || t.trim().is_empty()
@@ -2554,25 +2685,14 @@ fn parse_block_content(
         }
     );
     if line.starts_with([' ', '\t']) && pending_style.is_none() && !text_only && !dlist_adjacent {
-        let text = lines.content(start, end).text;
-        let indent = text
+        let text = Indentation::strip()
+            .apply_text(&lines.content(start, end).text)
             .lines()
-            .filter(|l| !l.is_empty())
-            .map(|l| l.len() - l.trim_start().len())
-            .min()
-            .unwrap_or(0);
-        context.verbatim_bodies.insert(start, (start, end, indent));
-        let text = text
-            .lines()
-            .map(|l| {
-                if l.is_empty() {
-                    l
-                } else {
-                    &l[indent.min(l.len())..]
-                }
-            })
             .collect::<Vec<_>>()
             .join("\n");
+        context
+            .verbatim_bodies
+            .insert(start, (start, end, Indentation::strip()));
         return Some(Block::new(
             Span::new(start, end),
             BlockKind::Literal {
@@ -4095,10 +4215,9 @@ mod tests {
 
     #[test]
     fn attr_list_line_is_consumed_and_carried_on_block() {
-        // `[source,ruby]` is now a recognised attribute list (it was a documented
-        // limitation before): the line is consumed — not shown as text — and its
-        // style/language ride on the following block. Here that is a paragraph,
-        // since there is no `----` listing; id/roles stay empty.
+        // `[source,ruby]` is a recognised attribute list: the line is consumed —
+        // not shown as text — and its style/language ride on the following
+        // block, a verbatim paragraph turned into a listing; id/roles stay empty.
         let doc = parse("[source,ruby]\nx = 1").document;
         assert_eq!(doc.flat_blocks().len(), 1);
         let b = &doc.flat_blocks()[0];
@@ -4109,7 +4228,7 @@ mod tests {
             b.attrs.named.get("language").map(String::as_str),
             Some("ruby")
         );
-        assert!(matches!(b.kind, BlockKind::Paragraph { .. }));
+        assert!(matches!(&b.kind, BlockKind::Listing { text, .. } if text == "x = 1"));
         // The attribute line is excluded from the block span, like an anchor line.
         assert_eq!(
             b.span,

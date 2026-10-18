@@ -480,15 +480,26 @@ fn sync(pending: &mut PendingMeta) {
     let mut named = pending.list.named.clone();
     let mut first = 2;
     if pending.attrs.style.as_deref() == Some("source") {
-        // `[source, language, linenums]` rekeys the second positional, even
-        // over a named `language`. An empty language carries none.
-        if let Some(language) = pending.list.value(2).filter(|v| !v.text.is_empty()) {
+        // `[source, language, linenums]` rekeys the second and third
+        // positionals, even over named values; a quoted empty value counts.
+        if let Some(language) = pending.list.value(2) {
             named.insert("language".to_owned(), language.text.clone());
         }
-        first = 3;
+        rekey_linenums(&pending.list, &mut named);
+        first = 4;
     }
     pending.attrs.positional = positional(&pending.list, first);
     pending.attrs.named = named;
+}
+
+/// Ruby's `AttributeList.rekey` of a source block's third positional.
+pub(crate) fn rekey_linenums(
+    list: &BlockList,
+    named: &mut std::collections::BTreeMap<String, String>,
+) {
+    if let Some(linenums) = list.value(3) {
+        named.insert("linenums".to_owned(), linenums.text.clone());
+    }
 }
 
 /// The positional values of a list from key `first` on (Ruby's keys).
@@ -621,11 +632,18 @@ mod tests {
     fn source_language_rekeys_the_second_field() {
         let (p, _) = meta(&["[source,ruby,language=py]"]);
         assert_eq!(p.attrs.named["language"], "ruby");
+        // The named field takes key 2, so the third key is `linenums`.
         let (p, _) = meta(&["[source,language=py,ruby]"]);
         assert_eq!(p.attrs.named["language"], "py");
-        assert_eq!(p.attrs.positional, ["ruby"]);
+        assert_eq!(p.attrs.named["linenums"], "ruby");
+        assert!(p.attrs.positional.is_empty());
         let (p, _) = meta(&["[source, ruby]", "[source]"]);
         assert_eq!(p.attrs.named["language"], "ruby");
+        // A quoted empty language counts; later positionals stay positional.
+        let (p, _) = meta(&["[source,\"\",,x]"]);
+        assert_eq!(p.attrs.named["language"], "");
+        assert!(!p.attrs.named.contains_key("linenums"));
+        assert_eq!(p.attrs.positional, ["x"]);
     }
 
     #[test]

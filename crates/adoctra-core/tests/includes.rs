@@ -547,10 +547,16 @@ fn paragraphs(result: &ParseResult) -> Vec<String> {
 
 #[test]
 fn normalization_depends_on_resource_type_and_keeps_include_boundaries() {
+    // `tabsize` expands the tabs that normalization keeps (Ruby's build_block).
+    let tab = |n| " ".repeat(n);
+    let expanded = format!("{}Я{}X", tab(8), tab(7));
     for (name, expected) in [
-        ("part.adoc", "\tЯ\tX\n\nZ\u{a0}"),
-        ("part.txt", "\tЯ\tX\n\nZ\u{a0}"),
-        ("part.rs", "\tЯ\tX \t\0\n \t\nZ\u{a0} \t"),
+        ("part.adoc", format!("{expanded}\n\nZ\u{a0}")),
+        ("part.txt", format!("{expanded}\n\nZ\u{a0}")),
+        (
+            "part.rs",
+            format!("{expanded}{}\0\n{}\nZ\u{a0}{}", tab(7), tab(8), tab(6)),
+        ),
     ] {
         let child = "\u{feff}\tЯ\tX \t\0\r\n \t\r\nZ\u{a0} \t\r\n";
         let (mut sources, resources, options) = setup(
@@ -562,7 +568,7 @@ fn normalization_depends_on_resource_type_and_keeps_include_boundaries() {
         let BlockKind::Listing { text, .. } = &result.document.flat_blocks()[0].kind else {
             panic!("{result:?}")
         };
-        assert_eq!(text, expected, "{name}");
+        assert_eq!(text, &expected, "{name}");
         assert_eq!(sources.get(SourceId(1)).unwrap().text(), child);
         check_spans(&result, &sources);
     }

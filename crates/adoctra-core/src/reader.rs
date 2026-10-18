@@ -926,12 +926,6 @@ impl<'a> Reader<'a> {
     }
 
     pub fn content(&self, start: usize, end: usize) -> FilteredSource {
-        self.content_indented(start, end, 0)
-    }
-
-    /// [`Self::content`] without the first `indent` bytes of every line (an
-    /// indented literal paragraph, like Ruby's `adjust_indentation!`).
-    pub fn content_indented(&self, start: usize, end: usize, indent: usize) -> FilteredSource {
         let mut fragments = Vec::new();
         let first = self
             .loaded
@@ -941,7 +935,7 @@ impl<'a> Reader<'a> {
             if off >= end {
                 break;
             }
-            let left = start.saturating_sub(off).max(indent).min(line.len());
+            let left = start.saturating_sub(off).min(line.len());
             let right = end.saturating_sub(off).min(line.len()).max(left);
             if right > left {
                 fragments.push((off + left, &line[left..right]));
@@ -956,16 +950,18 @@ impl<'a> Reader<'a> {
         FilteredSource::from_fragments(fragments)
     }
 
-    pub fn scan(
+    /// Defer a verse body: verbatim lines (adjusted like Ruby's `build_block`)
+    /// that keep their line breaks.
+    pub fn scan_verse(
         &self,
         start: usize,
         end: usize,
         attrs: &Attributes,
-        fold: bool,
+        indentation: crate::indentation::Indentation,
         context: &mut ParseContext,
     ) -> Vec<Inline> {
-        let content = self.content(start, end);
-        context.body_subs.defer(content, None, attrs, fold)
+        let content = indentation.apply(&self.content(start, end));
+        context.body_subs.defer(content, None, attrs, false)
     }
 
     /// Catalog inline anchors from the same comment-filtered text that the

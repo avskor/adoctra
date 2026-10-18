@@ -1747,6 +1747,23 @@ mod tests {
     }
 
     #[test]
+    fn source_defaults_and_adjusted_verbatim_text_serialize() {
+        let json = render(
+            ":source-language: ruby\n:source-linenums-option:\n:source-indent: 1\n:tabsize: 2\n\n----\n\tx\n----\n\n[listing]\nplain\n\n[verse,indent=0]\n  v",
+        );
+        assert!(
+            json.contains(r#"{"name":"listing","id":null,"roles":[],"style":"source","attributes":{"indent":"1","language":"ruby","linenums":""},"options":[],"title":null,"caption":null,"text":" x"#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""style":"listing","attributes":{},"options":[],"title":null,"caption":null,"text":"plain""#),
+            "{json}"
+        );
+        assert!(json.contains(r#""name":"verse""#), "{json}");
+        assert!(json.contains(r#"{"name":"text","value":"v"}"#), "{json}");
+    }
+
+    #[test]
     fn breaks_and_fenced_code_serialize() {
         let json = render("[.r]\n'''\n\n<<<\n\n```js,1\nx\n```");
         assert!(

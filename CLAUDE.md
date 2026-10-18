@@ -772,8 +772,9 @@ indent: primary and AsciiDoc inputs rstrip ASCII whitespace/NUL, while raw inclu
 only chomp. Unicode spaces and internal tabs survive this stage. Only primary input
 condenses final empty lines; includes preserve block boundaries. Removed suffixes
 and retained line endings have separate physical fragments; the tokenizer's plain
-reader must not normalize processed raw content again. Verbatim tabsize substitution
-outside include indentation remains an explicit XFAIL. Multiline attributes now use
+reader must not normalize processed raw content again. Verbatim `tabsize`/`indent`
+outside include indentation follow build_block (see **Source defaults and
+verbatim indentation**). Multiline attributes now use
 one parser-owned collector for header/body: space-backslash and legacy space-plus,
 marker consistency, blank/EOF termination, locked/unset consumption, and cross-source
 continuations. Preprocessing sees the old context until collection finishes. Reader
@@ -1140,7 +1141,7 @@ child paragraph of a styled paragraph (`[NOTE]`, `NOTE:`, `[example]`, `[quote]`
 BlockSubs); delimited containers ignore `subs`. Listing/literal/pass blocks get
 `inlines: Option<Vec<Inline>>` (one Inline::Substituted, backends render it
 instead of `text`), sourced from ParseContext.verbatim_bodies (fence bodies,
-indented literal paragraphs without their indentation via content_indented)
+indented literal paragraphs without their indentation, adjusted by indentation.rs)
 or the block span (`[literal]`/`[pass]` paragraphs, the latter comment-filtered).
 Verbatim/raw results trim blank edge lines after substitution. With callouts,
 the raw source marks register in the catalog (callouts::catalog, Ruby's
@@ -1195,8 +1196,25 @@ lists.rs delimiter) is a `Listing` closed by exactly three backticks:
 MacroMeta.style forces `source` over the metadata style (its `source` rekeying
 does not apply, block_attributes::unkeyed_fields) and fenced_code_attributes
 gives `language`/`linenums` like Ruby (a leading comma keeps the whole text).
-`source-language`/`source-linenums-option`/`source-indent` defaults are not
-implemented yet.
+**Source defaults and verbatim indentation**: parser.rs source_defaults is Ruby's
+`:listing`/`:source` branch at block completion: a Listing without a style
+becomes `source` when its second positional or the reading attribute
+`source-language` gives a language (an empty value counts; `[#id]`/`[foo]`
+follow style); a `source` listing takes `source-language` without its own;
+`linenums` from positional 3 (block_attributes rekey_linenums), `%linenums`/
+`linenums-option` or `source-linenums-option`; `indent` from `source-indent`.
+Fenced code replaces even a metadata language with the default when its fence
+has none. `[listing]`/`[source]` paragraphs are verbatim Listing blocks (end
+only at a blank line or `+`), `[listing]` also masquerades on `--`.
+indentation.rs ports `adjust_indentation!` (tabs to character tab stops, then
+common-indent removal and new indent; Ruby `to_i`, values clamped at 4096) over
+a FilteredSource whose generated segments pin padding (zero width) and expanded
+tabs (the tab byte) to physical bytes. adjust_verbatim applies the block's
+`indent` and block/document `tabsize` to Listing/Literal `text` and stores it
+in ParseContext.verbatim_bodies for `subs` conversion and callout catalogs;
+verse bodies are deferred adjusted (Reader::scan_verse). Indented literal
+paragraphs keep Ruby's plain strip (no indent/tabsize). Callout spans align
+from the line end, so they survive the adjustment.
 Like Ruby's `Block#content`, parser.rs trim_verbatim_edges drops blank edge
 lines of a multi-line Listing/Literal/Passthrough `text` at block completion
 (before callouts), also without custom subs.

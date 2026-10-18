@@ -19,12 +19,34 @@ pub(crate) fn lines_with_offsets(source: &str) -> Vec<(usize, &str)> {
 }
 
 /// Retained text fragments with a piecewise map back to the original buffer. A span across a gap encloses the removed bytes; a span on either side
-/// maps to that side. No per-byte table, padding or synthetic source positions.
+/// maps to that side. No per-byte table: generated text (verbatim padding or
+/// expanded tabs) is one segment pinned to the source bytes it replaces.
 #[derive(Clone)]
 pub(crate) struct FilteredSource {
     pub text: String,
     pub removed: Vec<crate::Span>,
-    segments: Vec<(usize, usize)>, // transformed start, original start
+    segments: Vec<Segment>,
+}
+
+/// A run of the transformed text starting at `start` that maps to `original`.
+/// Generated text maps every position to `original`; a span ending in it ends
+/// after the `width` source bytes it replaces (zero for padding).
+#[derive(Clone, Copy)]
+struct Segment {
+    start: usize,
+    original: usize,
+    generated: Option<usize>,
+}
+
+/// A piece of a [`FilteredSource::remap`] result: a range of the source's
+/// text, or generated text standing for the source range `at..at + width`.
+pub(crate) enum Piece {
+    Copy(std::ops::Range<usize>),
+    Generated {
+        text: String,
+        at: usize,
+        width: usize,
+    },
 }
 
 impl FilteredSource {
@@ -36,7 +58,11 @@ impl FilteredSource {
         };
         for (offset, text) in fragments {
             if !text.is_empty() {
-                result.segments.push((result.text.len(), offset));
+                result.segments.push(Segment {
+                    start: result.text.len(),
+                    original: offset,
+                    generated: None,
+                });
                 result.text.push_str(text);
             }
         }
@@ -66,7 +92,11 @@ impl FilteredSource {
             if index > 0 && remove(line) {
                 result.removed.push(crate::Span::new(off, off + line.len()));
             } else {
-                result.segments.push((result.text.len(), off));
+                result.segments.push(Segment {
+                    start: result.text.len(),
+                    original: off,
+                    generated: None,
+                });
                 result.text.push_str(raw);
             }
             off += raw.len();
@@ -77,6 +107,68 @@ impl FilteredSource {
         result
     }
 
+    /// A new text assembled from `pieces` of this one, keeping the map back
+    /// to the original buffer (generated pieces pin to the bytes they stand for).
+    pub fn remap(&self, pieces: &[Piece]) -> Self {
+        let mut result = Self {
+            text: String::new(),
+            removed: self.removed.clone(),
+            segments: Vec::new(),
+        };
+        for piece in pieces {
+            match piece {
+                Piece::Copy(range) if range.is_empty() => {}
+                Piece::Copy(range) => {
+                    if self.segments.is_empty() {
+                        result.segments.push(Segment {
+                            start: result.text.len(),
+                            original: range.start,
+                            generated: None,
+                        });
+                    } else {
+                        let first = self
+                            .segments
+                            .partition_point(|s| s.start <= range.start)
+                            .saturating_sub(1);
+                        for segment in self.segments[first..]
+                            .iter()
+                            .take_while(|s| s.start < range.end)
+                        {
+                            let from = range.start.max(segment.start);
+                            result.segments.push(Segment {
+                                start: result.text.len() + from - range.start,
+                                original: match segment.generated {
+                                    Some(_) => segment.original,
+                                    None => segment.original + from - segment.start,
+                                },
+                                generated: segment.generated,
+                            });
+                        }
+                    }
+                    result.text.push_str(&self.text[range.clone()]);
+                }
+                Piece::Generated { text, .. } if text.is_empty() => {}
+                Piece::Generated { text, at, width } => {
+                    let original = self.original_span(crate::Span::new(*at, at + width));
+                    result.segments.push(Segment {
+                        start: result.text.len(),
+                        original: original.start,
+                        generated: Some(original.end - original.start),
+                    });
+                    result.text.push_str(text);
+                }
+            }
+        }
+        result
+    }
+
+    /// The transformed end of segment `index`.
+    fn segment_end(&self, index: usize) -> usize {
+        self.segments
+            .get(index + 1)
+            .map_or(self.text.len(), |s| s.start)
+    }
+
     /// Map retained source trivia into the logical buffer for highlighting.
     /// Callers supply spans produced from these same retained fragments.
     pub fn transformed_span(&self, span: crate::Span) -> crate::Span {
@@ -85,15 +177,22 @@ impl FilteredSource {
         }
         let start_idx = self
             .segments
-            .partition_point(|(_, original)| *original <= span.start)
+            .partition_point(|s| s.original <= span.start)
             .saturating_sub(1);
         let end_idx = self
             .segments
-            .partition_point(|(_, original)| *original < span.end)
+            .partition_point(|s| s.original < span.end)
             .saturating_sub(1);
-        let (s, original_s) = self.segments[start_idx];
-        let (e, original_e) = self.segments[end_idx];
-        crate::Span::new(s + span.start - original_s, e + span.end - original_e)
+        let (s, e) = (self.segments[start_idx], self.segments[end_idx]);
+        let start = match s.generated {
+            Some(_) => s.start,
+            None => s.start + span.start - s.original,
+        };
+        let end = match e.generated {
+            Some(_) => self.segment_end(end_idx),
+            None => e.start + span.end - e.original,
+        };
+        crate::Span::new(start, end.max(start))
     }
 
     pub fn original_span(&self, span: crate::Span) -> crate::Span {
@@ -102,17 +201,25 @@ impl FilteredSource {
         }
         let start_idx = self
             .segments
-            .partition_point(|(start, _)| *start <= span.start)
+            .partition_point(|s| s.start <= span.start)
             .saturating_sub(1);
-        let end_idx = if span.start == span.end {
-            start_idx
-        } else {
-            self.segments
-                .partition_point(|(start, _)| *start < span.end)
-                .saturating_sub(1)
+        let s = self.segments[start_idx];
+        let start = match s.generated {
+            Some(_) => s.original,
+            None => s.original + span.start - s.start,
         };
-        let (s, original_s) = self.segments[start_idx];
-        let (e, original_e) = self.segments[end_idx];
-        crate::Span::new(original_s + span.start - s, original_e + span.end - e)
+        if span.start == span.end {
+            return crate::Span::new(start, start);
+        }
+        let end_idx = self
+            .segments
+            .partition_point(|s| s.start < span.end)
+            .saturating_sub(1);
+        let e = self.segments[end_idx];
+        let end = match e.generated {
+            Some(width) => e.original + width,
+            None => e.original + span.end - e.start,
+        };
+        crate::Span::new(start, end.max(start))
     }
 }

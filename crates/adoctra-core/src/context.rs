@@ -120,9 +120,10 @@ pub(crate) struct ParseContext {
     /// Ruby's `Document#callouts`, shared with nested documents.
     pub callouts: crate::callouts::Catalog,
     /// The body of each verbatim/raw block read from a fence or an indented
-    /// paragraph, by the block's start: its reader range and the indentation
-    /// removed from every line. A `subs` attribute converts it on completion.
-    pub verbatim_bodies: BTreeMap<usize, (usize, usize, usize)>,
+    /// paragraph (or a verbatim paragraph form), by the block's start: its
+    /// reader range and how its lines are adjusted (Ruby's
+    /// `adjust_indentation!`). A `subs` attribute converts it on completion.
+    pub verbatim_bodies: BTreeMap<usize, (usize, usize, crate::indentation::Indentation)>,
 }
 
 fn root_of(

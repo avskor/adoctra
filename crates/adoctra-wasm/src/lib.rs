@@ -1708,6 +1708,47 @@ mod tests {
     }
 
     #[test]
+    fn verbatim_paragraphs_and_adjusted_subs_export_physical_spans() {
+        let source = ":n: v\n\n[source,subs=+attributes,indent=2]\n    {n}\n\n[listing]\n--\nx\n--";
+        let json = parse_json(source);
+        let reference = source.find("{n}").unwrap();
+        assert!(
+            json.contains(&format!(
+                r#""span":{{"source_id":0,"start":{},"end":{}}},"name":"listing","id":null,"roles":[],"style":"source""#,
+                reference - 4,
+                reference + 3
+            )),
+            "{json}"
+        );
+        // The converted text spans the reference; the new indent is zero-width.
+        assert!(
+            json.contains(r#""name":"substituted","value":"  v","#),
+            "{json}"
+        );
+        assert!(
+            json.contains(&format!(
+                r#""span":{{"source_id":0,"start":{reference},"end":{}}}"#,
+                reference + 3
+            )),
+            "{json}"
+        );
+        assert!(json.contains(r#""style":"listing","#), "{json}");
+        let tokens = tokens_json(source);
+        let open = source.find("--").unwrap();
+        for (start, end, kind) in [
+            (open, open + 2, "open-delimiter"),
+            (open + 3, open + 4, "listing-text"),
+        ] {
+            assert!(
+                tokens.contains(&format!(
+                    r#"{{"span":{{"source_id":0,"start":{start},"end":{end}}},"kind":"{kind}"}}"#
+                )),
+                "{tokens}"
+            );
+        }
+    }
+
+    #[test]
     fn breaks_and_fenced_code_export_spans_and_tokens() {
         let source = "'''\n\n<<<\n\n```sh\nls\n```";
         let json = parse_json(source);

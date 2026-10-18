@@ -3074,6 +3074,25 @@ mod tests {
     }
 
     #[test]
+    fn verbatim_paragraphs_and_source_defaults_render_like_ruby() {
+        let html = render(
+            ":source-language: ruby\n:tabsize: 4\n\n----\n\ta <b>\n----\n\n[listing]\n*plain*\n\n[verse,indent=1]\n   *v*",
+        );
+        assert!(
+            html.contains(r#"<pre class="highlight"><code class="language-ruby" data-lang="ruby">    a &lt;b&gt;</code></pre>"#),
+            "{html}"
+        );
+        assert!(
+            html.contains("<pre class=\"listing\">*plain*</pre>"),
+            "{html}"
+        );
+        assert!(
+            html.contains("<pre class=\"verse\"> <strong>v</strong></pre>"),
+            "{html}"
+        );
+    }
+
+    #[test]
     fn fenced_code_renders_as_a_source_listing() {
         let html = render("```ruby\nputs 1 <1>\n```\n<1> x\n\n```\n<b>\n```");
         assert!(

@@ -2210,8 +2210,7 @@
     {
       "id": "reader-normalization-tabsize-substitution",
       "category": "substitutions",
-      "expect": "xfail",
-      "reason": "Verbatim tabsize substitution outside include indent is not implemented; reader normalization preserves internal tabs.",
+      "expect": "pass",
       "source": ":tabsize: 8\n\n----\n\tЯ\tX\n----"
     },
     {
@@ -19260,6 +19259,107 @@
       "resources": {
         "code.rb": "puts 1\n```\n",
         "part.adoc": "<<<\n\n```\nx\n```\n"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "source-paragraph-forms",
+      "category": "blocks",
+      "source": "[source]\nputs *1*\n  puts 2\n\n[source,ruby]\nfirst\n// kept\n----\n:attr: x\n* item\nimage::a.png[]\n\n[listing]\nplain *x* text\n====\n<<<\n\n.Title\n[source,py]\nx = 1\n+\nafter\n",
+      "expect": "pass"
+    },
+    {
+      "id": "source-paragraph-in-list",
+      "category": "blocks",
+      "source": "* item\n+\n[source,ruby]\nputs 1\n  puts 2\n* next\n\n[listing]\n* not a list\n. nor this\n\nterm:: def\n+\n[listing]\nline\n",
+      "expect": "pass"
+    },
+    {
+      "id": "source-language-default",
+      "category": "blocks",
+      "source": ":source-language: ruby\n\n----\nunstyled\n----\n\n[source]\n----\nsource\n----\n\n[source,c]\n----\nown\n----\n\n```\nfenced\n```\n\n```js\nfenced js\n```\n\n[listing]\n----\nlisting\n----\n\n[source]\n....\ndots\n....\n\n[#ident.role]\n----\nshorthand\n----\n\n[foo]\n----\nunknown style\n----\n\n[source]\nparagraph\n\n====\n----\nnested\n----\n====\n",
+      "expect": "pass"
+    },
+    {
+      "id": "source-language-positional",
+      "category": "blocks",
+      "source": "[,java]\n----\npositional\n----\n\n[,java,linenums]\n----\nwith linenums\n----\n\n[source,\"\"]\n----\nempty quoted\n----\n\n[source,]\n----\nempty\n----\n\n[listing,c]\n----\nlisting keeps\n----\n\n[,]\n----\nnone\n----\n",
+      "expect": "pass"
+    },
+    {
+      "id": "source-language-empty-and-body",
+      "category": "blocks",
+      "source": ":source-language:\n\n----\nempty default\n----\n\n:source-language: python\n\n----\nbody value\n----\n\n:source-language!:\n\n----\nunset\n----\n\n[source]\n----\nno language\n----\n",
+      "expect": "pass"
+    },
+    {
+      "id": "source-language-fenced-metadata",
+      "category": "blocks",
+      "source": ":source-language: ruby\n\n[source,language=c]\n```\nfence replaces metadata\n```\n\n[language=c]\n```go\nfence language\n```\n\n[source,language=c]\n----\nmetadata language\n----\n",
+      "expect": "pass"
+    },
+    {
+      "id": "source-indent-default",
+      "category": "blocks",
+      "source": ":source-language: ruby\n:source-indent: 2\n\n----\n    unstyled\n      more\n----\n\n[source]\nparagraph\n  two\n\n```\n\tfenced\n```\n\n[source,indent=0]\n----\n    explicit\n----\n\n[listing]\n----\n    listing untouched\n----\n\n....\n    literal untouched\n....\n",
+      "expect": "pass"
+    },
+    {
+      "id": "verbatim-indent-forms",
+      "category": "blocks",
+      "source": "[indent=2]\n----\n    listing\n      two\n----\n\n[indent=0]\n....\n   literal\n     two\n....\n\n[literal,indent=1]\n   paragraph\n     two\n\n[literal,indent=3]\n----\nmasquerade\n  two\n----\n\n[listing,indent=abc]\n--\n  open listing\n   two\n--\n\n[source,ruby,indent=-1]\n----\n    kept\n----\n\n[verse,indent=1]\n____\n   *verse*\n     two\n____\n\n[verse,indent=0]\n  verse paragraph\n    two\n\n[verse,indent=4]\n--\nopen verse\n--\n\n[indent=2]\n  indented literal paragraph\n   keeps\n",
+      "expect": "pass"
+    },
+    {
+      "id": "verbatim-indent-blank-lines",
+      "category": "blocks",
+      "source": "[indent=2]\n----\n\n    a\n\n      b\n\n----\n\n[indent=1]\n....\nx\n\n  y\n....\n",
+      "expect": "pass"
+    },
+    {
+      "id": "verbatim-tabsize-document",
+      "category": "blocks",
+      "source": ":tabsize: 4\n\n----\n\tЯ\tX\n  \tab\na\tb🙂\tc\n----\n\n....\n\tliteral\n....\n\n[verse]\n\tx\ty\n\n[literal]\n\tparagraph\n\n  \tindented literal\n   paragraph\n\n[source,ruby,indent=0]\n----\n\t\tdeep\n\tshallow\n----\n\n[indent=-1]\n----\n\tminus\n----\n",
+      "expect": "pass"
+    },
+    {
+      "id": "verbatim-tabsize-block",
+      "category": "blocks",
+      "source": ":tabsize: 8\n\n[tabsize=2]\n----\n\ta\tb\n----\n\n[tabsize=0]\n----\n\tkept\n----\n\n[tabsize=x,indent=0]\n----\n\t\ttabs\n\t\tstay\n----\n\n----\n\tdocument\n----\n",
+      "expect": "pass"
+    },
+    {
+      "id": "verbatim-indent-callouts",
+      "category": "blocks",
+      "source": ":tabsize: 4\n\n[source,ruby,indent=1]\n----\n    a = 1 # <1>\n\tb = 2\t<2>\n    \\<3> escaped\n----\n<1> one\n<2> two\n\n[indent=4]\n....\nx <.>\n....\n<1> auto\n",
+      "expect": "pass"
+    },
+    {
+      "id": "verbatim-indent-subs",
+      "category": "blocks",
+      "source": ":tabsize: 2\n:name: value\n\n[subs=\"+quotes,+attributes\",indent=1]\n----\n    *bold* {name}\n\t_em_\n----\n\n[source,subs=\"attributes+\",indent=2]\n{name}\n\t{name}\n\n[literal,subs=macros,indent=0]\n  https://example.org[site]\n    link:a.html[]\n\n[verse,subs=+macros,indent=0]\n____\n  https://example.org[x]\n____\n",
+      "expect": "pass"
+    },
+    {
+      "id": "verbatim-indent-list-and-cell",
+      "category": "blocks",
+      "source": ":tabsize: 2\n\n* item\n+\n[source,ruby,indent=1]\n   a <1>\n\tb <2>\n* next\n\n<1> one\n<2> two\n\n[cols=\"1a,1\"]\n|===\na|\n[indent=0]\n----\n\tcell\n----\n:tabsize: 6\n....\n\tinner\n....\n|\n----\n\tplain\n----\n|===\n\n----\n\tafter\n----\n",
+      "expect": "pass"
+    },
+    {
+      "id": "verbatim-indent-crlf",
+      "category": "blocks",
+      "source": "[indent=1]\r\n----\r\n   a\r\n\r\n     b\r\n----\r\n\r\n[verse,indent=0]\r\n  x\r\n    y\r\n\r\n[source,ruby,subs=+quotes,indent=2]\r\n*q*\r\n",
+      "expect": "pass"
+    },
+    {
+      "id": "verbatim-indent-include",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": ":tabsize: 4\n\n[indent=1]\n----\ninclude::code.rb[]\n----\n\n[source,ruby,indent=0]\n----\ninclude::code.rb[indent=6]\n----\n\n[verse,indent=2]\n____\ninclude::poem.txt[]\n____\n",
+      "resources": {
+        "code.rb": "\tdef x\n\t\t1 # <1>\n\tend\n",
+        "poem.txt": "    roses\n      violets\n"
       },
       "expect": "pass"
     }

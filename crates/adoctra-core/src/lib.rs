@@ -24,6 +24,7 @@ mod image;
 mod include_attributes;
 mod include_indent;
 mod include_selection;
+mod indentation;
 mod inline;
 mod inline_attributes;
 mod inline_pass;
