@@ -41,6 +41,8 @@ pub enum TokenKind {
     LiteralText,
     PassthroughDelimiter,
     PassthroughText,
+    StemDelimiter,
+    StemText,
     ExampleDelimiter,
     QuoteDelimiter,
     SidebarDelimiter,
@@ -84,6 +86,8 @@ impl TokenKind {
             TokenKind::LiteralText => "literal-text",
             TokenKind::PassthroughDelimiter => "pass-delimiter",
             TokenKind::PassthroughText => "pass-text",
+            TokenKind::StemDelimiter => "stem-delimiter",
+            TokenKind::StemText => "stem-text",
             TokenKind::ExampleDelimiter => "example-delimiter",
             TokenKind::QuoteDelimiter => "quote-delimiter",
             TokenKind::SidebarDelimiter => "sidebar-delimiter",
@@ -135,7 +139,15 @@ pub(crate) fn tokens_reader<'a>(
         .iter()
         .map(|span| processed.transformed_span(*span))
         .collect();
-    let tables = Tables {
+    let mut tables = Tables {
+        stems: reader
+            .stem_tokens
+            .iter()
+            .map(|t| Token {
+                span: processed.transformed_span(t.span),
+                kind: t.kind,
+            })
+            .collect(),
         blocks: reader
             .tables
             .iter()
@@ -152,6 +164,7 @@ pub(crate) fn tokens_reader<'a>(
             .map(|span| processed.transformed_span(*span))
             .collect(),
     };
+    tables.stems.sort_by_key(|t| t.span.start);
     let mut out: Vec<_> = tokens_processed(
         &processed.text,
         options,
@@ -243,7 +256,7 @@ pub(crate) fn tokens_reader<'a>(
         .collect();
     let mut protected: Vec<_> = out
         .iter()
-        .filter(|t| t.kind == TokenKind::PassthroughText)
+        .filter(|t| matches!(t.kind, TokenKind::PassthroughText | TokenKind::StemText))
         .map(|t| t.span)
         .collect();
     protected.sort_by_key(|s| (s.source_id, s.start, s.end));
@@ -313,6 +326,7 @@ pub(crate) fn tokens_reader<'a>(
 /// Table blocks and their cell separators, and list markers (description
 /// list delimiters too), from the parser.
 struct Tables {
+    stems: Vec<Token>,
     blocks: Vec<Span>,
     separators: Vec<Span>,
     list_markers: Vec<Span>,
@@ -409,6 +423,29 @@ fn tokens_processed(
                     TokenKind::Revision
                 },
             });
+            continue;
+        }
+        // Formula bodies and delimiters come from the parser, including
+        // formulas in list continuations and AsciiDoc table cells. Never
+        // reinterpret raw math as formatting, comments or attribute entries.
+        let stem_start = tables.stems.partition_point(|t| t.span.end <= off);
+        let stem_end = tables
+            .stems
+            .partition_point(|t| t.span.start < line_span.end);
+        let stems = &tables.stems[stem_start..stem_end];
+        if !stems.is_empty() {
+            out.extend(
+                tables
+                    .separators
+                    .iter()
+                    .filter(|s| s.start >= off && s.end <= stems[0].span.start)
+                    .map(|span| Token {
+                        span: *span,
+                        kind: TokenKind::CellSeparator,
+                    }),
+            );
+            out.extend_from_slice(stems);
+            mid_paragraph = false;
             continue;
         }
         // A table, as the parser read it: its fences, then each line's cell

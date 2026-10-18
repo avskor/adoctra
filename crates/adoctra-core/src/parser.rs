@@ -192,6 +192,7 @@ pub(crate) fn parse_reader<'a>(
     let mut header = collect_header(&mut lines, &mut context);
     let mut doc = Document {
         attributes: (*context.attributes).clone(),
+        final_attributes: Attributes::default(),
         header: header.metadata,
         blocks: Vec::new(),
         has_title: header.effective_title.is_some(),
@@ -450,6 +451,18 @@ fn collect_blocks_in(
             complete_media(&mut block, &context.attributes);
             let attributes = inline_attributes(&context.render_attributes(), Some(&block.attrs));
             apply_style_fixup(&mut block, lines, &attributes, &pending.list, context);
+            if let BlockKind::Stem { style, .. } = &mut block.kind {
+                if block.attrs.style.as_deref() == Some("stem") {
+                    *style = crate::StemStyle::from_alias(
+                        pending
+                            .list
+                            .value(2)
+                            .map(|v| v.text.as_str())
+                            .or(context.attributes.get("stem")),
+                    );
+                }
+                block.attrs.style = Some(style.as_str().into());
+            }
             apply_callouts(&mut block, lines, context);
             if let Some(value) = reftext {
                 context.attach_reftext(&mut block, value);
@@ -1132,9 +1145,6 @@ fn changes_paragraph_type(style: &str) -> bool {
                 | "quote"
                 | "sidebar"
                 | "source"
-                | "stem"
-                | "latexmath"
-                | "asciimath"
                 | "verse"
         )
 }
@@ -1880,12 +1890,44 @@ fn parse_block_content(
             context,
             diagnostics,
         );
-        return Some(Block::new(
-            Span::new(start, end),
+        let kind = if matches!(pending_style, Some("stem" | "asciimath" | "latexmath")) {
+            // Generic STEM is selected from the original positional list on
+            // block completion, where absent and quoted-empty fields differ.
+            let style = crate::StemStyle::from_alias(pending_style);
+            let source = lines.content(body_start, body_end);
+            lines.stem_tokens.push(crate::Token {
+                span: Span::new(start, off + line.len()),
+                kind: crate::TokenKind::StemDelimiter,
+            });
+            for (offset, text) in crate::scanner::lines_with_offsets(&source.text) {
+                if !text.is_empty() {
+                    lines.stem_tokens.push(crate::Token {
+                        span: source.original_span(Span::new(offset, offset + text.len())),
+                        kind: crate::TokenKind::StemText,
+                    });
+                }
+            }
+            if end > body_end {
+                lines.stem_tokens.push(crate::Token {
+                    span: Span::new(end - 4, end),
+                    kind: crate::TokenKind::StemDelimiter,
+                });
+            }
+            let stages = crate::pass_subs::resolve_stem(
+                pending_attrs
+                    .and_then(|a| a.named.get("subs"))
+                    .map(String::as_str),
+                Span::new(start, end),
+                diagnostics,
+            );
+            let inlines = context.body_subs.defer_stem(source, &attrs, stages);
+            BlockKind::Stem { style, inlines }
+        } else {
             BlockKind::Passthrough {
                 text: lines.content(body_start, body_end).text,
-            },
-        ));
+            }
+        };
+        return Some(Block::new(Span::new(start, end), kind));
     }
 
     // Example block (a parsed container, fenced by `====`). Unlike the verbatim

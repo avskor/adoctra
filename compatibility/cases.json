@@ -18737,6 +18737,100 @@
       "category": "stem",
       "expect": "pass",
       "source": "stem:bogus[x] stem:c,bogus[y] stem:ABC[z] stem:q,-q[*z*]\n\nstem:[]\n\nstem:[Ж\\]\n\nstem:[ stem:[ stem:[\n"
+    },
+    {
+      "id": "block-stem-forms",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "[stem]\n++++\nx < y & {a} *b*\n// raw\n++++\n\n[asciimath]\n++++\nsqrt(4)\n++++\n\n[latexmath]\n++++\n\\sqrt{4}\n++++"
+    },
+    {
+      "id": "block-stem-notation-scope",
+      "category": "blocks",
+      "expect": "pass",
+      "source": ":stem: latex\n\n[stem]\n++++\nx\n++++\n\n:stem: asciimath\n\n[stem]\n++++\ny\n++++\n\n[stem,tex]\n++++\nz\n++++"
+    },
+    {
+      "id": "block-stem-positional-fields",
+      "category": "blocks",
+      "expect": "pass",
+      "source": ":stem: latex\n\n[stem,,role=r]\n++++\nx\n++++\n\n[stem,\"\"]\n++++\nx\n++++\n\n[stem,unknown]\n++++\nx\n++++\n\n[asciimath,tex]\n++++\nx\n++++\n\n[latexmath,asciimath]\n++++\nx\n++++"
+    },
+    {
+      "id": "block-stem-line-breaks",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "[asciimath]\n++++\n\nx \\\ny\n\nz\n\n\nq \\\n\\\n\\\nw\n\n++++\n\n[latexmath]\n++++\nx \\\ny\n\nz\n++++"
+    },
+    {
+      "id": "block-stem-delimiters",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "[asciimath]\n++++\n\\$x\\$\n++++\n\n[latexmath]\n++++\n\\[x\\]\n++++\n\n[latexmath]\n++++\n$x$\n++++\n\n[stem]\n++++\n++++\n\n[stem]\n++++\n\n\n++++"
+    },
+    {
+      "id": "block-stem-substitutions",
+      "category": "blocks",
+      "expect": "pass",
+      "source": ":a: Ж\n\n[stem,subs=\"+attributes,+quotes\"]\n++++\n{empty}\n{a} *x* <y>\n{empty}\n++++\n\n[stem,subs=\"none\"]\n++++\n<b>x</b>\n++++\n\n[latexmath,subs=\"attributes+,specialcharacters\"]\n++++\n{a} <x>\n++++"
+    },
+    {
+      "id": "block-stem-substitution-order",
+      "category": "blocks",
+      "expect": "pass",
+      "source": ":a: *Ж* & <x>\n\n[stem,subs=\"normal,-macros\"]\n++++\n{a} *b* (C)\n++++\n\n[stem,subs=\"-specialcharacters,+attributes\"]\n++++\n{a} *b* (C)\n++++\n\n[stem,subs=\"attributes+,quotes+\"]\n++++\n{a} *b* (C)\n++++\n\n[stem,subs=\"specialcharacters,+quotes,-quotes,+replacements\"]\n++++\n{a} *b* (C)\n++++\n\n[stem,subs=\"c,basic,quotes\"]\n++++\n{a} *b* (C)\n++++\n\n[stem,subs=\"\"]\n++++\n{a} *b* (C)\n++++"
+    },
+    {
+      "id": "block-stem-passes",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "[stem,subs=\"normal\"]\n++++\npass:q[*bold*] +*literal*+ latexmath:[x^2] stem:[a_b]\n++++\n\n[stem,subs=\"quotes\"]\n++++\npass:q[*bold*] +*literal*+ stem:[a_b]\n++++"
+    },
+    {
+      "id": "block-stem-titles-and-xrefs",
+      "category": "blocks",
+      "expect": "pass",
+      "source": ".An *equation*\n[stem#eq.red]\n++++\nx < y\n++++\n\nSee <<eq>> and <<target>>.\n\n[latexmath,subs=\"specialcharacters,macros\"]\n++++\n<<target>> footnote:[Note]\n++++\n\n[[target]]\n== Target"
+    },
+    {
+      "id": "block-stem-stateful-order",
+      "category": "blocks",
+      "expect": "pass",
+      "source": ":n: 3\n\n.Title {counter:n}\n[stem,subs=\"+attributes\"]\n++++\n{counter:n} {set:stem:latex}x\n++++\n\n{counter:n}\n\n[stem]\n++++\ny\n++++"
+    },
+    {
+      "id": "block-stem-non-math-contexts",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "[stem]\nx *y*\n\n[latexmath]\n----\nx *y*\n----\n\n[asciimath]\n....\nx *y*\n....\n\n[stem]\n--\nx *y*\n--"
+    },
+    {
+      "id": "block-stem-lists-and-cells",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "* item\n+\n[stem]\n++++\nx < y\n++++\n\n[cols=\"a\"]\n|===\n|[latexmath]\n++++\n\\sqrt{4}\n++++\n|==="
+    },
+    {
+      "id": "block-stem-unicode-crlf",
+      "category": "blocks",
+      "expect": "pass",
+      "source": ":stem: latex\r\n\r\n.Формула\r\n[stem#eq]\r\n++++\r\nЖ < Я\r\n\r\nЮ\r\n++++\r\n\r\n<<eq>>"
+    },
+    {
+      "id": "block-stem-unclosed",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "[stem]\n++++\nЖ *x*\n// raw"
+    },
+    {
+      "id": "block-stem-includes",
+      "category": "blocks",
+      "expect": "pass",
+      "source": ":stem: tex\n\n[stem]\n++++\ninclude::formula.txt[]\n++++",
+      "profile": "include-body-dom-v1",
+      "resources": {
+        "formula.txt": "Ж < x\n\\sqrt{4}"
+      }
     }
   ]
 }

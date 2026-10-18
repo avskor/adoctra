@@ -1094,14 +1094,32 @@ selectors use the shared pass pipeline (special characters by default).
 HTML emits math delimiters, JSON/WASM expose `stem` with `style` and `parts`.
 The tokenizer uses extraction spans and projects multiline source formulas
 from the complete parse to suppress protected contents' tokens. Block math
-and loading MathJax in full HTML are still pending. Core/all-consumer tests,
+and loading MathJax in full HTML are implemented as described below. Core/all-consumer tests,
 `golden/stem.adoc`, and compatibility fixtures cover this step.
 
+Block math uses `BlockKind::Stem { style, inlines }` on `++++` only.
+`stem` resolves its second positional (including nil vs quoted empty) against
+reading-time attributes. BodySubs defers content with selected stages; default
+special-character protection, block selector modifiers, macros and stateful
+expressions share the pass pipeline. Raw content trims blank edge lines after
+substitutions. Callout substitutions in STEM remain unsupported with a warning.
+JSON/WASM expose `stem` with `style` and `inlines`; `stem-delimiter`/`stem-text`
+tokens come from Reader records, including nested cells and includes. HTML uses
+Ruby's block delimiters and AsciiMath line splitting. `Document.final_attributes`
+keeps conversion state separately from header attributes. HTML emits the pinned
+MathJax 2.7.9 configuration in head when final `stem` is set, with final `eqnums`
+and header `asset-uri-scheme`; equation numbering is escaped as script data.
+Golden block/config fixtures and 15 compatibility cases cover the feature;
+a separate Chrome 155 browser check loaded MathJax from the real CDN and passed
+5 scenarios for both adoctra and Ruby, including desktop/mobile screenshots,
+numbering, inline/display modes, ignore classes and body attribute replay.
+Local browser artifacts are in `target/browser-stem/` (not committed).
+
 Not yet implemented (common asks — treat as roadmap, do not assume present):
-broader language coverage (block math, bibliography lists). The full block-attribute list is now *parsed* (style, named
+broader language coverage (bibliography lists, general block substitutions). The full block-attribute list is now *parsed* (style, named
 attributes, `%options`, id/role folding), but most of it has nothing to render
-against yet: a few **styles that change a block's type** (`[stem]`/`[latexmath]` →
-math, …) remain unimplemented — `[source,<lang>]`, `[literal]`, `[pass]`,
+against yet. Math styles (`[stem]`/`[asciimath]`/`[latexmath]`) apply to `++++`
+only, as in Ruby. `[source,<lang>]`, `[literal]`, `[pass]`,
 `[example]`, `[sidebar]`, `[quote]`/`[verse]`, `[open]` and the admonition styles
 are wired. The **passthrough block** (`++++` / `[pass]`) is done — verbatim and
 emitted *completely raw* (no escaping, no wrapper, id/roles dropped). The **open

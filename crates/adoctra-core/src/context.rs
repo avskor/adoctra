@@ -360,7 +360,7 @@ impl ParseContext {
         includes: &crate::xref_target::Includes,
         references: &mut Vec<crate::Diagnostic>,
     ) {
-        std::mem::take(&mut self.body_subs).execute(
+        document.final_attributes = std::mem::take(&mut self.body_subs).execute(
             &mut document.blocks,
             document.attributes.clone(),
             crate::body_subs::Conversion {

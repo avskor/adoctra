@@ -16,6 +16,7 @@ struct Pending {
     fold: bool,
     hardbreaks: bool,
     replacement_origin: Option<Span>,
+    stages: Option<Vec<crate::pass_subs::Stage>>,
 }
 
 pub(crate) type Declaration = (usize, String, Option<Vec<AttributePart>>);
@@ -76,6 +77,7 @@ impl BodySubs {
                 fold,
                 hardbreaks: attrs.local_hardbreaks,
                 replacement_origin: None,
+                stages: None,
             },
         );
         // Private placeholder; replaced before source mapping or public output.
@@ -83,6 +85,19 @@ impl BodySubs {
             value: String::new(),
             span,
         }]
+    }
+
+    pub fn defer_stem(
+        &mut self,
+        source: FilteredSource,
+        attrs: &Attributes,
+        stages: Vec<crate::pass_subs::Stage>,
+    ) -> Vec<Inline> {
+        let nodes = self.defer(source, None, attrs, false);
+        if let Some(key) = crate::resolve::placeholder(&nodes) {
+            self.pending.get_mut(&key).expect("deferred formula").stages = Some(stages);
+        }
+        nodes
     }
 
     /// A block title runs during conversion. A `title=` value transformed by
@@ -125,6 +140,7 @@ impl BodySubs {
             fold: true,
             hardbreaks: attrs.local_hardbreaks,
             replacement_origin: title.replacement.then_some(title.span),
+            stages: None,
         });
         vec![Inline::Text {
             value: String::new(),
@@ -155,7 +171,12 @@ impl BodySubs {
         Some(run(pending, &mut evaluation, diagnostics))
     }
 
-    pub fn execute(mut self, blocks: &mut [Block], attributes: Attributes, conversion: Conversion) {
+    pub fn execute(
+        mut self,
+        blocks: &mut [Block],
+        attributes: Attributes,
+        conversion: Conversion,
+    ) -> Attributes {
         let mut execution = Execution {
             pending: &mut self.pending,
             caption_counters: &mut self.caption_counters,
@@ -200,6 +221,7 @@ impl BodySubs {
             _ => None,
         });
         execution.blocks(&mut blocks[body..]);
+        execution.attributes
     }
 }
 
@@ -579,9 +601,9 @@ impl Execution<'_> {
                 block.caption = section.caption(&self.attributes);
             }
             match &mut block.kind {
-                BlockKind::Paragraph { inlines } | BlockKind::Verse { inlines, .. } => {
-                    self.inlines(inlines)
-                }
+                BlockKind::Paragraph { inlines }
+                | BlockKind::Stem { inlines, .. }
+                | BlockKind::Verse { inlines, .. } => self.inlines(inlines),
                 // Section titles were converted while reading; a forward
                 // reference may already have resolved their references.
                 BlockKind::Heading { inlines, .. } => {
@@ -753,13 +775,34 @@ fn run(
 ) -> Vec<Inline> {
     let source = pending.filtered.as_ref().unwrap_or(&pending.source);
     let before = diagnostics.len();
-    let mut nodes = crate::inline::scan_inlines_evaluated(
-        &source.text,
-        0,
-        evaluation,
-        pending.fold,
-        diagnostics,
-    );
+    let mut nodes = if let Some(stages) = &pending.stages {
+        let text = source.text.replace("\r\n", "\n");
+        let span = Span::new(0, source.text.len());
+        let parts = crate::inline_pass::Passes::selected_stages(
+            &text,
+            stages,
+            evaluation,
+            evaluation.get("compat-mode").is_some(),
+            span,
+            diagnostics,
+        );
+        // Raw blocks trim empty edge lines *after* substitutions: attribute
+        // expansion may create or remove those lines. Preserve semantic parts.
+        let parts = trim_stem(parts);
+        vec![Inline::Substituted {
+            value: crate::attributes::parts_text(&parts),
+            parts,
+            span,
+        }]
+    } else {
+        crate::inline::scan_inlines_evaluated(
+            &source.text,
+            0,
+            evaluation,
+            pending.fold,
+            diagnostics,
+        )
+    };
     if let Some(filtered) = &pending.filtered {
         filtered.restore_inlines(&mut nodes);
         for diagnostic in &mut diagnostics[before..] {
@@ -783,6 +826,30 @@ fn run(
         }
     }
     nodes
+}
+
+fn trim_stem(parts: Vec<AttributePart>) -> Vec<AttributePart> {
+    let text = crate::substitution_text::Text::from_parts(&parts);
+    if !text.text.contains('\n') {
+        return parts;
+    }
+    let lines = crate::scanner::lines_with_offsets(&text.text);
+    let nonempty = |line: &str| {
+        !line
+            .trim_matches([' ', '\t', '\r', '\x0b', '\x0c'])
+            .is_empty()
+    };
+    let start = lines
+        .iter()
+        .find(|(_, line)| nonempty(line))
+        .map_or(text.text.len(), |(at, _)| *at);
+    let end = lines
+        .iter()
+        .rfind(|(_, line)| nonempty(line))
+        .map_or(start, |(at, line)| at + line.len());
+    let mut trimmed = crate::substitution_text::Text::default();
+    text.copy(start..end, &mut trimmed);
+    trimmed.into_parts()
 }
 
 fn referable_titles(registry: &crate::resolve::Registry) -> BTreeSet<(usize, usize)> {

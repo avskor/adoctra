@@ -15,6 +15,100 @@ pub(crate) enum Stage {
     Post,
 }
 
+/// Block selectors differ from inline pass selectors: no one-letter hints,
+/// spaces are ignored, and +/- modifiers start with the block's defaults.
+pub(crate) fn resolve_stem(
+    subs: Option<&str>,
+    span: Span,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> Vec<Stage> {
+    let Some(subs) = subs else {
+        return vec![Stage::Specials];
+    };
+    let subs = subs.replace(' ', "");
+    let mut candidates: Option<Vec<&str>> = None;
+    for name in subs.split(',').filter(|s| !s.is_empty()) {
+        let (operation, name) = if let Some(name) = name.strip_prefix('+') {
+            ('+', name)
+        } else if let Some(name) = name.strip_prefix('-') {
+            ('-', name)
+        } else if let Some(name) = name.strip_suffix('+') {
+            ('^', name)
+        } else {
+            (' ', name)
+        };
+        let expanded: &[&str] = match name {
+            "normal" => &[
+                "specialcharacters",
+                "quotes",
+                "attributes",
+                "replacements",
+                "macros",
+                "post_replacements",
+            ],
+            "verbatim" => &["specialcharacters", "callouts"],
+            "specialchars" => &["specialcharacters"],
+            "none" => &[],
+            _ => std::slice::from_ref(&name),
+        };
+        let candidates = candidates.get_or_insert_with(|| {
+            if operation == ' ' {
+                Vec::new()
+            } else {
+                vec!["specialcharacters"]
+            }
+        });
+        match operation {
+            '-' => candidates.retain(|name| !expanded.contains(name)),
+            '^' => candidates
+                .splice(0..0, expanded.iter().copied())
+                .for_each(drop),
+            _ => candidates.extend_from_slice(expanded),
+        }
+    }
+    let mut stages = Vec::new();
+    let mut invalid = Vec::new();
+    for name in candidates.unwrap_or_default() {
+        let stage = match name {
+            "specialcharacters" => Stage::Specials,
+            "quotes" => Stage::Quotes,
+            "attributes" => Stage::Attributes,
+            "replacements" => Stage::Replacements,
+            "macros" => Stage::Macros,
+            "post_replacements" => Stage::Post,
+            "callouts" => {
+                diagnostics.push(Diagnostic {
+                    span,
+                    severity: Severity::Warning,
+                    message: "callout substitutions in stem blocks are not supported".into(),
+                });
+                continue;
+            }
+            _ => {
+                if !invalid.contains(&name) {
+                    invalid.push(name);
+                }
+                continue;
+            }
+        };
+        if !stages.contains(&stage) {
+            stages.push(stage);
+        }
+    }
+    if !invalid.is_empty() {
+        diagnostics.push(Diagnostic {
+            span,
+            severity: Severity::Warning,
+            message: format!(
+                "invalid substitution type{} for stem: {}",
+                if invalid.len() > 1 { "s" } else { "" },
+                invalid.join(", ")
+            ),
+        });
+    }
+    stages
+}
+
 pub(crate) fn syntax(subs: &str) -> bool {
     subs.is_empty()
         || subs.split(',').enumerate().all(|(i, name)| {

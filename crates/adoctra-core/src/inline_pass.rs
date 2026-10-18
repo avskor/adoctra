@@ -466,6 +466,17 @@ impl Passes {
         diagnostics: &mut Vec<crate::Diagnostic>,
     ) -> Vec<P> {
         let stages = pass_subs::resolve(subs, span, diagnostics);
+        Self::selected_stages(body, &stages, attrs, compat, span, diagnostics)
+    }
+
+    pub fn selected_stages(
+        body: &str,
+        stages: &[Stage],
+        attrs: &mut Evaluation<'_>,
+        compat: bool,
+        span: Span,
+        diagnostics: &mut Vec<crate::Diagnostic>,
+    ) -> Vec<P> {
         // Use the same collision check as ordinary source extraction, without
         // extracting anything unless macros is one of the requested stages.
         let mut prefix = "\u{96}".to_owned();
@@ -485,7 +496,7 @@ impl Passes {
             token_slots: 0,
             diagnostics: Vec::new(),
         };
-        let parts = passes.apply_selected(body.into(), &stages, attrs, compat, span, 0);
+        let parts = passes.apply_selected(body.into(), stages, attrs, compat, span, 0);
         diagnostics.append(&mut passes.diagnostics);
         parts
     }

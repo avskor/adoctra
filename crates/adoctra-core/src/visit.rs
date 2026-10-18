@@ -82,6 +82,7 @@ pub fn walk_block_mut(visitor: &mut (impl VisitorMut + ?Sized), block: &mut Bloc
     match &mut block.kind {
         BlockKind::Heading { inlines, .. }
         | BlockKind::Paragraph { inlines }
+        | BlockKind::Stem { inlines, .. }
         | BlockKind::Verse { inlines, .. } => visitor.visit_inlines(inlines, InlineContext::Body),
         BlockKind::List { items, .. } => {
             for item in items {

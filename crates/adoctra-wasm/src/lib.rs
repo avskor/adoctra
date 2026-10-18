@@ -423,6 +423,17 @@ fn write_block(b: &Block, s: &mut String) {
             write_str(text, s);
             write_callouts(callouts, s);
         }
+        BlockKind::Stem { style, inlines } => {
+            s.push_str("\"name\":\"stem\",");
+            write_id(&b.id, s);
+            write_roles(&b.roles, s);
+            write_style(&Some(style.as_str().into()), s);
+            write_attributes(&b.attrs.named, s);
+            write_options(&b.attrs.options, s);
+            write_title(&b.title, s);
+            s.push_str(",\"inlines\":");
+            write_inlines(inlines, s);
+        }
         BlockKind::Passthrough { text } => {
             s.push_str("\"name\":\"pass\",");
             write_id(&b.id, s);

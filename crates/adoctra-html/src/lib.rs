@@ -3,6 +3,8 @@
 use adoctra_core::ast::{Attribution, Block, BlockKind, Inline};
 use adoctra_core::{Backend, Document, Result};
 
+mod math;
+
 /// adoctra's reference stylesheet — a modern, self-contained theme (custom
 /// properties, `color-mix()`, SVG-mask icons). [`HtmlBackend::convert`] inlines
 /// it into the document `<head>` so output is styled out of the box; consumers
@@ -31,7 +33,9 @@ impl Backend for HtmlBackend {
         let mut out = String::new();
         out.push_str("<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"utf-8\">\n<style>\n");
         out.push_str(STYLESHEET);
-        out.push_str("</style>\n</head>\n<body>\n");
+        out.push_str("</style>\n");
+        math::configuration(&doc.final_attributes, &doc.attributes, &mut out);
+        out.push_str("</head>\n<body>\n");
         let cx = Cx {
             doc,
             book: doc.attributes.get("doctype") == Some("book"),
@@ -207,6 +211,16 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
                 out.push_str("</li>\n");
             }
             out.push_str("</ol>\n");
+        }
+        BlockKind::Stem { style, inlines } => {
+            let class = class_attr(&["stemblock"], &block.roles);
+            out.push_str(&format!("<div{id}{class}>\n"));
+            render_title(&block.title, &block.caption, out);
+            out.push_str("<div class=\"content\">\n");
+            let mut equation = String::new();
+            render_inlines(inlines, &mut equation);
+            math::equation(*style, &equation, out);
+            out.push_str("\n</div>\n</div>\n");
         }
         BlockKind::Passthrough { text } => {
             // Passthrough: the body is emitted *completely raw* — no escaping and

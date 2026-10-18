@@ -58,6 +58,9 @@ impl Span {
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Document {
     pub attributes: Attributes,
+    /// Effective attributes after body conversion, for document-level output
+    /// such as math typesetting configuration. The header snapshot is unchanged.
+    pub final_attributes: Attributes,
     pub header: Option<DocumentHeader>,
     pub blocks: Vec<Block>,
     /// Whether `blocks[0]` is the document title: a source `= Title` or a
@@ -400,6 +403,14 @@ pub enum BlockKind {
     /// raw**: no HTML escaping and no wrapper element at all (asciidoctor's
     /// `:pass` context), so even a block id/role is dropped on output.
     Passthrough { text: String },
+
+    /// A `++++` block styled `stem`, `asciimath` or `latexmath`. Content uses
+    /// special-character protection by default; explicit substitutions retain
+    /// neutral inline parts and their source ranges.
+    Stem {
+        style: crate::StemStyle,
+        inlines: Vec<Inline>,
+    },
     /// An unordered (`*`, `-`, `•`) or ordered (`.`, `1.`, `a.`, `A.`, `i)`,
     /// `I)`) list, parsed like Ruby's `parse_list`: each item's lines are
     /// collected (`read_lines_for_list_item`) and parsed as its blocks, a
