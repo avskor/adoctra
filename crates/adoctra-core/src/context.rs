@@ -177,6 +177,8 @@ fn default_attributes() -> Attributes {
     attributes.set("toc-title", "Table of Contents");
     // Ruby's DEFAULT_ATTRIBUTES: verbatim blocks wrap unless unset.
     attributes.set("prewrap", "");
+    // Ruby's DEFAULT_ATTRIBUTES: sections get automatic ids unless unset.
+    attributes.set("sectids", "");
     // The HTML converter's suffix, set before the header (Ruby's init).
     attributes.set("outfilesuffix", ".html");
     // Ruby sets this for a standalone document; adoctra's HTML is one.
@@ -639,6 +641,23 @@ impl ParseContext {
         self.sections.insert(key, section);
         self.open_sections.push((level, key));
         level
+    }
+
+    /// A section or discrete heading without an id gets one generated after
+    /// its title converts: like Ruby's `Section.generate_id`, a longer
+    /// `idseparator` is cut to its first character for later reading
+    /// (whatever the locks; conversion starts again from the header).
+    pub fn generating_id(&mut self) {
+        if self.attributes.get("sectids").is_none() {
+            return;
+        }
+        let Some(separator) = self.attributes.get("idseparator") else {
+            return;
+        };
+        let mut chars = separator.chars();
+        if let (Some(first), Some(_)) = (chars.next(), chars.next()) {
+            Arc::make_mut(&mut self.attributes).set("idseparator", first.to_string());
+        }
     }
 
     /// Close open sections at `level` or deeper (all with level 0 at the end

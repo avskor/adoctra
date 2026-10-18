@@ -2240,6 +2240,9 @@ fn parse_block_content(
         };
         let heading_attrs = inline_attributes(&context.attributes, pending_attrs);
         let inlines = context.reading_title(title, base, &heading_attrs, &lines.include_catalog);
+        if !has_id && anchor.is_none() {
+            context.generating_id();
+        }
         // `Block.id` is otherwise assigned later, by the resolve pass, once the
         // whole document is known (it deduplicates ids across all sections).
         let mut block = Block::new(Span::new(off, end), BlockKind::Heading { level, inlines });

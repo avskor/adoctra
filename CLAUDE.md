@@ -708,8 +708,13 @@ macros and raw whole-doctitle replacement also remain work.
 Automatic section IDs sanitize a temporary lexical title: raw XML tags and
 references matching the pinned entity grammar are removed, not decoded.
 Literal protection and structural inline boundaries remain distinct; title
-nodes, attribute snapshots and source spans are unchanged. Default prefix,
-separator and deduplication behavior is retained; configurable ID policy remains work.
+nodes, attribute snapshots and source spans are unchanged. resolve.rs IdPolicy is
+Ruby's Section.generate_id with the heading's reading attributes: `sectids` (default
+on; unset → no id, not registered, TOC `href="#"`), verbatim `idprefix` (`_` when
+unset) and the first char of `idseparator` (empty only deletes spaces; tr_s squeezes
+space/`.`/`-`/separator runs, prefix included), dedup `<id><sep>2`. Generating an id
+cuts a longer `idseparator` in the reading attributes (ParseContext::generating_id,
+lock-free, reading only), like Ruby's write-back.
 The tokenizer shares header parsing (author/revision tokens). Setext document titles use adjacent
 processed lines, Unicode character lengths (difference <= 1), uniform =/-/~/^/+
 underlines and effective level zero. ATX takes precedence. The Heading/header

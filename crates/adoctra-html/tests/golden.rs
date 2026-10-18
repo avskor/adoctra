@@ -1321,3 +1321,26 @@ fn html_manual_pages_match_asciidoctor() {
     }
     assert!(checked > 0, "no golden fixtures found in {dir:?}");
 }
+
+#[test]
+fn section_id_policy_matches_asciidoctor() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden");
+    let source = fs::read_to_string(dir.join("section-id-policy.adoc")).unwrap();
+    let expected = fs::read_to_string(dir.join("section-id-policy.expected.html")).unwrap();
+    let result = adoctra_core::parse(&source);
+    assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+    let ours = String::from_utf8(HtmlBackend.convert(&result.document).unwrap()).unwrap();
+    // Headings, TOC entries and resolved references carry the same ids.
+    let ids = |html: &str| -> Vec<String> {
+        html.lines()
+            .filter(|line| {
+                line.starts_with("<h2") || line.starts_with("<h3") || line.starts_with("<li>")
+            })
+            .map(str::to_owned)
+            .collect()
+    };
+    assert_eq!(ids(&ours), ids(&expected));
+    assert_eq!(ids(&ours).len(), 11);
+    assert_eq!(paragraph_inner(&ours), paragraph_inner(&expected));
+    assert!(ours.contains("<h2 id=\"hello-world-2\">Hello World -</h2>"));
+}

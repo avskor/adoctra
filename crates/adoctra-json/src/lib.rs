@@ -990,6 +990,20 @@ mod tests {
     }
 
     #[test]
+    fn section_ids_follow_the_id_policy() {
+        let json =
+            render(":sectids!:\n\n== A\n\n:sectids:\n:idprefix:\n:idseparator: -\n\n== B C\n");
+        assert!(
+            json.contains(r#"{"name":"heading","level":1,"id":null,"#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#"{"name":"heading","level":1,"id":"b-c","#),
+            "{json}"
+        );
+    }
+
+    #[test]
     fn manual_pages_export_names_and_the_name_section() {
         let json = render("= x(1)\n:doctype: manpage\n\n== NAME\n\na, b - p\n");
         assert!(json.ends_with(r#","manpage":{"names":["a","b"],"name_section":{"heading":{"name":"heading","level":1,"id":"_name","roles":[],"style":null,"attributes":{},"options":[],"title":null,"caption":null,"inlines":[{"name":"text","value":"NAME"}]},"conforming":true}}}"#), "{json}");

@@ -19594,6 +19594,102 @@
       "category": "sections",
       "expect": "pass",
       "source": ":doctype: manpage\n\n[.lead]\n== NAME\n\nmissing purpose\n\n== Synopsis\n\n=== Nested\n\ntext\n"
+    },
+    {
+      "id": "section-id-idprefix-empty",
+      "category": "sections",
+      "expect": "pass",
+      "source": ":idprefix:\n\n== Hello World\n\n== -Lead and trail-\n\n== a. b - c__d\n\n== Über  Größe\n\n== xxlarge x y\n\n== Dup\n\n== Dup\n\n[discrete]\n=== Float It\n"
+    },
+    {
+      "id": "section-id-idprefix-custom",
+      "category": "sections",
+      "expect": "pass",
+      "source": ":idprefix: Sec.\n\n== Hello World\n\n== -Lead and trail-\n\n== a. b - c__d\n\n== Über  Größe\n\n== xxlarge x y\n\n== Dup\n\n== Dup\n\n[discrete]\n=== Float It\n"
+    },
+    {
+      "id": "section-id-idseparator-hyphen",
+      "category": "sections",
+      "expect": "pass",
+      "source": ":idseparator: -\n\n== Hello World\n\n== -Lead and trail-\n\n== a. b - c__d\n\n== Über  Größe\n\n== xxlarge x y\n\n== Dup\n\n== Dup\n\n[discrete]\n=== Float It\n"
+    },
+    {
+      "id": "section-id-idseparator-dot-no-prefix",
+      "category": "sections",
+      "expect": "pass",
+      "source": ":idprefix:\n:idseparator: .\n\n== Hello World\n\n== -Lead and trail-\n\n== a. b - c__d\n\n== Über  Größe\n\n== xxlarge x y\n\n== Dup\n\n== Dup\n\n[discrete]\n=== Float It\n"
+    },
+    {
+      "id": "section-id-idseparator-empty",
+      "category": "sections",
+      "expect": "pass",
+      "source": ":idprefix: sec-\n:idseparator:\n\n== Hello World\n\n== -Lead and trail-\n\n== a. b - c__d\n\n== Über  Größe\n\n== xxlarge x y\n\n== Dup\n\n== Dup\n\n[discrete]\n=== Float It\n"
+    },
+    {
+      "id": "section-id-idseparator-letter",
+      "category": "sections",
+      "expect": "pass",
+      "source": ":idseparator: x\n\n== Hello World\n\n== -Lead and trail-\n\n== a. b - c__d\n\n== Über  Größe\n\n== xxlarge x y\n\n== Dup\n\n== Dup\n\n[discrete]\n=== Float It\n"
+    },
+    {
+      "id": "section-id-idseparator-first-char",
+      "category": "sections",
+      "expect": "pass",
+      "source": ":idseparator: -+\n\nBefore {idseparator}\n\n== A B {idseparator}\n\n== C D {idseparator}\n\nAfter {idseparator}\n"
+    },
+    {
+      "id": "section-id-idseparator-explicit-id-keeps",
+      "category": "sections",
+      "expect": "pass",
+      "source": ":idseparator: -+\n\n[[a]]\n== A {idseparator}\n\n== B C {idseparator}\n\n[#d]\n== D {idseparator}\n"
+    },
+    {
+      "id": "section-id-unset-defaults",
+      "category": "sections",
+      "expect": "pass",
+      "source": ":idprefix!:\n:idseparator!:\n\n== Hello World\n\n== -Lead and trail-\n\n== a. b - c__d\n\n== Über  Größe\n\n== xxlarge x y\n\n== Dup\n\n== Dup\n\n[discrete]\n=== Float It\n"
+    },
+    {
+      "id": "section-id-sectids-unset",
+      "category": "sections",
+      "expect": "pass",
+      "source": "= Doc\n:sectids!:\n\n== First\n\n[discrete]\n=== Float\n\n[[x]]\n== Explicit\n\n== Second [[y]]\n"
+    },
+    {
+      "id": "section-id-sectids-toc",
+      "category": "sections",
+      "expect": "pass",
+      "source": "= Doc\n:toc:\n:sectids!:\n\n== First Part\n\nSee <<First Part>> and <<_first_part>>.\n\n:sectids:\n:idseparator:\n\n== Second Part\n\n== Second Part\n\n:idprefix:\n:idseparator: -\n\n== Third Part\n\n<<third-part>> and <<Third Part>>\n"
+    },
+    {
+      "id": "section-id-policy-in-body",
+      "category": "sections",
+      "expect": "pass",
+      "source": "== One Two\n\n:idprefix: p-\n\n== One Two\n\n:idseparator: .\n\n=== One Two\n\n:idprefix!:\n\n== One Two\n"
+    },
+    {
+      "id": "section-id-policy-book",
+      "category": "sections",
+      "expect": "pass",
+      "source": "= Book\n:doctype: book\n:idprefix: ch-\n:idseparator: -\n\n= Part One\n\n== Chapter One\n\n[appendix]\n== Extra Things\n"
+    },
+    {
+      "id": "section-id-policy-manpage",
+      "category": "sections",
+      "expect": "pass",
+      "source": "= prog(1)\n:doctype: manpage\n:idprefix: x-\n:idseparator: -\n\n== The Name\n\nprog - does things\n\n== See Also\n\n<<x-the-name>>\n"
+    },
+    {
+      "id": "section-id-sectids-manpage",
+      "category": "sections",
+      "expect": "pass",
+      "source": "= prog(1)\n:doctype: manpage\n:sectids!:\n\n== NAME\n\nprog - does things\n\n== SYNOPSIS\n\nprog\n"
+    },
+    {
+      "id": "section-id-policy-table-cell",
+      "category": "sections",
+      "expect": "pass",
+      "source": ":idprefix: o-\n\n|===\na|\n:idseparator: -\n\n== In Cell\n\n[discrete]\n== Cell Float\n|===\n\n== After Cell\n"
     }
   ]
 }

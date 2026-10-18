@@ -1857,6 +1857,29 @@ mod tests {
     }
 
     #[test]
+    fn section_ids_follow_the_id_policy() {
+        let html = render(
+            "= Doc\n:toc:\n:sectids!:\n\n== First\n\n:sectids:\n:idprefix: s-\n:idseparator:\n\n\
+             == Two Words\n\n== Two Words\n\n<<s-twowords2>>\n",
+        );
+        // Like Ruby, a section without an id links its TOC entry to `#`.
+        assert!(html.contains("<li><a href=\"#\">First</a></li>"), "{html}");
+        assert!(
+            html.contains("<li><a href=\"#s-twowords2\">Two Words</a></li>"),
+            "{html}"
+        );
+        assert!(html.contains("<h2>First</h2>"), "{html}");
+        assert!(
+            html.contains("<h2 id=\"s-twowords\">Two Words</h2>"),
+            "{html}"
+        );
+        assert!(
+            html.contains("<a href=\"#s-twowords2\">Two Words</a>"),
+            "{html}"
+        );
+    }
+
+    #[test]
     fn manual_pages_render_the_name_section_after_the_title() {
         let html = render(
             "= git-foo(1)\n:doctype: manpage\n:toc:\n\n== NAME\n\n\

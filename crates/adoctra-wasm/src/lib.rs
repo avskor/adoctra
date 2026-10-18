@@ -1185,6 +1185,20 @@ mod tests {
     use super::*;
 
     #[test]
+    fn section_ids_follow_the_id_policy() {
+        let json =
+            parse_json(":sectids!:\n\n== A\n\n:sectids:\n:idprefix:\n:idseparator: -\n\n== B C\n");
+        assert!(
+            json.contains(r#""name":"heading","level":1,"id":null"#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""name":"heading","level":1,"id":"b-c""#),
+            "{json}"
+        );
+    }
+
+    #[test]
     fn bibliography_exports_parts_and_complete_source_anchor_token() {
         let source = "[bibliography]\n* [[[book,Label]]] Text";
         let json = parse_json_with_source(source, 7);

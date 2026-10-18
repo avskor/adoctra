@@ -816,8 +816,12 @@ impl VisitorMut for Ids<'_> {
                 block.span,
                 self.diagnostics,
             );
-        } else if let (BlockKind::Heading { inlines, .. }, false) = (&block.kind, doctitle) {
-            let unique = dedup(generate_id(&inline_text(inlines)), &self.registry);
+        } else if let (BlockKind::Heading { inlines, .. }, false, Some(policy)) =
+            (&block.kind, doctitle, IdPolicy::new(&attributes))
+        {
+            // Without `sectids` the heading keeps no id and is not registered.
+            let id = policy.generate(&inline_text(inlines));
+            let unique = policy.unique(id, |candidate| self.registry.contains_key(candidate));
             let target = Target {
                 reftext: None,
                 title,
@@ -923,47 +927,93 @@ fn register_id(
 }
 
 /// The automatic id of a manual page's NAME section, read when only the
-/// document's id can be registered.
-pub(crate) fn section_id(heading: &Block, doc_id: Option<&str>) -> String {
+/// document's id can be registered (`None` with `sectids` unset).
+pub(crate) fn section_id(heading: &Block, doc_id: Option<&str>) -> Option<String> {
     let BlockKind::Heading { inlines, .. } = &heading.kind else {
         unreachable!("a section title")
     };
-    let id = generate_id(&inline_text(inlines));
-    if doc_id == Some(id.as_str()) {
-        format!("{id}_2")
-    } else {
-        id
-    }
+    let policy = IdPolicy::new(&heading.attribute_context)?;
+    let id = policy.generate(&inline_text(inlines));
+    Some(policy.unique(id, |candidate| doc_id == Some(candidate)))
 }
 
-/// Make `base` unique against ids already in `registry`, appending
-/// `_2`, `_3`, … like asciidoctor (the base already carries the `_` prefix).
-fn dedup(base: String, registry: &Registry) -> String {
-    if !registry.contains_key(&base) {
-        return base;
+/// Ruby's `Section.generate_id` settings, read from the attributes at the
+/// title (`None` when `sectids` is unset, so no id is generated).
+struct IdPolicy {
+    /// `idprefix`, `_` when unset; inserted verbatim (not lowercased).
+    prefix: String,
+    /// The first character of `idseparator` (`_` when unset), `None` for an
+    /// empty separator, which only deletes spaces.
+    separator: Option<char>,
+}
+
+impl IdPolicy {
+    fn new(attributes: &crate::Attributes) -> Option<Self> {
+        attributes.get("sectids")?;
+        let prefix = attributes.get("idprefix").unwrap_or("_").to_owned();
+        // Ruby keeps only the first character of a longer separator.
+        let separator = match attributes.get("idseparator") {
+            Some(separator) => separator.chars().next(),
+            None => Some('_'),
+        };
+        Some(Self { prefix, separator })
     }
-    let mut n = 2u32;
-    loop {
-        let candidate = format!("{base}_{n}");
-        if !registry.contains_key(&candidate) {
-            return candidate;
+
+    /// The id of an (already resolved) title: lowercase it, drop every raw
+    /// tag or entity, then characters other than word chars, spaces, hyphens
+    /// and dots (InvalidSectionIdCharsRx); prepend the prefix and squeeze runs
+    /// of spaces, hyphens, dots and separators into one separator, dropping a
+    /// trailing one (and a leading one without a prefix). An all-separator
+    /// title yields an empty id, exactly as asciidoctor emits `id=""`.
+    fn generate(&self, title: &str) -> String {
+        let mut id = self.prefix.clone();
+        id.push_str(&strip_invalid(title));
+        let Some(separator) = self.separator else {
+            return id.replace(' ', "");
+        };
+        // Ruby's `tr_s " #{sep}.-", sep`.
+        let mut squeezed = String::with_capacity(id.len());
+        let mut translated = false;
+        for ch in id.chars() {
+            if matches!(ch, ' ' | '.' | '-') || ch == separator {
+                if !translated {
+                    squeezed.push(separator);
+                }
+                translated = true;
+            } else {
+                squeezed.push(ch);
+                translated = false;
+            }
         }
-        n += 1;
+        if squeezed.ends_with(separator) {
+            squeezed.pop();
+        }
+        if self.prefix.is_empty() && squeezed.starts_with(separator) {
+            squeezed.remove(0);
+        }
+        squeezed
+    }
+
+    /// Make `base` unique against ids already `taken`, appending the
+    /// separator and `2`, `3`, … like asciidoctor.
+    fn unique(&self, base: String, taken: impl Fn(&str) -> bool) -> String {
+        if !taken(&base) {
+            return base;
+        }
+        let separator = self.separator.map(String::from).unwrap_or_default();
+        (2u64..)
+            .map(|n| format!("{base}{separator}{n}"))
+            .find(|candidate| !taken(candidate))
+            .expect("an unused id")
     }
 }
 
-/// Auto-generate a section id from its (already resolved) title text, matching
-/// asciidoctor's default `idprefix=_`, `idseparator=_`: lowercase; drop every
-/// raw tag or entity, then characters other than word chars, spaces, hyphens
-/// and dots; map runs of
-/// space/hyphen/dot (and adjacent separators) to a single `_`; trim leading and
-/// trailing `_`; prefix `_`. An all-separator title yields an empty id, exactly
-/// as asciidoctor emits `id=""`.
-fn generate_id(title: &str) -> String {
+/// Lowercase `title` and drop what Ruby's InvalidSectionIdCharsRx matches.
+fn strip_invalid(title: &str) -> String {
     // InvalidSectionIdCharsRx operates on the substituted lexical title, not
     // decoded visible text. In particular &#65; is removed, not turned into A.
     let title: String = title.chars().flat_map(char::to_lowercase).collect();
-    let mut mapped = String::with_capacity(title.len());
+    let mut kept = String::with_capacity(title.len());
     let mut offset = 0;
     let mut unclosed_tag = false;
     while offset < title.len() {
@@ -989,35 +1039,13 @@ fn generate_id(title: &str) -> String {
         }
         let ch = rest.chars().next().unwrap();
         offset += ch.len_utf8();
-        if ch.is_alphanumeric() || ch == '_' {
-            mapped.push(ch);
-        } else if ch == ' ' || ch == '-' || ch == '.' {
-            mapped.push('_');
-        }
         // Everything else (apostrophe, slash, punctuation, em dash, thin
         // space, …) is dropped, not turned into a separator.
-    }
-
-    // Collapse runs of `_` and trim them off both ends.
-    let mut collapsed = String::with_capacity(mapped.len());
-    let mut prev_underscore = false;
-    for ch in mapped.chars() {
-        if ch == '_' {
-            if !prev_underscore {
-                collapsed.push('_');
-            }
-            prev_underscore = true;
-        } else {
-            collapsed.push(ch);
-            prev_underscore = false;
+        if matches!(ch, ' ' | '-' | '.') || crate::unicode_word::is_word(ch) {
+            kept.push(ch);
         }
     }
-    let core = collapsed.trim_matches('_');
-    if core.is_empty() {
-        String::new()
-    } else {
-        format!("_{core}")
-    }
+    kept
 }
 
 /// A lexical view for ID derivation only. Flatten semantic formatting while
@@ -1291,22 +1319,157 @@ mod tests {
         super::inline_text(children).replace("<>", "")
     }
 
+    fn generate_id(title: &str) -> String {
+        let policy = super::IdPolicy {
+            prefix: "_".into(),
+            separator: Some('_'),
+        };
+        policy.generate(title)
+    }
+
     #[test]
     fn generate_id_matches_asciidoctor() {
         // Verified against asciidoctor 2.0.23.
-        assert_eq!(super::generate_id("Hello World"), "_hello_world");
-        assert_eq!(super::generate_id("Hello, World!"), "_hello_world");
-        assert_eq!(super::generate_id("foo & bar"), "_foo_bar");
-        assert_eq!(super::generate_id("1. Intro"), "_1_intro");
-        assert_eq!(super::generate_id("a.b.c"), "_a_b_c");
-        assert_eq!(super::generate_id("a-b-c"), "_a_b_c");
-        assert_eq!(super::generate_id("A/B/C"), "_abc");
-        assert_eq!(super::generate_id("100%"), "_100");
-        assert_eq!(super::generate_id("café déjà"), "_café_déjà");
+        assert_eq!(generate_id("Hello World"), "_hello_world");
+        assert_eq!(generate_id("Hello, World!"), "_hello_world");
+        assert_eq!(generate_id("foo & bar"), "_foo_bar");
+        assert_eq!(generate_id("1. Intro"), "_1_intro");
+        assert_eq!(generate_id("a.b.c"), "_a_b_c");
+        assert_eq!(generate_id("a-b-c"), "_a_b_c");
+        assert_eq!(generate_id("A/B/C"), "_abc");
+        assert_eq!(generate_id("100%"), "_100");
+        assert_eq!(generate_id("café déjà"), "_café_déjà");
         // The apostrophe is dropped (the resolved title carries `’`, U+2019).
-        assert_eq!(super::generate_id("It\u{2019}s me"), "_its_me");
+        assert_eq!(generate_id("It\u{2019}s me"), "_its_me");
         // An all-separator title collapses to the empty id, like asciidoctor.
-        assert_eq!(super::generate_id("___"), "");
+        assert_eq!(generate_id("___"), "");
+    }
+
+    fn policy(prefix: &str, separator: Option<char>) -> super::IdPolicy {
+        super::IdPolicy {
+            prefix: prefix.into(),
+            separator,
+        }
+    }
+
+    #[test]
+    fn id_policy_matches_section_generate_id() {
+        // Verified against asciidoctor 2.0.23 (Section.generate_id).
+        let cases = [
+            (policy("", Some('-')), "-Lead and trail-", "lead-and-trail"),
+            (policy("", Some('.')), "a. b - c__d", "a.b.c__d"),
+            (policy("Sec.", Some('_')), "Hello World", "Sec_hello_world"),
+            (policy("Pre ", Some('-')), "Über  Größe", "Pre-über-größe"),
+            // A letter separator is squeezed like Ruby's tr_s.
+            (policy("_", Some('x')), "xxlarge x y", "_xlargexy"),
+            // An empty separator only deletes spaces.
+            (
+                policy("sec-", None),
+                "-Lead and trail-",
+                "sec--leadandtrail-",
+            ),
+            (policy("sec-", None), "a. b - c", "sec-a.b-c"),
+            // The prefix is neither lowercased nor sanitized.
+            (policy("A&b;", Some('_')), "C D", "A&b;c_d"),
+            (policy("", Some('_')), "___", ""),
+        ];
+        for (policy, title, expected) in cases {
+            assert_eq!(policy.generate(title), expected, "{title}");
+        }
+        // Combining marks are word characters, as in Ruby's \p{Word}.
+        assert_eq!(generate_id("e\u{301}t\u{e9}"), "_e\u{301}t\u{e9}");
+    }
+
+    #[test]
+    fn id_policy_deduplicates_with_its_separator() {
+        let taken = ["dup", "dup-2", "x"];
+        let is_taken = |id: &str| taken.contains(&id);
+        assert_eq!(
+            policy("", Some('-')).unique("dup".into(), is_taken),
+            "dup-3"
+        );
+        assert_eq!(policy("", None).unique("dup".into(), is_taken), "dup2");
+        assert_eq!(policy("", None).unique("new".into(), is_taken), "new");
+    }
+
+    #[test]
+    fn id_policy_reads_attributes_at_each_title() {
+        let src = "== One Two\n\n:idprefix: p-\n\n== One Two\n\n:idseparator: --\n\n\
+                   === One Two\n\n:idprefix!:\n\n== One Two\n\n[discrete]\n== One Two\n";
+        let ids: Vec<_> = (0..5).map(|n| heading_id(src, n)).collect();
+        assert_eq!(
+            ids,
+            [
+                "_one_two",
+                "p_one_two",
+                "p-one-two",
+                "_one-two",
+                "_one-two-2"
+            ]
+            .map(|id| Some(id.to_owned()))
+        );
+    }
+
+    #[test]
+    fn unset_sectids_leaves_headings_without_ids() {
+        let src = "= Doc\n:sectids!:\n\n== First\n\n[discrete]\n=== Float\n\n\
+                   [[x]]\n== Explicit\n\n== Second [[y]]\n\n:sectids:\n\n== Later\n\n\
+                   <<_first>> <<First>> <<x>>\n";
+        let ids: Vec<_> = (1..6).map(|n| heading_id(src, n)).collect();
+        assert_eq!(
+            ids,
+            [
+                None,
+                None,
+                Some("x".into()),
+                Some("y".into()),
+                Some("_later".into())
+            ]
+        );
+        // Neither the generated nor the natural id of an unnamed section resolves.
+        let messages: Vec<_> = crate::parse(src)
+            .diagnostics
+            .into_iter()
+            .map(|d| d.message)
+            .collect();
+        assert_eq!(
+            messages,
+            [
+                "unresolved cross reference: '_first'",
+                "unresolved cross reference: 'First'"
+            ]
+        );
+    }
+
+    #[test]
+    fn generated_ids_cut_a_longer_separator_for_later_reading() {
+        // Ruby stores the first character back into the document attribute
+        // when it generates an id; explicit ids leave it alone, and body text
+        // (converted from the header attributes) still sees the whole value.
+        let src = ":idseparator: -+\n\nBefore {idseparator}\n\n[[a]]\n== A {idseparator}\n\n\
+                   == B C {idseparator}\n\n== D {idseparator}\n\nAfter {idseparator}\n";
+        let doc = crate::parse(src).document;
+        let texts: Vec<_> = doc
+            .flat_blocks()
+            .iter()
+            .filter_map(|b| match &b.kind {
+                BlockKind::Heading { inlines, .. } | BlockKind::Paragraph { inlines } => {
+                    Some((b.id.clone(), text_of(inlines)))
+                }
+                _ => None,
+            })
+            .collect();
+        let owned = |id: Option<&str>, text: &str| (id.map(str::to_owned), text.to_owned());
+        assert_eq!(
+            texts,
+            [
+                owned(None, "Before -+"),
+                owned(Some("a"), "A -+"),
+                owned(Some("_b-c"), "B C -+"),
+                owned(Some("_d"), "D -"),
+                owned(None, "After -+"),
+            ]
+        );
     }
 
     #[test]

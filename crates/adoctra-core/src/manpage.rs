@@ -170,6 +170,9 @@ fn name_section(
     let base = off + (title.as_ptr() as usize - line.as_ptr() as usize);
     let attributes = Arc::clone(&context.attributes);
     let inlines = context.reading_title(title, base, &attributes, &lines.include_catalog);
+    if anchor.is_none() {
+        context.generating_id();
+    }
     let mut heading = Block::new(Span::new(off, end), BlockKind::Heading { level, inlines });
     if let Some(anchor) = &anchor {
         heading.id = Some(anchor.id.to_owned());
@@ -247,7 +250,7 @@ fn name_section(
     let id = heading
         .id
         .clone()
-        .unwrap_or_else(|| crate::resolve::section_id(&heading, doc_id));
+        .or_else(|| crate::resolve::section_id(&heading, doc_id));
     let title = match &heading.kind {
         BlockKind::Heading { inlines, .. } => crate::resolve::label_parts(inlines),
         _ => unreachable!(),
@@ -257,7 +260,9 @@ fn name_section(
     if section_title {
         attributes.set_parts("manname-title", title);
     }
-    attributes.set("manname-id", id);
+    if let Some(id) = id {
+        attributes.set("manname-id", id);
+    }
     if let Some(name) = names.first() {
         attributes.set_parts("manname", raw(name.clone()));
     }
@@ -401,6 +406,30 @@ mod tests {
             BlockKind::Section { blocks, .. } => blocks[0].id.as_deref(),
             _ => None,
         }
+    }
+
+    #[test]
+    fn the_name_section_follows_the_id_policy() {
+        let src = "= prog(1)\n:doctype: manpage\n:idprefix: x-\n:idseparator: -+\n\n\
+                   == The Name\n\nprog - does things\n\n== After {idseparator}\n";
+        let doc = crate::parse(src).document;
+        assert_eq!(doc.attributes.get("manname-id"), Some("x-the-name"));
+        let section = doc.manpage.as_ref().unwrap().name_section.as_ref().unwrap();
+        assert_eq!(section.heading.id.as_deref(), Some("x-the-name"));
+        // Generating the NAME section's id cut the separator for later reading.
+        let BlockKind::Section { blocks, .. } = &doc.blocks[1].kind else {
+            panic!("{:?}", doc.blocks[1].kind)
+        };
+        assert_eq!(blocks[0].id.as_deref(), Some("x-after"));
+
+        // Without `sectids` neither the NAME section nor `manname-id` has one.
+        let src =
+            "= prog(1)\n:doctype: manpage\n:sectids!:\n\n== NAME\n\nprog - does\n\n== SYNOPSIS\n";
+        let doc = crate::parse(src).document;
+        assert_eq!(doc.attributes.get("manname-id"), None);
+        let section = doc.manpage.as_ref().unwrap().name_section.as_ref().unwrap();
+        assert_eq!(section.heading.id, None);
+        assert_eq!(heading_id(&doc.blocks[1]), None);
     }
 
     #[test]
