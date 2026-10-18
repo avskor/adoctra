@@ -63,6 +63,8 @@ pub enum TokenKind {
     ListMarker,
     LineBreak,
     BlockMacro,
+    ThematicBreak,
+    PageBreak,
     InlineMacro,
     Callout,
 }
@@ -108,6 +110,8 @@ impl TokenKind {
             TokenKind::ListMarker => "list-marker",
             TokenKind::LineBreak => "line-break",
             TokenKind::BlockMacro => "block-macro",
+            TokenKind::ThematicBreak => "thematic-break",
+            TokenKind::PageBreak => "page-break",
             TokenKind::InlineMacro => "inline-macro",
             TokenKind::Callout => "callout",
         }

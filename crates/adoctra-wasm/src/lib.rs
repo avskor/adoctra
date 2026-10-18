@@ -471,6 +471,22 @@ fn write_block(b: &Block, s: &mut String) {
             write_str(text, s);
             write_substituted(inlines, s);
         }
+        BlockKind::ThematicBreak | BlockKind::PageBreak => {
+            // The ASG `break` block with its variant; it has no content.
+            s.push_str("\"name\":\"break\",\"variant\":");
+            s.push_str(if matches!(b.kind, BlockKind::PageBreak) {
+                "\"page\","
+            } else {
+                "\"thematic\","
+            });
+            write_id(&b.id, s);
+            write_roles(&b.roles, s);
+            write_style(&b.attrs.style, s);
+            write_attributes(&b.attrs.named, s);
+            write_options(&b.attrs.options, s);
+            write_title(&b.title, s);
+            write_caption(&b.caption, s);
+        }
         BlockKind::Toc => {
             // The `toc::[]` macro; the editor builds the outline from sections.
             s.push_str("\"name\":\"toc\",");
@@ -1689,6 +1705,43 @@ mod tests {
         );
         // The nested paragraph carries its own span too.
         assert!(json.contains("\"name\":\"paragraph\""), "got: {json}");
+    }
+
+    #[test]
+    fn breaks_and_fenced_code_export_spans_and_tokens() {
+        let source = "'''\n\n<<<\n\n```sh\nls\n```";
+        let json = parse_json(source);
+        assert!(
+            json.contains(
+                r#""span":{"source_id":0,"start":0,"end":3},"name":"break","variant":"thematic""#
+            ),
+            "{json}"
+        );
+        assert!(
+            json.contains(
+                r#""span":{"source_id":0,"start":5,"end":8},"name":"break","variant":"page""#
+            ),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""style":"source","attributes":{"language":"sh"}"#),
+            "{json}"
+        );
+        let tokens = tokens_json(source);
+        for (start, end, kind) in [
+            (0, 3, "thematic-break"),
+            (5, 8, "page-break"),
+            (10, 15, "listing-delimiter"),
+            (16, 18, "listing-text"),
+            (19, 22, "listing-delimiter"),
+        ] {
+            assert!(
+                tokens.contains(&format!(
+                    r#"{{"span":{{"source_id":0,"start":{start},"end":{end}}},"kind":"{kind}"}}"#
+                )),
+                "{tokens}"
+            );
+        }
     }
 
     #[test]

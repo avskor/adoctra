@@ -364,6 +364,23 @@ fn write_block(block: &Block, s: &mut String) {
             write_substituted(inlines, s);
             s.push('}');
         }
+        BlockKind::ThematicBreak | BlockKind::PageBreak => {
+            // The ASG `break` block with its variant; it has no content.
+            s.push_str("{\"name\":\"break\",\"variant\":");
+            s.push_str(if matches!(block.kind, BlockKind::PageBreak) {
+                "\"page\","
+            } else {
+                "\"thematic\","
+            });
+            write_id(&block.id, s);
+            write_roles(&block.roles, s);
+            write_style(&block.attrs.style, s);
+            write_attributes(&block.attrs.named, s);
+            write_options(&block.attrs.options, s);
+            write_title(&block.title, s);
+            write_caption(&block.caption, s);
+            s.push('}');
+        }
         BlockKind::Toc => {
             // The `toc::[]` macro; consumers build the outline from sections.
             s.push_str("{\"name\":\"toc\",");
@@ -1727,6 +1744,23 @@ mod tests {
         assert!(json.contains("\"blocks\":["), "got: {json}");
         assert!(json.contains("\"name\":\"paragraph\""), "got: {json}");
         assert!(json.contains("\"name\":\"strong\""), "got: {json}");
+    }
+
+    #[test]
+    fn breaks_and_fenced_code_serialize() {
+        let json = render("[.r]\n'''\n\n<<<\n\n```js,1\nx\n```");
+        assert!(
+            json.contains(r#"{"name":"break","variant":"thematic","id":null,"roles":["r"],"style":null,"attributes":{},"options":[],"title":null,"caption":null}"#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#"{"name":"break","variant":"page","#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""style":"source","attributes":{"language":"js","linenums":""}"#),
+            "{json}"
+        );
     }
 
     #[test]

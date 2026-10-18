@@ -1068,8 +1068,8 @@ fixtures under `golden/blocks/`, literal-block fixtures under `golden/literals/`
 admonition fixtures under `golden/admonitions/`, example-block fixtures under
 `golden/examples/`, block-title fixtures under `golden/titles/`, quote/verse
 fixtures under `golden/quotes/` and `golden/verses/`, open-block fixtures under
-`golden/opens/`, passthrough fixtures under `golden/passthrough/` and table
-fixtures under `golden/tables/`).
+`golden/opens/`, passthrough fixtures under `golden/passthrough/`, table
+fixtures under `golden/tables/` and break fixtures under `golden/breaks/`).
 
 Scaffold only: DOCX backend; the extension API exists but `parse`/`convert` do
 not invoke it yet.
@@ -1180,8 +1180,26 @@ plain ones (StartOfBlockProc); verbatim paragraphs (`[literal]`/`[source]`/
 `[verse]`) only at a blank line or `+`. The parser records every fence and verbatim
 body line in Reader.block_tokens; the tokenizer projects them instead of its own
 fence toggles (masquerade bodies are text tokens of their kind, AsciiDoc cells
-and includes too). Markdown fenced code (```` ``` ````) and `---` thematic
-breaks remain work.
+and includes too).
+**Breaks and fenced code**: parser.rs layout_break is Ruby's layout-break branch
+of `next_block` with Markdown syntax: `'''`+ is `BlockKind::ThematicBreak`, `<<<`+
+`BlockKind::PageBreak`, and MarkdownThematicBreakRx (`---`, `- - -`, `***`,
+`___`, uniform spaces, indented up to three spaces) a thematic break. They are
+checked at a block start before block macros (not in a list item's text-only
+block or under a verbatim style) and never interrupt a paragraph. Metadata is
+kept, but like an unrendered passthrough the title is not executed; HTML emits
+Ruby's `<hr>` / `<div style="page-break-after: always;"></div>` without
+metadata, JSON/WASM the ASG `name:"break"` with `variant` thematic/page, tokens
+`thematic-break`/`page-break` from the parser. Fenced code (```` ``` ````, tip of
+lists.rs delimiter) is a `Listing` closed by exactly three backticks:
+MacroMeta.style forces `source` over the metadata style (its `source` rekeying
+does not apply, block_attributes::unkeyed_fields) and fenced_code_attributes
+gives `language`/`linenums` like Ruby (a leading comma keeps the whole text).
+`source-language`/`source-linenums-option`/`source-indent` defaults are not
+implemented yet.
+Like Ruby's `Block#content`, parser.rs trim_verbatim_edges drops blank edge
+lines of a multi-line Listing/Literal/Passthrough `text` at block completion
+(before callouts), also without custom subs.
 
 Not yet implemented (common asks — treat as roadmap, do not assume present):
 broader language coverage. The full block-attribute list is now *parsed* (style, named

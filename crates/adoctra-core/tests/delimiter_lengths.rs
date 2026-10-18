@@ -121,8 +121,9 @@ fn indented_and_short_fences_are_not_delimiters() {
         BlockKind::Literal { text, .. } => assert_eq!(text, " ----\nindented"),
         other => panic!("expected a literal paragraph, got {other:?}"),
     }
-    // A three-character run is never a fence; a mixed run is not uniform.
-    for line in ["===", "***", "====-"] {
+    // A three-character run is never a fence (`***` is a thematic break, see
+    // tests/breaks.rs); a mixed run is not uniform.
+    for line in ["===", "====-"] {
         let blocks = parse(&format!("{line}\ntext")).document.blocks;
         assert!(
             matches!(blocks[0].kind, BlockKind::Paragraph { .. }),

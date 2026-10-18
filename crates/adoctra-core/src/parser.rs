@@ -55,6 +55,8 @@ pub(crate) struct MacroMeta {
     pub reftext: Option<crate::reftext::Read>,
     pub named: Vec<(String, String)>,
     pub options: Vec<String>,
+    /// A style the block sets over the metadata (fenced code is `source`).
+    pub style: Option<String>,
 }
 
 impl MacroMeta {
@@ -67,6 +69,7 @@ impl MacroMeta {
             reftext: list.reftext,
             named: list.attrs.named.into_iter().collect(),
             options: list.attrs.options,
+            style: None,
         }
     }
 }
@@ -442,6 +445,13 @@ fn collect_blocks_in(
                 }
             }
             if let Some(meta) = macro_meta {
+                if meta.style.is_some() {
+                    // The block's own style replaces the metadata style,
+                    // whose `source` rekeying does not apply.
+                    (block.attrs.named, block.attrs.positional) =
+                        crate::block_attributes::unkeyed_fields(&pending.list);
+                    block.attrs.style = meta.style;
+                }
                 block.attrs.named.extend(meta.named);
                 for option in meta.options {
                     if !block.attrs.options.contains(&option) {
@@ -469,6 +479,7 @@ fn collect_blocks_in(
                 }
                 block.attrs.style = Some(style.as_str().into());
             }
+            trim_verbatim_edges(&mut block);
             commit_subs(&mut block, simple, lines, &attributes, context, diagnostics);
             apply_callouts(&mut block, lines, context);
             if let Some(value) = reftext {
@@ -488,7 +499,10 @@ fn collect_blocks_in(
                         title.origin.is_none(),
                         &lines.include_catalog,
                     ));
-                } else if !matches!(block.kind, BlockKind::Passthrough { .. }) {
+                } else if !matches!(
+                    block.kind,
+                    BlockKind::Passthrough { .. } | BlockKind::ThematicBreak | BlockKind::PageBreak
+                ) {
                     block.title = Some(context.body_subs.defer_title(
                         &title.text,
                         title.base,
@@ -496,8 +510,9 @@ fn collect_blocks_in(
                         &context.attributes,
                     ));
                 }
-                // An unrendered passthrough title retains its source text; it
-                // must neither execute expressions nor issue inline warnings.
+                // An unrendered passthrough or break title retains its source
+                // text; it must neither execute expressions nor issue inline
+                // warnings.
             }
             block.attribute_context = Arc::clone(&context.attributes);
             blocks.push(block);
@@ -1158,6 +1173,88 @@ fn changes_paragraph_type(style: &str) -> bool {
                 | "source"
                 | "verse"
         )
+}
+
+/// Ruby's `Block#content` for verbatim and raw blocks: blank lines at either
+/// edge of a multi-line body are dropped (a single line is kept as is).
+fn trim_verbatim_edges(block: &mut Block) {
+    let (BlockKind::Listing { text, .. }
+    | BlockKind::Literal { text, .. }
+    | BlockKind::Passthrough { text, .. }) = &mut block.kind
+    else {
+        return;
+    };
+    if !text.contains('\n') {
+        return;
+    }
+    let blank = |line: &&str| {
+        line.trim_end_matches([' ', '\t', '\r', '\n', '\x0b', '\x0c', '\0'])
+            .is_empty()
+    };
+    let lines: Vec<&str> = text.split('\n').collect();
+    let start = lines
+        .iter()
+        .position(|line| !blank(line))
+        .unwrap_or(lines.len());
+    let end = lines
+        .iter()
+        .rposition(|line| !blank(line))
+        .map_or(start, |i| i + 1);
+    *text = lines[start..end].join("\n");
+}
+
+/// Ruby's layout breaks in `next_block` (with Markdown syntax): a line of three
+/// or more `'` (thematic break) or `<` (page break), or Markdown's thematic
+/// break (`MarkdownThematicBreakRx`, also indented by up to three spaces).
+fn layout_break(line: &str) -> Option<BlockKind> {
+    let markdown = |line: &str| {
+        let mut chars = line.chars();
+        let c = chars.next().filter(|c| matches!(c, '-' | '*' | '_'))?;
+        let rest = chars.as_str();
+        let spaces = " ".repeat(rest.len() - rest.trim_start_matches(' ').len());
+        (rest == format!("{spaces}{c}{spaces}{c}")).then_some(BlockKind::ThematicBreak)
+    };
+    let uniform = |c: char| line.len() >= 3 && line.chars().all(|x| x == c);
+    if uniform('\'') {
+        Some(BlockKind::ThematicBreak)
+    } else if uniform('<') {
+        Some(BlockKind::PageBreak)
+    } else if line.starts_with(' ') {
+        let indented = line.trim_start_matches(' ');
+        (line.len() - indented.len() <= 3)
+            .then(|| markdown(indented))
+            .flatten()
+    } else {
+        markdown(line)
+    }
+}
+
+/// The attributes of a fenced code block's opening line, as Ruby's
+/// `:fenced_code` branch: the text after the backticks up to a comma is the
+/// language (a leading comma keeps the whole text), and text after the comma
+/// sets `linenums`.
+fn fenced_code_attributes(line: &str) -> Vec<(String, String)> {
+    let mut named = Vec::new();
+    let rest = line.get(3..).unwrap_or("");
+    let language = match rest.find(',') {
+        Some(0) => {
+            if rest.len() > 1 {
+                named.push(("linenums".to_owned(), String::new()));
+            }
+            rest
+        }
+        Some(comma) => {
+            if comma + 1 < rest.len() {
+                named.push(("linenums".to_owned(), String::new()));
+            }
+            rest[..comma].trim()
+        }
+        None => rest.trim_start(),
+    };
+    if !language.is_empty() {
+        named.push(("language".to_owned(), language.to_owned()));
+    }
+    named
 }
 
 /// Read a compound delimited block whose opening `fence` is at `*i`: its body
@@ -1973,6 +2070,16 @@ fn parse_block_content(
         }
     );
     let verbatim = verbatim || text_only;
+    if let Some(kind) = layout_break(line).filter(|_| !verbatim) {
+        let span = Span::new(off, off + line.len());
+        let token = match kind {
+            BlockKind::PageBreak => TokenKind::PageBreak,
+            _ => TokenKind::ThematicBreak,
+        };
+        lines.record_fences(span, None, token);
+        *i += 1;
+        return Some(Block::new(span, kind));
+    }
     if let Some(found) = crate::image::match_macro(trimmed).filter(|_| !verbatim) {
         *i += 1;
         return read_media_macro(trimmed, off, found, context, &lines.include_catalog);
@@ -2009,6 +2116,40 @@ fn parse_block_content(
             pending_attrs,
             context,
             diagnostics,
+        ));
+    }
+
+    // Markdown fenced code (Ruby's `:fenced_code`): a source listing whatever
+    // the style, closed by a line of exactly three backticks. The opening
+    // line's rest gives the language and `linenums`.
+    if let Some(fence) = fence("```") {
+        let opening = Span::new(off, off + line.len());
+        *i += 1;
+        let (body_start, body_end, end, closing) =
+            capture_verbatim_body(lines, i, opening, &fence, "listing", context, diagnostics);
+        context
+            .verbatim_bodies
+            .insert(off, (body_start, body_end, 0));
+        lines.record_verbatim(
+            opening,
+            closing,
+            (body_start, body_end),
+            TokenKind::ListingDelimiter,
+            TokenKind::ListingText,
+        );
+        context.block_macro = Some(MacroMeta {
+            style: Some("source".to_owned()),
+            named: fenced_code_attributes(line),
+            ..MacroMeta::default()
+        });
+        let text = lines.content(body_start, body_end).text;
+        return Some(Block::new(
+            Span::new(off, end),
+            BlockKind::Listing {
+                text,
+                callouts: Vec::new(),
+                inlines: None,
+            },
         ));
     }
 
@@ -4650,14 +4791,14 @@ mod tests {
     #[test]
     fn open_delimiter_is_exactly_two_hyphens() {
         // A whole-line `--` is the open-block fence; `---` (three hyphens) is not a
-        // delimiter and stays a paragraph.
+        // delimiter but Markdown's thematic break.
         let b = &parse("--\ntext\n--").document.into_flat_blocks()[0];
         assert!(matches!(b.kind, BlockKind::Open { .. }));
-        let para = &parse("---\ntext\n---").document.into_flat_blocks()[0];
+        let hr = &parse("---\n\ntext").document.into_flat_blocks()[0];
         assert!(
-            matches!(para.kind, BlockKind::Paragraph { .. }),
+            matches!(hr.kind, BlockKind::ThematicBreak),
             "got {:?}",
-            para.kind
+            hr.kind
         );
     }
 

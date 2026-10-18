@@ -157,6 +157,8 @@ pub fn walk_block_mut(visitor: &mut (impl VisitorMut + ?Sized), block: &mut Bloc
         }
         BlockKind::Passthrough { .. }
         | BlockKind::Toc
+        | BlockKind::ThematicBreak
+        | BlockKind::PageBreak
         | BlockKind::Image { .. }
         | BlockKind::Video { .. }
         | BlockKind::Audio { .. } => {}

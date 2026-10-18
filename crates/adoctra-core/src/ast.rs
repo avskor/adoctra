@@ -526,6 +526,13 @@ pub enum BlockKind {
     /// macro's brackets replace the block's metadata. Backends build the outline
     /// from the document's sections.
     Toc,
+    /// A thematic break (Ruby's `:thematic_break`): `'''` (three or more
+    /// apostrophes) or Markdown's `---`, `***`, `___` with optional uniform
+    /// spaces between the characters (`- - -`), indented up to three spaces.
+    /// It has no content; backends ignore its metadata, like Ruby.
+    ThematicBreak,
+    /// A page break (Ruby's `:page_break`): three or more `<` on a line.
+    PageBreak,
     /// The `image::target[alt, width, height]` block macro (Ruby's `:image`
     /// block). `target` is the macro target after its attribute references;
     /// `src` is the resolved web path (`imagesdir`, `.`/`..` segments and

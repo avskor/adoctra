@@ -610,6 +610,10 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             out.push_str("</blockquote>\n</figure>\n");
         }
         BlockKind::Open { blocks } => render_open(block, blocks, cx, out),
+        // Ruby's `convert_thematic_break` / `convert_page_break` ignore the
+        // block's id, roles and title.
+        BlockKind::ThematicBreak => out.push_str("<hr>\n"),
+        BlockKind::PageBreak => out.push_str("<div style=\"page-break-after: always;\"></div>\n"),
         BlockKind::Toc => {
             // Ruby's `convert_toc`: only with `toc-placement` macro (the header
             // value `:toc: macro`), at the attributes of its position.
@@ -3058,6 +3062,28 @@ mod tests {
 
     fn body(html: &str) -> &str {
         html.split("<body>\n").nth(1).unwrap()
+    }
+
+    #[test]
+    fn breaks_render_like_ruby_without_metadata() {
+        let html = render("[#hr.r]\n.T\n'''\n\n<<<\n\n* * *");
+        assert_eq!(
+            body(&html),
+            "<hr>\n<div style=\"page-break-after: always;\"></div>\n<hr>\n</body>\n</html>\n"
+        );
+    }
+
+    #[test]
+    fn fenced_code_renders_as_a_source_listing() {
+        let html = render("```ruby\nputs 1 <1>\n```\n<1> x\n\n```\n<b>\n```");
+        assert!(
+            html.contains(r#"<pre class="highlight"><code class="language-ruby" data-lang="ruby">puts 1 <b class="conum">(1)</b></code></pre>"#),
+            "{html}"
+        );
+        assert!(
+            html.contains("<pre class=\"highlight\"><code>&lt;b&gt;</code></pre>"),
+            "{html}"
+        );
     }
 
     #[test]

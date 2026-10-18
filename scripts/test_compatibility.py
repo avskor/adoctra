@@ -154,6 +154,12 @@ class ProjectionTests(unittest.TestCase):
         self.assertEqual(projection(ruby), projection(ours))
         self.assertNotEqual(projection(ours), projection(ours.replace('body', 'changed')))
 
+    def test_thematic_break_separates_item_text(self):
+        ruby = '<ul><li><p>item</p>\n<hr></li></ul>'
+        ours = '<ul><li>item\n<hr>\n</li></ul>'
+        self.assertEqual(projection(ruby), projection(ours))
+        self.assertNotEqual(projection(ours), projection(ours.replace('<hr>', '')))
+
     def test_malformed_html_is_a_harness_error(self):
         for html in ['<p>unclosed', '<p>x</em>', '</div>']:
             with self.assertRaises(ValueError):

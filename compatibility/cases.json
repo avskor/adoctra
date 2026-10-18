@@ -19173,6 +19173,95 @@
       "category": "blocks",
       "expect": "pass",
       "source": "[literal]\n----\nx <1>\n----\n\n[listing]\n....\ny\n....\n\n[source,ruby]\n.....\nputs 1\n....\n.....\n\n[literal]\n------\nunterminated\n"
+    },
+    {
+      "id": "break-thematic-forms",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "a\n\n'''\n\n''''\n\n---\n\n- - -\n\n-  -  -\n\n***\n\n* * *\n\n___\n\n_ _ _\n\n  ---\n\n   ***\n\nb\n"
+    },
+    {
+      "id": "break-not-breaks",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "    ---\n\n- -  -\n\n''\n\n'''x\n\n<<<x\n\n-- -\n"
+    },
+    {
+      "id": "break-page",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "a\n\n<<<\n\n<<<<<\n\nb\n"
+    },
+    {
+      "id": "break-metadata",
+      "category": "blocks",
+      "expect": "pass",
+      "source": ":n: 1\n\n[#hr.r%o]\n.Title {counter:n}\n'''\n\n.Kept? {n}\n<<<\n\nNext {n}\n"
+    },
+    {
+      "id": "break-paragraph-and-list",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "para\n'''\nmore\n\n* item\n'''\n\n* item\n+\n'''\n\n====\n<<<\n'''\n====\n"
+    },
+    {
+      "id": "break-verbatim-style",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "[literal]\n'''\n\n[verse]\n<<<\n\n----\n\n'''\n\n----\n"
+    },
+    {
+      "id": "break-setext-and-sections",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "== Section\n\ntext\n\n---\n\n=== Sub\n\n'''\n"
+    },
+    {
+      "id": "fenced-code-forms",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "```\nplain <b>\n```\n\n```ruby\nputs 1 # <1>\n```\n<1> one\n\n``` js , linenums\nx\n```\n\n```,x\ny\n```\n"
+    },
+    {
+      "id": "fenced-code-metadata",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "[.r#f]\n.Title\n```py\n````\n```py\nz\n```\n\n[literal]\n```\nlit\n```\n\n[source,python]\n```\nb\n```\n\n[language=go]\n```\nc\n```\n"
+    },
+    {
+      "id": "fenced-code-not-fenced",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "````\nnot fenced\n````\n\n``x\n\ntext\n```\n"
+    },
+    {
+      "id": "fenced-code-list-and-cell",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "* item\n+\n```sh\nls *x*\n```\n\n|===\na|\n```c\nint x;\n```\n|===\n"
+    },
+    {
+      "id": "fenced-code-unterminated",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "```\nunterminated\n<b>\n"
+    },
+    {
+      "id": "fenced-code-subs-and-crlf",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "[subs=+quotes]\r\n```\r\n*bold* {x}\r\n```\r\n"
+    },
+    {
+      "id": "fenced-code-include",
+      "category": "blocks",
+      "profile": "include-body-dom-v1",
+      "source": "```ruby\ninclude::code.rb[]\n```\n\n'''\n\ninclude::part.adoc[]\n",
+      "resources": {
+        "code.rb": "puts 1\n```\n",
+        "part.adoc": "<<<\n\n```\nx\n```\n"
+      },
+      "expect": "pass"
     }
   ]
 }

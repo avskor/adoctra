@@ -487,23 +487,24 @@ fn sync(pending: &mut PendingMeta) {
         }
         first = 3;
     }
-    let last = pending
-        .list
-        .positional
-        .keys()
-        .next_back()
-        .copied()
-        .unwrap_or(0);
-    pending.attrs.positional = (first..=last)
-        .map(|key| {
-            pending
-                .list
-                .value(key)
-                .map(|v| v.text.clone())
-                .unwrap_or_default()
-        })
-        .collect();
+    pending.attrs.positional = positional(&pending.list, first);
     pending.attrs.named = named;
+}
+
+/// The positional values of a list from key `first` on (Ruby's keys).
+fn positional(list: &BlockList, first: usize) -> Vec<String> {
+    let last = list.positional.keys().next_back().copied().unwrap_or(0);
+    (first..=last)
+        .map(|key| list.value(key).map(|v| v.text.clone()).unwrap_or_default())
+        .collect()
+}
+
+/// The named and positional fields of a list without the `source` rekeying,
+/// for a block whose own style replaces the metadata style (fenced code).
+pub(crate) fn unkeyed_fields(
+    list: &BlockList,
+) -> (std::collections::BTreeMap<String, String>, Vec<String>) {
+    (list.named.clone(), positional(list, 2))
 }
 
 #[cfg(test)]
