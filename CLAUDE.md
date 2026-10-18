@@ -1115,8 +1115,22 @@ a separate Chrome 155 browser check loaded MathJax from the real CDN and passed
 numbering, inline/display modes, ignore classes and body attribute replay.
 Local browser artifacts are in `target/browser-stem/` (not committed).
 
+Bibliography lists use the existing List style and neutral Anchor/Text parts
+in Inline::Substituted. Direct unordered children of bibliography sections
+inherit the style; nested lists and containers do not. Reading catalogs only a
+leading triple-bracket anchor of an unordered bibliography item, keeping its
+bracketed reftext without early attribute substitution; first id wins. Conversion
+recognizes the first line-leading triple-bracket anchor in a bibliography list
+item (including explicitly styled ordered/description lists), after links and
+before ordinary anchors. Its label runs c/q/r again like Inline#reftext, so
+already generated formatting tags become escaped text. Generated anchors render
+without being cataloged. Checklist recognition is disabled for bibliography.
+JSON/WASM expose parts and style; tokenizer projects the complete anchor span
+from parsed substituted nodes. Covered by core/all-consumer tests, a list golden
+fixture and 22 compatibility cases including include and nested cells.
+
 Not yet implemented (common asks — treat as roadmap, do not assume present):
-broader language coverage (bibliography lists, general block substitutions). The full block-attribute list is now *parsed* (style, named
+broader language coverage (general block substitutions). The full block-attribute list is now *parsed* (style, named
 attributes, `%options`, id/role folding), but most of it has nothing to render
 against yet. Math styles (`[stem]`/`[asciimath]`/`[latexmath]`) apply to `++++`
 only, as in Ruby. `[source,<lang>]`, `[literal]`, `[pass]`,
@@ -1137,8 +1151,7 @@ blocks** (`Example N.` via the `example-caption` attribute, on `Block.caption`) 
 images (`Figure N.`) and tables (`Table N.`). The unset forms
 `:!example-caption:` / `:example-caption!:` disable example captions and their
 counter increments; a custom per-block `caption=` or document `caption` overrides
-the prefix without incrementing the counter. Also: bibliography lists and
-delimiters longer than four chars (the same
+the prefix without incrementing the counter. Also: delimiters longer than four chars (the same
 single-length limitation applies to `====`/`____`: a nested same-length `====` /
 `____` closes the outer block); ids of individual list items,
 incremental/block reparse, and a pull/event API over the AST.

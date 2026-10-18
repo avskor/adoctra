@@ -575,6 +575,13 @@ impl ParseContext {
             .insert((block.span.start, block.span.end), (context, effect.parts));
     }
 
+    pub fn bibliography_section(&self) -> bool {
+        self.open_sections
+            .last()
+            .and_then(|(_, key)| self.sections.get(key))
+            .is_some_and(|section| section.sectname == "bibliography")
+    }
+
     /// Read a section title line at `key` (after `close_sections`, before its
     /// title is converted): decide its kind and numbering with the current
     /// attributes and the enclosing section; returns the section's level.

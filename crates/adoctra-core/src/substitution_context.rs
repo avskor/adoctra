@@ -9,6 +9,7 @@ use std::{
 };
 
 pub(crate) struct Evaluation<'a> {
+    pub bibliography: bool,
     attributes: Cow<'a, Attributes>,
     compat: bool,
     state: Option<(&'a BTreeSet<String>, &'a mut BTreeMap<String, String>)>,
@@ -62,6 +63,7 @@ pub(crate) struct Effect {
 impl<'a> Evaluation<'a> {
     pub fn read_only(attributes: &'a Attributes) -> Self {
         Self {
+            bibliography: false,
             attributes: Cow::Borrowed(attributes),
             state: None,
             compat: false,
@@ -77,6 +79,7 @@ impl<'a> Evaluation<'a> {
         compat: bool,
     ) -> Self {
         Self {
+            bibliography: false,
             attributes: Cow::Borrowed(attributes),
             state: Some((locked, counters)),
             compat,

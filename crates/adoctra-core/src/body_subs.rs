@@ -11,6 +11,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Clone)]
 struct Pending {
+    bibliography: bool,
     source: FilteredSource,
     filtered: Option<FilteredSource>,
     fold: bool,
@@ -58,6 +59,14 @@ pub(crate) struct BodySubs {
 }
 
 impl BodySubs {
+    pub fn bibliography(&mut self, nodes: &[Inline]) {
+        if let Some(key) = crate::resolve::placeholder(nodes) {
+            if let Some(pending) = self.pending.get_mut(&key) {
+                pending.bibliography = true;
+            }
+        }
+    }
+
     pub fn defer(
         &mut self,
         source: FilteredSource,
@@ -72,6 +81,7 @@ impl BodySubs {
         self.pending.insert(
             (span.start, span.end),
             Pending {
+                bibliography: false,
                 source,
                 filtered,
                 fold,
@@ -135,6 +145,7 @@ impl BodySubs {
         // Keep this separate from physical body ranges: host replacements can
         // have the same synthetic offsets as the first paragraph.
         self.header = Some(Pending {
+            bibliography: false,
             source,
             filtered: None,
             fold: true,
@@ -773,6 +784,7 @@ fn run(
     evaluation: &mut Evaluation<'_>,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Vec<Inline> {
+    evaluation.bibliography = pending.bibliography;
     let source = pending.filtered.as_ref().unwrap_or(&pending.source);
     let before = diagnostics.len();
     let mut nodes = if let Some(stages) = &pending.stages {

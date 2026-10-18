@@ -1085,6 +1085,24 @@ mod tests {
     use super::*;
 
     #[test]
+    fn bibliography_exports_parts_and_complete_source_anchor_token() {
+        let source = "[bibliography]\n* [[[book,Label]]] Text";
+        let json = parse_json_with_source(source, 7);
+        assert!(json.contains(r#""style":"bibliography""#), "{json}");
+        assert!(
+            json.contains(
+                r#""parts":[{"kind":"anchor","id":"book"},{"kind":"text","value":"[Label]"}]"#
+            ),
+            "{json}"
+        );
+        let tokens = tokens_json_with_source(source, 7);
+        assert!(
+            tokens.contains(r#"{"span":{"source_id":7,"start":17,"end":33},"kind":"anchor"}"#),
+            "{tokens}"
+        );
+    }
+
+    #[test]
     fn host_source_id_reaches_nodes_diagnostics_and_tokens() {
         let src = "= Doc\n:who: first\n\n{who}\n\n:who: second\n\n{who} <<missing>>";
         let json = parse_json_with_source(src, 42);

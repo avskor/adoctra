@@ -301,6 +301,7 @@ fn flush_inlines(
             report,
         );
     }
+    text = apply_bibliography(text, attributes, report);
     text = apply_anchors(text, report);
     text = apply_xrefs(text, attributes, report);
     text = apply_footnotes(text, attributes, report);
@@ -427,6 +428,7 @@ fn apply_inner(
     for stage in 0..3 {
         text = apply_stage(text, stage, attributes, compat, depth, true, report);
     }
+    let text = apply_bibliography(text, attributes, report);
     let text = apply_anchors(text, report);
     let text = apply_xrefs(text, attributes, report);
     apply_footnotes(text, attributes, report).into_parts()
@@ -1341,6 +1343,49 @@ fn ruby_split<'a>(src: &'a str, separator: &str) -> Vec<&'a str> {
         pieces.pop();
     }
     pieces
+}
+
+/// Ruby's first `InlineBiblioAnchorRx` match in a bibliography list item.
+/// Registration is separate: generated anchors render without joining refs.
+fn apply_bibliography(
+    text: Text,
+    attributes: &mut Evaluation<'_>,
+    report: &mut Report<'_>,
+) -> Text {
+    if !attributes.bibliography {
+        return text;
+    }
+    let found = std::iter::once(0)
+        .chain(text.text.match_indices('\n').map(|(at, _)| at + 1))
+        .find_map(|at| crate::anchor_catalog::bibliography_at(&text.text, at));
+    let Some(found) = found else { return text };
+    let mut output = Text::default();
+    text.copy(0..found.start, &mut output);
+    let span = text.match_span(found.start..found.end);
+    report.anchors.push(span);
+    let mut parts = vec![
+        Part::Anchor(text.text[found.id.clone()].to_owned()),
+        Part::Text("[".into()),
+    ];
+    if let Some(label) = found.reftext {
+        // Inline#reftext applies c/q/r again to the already substituted label.
+        // Consequently generated formatting tags become visible escaped text.
+        use crate::pass_subs::Stage::{Quotes, Replacements, Specials};
+        parts.extend(Passes::selected_stages(
+            &text.text[label],
+            &[Specials, Quotes, Replacements],
+            attributes,
+            attributes.get("compat-mode").is_some(),
+            span,
+            &mut report.passes.diagnostics,
+        ));
+    } else {
+        parts.push(Part::Text(text.text[found.id].to_owned()));
+    }
+    parts.push(Part::Text("]".into()));
+    text.replace_parts(found.start..found.end, &parts, &mut output);
+    text.copy(found.end..text.text.len(), &mut output);
+    output
 }
 
 /// Ruby's `InlineAnchorRx` after links and emails, over the lexical result of

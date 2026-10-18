@@ -18831,6 +18831,142 @@
       "resources": {
         "formula.txt": "Ж < x\n\\sqrt{4}"
       }
+    },
+    {
+      "id": "bibliography-basic",
+      "category": "lists",
+      "expect": "pass",
+      "source": "See <<book>> and <<key>>.\n\n[bibliography]\n* [[[book]]] Title\n* [[[key,Ref *bold*]]] Book"
+    },
+    {
+      "id": "bibliography-section",
+      "category": "lists",
+      "expect": "pass",
+      "source": "[bibliography]\n== References\n\n* [[[book]]] Title\n** [[[nested]]] Child\n\n--\n* [[[inside]]] In container\n--\n\n== Next\n\n* [[[other]]] Other"
+    },
+    {
+      "id": "bibliography-attributes",
+      "category": "lists",
+      "expect": "pass",
+      "source": ":name: New\n\nSee <<book>>.\n\n[bibliography]\n* [[[book,{name}]]] Title"
+    },
+    {
+      "id": "bibliography-checkbox",
+      "category": "lists",
+      "expect": "pass",
+      "source": "[bibliography]\n* [x] Task\n* [[ordinary,Label]] Text\n\nSee <<ordinary>>."
+    },
+    {
+      "id": "bibliography-ordered",
+      "category": "lists",
+      "expect": "pass",
+      "source": "[bibliography]\n. [[[book,Label]]] Book\n\n<<book>>"
+    },
+    {
+      "id": "bibliography-nested",
+      "category": "lists",
+      "expect": "pass",
+      "source": "[bibliography]\n* [[[book]]] Book\n** [[[inner]]] Inner\n+\n[bibliography]\n*** [[[explicit]]] Explicit\n\n<<book>> <<inner>> <<explicit>>"
+    },
+    {
+      "id": "bibliography-escaping",
+      "category": "lists",
+      "expect": "pass",
+      "source": "[bibliography]\n* \\[[[escape]]] Escaped\n* prefix [[[late]]] Late\n* [[[first]]] and [[[second]]] Second\n* [[[broken]] Partial"
+    },
+    {
+      "id": "bibliography-formatted",
+      "category": "lists",
+      "expect": "pass",
+      "source": "[bibliography]\n* [[[book,*B* _I_]]] Title\n* [[[other,link:https://example.org[URL]]]] Book\n\n<<book>> <<other>>"
+    },
+    {
+      "id": "bibliography-multiline",
+      "category": "lists",
+      "expect": "pass",
+      "source": "[bibliography]\n* First\n[[[later]]] Title\n\n<<later>>"
+    },
+    {
+      "id": "bibliography-generated",
+      "category": "lists",
+      "expect": "pass",
+      "source": ":entry: [[[book,Label]]]\n\n[bibliography]\n* {entry} Book\n\n<<book>>"
+    },
+    {
+      "id": "bibliography-ids",
+      "category": "lists",
+      "expect": "pass",
+      "source": "[bibliography]\n* [[[Журнал_1,Русский]]] Книга\n* [[[:item]]] Colon\n* [[[_item.2-x]]] Valid\n* [[[123]]] Invalid\n* [[[bad id]]] Invalid\n\n<<Журнал_1>> <<:item>> <<_item.2-x>>"
+    },
+    {
+      "id": "bibliography-labels",
+      "category": "lists",
+      "expect": "pass",
+      "source": "[bibliography]\n* [[[a,]]] Empty\n* [[[b, ]]] Space\n* [[[c,  A, B ]]] Comma\n* [[[d,a]]b]]] Double\n\n<<a>> <<b>> <<c>> <<d>>"
+    },
+    {
+      "id": "bibliography-specials",
+      "category": "lists",
+      "expect": "pass",
+      "source": "[bibliography]\n* [[[a,<tag> & stuff]]] Book\n* [[[b,&copy; -- ...]]] Other\n\n<<a>> <<b>>"
+    },
+    {
+      "id": "bibliography-duplicates",
+      "category": "lists",
+      "expect": "pass",
+      "source": "[bibliography]\n* [[[a,First]]] Book\n* [[[a,Second]]] Other\n\n<<a>>"
+    },
+    {
+      "id": "bibliography-continuation",
+      "category": "lists",
+      "expect": "pass",
+      "source": "[bibliography]\n* [[[a]]] Book\n+\n[[[paragraph]]] Text\n+\n[bibliography]\n* [[[b]]] Other\n\n<<a>> <<b>>"
+    },
+    {
+      "id": "bibliography-section-override",
+      "category": "lists",
+      "expect": "pass",
+      "source": "[bibliography]\n== References\n\n[square]\n* [[[a]]] Book\n\n. [[[b]]] Ordered\n\n* [[[c]]] Inherit\n\n=== Subsection\n\n* [[[d]]] Normal"
+    },
+    {
+      "id": "bibliography-pass",
+      "category": "lists",
+      "expect": "pass",
+      "source": ":name: Label\n\n[bibliography]\n* [[[a,pass:[*bold*]]]] Book\n* pass:macros[[[[b]]]] Other\n\n<<a>> <<b>>"
+    },
+    {
+      "id": "bibliography-stateful",
+      "category": "lists",
+      "expect": "pass",
+      "source": "[bibliography]\n* [[[a,{counter:n}]]] Book\n* [[[b,{counter:n}]]] Book\n\n<<a>> <<b>> {n}"
+    },
+    {
+      "id": "bibliography-cell",
+      "category": "lists",
+      "expect": "pass",
+      "source": "[cols=\"a\"]\n|===\n|[bibliography]\n* [[[a,Label]]] Book\n\n<<a>>\n|==="
+    },
+    {
+      "id": "bibliography-crlf",
+      "category": "lists",
+      "expect": "pass",
+      "source": "[bibliography]\r\n* [[[книга,Ссылка]]] Текст\r\n\r\n<<книга>>"
+    },
+    {
+      "id": "bibliography-description",
+      "category": "lists",
+      "expect": "pass",
+      "source": "[bibliography]\n[[[term]]]:: [[[description]]] Text\n\n<<term>> <<description>>"
+    },
+    {
+      "id": "bibliography-include",
+      "category": "lists",
+      "profile": "include-body-dom-v1",
+      "expect": "pass",
+      "source": "[bibliography]\ninclude::refs.adoc[]\n\n<<книга>>",
+      "resources": {
+        "refs.adoc": "* [[[книга,Ссылка]]] Текст"
+      }
     }
   ]
 }

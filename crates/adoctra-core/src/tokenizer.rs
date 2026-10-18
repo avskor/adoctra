@@ -212,6 +212,12 @@ pub(crate) fn tokens_reader<'a>(
         fn visit_inline(&mut self, inline: &mut Inline) {
             use crate::AttributePart as P;
             if let Inline::Substituted { parts, span, .. } = inline {
+                // Bibliographic anchors include their visible bracketed label
+                // in the same substituted value. Use the executed source span;
+                // a syntax-only line scan has no parent-list context.
+                if parts.iter().any(|p| matches!(p, P::Anchor(_))) {
+                    self.0.push((*span, TokenKind::Anchor));
+                }
                 if parts.contains(&P::LineBreak)
                     && parts.iter().all(|p| match p {
                         P::LineBreak => true,

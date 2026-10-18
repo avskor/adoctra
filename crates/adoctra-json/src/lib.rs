@@ -894,6 +894,19 @@ mod tests {
     }
 
     #[test]
+    fn bibliography_exports_list_style_and_neutral_anchor_parts() {
+        let json = render("[bibliography]\n* [[[book,Label]]] Text\n\n<<book>>");
+        assert!(json.contains(r#""style":"bibliography""#), "{json}");
+        assert!(
+            json.contains(
+                r#""parts":[{"kind":"anchor","id":"book"},{"kind":"text","value":"[Label]"}]"#
+            ),
+            "{json}"
+        );
+        assert!(json.contains(r##""target":"#book""##), "{json}");
+    }
+
+    #[test]
     fn emits_json() {
         let json = render("= Title");
         assert!(json.starts_with("{\"name\":\"document\""));

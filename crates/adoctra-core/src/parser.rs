@@ -2182,14 +2182,13 @@ fn parse_block_content(
             crate::lists::ListType::Description,
         ] {
             if crate::lists::item(trimmed, list_type).is_some() {
-                return Some(parse_list(
-                    lines,
-                    i,
-                    context,
-                    diagnostics,
-                    list_type,
-                    pending_style,
-                ));
+                let style = pending_style.or_else(|| {
+                    (list_type == crate::lists::ListType::Unordered
+                        && ctx == BlockCtx::Section
+                        && context.bibliography_section())
+                    .then_some("bibliography")
+                });
+                return Some(parse_list(lines, i, context, diagnostics, list_type, style));
             }
         }
     }
@@ -2690,12 +2689,23 @@ fn parse_list(
             }
         }
         items.push(current);
+        if style == Some("bibliography") {
+            for item in &items {
+                for term in &item.terms {
+                    context.body_subs.bibliography(&term.inlines);
+                }
+                if let Some(description) = &item.description {
+                    context.body_subs.bibliography(&description.inlines);
+                }
+            }
+        }
         end = items.last().map_or(end, |item| item.span.end);
         let mut block = Block::new(Span::new(start, end), BlockKind::DescriptionList { items });
         block.attribute_context = Arc::clone(&context.attributes);
         return block;
     }
     let ordered = list_type == ListType::Ordered;
+    let bibliography = style == Some("bibliography");
     let mut items = Vec::new();
     let mut implicit_style = None;
     let mut checklist = false;
@@ -2740,7 +2750,7 @@ fn parse_list(
             Sibling::Marker(list_type, marker)
         } else {
             // Ruby's checklist items.
-            if let Some(range) = &m.text {
+            if let Some(range) = m.text.as_ref().filter(|_| !bibliography) {
                 let item_text = &line[range.clone()];
                 for (prefix, checked) in [("[ ] ", false), ("[x] ", true), ("[*] ", true)] {
                     if item_text.starts_with(prefix) {
@@ -2753,13 +2763,23 @@ fn parse_list(
             Sibling::Marker(list_type, m.marker.clone())
         };
         if let Some(text) = text {
-            lines.catalog_anchors(text.start, text.end, true, context);
+            if bibliography && !ordered {
+                let content = lines.content(text.start, text.end);
+                context.catalog_bibliography(&content.text, |range| {
+                    content.original_span(Span::new(range.start, range.end))
+                });
+            } else {
+                lines.catalog_anchors(text.start, text.end, true, context);
+            }
         }
         *i += 1;
         let buffer = read_list_item_lines(lines, i, context, list_type, &sibling, true);
         let (blocks, folded) =
             parse_item_blocks(lines, buffer, context, diagnostics, list_type, true);
         let inlines = item_text(lines, text, folded, context);
+        if bibliography {
+            context.body_subs.bibliography(&inlines);
+        }
         let item_end = blocks
             .last()
             .map(|b| b.span.end)
@@ -2782,7 +2802,7 @@ fn parse_list(
         }
     }
     let mut block = Block::new(Span::new(start, end), BlockKind::List { ordered, items });
-    block.attrs.style = implicit_style;
+    block.attrs.style = style.map(str::to_owned).or(implicit_style);
     if checklist {
         block.attrs.options.push("checklist".into());
     }

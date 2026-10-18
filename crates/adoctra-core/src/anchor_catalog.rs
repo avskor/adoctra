@@ -14,6 +14,7 @@ use std::ops::Range;
 pub(crate) struct Entry {
     pub span: Span,
     pub reftext: Option<crate::reftext::Read>,
+    pub bibliography: bool,
 }
 
 pub(crate) struct Found {
@@ -76,6 +77,41 @@ fn id_end(text: &str, start: usize) -> Option<usize> {
             .find(|(_, c)| !is_word(*c) && !matches!(c, '-' | ':' | '.'))
             .map_or(text.len(), |(i, _)| start + i),
     )
+}
+
+/// Ruby's `InlineBiblioAnchorRx`. Only a triple closing delimiter ends it.
+pub(crate) fn bibliography_at(text: &str, at: usize) -> Option<Found> {
+    if !text[at..].starts_with("[[[") {
+        return None;
+    }
+    let start = at + 3;
+    let end = id_end(text, start)?;
+    let rest = &text[end..];
+    let (close, reftext) = if rest.starts_with("]]]") {
+        (end, None)
+    } else {
+        let after = rest.strip_prefix(',')?;
+        let line = &after[..after.find('\n').unwrap_or(after.len())];
+        let spaces = line.len() - line.trim_start_matches(' ').len();
+        let (from, close) = line[spaces..]
+            .chars()
+            .next()
+            .and_then(|c| {
+                let first = spaces + c.len_utf8();
+                Some((spaces, first + line[first..].find("]]]")?))
+            })
+            .or_else(|| {
+                (spaces > 0 && line[spaces..].starts_with("]]]")).then(|| (spaces - 1, spaces))
+            })?;
+        (end + 1 + close, Some(end + 1 + from..end + 1 + close))
+    };
+    Some(Found {
+        start: at,
+        end: close + 3,
+        id: start..end,
+        reftext,
+        shorthand: true,
+    })
 }
 
 /// `\[\[(id)(?:, *(.+?))?\]\]` within one line.
@@ -145,6 +181,27 @@ pub(crate) fn macro_at(text: &str, at: usize) -> Option<Found> {
 }
 
 impl ParseContext {
+    /// Bibliographic reftext deliberately skips the reading-time a-stage.
+    pub(crate) fn catalog_bibliography(&mut self, text: &str, map: impl Fn(Range<usize>) -> Span) {
+        let Some(found) = bibliography_at(text, 0) else {
+            return;
+        };
+        let span = map(found.start..found.end);
+        let reftext = found.reftext.map(|range| {
+            let mut expanded = crate::substitution_text::Text::default();
+            expanded.append_source(&format!("[{}]", &text[range]), true, 0, span);
+            crate::reftext::Read::expanded(expanded, Vec::new())
+        });
+        self.anchors.push((
+            text[found.id].to_owned(),
+            Entry {
+                span,
+                reftext,
+                bibliography: true,
+            },
+        ));
+    }
+
     /// Ruby's `catalog_inline_anchors` for paragraph text. `map` turns a range
     /// of `text` into processed-source coordinates.
     pub(crate) fn catalog_inline_anchors(
@@ -223,7 +280,14 @@ impl ParseContext {
     }
 
     fn register_anchor(&mut self, id: String, span: Span, reftext: Option<crate::reftext::Read>) {
-        self.anchors.push((id, Entry { span, reftext }));
+        self.anchors.push((
+            id,
+            Entry {
+                span,
+                reftext,
+                bibliography: false,
+            },
+        ));
     }
 }
 

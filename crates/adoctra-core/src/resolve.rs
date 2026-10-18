@@ -326,6 +326,14 @@ impl Ids<'_> {
 
     fn anchor(&mut self) {
         let (id, entry) = self.anchors.next().unwrap();
+        if entry.bibliography && self.registry.contains_key(&id) {
+            self.diagnostics.push(Diagnostic {
+                span: entry.span,
+                severity: Severity::Warning,
+                message: format!("id assigned to bibliography anchor already in use: {id}"),
+            });
+            return;
+        }
         let target = Target {
             reftext: entry.reftext,
             title: None,
