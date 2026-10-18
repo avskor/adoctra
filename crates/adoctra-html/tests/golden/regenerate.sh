@@ -33,6 +33,12 @@ for adoc in *.adoc lists/*.adoc blocks/*.adoc literals/*.adoc admonitions/*.adoc
   echo "  ${name}.expected.html"
 done
 ruby "$reference" --mathjax-config <math/mathjax.adoc >math/mathjax.expected.html
+# Client-side syntax highlighters under highlight/, standalone in safe mode
+# (secure mode locks source-highlighter).
+for adoc in highlight/*.adoc; do
+  ruby "$reference" --standalone --safe <"$adoc" >"${adoc%.adoc}.expected.html"
+  echo "  ${adoc%.adoc}.expected.html"
+done
 # Standalone documents (head, header and footer) under document/.
 for adoc in document/*.adoc; do
   ruby "$reference" --standalone <"$adoc" >"${adoc%.adoc}.expected.html"

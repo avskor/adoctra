@@ -5,6 +5,7 @@ use adoctra_core::{Backend, DocinfoLocation, Document, ResourceProvider, Resourc
 use std::fmt;
 use std::sync::Arc;
 
+mod highlight;
 mod math;
 
 /// adoctra's reference stylesheet — a modern, self-contained theme (custom
@@ -81,6 +82,7 @@ impl HtmlBackend {
         let cx = Cx {
             doc,
             book: doc.attributes.get("doctype") == Some("book"),
+            highlighter: highlight::Highlighter::of(&doc.attributes),
         };
         let mut out = String::new();
         let mut warnings = Vec::new();
@@ -184,6 +186,9 @@ fn render_document(
     out.push_str(&format!("<title>{}</title>\n", document_title(doc)));
     stylesheet(attributes, resources, warnings, out);
     icon_font(attributes, out);
+    if let Some(highlighter) = cx.highlighter {
+        highlighter.head(&doc.final_attributes, attributes, out);
+    }
     docinfo(attributes, DocinfoLocation::Head, resources, out);
     out.push_str("</head>\n");
 
@@ -255,7 +260,11 @@ fn render_document(
     if attributes.get("nofooter").is_none() {
         render_footer(&doc.final_attributes, &max_width, out);
     }
-    // Like Ruby, the MathJax setup and the footer docinfo end the body.
+    // Like Ruby, the highlighter scripts, the MathJax setup and the footer
+    // docinfo end the body.
+    if let Some(highlighter) = cx.highlighter {
+        highlighter.footer(&doc.final_attributes, attributes, out);
+    }
     math::configuration(&doc.final_attributes, attributes, out);
     docinfo(
         &doc.final_attributes,
@@ -760,6 +769,9 @@ fn map_text(html: &str, map: impl Fn(&str) -> String) -> String {
 struct Cx<'a> {
     doc: &'a Document,
     book: bool,
+    /// The document's client-side syntax highlighter, shared by nested
+    /// documents like Ruby's `parent_doc.syntax_highlighter`.
+    highlighter: Option<highlight::Highlighter>,
 }
 
 impl Cx<'_> {
@@ -804,7 +816,13 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             // listing. asciidoctor hangs roles/id on a wrapping `<div>`; adoctra
             // has no wrapper, so they go on the `<pre>` (roles appended to the base
             // class), as elsewhere.
-            if block.attrs.style.as_deref() == Some("source") {
+            if let (Some("source"), Some(highlighter)) =
+                (block.attrs.style.as_deref(), cx.highlighter)
+            {
+                let close = highlighter.open(block, nowrap(block), out);
+                render_verbatim(text, callouts, inlines, out);
+                out.push_str(close);
+            } else if block.attrs.style.as_deref() == Some("source") {
                 let class = class_attr(&["highlight", nowrap(block)], &block.roles);
                 out.push_str(&format!("<pre{class}{id}>"));
                 match block.attrs.named.get("language") {
@@ -3453,6 +3471,150 @@ mod tests {
             ["could not retrieve contents of stylesheet at URI: https://cdn.org/gone.css"]
         );
         assert!(output.html.contains("<style>\n\n</style>"));
+    }
+
+    #[test]
+    fn source_highlighters_format_listings_like_ruby_adapters() {
+        // highlight.js: `language-<lang|none> hljs`, data-lang last; id and
+        // roles on the `<pre>` like adoctra's plain source listing.
+        let html = render(
+            ":source-highlighter: highlightjs\n\n[source#s.r,ruby]\n----\nputs 1\n----\n\n\
+             [source]\n----\nx\n----\n\n----\nplain\n----\n",
+        );
+        assert!(
+            html.contains(
+                "<pre class=\"highlightjs highlight r\" id=\"s\"><code class=\"language-ruby hljs\" data-lang=\"ruby\">puts 1</code></pre>"
+            ),
+            "{html}"
+        );
+        assert!(
+            html.contains("<pre class=\"highlightjs highlight\"><code class=\"language-none hljs\">x</code></pre>"),
+            "{html}"
+        );
+        assert!(
+            html.contains("<pre class=\"listing\">plain</pre>"),
+            "{html}"
+        );
+        // prettify appends `linenums[:start]`, the code keeps only data-lang.
+        let html = render(
+            ":source-highlighter: prettify\n\n[source,ruby,linenums]\n----\na\n----\n\n\
+             [source%nowrap,ruby,linenums,start=3]\n----\nb\n----\n",
+        );
+        assert!(
+            html.contains("<pre class=\"prettyprint highlight linenums\"><code data-lang=\"ruby\">a</code></pre>"),
+            "{html}"
+        );
+        assert!(
+            html.contains("<pre class=\"prettyprint highlight nowrap linenums:3\"><code data-lang=\"ruby\">b</code></pre>"),
+            "{html}"
+        );
+        // html-pipeline: `lang` on a classless `<pre>`, no nowrap.
+        let html = render(
+            ":source-highlighter: html-pipeline\n:prewrap!:\n\n[source,ruby]\n----\na\n----\n\n\
+             [source.r]\n----\nb\n----\n",
+        );
+        assert!(
+            html.contains("<pre lang=\"ruby\"><code>a</code></pre>"),
+            "{html}"
+        );
+        assert!(
+            html.contains("<pre class=\"r\"><code>b</code></pre>"),
+            "{html}"
+        );
+    }
+
+    #[test]
+    fn source_highlighter_is_chosen_from_the_header_like_ruby() {
+        let plain = "<pre class=\"highlight\"><code class=\"language-ruby\" data-lang=\"ruby\">a</code></pre>";
+        let listing = "[source,ruby]\n----\na\n----\n";
+        // Unknown and server-side names, `<name>-unavailable`, a body entry
+        // and a non-html basebackend leave the plain source listing.
+        for header in [
+            ":source-highlighter: rouge\n",
+            ":source-highlighter: nope\n",
+            ":source-highlighter: highlightjs\n:highlightjs-unavailable:\n",
+            ":source-highlighter: prettify\n:basebackend: docbook\n",
+        ] {
+            let html = render(&format!("= T\n{header}\n{listing}"));
+            assert!(html.contains(plain), "{header}: {html}");
+        }
+        let html = render(&format!(
+            "= T\n\n:source-highlighter: highlightjs\n\n{listing}"
+        ));
+        assert!(html.contains(plain), "{html}");
+        // Secure mode locks it unset.
+        let options = adoctra_core::ParseOptions {
+            safe: adoctra_core::SafeMode::Secure,
+            ..Default::default()
+        };
+        let doc = adoctra_core::parse_with_options(
+            &format!(":source-highlighter: highlightjs\n\n{listing}"),
+            &options,
+        )
+        .document;
+        let html = String::from_utf8(HtmlBackend::embedded().convert(&doc).unwrap()).unwrap();
+        assert!(html.contains(plain), "{html}");
+        // AsciiDoc cells share the document's highlighter.
+        let html = render(
+            ":source-highlighter: highlightjs\n\n|===\na|\n[source,c]\n----\nz\n----\n|===\n",
+        );
+        assert!(
+            html.contains("<pre class=\"highlightjs highlight\"><code class=\"language-c hljs\" data-lang=\"c\">z</code></pre>"),
+            "{html}"
+        );
+    }
+
+    #[test]
+    fn source_highlighter_docinfo_uses_final_attributes_and_header_scheme() {
+        // Embedded output has no docinfo.
+        let embedded = render(":source-highlighter: highlightjs\n\nx\n");
+        assert!(
+            !embedded.contains("<script") && !embedded.contains("<link"),
+            "{embedded}"
+        );
+        let html = render_standalone(
+            "= T\n:source-highlighter: highlightjs\n:asset-uri-scheme: http\n\
+             :highlightjs-languages: rust, ,yaml,,\n\n:highlightjs-theme: dark\n\nx\n\n:asset-uri-scheme:\n\ny\n",
+        );
+        let base = "http://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.3";
+        assert!(
+            html.contains(&format!(
+                "<link rel=\"stylesheet\" href=\"{base}/styles/dark.min.css\">\n</head>"
+            )),
+            "{html}"
+        );
+        assert!(
+            html.contains(&format!(
+                "</footer>\n<script src=\"{base}/highlight.min.js\"></script>\n\
+                 <script src=\"{base}/languages/rust.min.js\"></script>\n\
+                 <script src=\"{base}/languages/.min.js\"></script>\n\
+                 <script src=\"{base}/languages/yaml.min.js\"></script>\n<script>\n\
+                 if (!hljs.initHighlighting.called) {{"
+            )),
+            "{html}"
+        );
+        // Directories and an absolute prettify theme; scripts precede MathJax.
+        let html = render_standalone(
+            "= T\n:source-highlighter: prettify\n:prettifydir: /js/p\n:stem:\n\nx\n",
+        );
+        assert!(
+            html.contains("<link rel=\"stylesheet\" href=\"/js/p/prettify.min.css\">"),
+            "{html}"
+        );
+        assert!(
+            html.contains("<script src=\"/js/p/run_prettify.min.js\"></script>\n<script type=\"text/x-mathjax-config\">"),
+            "{html}"
+        );
+        let html = render_standalone(
+            "= T\n:source-highlighter: prettify\n:prettify-theme: https://h/t.css\n\nx\n",
+        );
+        assert!(
+            html.contains("<link rel=\"stylesheet\" href=\"https://h/t.css\">"),
+            "{html}"
+        );
+        // html-pipeline adds nothing.
+        let html = render_standalone("= T\n:source-highlighter: html-pipeline\n\nx\n");
+        assert!(!html.contains("<script"), "{html}");
     }
 
     #[test]

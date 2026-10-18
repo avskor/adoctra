@@ -43,7 +43,7 @@ entities и нормализует пробелы обычного текста.
 метке. Текст `blockquote` сравнивается как есть: простое содержимое цитаты
 (абзацная форма) отличается от абзаца `<p>`.
 Спроецированные узлы `quote`/`verse` в пункте списка — блоки, как и остальные.
-Корпус содержит 3134 сценария: 3134 PASS.
+Корпус содержит 3139 сценариев: 3139 PASS.
 
 [source,sh]
 ----
@@ -1317,6 +1317,28 @@ URI-включения) без `allow-uri-read` становится той же
 значений, а также бывший XFAIL `icons-secure-mode-lock`; уровни unsafe/safe/
 server, include и stylesheet по URI сверены с Ruby вручную и закреплены
 Rust-тестами (включая локальный HTTP-сервер в тестах CLI).
+
+== Подсветка исходного кода
+
+`source-highlighter` выбирается, как `save_attributes` Ruby: по атрибутам
+заголовка (присваивание в теле не действует), только для basebackend `html` и
+без `<имя>-unavailable`; вложенные документы (ячейки AsciiDoc) используют
+подсветчик документа. Перенесены клиентские адаптеры Ruby: `highlight.js`/
+`highlightjs` (`<pre class="highlightjs highlight">`, `code` с
+`language-<язык|none> hljs`, тема `highlightjs-theme` в head, скрипты 9.18.3,
+`highlightjs-languages` и инициализация в конце body), `prettify` (`prettyprint`,
+`linenums[:start]`, `prettify-theme` — имя или URL, `run_prettify`) и
+`html-pipeline` (`<pre lang>`). Каталоги `highlightjsdir`/`prettifydir`, тема и
+языки читаются из итоговых атрибутов, схема CDN — из `asset-uri-scheme`
+заголовка, как в `convert_document`. Подсветку выполняет браузер; adoctra не
+разбирает исходный код. Серверные адаптеры (rouge, coderay, pygments) требуют
+своих библиотек и не реализованы: как неизвестное имя, они дают обычный
+листинг `highlight`. Secure mode блокирует атрибут, поэтому 4 PASS стенда
+работают в safe mode (профиль include без ресурсов), ещё один проверяет
+блокировку secure. Golden-тест `golden/highlight/` сравнивает шапку, подвал и
+разметку листингов standalone-документа с `asciidoctor-reference.rb
+--standalone --safe`; вид highlight.js и prettify (с номерами строк) сверен со
+скриншотами Ruby в Chrome.
 
 == Встроенные атрибуты
 

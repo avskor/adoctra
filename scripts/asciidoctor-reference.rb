@@ -7,6 +7,8 @@ require 'asciidoctor'
 
 options = { safe: :secure, header_footer: false }
 options[:attributes] = { 'showtitle' => '' } if ARGV.delete('--showtitle')
+# Safe mode keeps attributes secure mode locks (e.g. source-highlighter).
+options[:safe] = :safe if ARGV.delete('--safe')
 mathjax_config = ARGV.delete('--mathjax-config')
 options[:header_footer] = true if mathjax_config
 # A standalone document without the date-dependent footer line and the
@@ -21,10 +23,13 @@ if ARGV.length == 2 && ARGV[0] == '--include-root'
   options.merge! safe: :safe, base_dir: root, to_file: false
   puts Asciidoctor.convert_file(File.join(root, 'main.adoc'), options)
 else
-  abort 'usage: ruby scripts/asciidoctor-reference.rb [--showtitle] [--mathjax-config] [--standalone] [--include-root DIR] < input.adoc' unless ARGV.empty?
+  abort 'usage: ruby scripts/asciidoctor-reference.rb [--showtitle] [--safe] [--mathjax-config] [--standalone] [--include-root DIR] < input.adoc' unless ARGV.empty?
   output = Asciidoctor.convert($stdin.read, options)
   if standalone
-    output = output.gsub(/<link rel="stylesheet"[^>]*>\n/, '').sub(/<style>\n.*?<\/style>\n/m, '')
+    # Only Ruby's own stylesheet and its web fonts; other links (e.g. a
+    # syntax highlighter theme) are compared.
+    output = output.gsub(/<link rel="stylesheet" href="[^"]*(?:asciidoctor\.css|fonts\.googleapis\.com[^"]*)">\n/, '')
+                   .sub(/<style>\n.*?<\/style>\n/m, '')
   end
   if mathjax_config
     output = output[/<script type="text\/x-mathjax-config">.*?<\/script>\n<script src="[^"]+\/MathJax\.js[^\"]*"><\/script>/m] or abort 'MathJax configuration not found'

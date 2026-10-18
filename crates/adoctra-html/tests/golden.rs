@@ -1514,3 +1514,56 @@ fn html_standalone_documents_match_asciidoctor() {
     }
     assert!(checked > 0, "no golden fixtures found in {dir:?}");
 }
+
+/// The opening `<pre>`/`<code>` tags of every verbatim block, in order.
+fn pre_tags(html: &str) -> Vec<String> {
+    let mut tags = Vec::new();
+    let mut rest = html;
+    while let Some(start) = rest.find("<pre") {
+        rest = &rest[start..];
+        let mut end = rest.find('>').unwrap() + 1;
+        if rest[end..].starts_with("<code") {
+            end += rest[end..].find('>').unwrap() + 1;
+        }
+        // adoctra's plain listing carries Ruby's wrapper class on the `<pre>`.
+        tags.push(rest[..end].replace("<pre class=\"listing\">", "<pre>"));
+        rest = &rest[end..];
+    }
+    tags
+}
+
+#[test]
+fn html_syntax_highlighters_match_asciidoctor() {
+    // Ruby's client-side adapters: the listing markup and the head/footer
+    // docinfo (the reference runs in safe mode, which keeps
+    // `source-highlighter`).
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/highlight");
+    let mut checked = 0usize;
+    for entry in fs::read_dir(&dir).expect("golden/highlight dir is missing") {
+        let path = entry.unwrap().path();
+        if path.extension().and_then(|e| e.to_str()) != Some("adoc") {
+            continue;
+        }
+        let name = path.file_stem().unwrap().to_string_lossy().into_owned();
+        let source = fs::read_to_string(&path).unwrap();
+        let expected = fs::read_to_string(path.with_extension("expected.html")).unwrap();
+        let ours = String::from_utf8(
+            HtmlBackend::new()
+                .convert(&adoctra_core::parse(&source).document)
+                .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            document_shell(&ours),
+            document_shell(&expected),
+            "document shell diverges from asciidoctor for `{name}`"
+        );
+        assert_eq!(
+            pre_tags(&ours),
+            pre_tags(&expected),
+            "listing markup diverges from asciidoctor for `{name}`"
+        );
+        checked += 1;
+    }
+    assert!(checked > 0, "no golden fixtures found in {dir:?}");
+}
