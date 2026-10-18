@@ -1152,14 +1152,17 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             kind,
             label,
             blocks,
+            icons,
+            src,
         } => {
             // A modern, semantic admonition: a single `<aside>` carrying the type
-            // (`data-type`) and an accessible label, then a title and the rendered
-            // child blocks. No table/icon-font scaffolding (asciidoctor's) — the
-            // styling is the reference stylesheet's job. As elsewhere there is no
-            // wrapping `<div>`: id/roles hang on the `<aside>` itself (roles append
-            // to `admonition`). The paragraph/label forms are simple content:
-            // their single child paragraph renders as bare text, like Ruby.
+            // (`data-type`) and an accessible label, then the label (or icon) and
+            // a content wrapper with the title and the rendered child blocks.
+            // No table scaffolding (asciidoctor's): the reference stylesheet lays
+            // out the label and content columns like Ruby's. As elsewhere id/roles
+            // hang on the `<aside>` itself (roles append to `admonition`). The
+            // paragraph/label forms are simple content: their single child
+            // paragraph renders as bare text, like Ruby.
             // The label is core's resolved `caption` / `<kind>-caption` value; an
             // unset caption leaves an empty title, as in asciidoctor.
             let class = class_attr(&["admonition"], &block.roles);
@@ -1173,13 +1176,24 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
                 format!(" aria-label=\"{}\"", escape(&text).replace('"', "&quot;"))
             };
             out.push_str(&format!("<aside{id}{class} data-type=\"{ty}\"{aria}>\n"));
-            out.push_str(&format!("<p class=\"admonition-title\">{label_html}</p>\n"));
+            // Like Ruby's `convert_admonition`, `icons` shows an icon font glyph
+            // or an image titled with the label instead of the label text.
+            let title = label_html.replace('"', "&quot;");
+            let icon = match icons.as_deref() {
+                None => label_html,
+                Some("font") if src.is_empty() => {
+                    format!("<i class=\"fa icon-{ty}\" title=\"{title}\"></i>")
+                }
+                Some(_) => format!("<img src=\"{}\" alt=\"{title}\">", attr_value(src)),
+            };
+            out.push_str(&format!("<p class=\"admonition-title\">{icon}</p>\n"));
+            out.push_str("<div class=\"admonition-content\">\n");
             // A `.Title` on the admonition is the block's *own* title (distinct from
             // the `Note`/`Tip`/… label), rendered above the body — matching where
             // asciidoctor places it in the content cell.
             render_title(&block.title, &block.caption, out);
             render_body(block, blocks, cx, out);
-            out.push_str("</aside>\n");
+            out.push_str("</div>\n</aside>\n");
         }
         BlockKind::Example { blocks } if has_option(block, "collapsible") => {
             // Ruby's collapsible example: `<details>` (open with `%open`) whose
@@ -4074,7 +4088,9 @@ mod tests {
         );
         // Ruby's simple content: the paragraph text without a `<p>`.
         assert!(
-            html.contains("</p>\nThis is a <strong>note</strong>.\n</aside>"),
+            html.contains(
+                "</p>\n<div class=\"admonition-content\">\nThis is a <strong>note</strong>.\n</div>\n</aside>"
+            ),
             "got: {html}"
         );
     }
@@ -4088,7 +4104,9 @@ mod tests {
             "got: {html}"
         );
         assert!(
-            html.contains("</p>\nThis is a <strong>note</strong>.\n</aside>"),
+            html.contains(
+                "</p>\n<div class=\"admonition-content\">\nThis is a <strong>note</strong>.\n</div>\n</aside>"
+            ),
             "got: {html}"
         );
         assert!(!html.contains("NOTE:"), "label leaked into body: {html}");
@@ -4353,13 +4371,41 @@ mod tests {
     }
 
     #[test]
+    fn admonition_icons_replace_the_label_like_ruby() {
+        // `icons=font`: Ruby's glyph titled with the label (a raw `caption=`
+        // value, as Ruby inserts it, with quotes kept inside the attribute).
+        let html = render(":icons: font\n\n[NOTE,caption=Say \"hi\" & go]\nx");
+        assert!(
+            html.contains(
+                "<p class=\"admonition-title\"><i class=\"fa icon-note\" title=\"Say &quot;hi&quot; & go\"></i></p>\n<div class=\"admonition-content\">\nx\n</div>"
+            ),
+            "got: {html}"
+        );
+        // A block `icon` is an image even with font icons; other modes are
+        // images under `iconsdir`.
+        let html = render(":icons: font\n\n[TIP,icon=bulb]\nx\n\n:icons:\n\nWARNING: y");
+        assert!(
+            html.contains(
+                "<p class=\"admonition-title\"><img src=\"./images/icons/bulb.png\" alt=\"Tip\"></p>"
+            ),
+            "got: {html}"
+        );
+        assert!(
+            html.contains(
+                "<p class=\"admonition-title\"><img src=\"./images/icons/warning.png\" alt=\"Warning\"></p>"
+            ),
+            "got: {html}"
+        );
+    }
+
+    #[test]
     fn admonition_title_renders_after_the_label() {
         // A `.Title` on an admonition is the block's own title (distinct from the
         // `Note` label), rendered just below the label.
         let html = render(".My note\n[NOTE]\nbody");
         assert!(
             html.contains(
-                "<p class=\"admonition-title\">Note</p>\n<div class=\"title\">My note</div>"
+                "<p class=\"admonition-title\">Note</p>\n<div class=\"admonition-content\">\n<div class=\"title\">My note</div>"
             ),
             "got: {html}"
         );
@@ -4945,7 +4991,9 @@ mod tests {
         assert_eq!(roles.matches("-background { background:").count(), 16);
         // Content that sets its own colour in Ruby keeps it under a block role.
         assert!(roles.contains("pre:is(.listing, .literalblock, .highlight) {"));
-        assert!(roles.contains("aside.admonition { color: var(--adoctra-fg); }"));
+        assert!(
+            roles.contains("aside.admonition > .admonition-title { color: var(--adoctra-fg); }")
+        );
         assert!(!STYLESHEET.contains("sup.footnoteref.red"));
         // Roles reach the elements: inline spans, blocks and the unresolved
         // footnote reference.

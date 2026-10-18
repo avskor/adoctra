@@ -682,6 +682,8 @@ fn write_block(b: &Block, s: &mut String) {
             kind,
             label,
             blocks,
+            icons,
+            src,
         } => {
             s.push_str(&format!(
                 "\"name\":\"admonition\",\"admonition-type\":\"{}\",\"label\":",
@@ -698,6 +700,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_caption(&b.caption, s);
             // Children carry their own spans; recurse so the editor sees the tree.
             write_simple(b.simple, s);
+            write_icon(icons, src, s);
             s.push_str(",\"blocks\":[");
             for (j, child) in blocks.iter().enumerate() {
                 if j > 0 {
@@ -2927,6 +2930,19 @@ mod header_tests {
         assert!(json.contains(r#""stylesdir":".""#), "{json}");
         let json = super::parse_json(":iconfont-remote!:\n\nx");
         assert!(!json.contains("iconfont-remote"), "{json}");
+    }
+
+    #[test]
+    fn admonition_icons_export_the_mode_where_blocks_convert() {
+        let json = super::parse_json("NOTE: a\n\n:icons:\n:iconsdir: ic\n\n[TIP,icon=b.svg]\nb");
+        assert!(
+            json.contains(r#""simple":true,"icons":null,"src":"","blocks""#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""simple":true,"icons":"","src":"ic/b.svg","blocks""#),
+            "{json}"
+        );
     }
 
     #[test]

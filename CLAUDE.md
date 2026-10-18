@@ -939,14 +939,21 @@ the paragraph and label forms wrap their inlines in a single child paragraph (an
 `AdmonitionKind` enum; both forms case-sensitive, matching asciidoctor —
 `[note]`/`note:` stay paragraphs). The HTML backend renders a **modern, semantic**
 `<aside class="admonition" data-type="TYPE" aria-label="…">` with a
-`.admonition-title` and the rendered child blocks. The label is core's
+`.admonition-title` and the rendered child blocks in `div.admonition-content`
+(adoctra.css lays them out like Ruby's label/content table, checked with
+screenshots). Like `convert_admonition`, `Admonition.icons`/`src` capture the
+`icons` mode where the block converts (body_subs): `font` renders `<i class="fa
+icon-TYPE" title="label">` unless the block has `icon`, other modes `<img src
+alt>` from image.rs icon_uri (block `icon`, else the type, plus `icontype`,
+under the document `iconsdir`); JSON/WASM export `icons`/`src`;
+`golden/admonition_icons/` runs the reference in safe mode. The label is core's
 `Admonition.label` (asciidoctor's `textlabel`): a raw `caption=` attribute, else
 the document's `<kind>-caption` parts while reading (built-in `Note`/…, empty
 when unset) — *not* asciidoctor's
-table/icon-font layout; id/roles hang on the `<aside>`. This is also where adoctra first **ships a
+table layout; id/roles hang on the `<aside>`. This is also where adoctra first **ships a
 reference stylesheet**: `adoctra-html` exposes `STYLESHEET` (`assets/adoctra.css`,
-a modern theme — custom properties, `color-mix()`, logical properties, SVG-mask
-icons) and `convert()` inlines it into a `<head>` so output is styled out of the
+a modern theme — custom properties, `color-mix()`, logical properties — that
+looks like Ruby's default stylesheet) and `convert()` inlines it into a `<head>` so output is styled out of the
 box. The tokenizer emits an `admonition-label` token for the `NOTE:` prefix (the
 `[NOTE]` style is just a `block-attribute-list`). **Example blocks** are the
 first **container** block kind besides a list: a `====` … `====` delimited block

@@ -104,8 +104,11 @@ class ProjectionTests(unittest.TestCase):
                 '<div class="title">Note</div>\n</td>\n<td class="content">\n<div class="title">T</div>\n'
                 'Text <strong>b</strong>\n</td>\n</tr>\n</table>\n</div>')
         ours = ('<aside id="n" class="admonition r" data-type="note" aria-label="Note">\n'
-                '<p class="admonition-title">Note</p>\n<div class="title">T</div>\nText <strong>b</strong>\n</aside>')
+                '<p class="admonition-title">Note</p>\n<div class="admonition-content">\n<div class="title">T</div>\n'
+                'Text <strong>b</strong>\n</div>\n</aside>')
         self.assertEqual(projection(ruby), projection(ours))
+        # The content wrapper is Ruby's content cell, not an extra block.
+        self.assertNotEqual(projection(ruby), projection(ours.replace('admonition-content', 'openblock')))
         # Type, label, roles, id, title and body remain observable.
         for a, b in [('data-type="note"', 'data-type="tip"'), ('>Note</p>', '>Hint</p>'), ('admonition r', 'admonition'),
                      ('id="n"', 'id="m"'), ('>T<', '><'), ('Text <strong>', '<p>Text</p><strong>')]:
@@ -113,6 +116,11 @@ class ProjectionTests(unittest.TestCase):
         # Ruby's icon markup (icons mode) is not a text label.
         icons = ruby.replace('<div class="title">Note</div>', '<i class="fa icon-note" title="Note"></i>')
         self.assertNotEqual(projection(icons), projection(ours))
+        # adoctra carries the same icon markup in its label.
+        ours_icons = ours.replace('>Note</p>', '><i class="fa icon-note" title="Note"></i></p>')
+        self.assertEqual(projection(icons), projection(ours_icons))
+        image = icons.replace('<i class="fa icon-note" title="Note"></i>', '<img src="i/note.png" alt="Note">')
+        self.assertNotEqual(projection(image), projection(ours_icons))
 
     def test_video_and_audio_figures_are_ruby_media_blocks(self):
         ruby = ('<div id="v" class="videoblock left"><div class="title">T</div><div class="content">'
@@ -182,7 +190,7 @@ class ProjectionTests(unittest.TestCase):
         ruby = ('<ul><li><p>item</p>\n<div class="admonitionblock note"><table><tr><td class="icon">'
                 '<div class="title">Note</div></td><td class="content">inside</td></tr></table></div></li></ul>')
         ours = ('<ul><li>item\n<aside class="admonition" data-type="note" aria-label="Note">'
-                '<p class="admonition-title">Note</p>inside</aside></li></ul>')
+                '<p class="admonition-title">Note</p><div class="admonition-content">inside</div></aside></li></ul>')
         self.assertEqual(projection(ruby), projection(ours))
         self.assertNotEqual(projection(ours), projection(ours.replace('item\n', 'item more\n')))
 

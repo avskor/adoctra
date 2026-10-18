@@ -1040,6 +1040,8 @@ fn apply_style_fixup(
                     kind,
                     label: context.admonition_label(kind, Some(&block.attrs)),
                     blocks: vec![child],
+                    icons: None,
+                    src: String::new(),
                 };
                 block.simple = true;
             }
@@ -1054,6 +1056,8 @@ fn apply_style_fixup(
                     kind,
                     label: context.admonition_label(kind, Some(&block.attrs)),
                     blocks,
+                    icons: None,
+                    src: String::new(),
                 };
             }
             _ => {}
@@ -2816,6 +2820,8 @@ fn parse_block_content(
                 kind,
                 label: context.admonition_label(kind, pending_attrs),
                 blocks: vec![child],
+                icons: None,
+                src: String::new(),
             },
         );
         block.simple = true;

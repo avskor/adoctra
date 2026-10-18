@@ -129,6 +129,10 @@ def admonition(node):
         if children and isinstance(children[0], Element) and children[0].tag == "p" \
                 and children[0].attrs.get("class") == "admonition-title":
             label, children = children[0].children, children[1:]
+        # The content wrapper is Ruby's content cell.
+        if len(children) == 1 and isinstance(children[0], Element) and children[0].tag == "div" \
+                and children[0].attrs.get("class") == "admonition-content":
+            children = children[0].children
     else:
         classes = node.attrs.get("class", "").split()
         attrs["type"] = classes[1] if len(classes) > 1 else ""

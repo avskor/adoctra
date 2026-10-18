@@ -678,6 +678,25 @@ impl Execution<'_> {
                             crate::callouts::icon(&self.attributes, &(index + 1).to_string());
                     }
                 }
+                // Ruby's `convert_admonition`: a font glyph unless the block
+                // names an `icon`, else `icon_uri` under the document's
+                // `iconsdir` (a block `iconsdir` is ignored).
+                BlockKind::Admonition {
+                    kind, icons, src, ..
+                } => {
+                    *icons = self.attributes.get("icons").map(str::to_owned);
+                    let icon = block.attrs.named.get("icon").map(String::as_str);
+                    *src = match icons.as_deref() {
+                        None => String::new(),
+                        Some("font") if icon.is_none() => String::new(),
+                        Some(_) => crate::image::icon_uri(
+                            icon,
+                            kind.as_str(),
+                            self.attributes.get("icontype"),
+                            self.attributes.get("iconsdir"),
+                        ),
+                    };
+                }
                 _ => {}
             }
             if let Some(title) = &mut block.title {

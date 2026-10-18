@@ -570,6 +570,8 @@ fn write_block(block: &Block, s: &mut String) {
             kind,
             label,
             blocks,
+            icons,
+            src,
         } => {
             s.push_str(&format!(
                 "{{\"name\":\"admonition\",\"admonition-type\":\"{}\",\"label\":",
@@ -585,6 +587,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_title(&block.title, s);
             write_caption(&block.caption, s);
             write_simple(block.simple, s);
+            write_icon(icons, src, s);
             s.push_str(",\"blocks\":[");
             for (i, child) in blocks.iter().enumerate() {
                 if i > 0 {
@@ -1935,6 +1938,25 @@ mod tests {
         );
         assert_eq!(json.matches(r#""name":"example""#).count(), 2, "{json}");
         assert!(json.contains(r#""text":"code\n----""#), "{json}");
+    }
+
+    #[test]
+    fn admonition_icons_serialize() {
+        let json = render(":icons: font\n\nNOTE: a\n\n[TIP,icon=bulb]\nb\n\n:icons!:\n\nNOTE: c");
+        assert!(
+            json.contains(r#""simple":true,"icons":"font","src":"","blocks""#),
+            "{json}"
+        );
+        assert!(
+            json.contains(
+                r#""simple":true,"icons":"font","src":"./images/icons/bulb.png","blocks""#
+            ),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""simple":true,"icons":null,"src":"","blocks""#),
+            "{json}"
+        );
     }
 
     #[test]

@@ -630,6 +630,61 @@ fn html_admonition_blocks_match_asciidoctor() {
     }
 }
 
+/// Every admonition's type and icon cell in document order: Ruby's
+/// `<td class="icon">` (a text label unwrapped from its title `<div>`) and
+/// adoctra's `admonition-title`, which carries the same `<i>`/`<img>`.
+fn admonition_icons(html: &str) -> Vec<(String, String)> {
+    let body = html.split("<body>").nth(1).unwrap_or(html);
+    let mut out = Vec::new();
+    for (open, close, ty) in [
+        ("<td class=\"icon\">\n", "\n</td>", "admonitionblock "),
+        ("<p class=\"admonition-title\">", "</p>", "data-type=\""),
+    ] {
+        let mut rest = body;
+        while let Some(at) = rest.find(ty) {
+            let kind = &rest[at + ty.len()..];
+            let kind = kind[..kind.find(['"', ' ']).unwrap()].to_string();
+            let start = rest[at..].find(open).unwrap() + at + open.len();
+            let end = rest[start..].find(close).unwrap() + start;
+            let cell = &rest[start..end];
+            let cell = cell
+                .strip_prefix("<div class=\"title\">")
+                .and_then(|cell| cell.strip_suffix("</div>"))
+                .unwrap_or(cell);
+            out.push((kind, cell.to_string()));
+            rest = &rest[end..];
+        }
+    }
+    out
+}
+
+#[test]
+fn html_admonition_icons_match_asciidoctor() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/admonition_icons");
+    let mut checked = 0;
+    for entry in fs::read_dir(&dir).expect("golden/admonition_icons dir is missing") {
+        let path = entry.unwrap().path();
+        if path.extension().and_then(|e| e.to_str()) != Some("adoc") {
+            continue;
+        }
+        let name = path.file_stem().unwrap().to_string_lossy().into_owned();
+        let adoc = fs::read_to_string(&path).unwrap();
+        let expected = fs::read_to_string(path.with_extension("expected.html")).unwrap();
+        // The reference runs in safe mode, adoctra's default.
+        let doc = adoctra_core::parse(&adoc).document;
+        let ours = String::from_utf8(HtmlBackend::embedded().convert(&doc).unwrap()).unwrap();
+        let icons = admonition_icons(&expected);
+        assert!(!icons.is_empty(), "no admonitions in `{name}`");
+        assert_eq!(
+            admonition_icons(&ours),
+            icons,
+            "HTML admonition icons diverge from asciidoctor for `{name}`"
+        );
+        checked += 1;
+    }
+    assert_eq!(checked, 2);
+}
+
 #[test]
 fn html_example_blocks_match_asciidoctor() {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/examples");

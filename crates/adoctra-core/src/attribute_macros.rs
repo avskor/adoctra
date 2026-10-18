@@ -918,15 +918,12 @@ fn inline_image(text: &Text, m: &ImageMatch, attributes: &Evaluation<'_>) -> Inl
     let src = if !m.icon {
         crate::image::web_path(&target, attributes.get("imagesdir"))
     } else if icons.as_deref().is_some_and(|icons| icons != "font") {
-        // `icon_uri`: the `icon` attribute or the target, with `icontype`
-        // unless it has an extension, under `iconsdir`.
-        let icontype = attributes.get("icontype").unwrap_or("png");
-        let icon = match named.get("icon") {
-            Some(icon) if crate::image::has_extension(icon) => icon.clone(),
-            Some(icon) => format!("{icon}.{icontype}"),
-            None => format!("{target}.{icontype}"),
-        };
-        crate::image::web_path(&icon, attributes.get("iconsdir"))
+        crate::image::icon_uri(
+            named.get("icon").map(String::as_str),
+            &target,
+            attributes.get("icontype"),
+            attributes.get("iconsdir"),
+        )
     } else {
         String::new()
     };

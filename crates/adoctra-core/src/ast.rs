@@ -540,6 +540,13 @@ pub enum BlockKind {
         /// that attribute is unset.
         label: Vec<crate::AttributePart>,
         blocks: Vec<Block>,
+        /// The document `icons` mode when the block converts, like Ruby's
+        /// `convert_admonition`: `None` shows the label, `font` an icon font
+        /// glyph unless the block names an `icon`, any other value an image.
+        icons: Option<String>,
+        /// The image icon (Ruby's `icon_uri` of the block's `icon` attribute
+        /// or the admonition name under `iconsdir`); empty unless an image.
+        src: String,
     },
     /// An example block: a parsed container of child blocks, delimited by `====`
     /// (or produced by an `[example]` style on a paragraph). The first container

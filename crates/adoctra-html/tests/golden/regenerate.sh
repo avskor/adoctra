@@ -18,7 +18,7 @@ ruby "$reference" </dev/null >/dev/null
 echo "using Asciidoctor $(cat ../../../../compatibility/asciidoctor-version)"
 # Top-level inline fixtures, flat-list fixtures under lists/, block-level
 # fixtures (e.g. source listings) under blocks/, literal blocks under literals/,
-# admonitions under admonitions/, example blocks under examples/, sidebar blocks
+# admonitions under admonitions/ (icons under admonition_icons/, below), example blocks under examples/, sidebar blocks
 # under sidebars/, block titles under titles/, quote/verse blocks under quotes/
 # and verses/, open blocks under opens/, passthrough blocks under passthrough/,
 # tables of contents under toc/, images under images/, video/audio under
@@ -37,6 +37,12 @@ ruby "$reference" --mathjax-config <math/mathjax.adoc >math/mathjax.expected.htm
 # (secure mode locks source-highlighter).
 for adoc in highlight/*.adoc; do
   ruby "$reference" --standalone --safe <"$adoc" >"${adoc%.adoc}.expected.html"
+  echo "  ${adoc%.adoc}.expected.html"
+done
+# Admonition icons under admonition_icons/, in safe mode (secure mode locks
+# icons).
+for adoc in admonition_icons/*.adoc; do
+  ruby "$reference" --safe <"$adoc" >"${adoc%.adoc}.expected.html"
   echo "  ${adoc%.adoc}.expected.html"
 done
 # Standalone documents (head, header and footer) under document/.
