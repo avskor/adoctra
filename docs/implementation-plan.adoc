@@ -1472,6 +1472,36 @@ Ruby API и выполнение Ruby-расширений относятся к
   эталоны не изменены. Проверены Rust-тесты, fmt, clippy с запретом warning,
   WASM target и тесты стенда.
 
+Восьмидесятый рабочий набор изменений:
+
+* Сворачиваемые примеры, как ветка `:example` `next_block` и
+  `convert_example` Ruby: пример с опцией `collapsible` (`%collapsible`,
+  `options=`, `collapsible-option`; разделитель `====`, абзац `[example]` и
+  маскарад на `--`) получает пустую подпись, перекрывающую `caption=`, и не
+  увеличивает `example-number`; xrefstyle берёт его название. HTML выводит
+  `<details>` (id, роли, `open` при опции `open`) с `<summary class="title">`
+  — название без подписи, иначе `Details` дословно, как в Ruby; дети идут
+  без обёртки `content`. JSON/WASM уже экспортируют options и пустой caption.
+* `nowrap` verbatim-блоков, как `convert_listing`/`convert_literal`: класс
+  `nowrap` у `<pre>` listing, source и literal при опции `nowrap` или без
+  атрибута `prewrap` в месте блока. `prewrap` — встроенное умолчание
+  (DEFAULT_ATTRIBUTES Ruby), снятие в заголовке или теле действует на
+  последующие блоки.
+* Стили, как у Ruby: `pre` переносит строки (`pre-wrap`), `pre.nowrap` — нет;
+  `details`/`summary` с треугольным маркером и отступом. Сверено в Chrome 155
+  с Ruby в safe mode.
+* Исправлено: вложенный документ AsciiDoc-ячейки больше не восстанавливает
+  встроенные умолчания, снятые родителем (`:example-caption!:`,
+  `:toc-title!:`, `:prewrap!:`), — Ruby применяет DEFAULT_ATTRIBUTES только к
+  корневому документу.
+* Профиль `body-dom-v1` считает `details` блоком в пункте списка.
+* Добавлены 7 сравнительных сценариев и golden fixtures
+  (`golden/examples/collapsible`, `golden/blocks/nowrap`,
+  `golden/literals/nowrap`): всего 3019 PASS и 4 XFAIL. Прежние эталоны не
+  изменены. Проверены Rust-тесты, fmt, clippy с запретом warning, WASM target и
+  тесты стенда. Абзацная форма `[example%collapsible]` выводится абзацем, как
+  остальные стилизованные абзацы (XFAIL `subs-styled-paragraph-simple-content`).
+
 *Следующее изменение:* оставшиеся блочные семейства и substitutions — по приоритетам этапов 4–6.
 Исполнение выражений reftext в ранних ссылках
 заголовков и порядок регистрации контейнеров после содержимого — отдельная работа.

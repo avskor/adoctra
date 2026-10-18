@@ -552,7 +552,8 @@ reader offsets, no preprocessing; Reader::absorb keeps highlighting records, its
 entries never apply to the parent) and runs header, body and nest_sections inside
 ParseContext::enter_nested/exit_nested. The nested document starts from the
 parent's reading attributes (without doctitle/notitle/showtitle/toc/toc-position,
-defaults restored) with every inherited key locked except compat-mode, doctype
+defaults are not reapplied, like Ruby's `unless parent_doc`, so a parent's
+unset default stays unset) with every inherited key locked except compat-mode, doctype
 and toc-placement; catalogs and ids are shared. Its counters (`{counter:…}`,
 caption numbers) delegate to the root document's attributes and locks, like
 Ruby's `counter` (Evaluation::with_root, both at reading and conversion).
@@ -1215,6 +1216,15 @@ in ParseContext.verbatim_bodies for `subs` conversion and callout catalogs;
 verse bodies are deferred adjusted (Reader::scan_verse). Indented literal
 paragraphs keep Ruby's plain strip (no indent/tabsize). Callout spans align
 from the line end, so they survive the adjustment.
+**Collapsible examples and nowrap**: assign_caption gives an Example with
+the `collapsible` option (`%`, `options=`, `-option`) `caption = Some("")`
+(Ruby's `:example` branch sets caption ''), so it never numbers and
+`caption=` is ignored. HTML renders Ruby's `<details>` (id, roles, `open`
+option) with `<summary class="title">` = uncaptioned title or verbatim
+`Details`, children unwrapped. `prewrap` is a core default attribute; HTML
+adds `nowrap` to listing/source/literal `<pre>` with `%nowrap` or without
+`prewrap` in the block's attribute_context. adoctra.css wraps `pre` like
+Ruby (`pre-wrap`, `pre.nowrap` keeps lines) and styles `details` markers.
 Like Ruby's `Block#content`, parser.rs trim_verbatim_edges drops blank edge
 lines of a multi-line Listing/Literal/Passthrough `text` at block completion
 (before callouts), also without custom subs.

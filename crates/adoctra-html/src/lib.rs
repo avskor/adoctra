@@ -147,7 +147,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             // has no wrapper, so they go on the `<pre>` (roles appended to the base
             // class), as elsewhere.
             if block.attrs.style.as_deref() == Some("source") {
-                let class = class_attr(&["highlight"], &block.roles);
+                let class = class_attr(&["highlight", nowrap(block)], &block.roles);
                 out.push_str(&format!("<pre{class}{id}>"));
                 match block.attrs.named.get("language") {
                     Some(lang) => {
@@ -161,7 +161,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
                 render_verbatim(text, callouts, inlines, out);
                 out.push_str("</code></pre>\n");
             } else {
-                let class = class_attr(&["listing"], &block.roles);
+                let class = class_attr(&["listing", nowrap(block)], &block.roles);
                 out.push_str(&format!("<pre{class}{id}>"));
                 render_verbatim(text, callouts, inlines, out);
                 out.push_str("</pre>\n");
@@ -176,7 +176,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             // `literalblock` base class. asciidoctor wraps it in a `<div>`; adoctra
             // hangs the class/id/roles on the `<pre>` itself, as for a listing.
             render_title(&block.title, &block.caption, out);
-            let class = class_attr(&["literalblock"], &block.roles);
+            let class = class_attr(&["literalblock", nowrap(block)], &block.roles);
             out.push_str(&format!("<pre{class}{id}>"));
             render_verbatim(text, callouts, inlines, out);
             out.push_str("</pre>\n");
@@ -495,6 +495,28 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
                 render_block(child, cx, out);
             }
             out.push_str("</aside>\n");
+        }
+        BlockKind::Example { blocks } if has_option(block, "collapsible") => {
+            // Ruby's collapsible example: `<details>` (open with `%open`) whose
+            // `<summary>` is the uncaptioned title, else `Details` verbatim.
+            let class = class_attr(&[], &block.roles);
+            let open = if has_option(block, "open") {
+                " open"
+            } else {
+                ""
+            };
+            out.push_str(&format!(
+                "<details{id}{class}{open}>\n<summary class=\"title\">"
+            ));
+            match &block.title {
+                Some(title) => render_inlines(title, out),
+                None => out.push_str("Details"),
+            }
+            out.push_str("</summary>\n");
+            for child in blocks {
+                render_block(child, cx, out);
+            }
+            out.push_str("</details>\n");
         }
         BlockKind::Example { blocks } => {
             // A parsed container: one `<div class="exampleblock">` wrapping the
@@ -1334,20 +1356,37 @@ fn id_attr(id: &Option<String>) -> String {
     }
 }
 
+/// Whether a block has an option (`%name`, `options=name` or `name-option`).
+fn has_option(block: &Block, name: &str) -> bool {
+    block.attrs.options.iter().any(|o| o == name)
+        || block.attrs.named.contains_key(&format!("{name}-option"))
+}
+
+/// Ruby's `nowrap` class of a listing or literal `<pre>`: with `%nowrap` or
+/// without the (default) `prewrap` attribute at the block.
+fn nowrap(block: &Block) -> &'static str {
+    if has_option(block, "nowrap") || block.attribute_context.get("prewrap").is_none() {
+        "nowrap"
+    } else {
+        ""
+    }
+}
+
 /// A ` class="…"` attribute (with a leading space) joining a block's static
-/// `base` classes (e.g. `listing`) with its `[.role]` shorthand roles, or the
+/// `base` classes (e.g. `listing`; empty ones are skipped) with its `[.role]` shorthand roles, or the
 /// empty string when there are none. Classes are space-separated in order and
 /// escaped as an attribute value.
 fn class_attr(base: &[&str], roles: &[String]) -> String {
-    if base.is_empty() && roles.is_empty() {
-        return String::new();
-    }
     let classes = base
         .iter()
         .copied()
+        .filter(|class| !class.is_empty())
         .chain(roles.iter().map(String::as_str))
         .collect::<Vec<_>>()
         .join(" ");
+    if classes.is_empty() {
+        return String::new();
+    }
     format!(" class=\"{}\"", escape(&classes))
 }
 
@@ -2365,6 +2404,80 @@ mod tests {
             html.contains("<pre class=\"listing\">x = 1</pre>"),
             "got: {html}"
         );
+    }
+
+    #[test]
+    fn collapsible_example_renders_details_like_ruby() {
+        let html = render(
+            ".Show *me*\n[#d.r%collapsible%open]\n====\nBody\n====\n\n\
+             [%collapsible]\n====\nHidden\n====\n\n.Plain\n====\nEx\n====\n",
+        );
+        assert!(
+            html.contains("<details id=\"d\" class=\"r\" open>\n<summary class=\"title\">Show <strong>me</strong></summary>\n<p>Body</p>\n</details>\n"),
+            "{html}"
+        );
+        assert!(
+            html.contains("<details>\n<summary class=\"title\">Details</summary>\n<p>Hidden</p>\n</details>\n"),
+            "{html}"
+        );
+        // The collapsible examples took no number.
+        assert!(
+            html.contains(
+                "<div class=\"exampleblock\">\n<div class=\"title\">Example 1. Plain</div>"
+            ),
+            "{html}"
+        );
+        // A masqueraded open block and named options collapse too.
+        let html = render("[example%collapsible]\n--\nx\n--\n\n[open-option=,collapsible-option=]\n====\ny\n====\n");
+        assert!(
+            html.contains("<details>\n<summary class=\"title\">Details</summary>\n<p>x</p>"),
+            "{html}"
+        );
+        assert!(
+            html.contains("<details open>\n<summary class=\"title\">Details</summary>\n<p>y</p>"),
+            "{html}"
+        );
+    }
+
+    #[test]
+    fn verbatim_blocks_get_nowrap_from_the_option_or_unset_prewrap() {
+        let html = render(
+            "[%nowrap]\n----\na\n----\n\n[source%nowrap,ruby]\n----\nb\n----\n\n\
+             [literal%nowrap.r]\nc\n\n----\nwraps\n----\n",
+        );
+        assert!(
+            html.contains("<pre class=\"listing nowrap\">a</pre>"),
+            "{html}"
+        );
+        assert!(
+            html.contains("<pre class=\"highlight nowrap\"><code class=\"language-ruby\" data-lang=\"ruby\">b</code></pre>"),
+            "{html}"
+        );
+        assert!(
+            html.contains("<pre class=\"literalblock nowrap r\">c</pre>"),
+            "{html}"
+        );
+        assert!(
+            html.contains("<pre class=\"listing\">wraps</pre>"),
+            "{html}"
+        );
+        // `prewrap` is read at each block, like Ruby's replayed attributes.
+        let html = render(
+            ":prewrap!:\n\n----\na\n----\n\n [source]\n\n....\nb\n....\n\n:prewrap:\n\n----\nc\n----\n",
+        );
+        assert!(
+            html.contains("<pre class=\"listing nowrap\">a</pre>"),
+            "{html}"
+        );
+        assert!(
+            html.contains("<pre class=\"literalblock nowrap\">[source]</pre>"),
+            "{html}"
+        );
+        assert!(
+            html.contains("<pre class=\"literalblock nowrap\">b</pre>"),
+            "{html}"
+        );
+        assert!(html.contains("<pre class=\"listing\">c</pre>"), "{html}");
     }
 
     #[test]

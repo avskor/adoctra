@@ -168,6 +168,8 @@ fn default_attributes() -> Attributes {
     // Ruby's DEFAULT_ATTRIBUTES for the table of contents.
     attributes.set("toc-placement", "auto");
     attributes.set("toc-title", "Table of Contents");
+    // Ruby's DEFAULT_ATTRIBUTES: verbatim blocks wrap unless unset.
+    attributes.set("prewrap", "");
     // The HTML converter's suffix, set before the header (Ruby's init).
     attributes.set("outfilesuffix", ".html");
     // Ruby sets this for a standalone document; adoctra's HTML is one.
@@ -239,9 +241,10 @@ impl ParseContext {
 
     /// Start reading a nested document (Ruby's `Document.new` with a parent):
     /// the parent's attributes (without `doctitle`, `notitle`, `showtitle`,
-    /// `toc` and `toc-position`) over the defaults, all locked except
-    /// `compat-mode`, `doctype` and `toc-placement`. Counters and catalogs
-    /// stay shared.
+    /// `toc` and `toc-position`), all locked except
+    /// `compat-mode`, `doctype` and `toc-placement`. Like Ruby (`unless
+    /// parent_doc`), defaults are not applied again, so an attribute the parent
+    /// unset stays unset. Counters and catalogs stay shared.
     pub fn enter_nested(&mut self) -> Outer {
         let mut attributes = (*self.attributes).clone();
         for key in ["doctitle", "notitle", "showtitle", "toc", "toc-position"] {
@@ -254,11 +257,6 @@ impl ParseContext {
                 .map(|(key, _)| key.to_owned())
                 .filter(|key| !matches!(key.as_str(), "compat-mode" | "doctype" | "toc-placement")),
         );
-        for (key, value) in default_attributes().iter() {
-            if attributes.get(key).is_none() && !locked.contains(key) {
-                attributes.set(key.to_owned(), value.to_owned());
-            }
-        }
         if attributes.get("toc-placement").is_none() {
             attributes.set("toc-placement", "auto");
         }
@@ -544,6 +542,12 @@ impl ParseContext {
         let Some(context) = caption_context(&block.kind).filter(|_| block.title.is_some()) else {
             return;
         };
+        // Ruby's `:example` branch of `next_block` sets `caption` to '' for a
+        // collapsible example, so it is never numbered.
+        if context == "example" && crate::parser::has_option(&block.attrs, "collapsible") {
+            block.caption = Some(String::new());
+            return;
+        }
         if let Some(caption) = block
             .attrs
             .named

@@ -1781,6 +1781,15 @@ mod tests {
     }
 
     #[test]
+    fn collapsible_example_keeps_options_and_an_empty_caption() {
+        let json = render("[%collapsible%open]\n.T\n====\nx\n====\n");
+        assert!(
+            json.contains(r#""name":"example","id":null,"roles":[],"style":null,"attributes":{},"options":["collapsible","open"],"title":[{"name":"text","value":"T"}],"caption":"","blocks":["#),
+            "{json}"
+        );
+    }
+
+    #[test]
     fn longer_fences_serialize_nested_blocks_of_one_kind() {
         let json =
             render("======\nouter\n\n====\ninner\n====\n======\n\n------\ncode\n----\n------");

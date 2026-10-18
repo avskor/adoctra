@@ -38,8 +38,12 @@ h1, h2, h3, h4, h5, h6 {
 
 code { font-family: var(--adoctra-mono); font-size: 0.9em; }
 
+/* Like Ruby's stylesheet, verbatim text wraps unless `nowrap` (`%nowrap` or
+   `:prewrap!:`) keeps its lines. */
 pre {
   font-family: var(--adoctra-mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
   overflow-x: auto;
   padding: 1rem;
   border-radius: 8px;
@@ -47,6 +51,7 @@ pre {
   line-height: 1.45;
 }
 pre code { font-size: inherit; }
+pre.nowrap { white-space: pre; overflow-wrap: normal; }
 
 .stemblock { margin-block-end: 1.25em; }
 
@@ -116,6 +121,45 @@ pre code { font-size: inherit; }
 }
 .exampleblock > :first-child { margin-block-start: 0; }
 .exampleblock > :last-child { margin-block-end: 0; }
+
+/* A collapsible example (`%collapsible`) is Ruby's `<details>`: indented,
+   with a triangle disclosure marker beside a plain `<summary>`. */
+details {
+  margin-block: 0 1.25rem;
+  margin-inline-start: 1.25rem;
+}
+details > summary {
+  cursor: pointer;
+  display: block;
+  position: relative;
+  line-height: 1.6;
+  margin-block-end: 0.625rem;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+details > summary.title {
+  font-weight: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+details > summary::-webkit-details-marker { display: none; }
+details > summary::before {
+  content: "";
+  border: solid transparent;
+  border-inline-start: solid;
+  border-width: 0.3em 0 0.3em 0.5em;
+  position: absolute;
+  top: 0.5em;
+  inset-inline-start: -1.25rem;
+  transform: translateX(15%);
+}
+details[open] > summary::before {
+  border: solid transparent;
+  border-block-start: solid;
+  border-width: 0.5em 0.3em 0;
+  transform: translateY(15%);
+}
+details > :last-child { margin-block-end: 0; }
 
 /* --- Sidebar blocks ------------------------------------------------------- */
 

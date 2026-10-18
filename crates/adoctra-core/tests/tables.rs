@@ -447,6 +447,25 @@ fn nested_documents_lock_inherited_attributes_and_keep_their_entries() {
 }
 
 #[test]
+fn nested_documents_do_not_restore_defaults_the_parent_unset() {
+    // Ruby applies DEFAULT_ATTRIBUTES only to the root document.
+    let source = ":example-caption!:\n:toc-title!:\n:prewrap!:\n\n|===\na|\n.T\n====\nx\n====\n\n{toc-title}\n\n----\ny\n----\n|===\n";
+    let blocks = blocks(source);
+    let nested = cell_blocks(&table(&blocks[0]).body[0][0]);
+    assert_eq!(nested[0].caption, None);
+    assert_eq!(paragraph_text(&nested[1]), "{toc-title}");
+    assert_eq!(nested[2].attribute_context.get("prewrap"), None);
+    // Defaults the parent kept are inherited.
+    let nested = blocks_of_cell("|===\na|\n.T\n====\nx\n====\n|===\n");
+    assert_eq!(nested[0].caption.as_deref(), Some("Example 1. "));
+    assert_eq!(nested[0].attribute_context.get("prewrap"), Some(""));
+}
+
+fn blocks_of_cell(source: &str) -> Vec<Block> {
+    cell_blocks(&table(&blocks(source)[0]).body[0][0]).to_vec()
+}
+
+#[test]
 fn nested_tables_use_the_exclamation_separator() {
     let source = "|===\na|\n!===\n!in 2+!wide\n!===\n|===\n";
     let blocks = blocks(source);

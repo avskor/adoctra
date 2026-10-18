@@ -1189,6 +1189,15 @@ mod tests {
     }
 
     #[test]
+    fn collapsible_example_keeps_options_and_an_empty_caption() {
+        let json = parse_json("[%collapsible]\n.T\n====\nx\n====\n");
+        assert!(
+            json.contains(r#""name":"example","id":null,"roles":[],"style":null,"attributes":{},"options":["collapsible"],"title":[{"span":{"source_id":0,"start":16,"end":17},"name":"text","value":"T"}],"caption":"","blocks":["#),
+            "{json}"
+        );
+    }
+
+    #[test]
     fn parse_json_has_document_and_diagnostics() {
         let json = parse_json("= Title\n\ntext");
         assert!(json.contains("\"document\""));
