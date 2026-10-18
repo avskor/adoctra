@@ -203,6 +203,28 @@ const tokens = JSON.parse(workspace.tokens_json(main));
 в документе. Имена атрибутов регистронезависимы. Внешние значения задаются как строки;
 soft defaults и внешние locked unsets ещё не представлены в API.
 
+`ParseOptions.embedded` — режим `standalone: false` Ruby: атрибут `embedded`
+(заблокирован, документ его не меняет) и умолчание `notitle`, если host не задал
+`showtitle` (тогда `notitle` заблокирован удалённым) или `notitle` (тогда так же
+`showtitle`). Документ standalone (по умолчанию) получает `copycss`,
+`iconfont-remote`, `stylesheet` и `webfonts`. Присваивание `showtitle` в
+документе, как `store_attribute`, сначала записывает обратный `notitle`.
+
+`ParseOptions.dates` (`DocumentDates { local, document }` из `DateTime` с
+`utc_offset` в секундах) — часы host для `fill_datetime_attributes` Ruby:
+`localdate`/`localyear`/`localtime`/`localdatetime` и `docdate`/`docyear`/
+`doctime`/`docdatetime` (`%F`, `%T` и `UTC` или `±hhmm`) заполняют только
+незаданные ключи, поэтому внешние и header-значения имеют приоритет, а заданная
+дата выводит год. Ядро не читает часы: без `dates` эти атрибуты не задаются.
+CLI передаёт `SOURCE_DATE_EPOCH` (UTC, оба времени) или локальное время и время
+изменения входного файла.
+
+`Document::authors()`/`authors_line()` дают авторов шапки HTML, как
+`Document#authors` Ruby. `adoctra_core::docinfo(attributes, location, suffix,
+provider, referrer)` — `Document#docinfo`: файлы `docinfo`/`docinfo1`/`docinfo2`
+(shared/private с квалификаторами расположения) из `docinfodir` через provider,
+нормализованные и с подстановками `docinfosubs` (по умолчанию attributes).
+
 Разбор поддерживает атрибуты перед заголовком и непосредственно после `= Title`,
 присваивания на границах блоков, обе формы удаления (`:!name:` и `:name!:`), а также
 подстановку ссылок на атрибуты в значениях. Строка атрибута внутри уже начавшегося

@@ -2,12 +2,18 @@
 //! stderr, and converts via the chosen backend.
 //!
 //! Usage:
-//!   adoctra <input.adoc> [--to html|docx|json] [-s] [-o out] [--stdout]
+//!   adoctra <input.adoc> [--to html|docx|json] [-s] [-a name[=value]]... [-o out] [--stdout]
 //!   adoctra -            (read from stdin)
+//!
+//! Like Ruby's CLI, it supplies the clock (`SOURCE_DATE_EPOCH` or the local
+//! time and the input's modification time) for the date attributes, reads a
+//! custom stylesheet and docinfo files next to the input, and copies the
+//! stylesheet next to the output with `linkcss` and `copycss`.
 
 use std::io::{Read, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
+use std::sync::Arc;
 
 use adoctra::Backend;
 
@@ -29,6 +35,7 @@ struct Args {
     output: Option<PathBuf>,
     to_stdout: bool,
     embedded: bool,
+    attributes: adoctra::Attributes,
 }
 
 fn run() -> adoctra::Result<()> {
@@ -46,10 +53,13 @@ fn run() -> adoctra::Result<()> {
     // Parsing never fails on syntax; surface diagnostics, then keep going.
     let options = adoctra::ParseOptions {
         source_id,
+        attributes: args.attributes.clone(),
+        embedded: args.embedded,
+        dates: Some(dates(&args.input)?),
         ..Default::default()
     };
-    let result = if let Some(provider) = provider {
-        adoctra::parse_resource(&mut sources, &options, &provider)?
+    let result = if let Some(provider) = &provider {
+        adoctra::parse_resource(&mut sources, &options, provider.as_ref())?
     } else {
         adoctra::parse_with_options(
             sources.get(source_id).expect("registered stdin").text(),
@@ -74,7 +84,10 @@ fn run() -> adoctra::Result<()> {
         );
     }
 
-    let backend = select_backend(&args.backend, args.embedded)?;
+    let referrer = sources
+        .get(source_id)
+        .map(|source| source.name().to_owned());
+    let backend = select_backend(&args.backend, args.embedded, provider.clone(), referrer)?;
     let bytes = backend.convert(&result.document)?;
 
     if args.to_stdout || (args.input == "-" && args.output.is_none()) {
@@ -85,8 +98,127 @@ fn run() -> adoctra::Result<()> {
     let out_path = args
         .output
         .unwrap_or_else(|| default_output(&args.input, backend.extension()));
+    // Like Ruby's CLI (`mkdirs: true`), create the output directory.
+    if let Some(dir) = out_path.parent().filter(|dir| !dir.as_os_str().is_empty()) {
+        std::fs::create_dir_all(dir)?;
+    }
     std::fs::write(&out_path, &bytes)?;
     eprintln!("wrote {}", out_path.display());
+    if args.backend == "html" {
+        let base = match &args.input[..] {
+            "-" => std::env::current_dir()?,
+            input => std::fs::canonicalize(input)?
+                .parent()
+                .map(Path::to_path_buf)
+                .unwrap_or_default(),
+        };
+        copy_stylesheet(&result.document.final_attributes, &base, &out_path)?;
+    }
+    Ok(())
+}
+
+/// The clock for Ruby's date attributes: `SOURCE_DATE_EPOCH` (UTC, also as
+/// the document time), else the local time and the input file's
+/// modification time (the current time for stdin).
+fn dates(input: &str) -> adoctra::Result<adoctra::DocumentDates> {
+    use chrono::{Datelike, Offset, TimeZone, Timelike};
+    fn convert<Tz: TimeZone>(time: chrono::DateTime<Tz>) -> adoctra::DateTime {
+        adoctra::DateTime {
+            year: time.year(),
+            month: time.month() as u8,
+            day: time.day() as u8,
+            hour: time.hour() as u8,
+            minute: time.minute() as u8,
+            second: time.second() as u8,
+            utc_offset: time.offset().fix().local_minus_utc(),
+        }
+    }
+    if let Ok(epoch) = std::env::var("SOURCE_DATE_EPOCH") {
+        let time = epoch
+            .trim()
+            .parse::<i64>()
+            .ok()
+            .and_then(|secs| chrono::Utc.timestamp_opt(secs, 0).single())
+            .ok_or_else(|| {
+                std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    format!("invalid SOURCE_DATE_EPOCH: {epoch}"),
+                )
+            })?;
+        let time = convert(time);
+        return Ok(adoctra::DocumentDates {
+            local: time,
+            document: time,
+        });
+    }
+    let now = chrono::Local::now();
+    let document = match input {
+        "-" => now,
+        path => chrono::DateTime::<chrono::Local>::from(std::fs::metadata(path)?.modified()?),
+    };
+    Ok(adoctra::DocumentDates {
+        local: convert(now),
+        document: convert(document),
+    })
+}
+
+/// Ruby's `copycss` step after writing a file: with `linkcss` and `copycss`
+/// (and a non-URI `stylesdir`), adoctra's stylesheet is written into
+/// `stylesdir` next to the output, or a custom stylesheet (from `copycss`
+/// when it names a file, else the `stylesheet` path, relative to the input's
+/// directory) is copied there.
+fn copy_stylesheet(
+    attributes: &adoctra::Attributes,
+    base: &Path,
+    out_path: &Path,
+) -> adoctra::Result<()> {
+    let uri = |value: &str| value.contains("://");
+    let stylesdir = attributes.get("stylesdir").unwrap_or("");
+    if attributes.get("linkcss").is_none() || attributes.get("copycss").is_none() || uri(stylesdir)
+    {
+        return Ok(());
+    }
+    let Some(stylesheet) = attributes.get("stylesheet") else {
+        return Ok(());
+    };
+    let outdir = out_path
+        .parent()
+        .filter(|dir| !dir.as_os_str().is_empty())
+        .unwrap_or(Path::new("."));
+    let stylesoutdir = outdir.join(stylesdir);
+    if matches!(stylesheet, "" | "DEFAULT") {
+        std::fs::create_dir_all(&stylesoutdir)?;
+        std::fs::write(
+            stylesoutdir.join(adoctra::html::DEFAULT_STYLESHEET_NAME),
+            adoctra::html::STYLESHEET,
+        )?;
+    } else if !uri(stylesheet) {
+        let source = match attributes.get("copycss") {
+            Some("") | None => base.join(stylesheet),
+            Some(path) => base.join(path),
+        };
+        let dest = stylesoutdir.join(stylesheet);
+        let same = match (source.canonicalize(), dest.canonicalize()) {
+            (Ok(a), Ok(b)) => a == b,
+            _ => false,
+        };
+        if !same {
+            match std::fs::read(&source) {
+                Ok(data) => {
+                    if let Some(dir) = dest.parent() {
+                        std::fs::create_dir_all(dir)?;
+                    }
+                    std::fs::write(&dest, data)?;
+                }
+                // Like Ruby, an existing copy silences the warning.
+                Err(_) if dest.is_file() => {}
+                Err(_) => eprintln!(
+                    "adoctra: warning: stylesheet does not exist or cannot be read: {}",
+                    source.display()
+                ),
+            }
+        }
+    }
     Ok(())
 }
 
@@ -96,6 +228,7 @@ fn parse_args() -> Option<Args> {
     let mut output: Option<PathBuf> = None;
     let mut to_stdout = false;
     let mut embedded = false;
+    let mut attributes = adoctra::Attributes::new();
 
     let mut it = std::env::args().skip(1);
     while let Some(arg) = it.next() {
@@ -105,6 +238,20 @@ fn parse_args() -> Option<Args> {
             "-o" | "--out" => output = Some(PathBuf::from(it.next()?)),
             "--stdout" => to_stdout = true,
             "-s" | "--embedded" | "--no-header-footer" => embedded = true,
+            // Ruby's `-a name[=value]` as a hard override (the soft `@` and
+            // unset `!` forms are not supported).
+            "-a" | "--attribute" => {
+                let entry = it.next()?;
+                let (name, value) = entry.split_once('=').unwrap_or((&entry, ""));
+                if name.is_empty()
+                    || name.starts_with('!')
+                    || name.ends_with(['!', '@'])
+                    || value.ends_with('@')
+                {
+                    return None;
+                }
+                attributes.set(name, value);
+            }
             other => {
                 if input.is_some() {
                     return None;
@@ -120,13 +267,14 @@ fn parse_args() -> Option<Args> {
         output,
         to_stdout,
         embedded,
+        attributes,
     })
 }
 
 fn load_source(
     input: &str,
     sources: &mut adoctra::SourceMap,
-) -> adoctra::Result<(adoctra::SourceId, Option<resources::FileResources>)> {
+) -> adoctra::Result<(adoctra::SourceId, Option<Arc<resources::FileResources>>)> {
     if input == "-" {
         let mut s = String::new();
         std::io::stdin().read_to_string(&mut s)?;
@@ -150,17 +298,52 @@ fn load_source(
                 )
             })?;
         let provider = resources::FileResources::new(parent)?;
-        Ok((sources.load(name, None, &provider)?, Some(provider)))
+        Ok((
+            sources.load(name, None, &provider)?,
+            Some(Arc::new(provider)),
+        ))
     }
 }
 
-fn select_backend(name: &str, embedded: bool) -> adoctra::Result<Box<dyn Backend>> {
+fn select_backend(
+    name: &str,
+    embedded: bool,
+    provider: Option<Arc<resources::FileResources>>,
+    referrer: Option<String>,
+) -> adoctra::Result<Box<dyn Backend>> {
     match name {
         "html" if embedded => Ok(Box::new(adoctra::html::HtmlBackend::embedded())),
-        "html" => Ok(Box::new(adoctra::html::HtmlBackend::new())),
+        "html" => {
+            let backend = adoctra::html::HtmlBackend::new();
+            Ok(Box::new(Html(match provider {
+                Some(provider) => backend.with_resources(provider, referrer),
+                None => backend,
+            })))
+        }
         "docx" => Ok(Box::new(adoctra::docx::DocxBackend::new())),
         "json" => Ok(Box::new(adoctra::json::JsonBackend::new())),
         other => Err(adoctra::Error::Unsupported(format!("backend `{other}`"))),
+    }
+}
+
+/// The HTML backend, printing its warnings like the parser's diagnostics.
+struct Html(adoctra::html::HtmlBackend);
+
+impl Backend for Html {
+    fn name(&self) -> &'static str {
+        self.0.name()
+    }
+
+    fn extension(&self) -> &'static str {
+        self.0.extension()
+    }
+
+    fn convert(&self, doc: &adoctra::Document) -> adoctra::Result<Vec<u8>> {
+        let output = self.0.render(doc);
+        for warning in &output.warnings {
+            eprintln!("adoctra: warning: {warning}");
+        }
+        Ok(output.html.into_bytes())
     }
 }
 
@@ -173,10 +356,11 @@ fn default_output(input: &str, ext: &str) -> PathBuf {
 fn print_usage() {
     eprintln!(
         "adoctra — AsciiDoc processor\n\n\
-         USAGE:\n  adoctra <input.adoc> [--to html|docx|json] [-s] [-o <out>] [--stdout]\n  \
+         USAGE:\n  adoctra <input.adoc> [--to html|docx|json] [-s] [-a <name=value>] [-o <out>] [--stdout]\n  \
          adoctra -   (read from stdin)\n\n\
          OPTIONS:\n  -b, --to <BACKEND>   output format [default: html]\n  \
          -s, --embedded       HTML body content only (no document shell, header or footer)\n  \
+         -a, --attribute <NAME[=VALUE]>  set a document attribute\n  \
          -o, --out <FILE>     output path\n      --stdout         write to stdout\n  \
          -h, --help           show this help"
     );

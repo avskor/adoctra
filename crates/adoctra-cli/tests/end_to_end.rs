@@ -370,10 +370,147 @@ fn cli_writes_a_standalone_document_or_embedded_content() {
     assert!(standalone.starts_with("<!DOCTYPE html>\n<html lang=\"en\">"));
     assert!(standalone.contains("<span id=\"author\" class=\"author\">Ann Lee</span>"));
     assert!(standalone.contains("<footer id=\"footer\">"));
+    // Embedded content hides the title unless `showtitle` is set.
     for flag in ["-s", "--embedded", "--no-header-footer"] {
-        assert_eq!(
-            run(&["-", flag, "--stdout"]),
-            "<h1>Doc</h1>\n<p>Text.</p>\n"
-        );
+        assert_eq!(run(&["-", flag, "--stdout"]), "<p>Text.</p>\n");
     }
+    assert_eq!(
+        run(&["-", "-s", "-a", "showtitle", "--stdout"]),
+        "<h1>Doc</h1>\n<p>Text.</p>\n"
+    );
+    assert_eq!(
+        run(&[
+            "-",
+            "-s",
+            "--attribute",
+            "author=X",
+            "-a",
+            "showtitle=",
+            "--stdout"
+        ]),
+        "<h1>Doc</h1>\n<p>Text.</p>\n"
+    );
+}
+
+#[test]
+fn cli_supplies_dates_docinfo_and_copies_linked_stylesheets() {
+    use std::process::Command;
+    let root = std::env::temp_dir().join(format!("adoctra-cli-document-{}", std::process::id()));
+    std::fs::create_dir_all(root.join("css")).unwrap();
+    std::fs::write(
+        root.join("guide.adoc"),
+        "= Guide\n:docinfo: shared,private\n\n{docdate} {docyear} {doctime} | {localdatetime}\n",
+    )
+    .unwrap();
+    std::fs::write(
+        root.join("docinfo.html"),
+        "<meta name=\"t\" content=\"{doctitle}\">\n",
+    )
+    .unwrap();
+    std::fs::write(
+        root.join("guide-docinfo-footer.html"),
+        "<p>{docname} end</p>",
+    )
+    .unwrap();
+    std::fs::write(root.join("css/my.css"), "body { color: red; }").unwrap();
+    let run = |args: &[&str], epoch: Option<&str>| {
+        let mut command = Command::new(env!("CARGO_BIN_EXE_adoctra"));
+        command.arg(root.join("guide.adoc")).args(args);
+        match epoch {
+            Some(epoch) => command.env("SOURCE_DATE_EPOCH", epoch),
+            None => command.env_remove("SOURCE_DATE_EPOCH"),
+        };
+        let output = command.output().unwrap();
+        (
+            output.status.success(),
+            String::from_utf8(output.stdout).unwrap(),
+            String::from_utf8(output.stderr).unwrap(),
+        )
+    };
+    // SOURCE_DATE_EPOCH fixes both clocks in UTC, and the footer shows it.
+    let (ok, html, _) = run(&["--stdout"], Some("86400"));
+    assert!(ok);
+    assert!(
+        html.contains("<p>1970-01-02 1970 00:00:00 UTC | 1970-01-02 00:00:00 UTC</p>"),
+        "{html}"
+    );
+    assert!(
+        html.contains("<div id=\"footer-text\">\nLast updated 1970-01-02 00:00:00 UTC\n</div>"),
+        "{html}"
+    );
+    assert!(
+        html.contains("<meta name=\"t\" content=\"Guide\">\n</head>"),
+        "{html}"
+    );
+    assert!(html.contains("<p>guide end</p>\n</body>"), "{html}");
+    let (ok, _, stderr) = run(&["--stdout"], Some("soon"));
+    assert!(!ok);
+    assert!(
+        stderr.contains("invalid SOURCE_DATE_EPOCH: soon"),
+        "{stderr}"
+    );
+    // Otherwise the document date is the file's modification time.
+    let modified = std::fs::metadata(root.join("guide.adoc"))
+        .unwrap()
+        .modified()
+        .unwrap();
+    let year = 1970
+        + modified
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+            / 31_556_952;
+    let (ok, html, _) = run(&["--stdout"], None);
+    assert!(ok && html.contains(&format!(" {year} ")), "{html}");
+    // `-a` overrides; `linkcss` with `copycss` writes the stylesheet next to
+    // the output.
+    let out = root.join("out/guide.html");
+    let (ok, _, _) = run(
+        &[
+            "-a",
+            "linkcss",
+            "-a",
+            "stylesdir=styles",
+            "-o",
+            out.to_str().unwrap(),
+        ],
+        Some("0"),
+    );
+    assert!(ok);
+    let html = std::fs::read_to_string(&out).unwrap();
+    assert!(
+        html.contains("<link rel=\"stylesheet\" href=\"styles/adoctra.css\">"),
+        "{html}"
+    );
+    assert_eq!(
+        std::fs::read_to_string(root.join("out/styles/adoctra.css")).unwrap(),
+        adoctra::html::STYLESHEET
+    );
+    // A custom stylesheet is copied from the input's directory, or inlined
+    // without `linkcss`.
+    let (ok, _, _) = run(
+        &[
+            "-a",
+            "linkcss",
+            "-a",
+            "stylesheet=css/my.css",
+            "-o",
+            out.to_str().unwrap(),
+        ],
+        Some("0"),
+    );
+    assert!(ok);
+    assert_eq!(
+        std::fs::read_to_string(root.join("out/css/my.css")).unwrap(),
+        "body { color: red; }"
+    );
+    let (ok, html, _) = run(
+        &["-a", "stylesheet=my.css", "-a", "stylesdir=css", "--stdout"],
+        Some("0"),
+    );
+    assert!(
+        ok && html.contains("<style>\nbody { color: red; }\n</style>"),
+        "{html}"
+    );
+    std::fs::remove_dir_all(&root).unwrap();
 }

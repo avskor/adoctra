@@ -24,7 +24,7 @@ fn mathjax_configuration_matches_pinned_converter() {
         .split_once("<script type=\"text/x-mathjax-config\">")
         .unwrap()
         .1
-        .split_once("</head>")
+        .split_once("</body>")
         .unwrap()
         .0;
     assert_eq!(

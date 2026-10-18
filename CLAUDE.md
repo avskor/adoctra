@@ -66,7 +66,8 @@ The model serves three audiences; keep their needs in mind when changing core:
   deps go in the root `[workspace.dependencies]` and are referenced with
   `{ workspace = true }`.
 - Keep the scaffold **dependency-light**. The core/backends are intentionally
-  `std`-only right now; the `thiserror`/`docx-rs`/`clap`/`serde` lines in the
+  `std`-only right now (the CLI uses `chrono` for the local clock only); the
+  `thiserror`/`docx-rs`/`clap`/`serde` lines in the
   root manifest are commented placeholders. Add a dependency only when it earns
   its place, and prefer `cargo add` so versions stay current.
 - WASM glue stays behind `#[cfg(target_arch = "wasm32")]`; the JSON
@@ -321,7 +322,7 @@ update them (body assignments are plain); ParseContext keeps Ruby's
 `@doctype`/`@backend` apart from the attributes (book/manpage decisions use it);
 nested documents reset the doctype to `article`. Compliance defaults
 (`attribute-missing`/`-undefined`) and the header/footer labels are defaults.
-Safe-mode, date, embedded and `asciidoctor*` attributes are not modeled.
+Safe-mode and `asciidoctor*` attributes are not modeled (dates and embedded: see **Standalone document**).
 Stateful pass bodies execute lazily at restoration, after outer stages. A dropped
 slot has no body effects, while repeated slot occurrences execute independently
 (e.g. a link target and its fallback label can advance the same counter twice).
@@ -1340,20 +1341,32 @@ incremental/block reparse, and a pull/event API over the AST.
 `convert_document`: head metadata (`lang`/`nolang`, `encoding`, generator
 adoctra, `app-name`, `description`, `keywords`, `author` from
 `Document::authors_line`, `copyright`, `favicon`, `<title>` = Ruby's sanitized
-doctitle with fallbacks), `<body id class>` (doctype, auto-TOC `toc-class`
-and `toc-<position>`, the `role` attribute), `<header id="header">` (title
-unless `notitle`, `.details` from `Document::authors` — names with
-replacements, emails with macros — and revnumber/revdate/revremark, then the
-auto TOC; manpage: title, TOC, NAME), `<main id="content">`, footnotes and
-`<footer id="footer">` (version and last update from final_attributes; dates
-are not modeled, so only an explicit `docdatetime`, never with
-`reproducible`), `noheader`/`nofooter`/`max-width`. `HtmlBackend::embedded()`
-(CLI `-s`/`--embedded`) is Ruby's `convert_embedded`; the compatibility bench
-and golden tests use it, `golden/document/` compares the standalone shell with
-`asciidoctor-reference.rb --standalone`. adoctra.css lays out the header,
+doctitle with fallbacks), the stylesheet branch (`stylesheet` ''/`DEFAULT` =
+adoctra.css inlined or linked under `stylesdir` with `linkcss`, an explicit
+`webfonts` link, a custom sheet linked or read through the resources, none
+without `stylesheet`), icon font, head docinfo, `<body id class>` (doctype,
+auto-TOC `toc-class`/`toc-<position>`, the `role` attribute), header docinfo,
+`<header id="header">` (title unless `notitle`, `.details` from
+`Document::authors` and revnumber/revdate/revremark, then the auto TOC;
+manpage: title, TOC, NAME), `<main id="content">`, footnotes,
+`<footer id="footer">` (version and `last-update-label docdatetime` unless
+`reproducible`, from final_attributes), MathJax and footer docinfo (final
+attributes). `HtmlBackend::with_resources(provider, referrer)` reads custom
+stylesheets and docinfo (`adoctra_core::docinfo`: docinfo/docinfo1/docinfo2,
+docinfodir, `docinfosubs` default attributes); `render` returns the warnings.
+`HtmlBackend::embedded()` (CLI `-s`) is Ruby's `convert_embedded` (title hidden
+by `notitle`). `ParseOptions.embedded` mirrors Ruby's standalone option
+(`embedded` locked, embedded `notitle` default unless host
+`showtitle`/`notitle`; standalone `copycss`/`iconfont-remote`/`stylesheet`/
+`webfonts`), and a `showtitle` entry stores the inverse `notitle` first.
+`ParseOptions.dates` (host clock, core reads none) fills Ruby's
+`local*`/`doc*` date attributes; the CLI passes `SOURCE_DATE_EPOCH` or local
+time (chrono, CLI only) and the input mtime, accepts `-a name[=value]`, creates
+the output directory and copies stylesheets with `linkcss`+`copycss`. The
+bench runs `-s -a showtitle`; `golden/document/` compares the standalone shell
+with `asciidoctor-reference.rb --standalone`. adoctra.css lays out the header,
 details, footer and the fixed `toc2` sidebar like Ruby (checked with
-screenshots). Not modeled: `embedded`/embedded `notitle` default, stylesheet/
-linkcss/webfonts/copycss, docinfo.
+screenshots). Not modeled: `allow-uri-read`, safe mode.
 
 When asked to "add a feature," check this list first and say plainly whether it
 is new work or wiring up an existing seam.

@@ -1,7 +1,9 @@
 //! HTML5 backend.
 
 use adoctra_core::ast::{Attribution, Block, BlockKind, Inline};
-use adoctra_core::{Backend, Document, Result};
+use adoctra_core::{Backend, DocinfoLocation, Document, ResourceProvider, ResourceRequest, Result};
+use std::fmt;
+use std::sync::Arc;
 
 mod math;
 
@@ -15,10 +17,35 @@ pub const STYLESHEET: &str = include_str!("../assets/adoctra.css");
 /// like Ruby's `convert_document` (head metadata, a header with the title,
 /// author/revision details and an automatic TOC, the content, footnotes and a
 /// footer); [`HtmlBackend::embedded`] writes only the body content, like
-/// Ruby's `convert_embedded` (`-s`).
-#[derive(Debug, Default, Clone, Copy)]
+/// Ruby's `convert_embedded` (`-s`). With [`HtmlBackend::with_resources`] a
+/// standalone document can read a custom stylesheet and docinfo files.
+#[derive(Clone, Default)]
 pub struct HtmlBackend {
     embedded: bool,
+    resources: Option<Resources>,
+}
+
+#[derive(Clone)]
+struct Resources {
+    provider: Arc<dyn ResourceProvider>,
+    referrer: Option<String>,
+}
+
+impl fmt::Debug for HtmlBackend {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("HtmlBackend")
+            .field("embedded", &self.embedded)
+            .field("resources", &self.resources.as_ref().map(|r| &r.referrer))
+            .finish()
+    }
+}
+
+/// A converted document and the warnings Ruby's converter would log (an
+/// unreadable stylesheet).
+#[derive(Debug, Clone, PartialEq)]
+pub struct Output {
+    pub html: String,
+    pub warnings: Vec<String>,
 }
 
 impl HtmlBackend {
@@ -27,10 +54,46 @@ impl HtmlBackend {
         Self::default()
     }
 
-    /// Embedded output: the title, an automatic TOC, the content and the
-    /// footnotes, without the document shell, header details or footer.
+    /// Embedded output: the title (unless `notitle`), an automatic TOC, the
+    /// content and the footnotes, without the document shell, header details
+    /// or footer.
     pub fn embedded() -> Self {
-        Self { embedded: true }
+        Self {
+            embedded: true,
+            resources: None,
+        }
+    }
+
+    /// Read a custom `stylesheet` and docinfo files through `provider`,
+    /// relative to `referrer` (the primary document's canonical name), like
+    /// Ruby's `read_contents`/`read_asset` from the document's directory.
+    pub fn with_resources(
+        mut self,
+        provider: Arc<dyn ResourceProvider>,
+        referrer: Option<String>,
+    ) -> Self {
+        self.resources = Some(Resources { provider, referrer });
+        self
+    }
+
+    /// Convert and report the warnings.
+    pub fn render(&self, doc: &Document) -> Output {
+        let cx = Cx {
+            doc,
+            book: doc.attributes.get("doctype") == Some("book"),
+        };
+        let mut out = String::new();
+        let mut warnings = Vec::new();
+        if self.embedded {
+            render_content(&cx, true, &mut out);
+            render_footnotes(&doc.footnotes, &doc.attributes, "", &mut out);
+        } else {
+            render_document(&cx, self.resources.as_ref(), &mut warnings, &mut out);
+        }
+        Output {
+            html: out,
+            warnings,
+        }
     }
 }
 
@@ -44,18 +107,7 @@ impl Backend for HtmlBackend {
     }
 
     fn convert(&self, doc: &Document) -> Result<Vec<u8>> {
-        let cx = Cx {
-            doc,
-            book: doc.attributes.get("doctype") == Some("book"),
-        };
-        let mut out = String::new();
-        if self.embedded {
-            render_content(&cx, true, &mut out);
-            render_footnotes(&doc.footnotes, &doc.attributes, "", &mut out);
-        } else {
-            render_document(&cx, &mut out);
-        }
-        Ok(out.into_bytes())
+        Ok(self.render(doc).html.into_bytes())
     }
 }
 
@@ -65,7 +117,12 @@ impl Backend for HtmlBackend {
 /// `#header`/`#content`/`#footer` divs and always inlines its stylesheet.
 /// Date attributes are not modeled, so the last-update line needs an
 /// explicit `docdatetime`.
-fn render_document(cx: &Cx, out: &mut String) {
+fn render_document(
+    cx: &Cx,
+    resources: Option<&Resources>,
+    warnings: &mut Vec<String>,
+    out: &mut String,
+) {
     let doc = cx.doc;
     let attributes = &doc.attributes;
     let content =
@@ -125,11 +182,9 @@ fn render_document(cx: &Cx, out: &mut String) {
         ));
     }
     out.push_str(&format!("<title>{}</title>\n", document_title(doc)));
-    out.push_str("<style>\n");
-    out.push_str(STYLESHEET);
-    out.push_str("</style>\n");
+    stylesheet(attributes, resources, warnings, out);
     icon_font(attributes, out);
-    math::configuration(&doc.final_attributes, attributes, out);
+    docinfo(attributes, DocinfoLocation::Head, resources, out);
     out.push_str("</head>\n");
 
     let sectioned = cx.has_sections();
@@ -158,6 +213,7 @@ fn render_document(cx: &Cx, out: &mut String) {
         "<body{id} class=\"{}\">\n",
         escape(&classes.join(" "))
     ));
+    docinfo(attributes, DocinfoLocation::Header, resources, out);
     let max_width = attributes
         .get("max-width")
         .filter(|value| !value.is_empty())
@@ -199,7 +255,165 @@ fn render_document(cx: &Cx, out: &mut String) {
     if attributes.get("nofooter").is_none() {
         render_footer(&doc.final_attributes, &max_width, out);
     }
+    // Like Ruby, the MathJax setup and the footer docinfo end the body.
+    math::configuration(&doc.final_attributes, attributes, out);
+    docinfo(
+        &doc.final_attributes,
+        DocinfoLocation::Footer,
+        resources,
+        out,
+    );
     out.push_str("</body>\n</html>\n");
+}
+
+/// Ruby's stylesheet branch: the default stylesheet (`stylesheet` empty or
+/// `DEFAULT`, adoctra.css) is linked under `stylesdir` with `linkcss`, else
+/// inlined, after a `webfonts` link; a custom one is linked, or read through
+/// the resources and inlined (an unreadable one warns and leaves the style
+/// empty). Without `stylesheet` there is none. adoctra's theme uses system
+/// fonts, so an empty `webfonts` (Ruby's default families) links nothing.
+fn stylesheet(
+    attributes: &adoctra_core::Attributes,
+    resources: Option<&Resources>,
+    warnings: &mut Vec<String>,
+    out: &mut String,
+) {
+    let linkcss = attributes.get("linkcss").is_some();
+    let stylesdir = attributes.get("stylesdir");
+    match attributes.get("stylesheet") {
+        Some("" | "DEFAULT") => {
+            if let Some(families) = attributes.get("webfonts").filter(|f| !f.is_empty()) {
+                let scheme = attributes.get("asset-uri-scheme").unwrap_or("https");
+                let colon = if scheme.is_empty() { "" } else { ":" };
+                out.push_str(&format!(
+                    "<link rel=\"stylesheet\" href=\"{}\">\n",
+                    attr_value(&format!(
+                        "{scheme}{colon}//fonts.googleapis.com/css?family={families}"
+                    ))
+                ));
+            }
+            if linkcss {
+                let href = adoctra_core::normalize_web_path(
+                    DEFAULT_STYLESHEET_NAME,
+                    Some(stylesdir.unwrap_or("")),
+                    false,
+                );
+                out.push_str(&format!(
+                    "<link rel=\"stylesheet\" href=\"{}\">\n",
+                    attr_value(&href)
+                ));
+            } else {
+                out.push_str("<style>\n");
+                out.push_str(STYLESHEET);
+                out.push_str("</style>\n");
+            }
+        }
+        Some(sheet) if linkcss => {
+            let href = adoctra_core::normalize_web_path(sheet, Some(stylesdir.unwrap_or("")), true);
+            out.push_str(&format!(
+                "<link rel=\"stylesheet\" href=\"{}\">\n",
+                attr_value(&href)
+            ));
+        }
+        Some(sheet) => {
+            let contents = read_stylesheet(sheet, stylesdir, attributes, resources, warnings);
+            out.push_str(&format!(
+                "<style>\n{}\n</style>\n",
+                contents.unwrap_or_default()
+            ));
+        }
+        None => {}
+    }
+}
+
+/// The name adoctra's stylesheet is linked and copied under (Ruby's
+/// `DEFAULT_STYLESHEET_NAME` for its own theme).
+pub const DEFAULT_STYLESHEET_NAME: &str = "adoctra.css";
+
+/// Ruby's `read_contents` of a custom stylesheet under `stylesdir`: URIs are
+/// not read (`allow-uri-read` is not modeled), paths go through the
+/// resources; failures warn like Ruby.
+fn read_stylesheet(
+    sheet: &str,
+    stylesdir: Option<&str>,
+    attributes: &adoctra_core::Attributes,
+    resources: Option<&Resources>,
+    warnings: &mut Vec<String>,
+) -> Option<String> {
+    let uri = |value: &str| {
+        value.split_once("://").is_some_and(|(scheme, _)| {
+            scheme.len() > 1
+                && scheme.chars().next().unwrap().is_ascii_alphabetic()
+                && scheme
+                    .chars()
+                    .all(|c| c.is_ascii_alphanumeric() || "+.-".contains(c))
+        })
+    };
+    if uri(sheet) || stylesdir.is_some_and(uri) {
+        let target = adoctra_core::normalize_web_path(sheet, stylesdir, true);
+        warnings.push(format!(
+            "cannot retrieve contents of stylesheet at URI: {target} (allow-uri-read attribute not enabled)"
+        ));
+        return None;
+    }
+    let target = match stylesdir.filter(|dir| !dir.is_empty() && !sheet.starts_with('/')) {
+        Some(dir) => format!("{}/{sheet}", dir.trim_end_matches('/')),
+        None => sheet.to_owned(),
+    };
+    let loaded = resources.and_then(|resources| {
+        resources
+            .provider
+            .load(ResourceRequest {
+                target: &target,
+                referrer: resources.referrer.as_deref(),
+            })
+            .ok()
+    });
+    match loaded {
+        Some(resource) => Some(resource.text),
+        None => {
+            // Ruby names the system path under the document's directory.
+            let path = target
+                .split('/')
+                .filter(|segment| *segment != ".")
+                .collect::<Vec<_>>()
+                .join("/");
+            let path = match attributes.get("docdir").filter(|_| !path.starts_with('/')) {
+                Some(docdir) => format!("{}/{path}", docdir.trim_end_matches('/')),
+                None => path,
+            };
+            let docfile = attributes.get("docfile").unwrap_or("<stdin>");
+            warnings.push(format!(
+                "{docfile}: stylesheet does not exist or cannot be read: {path}"
+            ));
+            None
+        }
+    }
+}
+
+/// Docinfo content at `location` (Ruby's `node.docinfo`), when the host
+/// gave resources to read it from.
+fn docinfo(
+    attributes: &adoctra_core::Attributes,
+    location: DocinfoLocation,
+    resources: Option<&Resources>,
+    out: &mut String,
+) {
+    let Some(resources) = resources else {
+        return;
+    };
+    let suffix = attributes.get("outfilesuffix").unwrap_or(".html");
+    let parts = adoctra_core::docinfo(
+        attributes,
+        location,
+        suffix,
+        resources.provider.as_ref(),
+        resources.referrer.as_deref(),
+    );
+    if !parts.is_empty() {
+        render_parts(&parts, out);
+        out.push('\n');
+    }
 }
 
 /// Ruby's `doctitle sanitize: true, use_fallback: true` for `<title>`: the
@@ -337,8 +551,13 @@ fn render_content(cx: &Cx, embedded: bool, out: &mut String) {
         && attributes.get("toc").is_some()
         && !matches!(attributes.get("toc-placement"), Some("macro" | "preamble"));
     let title = usize::from(doc.has_title);
+    // Ruby's `convert_embedded` hides the title with `notitle` (embedded
+    // content's default unless the host sets `showtitle`).
+    let show_title = attributes.get("notitle").is_none();
     if embedded && doc.manpage.is_some() && !doc.has_title {
-        render_manpage_title(doc, true, out);
+        if show_title {
+            render_manpage_title(doc, true, out);
+        }
         render_manname_section(doc, out);
     }
     for (i, block) in doc.blocks.iter().enumerate() {
@@ -348,11 +567,15 @@ fn render_content(cx: &Cx, embedded: bool, out: &mut String) {
         match &block.kind {
             BlockKind::Heading { .. } if i == 0 && doc.has_title && !embedded => {}
             BlockKind::Heading { .. } if i == 0 && doc.manpage.is_some() && doc.has_title => {
-                render_manpage_title(doc, true, out);
+                if show_title {
+                    render_manpage_title(doc, true, out);
+                }
                 render_manname_section(doc, out);
             }
             BlockKind::Heading { level, inlines } if i == 0 && doc.has_title => {
-                render_heading(block, *level, inlines, false, &block.roles, out);
+                if show_title {
+                    render_heading(block, *level, inlines, false, &block.roles, out);
+                }
             }
             // Like Ruby, a partintro renders only as a child of a book part.
             BlockKind::Section { level: 0, blocks } if cx.book => {
@@ -2991,6 +3214,156 @@ mod tests {
             ),
             "{body}"
         );
+    }
+
+    fn render_with(resources: adoctra_core::MemoryResources) -> Output {
+        let mut sources = adoctra_core::SourceMap::new();
+        let source_id = sources.load("/d/guide.adoc", None, &resources).unwrap();
+        let options = adoctra_core::ParseOptions {
+            source_id,
+            ..Default::default()
+        };
+        let doc = adoctra_core::parse_resource(&mut sources, &options, &resources)
+            .unwrap()
+            .document;
+        HtmlBackend::new()
+            .with_resources(Arc::new(resources), Some("/d/guide.adoc".into()))
+            .render(&doc)
+    }
+
+    fn memory(files: &[(&str, &str)]) -> adoctra_core::MemoryResources {
+        let mut resources = adoctra_core::MemoryResources::new();
+        for (name, text) in files {
+            resources.insert(name, *text).unwrap();
+        }
+        resources
+    }
+
+    #[test]
+    fn stylesheets_follow_ruby_stylesheet_and_linkcss() {
+        let head = |src: &str| {
+            let html = render_standalone(src);
+            let head = html.split("</title>\n").nth(1).unwrap();
+            head.split("</head>").next().unwrap().to_owned()
+        };
+        // The default stylesheet is inlined, or linked under `stylesdir`.
+        assert!(head("x").starts_with("<style>\n/* adoctra reference stylesheet."));
+        assert_eq!(
+            head(":linkcss:\n:stylesdir: my styles\n\nx"),
+            "<link rel=\"stylesheet\" href=\"my%20styles/adoctra.css\">\n"
+        );
+        assert_eq!(
+            head(":linkcss:\n:stylesheet: DEFAULT\n\nx"),
+            "<link rel=\"stylesheet\" href=\"./adoctra.css\">\n"
+        );
+        // Explicit web fonts are linked before it; the empty default is not
+        // (adoctra's theme uses system fonts).
+        assert_eq!(
+            head(":linkcss:\n:webfonts: Roboto:400\n:asset-uri-scheme: http\n\nx"),
+            "<link rel=\"stylesheet\" href=\"http://fonts.googleapis.com/css?family=Roboto:400\">\n\
+             <link rel=\"stylesheet\" href=\"./adoctra.css\">\n"
+        );
+        // A custom stylesheet is linked (URIs kept) or read and inlined.
+        assert_eq!(
+            head(":linkcss:\n:stylesheet: https://x.org/a.css\n\nx"),
+            "<link rel=\"stylesheet\" href=\"https://x.org/a.css\">\n"
+        );
+        assert_eq!(head(":stylesheet!:\n\nx"), "");
+        let output = render_with(memory(&[
+            (
+                "/d/guide.adoc",
+                "= T\n:stylesheet: my.css\n:stylesdir: css\n\nx",
+            ),
+            ("/d/css/my.css", "body { color: red; }"),
+        ]));
+        assert!(
+            output
+                .html
+                .contains("<style>\nbody { color: red; }\n</style>\n</head>"),
+            "{}",
+            output.html
+        );
+        assert!(output.warnings.is_empty());
+        // An unreadable one warns like Ruby and leaves the style empty.
+        let output = render_with(memory(&[(
+            "/d/guide.adoc",
+            "= T\n:stylesheet: gone.css\n\nx",
+        )]));
+        assert!(
+            output.html.contains("<style>\n\n</style>\n</head>"),
+            "{}",
+            output.html
+        );
+        assert_eq!(
+            output.warnings,
+            ["/d/guide.adoc: stylesheet does not exist or cannot be read: /d/gone.css"]
+        );
+        let output = HtmlBackend::new().render(
+            &adoctra_core::parse(":stylesheet: a.css\n:stylesdir: https://cdn.org\n\nx").document,
+        );
+        assert_eq!(
+            output.warnings,
+            ["cannot retrieve contents of stylesheet at URI: https://cdn.org/a.css (allow-uri-read attribute not enabled)"]
+        );
+    }
+
+    #[test]
+    fn docinfo_is_placed_in_head_header_and_footer_like_ruby() {
+        let output = render_with(memory(&[
+            (
+                "/d/guide.adoc",
+                "= T\n:docinfo: shared\n:stem:\n\nx\n\n:note: late\n\ny\n",
+            ),
+            (
+                "/d/docinfo.html",
+                "<meta name=\"t\" content=\"{doctitle}\">",
+            ),
+            ("/d/docinfo-header.html", "<div>top</div>"),
+            ("/d/docinfo-footer.html", "<script>{note}</script>"),
+        ]));
+        let html = output.html;
+        assert!(html.contains("<meta name=\"t\" content=\"T\">\n</head>\n<body class=\"article\">\n<div>top</div>\n<header"), "{html}");
+        // The footer docinfo reads the attributes after conversion and ends
+        // the body after the MathJax setup.
+        assert!(
+            html.contains("</script>\n<script>late</script>\n</body>"),
+            "{html}"
+        );
+        assert!(
+            html.contains("</footer>\n<script type=\"text/x-mathjax-config\">"),
+            "{html}"
+        );
+        // Without resources there is no docinfo.
+        let html = render_standalone("= T\n:docinfo: shared\n\nx");
+        assert!(
+            html.contains("</style>\n</head>\n<body class=\"article\">\n<header"),
+            "{html}"
+        );
+    }
+
+    #[test]
+    fn embedded_content_hides_the_title_with_notitle() {
+        let render_mode = |src: &str| {
+            let options = adoctra_core::ParseOptions {
+                embedded: true,
+                ..Default::default()
+            };
+            let doc = adoctra_core::parse_with_options(src, &options).document;
+            String::from_utf8(HtmlBackend::embedded().convert(&doc).unwrap()).unwrap()
+        };
+        assert_eq!(render_mode("= T\n\nx"), "<p>x</p>\n");
+        assert_eq!(
+            render_mode("= T\n:showtitle:\n\nx"),
+            "<h1>T</h1>\n<p>x</p>\n"
+        );
+        // A manual page keeps its NAME section.
+        let html = render_mode("= prog(1)\n:doctype: manpage\n\n== NAME\n\nprog - does it\n");
+        assert!(
+            html.starts_with("<section class=\"sect1\">\n<h2 id=\"_name\">NAME</h2>"),
+            "{html}"
+        );
+        // A standalone parse shows it in embedded output too.
+        assert_eq!(render("= T\n\nx"), "<h1>T</h1>\n<p>x</p>\n");
     }
 
     #[test]

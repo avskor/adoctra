@@ -24,7 +24,7 @@ entities и нормализует пробелы обычного текста.
 Этот профиль проверяет наблюдаемое содержимое HTML, а не полный ASG, диагностики,
 атрибуты документа или точное совпадение HTML. Для них нужны отдельные профили.
 При генерации этого профиля задан `showtitle`, чтобы заголовок документа входил
-в сравнение; adoctra запускается с `--embedded` (как `-s` Ruby). Quote и verse проецируются в общие узлы: Ruby `div.attribution`
+в сравнение; adoctra запускается с `--embedded -a showtitle` (как `-s` Ruby). Quote и verse проецируются в общие узлы: Ruby `div.attribution`
 и `pre.content` согласуются с `figcaption` и `pre.verse`, а единственный параграф
 внутри `blockquote` сравнивается с текстом простой цитаты. `figure.imageblock`,
 `figure.videoblock`, `figure.audioblock` и их `figcaption.title` adoctra
@@ -112,8 +112,8 @@ Fixtures начального корпуса — минимальные восп
 профиль не согласует HTML-разметку verse, а ссылка без текста на параграф с
 подписью использует id вместо подписи. Оба случая имеют явные XFAIL и baseline.
 Условия проверяют атрибуты текущего контекста, включая встроенный профиль
-backend/doctype (см. «Встроенные атрибуты»); атрибуты safe mode, режима
-embedded/standalone, даты и окружения ещё не реализованы.
+backend/doctype (см. «Встроенные атрибуты»), режим embedded/standalone и даты
+от host; атрибуты safe mode и окружения ещё не реализованы.
 
 `ifeval` проверен по закреплённому reader, включая числовые префиксы Ruby,
 целые числа произвольной длины и несовместимые типы. Унаследованные особенности
@@ -1250,16 +1250,34 @@ replacements, email с macros), версии, дате и примечании �
 шапки, содержимого, сносок и подвала. `HtmlBackend::embedded()` и флаг CLI
 `-s`/`--embedded` дают прежний embedded-вывод.
 
+Стили — как ветка stylesheet Ruby: `stylesheet` пустой или `DEFAULT` — встроенная
+тема adoctra (`adoctra.css`), со `linkcss` — ссылка под `stylesdir`; явный
+`webfonts` даёт ссылку Google Fonts перед ней (пустое умолчание Ruby ничего не
+подключает: тема adoctra использует системные шрифты); пользовательский stylesheet
+со `linkcss` — ссылка (URI сохраняется), иначе читается через provider
+(`HtmlBackend::with_resources`) из `stylesdir` и встраивается, а нечитаемый даёт
+предупреждение Ruby и пустой `<style>`; без `stylesheet` стилей нет. Docinfo
+(`docinfo`, `docinfo1`, `docinfo2`, `docinfodir`, `docinfosubs`) читается через
+provider и выводится в конце `<head>`, в начале `<body>` и в конце `<body>` (после
+MathJax, по атрибутам после преобразования). CLI, как Ruby CLI, передаёт даты,
+читает stylesheet и docinfo рядом с входным файлом, создаёт каталог вывода и при
+`linkcss` с `copycss` копирует тему или пользовательский stylesheet в `stylesdir`
+рядом с выводом; `-a name[=value]` задаёт внешний атрибут.
+
 Golden fixtures `golden/document/` сравнивают оболочку документа с
 `asciidoctor-reference.rb --standalone` (с `reproducible`). Намеренные отличия:
 семантические `<header>`/`<main>`/`<footer>`/`<nav>` вместо div Ruby, нет
 устаревшего `X-UA-Compatible`, generator — adoctra, кавычки в `content`
-экранируются (у Ruby атрибут получается некорректным), стили всегда встроены
-(`stylesheet`, `linkcss`, `webfonts`, `copycss` и docinfo не поддерживаются).
-Атрибуты дат не моделируются, поэтому строка `Last updated` выводится только
-при явном `docdatetime`. Разбор не различает embedded и standalone: атрибут
-`embedded` и умолчание `notitle` Ruby для embedded не заданы. Вид шапки,
-подвала и боковой TOC (`toc: left/right`) сверен со скриншотами Ruby в Chrome.
+экранируются (у Ruby атрибут получается некорректным). Даты, docinfo, stylesheet,
+`linkcss`/`copycss` и `webfonts` сверены с Ruby в safe mode вручную и закреплены
+Rust-тестами (эталон стенда работает в secure mode, где docinfo и чтение файлов
+отключены). `allow-uri-read` (чтение stylesheet по URI) не поддерживается.
+
+Режим embedded (`ParseOptions.embedded`, CLI `-s`) задаёт атрибут `embedded` и
+скрывает название без `showtitle`, как Ruby; стенд запускает adoctra с
+`-s -a showtitle`, как эталон с `--showtitle`. 3 PASS проверяют атрибуты режима и
+связь `showtitle`/`notitle`. Вид шапки, подвала и боковой TOC (`toc: left/right`)
+сверен со скриншотами Ruby в Chrome.
 
 == Встроенные атрибуты
 
@@ -1289,5 +1307,5 @@ Golden fixtures `golden/document/` сравнивают оболочку док�
 поэтому смена backend в header проверена только Rust-тестами. Не реализованы
 `asciidoctor`/`asciidoctor-version`, атрибуты safe mode (`safe-mode-*`,
 `max-attribute-value-size`, `user-home`, `docdir` в secure mode),
-`embedded`/`notitle`, `max-include-depth`, даты/время (`localdate`, `docdate`, …),
+`max-include-depth`,
 включение `toc`/`sectnums` для DocBook и XHTML-разметка HTML backend.

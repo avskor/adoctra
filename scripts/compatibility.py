@@ -349,7 +349,7 @@ def validate_resources(case):
 def case_commands(case, binary):
     validate_resources(case)
     reference = ["ruby", str(ROOT / "scripts/asciidoctor-reference.rb"), "--showtitle"]
-    actual = [str(binary.resolve()), "-", "--to", "html", "--embedded", "--stdout"]
+    actual = [str(binary.resolve()), "-", "--to", "html", "--embedded", "-a", "showtitle", "--stdout"]
     if "resources" not in case:
         yield reference, actual
         return

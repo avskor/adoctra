@@ -17,6 +17,95 @@ pub struct ParseOptions {
     pub attributes: Attributes,
     /// Limits for explicit resource parsing; ordinary string parsing performs no loads.
     pub includes: IncludeLimits,
+    /// Ruby's `standalone: false`: the document is converted as embedded
+    /// content. It sets the `embedded` attribute and hides the title unless
+    /// the host sets `showtitle`; a standalone document (the default) gets the
+    /// `copycss`, `iconfont-remote`, `stylesheet` and `webfonts` defaults.
+    pub embedded: bool,
+    /// The clock and the input's modification time, for Ruby's date
+    /// attributes (`localdate`, `docdate`, …). Core reads no clock: without
+    /// them those attributes stay unset, which keeps output deterministic.
+    pub dates: Option<DocumentDates>,
+}
+
+/// A wall-clock time with its UTC offset, as the host's clock reports it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DateTime {
+    pub year: i32,
+    pub month: u8,
+    pub day: u8,
+    pub hour: u8,
+    pub minute: u8,
+    pub second: u8,
+    /// Seconds east of UTC (`0` formats as `UTC`, like Ruby).
+    pub utc_offset: i32,
+}
+
+impl DateTime {
+    /// Ruby's `strftime '%F'`.
+    fn date(&self) -> String {
+        format!("{:04}-{:02}-{:02}", self.year, self.month, self.day)
+    }
+
+    /// Ruby's `strftime %(%T #{utc_offset == 0 ? 'UTC' : '%z'})`.
+    fn time(&self) -> String {
+        let zone = match self.utc_offset {
+            0 => "UTC".to_owned(),
+            offset => {
+                let minutes = offset.unsigned_abs() / 60;
+                let sign = if offset < 0 { '-' } else { '+' };
+                format!("{sign}{:02}{:02}", minutes / 60, minutes % 60)
+            }
+        };
+        format!(
+            "{:02}:{:02}:{:02} {zone}",
+            self.hour, self.minute, self.second
+        )
+    }
+}
+
+/// The times behind Ruby's `fill_datetime_attributes`: `local` is now
+/// (`localdate`, `localtime`, …), `document` the input's modification time
+/// (`docdate`, `doctime`, …). A host honouring `SOURCE_DATE_EPOCH` passes
+/// that instant in UTC for both, and the current time as `document` when
+/// the input has no file.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DocumentDates {
+    pub local: DateTime,
+    pub document: DateTime,
+}
+
+/// Ruby's `fill_datetime_attributes`: each value fills only an unset key,
+/// so host overrides win and a preset date derives its year.
+fn fill_dates(attributes: &mut Attributes, dates: &DocumentDates) {
+    for (prefix, time) in [("local", &dates.local), ("doc", &dates.document)] {
+        let date = match attributes.get(&format!("{prefix}date")) {
+            Some(date) => {
+                let date = date.to_owned();
+                if attributes.get(&format!("{prefix}year")).is_none() && date.find('-') == Some(4) {
+                    attributes.set(format!("{prefix}year"), &date[..4]);
+                }
+                date
+            }
+            None => {
+                attributes.set(format!("{prefix}date"), time.date());
+                if attributes.get(&format!("{prefix}year")).is_none() {
+                    attributes.set(format!("{prefix}year"), time.year.to_string());
+                }
+                time.date()
+            }
+        };
+        let clock = match attributes.get(&format!("{prefix}time")) {
+            Some(clock) => clock.to_owned(),
+            None => {
+                attributes.set(format!("{prefix}time"), time.time());
+                time.time()
+            }
+        };
+        if attributes.get(&format!("{prefix}datetime")).is_none() {
+            attributes.set(format!("{prefix}datetime"), format!("{date} {clock}"));
+        }
+    }
 }
 
 impl ParseOptions {
@@ -193,8 +282,6 @@ fn default_attributes() -> Attributes {
     attributes.set("last-update-label", "Last updated");
     attributes.set("untitled-label", "Untitled");
     attributes.set("version-label", "Version");
-    // Ruby sets this for a standalone document; adoctra's HTML is one.
-    attributes.set("iconfont-remote", "");
     for kind in [
         crate::ast::AdmonitionKind::Note,
         crate::ast::AdmonitionKind::Tip,
@@ -211,6 +298,12 @@ impl ParseContext {
     pub fn new(options: &ParseOptions) -> Self {
         let mut attributes = default_attributes();
         let mut locked = BTreeSet::new();
+        // Ruby's standalone defaults, before the host overrides.
+        if !options.embedded {
+            for key in ["copycss", "iconfont-remote", "stylesheet", "webfonts"] {
+                attributes.set(key, "");
+            }
+        }
         for (key, value) in options.attributes.iter() {
             let effective_key = attribute_name(key);
             attributes.set_parts(
@@ -221,6 +314,22 @@ impl ParseContext {
                     .map_or_else(|| vec![AttributePart::Raw(value.to_owned())], <[_]>::to_vec),
             );
             locked.insert(effective_key.to_string());
+        }
+        // Ruby syncs the `embedded` override with the mode; embedded content
+        // hides the title unless the host shows it, and a host `showtitle` or
+        // `notitle` locks the other key unset.
+        locked.insert("embedded".to_owned());
+        if options.embedded {
+            attributes.set("embedded", "");
+            if locked.contains("showtitle") {
+                locked.insert("notitle".to_owned());
+            } else if locked.contains("notitle") {
+                locked.insert("showtitle".to_owned());
+            } else {
+                attributes.set("notitle", "");
+            }
+        } else {
+            attributes.remove("embedded");
         }
         // Ruby's initial backend and doctype (the backend's `outfilesuffix`
         // is set before the header); the manpage backend locks the doctype.
@@ -236,6 +345,9 @@ impl ParseContext {
         if attributes.get("iconsdir").is_none() {
             let images = attributes.get("imagesdir").unwrap_or("./images");
             attributes.set("iconsdir", format!("{images}/icons"));
+        }
+        if let Some(dates) = &options.dates {
+            fill_dates(&mut attributes, dates);
         }
         Self {
             quote_compat: options.attributes.get("compat-mode").is_some(),
@@ -758,6 +870,14 @@ impl ParseContext {
             AttributeEntry::Set(key, value) => (key, Some(value)),
             AttributeEntry::Unset(key) => (key, None),
         };
+        // Ruby's `store_attribute` stores the inverse `notitle` first.
+        if key == "showtitle" {
+            let notitle = match value {
+                Some(_) => AttributeEntry::Unset("notitle".to_owned()),
+                None => AttributeEntry::Set("notitle".to_owned(), String::new()),
+            };
+            self.apply_at(notitle, span);
+        }
         if self.locked.contains(&key) {
             return;
         }

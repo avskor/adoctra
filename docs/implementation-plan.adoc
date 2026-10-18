@@ -1663,6 +1663,25 @@ Ruby API и выполнение Ruby-расширений относятся к
   --standalone`), корпус без изменений: 3095 PASS и 2 XFAIL. Проверены
   Rust-тесты, fmt, clippy и тесты стенда.
 
+Восемьдесят девятый рабочий набор изменений:
+
+* Даты, как `fill_datetime_attributes` Ruby: `ParseOptions.dates` (часы host)
+  заполняет `local*`/`doc*` атрибуты; CLI передаёт `SOURCE_DATE_EPOCH` или
+  локальное время (`chrono`, только в CLI) и время изменения файла. Подвал
+  показывает `Last updated`.
+* Режим embedded, как `standalone: false` Ruby: `ParseOptions.embedded` задаёт
+  `embedded` и `notitle` (кроме внешнего `showtitle`), standalone — `copycss`,
+  `iconfont-remote`, `stylesheet`, `webfonts`; `showtitle` в документе
+  записывает обратный `notitle`. Embedded HTML скрывает название при `notitle`;
+  CLI `-s` и `-a name[=value]`, стенд — `-s -a showtitle`.
+* Стили и docinfo: `stylesheet`/`DEFAULT`/пользовательский, `linkcss`,
+  `stylesdir`, явный `webfonts`, docinfo в head/header/footer через
+  `HtmlBackend::with_resources` и `adoctra_core::docinfo` (`docinfosubs`);
+  предупреждения в `HtmlBackend::render`. CLI копирует stylesheet при `copycss`
+  и создаёт каталог вывода. MathJax перенесён в конец `<body>`, как у Ruby.
+* Добавлены 3 сравнительных сценария: всего 3098 PASS и 2 XFAIL. Проверены
+  Rust-тесты, fmt, clippy, WASM target и тесты стенда.
+
 *Следующее изменение:* оставшиеся блочные семейства и substitutions — по приоритетам этапов 4–6.
 Исполнение выражений reftext в ранних ссылках
 заголовков и порядок регистрации контейнеров после содержимого — отдельная работа.
@@ -1675,8 +1694,7 @@ Ruby API и выполнение Ruby-расширений относятся к
 потребителей, включая замену doctitle целиком.
 Отдельно остаётся согласование Unicode word-грамматики остальных потребителей (например, include/conditional).
 Encoding, URI и safe mode (включая атрибуты `safe-mode-*`) требуют отдельного
-согласования с контрактом provider; атрибуты дат (строка `Last updated`),
-атрибут `embedded`, `stylesheet`/`linkcss` и docinfo тоже впереди.
+согласования с контрактом provider; `allow-uri-read` тоже впереди.
 Полная совместимость header ещё требует
 полного набора header substitutions и остальных стадий pass:. Карта фрагментов покрывает
 комментарии, условия и составные источники;
