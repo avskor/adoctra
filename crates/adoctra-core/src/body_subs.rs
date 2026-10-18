@@ -73,6 +73,7 @@ pub(crate) struct Conversion<'a> {
     pub xrefs: crate::xref_target::Scope<'a>,
     /// Footnotes registered while reading.
     pub footnotes: crate::substitution_context::Footnotes,
+    pub images: Option<&'a crate::data_uri::Images<'a>>,
 }
 
 #[derive(Default)]
@@ -236,6 +237,7 @@ impl BodySubs {
             nested: std::mem::take(&mut self.nested),
             root: None,
             footnotes: conversion.footnotes,
+            images: conversion.images,
             counters: conversion.counters,
             diagnostics: conversion.diagnostics,
             registry: conversion.registry,
@@ -289,6 +291,7 @@ struct Execution<'a> {
     root: Option<(Attributes, std::borrow::Cow<'a, BTreeSet<String>>)>,
     /// The converting document's footnote registry.
     footnotes: crate::substitution_context::Footnotes,
+    images: Option<&'a crate::data_uri::Images<'a>>,
     counters: &'a mut BTreeMap<String, String>,
     diagnostics: &'a mut Vec<Diagnostic>,
     registry: &'a crate::resolve::Registry,
@@ -584,7 +587,8 @@ impl Execution<'_> {
         let mut evaluation =
             Evaluation::definition(&self.attributes, &self.locked, self.counters, compat)
                 .with_root(self.root.as_mut().map(|(a, l)| (a, &**l)))
-                .with_footnotes(&mut self.footnotes);
+                .with_footnotes(&mut self.footnotes)
+                .with_images(self.images);
         let nodes = read.finish(&mut evaluation, self.diagnostics);
         if let Some(attributes) = evaluation.changed_attributes() {
             self.attributes = attributes;
@@ -624,6 +628,16 @@ impl Execution<'_> {
         resolved
     }
 
+    /// Ruby's `image_uri` with the attributes at this point: `dir` names the
+    /// asset directory attribute.
+    fn image_uri(&mut self, target: &str, dir: &str, span: crate::Span) -> String {
+        let dir = self.attributes.get(dir);
+        match self.images {
+            Some(images) => images.uri(target, dir, &self.attributes, span, self.diagnostics),
+            None => crate::image::web_path(target, dir),
+        }
+    }
+
     fn evaluate(&mut self, nodes: &mut Vec<Inline>, pending: Pending) {
         self.attributes.local_hardbreaks = pending.hardbreaks;
         let compat = self.attributes.get("compat-mode").is_some();
@@ -631,6 +645,7 @@ impl Execution<'_> {
             Evaluation::definition(&self.attributes, &self.locked, self.counters, compat)
                 .with_root(self.root.as_mut().map(|(a, l)| (a, &**l)))
                 .with_footnotes(&mut self.footnotes)
+                .with_images(self.images)
                 .with_xrefs(self.xrefs);
         *nodes = run(pending, &mut evaluation, self.diagnostics);
         if let Some(attributes) = evaluation.changed_attributes() {
@@ -651,8 +666,9 @@ impl Execution<'_> {
             block.conversion_context = Some(self.snapshot());
             // Ruby's `image_uri` and `media_uri` read `imagesdir` (and
             // `asset-uri-scheme`) from the document at conversion./`asset-uri-scheme`
+            let span = block.span;
             if let BlockKind::Image { target, src, .. } = &mut block.kind {
-                *src = crate::image::web_path(target, self.attributes.get("imagesdir"));
+                *src = self.image_uri(target, "imagesdir", span);
             }
             crate::media::resolve(block, &self.attributes);
             // Callout icons follow the `icons` mode where the block converts.
@@ -668,14 +684,22 @@ impl Execution<'_> {
                     ..
                 } => {
                     for callout in callouts {
-                        (callout.icons, callout.src) =
+                        let (icons, target) =
                             crate::callouts::icon(&self.attributes, &callout.number);
+                        callout.icons = icons;
+                        callout.src = target.map_or_else(String::new, |target| {
+                            self.image_uri(&target, "iconsdir", span)
+                        });
                     }
                 }
                 BlockKind::CalloutList { items } => {
                     for (index, entry) in items.iter_mut().enumerate() {
-                        (entry.icons, entry.src) =
+                        let (icons, target) =
                             crate::callouts::icon(&self.attributes, &(index + 1).to_string());
+                        entry.icons = icons;
+                        entry.src = target.map_or_else(String::new, |target| {
+                            self.image_uri(&target, "iconsdir", entry.item.span)
+                        });
                     }
                 }
                 // Ruby's `convert_admonition`: a font glyph unless the block
@@ -689,12 +713,14 @@ impl Execution<'_> {
                     *src = match icons.as_deref() {
                         None => String::new(),
                         Some("font") if icon.is_none() => String::new(),
-                        Some(_) => crate::image::icon_uri(
-                            icon,
-                            kind.as_str(),
-                            self.attributes.get("icontype"),
-                            self.attributes.get("iconsdir"),
-                        ),
+                        Some(_) => {
+                            let target = crate::image::icon_target(
+                                icon,
+                                kind.as_str(),
+                                self.attributes.get("icontype"),
+                            );
+                            self.image_uri(&target, "iconsdir", span)
+                        }
                     };
                 }
                 _ => {}

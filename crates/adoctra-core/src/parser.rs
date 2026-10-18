@@ -193,7 +193,9 @@ pub(crate) fn parse_reader<'a>(
     mut lines: Reader<'a>,
 ) -> (ParseResult, Reader<'a>) {
     lines.set_primary_id(options.source_id);
+    let images = crate::data_uri::Images::new(lines.image_source());
     let mut context = ParseContext::new(options);
+    context.images = Some(&images);
     let mut header = collect_header(&mut lines, &mut context);
     let mut doc = Document {
         attributes: (*context.attributes).clone(),

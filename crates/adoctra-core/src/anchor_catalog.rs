@@ -180,7 +180,7 @@ pub(crate) fn macro_at(text: &str, at: usize) -> Option<Found> {
     })
 }
 
-impl ParseContext {
+impl ParseContext<'_> {
     /// Bibliographic reftext deliberately skips the reading-time a-stage.
     pub(crate) fn catalog_bibliography(&mut self, text: &str, map: impl Fn(Range<usize>) -> Span) {
         let Some(found) = bibliography_at(text, 0) else {

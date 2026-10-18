@@ -249,8 +249,12 @@ pub(crate) fn apply(
             true,
         )
         .into_parts(),
-        Stage::Callouts => {
-            crate::callouts::apply_parts(parts, passes.line_comment.as_deref(), attrs)
-        }
+        Stage::Callouts => crate::callouts::apply_parts(
+            parts,
+            passes.line_comment.as_deref(),
+            attrs,
+            span,
+            &mut passes.diagnostics,
+        ),
     }
 }

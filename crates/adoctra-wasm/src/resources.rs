@@ -24,8 +24,15 @@ impl ResourceWorkspace {
         Ok(())
     }
 
+    /// A binary buffer, e.g. an image the document embeds with `data-uri`.
+    pub fn set_binary(&mut self, name: &str, bytes: &[u8]) -> ResourceResult<()> {
+        self.resources.insert_binary(name, bytes)?;
+        Ok(())
+    }
+
     pub fn remove(&mut self, name: &str) -> ResourceResult<bool> {
-        Ok(self.resources.remove(name)?.is_some())
+        let text = self.resources.remove(name)?.is_some();
+        Ok(self.resources.remove_binary(name)?.is_some() || text)
     }
 
     pub fn load(&mut self, target: &str, relative_to: Option<usize>) -> ResourceResult<usize> {
@@ -83,6 +90,10 @@ mod wasm {
             self.0.set(name, text).map_err(js_error)
         }
 
+        pub fn set_binary(&mut self, name: &str, bytes: &[u8]) -> Result<(), JsValue> {
+            self.0.set_binary(name, bytes).map_err(js_error)
+        }
+
         pub fn remove(&mut self, name: &str) -> Result<bool, JsValue> {
             self.0.remove(name).map_err(js_error)
         }
@@ -122,6 +133,31 @@ mod wasm {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn binary_buffers_embed_images_with_data_uri() {
+        let mut workspace = ResourceWorkspace::new();
+        workspace
+            .set("docs/main.adoc", ":data-uri:\n\nimage::i/a.png[]")
+            .unwrap();
+        workspace.set_binary("docs/i/a.png", b"foo").unwrap();
+        let main = workspace.load("docs/main.adoc", None).unwrap();
+        let parsed = workspace.parse_json(main).unwrap();
+        assert!(
+            parsed.contains(r#""src":"data:image/png;base64,Zm9v""#),
+            "{parsed}"
+        );
+        assert!(workspace.remove("docs/i/a.png").unwrap());
+        let parsed = workspace.parse_json(main).unwrap();
+        assert!(
+            parsed.contains(r#""src":"data:image/png;base64,""#),
+            "{parsed}"
+        );
+        assert!(
+            parsed.contains("image to embed not found or not readable: /docs/i/a.png"),
+            "{parsed}"
+        );
+    }
 
     #[test]
     fn virtual_document_paths_reach_includes_json_and_original_reference_spans() {

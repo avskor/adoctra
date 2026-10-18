@@ -17,6 +17,7 @@ mod callouts;
 mod comments;
 mod conditional_expression;
 mod context;
+mod data_uri;
 pub mod diagnostic;
 mod docinfo;
 mod entity_references;
@@ -75,8 +76,8 @@ pub use error::{Error, Result};
 pub use extension::{Registry, TreeProcessor};
 pub use image::normalize_web_path;
 pub use resource::{
-    MemoryResources, Resource, ResourceError, ResourceErrorKind, ResourceProvider, ResourceRequest,
-    ResourceResult,
+    BinaryResource, MemoryResources, Resource, ResourceError, ResourceErrorKind, ResourceProvider,
+    ResourceRequest, ResourceResult,
 };
 pub use source::{SourceFile, SourceId, SourceMap, SourcePosition};
 pub use tokenizer::{Token, TokenKind};

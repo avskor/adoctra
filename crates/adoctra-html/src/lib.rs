@@ -4371,6 +4371,39 @@ mod tests {
     }
 
     #[test]
+    fn data_uri_images_render_embedded_sources() {
+        let mut resources = adoctra_core::MemoryResources::new();
+        resources
+            .insert(
+                "/d/main.adoc",
+                ":data-uri:\n:icons:\n:iconsdir: .\n\nimage::a.png[A]\n\nimage:a.png[] x\n\nNOTE: n",
+            )
+            .unwrap();
+        for name in ["/d/a.png", "/d/note.png"] {
+            resources.insert_binary(name, b"foo".to_vec()).unwrap();
+        }
+        let mut sources = adoctra_core::SourceMap::new();
+        let source_id = sources.load("/d/main.adoc", None, &resources).unwrap();
+        let options = adoctra_core::ParseOptions {
+            source_id,
+            ..Default::default()
+        };
+        let doc = adoctra_core::parse_resource(&mut sources, &options, &resources)
+            .unwrap()
+            .document;
+        let html = String::from_utf8(HtmlBackend::embedded().convert(&doc).unwrap()).unwrap();
+        assert!(
+            html.contains("<img src=\"data:image/png;base64,Zm9v\" alt=\"A\">"),
+            "{html}"
+        );
+        assert_eq!(
+            html.matches("src=\"data:image/png;base64,Zm9v\"").count(),
+            3,
+            "{html}"
+        );
+    }
+
+    #[test]
     fn admonition_icons_replace_the_label_like_ruby() {
         // `icons=font`: Ruby's glyph titled with the label (a raw `caption=`
         // value, as Ruby inserts it, with quotes kept inside the attribute).

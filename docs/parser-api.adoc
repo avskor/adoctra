@@ -109,6 +109,22 @@ admonition из `caption=` ещё не поддержана.
 выбор строк/тегов и рекурсивное раскрытие include выполняет reader.
 Сам parser не выполняет I/O и не ищет ресурс через неявный fallback.
 
+`ResourceProvider::load_binary(ResourceRequest)` загружает байты ресурса
+(`BinaryResource { name, bytes, content_type }`, тип — например, из HTTP
+`Content-Type`) с тем же разрешением путей; по умолчанию возвращает
+`ResourceErrorKind::Unsupported`. Его использует `data-uri`, как `image_uri`
+Ruby: ниже secure mode при преобразовании `src` блочных и inline-картинок, значков
+`icon:`, admonition и callouts становится `data:<тип>;base64,…`. Файл
+запрашивается относительно основного документа (`base_dir` Ruby) под
+`imagesdir`/`iconsdir`, тип — по расширению (`.svg` — `image/svg+xml`, без
+расширения — `application/octet-stream`); нечитаемый файл даёт пустые данные и
+предупреждение `image to embed not found or not readable` в месте картинки. URI
+(или цель под URI-каталогом) читается только с `allow-uri-read` (тип из ответа,
+при ошибке остаётся URI с предупреждением). Строковые API без provider всегда
+получают пустые данные. MemoryResources хранит двоичные буферы
+(`insert_binary`/`remove_binary`; текстовые буферы тоже читаются как байты), CLI
+читает файлы и http/https, WASM `ResourceWorkspace.set_binary`.
+
 `ResourceProvider::document_path(name)` необязательно возвращает абсолютный путь
 с разделителями `/` в пространстве provider. Метод не загружает ресурс заново;
 по умолчанию возвращает `None`, поэтому произвольные идентификаторы не считаются

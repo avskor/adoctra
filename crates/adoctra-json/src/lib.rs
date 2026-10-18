@@ -1941,6 +1941,16 @@ mod tests {
     }
 
     #[test]
+    fn data_uri_sources_serialize() {
+        // Without a provider the image cannot be read: Ruby's empty data.
+        let json = render(":data-uri:\n\nimage::a.svg[]");
+        assert!(
+            json.contains(r#""src":"data:image/svg+xml;base64,""#),
+            "{json}"
+        );
+    }
+
+    #[test]
     fn admonition_icons_serialize() {
         let json = render(":icons: font\n\nNOTE: a\n\n[TIP,icon=bulb]\nb\n\n:icons!:\n\nNOTE: c");
         assert!(

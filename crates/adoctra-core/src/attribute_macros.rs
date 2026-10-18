@@ -838,7 +838,8 @@ fn apply_images(text: Text, attributes: &mut Evaluation<'_>, report: &mut Report
             text.copy(start..m.end, &mut output);
         } else {
             report.images.push(text.match_span(at..m.end));
-            let image = inline_image(&text, &m, attributes);
+            let span = text.match_span(at..m.end);
+            let image = inline_image(&text, &m, attributes, span, &mut report.passes.diagnostics);
             text.replace_parts(at..m.end, &[Part::Image(Box::new(image))], &mut output);
         }
         copied = m.end;
@@ -899,7 +900,13 @@ fn image_at(src: &str, start: usize) -> Option<ImageMatch> {
 /// `posattrs` after `normalize_text` (strip, newlines as spaces, `\]`
 /// unescaped) and without value substitutions; a missing alt is the target's
 /// basename. Sources use the document attributes at this point.
-fn inline_image(text: &Text, m: &ImageMatch, attributes: &Evaluation<'_>) -> InlineImage {
+fn inline_image(
+    text: &Text,
+    m: &ImageMatch,
+    attributes: &Evaluation<'_>,
+    span: crate::Span,
+    diagnostics: &mut Vec<crate::Diagnostic>,
+) -> InlineImage {
     let target = text.text[m.target.clone()].to_owned();
     let posattrs: &[&str] = if m.icon {
         &["size"]
@@ -916,14 +923,14 @@ fn inline_image(text: &Text, m: &ImageMatch, attributes: &Evaluation<'_>) -> Inl
         .then(|| attributes.get("icons").map(str::to_owned))
         .flatten();
     let src = if !m.icon {
-        crate::image::web_path(&target, attributes.get("imagesdir"))
+        attributes.image_uri(&target, attributes.get("imagesdir"), span, diagnostics)
     } else if icons.as_deref().is_some_and(|icons| icons != "font") {
-        crate::image::icon_uri(
+        let icon = crate::image::icon_target(
             named.get("icon").map(String::as_str),
             &target,
             attributes.get("icontype"),
-            attributes.get("iconsdir"),
-        )
+        );
+        attributes.image_uri(&icon, attributes.get("iconsdir"), span, diagnostics)
     } else {
         String::new()
     };

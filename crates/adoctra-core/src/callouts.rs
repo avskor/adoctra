@@ -190,22 +190,21 @@ pub(crate) fn catalog(
     (found, ids, ranges)
 }
 
-/// The `icons` mode and the image icon of callout `number` with the
-/// attributes at conversion (`icon_uri "callouts/N"`, empty unless icons are
-/// images), like Ruby's `convert_inline_callout` and `convert_colist`.
-pub(crate) fn icon(attrs: &crate::Attributes, number: &str) -> (Option<String>, String) {
+/// The `icons` mode of callout `number` with the attributes at conversion
+/// and, when icons are images, its icon (`icon_uri "callouts/N"`, which
+/// `image_uri` resolves under `iconsdir`), like Ruby's
+/// `convert_inline_callout` and `convert_colist`.
+pub(crate) fn icon(attrs: &crate::Attributes, number: &str) -> (Option<String>, Option<String>) {
     let icons = attrs.get("icons").map(str::to_owned);
-    let src = match icons.as_deref() {
-        Some("font") | None => String::new(),
-        Some(_) => crate::image::web_path(
-            &format!(
-                "callouts/{number}.{}",
-                attrs.get("icontype").unwrap_or("png")
-            ),
-            attrs.get("iconsdir"),
-        ),
+    let target = match icons.as_deref() {
+        Some("font") | None => None,
+        Some(_) => Some(crate::image::icon_target(
+            None,
+            &format!("callouts/{number}"),
+            attrs.get("icontype"),
+        )),
     };
-    (icons, src)
+    (icons, target)
 }
 
 /// Ruby's `sub_callouts` over the lexical result of the earlier stages: a
@@ -215,6 +214,8 @@ pub(crate) fn apply_parts(
     parts: Vec<crate::AttributePart>,
     line_comment: Option<&str>,
     attrs: &crate::substitution_context::Evaluation<'_>,
+    span: crate::Span,
+    diagnostics: &mut Vec<crate::Diagnostic>,
 ) -> Vec<crate::AttributePart> {
     use crate::substitution_text::Text;
     let text = Text::from_parts(&parts);
@@ -239,7 +240,10 @@ pub(crate) fn apply_parts(
             } else {
                 mark.number
             };
-            let (icons, src) = icon(attrs, &number);
+            let (icons, target) = icon(attrs, &number);
+            let src = target.map_or_else(String::new, |target| {
+                attrs.image_uri(&target, attrs.get("iconsdir"), span, diagnostics)
+            });
             let callout = crate::InlineCallout {
                 number,
                 guard: mark.guard,

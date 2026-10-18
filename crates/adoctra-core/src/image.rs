@@ -83,22 +83,16 @@ pub(crate) fn has_extension(path: &str) -> bool {
         .is_some_and(|dot| !path[dot..].contains('/'))
 }
 
-/// Ruby's `icon_uri name`: the `icon` attribute (with `icontype`, default
-/// `png`, unless it has an extension) or `name.icontype`, as a web path under
-/// `iconsdir`.
-pub(crate) fn icon_uri(
-    icon: Option<&str>,
-    name: &str,
-    icontype: Option<&str>,
-    iconsdir: Option<&str>,
-) -> String {
+/// The image of Ruby's `icon_uri name`: the `icon` attribute (with
+/// `icontype`, default `png`, unless it has an extension) or `name.icontype`,
+/// which `image_uri` resolves under `iconsdir`.
+pub(crate) fn icon_target(icon: Option<&str>, name: &str, icontype: Option<&str>) -> String {
     let icontype = icontype.unwrap_or("png");
-    let icon = match icon {
+    match icon {
         Some(icon) if has_extension(icon) => icon.to_owned(),
         Some(icon) => format!("{icon}.{icontype}"),
         None => format!("{name}.{icontype}"),
-    };
-    web_path(&icon, iconsdir)
+    }
 }
 
 /// `AbstractBlock#alt`: special characters are the backend's; a value other

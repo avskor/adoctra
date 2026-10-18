@@ -233,6 +233,14 @@ impl<'a> Reader<'a> {
         Ok(reader)
     }
 
+    /// The provider and the primary document's canonical name, for image
+    /// reads while converting (`data-uri`).
+    pub fn image_source(&self) -> Option<(&'a dyn crate::ResourceProvider, String)> {
+        let resources = self.resources.as_ref()?;
+        let primary = resources.sources.get(self.inputs[0].source_id)?;
+        Some((resources.provider, primary.name().to_owned()))
+    }
+
     /// Record the opening and (when present) closing fence of a delimited block.
     pub fn record_fences(&mut self, opening: Span, closing: Option<Span>, kind: crate::TokenKind) {
         for span in std::iter::once(opening).chain(closing) {

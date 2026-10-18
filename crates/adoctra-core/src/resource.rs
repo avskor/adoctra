@@ -1,4 +1,5 @@
-//! Host-controlled text resources. Core provides no filesystem or network loader.
+//! Host-controlled text and binary resources. Core provides no filesystem or
+//! network loader.
 //!
 //! Providers resolve a target relative to the referring resource's canonical
 //! name and return an unmodified UTF-8 snapshot. Include selection, normalization,
@@ -22,6 +23,15 @@ pub struct Resource {
     pub text: String,
 }
 
+/// A binary resource (an image embedded as a data URI). `content_type` is a
+/// type the source reports (e.g. an HTTP `Content-Type`), if any.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BinaryResource {
+    pub name: String,
+    pub bytes: Vec<u8>,
+    pub content_type: Option<String>,
+}
+
 pub trait ResourceProvider {
     /// Load one snapshot. Missing and denied resources must be distinguished,
     /// so optional includes can suppress only the appropriate failures.
@@ -36,6 +46,16 @@ pub trait ResourceProvider {
     fn document_path(&self, _name: &str) -> Option<String> {
         None
     }
+
+    /// Load the bytes of a resource, resolved like [`ResourceProvider::load`]
+    /// (e.g. an image for `data-uri`). The default supports none.
+    fn load_binary(&self, request: ResourceRequest<'_>) -> ResourceResult<BinaryResource> {
+        Err(ResourceError::new(
+            ResourceErrorKind::Unsupported,
+            request.target,
+            "binary resources are not supported",
+        ))
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -46,6 +66,8 @@ pub enum ResourceErrorKind {
     InvalidTarget,
     InvalidEncoding,
     Io,
+    /// The provider does not load this kind of resource.
+    Unsupported,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -86,6 +108,7 @@ pub type ResourceResult<T> = std::result::Result<T, ResourceError>;
 #[derive(Debug, Clone, Default)]
 pub struct MemoryResources {
     files: BTreeMap<String, String>,
+    binaries: BTreeMap<String, Vec<u8>>,
 }
 
 impl MemoryResources {
@@ -106,6 +129,28 @@ impl MemoryResources {
         Ok(self.files.insert(name, text.into()))
     }
 
+    /// Insert or replace a binary buffer (e.g. an image), loaded only by
+    /// [`ResourceProvider::load_binary`]. Returns the previous bytes, if any.
+    pub fn insert_binary(
+        &mut self,
+        name: &str,
+        bytes: impl Into<Vec<u8>>,
+    ) -> ResourceResult<Option<Vec<u8>>> {
+        let name = virtual_name(ResourceRequest {
+            target: name,
+            referrer: None,
+        })?;
+        Ok(self.binaries.insert(name, bytes.into()))
+    }
+
+    pub fn remove_binary(&mut self, name: &str) -> ResourceResult<Option<Vec<u8>>> {
+        let name = virtual_name(ResourceRequest {
+            target: name,
+            referrer: None,
+        })?;
+        Ok(self.binaries.remove(&name))
+    }
+
     pub fn remove(&mut self, name: &str) -> ResourceResult<Option<String>> {
         let name = virtual_name(ResourceRequest {
             target: name,
@@ -118,6 +163,26 @@ impl MemoryResources {
 impl ResourceProvider for MemoryResources {
     fn document_path(&self, name: &str) -> Option<String> {
         Some(name.to_owned())
+    }
+
+    fn load_binary(&self, request: ResourceRequest<'_>) -> ResourceResult<BinaryResource> {
+        let name = virtual_name(request)?;
+        let bytes = match (self.binaries.get(&name), self.files.get(&name)) {
+            (Some(bytes), _) => bytes.clone(),
+            (None, Some(text)) => text.clone().into_bytes(),
+            (None, None) => {
+                return Err(ResourceError::new(
+                    ResourceErrorKind::NotFound,
+                    name,
+                    "resource not found",
+                ))
+            }
+        };
+        Ok(BinaryResource {
+            name,
+            bytes,
+            content_type: None,
+        })
     }
 
     fn load(&self, request: ResourceRequest<'_>) -> ResourceResult<Resource> {

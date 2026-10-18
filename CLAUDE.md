@@ -523,7 +523,18 @@ with `<img src alt width height>` (inside `<a class="image" href>` with
 `link`, window/noopener/nofollow like append_link_constraint_attrs) and a
 trailing `<figcaption class="title">`; the DOM profile maps them to Ruby's divs.
 JSON/WASM `name:"image"` with target/src/flat alt; token `block-macro`. No SVG
-inline/interactive or data-uri (the reference runs in secure mode).
+inline/interactive (the reference runs in secure mode).
+**data-uri**: data_uri.rs Images is Ruby's `image_uri` below secure mode:
+every image source (block/inline images, `icon:`, admonition and callout
+icons) becomes `data:<mime>;base64,…` where it converts, read through the
+optional `ResourceProvider::load_binary` (`BinaryResource`, default
+Unsupported) relative to the primary document under `imagesdir`/`iconsdir`;
+URIs only with host `allow-uri-read` (content type from the provider, the URI
+kept on failure). Unreadable files embed empty data and warn at the image
+(the diagnostics sink of the converting field). parse_reader owns Images and
+ParseContext/Evaluation/Execution borrow it (`with_images`); string APIs have
+no provider. MemoryResources `insert_binary`, CLI files and http(s), WASM
+`ResourceWorkspace.set_binary`.
 **Inline images/icons**: attribute_macros.rs apply_images (Ruby's
 InlineImageMacroRx, the first built-in macro, before links) over the lexical
 result of quotes/a/r, also in pass:m and repeated link parameter passes. The
@@ -1431,7 +1442,7 @@ stylesheet is read through the HTML resources. `SafeMode::of(attributes)`
 reads the level back. The CLI takes `-S`/`--safe-mode`/`--safe` (default
 safe), unjails FileResources in unsafe mode, passes `user-home` below server
 and fetches http/https with `ureq`; the bench runs it with `-S secure`
-(include fixtures `-S safe`). Not modeled: `cache-uri`, data URIs, inline/
+(include fixtures `-S safe`). Not modeled: `cache-uri`, inline/
 interactive SVG, Ruby's jail recovery (providers deny).
 
 When asked to "add a feature," check this list first and say plainly whether it

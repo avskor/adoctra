@@ -245,7 +245,9 @@ pub(crate) fn caption_context(kind: &crate::BlockKind) -> Option<&'static str> {
     }
 }
 
-pub(crate) struct ParseContext {
+pub(crate) struct ParseContext<'i> {
+    /// Image reads for `data-uri` while converting (Ruby's `image_uri`).
+    pub images: Option<&'i crate::data_uri::Images<'i>>,
     pub attributes: Arc<Attributes>,
     /// Quote/link mode is cached at document creation/header completion in Ruby;
     /// entries in the header and later body mutations do not update it eagerly.
@@ -396,7 +398,7 @@ fn default_attributes() -> Attributes {
     attributes
 }
 
-impl ParseContext {
+impl ParseContext<'_> {
     pub fn new(options: &ParseOptions) -> Self {
         let mut attributes = default_attributes();
         let mut locked = BTreeSet::new();
@@ -520,6 +522,7 @@ impl ParseContext {
             fill_dates(&mut attributes, dates);
         }
         Self {
+            images: None,
             quote_compat: options.attributes.get("compat-mode").is_some(),
             attributes: Arc::new(attributes),
             doctitle_span: None,
@@ -757,6 +760,7 @@ impl ParseContext {
                 references,
                 xrefs: Self::xrefs(&self.outfilesuffix, includes),
                 footnotes: std::mem::take(&mut self.footnotes),
+                images: self.images,
             },
         );
     }
@@ -769,7 +773,8 @@ impl ParseContext {
             self.quote_compat,
         )
         .with_root(root_of(&mut self.root))
-        .with_footnotes(&mut self.footnotes);
+        .with_footnotes(&mut self.footnotes)
+        .with_images(self.images);
         let parts = crate::inline_attributes::implicit_title(
             value,
             &mut evaluation,
@@ -797,7 +802,8 @@ impl ParseContext {
             self.quote_compat,
         )
         .with_root(root_of(&mut self.root))
-        .with_footnotes(&mut self.footnotes);
+        .with_footnotes(&mut self.footnotes)
+        .with_images(self.images);
         let result =
             crate::reftext::read(value, base, &mut evaluation, &mut self.inline_diagnostics);
         if let Some(attributes) = evaluation.changed_attributes() {
@@ -822,7 +828,8 @@ impl ParseContext {
             self.quote_compat,
         )
         .with_root(root_of(&mut self.root))
-        .with_footnotes(&mut self.footnotes);
+        .with_footnotes(&mut self.footnotes)
+        .with_images(self.images);
         let result =
             crate::inline_attributes::apply(source, &mut evaluation, &mut self.inline_diagnostics);
         if let Some(attributes) = evaluation.changed_attributes() {
@@ -876,6 +883,7 @@ impl ParseContext {
         )
         .with_root(root_of(&mut self.root))
         .with_footnotes(&mut self.footnotes)
+        .with_images(self.images)
         .with_xrefs(Self::xrefs(&self.outfilesuffix, includes));
         let inlines = crate::inline::scan_inlines_evaluated(
             value,
@@ -945,7 +953,8 @@ impl ParseContext {
             self.quote_compat,
         )
         .with_root(root_of(&mut self.root))
-        .with_footnotes(&mut self.footnotes);
+        .with_footnotes(&mut self.footnotes)
+        .with_images(self.images);
         let effect = evaluation.execute(
             &format!("counter:{context}-number"),
             block.span,
@@ -1050,7 +1059,8 @@ impl ParseContext {
                 self.quote_compat,
             )
             .with_root(root_of(&mut self.root))
-            .with_footnotes(&mut self.footnotes);
+            .with_footnotes(&mut self.footnotes)
+            .with_images(self.images);
             let effect = evaluation.execute(
                 counter,
                 crate::Span::new(key.0, key.1),
@@ -1100,7 +1110,8 @@ impl ParseContext {
                 self.quote_compat,
             )
             .with_root(root_of(&mut self.root))
-            .with_footnotes(&mut self.footnotes);
+            .with_footnotes(&mut self.footnotes)
+            .with_images(self.images);
             let parts = attribute_entry_parts_report(
                 &v,
                 &mut evaluation,

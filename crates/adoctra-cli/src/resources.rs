@@ -1,6 +1,7 @@
 //! Native filesystem adapter; the parser and WASM never import this module.
 use adoctra::{
-    Resource, ResourceError, ResourceErrorKind, ResourceProvider, ResourceRequest, ResourceResult,
+    BinaryResource, Resource, ResourceError, ResourceErrorKind, ResourceProvider, ResourceRequest,
+    ResourceResult,
 };
 use std::path::{Path, PathBuf};
 
@@ -23,8 +24,8 @@ fn uriish(value: &str) -> bool {
 }
 
 /// Read a URI (the core asks only with `allow-uri-read`), like Ruby's
-/// `open-uri`.
-fn fetch(uri: &str) -> ResourceResult<Resource> {
+/// `open-uri`, with the response's content type.
+fn fetch(uri: &str) -> ResourceResult<BinaryResource> {
     let scheme = uri
         .split(':')
         .next()
@@ -45,11 +46,28 @@ fn fetch(uri: &str) -> ResourceResult<Resource> {
         };
         ResourceError::new(kind, uri, error.to_string())
     })?;
-    let text = response.into_string().map_err(|error| {
-        ResourceError::new(ResourceErrorKind::InvalidEncoding, uri, error.to_string())
+    let content_type = Some(response.content_type().to_owned());
+    let mut bytes = Vec::new();
+    std::io::Read::read_to_end(&mut response.into_reader(), &mut bytes)
+        .map_err(|error| io_error(uri, error))?;
+    Ok(BinaryResource {
+        name: uri.to_owned(),
+        bytes,
+        content_type,
+    })
+}
+
+/// A text resource from loaded bytes.
+fn text(resource: BinaryResource) -> ResourceResult<Resource> {
+    let text = String::from_utf8(resource.bytes).map_err(|_| {
+        ResourceError::new(
+            ResourceErrorKind::InvalidEncoding,
+            &resource.name,
+            "resource is not UTF-8",
+        )
     })?;
     Ok(Resource {
-        name: uri.to_owned(),
+        name: resource.name,
         text,
     })
 }
@@ -87,6 +105,15 @@ impl ResourceProvider for FileResources {
     }
 
     fn load(&self, request: ResourceRequest<'_>) -> ResourceResult<Resource> {
+        let target = request.target;
+        let resource = self.load_binary(request)?;
+        text(resource).map_err(|error| ResourceError {
+            target: target.to_owned(),
+            ..error
+        })
+    }
+
+    fn load_binary(&self, request: ResourceRequest<'_>) -> ResourceResult<BinaryResource> {
         let target = request.target;
         // A URI, or a relative target inside a URI resource.
         if uriish(target) {
@@ -137,16 +164,10 @@ impl ResourceProvider for FileResources {
             ));
         }
         let bytes = std::fs::read(&path).map_err(|e| io_error(target, e))?;
-        let text = String::from_utf8(bytes).map_err(|_| {
-            ResourceError::new(
-                ResourceErrorKind::InvalidEncoding,
-                target,
-                "resource is not UTF-8",
-            )
-        })?;
-        Ok(Resource {
+        Ok(BinaryResource {
             name: name.to_owned(),
-            text,
+            bytes,
+            content_type: None,
         })
     }
 }
@@ -272,8 +293,13 @@ mod tests {
                 let path = line.split(' ').nth(1).unwrap_or_default().to_owned();
                 let response = match paths.iter().find(|(p, _)| *p == path) {
                     Some((_, body)) => format!(
-                        "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
-                        body.len()
+                        "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n{}Connection: close\r\n\r\n{body}",
+                        body.len(),
+                        if path.ends_with(".png") {
+                            "Content-Type: image/png\r\n"
+                        } else {
+                            ""
+                        }
                     ),
                     None => {
                         "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
@@ -309,6 +335,41 @@ mod tests {
                 .kind,
             ResourceErrorKind::NotFound
         );
+    }
+
+    #[test]
+    fn binary_resources_keep_bytes_and_report_uri_content_types() {
+        let tree = Tree::new();
+        let root = tree.0.join("docs");
+        std::fs::write(root.join("main.adoc"), "main").unwrap();
+        std::fs::write(root.join("chapters/a.png"), [0x89, 0xff, 0x00]).unwrap();
+        std::fs::write(tree.0.join("outside.png"), "x").unwrap();
+        let provider = FileResources::new(&root).unwrap();
+        let main = root.join("main.adoc").canonicalize().unwrap();
+        let request = |target| ResourceRequest {
+            target,
+            referrer: main.to_str(),
+        };
+        let image = provider.load_binary(request("chapters/a.png")).unwrap();
+        assert_eq!(image.bytes, [0x89, 0xff, 0x00]);
+        assert_eq!(image.content_type, None);
+        // As text the same bytes are not UTF-8; the error names the target.
+        let error = provider.load(request("chapters/a.png")).unwrap_err();
+        assert_eq!(error.kind, ResourceErrorKind::InvalidEncoding);
+        assert_eq!(error.target, "chapters/a.png");
+        assert_eq!(
+            provider
+                .load_binary(request("../outside.png"))
+                .unwrap_err()
+                .kind,
+            ResourceErrorKind::AccessDenied
+        );
+        let base = serve(&[("/i/a.png", "png")]);
+        let remote = provider
+            .load_binary(request(&format!("{base}/i/a.png")))
+            .unwrap();
+        assert_eq!(remote.bytes, b"png");
+        assert_eq!(remote.content_type.as_deref(), Some("image/png"));
     }
 
     #[cfg(unix)]

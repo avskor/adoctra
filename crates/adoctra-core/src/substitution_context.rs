@@ -20,6 +20,8 @@ pub(crate) struct Evaluation<'a> {
     /// The document's footnote registry while fields convert (Ruby's
     /// `Document#footnotes`); without it footnote macros stay text.
     footnotes: Option<&'a mut Footnotes>,
+    /// Image reads for `data-uri` while converting.
+    images: Option<&'a crate::data_uri::Images<'a>>,
 }
 
 /// Registered footnote ids (first wins) and the registration order.
@@ -70,6 +72,7 @@ impl<'a> Evaluation<'a> {
             xrefs: None,
             root: None,
             footnotes: None,
+            images: None,
         }
     }
     pub fn definition(
@@ -86,6 +89,7 @@ impl<'a> Evaluation<'a> {
             xrefs: None,
             root: None,
             footnotes: None,
+            images: None,
         }
     }
     /// Footnote macros register in this document's footnotes.
@@ -95,6 +99,24 @@ impl<'a> Evaluation<'a> {
     }
     pub fn footnotes(&mut self) -> Option<&mut Footnotes> {
         self.footnotes.as_deref_mut()
+    }
+    pub fn with_images(mut self, images: Option<&'a crate::data_uri::Images<'a>>) -> Self {
+        self.images = images;
+        self
+    }
+    /// Ruby's `image_uri` with the attributes at this point; without image
+    /// reads (no conversion context) the web path.
+    pub fn image_uri(
+        &self,
+        target: &str,
+        dir: Option<&str>,
+        span: crate::Span,
+        diagnostics: &mut Vec<crate::Diagnostic>,
+    ) -> String {
+        match self.images {
+            Some(images) => images.uri(target, dir, &self.attributes, span, diagnostics),
+            None => crate::image::web_path(target, dir),
+        }
     }
     /// Counters of a nested document read and update the root document.
     pub fn with_root(mut self, root: Option<(&'a mut Attributes, &'a BTreeSet<String>)>) -> Self {
