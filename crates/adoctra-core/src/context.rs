@@ -231,10 +231,14 @@ impl ParseOptions {
     }
 }
 
-/// The caption context of a numbered block kind: `example` or `figure`.
+/// The caption context of a numbered block kind (Ruby's
+/// `CAPTION_ATTRIBUTE_NAMES`): `example`, `figure`, `listing` or `table`.
+/// Listings have no built-in `listing-caption`, so only a document value or
+/// an explicit `caption` gives them one.
 pub(crate) fn caption_context(kind: &crate::BlockKind) -> Option<&'static str> {
     match kind {
         crate::BlockKind::Example { .. } => Some("example"),
+        crate::BlockKind::Listing { .. } => Some("listing"),
         crate::BlockKind::Image { .. } => Some("figure"),
         crate::BlockKind::Table(_) => Some("table"),
         _ => None,
@@ -851,7 +855,7 @@ impl ParseContext {
         }
     }
 
-    /// Example and figure captions are fixed in child-before-parent completion
+    /// Example, figure, listing and table captions are fixed in child-before-parent completion
     /// order (Ruby's `assign_caption` with `CAPTION_ATTRIBUTE_NAMES`). Their
     /// counter assignment is replayed when entering the owning block,
     /// independently of source-ordered explicit attribute declarations.

@@ -984,9 +984,12 @@ attribute at that point (default `Example`, overridable with
 `:example-caption: …`). An unset prefix suppresses the caption and counter increment;
 a local/document `caption` replaces it without numbering. The HTML
 backend prepends it inside the `<div class="title">` (`#{caption}#{title}`), and
-JSON/WASM serialize a `caption` field (the string, or `null`). Only example blocks
-are numbered: `listing-caption` stays unset (a titled listing/literal keeps its bare
-title), images number with `figure-caption` (see **Images**) and tables with
+JSON/WASM serialize a `caption` field (the string, or `null`). Besides example blocks,
+listing/source blocks (Ruby's `CAPTION_ATTRIBUTE_NAMES[:listing]`,
+also `[listing]` paragraphs, fenced code and masquerades) number with
+`listing-caption`/`listing-number` only when the document sets `listing-caption`
+(no built-in default; `caption=` or a document `caption` still apply), literal
+blocks never; images number with `figure-caption` (see **Images**) and tables with
 `table-caption` (see **Tables**).
 Snapshotted by `golden/examples/caption_numbering.adoc` and the golden oracle no
 longer strips the counter. **Quote and verse blocks** are the next type-changing
@@ -1332,7 +1335,8 @@ inline substitutions. For
 (`.Title`) are kept on `Block.title` and rendered except on passthrough blocks; still missing
 here: admonitions on list items. **Caption numbering** is done for **example
 blocks** (`Example N.` via the `example-caption` attribute, on `Block.caption`) and
-images (`Figure N.`) and tables (`Table N.`). The unset forms
+images (`Figure N.`), listings (`Listing N.` with a document `listing-caption`)
+and tables (`Table N.`). The unset forms
 `:!example-caption:` / `:example-caption!:` disable example captions and their
 counter increments; a custom per-block `caption=` or document `caption` overrides
 the prefix without incrementing the counter. Also: ids of individual list items,

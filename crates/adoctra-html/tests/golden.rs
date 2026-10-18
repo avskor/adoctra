@@ -135,14 +135,34 @@ fn strip_tags(s: &str) -> String {
 /// directly. This now *includes* the caption counter a numbered block carries
 /// (asciidoctor's `Example 1. `, which adoctra emits too), so the comparison pins
 /// caption numbering rather than stripping it.
-fn block_title(html: &str) -> String {
+fn block_titles(html: &str) -> Vec<String> {
     // Restrict to <body> for our full document (its inlined stylesheet has a
     // `.title` rule); asciidoctor's `-s` fragment has no <body> and falls through.
     let body = html.split("<body>").nth(1).unwrap_or(html);
     let marker = "<div class=\"title\">";
-    let at = body.find(marker).expect("no block title in output") + marker.len();
-    let end = body[at..].find("</div>").expect("unterminated title") + at;
-    strip_tags(&body[at..end])
+    let titles: Vec<_> = body
+        .match_indices(marker)
+        .map(|(at, _)| {
+            let at = at + marker.len();
+            let end = body[at..].find("</div>").expect("unterminated title") + at;
+            strip_tags(&body[at..end])
+        })
+        .collect();
+    assert!(!titles.is_empty(), "no block title in output");
+    titles
+}
+
+/// The text of every cross-reference link (`<a href="#…">`), in order.
+fn xref_texts(html: &str) -> Vec<String> {
+    let body = html.split("<body>").nth(1).unwrap_or(html);
+    let marker = "<a href=\"#";
+    body.match_indices(marker)
+        .map(|(at, _)| {
+            let at = body[at..].find('>').unwrap() + at + 1;
+            let end = body[at..].find("</a>").expect("unterminated link") + at;
+            strip_tags(&body[at..end])
+        })
+        .collect()
 }
 
 /// Normalise an admonition to `(type, body markup)`. adoctra emits a modern
@@ -877,9 +897,14 @@ fn html_block_titles_match_asciidoctor() {
         let ours = String::from_utf8(HtmlBackend::embedded().convert(&doc).unwrap()).unwrap();
 
         assert_eq!(
-            block_title(&ours),
-            block_title(&expected),
-            "HTML block title diverges from asciidoctor for `{name}`"
+            block_titles(&ours),
+            block_titles(&expected),
+            "HTML block titles diverge from asciidoctor for `{name}`"
+        );
+        assert_eq!(
+            xref_texts(&ours),
+            xref_texts(&expected),
+            "HTML cross-reference labels diverge from asciidoctor for `{name}`"
         );
     }
 }

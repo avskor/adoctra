@@ -3602,6 +3602,30 @@ mod tests {
     }
 
     #[test]
+    fn listing_captions_render_in_titles_and_xrefs_like_ruby() {
+        let html = render(":listing-caption: Listing\n:xrefstyle: short\n\nSee <<a>>.\n\n[#a]\n.Code\n----\nx\n----\n\n[source,ruby]\n.Ruby\n----\ny\n----\n\n.Lit\n....\nz\n....\n\n[caption=\"Own: \"]\n.Own\n----\nw\n----");
+        assert!(html.contains(r##"<a href="#a">Listing 1</a>"##), "{html}");
+        assert!(
+            html.contains(
+                "<div class=\"title\">Listing 1. Code</div>\n<pre class=\"listing\" id=\"a\">"
+            ),
+            "{html}"
+        );
+        assert!(
+            html.contains("<div class=\"title\">Listing 2. Ruby</div>\n<pre class=\"highlight\">"),
+            "{html}"
+        );
+        assert!(html.contains("<div class=\"title\">Lit</div>"), "{html}");
+        assert!(
+            html.contains("<div class=\"title\">Own: Own</div>"),
+            "{html}"
+        );
+        // Without `listing-caption` a titled listing keeps its bare title.
+        let html = render(".Code\n----\nx\n----");
+        assert!(html.contains("<div class=\"title\">Code</div>"), "{html}");
+    }
+
+    #[test]
     fn collapsible_example_renders_details_like_ruby() {
         let html = render(
             ".Show *me*\n[#d.r%collapsible%open]\n====\nBody\n====\n\n\

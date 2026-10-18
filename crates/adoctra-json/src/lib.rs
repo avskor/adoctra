@@ -2111,6 +2111,18 @@ mod tests {
     }
 
     #[test]
+    fn titled_listing_serializes_listing_caption() {
+        // Listings number only when the document sets `listing-caption`.
+        let json = render(".A\n----\na\n----\n\n:listing-caption: Listing\n\n.B\n----\nb\n----");
+        assert!(
+            json.contains(r#""name":"listing","id":null"#),
+            "got: {json}"
+        );
+        assert_eq!(json.matches(r#""caption":null"#).count(), 1, "got: {json}");
+        assert!(json.contains(r#""caption":"Listing 1. ""#), "got: {json}");
+    }
+
+    #[test]
     fn untitled_block_serializes_null_caption() {
         // No title (or a non-example titled block) → no caption.
         let json = render("Body.");
