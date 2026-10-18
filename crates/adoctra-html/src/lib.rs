@@ -1212,6 +1212,8 @@ fn render_attribution(attribution: &Option<Attribution>, out: &mut String) {
         render_inlines(cite, out);
         out.push_str("</cite>");
     }
+    // A credit split inside an element continues after the `cite`.
+    render_inlines(&attr.trailing, out);
     out.push_str("</figcaption>\n");
 }
 
@@ -2458,6 +2460,17 @@ mod tests {
         // A quoted paragraph is simple content.
         assert!(
             html.contains("<blockquote>\nq\n</blockquote>\n<figcaption>&#8212; B</figcaption>"),
+            "{html}"
+        );
+    }
+
+    #[test]
+    fn credit_split_inside_formatting_continues_after_the_cite() {
+        let html = render("> a\n> -- *A, B* rest\n");
+        assert!(
+            html.contains(
+                "<figcaption>&#8212; <strong>A</strong><br>\n<cite><strong>B</strong></cite> rest</figcaption>"
+            ),
             "{html}"
         );
     }

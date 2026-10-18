@@ -664,6 +664,8 @@ the content get labels. HTML renders Ruby's markers and the `<div
 id="footnotes">` list after the body (and inside AsciiDoc cells) unless
 `nofootnotes`; JSON/WASM `name:"footnote"` / `kind:"footnote"` (type, index, id,
 parts) and a document `footnotes` list; token `inline-macro` projected from AST.
+Duplicate ids warn like Ruby (resolve.rs register_id): `id assigned to
+block|section|anchor already in use: <id>` (section for non-discrete headings).
 Xref labels: resolve::register builds the registry after reading (auto ids,
 block ids, cataloged anchors in source order); body_subs Execution resolves each
 textless xref after its field's subs, like Ruby's xreftext:
@@ -1238,10 +1240,20 @@ paragraph). A paragraph starting with `"` whose last line is a `-- ` credit and
 whose previous line ends with `"` is a simple `Quote` of the text between the
 quotes. Both force style `quote` via MacroMeta (positional fields are not
 rekeyed). The credit gets normal subs while reading (reading_title, effects
-reach reading only) and splits at the first top-level `, ` into
-author/citetitle (also inside a plain attribute value; an empty result has no
-attribution); its xrefs resolve after the quote's children (resolve.rs
-resolve_attribution, attribute-line attributions before them). Inline anchors
+reach reading only; an empty result has no attribution) and stays whole in
+`author` (ParseContext.credits); its xrefs resolve after the quote's children
+(resolve.rs resolve_attribution, attribute-line attributions before them), then
+blockquote_credit.rs splits it like Ruby's `split ', ', 2` of the converted
+markup: the first `, ` of contiguous output text (Text/Raw/plain attribute
+values, adjacent leaves joined; markup between breaks contiguity) in document
+order, also inside formatting, links, xref labels and Substituted parts. Ruby
+then leaves those tags open; the browser keeps the `cite` inside the innermost
+element and closes it with it, so core builds that DOM from well-formed
+pieces: author (elements closed), citetitle (the innermost element's
+remainder inside copies of its ancestors) and `Attribution.trailing` (the rest,
+inside copies of the outer elements), rendered after `</cite>`; JSON/WASM
+export `trailing` only when non-empty. adoctra.css hides the attribution `<br>`
+and makes `cite` a block like Ruby's stylesheet (checked in Chrome). Inline anchors
 of the stripped lines are cataloged again after the nested parse, like Ruby
 (a duplicate warns). Markers are `quote-delimiter` tokens (Reader.quote_markers;
 the tokenizer classifies the rest of the line).

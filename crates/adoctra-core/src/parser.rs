@@ -1213,7 +1213,11 @@ fn build_attribution(
     if author.is_none() && citetitle.is_none() {
         None
     } else {
-        Some(Attribution { author, citetitle })
+        Some(Attribution {
+            author,
+            citetitle,
+            trailing: Vec::new(),
+        })
     }
 }
 
@@ -2807,8 +2811,8 @@ fn parse_block_content(
 /// Ruby's Markdown blockquote and quoted paragraph (`next_block`): an
 /// unstyled paragraph whose first line starts with `> `, or with `"` when its
 /// last line is a `-- ` credit and the line before ends with `"`. The credit
-/// gets normal substitutions while reading and splits at the first `, ` into
-/// the attribution and citetitle. A blockquote parses its unmarked lines as
+/// gets normal substitutions while reading and later splits at the first
+/// `, ` into the attribution and citetitle. A blockquote parses its unmarked lines as
 /// blocks (compound); a quoted paragraph is simple content. Both catalog the
 /// inline anchors of their lines, like an ordinary paragraph.
 fn quote_paragraph(
@@ -2914,6 +2918,15 @@ fn quote_paragraph(
     } else {
         return None;
     };
+    if matches!(
+        block.kind,
+        BlockKind::Quote {
+            attribution: Some(_),
+            ..
+        }
+    ) {
+        context.credits.insert((block.span.start, block.span.end));
+    }
     context.block_macro = Some(MacroMeta {
         style: Some("quote".to_owned()),
         ..MacroMeta::default()
@@ -2921,9 +2934,10 @@ fn quote_paragraph(
     Some(block)
 }
 
-/// A blockquote credit line: normal substitutions while reading, then Ruby's
-/// `split ', ', 2` into the attribution and citetitle (an empty result has
-/// neither).
+/// A blockquote credit line: normal substitutions while reading (an empty
+/// result has no attribution). The registry pass splits it into the
+/// attribution and citetitle once its reference labels are known
+/// (blockquote_credit.rs).
 fn credit_attribution(
     credit: &str,
     base: usize,
@@ -2932,13 +2946,13 @@ fn credit_attribution(
 ) -> Option<Attribution> {
     let attributes = Arc::clone(&context.attributes);
     let inlines = context.reading_title(credit, base, &attributes, &lines.include_catalog);
-    let (author, citetitle) = split_credit(inlines);
-    if citetitle.is_none() && author.iter().all(empty_inline) {
+    if inlines.iter().all(empty_inline) {
         return None;
     }
     Some(Attribution {
-        author: Some(author),
-        citetitle,
+        author: Some(inlines),
+        citetitle: None,
+        trailing: Vec::new(),
     })
 }
 
@@ -2951,67 +2965,6 @@ fn empty_inline(inline: &Inline) -> bool {
         }
         _ => false,
     }
-}
-
-/// Split substituted credit inlines at the first `, ` of their top-level text
-/// (also inside a plain attribute value). Unlike Ruby, which splits the
-/// converted markup, a separator inside formatting does not split it.
-fn split_credit(mut inlines: Vec<Inline>) -> (Vec<Inline>, Option<Vec<Inline>>) {
-    for index in 0..inlines.len() {
-        let at = match &inlines[index] {
-            Inline::Text { value, .. } => value.find(", "),
-            Inline::AttributeRef {
-                value: Some(value),
-                parts,
-                ..
-            } if parts.is_empty() => value.find(", "),
-            _ => None,
-        };
-        let Some(at) = at else {
-            continue;
-        };
-        let mut rest = inlines.split_off(index);
-        let (head, tail) = match rest.remove(0) {
-            Inline::Text { value, span } => {
-                // Replacements may change the length of the text.
-                let exact = value.len() == span.end - span.start;
-                let part = |range: std::ops::Range<usize>| Inline::Text {
-                    value: value[range.clone()].to_owned(),
-                    span: if exact {
-                        Span {
-                            start: span.start + range.start,
-                            end: span.start + range.end,
-                            ..span
-                        }
-                    } else {
-                        span
-                    },
-                };
-                (part(0..at), part(at + 2..value.len()))
-            }
-            Inline::AttributeRef {
-                name, value, span, ..
-            } => {
-                let value = value.unwrap_or_default();
-                let part = |text: &str| Inline::AttributeRef {
-                    name: name.clone(),
-                    value: Some(text.to_owned()),
-                    parts: Vec::new(),
-                    span,
-                };
-                (part(&value[..at]), part(&value[at + 2..]))
-            }
-            _ => unreachable!("only text splits"),
-        };
-        if !empty_inline(&head) {
-            inlines.push(head);
-        }
-        if !empty_inline(&tail) {
-            rest.insert(0, tail);
-        }
-        return (inlines, Some(rest));
-    }
-    (inlines, None)
 }
 
 /// A line of a list item, as Ruby's `read_lines_for_list_item` buffers it: a

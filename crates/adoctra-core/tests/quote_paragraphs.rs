@@ -233,3 +233,53 @@ fn reading_attributions_label_their_references() {
         (Some("[Sec]".into()), Some("[[_later]]".into()))
     );
 }
+
+#[test]
+fn credits_split_inside_elements_like_the_browser_repairs_ruby() {
+    // Ruby splits the converted markup; the cite closes with the innermost
+    // element and the rest of the line follows it.
+    let source = "> a\n> -- _x *A, B* y_ z\n\n> b\n> -- pass:q[*C, D*] tail\n\n\
+                  == E, F\n\n> c\n> -- <<_e_f>>\n";
+    let blocks = parse(source).document.blocks;
+    let attribution = quote(&blocks[0]).0.unwrap();
+    let emphasis = |inline: &Inline| match inline {
+        Inline::Emphasis { children, .. } => format!("_{}_", text(children)),
+        other => text(std::slice::from_ref(other)),
+    };
+    let parts = |inlines: &[Inline]| inlines.iter().map(emphasis).collect::<String>();
+    assert_eq!(parts(attribution.author.as_deref().unwrap()), "_x <A>_");
+    assert_eq!(parts(attribution.citetitle.as_deref().unwrap()), "_<B>_");
+    assert_eq!(parts(&attribution.trailing), "_ y_ z");
+    let attribution = quote(&blocks[1]).0.unwrap();
+    let [Inline::Substituted { value, .. }] = attribution.citetitle.as_deref().unwrap() else {
+        panic!("expected the passthrough remainder: {attribution:?}");
+    };
+    assert_eq!(value, "D");
+    assert_eq!(text(&attribution.trailing), " tail");
+    // A reference label resolved after reading splits too.
+    let BlockKind::Section { blocks, .. } = &blocks[2].kind else {
+        panic!("expected a section");
+    };
+    assert_eq!(credit(&blocks[1]), (Some("[E]".into()), Some("[F]".into())));
+    assert!(quote(&blocks[1]).0.unwrap().trailing.is_empty());
+}
+
+#[test]
+fn duplicate_ids_warn_like_ruby() {
+    let source = "= Doc\n\n[[a]]\nFirst.\n\n[[a]]\nSecond.\n\n[#s]\n== S1\n\n[#s]\n== S2\n\n\
+                  x [[a]] y\n\n[discrete#s]\n== D\n";
+    let messages: Vec<_> = parse(source)
+        .diagnostics
+        .into_iter()
+        .map(|d| d.message)
+        .collect();
+    assert_eq!(
+        messages,
+        [
+            "id assigned to block already in use: a",
+            "id assigned to section already in use: s",
+            "id assigned to anchor already in use: a",
+            "id assigned to block already in use: s",
+        ]
+    );
+}

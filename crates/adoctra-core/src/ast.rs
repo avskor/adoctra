@@ -372,6 +372,11 @@ pub struct Attribution {
     /// The cited work (asciidoctor's `citetitle`), rendered inside a `<cite>`.
     /// `None` when omitted.
     pub citetitle: Option<Vec<Inline>>,
+    /// Credit text rendered after the `<cite>`. Ruby splits a blockquote
+    /// credit line in its converted markup; when the `, ` lies inside an
+    /// element, the browser closes the `cite` with that element, so the rest
+    /// of the line is not part of the citetitle. Empty otherwise.
+    pub trailing: Vec<Inline>,
 }
 
 /// Block-level element kinds.

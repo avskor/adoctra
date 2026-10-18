@@ -825,6 +825,11 @@ fn write_attribution(attribution: &Option<Attribution>, s: &mut String) {
                 Some(c) => write_inlines(c, s),
                 None => s.push_str("null"),
             }
+            // Credit text after the citetitle, only when a split left some.
+            if !attr.trailing.is_empty() {
+                s.push_str(",\"trailing\":");
+                write_inlines(&attr.trailing, s);
+            }
             s.push('}');
         }
         None => s.push_str("null"),
@@ -1221,6 +1226,15 @@ mod tests {
         );
         assert!(
             json.contains(r#""simple":true,"blocks":[{"span":{"source_id":0,"start":18,"end":19},"name":"paragraph""#),
+            "{json}"
+        );
+    }
+
+    #[test]
+    fn credit_split_inside_formatting_exports_trailing_spans() {
+        let json = parse_json("> a\n> -- *A, B* rest\n");
+        assert!(
+            json.contains(r#""citetitle":[{"span":{"source_id":0,"start":9,"end":15},"name":"strong","inlines":[{"span":{"source_id":0,"start":13,"end":14},"name":"text","value":"B"}]}],"trailing":[{"span":{"source_id":0,"start":15,"end":20},"name":"text","value":" rest"}]}"#),
             "{json}"
         );
     }

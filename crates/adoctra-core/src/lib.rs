@@ -10,6 +10,7 @@ pub mod attributes;
 mod author_values;
 pub mod backend;
 mod block_attributes;
+mod blockquote_credit;
 mod body_subs;
 mod callouts;
 mod comments;

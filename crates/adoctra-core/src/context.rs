@@ -90,6 +90,9 @@ pub(crate) struct ParseContext {
     /// Caption numerals of numbered blocks, keyed by their reader range
     /// (Ruby's `@numeral`), for `xrefstyle`.
     numerals: BTreeMap<(usize, usize), String>,
+    /// Blockquotes whose attribution is a credit line still to split into
+    /// author and citetitle, keyed by their reader range.
+    pub credits: BTreeSet<(usize, usize)>,
     /// Section titles read in the body, keyed by the heading's reader range;
     /// the hierarchy assigns their numerals.
     pub sections: BTreeMap<(usize, usize), crate::section_numbers::Section>,
@@ -224,6 +227,7 @@ impl ParseContext {
             anchors: Vec::new(),
             reftexts: BTreeMap::new(),
             numerals: BTreeMap::new(),
+            credits: BTreeSet::new(),
             sections: BTreeMap::new(),
             book: false,
             open_sections: Vec::new(),
@@ -338,6 +342,7 @@ impl ParseContext {
             anchors: std::mem::take(&mut self.anchors),
             reftexts: std::mem::take(&mut self.reftexts),
             numerals: std::mem::take(&mut self.numerals),
+            credits: std::mem::take(&mut self.credits),
             sections: &self.sections,
             definitions: std::mem::take(&mut self.definitions),
         };

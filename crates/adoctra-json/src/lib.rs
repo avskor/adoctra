@@ -697,7 +697,7 @@ fn write_block(block: &Block, s: &mut String) {
 
 /// Emit the leading-comma `,"attribution":{…}|null` field of a quote/verse block.
 /// Each part is the inline array (so formatting is preserved) or `null`; an absent
-/// attribution is the JSON `null`.
+/// attribution is the JSON `null`. A non-empty `trailing` follows the citetitle.
 fn write_attribution(attribution: &Option<Attribution>, s: &mut String) {
     s.push_str(",\"attribution\":");
     match attribution {
@@ -711,6 +711,11 @@ fn write_attribution(attribution: &Option<Attribution>, s: &mut String) {
             match &attr.citetitle {
                 Some(c) => write_inlines(c, s),
                 None => s.push_str("null"),
+            }
+            // Credit text after the citetitle, only when a split left some.
+            if !attr.trailing.is_empty() {
+                s.push_str(",\"trailing\":");
+                write_inlines(&attr.trailing, s);
             }
             s.push('}');
         }
@@ -1804,6 +1809,17 @@ mod tests {
             json.contains(r#""attribution":{"author":[{"name":"text","value":"B"}],"citetitle":null},"simple":true,"blocks":[{"name":"paragraph""#),
             "{json}"
         );
+    }
+
+    #[test]
+    fn credit_split_inside_formatting_exports_trailing() {
+        let json = render("> a\n> -- *A, B* rest\n");
+        assert!(
+            json.contains(r#""attribution":{"author":[{"name":"strong","inlines":[{"name":"text","value":"A"}]}],"citetitle":[{"name":"strong","inlines":[{"name":"text","value":"B"}]}],"trailing":[{"name":"text","value":" rest"}]}"#),
+            "{json}"
+        );
+        // Without a remainder there is no trailing field.
+        assert!(!render("> a\n> -- A, B\n").contains("trailing"));
     }
 
     #[test]
