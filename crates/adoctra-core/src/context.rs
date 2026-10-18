@@ -255,6 +255,11 @@ pub(crate) struct ParseContext {
     locked: BTreeSet<String>,
     counters: BTreeMap<String, String>,
     replay: Option<Arc<Attributes>>,
+    /// Body declarations waiting for the next block of their collection, like
+    /// Ruby's `:attribute_entries` in the pending block attributes: a block
+    /// takes them into replay, an orphan at the collection end (or before a
+    /// skipped comment/dropped macro, which clear the attributes) loses them.
+    pending_entries: Vec<crate::body_subs::Declaration>,
     pub body_subs: crate::body_subs::BodySubs,
     pub comments: Vec<crate::Span>,
     pub comment_diagnostics: Vec<crate::Diagnostic>,
@@ -323,6 +328,12 @@ fn root_of(
         .map(|(attributes, locked)| (Arc::make_mut(attributes), &*locked))
 }
 
+/// Conversion replay before [`ParseContext::flush_entries`].
+pub(crate) struct Entries {
+    len: usize,
+    replay: Option<Arc<Attributes>>,
+}
+
 /// The parent document's reading state while a nested document is read.
 pub(crate) struct Outer {
     attributes: Arc<Attributes>,
@@ -331,6 +342,7 @@ pub(crate) struct Outer {
     doctitle_span: Option<crate::Span>,
     open_sections: Vec<(u8, (usize, usize))>,
     entries: Vec<crate::body_subs::Declaration>,
+    pending_entries: Vec<crate::body_subs::Declaration>,
     book: bool,
     manpage: bool,
     outfilesuffix: Option<String>,
@@ -514,6 +526,7 @@ impl ParseContext {
             locked,
             counters: BTreeMap::new(),
             replay: None,
+            pending_entries: Vec::new(),
             body_subs: Default::default(),
             comments: Vec::new(),
             comment_diagnostics: Vec::new(),
@@ -579,6 +592,7 @@ impl ParseContext {
             doctitle_span: self.doctitle_span.take(),
             open_sections: std::mem::take(&mut self.open_sections),
             entries: std::mem::take(&mut self.body_subs.entries),
+            pending_entries: std::mem::take(&mut self.pending_entries),
             book: self.book,
             manpage: self.manpage,
             outfilesuffix: self.outfilesuffix.clone(),
@@ -607,6 +621,7 @@ impl ParseContext {
             outer.attributes
         };
         self.replay = outer.replay;
+        self.pending_entries = outer.pending_entries;
         self.doctitle_span = outer.doctitle_span;
         self.open_sections = outer.open_sections;
         self.book = outer.book;
@@ -641,6 +656,43 @@ impl ParseContext {
             includes,
             outfilesuffix: outfilesuffix.as_deref(),
         }
+    }
+
+    /// Hand the pending declarations to the block starting now (Ruby's
+    /// `playback_attributes` before it converts). Returns the state to
+    /// [`restore_entries`](Self::restore_entries) if no block results.
+    pub fn flush_entries(&mut self) -> Entries {
+        let saved = Entries {
+            len: self.body_subs.entries.len(),
+            replay: self.replay.clone(),
+        };
+        let Some(replay) = &mut self.replay else {
+            return saved;
+        };
+        for (at, key, value) in self.pending_entries.drain(..) {
+            let attrs = Arc::make_mut(replay);
+            if let Some(parts) = &value {
+                attrs.set_parts(&key, parts.clone());
+            } else {
+                attrs.remove(&key);
+            }
+            self.body_subs.entries.push((at, key, value));
+        }
+        saved
+    }
+
+    /// No block took the flushed declarations: a skipped comment block or a
+    /// dropped block macro clears Ruby's pending attributes, entries included.
+    pub fn restore_entries(&mut self, saved: Entries) {
+        self.body_subs.entries.truncate(saved.len);
+        self.replay = saved.replay;
+        self.pending_entries.clear();
+    }
+
+    /// The end of a block collection orphans its pending declarations: they
+    /// changed reading but never reach conversion.
+    pub fn drop_entries(&mut self) {
+        self.pending_entries.clear();
     }
 
     pub fn render_attributes(&self) -> Arc<Attributes> {
@@ -1091,16 +1143,9 @@ impl ParseContext {
         // Conversion replays the declared result, not side effects incurred
         // while computing it during reading. Header side effects are already
         // captured when start_body creates this independent snapshot.
-        if let Some(replay) = &mut self.replay {
-            self.body_subs
-                .entries
+        if self.replay.is_some() {
+            self.pending_entries
                 .push((span.start, key.clone(), value.clone()));
-            let attrs = Arc::make_mut(replay);
-            if let Some(parts) = &value {
-                attrs.set_parts(&key, parts.clone());
-            } else {
-                attrs.remove(&key);
-            }
         }
         let attributes = Arc::make_mut(&mut self.attributes);
         // In the header, Ruby's set_attribute updates the backend and doctype

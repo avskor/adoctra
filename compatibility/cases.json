@@ -2366,9 +2366,98 @@
     {
       "id": "attribute-multiline-container-boundary",
       "category": "attributes",
-      "expect": "xfail",
-      "source": "====\n:x: one \\\n====\n\nAfter {x}.",
-      "reason": "Existing attribute replay difference: an assignment in an empty container affects following paragraphs."
+      "expect": "pass",
+      "source": "====\n:x: one \\\n====\n\nAfter {x}."
+    },
+    {
+      "id": "attribute-orphan-container-single",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "====\n:x: one\n====\n\nAfter {x}."
+    },
+    {
+      "id": "attribute-orphan-container-later-entry",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "====\n:x: one\n====\n\n:y: two\n\n{x}{y}"
+    },
+    {
+      "id": "attribute-orphan-container-after-text",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "====\ntext\n\n:x: one\n====\n\nAfter {x}."
+    },
+    {
+      "id": "attribute-orphan-container-metadata",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "====\n:x: one\n[[a]]\n.Title\n====\n\nAfter {x}."
+    },
+    {
+      "id": "attribute-orphan-open-quote",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "--\n:x: one\n--\n\n____\n:y: two\n____\n\n{x}{y}"
+    },
+    {
+      "id": "attribute-orphan-inactive-conditional",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "====\n:x: one\nifdef::nope[]\ntext\nendif::[]\n====\n\nAfter {x}."
+    },
+    {
+      "id": "attribute-orphan-list-item",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "* item\n+\n:x: one\n\n* two {x}"
+    },
+    {
+      "id": "attribute-orphan-dlist-item",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "a:: b\n+\n:x: one\n\nc:: {x}"
+    },
+    {
+      "id": "attribute-orphan-reading-kept",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "====\n:x: one\n====\n\nifdef::x[]\nreading sees {x}\nendif::[]"
+    },
+    {
+      "id": "attribute-orphan-counter",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "n\n\n:n: 1\n\n====\n:n: 2\n====\n\n{counter:n}"
+    },
+    {
+      "id": "attribute-entry-comment-paragraph-clears",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "====\n:x: one\n\n[comment]\nc\n\ninner {x}\n====\n\n:y: two\n\n[comment]\nc\n\nAfter {x}{y}."
+    },
+    {
+      "id": "attribute-entry-comment-block-clears",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "p\n\n:x: one\n\n.Title\n[comment]\n--\nc\n--\n\nAfter {x}.\n\n:y: two\n\n////\nc\n////\n\nKept {y}."
+    },
+    {
+      "id": "attribute-entry-dropped-macro-clears",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":attribute-missing: drop-line\n\np\n\n:x: one\n\nimage::{nope}[]\n\n{x}"
+    },
+    {
+      "id": "attribute-entry-carried-into-section",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "== S\n\n:x: one\n\n== Next\n\nAfter {x}."
+    },
+    {
+      "id": "attribute-orphan-table-cell",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "[cols=1a]\n|===\na|\n:x: one\n\ntext {x}\n\n:y: two\n|{y}\n|===\n\n{x}{y}"
     },
     {
       "id": "attribute-multiline-listing",
@@ -19005,6 +19094,12 @@
       "resources": {
         "refs.adoc": "* [[[книга,Ссылка]]] Текст"
       }
+    },
+    {
+      "id": "list-item-attached-admonition",
+      "category": "lists",
+      "expect": "pass",
+      "source": "* item\n+\nNOTE: inside\n\n* next\n+\n[TIP]\n====\nblock\n====\n"
     },
     {
       "id": "subs-paragraph-selected",

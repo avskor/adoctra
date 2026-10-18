@@ -3602,6 +3602,13 @@ mod tests {
     }
 
     #[test]
+    fn orphan_container_entries_do_not_reach_conversion() {
+        let html = render("====\n:x: one\n====\n\n:y: two\n\n{x}{y}\n\n[comment]\n--\nc\n--\n\n:z: three\n\n[comment]\nc\n\n{z}");
+        assert!(html.contains("<p>{x}two</p>"), "{html}");
+        assert!(html.contains("<p>{z}</p>"), "{html}");
+    }
+
+    #[test]
     fn listing_captions_render_in_titles_and_xrefs_like_ruby() {
         let html = render(":listing-caption: Listing\n:xrefstyle: short\n\nSee <<a>>.\n\n[#a]\n.Code\n----\nx\n----\n\n[source,ruby]\n.Ruby\n----\ny\n----\n\n.Lit\n....\nz\n....\n\n[caption=\"Own: \"]\n.Own\n----\nw\n----");
         assert!(html.contains(r##"<a href="#a">Listing 1</a>"##), "{html}");

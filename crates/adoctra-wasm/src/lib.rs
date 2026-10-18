@@ -1225,6 +1225,14 @@ mod tests {
     }
 
     #[test]
+    fn orphan_container_entries_leave_references_unresolved() {
+        // Ruby drops an entry with no following block in its container.
+        let json = parse_json("====\n:x: one\n====\n\n:y: two\n\n{x}{y}");
+        assert!(json.contains(r#""attribute":"x","value":null"#), "{json}");
+        assert!(json.contains(r#""attribute":"y","value":"two""#), "{json}");
+    }
+
+    #[test]
     fn host_source_id_reaches_nodes_diagnostics_and_tokens() {
         let src = "= Doc\n:who: first\n\n{who}\n\n:who: second\n\n{who} <<missing>>";
         let json = parse_json_with_source(src, 42);

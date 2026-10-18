@@ -178,6 +178,14 @@ class ProjectionTests(unittest.TestCase):
         self.assertEqual(projection(ruby), projection(ours))
         self.assertNotEqual(projection(ours), projection(ours.replace('<hr>', '')))
 
+    def test_attached_admonition_separates_item_text(self):
+        ruby = ('<ul><li><p>item</p>\n<div class="admonitionblock note"><table><tr><td class="icon">'
+                '<div class="title">Note</div></td><td class="content">inside</td></tr></table></div></li></ul>')
+        ours = ('<ul><li>item\n<aside class="admonition" data-type="note" aria-label="Note">'
+                '<p class="admonition-title">Note</p>inside</aside></li></ul>')
+        self.assertEqual(projection(ruby), projection(ours))
+        self.assertNotEqual(projection(ours), projection(ours.replace('item\n', 'item more\n')))
+
     def test_malformed_html_is_a_harness_error(self):
         for html in ['<p>unclosed', '<p>x</em>', '</div>']:
             with self.assertRaises(ValueError):

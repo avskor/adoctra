@@ -826,8 +826,14 @@ marker consistency, blank/EOF termination, locked/unset consumption, and cross-s
 continuations. Preprocessing sees the old context until collection finishes. Reader
 records consumed attribute lines and values for tokenizer classification; preserve
 physical spans and avoid independently interpreting continuation text as syntax.
-Hard-break substitution after attribute expansion and empty-container attribute replay
-remain explicit XFAILs (the latter also affects single-line entries).
+Body entries wait in ParseContext.pending_entries for the next block of their
+collection (Ruby's `:attribute_entries` in the pending block attributes):
+collect_blocks_in flushes them into conversion replay before parse_block,
+restores the replay when no block results (a skipped `[comment]` paragraph or
+block, a dropped block macro clear Ruby's attributes) and drops orphans at the
+collection end (container, list item, AsciiDoc cell). Section titles take them,
+so they cross section boundaries. Reading attributes keep orphan values (later
+conditions see them); Block.attribute_context, a reading snapshot, still does.
 ResourceProvider::document_path optionally supplies a slash-separated absolute
 path for primary docfile/docdir/docname/docfilesuffix attributes. MemoryResources
 and CLI opt in; opaque providers default to None. Resource parsing/highlighting

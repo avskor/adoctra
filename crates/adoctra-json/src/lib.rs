@@ -990,6 +990,16 @@ mod tests {
     }
 
     #[test]
+    fn orphan_container_entries_do_not_reach_conversion() {
+        // JSON projects resolved text: the dropped entry leaves `{x}`.
+        let json = render("====\n:x: one\n====\n\n:y: two\n\n{x}{y}");
+        assert!(
+            json.contains(r#"[{"name":"text","value":"{x}"},{"name":"text","value":"two"}]"#),
+            "{json}"
+        );
+    }
+
+    #[test]
     fn builtin_backend_and_doctype_attributes_resolve() {
         let json = render("= T\n:doctype: book\n\nifdef::backend-html5-doctype-book[{backend}/{doctype}]\nifdef::doctype-article[article]\n");
         assert!(

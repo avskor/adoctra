@@ -428,7 +428,8 @@ fn collect_blocks_in(
         text_only = false;
         skipped = 0;
         metadata_seen = false;
-        if let Some(mut block) = parse_block(
+        let entries = context.flush_entries();
+        let parsed = parse_block(
             lines,
             i,
             context,
@@ -436,7 +437,11 @@ fn collect_blocks_in(
             ctx,
             Some(&metadata.attrs),
             metadata.id.is_some(),
-        ) {
+        );
+        if parsed.is_none() {
+            context.restore_entries(entries);
+        }
+        if let Some(mut block) = parsed {
             let pending = metadata;
             // A section-title anchor supplies the id only without one from
             // metadata, but its reftext replaces a pending reftext.
@@ -580,6 +585,7 @@ fn collect_blocks_in(
             pending.title = Some(title);
         }
     }
+    context.drop_entries();
     if let Some(limit) = previous_limit {
         lines.limit = limit;
     }
