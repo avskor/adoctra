@@ -349,13 +349,26 @@ def validate_resources(case):
             raise ValueError(f"invalid fixture resource: {name!r}")
 
 
+def validate_attributes(case):
+    """Host attributes, passed to both processors as `name=value`."""
+    attributes = case.get("attributes", {})
+    if not isinstance(attributes, dict) or not all(
+            isinstance(name, str) and re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_-]*", name)
+            and isinstance(value, str) for name, value in attributes.items()):
+        raise ValueError(f"invalid host attributes: {case.get('id')}")
+
+
 @contextmanager
 def case_commands(case, binary):
     validate_resources(case)
+    validate_attributes(case)
     reference = ["ruby", str(ROOT / "scripts/asciidoctor-reference.rb"), "--showtitle"]
     # Like the reference: secure mode, safe mode for include fixtures.
     actual = [str(binary.resolve()), "-", "--to", "html", "--embedded", "-a", "showtitle",
               "-S", "secure", "--stdout"]
+    for name, value in case.get("attributes", {}).items():
+        reference += ["--attribute", f"{name}={value}"]
+        actual += ["-a", f"{name}={value}"]
     if "resources" not in case:
         yield reference, actual
         return
@@ -385,6 +398,7 @@ def load_manifest():
             raise ValueError(f"invalid or duplicate case id: {case['id']}")
         ids.add(case["id"])
         validate_resources(case)
+        validate_attributes(case)
         if case["expect"] not in {"pass", "xfail"} or not isinstance(case["source"], str):
             raise ValueError(f"invalid case: {case['id']}")
         if case["expect"] == "xfail" and not case.get("reason"):

@@ -1,7 +1,7 @@
 import unittest
 from pathlib import Path
 
-from compatibility import case_commands, classify, projection, validate_resources
+from compatibility import case_commands, classify, projection, validate_attributes, validate_resources
 
 
 class ProjectionTests(unittest.TestCase):
@@ -227,6 +227,20 @@ class ResourceFixtureTests(unittest.TestCase):
             self.assertEqual(Path(actual[1]), root / "main.adoc")
             self.assertEqual((root / "sub/я.adoc").read_bytes(), "Я\r\n".encode())
         self.assertFalse(root.exists())
+
+    def test_host_attributes_reach_both_renderers(self):
+        case = {"profile": "include-body-dom-v1", "source": "include::a.adoc[]",
+                "resources": {"a.adoc": "a"}, "attributes": {"max-include-depth": "1", "x": ""}}
+        with case_commands(case, Path("adoctra")) as (reference, actual):
+            self.assertEqual(reference[-2], "--include-root")
+            for value in ["max-include-depth=1", "x="]:
+                self.assertEqual(reference[reference.index(value) - 1], "--attribute")
+                self.assertEqual(actual[actual.index(value) - 1], "-a")
+
+    def test_invalid_host_attributes_are_rejected(self):
+        for attributes in [[], {"": "x"}, {"-x": "x"}, {"a=b": "x"}, {"a": 1}]:
+            with self.assertRaises(ValueError):
+                validate_attributes({"id": "x", "attributes": attributes})
 
 
 if __name__ == '__main__':

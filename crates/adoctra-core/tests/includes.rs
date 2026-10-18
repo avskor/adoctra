@@ -3025,3 +3025,110 @@ fn exceeded_include_depth_keeps_the_directive_like_ruby() {
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
     assert_eq!(paragraphs(&result), ["include::part.adoc[]"]);
 }
+
+fn depth_errors(result: &ParseResult) -> Vec<&str> {
+    result
+        .diagnostics
+        .iter()
+        .filter(|d| d.message.starts_with("maximum include depth"))
+        .map(|d| d.message.as_str())
+        .collect()
+}
+
+const DEPTH_FILES: &[(&str, &str)] = &[
+    ("/docs/part.adoc", "include::nested.adoc[]"),
+    ("/docs/nested.adoc", "include::leaf.adoc[]"),
+    ("/docs/leaf.adoc", "leaf"),
+    ("/docs/p5.adoc", "include::part.adoc[depth=5]"),
+];
+
+#[test]
+fn max_include_depth_attribute_bounds_includes_like_ruby() {
+    let (mut sources, resources, mut options) =
+        setup("include::part.adoc[]\n\ninclude::p5.adoc[]", DEPTH_FILES);
+    options.attributes.set("max-include-depth", "1");
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(
+        paragraphs(&result),
+        ["include::nested.adoc[]", "include::part.adoc[depth=5]"]
+    );
+    assert_eq!(
+        depth_errors(&result),
+        [
+            "maximum include depth of 1 exceeded",
+            "maximum include depth of 1 exceeded"
+        ]
+    );
+    let error = &result.diagnostics[0];
+    assert_eq!(sources.slice(error.span), Some("include::nested.adoc[]"));
+}
+
+#[test]
+fn relative_depth_beyond_max_include_depth_is_replaced_by_it() {
+    let (mut sources, resources, mut options) =
+        setup("include::part.adoc[]\n\ninclude::p5.adoc[]", DEPTH_FILES);
+    options.attributes.set("max-include-depth", "2");
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    // A relative depth of 5 under p5 becomes the absolute maximum of 2.
+    assert_eq!(
+        paragraphs(&result),
+        ["include::leaf.adoc[]", "include::nested.adoc[]"]
+    );
+    assert_eq!(
+        depth_errors(&result),
+        [
+            "maximum include depth of 2 exceeded",
+            "maximum include depth of 2 exceeded"
+        ]
+    );
+}
+
+#[test]
+fn max_include_depth_without_a_positive_value_disables_includes() {
+    for value in ["0", "-3", "wrong", ""] {
+        let (mut sources, resources, mut options) =
+            setup("include::part.adoc[]\n\ninclude::p5.adoc[]", DEPTH_FILES);
+        options.attributes.set("max-include-depth", value);
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        assert_eq!(
+            paragraphs(&result),
+            ["include::part.adoc[]", "include::p5.adoc[]"],
+            "{value:?}"
+        );
+        assert!(result.diagnostics.is_empty(), "{value:?}");
+        let tokens = tokens_resource(&mut sources, &options, &resources).unwrap();
+        assert!(tokens.iter().all(|t| t.span.source_id == options.source_id));
+    }
+}
+
+#[test]
+fn max_include_depth_is_read_before_the_header_like_ruby() {
+    let (mut sources, resources, options) =
+        setup(":max-include-depth: 0\n\ninclude::part.adoc[]", DEPTH_FILES);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(paragraphs(&result), ["leaf"]);
+}
+
+#[test]
+fn max_include_depth_attribute_never_exceeds_the_host_limit() {
+    let (mut sources, resources, mut options) = setup("include::part.adoc[]", DEPTH_FILES);
+    options.attributes.set("max-include-depth", "1_0");
+    options.includes.max_depth = 1;
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(paragraphs(&result), ["include::nested.adoc[]"]);
+    assert_eq!(
+        depth_errors(&result),
+        ["maximum include depth of 1 exceeded"]
+    );
+}
+
+#[test]
+fn zero_relative_depth_reports_a_depth_of_zero() {
+    let (mut sources, resources, options) = setup("include::part.adoc[depth=0]", DEPTH_FILES);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(paragraphs(&result), ["include::nested.adoc[]"]);
+    assert_eq!(
+        depth_errors(&result),
+        ["maximum include depth of 0 exceeded"]
+    );
+}

@@ -20424,6 +20424,147 @@
       "category": "header",
       "source": "= Doc\n:doctype: manpage\n:title: cmd(1)\n:manname: cmd\n:manpurpose: does\n\n== S\n\nx",
       "expect": "pass"
+    },
+    {
+      "id": "include-max-depth-one",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::part.adoc[]\n\ninclude::p5.adoc[]",
+      "resources": {
+        "part.adoc": "include::nested.adoc[]",
+        "nested.adoc": "include::leaf.adoc[]",
+        "leaf.adoc": "leaf",
+        "p5.adoc": "include::part.adoc[depth=5]"
+      },
+      "attributes": {
+        "max-include-depth": "1"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-max-depth-two",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::part.adoc[]\n\ninclude::p5.adoc[]",
+      "resources": {
+        "part.adoc": "include::nested.adoc[]",
+        "nested.adoc": "include::leaf.adoc[]",
+        "leaf.adoc": "leaf",
+        "p5.adoc": "include::part.adoc[depth=5]"
+      },
+      "attributes": {
+        "max-include-depth": "2"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-max-depth-zero",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::part.adoc[]\n\ninclude::p5.adoc[]",
+      "resources": {
+        "part.adoc": "include::nested.adoc[]",
+        "nested.adoc": "include::leaf.adoc[]",
+        "leaf.adoc": "leaf",
+        "p5.adoc": "include::part.adoc[depth=5]"
+      },
+      "attributes": {
+        "max-include-depth": "0"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-max-depth-negative",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::part.adoc[]\n\ninclude::p5.adoc[]",
+      "resources": {
+        "part.adoc": "include::nested.adoc[]",
+        "nested.adoc": "include::leaf.adoc[]",
+        "leaf.adoc": "leaf",
+        "p5.adoc": "include::part.adoc[depth=5]"
+      },
+      "attributes": {
+        "max-include-depth": "-1"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-max-depth-invalid",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::part.adoc[]\n\ninclude::p5.adoc[]",
+      "resources": {
+        "part.adoc": "include::nested.adoc[]",
+        "nested.adoc": "include::leaf.adoc[]",
+        "leaf.adoc": "leaf",
+        "p5.adoc": "include::part.adoc[depth=5]"
+      },
+      "attributes": {
+        "max-include-depth": "wrong"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-max-depth-empty",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::part.adoc[]\n\ninclude::p5.adoc[]",
+      "resources": {
+        "part.adoc": "include::nested.adoc[]",
+        "nested.adoc": "include::leaf.adoc[]",
+        "leaf.adoc": "leaf",
+        "p5.adoc": "include::part.adoc[depth=5]"
+      },
+      "attributes": {
+        "max-include-depth": ""
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-max-depth-prefix",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::part.adoc[]\n\ninclude::p5.adoc[]",
+      "resources": {
+        "part.adoc": "include::nested.adoc[]",
+        "nested.adoc": "include::leaf.adoc[]",
+        "leaf.adoc": "leaf",
+        "p5.adoc": "include::part.adoc[depth=5]"
+      },
+      "attributes": {
+        "max-include-depth": "1x"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-max-depth-header",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": ":max-include-depth: 0\n\ninclude::part.adoc[]\n\ninclude::p5.adoc[]",
+      "resources": {
+        "part.adoc": "include::nested.adoc[]",
+        "nested.adoc": "include::leaf.adoc[]",
+        "leaf.adoc": "leaf",
+        "p5.adoc": "include::part.adoc[depth=5]"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-max-depth-relative",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::part.adoc[depth=1]",
+      "resources": {
+        "part.adoc": "include::nested.adoc[]",
+        "nested.adoc": "include::leaf.adoc[]",
+        "leaf.adoc": "leaf",
+        "p5.adoc": "include::part.adoc[depth=5]"
+      },
+      "attributes": {
+        "max-include-depth": "3"
+      },
+      "expect": "pass"
     }
   ]
 }

@@ -15,7 +15,10 @@ struct Conditional {
 struct Input {
     source_id: crate::SourceId,
     lines: Vec<Line>,
+    /// Ruby's `@maxdepth[:curr]` (compared to the include stack size) and
+    /// `[:rel]` (the depth its error reports).
     max_depth: usize,
+    depth_label: usize,
     next: usize,
     preprocess: bool,
     occurrence: usize,
@@ -29,6 +32,7 @@ impl Input {
             source_id,
             lines,
             max_depth: usize::MAX,
+            depth_label: usize::MAX,
             next: 0,
             preprocess,
             occurrence,
@@ -41,6 +45,10 @@ struct Resources<'a> {
     sources: &'a mut crate::SourceMap,
     provider: &'a dyn crate::ResourceProvider,
     limits: crate::IncludeLimits,
+    /// Ruby's `@maxdepth[:abs]`: `max-include-depth` from the host attributes
+    /// (default 64), bounded by the host limit; `None` (a value that is not
+    /// positive) disables includes.
+    max_depth: Option<usize>,
     bytes: usize,
 }
 
@@ -223,11 +231,23 @@ impl<'a> Reader<'a> {
         })?;
         let mut reader = Self::new(source.text());
         reader.inputs[0].source_id = options.source_id;
-        reader.inputs[0].max_depth = options.includes.max_depth;
+        // Ruby reads the attribute once, when it creates the reader, so
+        // only the API attributes count.
+        let max_depth = match options.attributes.get("max-include-depth") {
+            Some(value) => usize::try_from(crate::include_selection::integer_prefix(value))
+                .ok()
+                .filter(|depth| *depth > 0)
+                .map(|depth| depth.min(options.includes.max_depth)),
+            None => Some(options.includes.max_depth),
+        };
+        let max = max_depth.unwrap_or(0);
+        reader.inputs[0].max_depth = max;
+        reader.inputs[0].depth_label = max;
         reader.resources = Some(Resources {
             sources,
             provider,
             limits: options.includes,
+            max_depth,
             bytes: 0,
         });
         Ok(reader)
@@ -383,10 +403,12 @@ impl<'a> Reader<'a> {
             return None;
         }
         let depth = self.inputs.len();
-        let max_depth = self
+        let (max_depth, depth_label) = self
             .inputs
             .first()
-            .map_or(usize::MAX, |input| input.max_depth);
+            .map_or((usize::MAX, usize::MAX), |input| {
+                (input.max_depth, input.depth_label)
+            });
         let count = lines.len();
         for (index, (chars, feed)) in lines.into_iter().enumerate().rev() {
             let line: String = chars.iter().map(|(_, c)| c).collect();
@@ -436,6 +458,7 @@ impl<'a> Reader<'a> {
                     fragments,
                 }],
                 max_depth: max_depth.max(depth + 1),
+                depth_label,
                 next: 0,
                 preprocess: index == 0,
                 occurrence: self.next_occurrence,
@@ -876,12 +899,15 @@ impl<'a> Reader<'a> {
         if crate::context::SafeMode::of(&context.attributes) >= crate::context::SafeMode::Secure {
             return self.include_link(&expanded_target, span);
         }
-        if self.resources.is_none() {
+        // Without a positive `max-include-depth` Ruby leaves the directive.
+        let Some(abs_depth) = self.resources.as_ref().and_then(|r| r.max_depth) else {
             return false;
-        }
+        };
         // Ruby checks the depth before it parses the parameter list.
-        if self.inputs.len() > self.inputs.last().expect("current input").max_depth {
-            self.error(span, "maximum include depth exceeded".into());
+        let current = self.inputs.last().expect("current input");
+        if self.inputs.len() > current.max_depth {
+            let message = format!("maximum include depth of {} exceeded", current.depth_label);
+            self.error(span, message);
             return false;
         }
         let attrs = self.include_attributes(attrlist, span, context);
@@ -900,7 +926,7 @@ impl<'a> Reader<'a> {
         }
         let parent = self.inputs.last().expect("current input");
         let current = parent.source_id;
-        let inherited_depth = parent.max_depth;
+        let inherited_depth = (parent.max_depth, parent.depth_label);
         let resources = self.resources.as_mut().expect("explicit resource provider");
         // A URI (or a target inside a URI include) is read only with
         // `allow-uri-read`; otherwise Ruby links to it.
@@ -962,14 +988,23 @@ impl<'a> Reader<'a> {
             .iter()
             .any(|ext| file.name().ends_with(ext));
         let mut input = Input::new(file.text(), id, preprocess, self.next_occurrence);
-        input.max_depth = attrs.get("depth").map_or(inherited_depth, |value| {
-            let relative = crate::include_selection::integer_prefix(value).max(0);
-            let relative = usize::try_from(relative).unwrap_or(usize::MAX);
-            self.inputs
-                .len()
-                .saturating_add(relative)
-                .min(resources.limits.max_depth)
-        });
+        // Like Ruby's push_include: a positive relative depth beyond the
+        // absolute maximum is replaced by it, otherwise nothing nests.
+        (input.max_depth, input.depth_label) =
+            attrs.get("depth").map_or(inherited_depth, |value| {
+                let stack = self.inputs.len();
+                let relative = crate::include_selection::integer_prefix(value);
+                if relative <= 0 {
+                    return (stack, 0);
+                }
+                match usize::try_from(relative)
+                    .ok()
+                    .and_then(|r| Some((stack.checked_add(r)?, r)))
+                {
+                    Some((depth, relative)) if depth <= abs_depth => (depth, relative),
+                    _ => (abs_depth, abs_depth),
+                }
+            });
         let full = selection.full();
         let whole = matches!(selection, crate::include_selection::Selection::All);
         let selected = selection.select(

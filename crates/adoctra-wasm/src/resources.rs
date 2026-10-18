@@ -430,7 +430,7 @@ mod indent_depth_tests {
         let child = workspace.load("part.adoc", Some(main)).unwrap();
         let tokens = workspace.tokens_json(main).unwrap();
         assert!(
-            parsed.contains("maximum include depth exceeded"),
+            parsed.contains("maximum include depth of 0 exceeded"),
             "{parsed}"
         );
         assert!(!parsed.contains("unreachable"), "{parsed}");

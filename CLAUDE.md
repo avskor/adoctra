@@ -837,7 +837,10 @@ retention in verbatim; generated lines have directive origins but no highlight t
 Heading levels and doctitle detection use the effective offset; levels above u8::MAX
 clamp with a warning, and HTML uses saturating arithmetic. Preserve physical spans,
 attribute snapshots and restoration semantics when extending this path.
-Includes also support indent and depth. Indent runs after selection and before
+Includes also support indent and depth; the API attribute `max-include-depth`
+(read when the reader is created, Ruby `to_i`, default 64, bounded by
+`IncludeLimits.max_depth`; not positive → includes stay literal) is Ruby's
+absolute maximum, and errors name the relative limit like Ruby. Indent runs after selection and before
 preprocessing, with optional tab expansion from tabsize. Reader line fragments map
 expanded tabs to their physical byte and exclude synthetic padding from highlighting.
 Physical snapshots never change. Indentation growth (including intermediate tab

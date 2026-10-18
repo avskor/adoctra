@@ -226,7 +226,7 @@ fn secure_mode_and_exceeded_depth_do_not_evaluate_parameter_lists() {
     assert!(result
         .diagnostics
         .iter()
-        .any(|d| d.message == "maximum include depth exceeded"));
+        .any(|d| d.message == "maximum include depth of 1 exceeded"));
     assert_eq!(paragraphs(&result)[1], "no d");
 }
 

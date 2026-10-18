@@ -18,12 +18,17 @@ if standalone
   options[:header_footer] = true
   options[:attributes] = (options[:attributes] || {}).merge('reproducible' => '')
 end
+# Host attributes (`--attribute name=value`), like the CLI's `-a`.
+while (index = ARGV.index('--attribute'))
+  name, value = ARGV.slice!(index, 2)[1].split('=', 2)
+  options[:attributes] = (options[:attributes] || {}).merge(name => value || '')
+end
 if ARGV.length == 2 && ARGV[0] == '--include-root'
   root = File.realpath(ARGV[1])
   options.merge! safe: :safe, base_dir: root, to_file: false
   puts Asciidoctor.convert_file(File.join(root, 'main.adoc'), options)
 else
-  abort 'usage: ruby scripts/asciidoctor-reference.rb [--showtitle] [--safe] [--mathjax-config] [--standalone] [--include-root DIR] < input.adoc' unless ARGV.empty?
+  abort 'usage: ruby scripts/asciidoctor-reference.rb [--showtitle] [--safe] [--mathjax-config] [--standalone] [--attribute NAME=VALUE]... [--include-root DIR] < input.adoc' unless ARGV.empty?
   output = Asciidoctor.convert($stdin.read, options)
   if standalone
     # Only Ruby's own stylesheet and its web fonts; other links (e.g. a
