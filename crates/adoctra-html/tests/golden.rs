@@ -1344,3 +1344,44 @@ fn section_id_policy_matches_asciidoctor() {
     assert_eq!(paragraph_inner(&ours), paragraph_inner(&expected));
     assert!(ours.contains("<h2 id=\"hello-world-2\">Hello World -</h2>"));
 }
+
+#[test]
+fn html_section_titles_match_asciidoctor() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/sections");
+    let mut checked = 0usize;
+    for entry in fs::read_dir(&dir).expect("golden/sections dir is missing") {
+        let path = entry.unwrap().path();
+        if path.extension().and_then(|e| e.to_str()) != Some("adoc") {
+            continue;
+        }
+        let name = path.file_stem().unwrap().to_string_lossy().into_owned();
+        let source = fs::read_to_string(&path).unwrap();
+        let expected = fs::read_to_string(path.with_extension("expected.html")).unwrap();
+        let ours = String::from_utf8(
+            HtmlBackend
+                .convert(&adoctra_core::parse(&source).document)
+                .unwrap(),
+        )
+        .unwrap();
+        // Section and floating titles (anchors, links and numbers) line by line.
+        let headings = |html: &str| -> Vec<String> {
+            html.lines()
+                .filter(|line| {
+                    line.len() > 2
+                        && line.starts_with("<h")
+                        && line.as_bytes()[2].is_ascii_digit()
+                        && !line.starts_with("<h1>")
+                })
+                .map(str::to_owned)
+                .collect()
+        };
+        assert_eq!(
+            headings(&ours),
+            headings(&expected),
+            "section titles diverge from asciidoctor for `{name}`"
+        );
+        assert!(!headings(&ours).is_empty(), "{name}");
+        checked += 1;
+    }
+    assert!(checked > 0, "no golden fixtures found in {dir:?}");
+}

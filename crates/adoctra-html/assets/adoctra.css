@@ -36,6 +36,31 @@ h1, h2, h3, h4, h5, h6 {
   margin-block: 1.5em 0.5em;
 }
 
+/* Like Ruby's stylesheet, a `sectanchors` anchor hangs before the title
+   (a section sign shown on hover) and a `sectlinks` link keeps the title's
+   look. */
+:is(h1, h2, h3, h4, h5, h6) > a.anchor {
+  position: absolute;
+  z-index: 1001;
+  width: 1.5ex;
+  margin-inline-start: -1.5ex;
+  display: block;
+  text-decoration: none !important;
+  visibility: hidden;
+  text-align: center;
+  font-weight: 400;
+}
+:is(h1, h2, h3, h4, h5, h6) > a.anchor::before {
+  content: "\00a7";
+  font-size: 0.85em;
+  display: block;
+  padding-top: 0.1em;
+}
+:is(h1, h2, h3, h4, h5, h6):hover > a.anchor,
+:is(h1, h2, h3, h4, h5, h6) > a.anchor:hover { visibility: visible; }
+:is(h1, h2, h3, h4, h5, h6) > a.link { color: inherit; text-decoration: none; }
+:is(h1, h2, h3, h4, h5, h6) > a.link:hover { color: color-mix(in srgb, currentColor 80%, transparent); }
+
 code { font-family: var(--adoctra-mono); font-size: 0.9em; }
 
 /* Like Ruby's stylesheet, verbatim text wraps unless `nowrap` (`%nowrap` or

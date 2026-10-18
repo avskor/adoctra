@@ -749,7 +749,11 @@ level-0-outside-book error; without a header, a body that starts with a section
 skips top-level checks. Document::flat_blocks/into_flat_blocks give the old flat
 order. HTML renders `<section class="sectN role">` (id on the heading, level 0
 unwrapped) and `<section id="preamble">`; JSON/WASM use section/preamble; the DOM
-profile treats section as div. Sectnums, special sections, book partintro and
+profile treats section as div. Like Ruby's convert_section, a section title
+with an id (not floating/document titles) wraps its numbered title in `<a
+class="link">` with `sectlinks` and adds `<a class="anchor">` before it
+(`sectanchors=after`: after), reading the heading's attribute_context;
+adoctra.css styles them like Ruby (§ on hover, checked with screenshots). Sectnums, special sections, book partintro and
 preamble cases are implemented (see above). JSON and WASM expose header metadata;
 WASM includes source spans. See parser-api.adoc for remaining header limitations.
 Comments (`//`, matching slash fences of length >= 4, and `[comment]` paragraphs

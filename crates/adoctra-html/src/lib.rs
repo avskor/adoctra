@@ -1292,10 +1292,31 @@ fn render_heading(
     // A heading's caption is its section number (Ruby's `convert_section`).
     render_title(&block.title, &None, out);
     out.push_str(&format!("<h{h}{}{class}>", id_attr(&block.id)));
+    let mut title = String::new();
     if let Some(caption) = &block.caption {
-        out.push_str(&escape(caption));
+        title.push_str(&escape(caption));
     }
-    render_inlines(inlines, out);
+    render_inlines(inlines, &mut title);
+    // Like Ruby's `convert_section` (not its floating titles or the document
+    // title), a section with an id wraps its numbered title in a `sectlinks`
+    // link and adds a `sectanchors` anchor before it (after with `after`),
+    // reading the attributes at the section.
+    if let (true, Some(id)) = (
+        body && base != Some("discrete") && base != Some("float"),
+        &block.id,
+    ) {
+        let attributes = &block.attribute_context;
+        let href = escape(id);
+        if attributes.get("sectlinks").is_some() {
+            title = format!("<a class=\"link\" href=\"#{href}\">{title}</a>");
+        }
+        match attributes.get("sectanchors") {
+            Some("after") => title.push_str(&format!("<a class=\"anchor\" href=\"#{href}\"></a>")),
+            Some(_) => title.insert_str(0, &format!("<a class=\"anchor\" href=\"#{href}\"></a>")),
+            None => {}
+        }
+    }
+    out.push_str(&title);
     out.push_str(&format!("</h{h}>\n"));
 }
 
@@ -2607,6 +2628,49 @@ mod tests {
     }
 
     #[test]
+    fn section_anchors_and_links_wrap_section_titles_like_ruby() {
+        let html = render(
+            "= Doc\n:sectanchors:\n:sectlinks:\n:sectnums:\n:showtitle:\n\n== One *B*\n\n\
+             [discrete]\n== Float\n\n:sectanchors: after\n\n== Two\n\n:sectlinks!:\n\n\
+             [[x]]\n== Three\n\n:sectids!:\n\n== Four\n",
+        );
+        assert!(html.contains("<h1>Doc</h1>"), "{html}");
+        assert!(
+            html.contains("<h2 id=\"_one_b\"><a class=\"anchor\" href=\"#_one_b\"></a><a class=\"link\" href=\"#_one_b\">1. One <strong>B</strong></a></h2>"),
+            "{html}"
+        );
+        assert!(
+            html.contains("<h2 id=\"_float\" class=\"discrete\">Float</h2>"),
+            "{html}"
+        );
+        assert!(
+            html.contains("<h2 id=\"_two\"><a class=\"link\" href=\"#_two\">2. Two</a><a class=\"anchor\" href=\"#_two\"></a></h2>"),
+            "{html}"
+        );
+        assert!(
+            html.contains("<h2 id=\"x\">3. Three<a class=\"anchor\" href=\"#x\"></a></h2>"),
+            "{html}"
+        );
+        assert!(html.contains("<h2>4. Four</h2>"), "{html}");
+    }
+
+    #[test]
+    fn section_anchors_apply_to_book_parts_and_cell_documents() {
+        let html = render(
+            "= Book\n:doctype: book\n:sectanchors:\n\n= Part\n\n== Chap\n\n|===\na|\n:sectanchors!:\n\n== Cell\n|===\n",
+        );
+        assert!(
+            html.contains("<h1 id=\"_part\" class=\"sect0\"><a class=\"anchor\" href=\"#_part\"></a>Part</h1>"),
+            "{html}"
+        );
+        // The cell's document inherits the locked attribute, like Ruby.
+        assert!(
+            html.contains("<h2 id=\"_cell\"><a class=\"anchor\" href=\"#_cell\"></a>Cell</h2>"),
+            "{html}"
+        );
+    }
+
+    #[test]
     fn collapsible_example_renders_details_like_ruby() {
         let html = render(
             ".Show *me*\n[#d.r%collapsible%open]\n====\nBody\n====\n\n\
@@ -3576,7 +3640,10 @@ mod tests {
             "{html}"
         );
         // A partintro outside a part is excluded, like Ruby's converter.
-        assert!(!html.contains("hidden"), "{html}");
+        assert!(
+            !html.split("<body>").nth(1).unwrap().contains("hidden"),
+            "{html}"
+        );
         // Outside a book there is no partintro container at all.
         let html = render("= A\n\n= P\n\n[partintro]\nhidden\n\n== C");
         let body = html.split("<body>").nth(1).unwrap();
@@ -3607,7 +3674,7 @@ mod tests {
         // every abstract directly in the document is excluded...
         let html = render(":doctype: book\n\n[abstract]\nhidden\n\nx\n\n[abstract]\nhidden");
         assert!(
-            !html.contains("hidden") && html.contains("<p>x</p>"),
+            !html.split("<body>").nth(1).unwrap().contains("hidden") && html.contains("<p>x</p>"),
             "{html}"
         );
         // ...while one inside the preamble renders.
