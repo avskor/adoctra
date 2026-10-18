@@ -406,6 +406,7 @@ fn asciidoc_cells_are_nested_documents_with_source_spans() {
         BlockKind::Listing {
             text: "code".into(),
             callouts: Vec::new(),
+            inlines: None,
         }
     );
 }

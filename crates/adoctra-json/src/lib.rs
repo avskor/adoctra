@@ -214,8 +214,20 @@ fn write_cell(cell: &adoctra_core::ast::TableCell, s: &mut String) {
     s.push('}');
 }
 
+/// A callout icon captured where its block converts: the `icons` mode and
+/// the image icon (empty unless icons are images).
+fn write_icon(icons: &Option<String>, src: &str, s: &mut String) {
+    s.push_str(",\"icons\":");
+    match icons {
+        Some(icons) => escape_into(icons, s),
+        None => s.push_str("null"),
+    }
+    s.push_str(",\"src\":");
+    escape_into(src, s);
+}
+
 /// A verbatim block's callout marks (omitted when there are none): number,
-/// guard, `<!--N-->` form and Ruby's id.
+/// guard, `<!--N-->` form, Ruby's id and the captured icon.
 fn write_callouts(callouts: &[adoctra_core::ast::Callout], s: &mut String) {
     if callouts.is_empty() {
         return;
@@ -235,7 +247,9 @@ fn write_callouts(callouts: &[adoctra_core::ast::Callout], s: &mut String) {
             Some(guard) => escape_into(guard, s),
             None => s.push_str("null"),
         }
-        s.push_str(&format!(",\"xml\":{}}}", callout.xml));
+        s.push_str(&format!(",\"xml\":{}", callout.xml));
+        write_icon(&callout.icons, &callout.src, s);
+        s.push('}');
     }
     s.push(']');
 }
@@ -286,7 +300,11 @@ fn write_block(block: &Block, s: &mut String) {
             write_inlines(inlines, s);
             s.push('}');
         }
-        BlockKind::Listing { text, callouts } => {
+        BlockKind::Listing {
+            text,
+            callouts,
+            inlines,
+        } => {
             s.push_str("{\"name\":\"listing\",");
             write_id(&block.id, s);
             write_roles(&block.roles, s);
@@ -298,9 +316,14 @@ fn write_block(block: &Block, s: &mut String) {
             s.push_str(",\"text\":");
             escape_into(text, s);
             write_callouts(callouts, s);
+            write_substituted(inlines, s);
             s.push('}');
         }
-        BlockKind::Literal { text, callouts } => {
+        BlockKind::Literal {
+            text,
+            callouts,
+            inlines,
+        } => {
             s.push_str("{\"name\":\"literal\",");
             write_id(&block.id, s);
             write_roles(&block.roles, s);
@@ -312,6 +335,7 @@ fn write_block(block: &Block, s: &mut String) {
             s.push_str(",\"text\":");
             escape_into(text, s);
             write_callouts(callouts, s);
+            write_substituted(inlines, s);
             s.push('}');
         }
         BlockKind::Stem { style, inlines } => {
@@ -326,7 +350,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_inlines(inlines, s);
             s.push('}');
         }
-        BlockKind::Passthrough { text } => {
+        BlockKind::Passthrough { text, inlines } => {
             s.push_str("{\"name\":\"pass\",");
             write_id(&block.id, s);
             write_roles(&block.roles, s);
@@ -337,6 +361,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_caption(&block.caption, s);
             s.push_str(",\"text\":");
             escape_into(text, s);
+            write_substituted(inlines, s);
             s.push('}');
         }
         BlockKind::Toc => {
@@ -463,7 +488,9 @@ fn write_block(block: &Block, s: &mut String) {
                     }
                     escape_into(id, s);
                 }
-                s.push_str("]}");
+                s.push(']');
+                write_icon(&entry.icons, &entry.src, s);
+                s.push('}');
             }
             s.push_str("]}");
         }
@@ -731,6 +758,15 @@ fn write_options(options: &[String], s: &mut String) {
 
 /// Emit the leading-comma `,"title":<array|null>` field — the block's `.Title`
 /// inlines (so formatting is preserved), or `null` when the block has no title.
+/// The `,"inlines":[…]` content of a verbatim or raw block converted with
+/// custom substitutions; absent with the defaults.
+fn write_substituted(inlines: &Option<Vec<Inline>>, s: &mut String) {
+    if let Some(inlines) = inlines {
+        s.push_str(",\"inlines\":");
+        write_inlines(inlines, s);
+    }
+}
+
 fn write_title(title: &Option<Vec<Inline>>, s: &mut String) {
     s.push_str(",\"title\":");
     match title {
@@ -1696,8 +1732,28 @@ mod tests {
     #[test]
     fn callouts_and_callout_lists_serialize() {
         let json = render("----\nx // <1>\n----\n<1> one");
-        assert!(json.contains(r#""text":"x // <1>","callouts":[{"number":"1","id":"CO1-1","guard":"// ","xml":false}]"#), "{json}");
-        assert!(json.contains(r#"{"name":"colist","id":null,"roles":[],"style":"arabic","attributes":{},"options":[],"title":null,"caption":null,"items":[{"inlines":[{"name":"text","value":"one"}],"blocks":[],"coids":["CO1-1"]}]}"#), "{json}");
+        assert!(json.contains(r#""text":"x // <1>","callouts":[{"number":"1","id":"CO1-1","guard":"// ","xml":false,"icons":null,"src":""}]"#), "{json}");
+        assert!(json.contains(r#"{"name":"colist","id":null,"roles":[],"style":"arabic","attributes":{},"options":[],"title":null,"caption":null,"items":[{"inlines":[{"name":"text","value":"one"}],"blocks":[],"coids":["CO1-1"],"icons":null,"src":""}]}"#), "{json}");
+        // Icons follow the `icons` mode where each block converts.
+        let json =
+            render("----\nx <1>\n----\n<1> a\n\n:icons:\n:iconsdir: i\n\n----\ny <1>\n----\n<1> b");
+        assert!(json.contains(r#""text":"x <1>","callouts":[{"number":"1","id":"CO1-1","guard":null,"xml":false,"icons":null,"src":""}]"#), "{json}");
+        assert!(json.contains(r#""text":"y <1>","callouts":[{"number":"1","id":"CO2-1","guard":null,"xml":false,"icons":"","src":"i/callouts/1.png"}]"#), "{json}");
+        assert!(
+            json.contains(r#""coids":["CO2-1"],"icons":"","src":"i/callouts/1.png"}"#),
+            "{json}"
+        );
+    }
+
+    #[test]
+    fn block_subs_serialize_converted_content() {
+        let json = render(":icons: font\n\n[subs=\"+quotes\"]\n----\n*x* // <1>\n----\n\n[subs=attributes]\n++++\n<u>{icons}</u>\n++++\n\n[subs=none]\n*p*");
+        assert!(json.contains(r#""text":"*x* // <1>","inlines":[{"name":"substituted","value":"x ","parts":[{"kind":"open","format":"strong"},{"kind":"text","value":"x"},{"kind":"close","format":"strong"},{"kind":"text","value":" "},{"kind":"callout","number":"1","id":"CO1-1","guard":"// ","icons":"font","xml":false,"src":""}]}]}"#), "{json}");
+        assert!(json.contains(r#""text":"<u>{icons}</u>","inlines":[{"name":"substituted","value":"<u>font</u>","parts":[{"kind":"raw","value":"<u>"},{"kind":"text","value":"font"},{"kind":"raw","value":"</u>"}]}]}"#), "{json}");
+        assert!(json.contains(r#""inlines":[{"name":"substituted","value":"*p*","parts":[{"kind":"raw","value":"*p*"}]}]"#), "{json}");
+        // Default substitutions keep the verbatim text only.
+        let json = render("----\n*x*\n----");
+        assert!(json.contains(r#""text":"*x*"}"#), "{json}");
     }
 
     #[test]

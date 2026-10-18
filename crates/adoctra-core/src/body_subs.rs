@@ -17,7 +17,33 @@ struct Pending {
     fold: bool,
     hardbreaks: bool,
     replacement_origin: Option<Span>,
-    stages: Option<Vec<crate::pass_subs::Stage>>,
+    block: Option<BlockSubs>,
+}
+
+/// Substitutions selected for a block's content instead of the normal
+/// inline scan (Ruby's committed `subs`).
+#[derive(Clone)]
+pub(crate) struct BlockSubs {
+    pub stages: Vec<crate::pass_subs::Stage>,
+    /// The block's `line-comment` for its callouts stage.
+    pub line_comment: Option<String>,
+    /// Ids the callouts catalog registered while reading, in order (Ruby's
+    /// `read_next_id`).
+    pub callout_ids: Vec<String>,
+    /// Verbatim and raw content trims blank edge lines after substitutions.
+    pub trim: bool,
+}
+
+impl BlockSubs {
+    /// A block's default substitutions.
+    pub fn new(defaults: crate::pass_subs::Defaults) -> Self {
+        Self {
+            stages: defaults.stages(),
+            line_comment: None,
+            callout_ids: Vec::new(),
+            trim: defaults != crate::pass_subs::Defaults::Normal,
+        }
+    }
 }
 
 pub(crate) type Declaration = (usize, String, Option<Vec<AttributePart>>);
@@ -87,7 +113,7 @@ impl BodySubs {
                 fold,
                 hardbreaks: attrs.local_hardbreaks,
                 replacement_origin: None,
-                stages: None,
+                block: None,
             },
         );
         // Private placeholder; replaced before source mapping or public output.
@@ -97,17 +123,28 @@ impl BodySubs {
         }]
     }
 
-    pub fn defer_stem(
+    /// Content converted with selected substitutions rather than the
+    /// normal inline scan. An empty source has nothing to convert.
+    pub fn defer_block(
         &mut self,
         source: FilteredSource,
+        filtered: Option<FilteredSource>,
         attrs: &Attributes,
-        stages: Vec<crate::pass_subs::Stage>,
+        subs: BlockSubs,
     ) -> Vec<Inline> {
-        let nodes = self.defer(source, None, attrs, false);
-        if let Some(key) = crate::resolve::placeholder(&nodes) {
-            self.pending.get_mut(&key).expect("deferred formula").stages = Some(stages);
-        }
+        let nodes = self.defer(source, filtered, attrs, false);
+        self.set_block_subs(&nodes, subs);
         nodes
+    }
+
+    /// Select the substitutions of already deferred content (a paragraph
+    /// whose `subs` are committed on completion).
+    pub fn set_block_subs(&mut self, nodes: &[Inline], subs: BlockSubs) {
+        if let Some(pending) =
+            crate::resolve::placeholder(nodes).and_then(|key| self.pending.get_mut(&key))
+        {
+            pending.block = Some(subs);
+        }
     }
 
     /// A block title runs during conversion. A `title=` value transformed by
@@ -151,7 +188,7 @@ impl BodySubs {
             fold: true,
             hardbreaks: attrs.local_hardbreaks,
             replacement_origin: title.replacement.then_some(title.span),
-            stages: None,
+            block: None,
         });
         vec![Inline::Text {
             value: String::new(),
@@ -600,6 +637,31 @@ impl Execution<'_> {
                 *src = crate::image::web_path(target, self.attributes.get("imagesdir"));
             }
             crate::media::resolve(block, &self.attributes);
+            // Callout icons follow the `icons` mode where the block converts.
+            match &mut block.kind {
+                BlockKind::Listing {
+                    callouts,
+                    inlines: None,
+                    ..
+                }
+                | BlockKind::Literal {
+                    callouts,
+                    inlines: None,
+                    ..
+                } => {
+                    for callout in callouts {
+                        (callout.icons, callout.src) =
+                            crate::callouts::icon(&self.attributes, &callout.number);
+                    }
+                }
+                BlockKind::CalloutList { items } => {
+                    for (index, entry) in items.iter_mut().enumerate() {
+                        (entry.icons, entry.src) =
+                            crate::callouts::icon(&self.attributes, &(index + 1).to_string());
+                    }
+                }
+                _ => {}
+            }
             if let Some(title) = &mut block.title {
                 self.inlines(title);
             }
@@ -614,7 +676,19 @@ impl Execution<'_> {
             match &mut block.kind {
                 BlockKind::Paragraph { inlines }
                 | BlockKind::Stem { inlines, .. }
-                | BlockKind::Verse { inlines, .. } => self.inlines(inlines),
+                | BlockKind::Verse { inlines, .. }
+                | BlockKind::Listing {
+                    inlines: Some(inlines),
+                    ..
+                }
+                | BlockKind::Literal {
+                    inlines: Some(inlines),
+                    ..
+                }
+                | BlockKind::Passthrough {
+                    inlines: Some(inlines),
+                    ..
+                } => self.inlines(inlines),
                 // Section titles were converted while reading; a forward
                 // reference may already have resolved their references.
                 BlockKind::Heading { inlines, .. } => {
@@ -787,20 +861,30 @@ fn run(
     evaluation.bibliography = pending.bibliography;
     let source = pending.filtered.as_ref().unwrap_or(&pending.source);
     let before = diagnostics.len();
-    let mut nodes = if let Some(stages) = &pending.stages {
+    let mut nodes = if let Some(block) = &pending.block {
         let text = source.text.replace("\r\n", "\n");
         let span = Span::new(0, source.text.len());
-        let parts = crate::inline_pass::Passes::selected_stages(
+        let mut parts = crate::inline_pass::Passes::selected_stages(
             &text,
-            stages,
+            &block.stages,
+            block.line_comment.as_deref(),
             evaluation,
             evaluation.get("compat-mode").is_some(),
             span,
             diagnostics,
         );
-        // Raw blocks trim empty edge lines *after* substitutions: attribute
-        // expansion may create or remove those lines. Preserve semantic parts.
-        let parts = trim_stem(parts);
+        let mut ids = block.callout_ids.iter();
+        for part in &mut parts {
+            if let AttributePart::Callout(callout) = part {
+                callout.id = ids.next().cloned();
+            }
+        }
+        // Verbatim and raw blocks trim empty edge lines *after* substitutions:
+        // attribute expansion may create or remove those lines. Preserve
+        // semantic parts.
+        if block.trim {
+            parts = trim_edges(parts);
+        }
         vec![Inline::Substituted {
             value: crate::attributes::parts_text(&parts),
             parts,
@@ -840,7 +924,7 @@ fn run(
     nodes
 }
 
-fn trim_stem(parts: Vec<AttributePart>) -> Vec<AttributePart> {
+fn trim_edges(parts: Vec<AttributePart>) -> Vec<AttributePart> {
     let text = crate::substitution_text::Text::from_parts(&parts);
     if !text.text.contains('\n') {
         return parts;

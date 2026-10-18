@@ -450,6 +450,11 @@ fn collect_blocks_in(
             }
             complete_media(&mut block, &context.attributes);
             let attributes = inline_attributes(&context.render_attributes(), Some(&block.attrs));
+            // Ruby builds a styled paragraph (or a label paragraph) with simple content.
+            let simple = matches!(
+                block.kind,
+                BlockKind::Paragraph { .. } | BlockKind::Admonition { .. }
+            );
             apply_style_fixup(&mut block, lines, &attributes, &pending.list, context);
             if let BlockKind::Stem { style, .. } = &mut block.kind {
                 if block.attrs.style.as_deref() == Some("stem") {
@@ -463,6 +468,7 @@ fn collect_blocks_in(
                 }
                 block.attrs.style = Some(style.as_str().into());
             }
+            commit_subs(&mut block, simple, lines, &attributes, context, diagnostics);
             apply_callouts(&mut block, lines, context);
             if let Some(value) = reftext {
                 context.attach_reftext(&mut block, value);
@@ -981,6 +987,7 @@ fn apply_style_fixup(
                 block.kind = BlockKind::Literal {
                     text,
                     callouts: Vec::new(),
+                    inlines: None,
                 };
             }
             // `[pass]` on a paragraph: the raw source slice, like `[literal]` but
@@ -993,7 +1000,10 @@ fn apply_style_fixup(
                     0,
                 )
                 .text;
-                block.kind = BlockKind::Passthrough { text };
+                block.kind = BlockKind::Passthrough {
+                    text,
+                    inlines: None,
+                };
             }
             // `[example]` on a paragraph wraps it into a single-child example block.
             // The container keeps the block's id/roles/attrs; the child is a plain
@@ -1473,6 +1483,146 @@ fn collect_footnotes(blocks: &mut [Block]) -> Vec<crate::ast::FootnoteDefinition
 /// (`sub_callouts`, numbering `<.>` per block); an escaped mark loses its
 /// backslash. Each mark's span is found on the block's source line with the
 /// same ending.
+/// Ruby's `commit_subs` and `catalog_callouts`: a `subs` attribute selects a
+/// block's substitutions relative to its content model's defaults. Simple
+/// content (a paragraph, or a styled block in paragraph form), verse and STEM
+/// select the substitutions of their deferred source; listing, literal and
+/// passthrough blocks convert theirs into `inlines`. A selection equal to
+/// the defaults changes nothing. With callouts, the source marks register in
+/// the catalog; without any, the callouts stage is dropped.
+fn commit_subs(
+    block: &mut Block,
+    simple: bool,
+    lines: &mut Reader<'_>,
+    attrs: &Attributes,
+    context: &mut ParseContext,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    use crate::pass_subs::Defaults;
+    let (defaults, subject) = match &block.kind {
+        BlockKind::Paragraph { .. } => (Defaults::Normal, "paragraph"),
+        BlockKind::Admonition { .. } if simple => (Defaults::Normal, "admonition"),
+        BlockKind::Example { .. } if simple => (Defaults::Normal, "example"),
+        BlockKind::Sidebar { .. } if simple => (Defaults::Normal, "sidebar"),
+        BlockKind::Quote { .. } if simple => (Defaults::Normal, "quote"),
+        BlockKind::Open { .. } if simple => (Defaults::Normal, "open"),
+        BlockKind::Verse { .. } => (Defaults::Normal, "verse"),
+        BlockKind::Listing { .. } => (Defaults::Verbatim, "listing"),
+        BlockKind::Literal { .. } => (Defaults::Verbatim, "literal"),
+        BlockKind::Passthrough { .. } => (Defaults::None, "pass"),
+        BlockKind::Stem { .. } => (Defaults::Basic, "stem"),
+        _ => return,
+    };
+    let mut stages = match block.attrs.named.get("subs") {
+        Some(custom) => {
+            crate::pass_subs::resolve_block(custom, defaults, subject, block.span, diagnostics)
+        }
+        None => defaults.stages(),
+    };
+    // Fenced bodies are verbatim for highlighting already; verbatim text in
+    // paragraph form keeps only the inline tokens of its stages.
+    let fenced = context
+        .verbatim_bodies
+        .get(&block.span.start)
+        .is_some_and(|&(start, ..)| start != block.span.start);
+    if stages == defaults.stages() {
+        if defaults != Defaults::Normal && !fenced {
+            lines.custom_subs.push((block.span, stages));
+        }
+        return;
+    }
+    // The content's reader source and its comment-filtered text, if any.
+    let (span, pass) = (
+        block.span,
+        matches!(block.kind, BlockKind::Passthrough { .. }),
+    );
+    let source =
+        |lines: &Reader<'_>, context: &ParseContext| match context.verbatim_bodies.get(&span.start)
+        {
+            Some(&(start, end, indent)) if !simple => {
+                (lines.content_indented(start, end, indent), None)
+            }
+            _ => {
+                let content = lines.content(span.start, span.end);
+                // A passthrough paragraph skips line comments, like other text.
+                let filtered = pass.then(|| crate::comments::filtered_text(&content.text, 0));
+                (content, filtered)
+            }
+        };
+    use crate::pass_subs::Stage;
+    let mut callout_ids = Vec::new();
+    let mut marks = Vec::new();
+    if stages.contains(&Stage::Callouts) {
+        let (content, _) = source(lines, context);
+        let (found, ids, ranges) = crate::callouts::catalog(&content.text, &mut context.callouts);
+        if found {
+            callout_ids = ids;
+            // Only marks protected by special characters first are converted.
+            let position = |stage| stages.iter().position(|&s| s == stage);
+            if matches!(
+                (position(Stage::Specials), position(Stage::Callouts)),
+                (Some(specials), Some(callouts)) if specials < callouts
+            ) {
+                marks = ranges
+                    .into_iter()
+                    .map(|r| content.original_span(Span::new(r.start, r.end)))
+                    .collect();
+            }
+        } else {
+            stages.retain(|&stage| stage != Stage::Callouts);
+        }
+    }
+    let subs = crate::body_subs::BlockSubs {
+        stages,
+        line_comment: block
+            .attrs
+            .named
+            .get("line-comment")
+            .cloned()
+            .or_else(|| context.attributes.get("line-comment").map(str::to_owned)),
+        callout_ids,
+        trim: !matches!(defaults, Defaults::Normal)
+            || matches!(block.kind, BlockKind::Verse { .. }),
+    };
+    lines.callout_marks.extend(marks);
+    match &mut block.kind {
+        BlockKind::Paragraph { inlines } | BlockKind::Verse { inlines, .. } => {
+            lines.custom_subs.push((span, subs.stages.clone()));
+            context.body_subs.set_block_subs(inlines, subs);
+        }
+        BlockKind::Stem { inlines, .. } => context.body_subs.set_block_subs(inlines, subs),
+        BlockKind::Admonition { blocks, .. }
+        | BlockKind::Example { blocks }
+        | BlockKind::Sidebar { blocks }
+        | BlockKind::Quote { blocks, .. }
+        | BlockKind::Open { blocks } => {
+            if let [Block {
+                kind: BlockKind::Paragraph { inlines },
+                span,
+                ..
+            }] = blocks.as_slice()
+            {
+                lines.custom_subs.push((*span, subs.stages.clone()));
+                context.body_subs.set_block_subs(inlines, subs);
+            }
+        }
+        BlockKind::Listing { inlines, .. }
+        | BlockKind::Literal { inlines, .. }
+        | BlockKind::Passthrough { inlines, .. } => {
+            if !fenced {
+                lines.custom_subs.push((span, subs.stages.clone()));
+            }
+            let (content, filtered) = source(lines, context);
+            *inlines = Some(
+                context
+                    .body_subs
+                    .defer_block(content, filtered, attrs, subs),
+            );
+        }
+        _ => {}
+    }
+}
+
 fn apply_callouts(block: &mut Block, lines: &Reader<'_>, context: &mut ParseContext) {
     let line_comment = block
         .attrs
@@ -1481,8 +1631,16 @@ fn apply_callouts(block: &mut Block, lines: &Reader<'_>, context: &mut ParseCont
         .cloned()
         .or_else(|| context.attributes.get("line-comment").map(str::to_owned));
     let span = block.span;
-    let (BlockKind::Listing { text, callouts } | BlockKind::Literal { text, callouts }) =
-        &mut block.kind
+    let (BlockKind::Listing {
+        text,
+        callouts,
+        inlines: None,
+    }
+    | BlockKind::Literal {
+        text,
+        callouts,
+        inlines: None,
+    }) = &mut block.kind
     else {
         return;
     };
@@ -1547,6 +1705,8 @@ fn apply_callouts(block: &mut Block, lines: &Reader<'_>, context: &mut ParseCont
                 xml: mark.xml,
                 id,
                 span,
+                icons: None,
+                src: String::new(),
             });
         }
         out.push_str(&line[copied..]);
@@ -1801,6 +1961,7 @@ fn parse_block_content(
         *i += 1;
         let mut text = String::new();
         let mut closed = false;
+        let mut body: Option<(usize, usize)> = None;
         while lines.has(*i, context) {
             let (loff, lline_buffer) = lines.line(*i);
             let lline = lline_buffer.as_ref();
@@ -1815,8 +1976,13 @@ fn parse_block_content(
             }
             text.push_str(lline);
             end = loff + lline.len();
+            body = Some((body.map_or(loff, |(s, _)| s), end));
             *i += 1;
         }
+        let (body_start, body_end) = body.unwrap_or((off + line.len(), off + line.len()));
+        context
+            .verbatim_bodies
+            .insert(start, (body_start, body_end, 0));
         if !closed {
             diagnostics.push(Diagnostic {
                 span: Span::new(start, start + 4),
@@ -1829,6 +1995,7 @@ fn parse_block_content(
             BlockKind::Listing {
                 text,
                 callouts: Vec::new(),
+                inlines: None,
             },
         ));
     }
@@ -1841,6 +2008,7 @@ fn parse_block_content(
         *i += 1;
         let mut text = String::new();
         let mut closed = false;
+        let mut body: Option<(usize, usize)> = None;
         while lines.has(*i, context) {
             let (loff, lline_buffer) = lines.line(*i);
             let lline = lline_buffer.as_ref();
@@ -1855,8 +2023,13 @@ fn parse_block_content(
             }
             text.push_str(lline);
             end = loff + lline.len();
+            body = Some((body.map_or(loff, |(s, _)| s), end));
             *i += 1;
         }
+        let (body_start, body_end) = body.unwrap_or((off + line.len(), off + line.len()));
+        context
+            .verbatim_bodies
+            .insert(start, (body_start, body_end, 0));
         if !closed {
             diagnostics.push(Diagnostic {
                 span: Span::new(start, start + 4),
@@ -1869,6 +2042,7 @@ fn parse_block_content(
             BlockKind::Literal {
                 text,
                 callouts: Vec::new(),
+                inlines: None,
             },
         ));
     }
@@ -1890,6 +2064,9 @@ fn parse_block_content(
             context,
             diagnostics,
         );
+        context
+            .verbatim_bodies
+            .insert(start, (body_start, body_end, 0));
         let kind = if matches!(pending_style, Some("stem" | "asciimath" | "latexmath")) {
             // Generic STEM is selected from the original positional list on
             // block completion, where absent and quoted-empty fields differ.
@@ -1913,18 +2090,18 @@ fn parse_block_content(
                     kind: crate::TokenKind::StemDelimiter,
                 });
             }
-            let stages = crate::pass_subs::resolve_stem(
-                pending_attrs
-                    .and_then(|a| a.named.get("subs"))
-                    .map(String::as_str),
-                Span::new(start, end),
-                diagnostics,
+            // A `subs` attribute is committed on completion.
+            let inlines = context.body_subs.defer_block(
+                source,
+                None,
+                &attrs,
+                crate::body_subs::BlockSubs::new(crate::pass_subs::Defaults::Basic),
             );
-            let inlines = context.body_subs.defer_stem(source, &attrs, stages);
             BlockKind::Stem { style, inlines }
         } else {
             BlockKind::Passthrough {
                 text: lines.content(body_start, body_end).text,
+                inlines: None,
             }
         };
         return Some(Block::new(Span::new(start, end), kind));
@@ -2105,6 +2282,9 @@ fn parse_block_content(
                 diagnostics,
             );
             let body = lines.content(body_start, body_end);
+            context
+                .verbatim_bodies
+                .insert(start, (body_start, body_end, 0));
             let kind = match pending_style {
                 // Verse keeps its line breaks but still applies inline subs; the
                 // positional attribution (`[verse, author, work]`) is folded in
@@ -2119,14 +2299,19 @@ fn parse_block_content(
                 Some("literal") => BlockKind::Literal {
                     text: body.text,
                     callouts: Vec::new(),
+                    inlines: None,
                 },
                 Some("source") => BlockKind::Listing {
                     text: body.text,
                     callouts: Vec::new(),
+                    inlines: None,
                 },
                 // `[pass]` on `--`: raw passthrough, emitted unescaped and
                 // unwrapped by the backend (no inline subs), like the `++++` fence.
-                Some("pass") => BlockKind::Passthrough { text: body.text },
+                Some("pass") => BlockKind::Passthrough {
+                    text: body.text,
+                    inlines: None,
+                },
                 _ => unreachable!(),
             };
             return Some(Block::new(Span::new(start, end), kind));
@@ -2255,6 +2440,7 @@ fn parse_block_content(
             .map(|l| l.len() - l.trim_start().len())
             .min()
             .unwrap_or(0);
+        context.verbatim_bodies.insert(start, (start, end, indent));
         let text = text
             .lines()
             .map(|l| {
@@ -2271,6 +2457,7 @@ fn parse_block_content(
             BlockKind::Literal {
                 text,
                 callouts: Vec::new(),
+                inlines: None,
             },
         ));
     }
@@ -2885,6 +3072,8 @@ fn parse_callout_list(
                 marker: Some("<1>".into()),
             },
             coids,
+            icons: None,
+            src: String::new(),
         });
         end = item_end;
     }
@@ -3888,7 +4077,10 @@ mod tests {
         assert!(r.diagnostics.is_empty());
         let b = &r.document.flat_blocks()[0];
         match &b.kind {
-            BlockKind::Passthrough { text } => assert_eq!(text, "<div>{author} *b*</div>"),
+            BlockKind::Passthrough {
+                text,
+                inlines: None,
+            } => assert_eq!(text, "<div>{author} *b*</div>"),
             other => panic!("expected passthrough, got {other:?}"),
         }
         // Span covers the whole block, opening through closing delimiter.
@@ -3902,7 +4094,10 @@ mod tests {
         let src = "[pass]\n<b>{x}</b> *b*";
         let b = &parse(src).document.into_flat_blocks()[0];
         match &b.kind {
-            BlockKind::Passthrough { text } => assert_eq!(text, "<b>{x}</b> *b*"),
+            BlockKind::Passthrough {
+                text,
+                inlines: None,
+            } => assert_eq!(text, "<b>{x}</b> *b*"),
             other => panic!("expected passthrough, got {other:?}"),
         }
         assert_eq!(b.attrs.style.as_deref(), Some("pass"));
@@ -3919,7 +4114,10 @@ mod tests {
         assert!(r.diagnostics.is_empty());
         let b = &r.document.flat_blocks()[0];
         match &b.kind {
-            BlockKind::Passthrough { text } => assert_eq!(text, "<i>raw</i> {x}"),
+            BlockKind::Passthrough {
+                text,
+                inlines: None,
+            } => assert_eq!(text, "<i>raw</i> {x}"),
             other => panic!("expected passthrough, got {other:?}"),
         }
         let fence = src.find("--").unwrap();

@@ -98,11 +98,23 @@ pub fn walk_block_mut(visitor: &mut (impl VisitorMut + ?Sized), block: &mut Bloc
                 walk_blocks_mut(visitor, &mut entry.item.blocks);
             }
         }
-        BlockKind::Listing { callouts, .. } | BlockKind::Literal { callouts, .. } => {
+        BlockKind::Listing {
+            callouts, inlines, ..
+        }
+        | BlockKind::Literal {
+            callouts, inlines, ..
+        } => {
             for callout in callouts {
                 visitor.visit_span(&mut callout.span);
             }
+            if let Some(inlines) = inlines {
+                visitor.visit_inlines(inlines, InlineContext::Body);
+            }
         }
+        BlockKind::Passthrough {
+            inlines: Some(inlines),
+            ..
+        } => visitor.visit_inlines(inlines, InlineContext::Body),
         BlockKind::DescriptionList { items } => {
             for item in items {
                 visitor.visit_span(&mut item.span);

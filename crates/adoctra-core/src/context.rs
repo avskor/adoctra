@@ -119,6 +119,10 @@ pub(crate) struct ParseContext {
     footnotes: crate::substitution_context::Footnotes,
     /// Ruby's `Document#callouts`, shared with nested documents.
     pub callouts: crate::callouts::Catalog,
+    /// The body of each verbatim/raw block read from a fence or an indented
+    /// paragraph, by the block's start: its reader range and the indentation
+    /// removed from every line. A `subs` attribute converts it on completion.
+    pub verbatim_bodies: BTreeMap<usize, (usize, usize, usize)>,
 }
 
 fn root_of(
@@ -165,6 +169,8 @@ fn default_attributes() -> Attributes {
     attributes.set("toc-title", "Table of Contents");
     // The HTML converter's suffix, set before the header (Ruby's init).
     attributes.set("outfilesuffix", ".html");
+    // Ruby sets this for a standalone document; adoctra's HTML is one.
+    attributes.set("iconfont-remote", "");
     for kind in [
         crate::ast::AdmonitionKind::Note,
         crate::ast::AdmonitionKind::Tip,
@@ -191,6 +197,10 @@ impl ParseContext {
                     .map_or_else(|| vec![AttributePart::Raw(value.to_owned())], <[_]>::to_vec),
             );
             locked.insert(effective_key.to_string());
+        }
+        // Ruby's fallback stylesheet directory.
+        if attributes.get("stylesdir").is_none() {
+            attributes.set("stylesdir", ".");
         }
         // Ruby's fallback icon directory, from the host's `imagesdir` only.
         if attributes.get("iconsdir").is_none() {
@@ -222,6 +232,7 @@ impl ParseContext {
             root: None,
             footnotes: Default::default(),
             callouts: Default::default(),
+            verbatim_bodies: BTreeMap::new(),
         }
     }
 

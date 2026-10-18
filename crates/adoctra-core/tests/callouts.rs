@@ -5,7 +5,7 @@ use adoctra_core::{parse, tokens, Block, BlockKind, Severity, TokenKind};
 
 fn callouts(block: &Block) -> (&str, &[Callout]) {
     match &block.kind {
-        BlockKind::Listing { text, callouts } | BlockKind::Literal { text, callouts } => {
+        BlockKind::Listing { text, callouts, .. } | BlockKind::Literal { text, callouts, .. } => {
             (text, callouts)
         }
         other => panic!("not verbatim: {other:?}"),

@@ -74,6 +74,11 @@ pub(crate) struct Reader<'a> {
     pub list_markers: Vec<Span>,
     /// Raw math bodies and their fences, classified during structural parsing.
     pub stem_tokens: Vec<crate::Token>,
+    /// Text whose block selected custom substitutions, with those stages:
+    /// highlighting keeps only the inline tokens of executed stages.
+    pub custom_subs: Vec<(Span, Vec<crate::pass_subs::Stage>)>,
+    /// Callout marks converted by custom substitutions, for highlighting.
+    pub callout_marks: Vec<Span>,
     endings: Vec<(usize, String)>,
     pub limit: usize,
     stack: Vec<Conditional>,
@@ -120,6 +125,8 @@ impl<'a> Reader<'a> {
             table_separators: Vec::new(),
             list_markers: Vec::new(),
             stem_tokens: Vec::new(),
+            custom_subs: Vec::new(),
+            callout_marks: Vec::new(),
             endings: Vec::new(),
             limit: usize::MAX,
             stack: Vec::new(),
@@ -190,6 +197,8 @@ impl<'a> Reader<'a> {
         self.table_separators.sort_by_key(|span| span.start);
         self.list_markers.extend(nested.list_markers);
         self.stem_tokens.extend(nested.stem_tokens);
+        self.custom_subs.extend(nested.custom_subs);
+        self.callout_marks.extend(nested.callout_marks);
         self.list_markers.sort_by_key(|span| span.start);
         self.diagnostics.extend(nested.diagnostics);
     }
@@ -888,6 +897,12 @@ impl<'a> Reader<'a> {
     }
 
     pub fn content(&self, start: usize, end: usize) -> FilteredSource {
+        self.content_indented(start, end, 0)
+    }
+
+    /// [`Self::content`] without the first `indent` bytes of every line (an
+    /// indented literal paragraph, like Ruby's `adjust_indentation!`).
+    pub fn content_indented(&self, start: usize, end: usize, indent: usize) -> FilteredSource {
         let mut fragments = Vec::new();
         let first = self
             .loaded
@@ -897,8 +912,8 @@ impl<'a> Reader<'a> {
             if off >= end {
                 break;
             }
-            let left = start.saturating_sub(off).min(line.len());
-            let right = end.saturating_sub(off).min(line.len());
+            let left = start.saturating_sub(off).max(indent).min(line.len());
+            let right = end.saturating_sub(off).min(line.len()).max(left);
             if right > left {
                 fragments.push((off + left, &line[left..right]));
             }

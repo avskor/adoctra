@@ -1374,6 +1374,7 @@ fn apply_bibliography(
         parts.extend(Passes::selected_stages(
             &text.text[label],
             &[Specials, Quotes, Replacements],
+            None,
             attributes,
             attributes.get("compat-mode").is_some(),
             span,

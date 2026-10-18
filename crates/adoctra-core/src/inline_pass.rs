@@ -20,6 +20,8 @@ pub(crate) struct Passes {
     slots: Vec<Slot>,
     token_slots: usize,
     pub diagnostics: Vec<crate::Diagnostic>,
+    /// The block's `line-comment` for its callouts stage.
+    pub line_comment: Option<String>,
 }
 
 struct Match {
@@ -67,6 +69,7 @@ impl Passes {
             prefix,
             slots: Vec::new(),
             token_slots: 0,
+            line_comment: None,
             diagnostics: Vec::new(),
         };
         let mut text = Text::default();
@@ -466,12 +469,14 @@ impl Passes {
         diagnostics: &mut Vec<crate::Diagnostic>,
     ) -> Vec<P> {
         let stages = pass_subs::resolve(subs, span, diagnostics);
-        Self::selected_stages(body, &stages, attrs, compat, span, diagnostics)
+        Self::selected_stages(body, &stages, None, attrs, compat, span, diagnostics)
     }
 
+    /// `line_comment` is a block's `line-comment` for its callouts stage.
     pub fn selected_stages(
         body: &str,
         stages: &[Stage],
+        line_comment: Option<&str>,
         attrs: &mut Evaluation<'_>,
         compat: bool,
         span: Span,
@@ -494,6 +499,7 @@ impl Passes {
             prefix,
             slots: Vec::new(),
             token_slots: 0,
+            line_comment: line_comment.map(str::to_owned),
             diagnostics: Vec::new(),
         };
         let parts = passes.apply_selected(body.into(), stages, attrs, compat, span, 0);

@@ -12,7 +12,7 @@ fn ascii_suffixes_are_removed_but_internal_and_unicode_whitespace_survive() {
         let text = match &block.kind {
             BlockKind::Listing { text, .. }
             | BlockKind::Literal { text, .. }
-            | BlockKind::Passthrough { text } => text,
+            | BlockKind::Passthrough { text, .. } => text,
             other => panic!("{other:?}"),
         };
         // The capture-based passthrough path preserves physical CRLF endings.

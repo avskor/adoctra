@@ -52,7 +52,7 @@ pub mod visit;
 pub use ast::{Author, Block, BlockKind, Document, DocumentHeader, Inline, Revision, Span};
 pub use attributes::{
     AttributeFormat, AttributeLink, AttributePart, Attributes, Footnote, FootnoteKind, IndexTerm,
-    InlineImage, Stem, StemStyle, UiMacro, Xref,
+    InlineCallout, InlineImage, Stem, StemStyle, UiMacro, Xref,
 };
 mod anchor_catalog;
 mod attribute_list;
@@ -64,6 +64,7 @@ pub use context::{IncludeLimits, ParseOptions};
 pub use diagnostic::{Diagnostic, ParseResult, Severity};
 pub use error::{Error, Result};
 pub use extension::{Registry, TreeProcessor};
+pub use image::normalize_web_path;
 pub use resource::{
     MemoryResources, Resource, ResourceError, ResourceErrorKind, ResourceProvider, ResourceRequest,
     ResourceResult,

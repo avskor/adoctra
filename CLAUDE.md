@@ -1102,7 +1102,7 @@ Block math uses `BlockKind::Stem { style, inlines }` on `++++` only.
 reading-time attributes. BodySubs defers content with selected stages; default
 special-character protection, block selector modifiers, macros and stateful
 expressions share the pass pipeline. Raw content trims blank edge lines after
-substitutions. Callout substitutions in STEM remain unsupported with a warning.
+substitutions. Callouts in STEM `subs` work like other blocks (see below).
 JSON/WASM expose `stem` with `style` and `inlines`; `stem-delimiter`/`stem-text`
 tokens come from Reader records, including nested cells and includes. HTML uses
 Ruby's block delimiters and AsciiMath line splitting. `Document.final_attributes`
@@ -1129,8 +1129,41 @@ JSON/WASM expose parts and style; tokenizer projects the complete anchor span
 from parsed substituted nodes. Covered by core/all-consumer tests, a list golden
 fixture and 22 compatibility cases including include and nested cells.
 
+**Block `subs`** (parser.rs commit_subs, Ruby's commit_subs/resolve_block_subs/
+catalog_callouts) runs on completion for every block: pass_subs::resolve_block
+expands groups and +/-/`name+` modifiers from the content model's Defaults
+(Normal: paragraphs, styled paragraph forms, verse; Verbatim: listing/literal;
+Basic: STEM; None: pass), warns "invalid substitution type(s) for <context>",
+and an equal selection changes nothing. Paragraphs, verse, STEM and the single
+child paragraph of a styled paragraph (`[NOTE]`, `NOTE:`, `[example]`, `[quote]`,
+`[sidebar]`, `[open]`) select stages on their deferred field (BodySubs
+BlockSubs); delimited containers ignore `subs`. Listing/literal/pass blocks get
+`inlines: Option<Vec<Inline>>` (one Inline::Substituted, backends render it
+instead of `text`), sourced from ParseContext.verbatim_bodies (fence bodies,
+indented literal paragraphs without their indentation via content_indented)
+or the block span (`[literal]`/`[pass]` paragraphs, the latter comment-filtered).
+Verbatim/raw results trim blank edge lines after substitution. With callouts,
+the raw source marks register in the catalog (callouts::catalog, Ruby's
+CalloutScanRx) or the stage is dropped; conversion's Stage::Callouts matches
+lexical `&lt;N&gt;` marks (callouts::apply_parts, line-comment via
+Passes.line_comment) into atomic `AttributePart::Callout(InlineCallout)` with
+the catalog ids in order, the `icons` mode and image src at conversion. HTML
+renders Ruby's conum markup (guard lexical), JSON/WASM kind:"callout".
+Every callout icon (ast::Callout, CalloutListItem, InlineCallout: `icons`
+mode and image `src`) is captured by body_subs where the block converts, like
+Ruby's convert_inline_callout/convert_colist, not from the header; image
+icons are vertically centred in `pre` and colists (checked with screenshots).
+With header `icons=font` the HTML head links the icon font like Ruby's
+convert_document: Font Awesome 4.7.0 from cdnjs (`asset-uri-scheme`,
+`iconfont-cdn`) while `iconfont-remote` is set — a core default, since adoctra
+HTML is standalone — else `<iconfont-name|font-awesome>.css` under `stylesdir`
+(core fallback `.`) via the public `normalize_web_path(…, false)`.
+Highlighting keeps only inline tokens of executed stages inside such text
+(Reader.custom_subs; verbatim paragraph forms have none by default) and
+projects converted marks as `callout` (Reader.callout_marks).
+
 Not yet implemented (common asks — treat as roadmap, do not assume present):
-broader language coverage (general block substitutions). The full block-attribute list is now *parsed* (style, named
+broader language coverage. The full block-attribute list is now *parsed* (style, named
 attributes, `%options`, id/role folding), but most of it has nothing to render
 against yet. Math styles (`[stem]`/`[asciimath]`/`[latexmath]`) apply to `++++`
 only, as in Ruby. `[source,<lang>]`, `[literal]`, `[pass]`,

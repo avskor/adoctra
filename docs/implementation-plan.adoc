@@ -1336,13 +1336,62 @@ Ruby API и выполнение Ruby-расширений относятся к
   warning, WASM target и тесты стенда проходят; весь корпус повторно сверен
   с Ruby 2.0.23.
 
-*Следующее изменение:* общие блочные substitutions — по приоритетам этапов 4–6.
+Семьдесят шестой рабочий набор изменений:
+
+* Атрибут `subs` блоков, как `commit_subs`, `resolve_block_subs`,
+  `catalog_callouts` и `sub_callouts` Ruby: выбор стадий относительно умолчаний
+  модели содержимого (normal для абзацев, абзацной формы стилей и verse;
+  verbatim для listing/literal; basic для STEM; none для pass), группы,
+  модификаторы `+name`, `name+`, `-name`, пустое значение и предупреждение
+  «invalid substitution type(s) for <context>». Выбор, равный умолчаниям,
+  ничего не меняет; ограждённые контейнеры `subs` не применяют.
+* Абзацы, verse, STEM и единственный абзац стилизованной абзацной формы
+  (`[NOTE]`, `NOTE:`, `[example]`, `[quote]`, `[sidebar]`, `[open]`) выполняют
+  выбранные стадии над отложенным полем при conversion. Listing, literal и pass
+  получают `inlines` с `Inline::Substituted`: тело из ограждения, литеральный
+  абзац без общего отступа, `[literal]`/`[pass]`-абзац (pass — без строк
+  комментариев). Пустые крайние строки verbatim/raw удаляются после подстановок.
+* Callouts: исходные метки регистрируются в каталоге при чтении, иначе стадия
+  удаляется; при conversion лексические `&lt;N&gt;` после specialcharacters
+  становятся `AttributePart::Callout` (`InlineCallout`: номер, guard, xml-форма,
+  id каталога, режим `icons` и src иконки), с `line-comment` и экранированием.
+  Ограничение callouts в STEM снято. HTML выводит conum-разметку Ruby,
+  JSON/WASM — `kind:"callout"` и поле `inlines` блоков.
+* Режим `icons` и иконка всех callout-меток и пунктов callout-списков
+  (`Callout`, `CalloutListItem`, `InlineCallout`: `icons`, `src`) фиксируются
+  при conversion блока, как в Ruby, а не берутся из заголовка: изменение
+  `icons` в теле теперь действует и на путь по умолчанию. JSON/WASM
+  экспортируют `icons`/`src`. Image-иконки в `pre` и списках выровнены по
+  середине строки, как правило `img` Ruby. Проверено в Chrome 155 против Ruby
+  в safe mode (font и image, 1280/390 px): разметка совпадает, ошибок и
+  горизонтального переполнения нет.
+* Иконочный шрифт, как `convert_document` Ruby: при `icons=font` в заголовке
+  `<head>` подключает Font Awesome 4.7.0 с cdnjs (схема `asset-uri-scheme`,
+  замена `iconfont-cdn`), а при снятом `iconfont-remote` —
+  `<iconfont-name>.css` в `stylesdir`. Встроенные атрибуты: `stylesdir=.`
+  (fallback Ruby) и `iconfont-remote` (standalone-значение Ruby; HTML adoctra —
+  полный документ). Путь строится публичным `normalize_web_path` core.
+  Проверено в Chrome 155 с настоящим CDN: глифы `icon:` отображаются, ошибок
+  загрузки нет; 17 вариантов атрибутов совпадают с Ruby.
+* Подсветка в тексте с выбранными `subs` сохраняет только inline-токены
+  исполненных стадий; verbatim-абзацы больше не получают inline-токены.
+  Преобразуемые метки дают токены `callout` с физическими диапазонами, в том
+  числе через include.
+* XFAIL `subs-none` исправлен; добавлены 20 сравнительных PASS-сценариев,
+  XFAIL `subs-styled-paragraph-simple-content` (Ruby выводит абзацную форму
+  `[NOTE]`/`NOTE:`/`[example]`/`[sidebar]` как простое содержимое без абзаца,
+  как и в существующем XFAIL `[open]`; подстановки совпадают) и golden
+  fixtures: всего 2969 PASS и 5 XFAIL. Прежние эталоны не изменены. Проверены
+  Rust-тесты, fmt, clippy с запретом warning, WASM target и тесты стенда.
+
+*Следующее изменение:* оставшиеся блочные семейства и substitutions — по приоритетам этапов 4–6.
 Исполнение выражений reftext в ранних ссылках
 заголовков и порядок регистрации контейнеров после содержимого — отдельная работа.
 Остальные производные настройки, структурные/raw caption
 и семейства подписей остаются отдельной работой. Условия и include-параметры требуют своей интеграции;
 не следует исполнять их побочные эффекты при повторном сканировании подсветки.
-Callouts в STEM и остальные блочные substitutions остаются отдельной работой.
+Подсветка исходных `source-highlighter`, `[listing]`-абзацы и tabsize в
+verbatim остаются отдельной работой.
 Остальные pass-макросы (xref/anchor, image/icon, footnotes и другие) ещё
 не перенесены. Структурные значения ещё теряются у прямых строковых
 потребителей, включая замену doctitle целиком.

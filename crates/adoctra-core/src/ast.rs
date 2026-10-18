@@ -387,6 +387,10 @@ pub enum BlockKind {
     Listing {
         text: String,
         callouts: Vec<Callout>,
+        /// The content after a `subs` attribute selected other substitutions
+        /// than the verbatim defaults (one [`Inline::Substituted`] node);
+        /// backends then render it instead of `text`.
+        inlines: Option<Vec<Inline>>,
     },
     /// A literal block: verbatim, no inline substitutions, either fenced by
     /// `....` or produced by a `[literal]` style on a paragraph. Same verbatim
@@ -395,6 +399,8 @@ pub enum BlockKind {
     Literal {
         text: String,
         callouts: Vec<Callout>,
+        /// Content after custom substitutions, as for [`BlockKind::Listing`].
+        inlines: Option<Vec<Inline>>,
     },
     /// A passthrough block: verbatim, fenced by `++++` (or produced by a `[pass]`
     /// style on a paragraph or `--` block). Like [`BlockKind::Literal`] the body
@@ -402,7 +408,12 @@ pub enum BlockKind {
     /// stay literal) — but unlike it, the backend emits the text **completely
     /// raw**: no HTML escaping and no wrapper element at all (asciidoctor's
     /// `:pass` context), so even a block id/role is dropped on output.
-    Passthrough { text: String },
+    /// A `subs` attribute selecting substitutions (Ruby applies none by
+    /// default) gives the converted `inlines`, still emitted raw.
+    Passthrough {
+        text: String,
+        inlines: Option<Vec<Inline>>,
+    },
 
     /// A `++++` block styled `stem`, `asciimath` or `latexmath`. Content uses
     /// special-character protection by default; explicit substitutions retain
@@ -745,6 +756,8 @@ pub struct ListItem {
 /// text, from any comment `guard` (`// `, `# `, `-- `, `;; ` or the
 /// `line-comment` attribute) through the mark; `xml` marks the `<!--N-->`
 /// form. `id` is Ruby's callout id (`CO1-2`). `span` is the mark's source.
+/// `icons` is the document `icons` mode when the block converts and `src` the
+/// image icon (`icon_uri "callouts/N"`) when icons are images.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Callout {
     pub start: usize,
@@ -754,14 +767,19 @@ pub struct Callout {
     pub xml: bool,
     pub id: String,
     pub span: Span,
+    pub icons: Option<String>,
+    pub src: String,
 }
 
 /// One item of a [`BlockKind::CalloutList`] and the ids of the callout marks
-/// it explains (Ruby's `coids`).
+/// it explains (Ruby's `coids`). `icons` and `src` are the item number's
+/// icon when the list converts, as for [`Callout`].
 #[derive(Debug, Clone, PartialEq)]
 pub struct CalloutListItem {
     pub item: ListItem,
     pub coids: Vec<String>,
+    pub icons: Option<String>,
+    pub src: String,
 }
 
 /// One entry of a [`BlockKind::DescriptionList`]: its terms and the shared

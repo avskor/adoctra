@@ -305,6 +305,43 @@ pub enum AttributePart {
     IndexTerm(Box<IndexTerm>),
     /// A protected inline formula extracted before normal substitutions.
     Stem(Box<Stem>),
+    /// A callout mark recognized by a block's callouts substitution (Ruby's
+    /// `sub_callouts`), an atomic value without flat text.
+    Callout(Box<InlineCallout>),
+}
+
+/// A callout mark at the end of a line of a block with custom substitutions,
+/// like Ruby's `:callout` inline node. `icons` is the document `icons` mode at
+/// the substitution and `src` the image icon (`icon_uri "callouts/N"`) when
+/// icons are images.
+#[derive(Debug, Clone, PartialEq)]
+pub struct InlineCallout {
+    pub number: String,
+    /// The line comment kept before the mark (`// `, `# `, …).
+    pub guard: Option<String>,
+    /// The `<!--N-->` form.
+    pub xml: bool,
+    /// Ruby's `CO<list>-<n>` id read from the callouts catalog, if any.
+    pub id: Option<String>,
+    pub icons: Option<String>,
+    pub src: String,
+}
+
+impl InlineCallout {
+    /// Ruby's `convert_inline_callout` markup, the lexical spelling later
+    /// stages see.
+    fn lexical(&self) -> String {
+        let n = &self.number;
+        match self.icons.as_deref() {
+            Some("font") => format!("<i class=\"conum\" data-value=\"{n}\"></i><b>({n})</b>"),
+            Some(_) => format!("<img src=\"{}\" alt=\"{n}\">", self.src),
+            None if self.xml => format!("&lt;!--<b class=\"conum\">({n})</b>--&gt;"),
+            None => format!(
+                "{}<b class=\"conum\">({n})</b>",
+                self.guard.as_deref().unwrap_or_default()
+            ),
+        }
+    }
 }
 
 /// The notation selected by an inline mathematical macro.
@@ -563,7 +600,8 @@ impl AttributePart {
             | Self::Footnote(_)
             | Self::Ui(_)
             | Self::IndexTerm(_)
-            | Self::Stem(_) => "",
+            | Self::Stem(_)
+            | Self::Callout(_) => "",
         }
     }
 
@@ -592,6 +630,7 @@ impl AttributePart {
                 | Self::Ui(_)
                 | Self::IndexTerm(_)
                 | Self::Stem(_)
+                | Self::Callout(_)
         )
     }
 
@@ -722,6 +761,7 @@ impl AttributePart {
             Self::Footnote(footnote) => return Cow::Owned(footnote.lexical()),
             Self::Ui(ui) => return Cow::Owned(ui.lexical()),
             Self::Stem(stem) => return Cow::Owned(stem.lexical()),
+            Self::Callout(callout) => return Cow::Owned(callout.lexical()),
             Self::IndexTerm(term) => {
                 return Cow::Owned(term.text.as_deref().map(reference_text).unwrap_or_default())
             }

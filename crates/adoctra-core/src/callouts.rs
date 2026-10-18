@@ -15,15 +15,30 @@ pub(crate) struct Mark {
     pub escaped: bool,
 }
 
+/// The spelling of a mark's angle brackets: the source form (`<1>`,
+/// Ruby's `CalloutScanRx`) or the form after special characters
+/// (`&lt;1&gt;`, Ruby's `CalloutSourceRx`).
+#[derive(Clone, Copy)]
+pub(crate) struct Form {
+    lt: &'static str,
+    gt: &'static str,
+}
+
+pub(crate) const SOURCE: Form = Form { lt: "<", gt: ">" };
+pub(crate) const LEXICAL: Form = Form {
+    lt: "&lt;",
+    gt: "&gt;",
+};
+
 /// A mark at `at` (its `<`): `<!?(|--)(\d+|\.)\3>` by default, `<(\d+|\.)>`
 /// with a `line-comment`. Returns its end, number and whether it is the
 /// `<!--N-->` form (`dashes`).
-fn mark_at(line: &str, at: usize, custom: bool) -> Option<(usize, String, bool)> {
-    let bytes = line.as_bytes();
-    if bytes.get(at) != Some(&b'<') {
+fn mark_at(line: &str, at: usize, custom: bool, form: Form) -> Option<(usize, String, bool)> {
+    if !line[at..].starts_with(form.lt) {
         return None;
     }
-    let mut p = at + 1;
+    let bytes = line.as_bytes();
+    let mut p = at + form.lt.len();
     let mut dashes = false;
     if !custom {
         if bytes.get(p) == Some(&b'!') {
@@ -50,12 +65,14 @@ fn mark_at(line: &str, at: usize, custom: bool) -> Option<(usize, String, bool)>
         }
         p += 2;
     }
-    (bytes.get(p) == Some(&b'>')).then_some((p + 1, number, dashes))
+    line[p..]
+        .starts_with(form.gt)
+        .then_some((p + form.gt.len(), number, dashes))
 }
 
 /// Whether only further marks (each after an optional space and backslash)
 /// follow `at` to the end of the line, with the same `<!--` form.
-fn chain_to_end(line: &str, mut at: usize, custom: bool, dashes: bool) -> bool {
+fn chain_to_end(line: &str, mut at: usize, custom: bool, dashes: bool, form: Form) -> bool {
     loop {
         if at == line.len() {
             return true;
@@ -67,7 +84,7 @@ fn chain_to_end(line: &str, mut at: usize, custom: bool, dashes: bool) -> bool {
         if line.as_bytes().get(p) == Some(&b'\\') {
             p += 1;
         }
-        match mark_at(line, p, custom) {
+        match mark_at(line, p, custom, form) {
             Some((end, _, d)) if d == dashes => at = end,
             _ => return false,
         }
@@ -78,13 +95,17 @@ fn chain_to_end(line: &str, mut at: usize, custom: bool, dashes: bool) -> bool {
 /// `line_comment` is the `line-comment` attribute (its empty value allows no
 /// guard).
 pub(crate) fn scan_line(line: &str, line_comment: Option<&str>) -> Vec<Mark> {
+    scan_line_in(line, line_comment, SOURCE)
+}
+
+pub(crate) fn scan_line_in(line: &str, line_comment: Option<&str>, form: Form) -> Vec<Mark> {
     let custom = line_comment.is_some();
     let mut marks = Vec::new();
     let mut at = 0;
-    while let Some(found) = line[at..].find('<') {
+    while let Some(found) = line[at..].find(form.lt) {
         let p = at + found;
-        if let Some((end, number, dashes)) = mark_at(line, p, custom) {
-            if chain_to_end(line, end, custom, dashes) {
+        if let Some((end, number, dashes)) = mark_at(line, p, custom, form) {
+            if chain_to_end(line, end, custom, dashes, form) {
                 let escaped = p > 0 && line.as_bytes()[p - 1] == b'\\';
                 let mark_start = p - usize::from(escaped);
                 let before = &line[..mark_start];
@@ -118,7 +139,8 @@ pub(crate) fn scan_line(line: &str, line_comment: Option<&str>) -> Vec<Mark> {
                     }
                     let escaped = line.as_bytes().get(p) == Some(&b'\\');
                     let mark = p + usize::from(escaped);
-                    let (end, number, dashes) = mark_at(line, mark, custom).expect("chain mark");
+                    let (end, number, dashes) =
+                        mark_at(line, mark, custom, form).expect("chain mark");
                     marks.push(Mark {
                         start: p,
                         end,
@@ -137,9 +159,110 @@ pub(crate) fn scan_line(line: &str, line_comment: Option<&str>) -> Vec<Mark> {
     marks
 }
 
+/// Ruby's `catalog_callouts`: register the source marks of a block whose
+/// substitutions include callouts in the current list (an escaped mark is
+/// found but not registered). Returns whether any mark was found, the
+/// registered ids in order and the ranges of those marks (with any guard).
+pub(crate) fn catalog(
+    text: &str,
+    catalog: &mut Catalog,
+) -> (bool, Vec<String>, Vec<std::ops::Range<usize>>) {
+    let (mut found, mut ids, mut ranges, mut autonum) = (false, Vec::new(), Vec::new(), 0u64);
+    if !text.contains('<') {
+        return (found, ids, ranges);
+    }
+    for (offset, line) in crate::scanner::lines_with_offsets(text) {
+        for mark in scan_line(line, None) {
+            found = true;
+            if mark.escaped {
+                continue;
+            }
+            let ordinal = if mark.number == "." {
+                autonum += 1;
+                autonum
+            } else {
+                mark.number.parse().unwrap_or(u64::MAX)
+            };
+            ids.push(catalog.register(ordinal));
+            ranges.push(offset + mark.start..offset + mark.end);
+        }
+    }
+    (found, ids, ranges)
+}
+
+/// The `icons` mode and the image icon of callout `number` with the
+/// attributes at conversion (`icon_uri "callouts/N"`, empty unless icons are
+/// images), like Ruby's `convert_inline_callout` and `convert_colist`.
+pub(crate) fn icon(attrs: &crate::Attributes, number: &str) -> (Option<String>, String) {
+    let icons = attrs.get("icons").map(str::to_owned);
+    let src = match icons.as_deref() {
+        Some("font") | None => String::new(),
+        Some(_) => crate::image::web_path(
+            &format!(
+                "callouts/{number}.{}",
+                attrs.get("icontype").unwrap_or("png")
+            ),
+            attrs.get("iconsdir"),
+        ),
+    };
+    (icons, src)
+}
+
+/// Ruby's `sub_callouts` over the lexical result of the earlier stages: a
+/// mark after special characters (`&lt;1&gt;`) becomes a callout part and an
+/// escaped one loses its backslash. Ids are assigned by the caller.
+pub(crate) fn apply_parts(
+    parts: Vec<crate::AttributePart>,
+    line_comment: Option<&str>,
+    attrs: &crate::substitution_context::Evaluation<'_>,
+) -> Vec<crate::AttributePart> {
+    use crate::substitution_text::Text;
+    let text = Text::from_parts(&parts);
+    if !text.text.contains(LEXICAL.lt) {
+        return parts;
+    }
+    let mut out = Text::default();
+    let (mut copied, mut autonum) = (0, 0u64);
+    for (offset, line) in crate::scanner::lines_with_offsets(&text.text) {
+        for mark in scan_line_in(line, line_comment, LEXICAL) {
+            let (start, end) = (offset + mark.start, offset + mark.end);
+            if mark.escaped {
+                let slash = start + mark.guard.as_ref().map_or(0, String::len);
+                text.copy(copied..slash, &mut out);
+                copied = slash + 1;
+                continue;
+            }
+            text.copy(copied..start, &mut out);
+            let number = if mark.number == "." {
+                autonum += 1;
+                autonum.to_string()
+            } else {
+                mark.number
+            };
+            let (icons, src) = icon(attrs, &number);
+            let callout = crate::InlineCallout {
+                number,
+                guard: mark.guard,
+                xml: mark.xml,
+                id: None,
+                icons,
+                src,
+            };
+            text.replace_parts(
+                start..end,
+                &[crate::AttributePart::Callout(Box::new(callout))],
+                &mut out,
+            );
+            copied = end;
+        }
+    }
+    text.copy(copied..text.text.len(), &mut out);
+    out.into_parts()
+}
+
 /// Ruby's `CalloutListRx`: `^<(\d+|\.)>[ \t]+(.*)$`.
 pub(crate) fn list_item(line: &str) -> Option<crate::lists::ItemMatch> {
-    let (end, number, _) = mark_at(line, 0, true)?;
+    let (end, number, _) = mark_at(line, 0, true, SOURCE)?;
     let ws = line[end..]
         .bytes()
         .take_while(|&b| b == b' ' || b == b'\t')

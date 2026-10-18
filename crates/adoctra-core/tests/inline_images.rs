@@ -197,3 +197,47 @@ fn macros_are_inline_macro_tokens() {
         .collect();
     assert_eq!(found, [Span::new(2, 18), Span::new(23, 31)]);
 }
+
+#[test]
+fn standalone_icon_font_defaults_follow_ruby() {
+    // Ruby's fallback `stylesdir` and the standalone `iconfont-remote`.
+    let doc = parse(":icons: font\n\n{stylesdir}|{iconfont-remote}|").document;
+    assert_eq!(doc.attributes.get("stylesdir"), Some("."));
+    assert_eq!(doc.attributes.get("iconfont-remote"), Some(""));
+    let doc = parse(":iconfont-remote!:\n:stylesdir: css\n\nx").document;
+    assert_eq!(doc.attributes.get("iconfont-remote"), None);
+    assert_eq!(doc.attributes.get("stylesdir"), Some("css"));
+    let mut attributes = adoctra_core::Attributes::new();
+    attributes.set("stylesdir", "host");
+    let options = adoctra_core::ParseOptions {
+        attributes,
+        ..Default::default()
+    };
+    let doc = adoctra_core::parse_with_options(":stylesdir: doc\n\nx", &options).document;
+    assert_eq!(doc.attributes.get("stylesdir"), Some("host"));
+}
+
+#[test]
+fn web_paths_can_join_uri_targets_like_stylesheets() {
+    use adoctra_core::normalize_web_path as web_path;
+    assert_eq!(
+        web_path("font-awesome.css", Some("."), false),
+        "./font-awesome.css"
+    );
+    assert_eq!(
+        web_path("fa 5.css", Some("css/a b"), false),
+        "css/a%20b/fa%205.css"
+    );
+    assert_eq!(web_path("x.css", Some("../s/./t"), false), "../s/t/x.css");
+    assert_eq!(web_path("x.css", Some("/abs/"), false), "/abs/x.css");
+    assert_eq!(web_path("x.css", None, false), "x.css");
+    // Only a preserved URI target keeps its form.
+    assert_eq!(
+        web_path("https://e.com/x.css", Some("."), false),
+        "./https://e.com/x.css"
+    );
+    assert_eq!(
+        web_path("https://e.com/a b.css", Some("."), true),
+        "https://e.com/a%20b.css"
+    );
+}

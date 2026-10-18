@@ -165,6 +165,11 @@ pub(crate) fn tokens_reader<'a>(
             .collect(),
     };
     tables.stems.sort_by_key(|t| t.span.start);
+    let custom: Vec<_> = reader
+        .custom_subs
+        .iter()
+        .map(|(span, stages)| (processed.transformed_span(*span), stages))
+        .collect();
     let mut out: Vec<_> = tokens_processed(
         &processed.text,
         options,
@@ -174,6 +179,14 @@ pub(crate) fn tokens_reader<'a>(
         &tables,
     )
     .into_iter()
+    // Text with custom substitutions keeps the inline tokens of executed stages.
+    .filter(|token| {
+        custom
+            .iter()
+            .find(|(span, _)| span.start <= token.span.start && token.span.end <= span.end)
+            .and_then(|(_, stages)| Some(stages.contains(&inline_stage(token.kind)?)))
+            .unwrap_or(true)
+    })
     .flat_map(|token| {
         reader
             .token_spans(processed.original_span(token.span))
@@ -184,6 +197,12 @@ pub(crate) fn tokens_reader<'a>(
             })
     })
     .collect();
+    for &span in &reader.callout_marks {
+        out.extend(reader.token_spans(span).into_iter().map(|span| Token {
+            span,
+            kind: TokenKind::Callout,
+        }));
+    }
     for &span in &reader.metadata_references {
         out.extend(reader.token_spans(span).into_iter().map(|span| Token {
             span,
@@ -327,6 +346,27 @@ pub(crate) fn tokens_reader<'a>(
     out.sort_by_key(|token| (token.span.source_id, token.span.start, token.span.end));
     out.dedup();
     out
+}
+
+/// The substitution that produces an inline token, if any.
+fn inline_stage(kind: TokenKind) -> Option<crate::pass_subs::Stage> {
+    use crate::pass_subs::Stage;
+    match kind {
+        TokenKind::Strong
+        | TokenKind::Emphasis
+        | TokenKind::Monospace
+        | TokenKind::Mark
+        | TokenKind::Superscript
+        | TokenKind::Subscript => Some(Stage::Quotes),
+        TokenKind::AttributeRef => Some(Stage::Attributes),
+        TokenKind::Link
+        | TokenKind::CrossReference
+        | TokenKind::Anchor
+        | TokenKind::InlineMacro
+        | TokenKind::PassthroughText => Some(Stage::Macros),
+        TokenKind::LineBreak => Some(Stage::Post),
+        _ => None,
+    }
 }
 
 /// Table blocks and their cell separators, and list markers (description

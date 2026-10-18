@@ -169,17 +169,17 @@ fn block_selectors_warn_without_accepting_inline_shorthand() {
 }
 
 #[test]
-fn unsupported_math_callouts_are_reported_explicitly() {
+fn math_callouts_convert_like_other_blocks() {
+    // Ruby catalogs and converts the marks of any block whose subs include
+    // callouts, formulas too.
     let result = parse("[stem,subs=verbatim]\n++++\nx <1>\n++++");
-    assert_eq!(result.diagnostics.len(), 1);
-    assert_eq!(
-        result.diagnostics[0].message,
-        "callout substitutions in stem blocks are not supported"
-    );
-    assert_eq!(
-        parts(formula(&result.document.blocks[0]).1),
-        [P::Text("x <1>".into())]
-    );
+    assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+    let [P::Text(text), P::Callout(callout)] = parts(formula(&result.document.blocks[0]).1) else {
+        panic!()
+    };
+    assert_eq!(text, "x ");
+    assert_eq!(callout.number, "1");
+    assert_eq!(callout.id.as_deref(), Some("CO1-1"));
 }
 
 #[test]

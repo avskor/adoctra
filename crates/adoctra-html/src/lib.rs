@@ -34,6 +34,7 @@ impl Backend for HtmlBackend {
         out.push_str("<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"utf-8\">\n<style>\n");
         out.push_str(STYLESHEET);
         out.push_str("</style>\n");
+        icon_font(&doc.attributes, &mut out);
         math::configuration(&doc.final_attributes, &doc.attributes, &mut out);
         out.push_str("</head>\n<body>\n");
         let cx = Cx {
@@ -132,7 +133,11 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             render_inlines(inlines, out);
             out.push_str("</p>\n");
         }
-        BlockKind::Listing { text, callouts } => {
+        BlockKind::Listing {
+            text,
+            callouts,
+            inlines,
+        } => {
             render_title(&block.title, &block.caption, out);
             // A `[source]`-style listing renders as asciidoctor's highlight form:
             // `<pre class="highlight"><code class="language-LANG" data-lang="LANG">`,
@@ -153,23 +158,27 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
                     }
                     None => out.push_str("<code>"),
                 }
-                render_verbatim(text, callouts, cx, out);
+                render_verbatim(text, callouts, inlines, out);
                 out.push_str("</code></pre>\n");
             } else {
                 let class = class_attr(&["listing"], &block.roles);
                 out.push_str(&format!("<pre{class}{id}>"));
-                render_verbatim(text, callouts, cx, out);
+                render_verbatim(text, callouts, inlines, out);
                 out.push_str("</pre>\n");
             }
         }
-        BlockKind::Literal { text, callouts } => {
+        BlockKind::Literal {
+            text,
+            callouts,
+            inlines,
+        } => {
             // A literal block: verbatim `<pre>`, like a plain listing but with the
             // `literalblock` base class. asciidoctor wraps it in a `<div>`; adoctra
             // hangs the class/id/roles on the `<pre>` itself, as for a listing.
             render_title(&block.title, &block.caption, out);
             let class = class_attr(&["literalblock"], &block.roles);
             out.push_str(&format!("<pre{class}{id}>"));
-            render_verbatim(text, callouts, cx, out);
+            render_verbatim(text, callouts, inlines, out);
             out.push_str("</pre>\n");
         }
         BlockKind::CalloutList { items } => {
@@ -178,7 +187,8 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             // number icon beside the text in a table; adoctra keeps the list
             // and the stylesheet lays out the same icon and text columns.
             render_title(&block.title, &block.caption, out);
-            let icons = cx.doc.attributes.get("icons");
+            // Core captured the `icons` mode where the list converts.
+            let icons = items.first().and_then(|entry| entry.icons.as_deref());
             let base: &[&str] = if icons.is_some() {
                 &["colist", "arabic", "icons"]
             } else {
@@ -196,7 +206,10 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
                             "<i class=\"conum\" data-value=\"{number}\"></i><b>{number}</b>"
                         ));
                     } else {
-                        out.push_str(&callout_image(&number.to_string(), cx));
+                        out.push_str(&format!(
+                            "<img src=\"{}\" alt=\"{number}\">",
+                            attr_value(&entry.src)
+                        ));
                     }
                     out.push_str("</span><div>");
                 }
@@ -222,12 +235,16 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             math::equation(*style, &equation, out);
             out.push_str("\n</div>\n</div>\n");
         }
-        BlockKind::Passthrough { text } => {
+        BlockKind::Passthrough { text, inlines } => {
             // Passthrough: the body is emitted *completely raw* — no escaping and
             // no wrapper element at all (asciidoctor's `:pass` context). Unlike
             // every other block, the id/roles are dropped: there is no element to
             // hang them on, matching asciidoctor. Its title is not rendered.
-            out.push_str(text);
+            // Custom substitutions emit their result, still unwrapped.
+            match inlines {
+                Some(inlines) => render_inlines(inlines, out),
+                None => out.push_str(text),
+            }
             out.push('\n');
         }
         BlockKind::Image { src, alt, .. } => {
@@ -833,43 +850,96 @@ fn render_dlist(
     }
 }
 
-/// Ruby's callout image icon (`icon_uri "callouts/N"`).
-fn callout_image(number: &str, cx: &Cx) -> String {
-    let attributes = &cx.doc.attributes;
-    let dir = attributes.get("iconsdir").unwrap_or("./images/icons");
-    let ext = attributes.get("icontype").unwrap_or("png");
-    let n = escape(number);
-    format!(
-        "<img src=\"{}/callouts/{n}.{}\" alt=\"{n}\">",
-        attr_value(dir),
-        attr_value(ext)
-    )
+/// Ruby's `convert_document` head: with font icons, the icon font stylesheet
+/// from the header attributes — Font Awesome from the CDN (or `iconfont-cdn`)
+/// unless `iconfont-remote` is unset, else `<iconfont-name>.css` under
+/// `stylesdir`.
+fn icon_font(attributes: &adoctra_core::Attributes, out: &mut String) {
+    if attributes.get("icons") != Some("font") {
+        return;
+    }
+    let href = if attributes.get("iconfont-remote").is_some() {
+        match attributes.get("iconfont-cdn") {
+            Some(cdn) => cdn.to_owned(),
+            None => {
+                let scheme = attributes.get("asset-uri-scheme").unwrap_or("https");
+                let colon = if scheme.is_empty() { "" } else { ":" };
+                format!("{scheme}{colon}//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css")
+            }
+        }
+    } else {
+        let name = attributes.get("iconfont-name").unwrap_or("font-awesome");
+        adoctra_core::normalize_web_path(&format!("{name}.css"), attributes.get("stylesdir"), false)
+    };
+    out.push_str(&format!(
+        "<link rel=\"stylesheet\" href=\"{}\">\n",
+        attr_value(&href)
+    ));
 }
 
-/// Verbatim text with its callout marks as Ruby's `convert_inline_callout`:
-/// the guard kept before `<b class="conum">(N)</b>` (an `<!--N-->` mark keeps
-/// its comment), or a font/image icon with `icons`.
-fn render_verbatim(text: &str, callouts: &[adoctra_core::ast::Callout], cx: &Cx, out: &mut String) {
-    let attributes = &cx.doc.attributes;
+/// A callout mark as Ruby's `convert_inline_callout`, with the `icons` mode
+/// core captured where the block converts. `guard` is already HTML.
+fn render_conum(
+    number: &str,
+    guard: Option<&str>,
+    xml: bool,
+    icons: Option<&str>,
+    src: &str,
+    out: &mut String,
+) {
+    let n = escape(number);
+    match icons {
+        Some("font") => out.push_str(&format!(
+            "<i class=\"conum\" data-value=\"{n}\"></i><b>({n})</b>"
+        )),
+        Some(_) => out.push_str(&format!("<img src=\"{}\" alt=\"{n}\">", attr_value(src))),
+        None if xml => out.push_str(&format!("&lt;!--<b class=\"conum\">({n})</b>--&gt;")),
+        None => {
+            out.push_str(guard.unwrap_or_default());
+            out.push_str(&format!("<b class=\"conum\">({n})</b>"));
+        }
+    }
+}
+
+/// A callout mark from custom block substitutions; its guard keeps the
+/// lexical spelling of the substituted text.
+fn render_callout(callout: &adoctra_core::InlineCallout, out: &mut String) {
+    render_conum(
+        &callout.number,
+        callout.guard.as_deref(),
+        callout.xml,
+        callout.icons.as_deref(),
+        &callout.src,
+        out,
+    );
+}
+
+/// Verbatim text with its callout marks: the guard kept before
+/// `<b class="conum">(N)</b>` (an `<!--N-->` mark keeps its comment), or a
+/// font/image icon with `icons`.
+/// Content converted with custom substitutions renders instead.
+fn render_verbatim(
+    text: &str,
+    callouts: &[adoctra_core::ast::Callout],
+    inlines: &Option<Vec<Inline>>,
+    out: &mut String,
+) {
+    if let Some(inlines) = inlines {
+        render_inlines(inlines, out);
+        return;
+    }
     let mut copied = 0;
     for callout in callouts {
         out.push_str(&escape(&text[copied..callout.start]));
-        let n = escape(&callout.number);
-        match attributes.get("icons") {
-            Some("font") => out.push_str(&format!(
-                "<i class=\"conum\" data-value=\"{n}\"></i><b>({n})</b>"
-            )),
-            Some(_) => out.push_str(&callout_image(&callout.number, cx)),
-            None if callout.xml => {
-                out.push_str(&format!("&lt;!--<b class=\"conum\">({n})</b>--&gt;"))
-            }
-            None => {
-                if let Some(guard) = &callout.guard {
-                    out.push_str(&escape(guard));
-                }
-                out.push_str(&format!("<b class=\"conum\">({n})</b>"));
-            }
-        }
+        let guard = callout.guard.as_deref().map(escape);
+        render_conum(
+            &callout.number,
+            guard.as_deref(),
+            callout.xml,
+            callout.icons.as_deref(),
+            &callout.src,
+            out,
+        );
         copied = callout.end;
     }
     out.push_str(&escape(&text[copied..]));
@@ -1580,6 +1650,7 @@ fn render_parts(parts: &[adoctra_core::AttributePart], out: &mut String) {
             adoctra_core::AttributePart::Ui(ui) => render_ui(ui, out),
             adoctra_core::AttributePart::IndexTerm(term) => render_index_term(term, out),
             adoctra_core::AttributePart::Stem(stem) => render_stem(stem, out),
+            adoctra_core::AttributePart::Callout(callout) => render_callout(callout, out),
             adoctra_core::AttributePart::Anchor(id) => {
                 out.push_str("<a id=\"");
                 out.push_str(id);
@@ -2028,9 +2099,44 @@ mod tests {
             "{html}"
         );
         assert!(html.contains("<li><span class=\"colist-icon\"><img src=\"./images/icons/callouts/1.png\" alt=\"1\"></span><div>one</div></li>"), "{html}");
+        // Each block takes the `icons` mode where it converts, like Ruby.
+        let html = render("----\na <1>\n----\n<1> one\n\n:icons: font\n\n----\nb <1>\n----\n<1> two\n\n:icons!:\n\n----\nc <1>\n----\n<1> three");
+        assert!(html.contains("<pre class=\"listing\">a <b class=\"conum\">(1)</b></pre>\n<ol class=\"colist arabic\">"), "{html}");
+        assert!(html.contains("<pre class=\"listing\">b <i class=\"conum\" data-value=\"1\"></i><b>(1)</b></pre>\n<ol class=\"colist arabic icons\">"), "{html}");
+        assert!(html.contains("<pre class=\"listing\">c <b class=\"conum\">(1)</b></pre>\n<ol class=\"colist arabic\">\n<li>three</li>"), "{html}");
+        // Image icons sit on the middle of the line, like Ruby's `img` rule.
+        assert!(STYLESHEET.contains("pre img { vertical-align: middle; }"));
         // As Asciidoctor's stylesheet: a plain mark is not drawn as a badge.
         assert!(STYLESHEET.contains(".conum[data-value]::after { content: attr(data-value); }"));
         assert!(STYLESHEET.contains(".conum"));
+    }
+
+    #[test]
+    fn block_subs_render_selected_substitutions() {
+        let html = render(":v: 1.0 <b>\n\n[subs=none]\n*p* {v} <i>\n\n[subs=quotes]\n*q* {v}\n\n[source,java,subs=\"attributes+\"]\n----\nx = \"{v}\"; // <1>\n----\n<1> one\n\n[subs=\"+quotes\"]\n....\n*l* <!--1-->\n....\n\n[subs=attributes]\n++++\n<u>{v}</u>\n++++\n\n[verse,subs=none]\n____\n*v*\n____\n\n[subs=callouts]\n----\nraw <1>\n----");
+        assert!(html.contains("<p>*p* {v} <i></p>"), "{html}");
+        assert!(html.contains("<p><strong>q</strong> {v}</p>"), "{html}");
+        // Ruby escapes the expanded value again (attributes before specials).
+        assert!(html.contains("<code class=\"language-java\" data-lang=\"java\">x = \"1.0 &amp;lt;b&amp;gt;\"; // <b class=\"conum\">(1)</b></code>"), "{html}");
+        assert!(html.contains("<pre class=\"literalblock\"><strong>l</strong> &lt;!--<b class=\"conum\">(1)</b>--&gt;</pre>"), "{html}");
+        // A passthrough stays unwrapped and raw.
+        assert!(html.contains("\n<u>1.0 &lt;b&gt;</u>\n"), "{html}");
+        assert!(html.contains("<pre class=\"verse\">*v*</pre>"), "{html}");
+        // Callouts before special characters leave the raw mark.
+        assert!(
+            html.contains("<pre class=\"listing\">raw <1></pre>"),
+            "{html}"
+        );
+        let html = render(":icons: font\n\n[subs=+quotes]\n----\n*x* // <1>\n----");
+        assert!(
+            html.contains("<strong>x</strong> <i class=\"conum\" data-value=\"1\"></i><b>(1)</b>"),
+            "{html}"
+        );
+        let html = render(":icons:\n:iconsdir: i\n\n[subs=+quotes]\n----\n# <1>\n----");
+        assert!(
+            html.contains("<pre class=\"listing\"><img src=\"i/callouts/1.png\" alt=\"1\"></pre>"),
+            "{html}"
+        );
     }
 
     #[test]
@@ -3125,6 +3231,60 @@ mod tests {
                 r##"D <a href="#sec">Sec Title</a> E <a href="#sec">Sec Title</a> "##,
                 r##"F <a href="#">Sec Title</a></p>"##
             )),
+            "{html}"
+        );
+    }
+
+    #[test]
+    fn font_icons_link_the_icon_font_stylesheet_like_ruby() {
+        let link = |src: &str| {
+            render(src)
+                .lines()
+                .filter(|l| l.starts_with("<link rel=\"stylesheet\""))
+                .map(str::to_owned)
+                .collect::<Vec<_>>()
+        };
+        let cdn = "//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css";
+        assert_eq!(
+            link(":icons: font\n\nx"),
+            [format!("<link rel=\"stylesheet\" href=\"https:{cdn}\">")]
+        );
+        assert_eq!(
+            link(":icons: font\n:asset-uri-scheme:\n\nx"),
+            [format!("<link rel=\"stylesheet\" href=\"{cdn}\">")]
+        );
+        assert_eq!(
+            link(":icons: font\n:iconfont-cdn: //c/fa.css?a&b\n\nx"),
+            ["<link rel=\"stylesheet\" href=\"//c/fa.css?a&amp;b\">"]
+        );
+        assert_eq!(
+            link(":icons: font\n:iconfont-remote!:\n\nx"),
+            ["<link rel=\"stylesheet\" href=\"./font-awesome.css\">"]
+        );
+        assert_eq!(
+            link(
+                ":icons: font\n:iconfont-remote!:\n:stylesdir: css/a b\n:iconfont-name: fa 5\n\nx"
+            ),
+            ["<link rel=\"stylesheet\" href=\"css/a%20b/fa%205.css\">"]
+        );
+        // The head reads the header: image icons, a body assignment and an
+        // unset mode link nothing.
+        for src in [
+            ":icons:\n\nx",
+            "x\n\n:icons: font",
+            ":icons: font\n:icons!:\n\nx",
+        ] {
+            assert!(link(src).is_empty(), "{src}");
+        }
+        // The icon font renders `icon:` glyphs.
+        let html = render(":icons: font\n\nicon:heart[2x]");
+        assert!(
+            html.contains("font-awesome.min.css\">\n</head>")
+                || html.contains("font-awesome.min.css\">\n<"),
+            "{html}"
+        );
+        assert!(
+            html.contains("<i class=\"fa fa-heart fa-2x\"></i>"),
             "{html}"
         );
     }

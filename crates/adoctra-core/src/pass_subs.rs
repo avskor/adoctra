@@ -13,39 +13,90 @@ pub(crate) enum Stage {
     Replacements,
     Macros,
     Post,
+    /// Ruby's `sub_callouts` (blocks only).
+    Callouts,
 }
 
-/// Block selectors differ from inline pass selectors: no one-letter hints,
-/// spaces are ignored, and +/- modifiers start with the block's defaults.
-pub(crate) fn resolve_stem(
-    subs: Option<&str>,
+/// A block's content model decides its default substitutions (Ruby's
+/// `commit_subs`).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(crate) enum Defaults {
+    /// `NORMAL_SUBS`: paragraphs, simple content and verse.
+    Normal,
+    /// `VERBATIM_SUBS`: listing and literal blocks.
+    Verbatim,
+    /// `BASIC_SUBS`: STEM blocks.
+    Basic,
+    /// `NO_SUBS`: passthrough blocks.
+    None,
+}
+
+impl Defaults {
+    pub(crate) fn stages(self) -> Vec<Stage> {
+        use Stage::*;
+        match self {
+            Self::Normal => vec![Specials, Quotes, Attributes, Replacements, Macros, Post],
+            Self::Verbatim => vec![Specials, Callouts],
+            Self::Basic => vec![Specials],
+            Self::None => Vec::new(),
+        }
+    }
+}
+
+const NORMAL: &[&str] = &[
+    "specialcharacters",
+    "quotes",
+    "attributes",
+    "replacements",
+    "macros",
+    "post_replacements",
+];
+
+fn stage_name(stage: Stage) -> &'static str {
+    match stage {
+        Stage::Specials => "specialcharacters",
+        Stage::Quotes => "quotes",
+        Stage::Attributes => "attributes",
+        Stage::Replacements => "replacements",
+        Stage::Macros => "macros",
+        Stage::Post => "post_replacements",
+        Stage::Callouts => "callouts",
+    }
+}
+
+/// Ruby's `resolve_block_subs`: block selectors differ from inline pass
+/// selectors (no one-letter hints, spaces are ignored) and +/- modifiers
+/// start with the block's defaults. Invalid names warn with the block's
+/// context as the subject.
+pub(crate) fn resolve_block(
+    subs: &str,
+    defaults: Defaults,
+    subject: &str,
     span: Span,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Vec<Stage> {
-    let Some(subs) = subs else {
-        return vec![Stage::Specials];
-    };
     let subs = subs.replace(' ', "");
+    let modifiers = subs.contains(['+', '-']);
     let mut candidates: Option<Vec<&str>> = None;
-    for name in subs.split(',').filter(|s| !s.is_empty()) {
-        let (operation, name) = if let Some(name) = name.strip_prefix('+') {
+    // Like Ruby's String#split, trailing empty fields are dropped.
+    let mut keys: Vec<&str> = subs.split(',').collect();
+    while keys.last() == Some(&"") {
+        keys.pop();
+    }
+    for key in keys {
+        let (operation, name) = if !modifiers {
+            (' ', key)
+        } else if let Some(name) = key.strip_prefix('+') {
             ('+', name)
-        } else if let Some(name) = name.strip_prefix('-') {
+        } else if let Some(name) = key.strip_prefix('-') {
             ('-', name)
-        } else if let Some(name) = name.strip_suffix('+') {
+        } else if let Some(name) = key.strip_suffix('+') {
             ('^', name)
         } else {
-            (' ', name)
+            (' ', key)
         };
         let expanded: &[&str] = match name {
-            "normal" => &[
-                "specialcharacters",
-                "quotes",
-                "attributes",
-                "replacements",
-                "macros",
-                "post_replacements",
-            ],
+            "normal" => NORMAL,
             "verbatim" => &["specialcharacters", "callouts"],
             "specialchars" => &["specialcharacters"],
             "none" => &[],
@@ -55,7 +106,7 @@ pub(crate) fn resolve_stem(
             if operation == ' ' {
                 Vec::new()
             } else {
-                vec!["specialcharacters"]
+                defaults.stages().into_iter().map(stage_name).collect()
             }
         });
         match operation {
@@ -76,18 +127,9 @@ pub(crate) fn resolve_stem(
             "replacements" => Stage::Replacements,
             "macros" => Stage::Macros,
             "post_replacements" => Stage::Post,
-            "callouts" => {
-                diagnostics.push(Diagnostic {
-                    span,
-                    severity: Severity::Warning,
-                    message: "callout substitutions in stem blocks are not supported".into(),
-                });
-                continue;
-            }
+            "callouts" => Stage::Callouts,
             _ => {
-                if !invalid.contains(&name) {
-                    invalid.push(name);
-                }
+                invalid.push(name);
                 continue;
             }
         };
@@ -100,7 +142,7 @@ pub(crate) fn resolve_stem(
             span,
             severity: Severity::Warning,
             message: format!(
-                "invalid substitution type{} for stem: {}",
+                "invalid substitution type{} for {subject}: {}",
                 if invalid.len() > 1 { "s" } else { "" },
                 invalid.join(", ")
             ),
@@ -207,5 +249,8 @@ pub(crate) fn apply(
             true,
         )
         .into_parts(),
+        Stage::Callouts => {
+            crate::callouts::apply_parts(parts, passes.line_comment.as_deref(), attrs)
+        }
     }
 }

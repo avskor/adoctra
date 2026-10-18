@@ -131,9 +131,18 @@ fn uri_prefix(s: &str) -> Option<usize> {
 /// a URI keeps its form with spaces encoded; a relative path is joined to the
 /// directory, `.`/`..` segments are resolved and spaces encoded.
 pub(crate) fn web_path(target: &str, imagesdir: Option<&str>) -> String {
-    if target.contains(':') && uri_prefix(target).is_some() {
+    normalize_web_path(target, imagesdir, true)
+}
+
+/// Ruby's `AbstractNode#normalize_web_path`: with `preserve_uri_target`, a
+/// URI target keeps its form (spaces encoded); otherwise the target is always
+/// joined to `start` (`PathResolver#web_path`), e.g. a stylesheet name under
+/// `stylesdir`.
+pub fn normalize_web_path(target: &str, start: Option<&str>, preserve_uri_target: bool) -> String {
+    if preserve_uri_target && target.contains(':') && uri_prefix(target).is_some() {
         return target.replace(' ', "%20");
     }
+    let imagesdir = start;
     let mut path = target.to_owned();
     let mut prefix = "";
     let joined;

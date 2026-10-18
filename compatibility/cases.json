@@ -90,8 +90,7 @@
     {
       "id": "subs-none",
       "category": "substitutions",
-      "expect": "xfail",
-      "reason": "The subs attribute is stored but not applied.",
+      "expect": "pass",
       "source": "[subs=none]\n*bold* {missing}"
     },
     {
@@ -18967,6 +18966,137 @@
       "resources": {
         "refs.adoc": "* [[[книга,Ссылка]]] Текст"
       }
+    },
+    {
+      "id": "subs-paragraph-selected",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: 1.0 <b>\n:a: *x*\n:empty:\n\n[subs=\"quotes\"]\n*bold* {v} <i>i</i>\n\n[subs=\"+attributes\"]\n*b* {v} a -- b\n\n[subs=\"-quotes\"]\n*b* {v} a -- b\n\n[subs=\"attributes,quotes\"]\n{a} _e_\n"
+    },
+    {
+      "id": "subs-paragraph-order-and-empty",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: 1.0 <b>\n:a: *x*\n:empty:\n\n[subs=\"quotes,specialcharacters\"]\n*<x>*\n\n[subs=\"\"]\n*raw* {v} <u>u</u>\n\n[subs=\"post_replacements\"]\na +\nb\n\n[subs=\"bogus,quotes\"]\n*x*\n"
+    },
+    {
+      "id": "subs-paragraph-macros",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: 1.0 <b>\n:a: *x*\n:empty:\n\n[[sec]]\n== Sec\n\n[subs=\"specialcharacters,macros\"]\n<<sec>> xref:sec[] https://x.org[X] footnote:[note] pass:q[*p*] *no*\n\n[subs=\"attributes,macros\"]\nlink:{empty}x[y] {v}\n"
+    },
+    {
+      "id": "subs-styled-paragraphs",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: 1.0 <b>\n:a: *x*\n:empty:\n\n[quote,Me,subs=none]\n*a* {v}\n\n[quote,Me,subs=\"attributes\"]\n*q* {v}\n"
+    },
+    {
+      "id": "subs-styled-paragraph-simple-content",
+      "category": "substitutions",
+      "expect": "xfail",
+      "reason": "Ruby renders [NOTE]/NOTE:/[example]/[sidebar] paragraph forms as simple content (text without a paragraph); adoctra wraps a child paragraph. The selected substitutions match.",
+      "source": ":v: 1.0 <b>\n:a: *x*\n:empty:\n\n[NOTE,subs=none]\n*a* {v}\n\n[subs=none]\nTIP: *a* {v}\n\n[example,subs=none]\n*a* {v}\n\n[sidebar,subs=\"attributes\"]\n*a* {v}\n"
+    },
+    {
+      "id": "subs-delimited-containers-ignore",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: 1.0 <b>\n:a: *x*\n:empty:\n\n[subs=none]\n====\n*inner* {v}\n====\n\n[subs=none]\n--\n*open* {v}\n--\n\n[subs=none]\n____\n*quote* {v}\n____\n"
+    },
+    {
+      "id": "subs-listing-attributes-callouts",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: 1.0 <b>\n:a: *x*\n:empty:\n\n[source,java,subs=\"attributes+\"]\n----\nx = \"{v}\"; // <1>\n*y* <2>\n----\n<1> one\n<2> two\n\n[subs=\"+quotes\"]\n----\n*bold* <x> <1>\n----\n<1> b\n"
+    },
+    {
+      "id": "subs-listing-order",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: 1.0 <b>\n:a: *x*\n:empty:\n\n[subs=\"quotes,specialcharacters\"]\n----\n*<x>* <1>\n----\n\n[subs=\"specialcharacters,quotes,callouts\"]\n----\n*x* // <1> <2>\n----\n<1> a\n<2> b\n\n[subs=\"callouts\"]\n----\nx <1>\n----\n"
+    },
+    {
+      "id": "subs-listing-trim-and-counters",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: 1.0 <b>\n:a: *x*\n:empty:\n\n[subs=\"attributes+\"]\n----\n{empty}\n\nbody {counter:n} {n}\n{empty}\n----\n\n[subs=\"+attributes\"]\n----\n\n{a}\n\n----\n\n{n}\n"
+    },
+    {
+      "id": "subs-listing-macros",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: 1.0 <b>\n:a: *x*\n:empty:\n\n[[sec]]\n== Sec\n\n[subs=+macros]\n----\nsee <<sec>> footnote:[fn] x\nhttp://x.org[X] +\npass:[<b>b</b>]\n----\n"
+    },
+    {
+      "id": "subs-literal-forms",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: 1.0 <b>\n:a: *x*\n:empty:\n\n[subs=\"bogus,quotes,foo\"]\n....\n*b* {v}\n....\n\n[subs=normal]\n....\n*b* {v} <3>\n....\n\n  indented *a* {v}\n  second\n\n[subs=+quotes]\n  indented *a* {v}\n    deeper\n\n[literal,subs=attributes]\nlit {v}\n"
+    },
+    {
+      "id": "subs-pass-forms",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: 1.0 <b>\n:a: *x*\n:empty:\n\n[subs=attributes]\n++++\n<p>{v}</p>\n++++\n\n[subs=\"specialchars,attributes\"]\n++++\n<p>{v}</p>\n++++\n\n[pass,subs=attributes]\n<u>{v}</u>\n// hidden\n\n[pass,subs=\"attributes,quotes\"]\n--\n<u>{v}</u> *q*\n--\n\n[subs=none]\n++++\n<i>{v}</i>\n++++\n"
+    },
+    {
+      "id": "subs-verse-forms",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: 1.0 <b>\n:a: *x*\n:empty:\n\n[verse,subs=none]\n____\n*a* {v}\nb\n____\n\n[verse,subs=\"quotes\"]\n--\n\n*v* {v}\n\n--\n\n[verse,Author,subs=\"+attributes\"]\nline *one*\n{v}\n"
+    },
+    {
+      "id": "subs-callouts-forms",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: 1.0 <b>\n:a: *x*\n:empty:\n\n[subs=\"+quotes\"]\n----\n\\<1> *e*\na // <.> <.>\nb \\<2>\n----\n<1> a\n<2> b\n\n[subs=\"+attributes\",line-comment=%]\n----\nx % <1>\ny <!--2-->\n----\n<1> one\n\n[subs=\"+quotes\"]\n----\nxml <!--1-->\n----\n<1> xml\n"
+    },
+    {
+      "id": "subs-callouts-paragraph-and-stem",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "[subs=\"+callouts\"]\npara *x* <1>\n\n<1> para co\n\n[stem,subs=\"+callouts\"]\n++++\nx <1>\n++++\n\n[stem,subs=verbatim]\n++++\ny <1>\n++++\n<1> stem\n"
+    },
+    {
+      "id": "subs-callouts-generated",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":co: pass:[<2>]\n:esc: <3>\n\n[subs=\"attributes+\"]\n----\nx <1>\ny {co}\nz {esc}\n----\n<1> one\n<2> two\n"
+    },
+    {
+      "id": "subs-nested-contexts",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: 1.0 <b>\n:a: *x*\n:empty:\n\n* item\n+\n[subs=+quotes]\n....\n*li*\n....\n\n|===\na|\n[subs=none]\n*cell* {empty}\n\n[subs=attributes+]\n----\n{v}\n----\n|===\n"
+    },
+    {
+      "id": "subs-modifiers-and-groups",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: 1.0 <b>\n:a: *x*\n:empty:\n\n[subs=\"normal\"]\n----\n*n* {v}\n----\n\n[subs=\"verbatim,quotes\"]\n....\n*x* <1>\n....\n<1> v\n\n[subs=\"-specialchars\"]\n----\n<b>raw</b> <1>\n----\n\n[subs=\"specialchars+, quotes+\"]\n----\n*s* {v}\n----\n\n[subs=\"+none\"]\n----\n<t> *u*\n----\n"
+    },
+    {
+      "id": "subs-paragraph-hardbreaks-and-unicode",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: 1.0 <b>\n:a: *x*\n:empty:\n\n[%hardbreaks,subs=\"post_replacements,quotes\"]\nЖ *ж*\nдва\n\n[subs=\"replacements\"]\n(C) -- ... *x*\n"
+    },
+    {
+      "id": "subs-crlf",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": ":v: 1.0 <b>\r\n:a: *x*\r\n:empty:\r\n\r\n[subs=\"+quotes\"]\r\n----\r\n*a* <1>\r\nb\r\n----\r\n<1> c\r\n\r\n[subs=none]\r\n*p*\r\nq\r\n"
+    },
+    {
+      "id": "subs-include-listing",
+      "category": "substitutions",
+      "profile": "include-body-dom-v1",
+      "source": "[subs=\"attributes+\"]\n----\ninclude::code.txt[]\n----\n<1> one\n",
+      "resources": {
+        "code.txt": ":x: 1\n{x} *y* <1>\n"
+      },
+      "expect": "pass"
     }
   ]
 }

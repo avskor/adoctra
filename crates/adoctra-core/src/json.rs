@@ -120,6 +120,26 @@ pub fn write_stem(stem: &crate::Stem, key: &str, out: &mut String) {
 /// An index term's fields (without braces), led by `"<key>":"indexterm"`
 /// (Ruby's node type): a flow term's shown `parts` (`null` when concealed),
 /// the concealed `terms`, `see` (or `null`) and `see_also`, all lexical.
+/// A callout mark from custom block substitutions: its number, guard, form,
+/// catalog id, `icons` mode and image icon.
+pub fn write_callout(callout: &crate::InlineCallout, key: &str, out: &mut String) {
+    out.push_str(&format!("\"{key}\":\"callout\",\"number\":"));
+    escape_into(&callout.number, out);
+    for (name, value) in [
+        ("id", &callout.id),
+        ("guard", &callout.guard),
+        ("icons", &callout.icons),
+    ] {
+        out.push_str(&format!(",\"{name}\":"));
+        match value {
+            Some(value) => escape_into(value, out),
+            None => out.push_str("null"),
+        }
+    }
+    out.push_str(&format!(",\"xml\":{},\"src\":", callout.xml));
+    escape_into(&callout.src, out);
+}
+
 pub fn write_index_term(term: &crate::IndexTerm, key: &str, out: &mut String) {
     let strings = |values: &[String], out: &mut String| {
         out.push('[');
@@ -286,6 +306,12 @@ fn write_parts_array(parts: &[crate::AttributePart], out: &mut String) {
         if let crate::AttributePart::Stem(stem) = part {
             out.push('{');
             write_stem(stem, "kind", out);
+            out.push('}');
+            continue;
+        }
+        if let crate::AttributePart::Callout(callout) = part {
+            out.push('{');
+            write_callout(callout, "kind", out);
             out.push('}');
             continue;
         }

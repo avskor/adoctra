@@ -181,6 +181,7 @@ fn indented_paragraphs_are_literal_blocks() {
         BlockKind::Literal {
             text: "indented *text*\n  deeper".into(),
             callouts: Vec::new(),
+            inlines: None,
         }
     );
     assert_eq!(blocks[0].span, Span::new(0, 28));
@@ -190,6 +191,7 @@ fn indented_paragraphs_are_literal_blocks() {
         BlockKind::Literal {
             text: "attached".into(),
             callouts: Vec::new(),
+            inlines: None,
         }
     );
     // Adjacent to a term, an indented line is the description's text.

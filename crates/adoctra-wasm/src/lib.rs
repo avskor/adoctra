@@ -314,8 +314,20 @@ fn write_cell(cell: &adoctra_core::ast::TableCell, s: &mut String) {
     s.push('}');
 }
 
+/// A callout icon captured where its block converts: the `icons` mode and
+/// the image icon (empty unless icons are images).
+fn write_icon(icons: &Option<String>, src: &str, s: &mut String) {
+    s.push_str(",\"icons\":");
+    match icons {
+        Some(icons) => write_str(icons, s),
+        None => s.push_str("null"),
+    }
+    s.push_str(",\"src\":");
+    write_str(src, s);
+}
+
 /// A verbatim block's callout marks (omitted when there are none): number,
-/// guard, `<!--N-->` form and Ruby's id.
+/// guard, `<!--N-->` form, Ruby's id and the captured icon.
 fn write_callouts(callouts: &[adoctra_core::ast::Callout], s: &mut String) {
     if callouts.is_empty() {
         return;
@@ -337,7 +349,9 @@ fn write_callouts(callouts: &[adoctra_core::ast::Callout], s: &mut String) {
             Some(guard) => write_str(guard, s),
             None => s.push_str("null"),
         }
-        s.push_str(&format!(",\"xml\":{}}}", callout.xml));
+        s.push_str(&format!(",\"xml\":{}", callout.xml));
+        write_icon(&callout.icons, &callout.src, s);
+        s.push('}');
     }
     s.push(']');
 }
@@ -397,7 +411,11 @@ fn write_block(b: &Block, s: &mut String) {
             s.push_str(",\"inlines\":");
             write_inlines(inlines, s);
         }
-        BlockKind::Listing { text, callouts } => {
+        BlockKind::Listing {
+            text,
+            callouts,
+            inlines,
+        } => {
             s.push_str("\"name\":\"listing\",");
             write_id(&b.id, s);
             write_roles(&b.roles, s);
@@ -409,8 +427,13 @@ fn write_block(b: &Block, s: &mut String) {
             s.push_str(",\"text\":");
             write_str(text, s);
             write_callouts(callouts, s);
+            write_substituted(inlines, s);
         }
-        BlockKind::Literal { text, callouts } => {
+        BlockKind::Literal {
+            text,
+            callouts,
+            inlines,
+        } => {
             s.push_str("\"name\":\"literal\",");
             write_id(&b.id, s);
             write_roles(&b.roles, s);
@@ -422,6 +445,7 @@ fn write_block(b: &Block, s: &mut String) {
             s.push_str(",\"text\":");
             write_str(text, s);
             write_callouts(callouts, s);
+            write_substituted(inlines, s);
         }
         BlockKind::Stem { style, inlines } => {
             s.push_str("\"name\":\"stem\",");
@@ -434,7 +458,7 @@ fn write_block(b: &Block, s: &mut String) {
             s.push_str(",\"inlines\":");
             write_inlines(inlines, s);
         }
-        BlockKind::Passthrough { text } => {
+        BlockKind::Passthrough { text, inlines } => {
             s.push_str("\"name\":\"pass\",");
             write_id(&b.id, s);
             write_roles(&b.roles, s);
@@ -445,6 +469,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_caption(&b.caption, s);
             s.push_str(",\"text\":");
             write_str(text, s);
+            write_substituted(inlines, s);
         }
         BlockKind::Toc => {
             // The `toc::[]` macro; the editor builds the outline from sections.
@@ -565,7 +590,9 @@ fn write_block(b: &Block, s: &mut String) {
                     }
                     write_str(id, s);
                 }
-                s.push_str("]}");
+                s.push(']');
+                write_icon(&entry.icons, &entry.src, s);
+                s.push('}');
             }
             s.push(']');
         }
@@ -846,6 +873,15 @@ fn write_options(options: &[String], s: &mut String) {
 /// Emit the leading-comma `,"title":<array|null>` field — the block's `.Title`
 /// inlines (each carrying its span, like any inline the editor sees), or `null`
 /// when the block has no title.
+/// The `,"inlines":[…]` content of a verbatim or raw block converted with
+/// custom substitutions (with source spans); absent with the defaults.
+fn write_substituted(inlines: &Option<Vec<Inline>>, s: &mut String) {
+    if let Some(inlines) = inlines {
+        s.push_str(",\"inlines\":");
+        write_inlines(inlines, s);
+    }
+}
+
 fn write_title(title: &Option<Vec<Inline>>, s: &mut String) {
     s.push_str(",\"title\":");
     match title {
@@ -2613,11 +2649,62 @@ mod header_tests {
     }
 
     #[test]
+    fn block_subs_export_converted_content_spans_and_tokens() {
+        let source = "[subs=\"+quotes\"]\n----\n*x* // <1>\n----\n\n[subs=none]\n*p* {a}";
+        let json = super::parse_json_with_source(source, 4);
+        assert!(json.contains(r#""text":"*x* // <1>","inlines":[{"span":{"source_id":4,"start":22,"end":32},"name":"substituted","value":"x ","parts":[{"kind":"open","format":"strong"},{"kind":"text","value":"x"},{"kind":"close","format":"strong"},{"kind":"text","value":" "},{"kind":"callout","number":"1","id":"CO1-1","guard":"// ","icons":null,"xml":false,"src":""}]}]"#), "{json}");
+        assert!(json.contains(r#""inlines":[{"span":{"source_id":4,"start":51,"end":58},"name":"substituted","value":"*p* {a}","parts":[{"kind":"raw","value":"*p* {a}"}]}]"#), "{json}");
+        let tokens = super::tokens_json_with_source(source, 4);
+        assert!(
+            tokens.contains(r#"{"span":{"source_id":4,"start":26,"end":32},"kind":"callout"}"#),
+            "{tokens}"
+        );
+        // Unselected stages leave no inline tokens.
+        assert!(!tokens.contains("strong"), "{tokens}");
+        assert!(!tokens.contains("attribute-ref"), "{tokens}");
+    }
+
+    #[test]
+    fn document_attributes_export_icon_font_defaults() {
+        let json = super::parse_json("x");
+        assert!(json.contains(r#""iconfont-remote":"""#), "{json}");
+        assert!(json.contains(r#""stylesdir":".""#), "{json}");
+        let json = super::parse_json(":iconfont-remote!:\n\nx");
+        assert!(!json.contains("iconfont-remote"), "{json}");
+    }
+
+    #[test]
+    fn callout_icons_export_the_mode_where_blocks_convert() {
+        let json = super::parse_json(
+            ":icons: font\n\n----\nx <1>\n----\n<1> a\n\n:icons!:\n\n----\ny <1>\n----\n<1> b",
+        );
+        assert!(
+            json.contains(
+                r#""number":"1","id":"CO1-1","guard":null,"xml":false,"icons":"font","src":""}]"#
+            ),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""coids":["CO1-1"],"icons":"font","src":""}"#),
+            "{json}"
+        );
+        assert!(
+            json.contains(
+                r#""number":"1","id":"CO2-1","guard":null,"xml":false,"icons":null,"src":""}]"#
+            ),
+            "{json}"
+        );
+    }
+
+    #[test]
     fn callouts_export_spans_and_tokens() {
         let source = "----\nx <1>\n----\n<1> one";
         let json = super::parse_json_with_source(source, 3);
-        assert!(json.contains(r#""callouts":[{"span":{"source_id":3,"start":7,"end":10},"number":"1","id":"CO1-1","guard":null,"xml":false}]"#), "{json}");
-        assert!(json.contains(r#""blocks":[],"coids":["CO1-1"]}"#), "{json}");
+        assert!(json.contains(r#""callouts":[{"span":{"source_id":3,"start":7,"end":10},"number":"1","id":"CO1-1","guard":null,"xml":false,"icons":null,"src":""}]"#), "{json}");
+        assert!(
+            json.contains(r#""blocks":[],"coids":["CO1-1"],"icons":null,"src":""}"#),
+            "{json}"
+        );
         let tokens = super::tokens_json_with_source(source, 3);
         assert!(
             tokens.contains(r#"{"span":{"source_id":3,"start":7,"end":10},"kind":"callout"}"#),
