@@ -26,6 +26,65 @@ pub struct ParseOptions {
     /// attributes (`localdate`, `docdate`, …). Core reads no clock: without
     /// them those attributes stay unset, which keeps output deterministic.
     pub dates: Option<DocumentDates>,
+    /// Ruby's safe mode (`safe-mode-*` attributes and their restrictions).
+    /// The default is `Safe`: resource providers already own access policy.
+    /// Ruby's API defaults to `Secure`, its CLI to `Unsafe`.
+    pub safe: SafeMode,
+}
+
+/// Ruby's `SafeMode` levels.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum SafeMode {
+    /// No restrictions.
+    Unsafe,
+    /// Paths are confined to the document's directory (the provider's jail).
+    #[default]
+    Safe,
+    /// Like `Safe`, and the document cannot see its directory or set
+    /// `copycss`, `source-highlighter` or `backend`.
+    Server,
+    /// Like `Server`, and includes become links, stylesheets are linked,
+    /// icons and docinfo are disabled and attribute values are limited.
+    Secure,
+}
+
+impl SafeMode {
+    /// Ruby's level number (`safe-mode-level`).
+    pub fn level(self) -> u8 {
+        match self {
+            Self::Unsafe => 0,
+            Self::Safe => 1,
+            Self::Server => 10,
+            Self::Secure => 20,
+        }
+    }
+
+    /// Ruby's name (`safe-mode-name`).
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Unsafe => "unsafe",
+            Self::Safe => "safe",
+            Self::Server => "server",
+            Self::Secure => "secure",
+        }
+    }
+
+    /// The mode for a name (any case), like `SafeMode.value_for_name`.
+    pub fn from_name(name: &str) -> Option<Self> {
+        [Self::Unsafe, Self::Safe, Self::Server, Self::Secure]
+            .into_iter()
+            .find(|mode| mode.name().eq_ignore_ascii_case(name))
+    }
+
+    /// The mode of a document from its `safe-mode-level` attribute.
+    pub fn of(attributes: &Attributes) -> Self {
+        match attributes.get("safe-mode-level") {
+            Some("0") => Self::Unsafe,
+            Some("10") => Self::Server,
+            Some("20") => Self::Secure,
+            _ => Self::Safe,
+        }
+    }
 }
 
 /// A wall-clock time with its UTC offset, as the host's clock reports it.
@@ -73,6 +132,31 @@ impl DateTime {
 pub struct DocumentDates {
     pub local: DateTime,
     pub document: DateTime,
+}
+
+/// Ruby's `limit_bytesize` of a substituted attribute value: keep at most
+/// `max` bytes of its lexical spelling, cutting text at a character boundary.
+fn limit_bytesize(parts: &mut Vec<AttributePart>, max: usize) {
+    let mut size = 0;
+    let mut kept = 0;
+    for part in parts.iter_mut() {
+        let length = part.lexical().len();
+        if size + length <= max {
+            size += length;
+            kept += 1;
+            continue;
+        }
+        if let AttributePart::Text(text) | AttributePart::Raw(text) = part {
+            let mut end = max - size;
+            while !text.is_char_boundary(end) {
+                end -= 1;
+            }
+            text.truncate(end);
+            kept += 1;
+        }
+        break;
+    }
+    parts.truncate(kept);
 }
 
 /// Ruby's `fill_datetime_attributes`: each value fills only an unset key,
@@ -224,6 +308,8 @@ pub(crate) struct ParseContext {
     /// Whether the header changed `htmlsyntax` since the last `backend`
     /// assignment (Ruby's `@attributes_modified.delete? 'htmlsyntax'`).
     htmlsyntax_modified: bool,
+    /// Ruby's `@max_attribute_value_size` (secure mode's 4096 bytes).
+    max_attribute_value_size: Option<usize>,
 }
 
 fn root_of(
@@ -315,6 +401,74 @@ impl ParseContext {
             );
             locked.insert(effective_key.to_string());
         }
+        // Ruby's safe mode overrides (`||=` keeps a host value).
+        let safe = options.safe;
+        fn host_or(
+            attributes: &mut Attributes,
+            locked: &mut BTreeSet<String>,
+            key: &str,
+            value: Option<&str>,
+        ) {
+            if locked.insert(key.to_owned()) {
+                match value {
+                    Some(value) => attributes.set(key, value),
+                    None => {
+                        attributes.remove(key);
+                    }
+                }
+            }
+        }
+        for key in [
+            "safe-mode-unsafe",
+            "safe-mode-safe",
+            "safe-mode-server",
+            "safe-mode-secure",
+        ] {
+            attributes.remove(key);
+        }
+        attributes.set("safe-mode-name", safe.name());
+        attributes.set(format!("safe-mode-{}", safe.name()), "");
+        attributes.set("safe-mode-level", safe.level().to_string());
+        locked.extend(
+            ["safe-mode-name", "safe-mode-level"]
+                .map(str::to_owned)
+                .into_iter()
+                .chain([format!("safe-mode-{}", safe.name())]),
+        );
+        // `allow-uri-read` is only ever set by the host.
+        host_or(&mut attributes, &mut locked, "allow-uri-read", None);
+        if safe >= SafeMode::Server {
+            host_or(&mut attributes, &mut locked, "copycss", None);
+            host_or(&mut attributes, &mut locked, "source-highlighter", None);
+            host_or(&mut attributes, &mut locked, "backend", Some("html5"));
+            // The document cannot see its directory; its file is relative.
+            if let (Some(file), Some(dir)) = (attributes.get("docfile"), attributes.get("docdir")) {
+                if let Some(relative) = file
+                    .strip_prefix(dir)
+                    .and_then(|rest| rest.strip_prefix('/'))
+                    .map(str::to_owned)
+                {
+                    attributes.set("docfile", relative);
+                }
+            }
+            attributes.set("docdir", "");
+            locked.insert("docdir".to_owned());
+            host_or(&mut attributes, &mut locked, "user-home", Some("."));
+            if safe >= SafeMode::Secure {
+                if !locked.contains("max-attribute-value-size") {
+                    attributes.set("max-attribute-value-size", "4096");
+                    locked.insert("max-attribute-value-size".to_owned());
+                }
+                if !locked.contains("linkcss") {
+                    attributes.set("linkcss", "");
+                    locked.insert("linkcss".to_owned());
+                }
+                host_or(&mut attributes, &mut locked, "icons", None);
+            }
+        }
+        let max_attribute_value_size = attributes
+            .get("max-attribute-value-size")
+            .map(|size| crate::include_selection::integer_prefix(size).unsigned_abs() as usize);
         // Ruby syncs the `embedded` override with the mode; embedded content
         // hides the title unless the host shows it, and a host `showtitle` or
         // `notitle` locks the other key unset.
@@ -379,6 +533,7 @@ impl ParseContext {
             verbatim_bodies: BTreeMap::new(),
             profile,
             htmlsyntax_modified: false,
+            max_attribute_value_size,
         }
     }
 
@@ -923,6 +1078,9 @@ impl ParseContext {
             }
             parts
         });
+        if let (Some(parts), Some(max)) = (&mut value, self.max_attribute_value_size) {
+            limit_bytesize(parts, max);
+        }
         if let Some(parts) = &mut value {
             self.fix_xrefs(parts, span);
         }

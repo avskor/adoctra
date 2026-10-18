@@ -582,7 +582,11 @@ impl<'a> Reader<'a> {
                 self.inactive.push(span);
                 return None;
             }
-            if self.resources.is_none() {
+            // Secure mode turns the directive into a link, even without a
+            // provider; otherwise only a provider expands includes.
+            if self.resources.is_none()
+                && crate::context::SafeMode::of(attributes) < crate::context::SafeMode::Secure
+            {
                 return Some((off, line));
             }
             self.includes.push(span);
@@ -693,6 +697,24 @@ impl<'a> Reader<'a> {
         }
     }
 
+    /// Ruby's `replace_next_line %(link:#{target}[role=include])` (a target
+    /// with spaces in `pass:c[…]`): a generated line with the directive as
+    /// its origin, read like any other line.
+    fn include_link(&mut self, target: &str, span: Span) -> bool {
+        let target = if target.contains(' ') {
+            format!("pass:c[{target}]")
+        } else {
+            target.to_owned()
+        };
+        let source_id = self.inputs.last().expect("current input").source_id;
+        let mut input = Input::new("", source_id, true, self.next_occurrence);
+        input.lines = vec![Line::generated(format!("link:{target}[role=include]"))];
+        input.generated_at = Some(self.original_spans(span)[0]);
+        self.inputs.push(input);
+        self.next_occurrence += 1;
+        true
+    }
+
     fn expand_include(
         &mut self,
         target: &str,
@@ -751,6 +773,14 @@ impl<'a> Reader<'a> {
             // failures. Ruby's path-bearing fallback is outside this profile.
             return false;
         }
+        // Ruby's secure mode does not process the directive; it leaves a
+        // link to the target instead.
+        if crate::context::SafeMode::of(attributes) >= crate::context::SafeMode::Secure {
+            return self.include_link(&expanded_target, span);
+        }
+        if self.resources.is_none() {
+            return false;
+        }
         // Resources are immutable UTF-8 snapshots supplied by the host. Keep
         // rejecting transcoding requests until the provider contract defines it.
         if attrs.contains_key("encoding") {
@@ -770,6 +800,27 @@ impl<'a> Reader<'a> {
             self.error(span, "maximum include depth exceeded".into());
             return false;
         }
+        // A URI (or a target inside a URI include) is read only with
+        // `allow-uri-read`; otherwise Ruby links to it.
+        let parent_name = resources
+            .sources
+            .get(current)
+            .map(|source| source.name().to_owned());
+        let uri_target = if crate::image::uri_prefix(&target).is_some() {
+            Some(target.clone())
+        } else {
+            parent_name
+                .filter(|name| crate::image::uri_prefix(name).is_some())
+                .map(|name| match name.rfind('/') {
+                    Some(slash) => format!("{}/{target}", &name[..slash]),
+                    None => target.clone(),
+                })
+        };
+        if let (Some(uri), None) = (&uri_target, attributes.get("allow-uri-read")) {
+            let uri = uri.clone();
+            return self.include_link(&uri, span);
+        }
+        let resources = self.resources.as_mut().expect("explicit resource provider");
         let id = match resources
             .sources
             .load(&target, Some(current), resources.provider)

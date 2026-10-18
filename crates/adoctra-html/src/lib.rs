@@ -351,10 +351,28 @@ fn read_stylesheet(
     };
     if uri(sheet) || stylesdir.is_some_and(uri) {
         let target = adoctra_core::normalize_web_path(sheet, stylesdir, true);
-        warnings.push(format!(
-            "cannot retrieve contents of stylesheet at URI: {target} (allow-uri-read attribute not enabled)"
-        ));
-        return None;
+        if attributes.get("allow-uri-read").is_none() {
+            warnings.push(format!(
+                "cannot retrieve contents of stylesheet at URI: {target} (allow-uri-read attribute not enabled)"
+            ));
+            return None;
+        }
+        // The host's provider reads URIs (the CLI fetches them).
+        let loaded = resources.and_then(|resources| {
+            resources
+                .provider
+                .load(ResourceRequest {
+                    target: &target,
+                    referrer: resources.referrer.as_deref(),
+                })
+                .ok()
+        });
+        if loaded.is_none() {
+            warnings.push(format!(
+                "could not retrieve contents of stylesheet at URI: {target}"
+            ));
+        }
+        return loaded.map(|resource| resource.text);
     }
     let target = match stylesdir.filter(|dir| !dir.is_empty() && !sheet.starts_with('/')) {
         Some(dir) => format!("{}/{sheet}", dir.trim_end_matches('/')),
@@ -399,7 +417,10 @@ fn docinfo(
     resources: Option<&Resources>,
     out: &mut String,
 ) {
-    let Some(resources) = resources else {
+    // Secure mode reads no docinfo.
+    let Some(resources) = resources
+        .filter(|_| adoctra_core::SafeMode::of(attributes) < adoctra_core::SafeMode::Secure)
+    else {
         return;
     };
     let suffix = attributes.get("outfilesuffix").unwrap_or(".html");
@@ -3339,6 +3360,99 @@ mod tests {
             html.contains("</style>\n</head>\n<body class=\"article\">\n<header"),
             "{html}"
         );
+    }
+
+    /// A provider serving one remote stylesheet besides local files.
+    struct Remote(adoctra_core::MemoryResources);
+
+    impl ResourceProvider for Remote {
+        fn load(
+            &self,
+            request: ResourceRequest<'_>,
+        ) -> adoctra_core::ResourceResult<adoctra_core::Resource> {
+            match request.target {
+                "https://cdn.org/css/r.css" => Ok(adoctra_core::Resource {
+                    name: request.target.into(),
+                    text: "body { color: blue; }".into(),
+                }),
+                target if target.starts_with("https://") => Err(adoctra_core::ResourceError::new(
+                    adoctra_core::ResourceErrorKind::NotFound,
+                    target,
+                    "missing",
+                )),
+                _ => self.0.load(request),
+            }
+        }
+    }
+
+    fn render_mode(source: &str, safe: adoctra_core::SafeMode, allow: bool) -> Output {
+        let resources = Remote(memory(&[
+            ("/d/guide.adoc", source),
+            ("/d/docinfo.html", "<meta name=\"d\">"),
+        ]));
+        let mut sources = adoctra_core::SourceMap::new();
+        let source_id = sources.load("/d/guide.adoc", None, &resources).unwrap();
+        let mut attributes = adoctra_core::Attributes::new();
+        if allow {
+            attributes.set("allow-uri-read", "");
+        }
+        let options = adoctra_core::ParseOptions {
+            source_id,
+            attributes,
+            safe,
+            ..Default::default()
+        };
+        let doc = adoctra_core::parse_resource(&mut sources, &options, &resources)
+            .unwrap()
+            .document;
+        HtmlBackend::new()
+            .with_resources(Arc::new(resources), Some("/d/guide.adoc".into()))
+            .render(&doc)
+    }
+
+    #[test]
+    fn safe_mode_and_allow_uri_read_control_what_the_document_reads() {
+        use adoctra_core::SafeMode::{Safe, Secure, Unsafe};
+        // Docinfo below secure mode only.
+        let source = "= T\n:docinfo: shared\n\nx";
+        assert!(render_mode(source, Unsafe, false)
+            .html
+            .contains("<meta name=\"d\">\n</head>"));
+        assert!(!render_mode(source, Secure, false)
+            .html
+            .contains("<meta name=\"d\">"));
+        // Secure mode links the default stylesheet.
+        let html = render_mode("= T\n\nx", Secure, false).html;
+        assert!(
+            html.contains("<link rel=\"stylesheet\" href=\"./adoctra.css\">"),
+            "{html}"
+        );
+        // A URI stylesheet is read with `allow-uri-read` (the host's provider).
+        let remote = "= T\n:stylesheet: r.css\n:stylesdir: https://cdn.org/css\n\nx";
+        let output = render_mode(remote, Safe, true);
+        assert!(
+            output
+                .html
+                .contains("<style>\nbody { color: blue; }\n</style>"),
+            "{}",
+            output.html
+        );
+        assert!(output.warnings.is_empty());
+        let output = render_mode(remote, Safe, false);
+        assert_eq!(
+            output.warnings,
+            ["cannot retrieve contents of stylesheet at URI: https://cdn.org/css/r.css (allow-uri-read attribute not enabled)"]
+        );
+        let output = render_mode(
+            "= T\n:stylesheet: https://cdn.org/gone.css\n\nx",
+            Safe,
+            true,
+        );
+        assert_eq!(
+            output.warnings,
+            ["could not retrieve contents of stylesheet at URI: https://cdn.org/gone.css"]
+        );
+        assert!(output.html.contains("<style>\n\n</style>"));
     }
 
     #[test]

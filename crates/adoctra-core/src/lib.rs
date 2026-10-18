@@ -68,7 +68,7 @@ mod attribute_macros;
 mod attribute_quotes;
 mod xref_target;
 pub use backend::Backend;
-pub use context::{DateTime, DocumentDates, IncludeLimits, ParseOptions};
+pub use context::{DateTime, DocumentDates, IncludeLimits, ParseOptions, SafeMode};
 pub use diagnostic::{Diagnostic, ParseResult, Severity};
 pub use docinfo::{docinfo, DocinfoLocation};
 pub use error::{Error, Result};

@@ -514,3 +514,58 @@ fn cli_supplies_dates_docinfo_and_copies_linked_stylesheets() {
     );
     std::fs::remove_dir_all(&root).unwrap();
 }
+
+#[test]
+fn cli_safe_mode_controls_includes_user_home_and_copied_stylesheets() {
+    use std::process::Command;
+    let root = std::env::temp_dir().join(format!("adoctra-cli-safe-{}", std::process::id()));
+    std::fs::create_dir_all(root.join("docs")).unwrap();
+    std::fs::write(root.join("outside.adoc"), "Outside text").unwrap();
+    std::fs::write(
+        root.join("docs/main.adoc"),
+        "{safe-mode-name} [{user-home}]\n\ninclude::../outside.adoc[]\n",
+    )
+    .unwrap();
+    let run = |args: &[&str]| {
+        let output = Command::new(env!("CARGO_BIN_EXE_adoctra"))
+            .arg(root.join("docs/main.adoc"))
+            .args(args)
+            .env("HOME", "/home/someone")
+            .output()
+            .unwrap();
+        (
+            output.status.success(),
+            String::from_utf8(output.stdout).unwrap(),
+        )
+    };
+    // The default safe mode keeps paths in the input's directory.
+    let (ok, html) = run(&["-s", "--stdout"]);
+    assert!(ok);
+    assert!(html.contains("<p>safe [/home/someone]</p>"), "{html}");
+    assert!(html.contains("include::../outside.adoc[]"), "{html}");
+    let (_, html) = run(&["-s", "--safe", "--stdout"]);
+    assert!(html.contains("<p>safe "), "{html}");
+    // Unsafe mode reads anywhere.
+    let (_, html) = run(&["-s", "-S", "unsafe", "--stdout"]);
+    assert!(html.contains("<p>Outside text</p>"), "{html}");
+    // Server mode hides the home; secure mode links includes.
+    let (_, html) = run(&["-s", "-S", "server", "--stdout"]);
+    assert!(html.contains("<p>server [.]</p>"), "{html}");
+    let (_, html) = run(&["-s", "-S", "SECURE", "--stdout"]);
+    assert!(
+        html.contains("<a href=\"../outside.adoc\" class=\"bare include\">../outside.adoc</a>"),
+        "{html}"
+    );
+    // An unknown mode is a usage error.
+    let (_, html) = run(&["-S", "paranoid", "--stdout"]);
+    assert!(html.is_empty());
+    // Secure mode links the stylesheet but never copies it.
+    let out = root.join("out/main.html");
+    let (ok, _) = run(&["-S", "secure", "-a", "copycss", "-o", out.to_str().unwrap()]);
+    assert!(ok);
+    assert!(std::fs::read_to_string(&out)
+        .unwrap()
+        .contains("<link rel=\"stylesheet\" href=\"./adoctra.css\">"));
+    assert!(!root.join("out/adoctra.css").exists());
+    std::fs::remove_dir_all(&root).unwrap();
+}

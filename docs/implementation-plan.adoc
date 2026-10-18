@@ -1682,6 +1682,24 @@ Ruby API и выполнение Ruby-расширений относятся к
 * Добавлены 3 сравнительных сценария: всего 3098 PASS и 2 XFAIL. Проверены
   Rust-тесты, fmt, clippy, WASM target и тесты стенда.
 
+Девяностый рабочий набор изменений:
+
+* Safe mode, как `Document#initialize` Ruby: `ParseOptions.safe`
+  (`SafeMode`), атрибуты `safe-mode-*`, блокировки server (`copycss`,
+  `source-highlighter`, `backend`, пустой `docdir`, относительный `docfile`,
+  `user-home`) и secure (`max-attribute-value-size` 4096 с усечением значений,
+  `linkcss`, `icons`), include в secure — `link:…[role=include]`, docinfo и
+  копирование stylesheet только ниже secure.
+* `allow-uri-read`: include по URI (и относительные цели внутри него) и
+  пользовательский stylesheet по URI читаются через provider, без атрибута
+  include становится ссылкой, а stylesheet — предупреждением.
+* CLI: `-S`/`--safe-mode`, `--safe` (по умолчанию safe), unsafe без
+  ограничения каталогом, `user-home`, загрузка http/https через `ureq`.
+  Стенд запускает CLI с `-S secure` (include-сценарии — `-S safe`).
+* XFAIL `icons-secure-mode-lock` переведён в PASS, добавлены 4 сценария:
+  всего 3103 PASS и 1 XFAIL. Проверены Rust-тесты, fmt, clippy, WASM target и
+  тесты стенда.
+
 *Следующее изменение:* оставшиеся блочные семейства и substitutions — по приоритетам этапов 4–6.
 Исполнение выражений reftext в ранних ссылках
 заголовков и порядок регистрации контейнеров после содержимого — отдельная работа.
@@ -1694,7 +1712,8 @@ Ruby API и выполнение Ruby-расширений относятся к
 потребителей, включая замену doctitle целиком.
 Отдельно остаётся согласование Unicode word-грамматики остальных потребителей (например, include/conditional).
 Encoding, URI и safe mode (включая атрибуты `safe-mode-*`) требуют отдельного
-согласования с контрактом provider; `allow-uri-read` тоже впереди.
+согласования с контрактом provider; `cache-uri`, data URI и встраивание SVG
+тоже впереди.
 Полная совместимость header ещё требует
 полного набора header substitutions и остальных стадий pass:. Карта фрагментов покрывает
 комментарии, условия и составные источники;

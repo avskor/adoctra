@@ -106,7 +106,8 @@ pub(crate) fn scaled_width(value: &str) -> String {
 
 /// `UriSniffRx` (`\A\p{Alpha}[\p{Alnum}.+-]+:/{0,2}`): the length of a URI
 /// scheme prefix, including up to two slashes.
-fn uri_prefix(s: &str) -> Option<usize> {
+/// Ruby's `UriSniffRx` (`uriish?`): the end of a scheme prefix.
+pub(crate) fn uri_prefix(s: &str) -> Option<usize> {
     let mut chars = s.char_indices();
     if !chars.next()?.1.is_alphabetic() {
         return None;

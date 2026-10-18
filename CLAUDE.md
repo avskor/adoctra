@@ -66,7 +66,8 @@ The model serves three audiences; keep their needs in mind when changing core:
   deps go in the root `[workspace.dependencies]` and are referenced with
   `{ workspace = true }`.
 - Keep the scaffold **dependency-light**. The core/backends are intentionally
-  `std`-only right now (the CLI uses `chrono` for the local clock only); the
+  `std`-only right now (the CLI uses `chrono` for the local clock and `ureq`
+  for URIs); the
   `thiserror`/`docx-rs`/`clap`/`serde` lines in the
   root manifest are commented placeholders. Add a dependency only when it earns
   its place, and prefer `cargo add` so versions stay current.
@@ -534,7 +535,7 @@ web_path under `imagesdir` at the macro; icons capture the `icons` mode (None �
 `[alt&#93;`, font → `<i class="fa …">`, else icon_uri: `icon` attr or target +
 `icontype` under `iconsdir`, default `<imagesdir option or ./images>/icons`);
 header save_icons normalizes `icons`/`icontype` like save_attributes. Secure
-mode's `icons` lock is not modeled (XFAIL icons-secure-mode-lock). Source-owned
+mode locks `icons` unset (see **Safe mode**). Source-owned
 results are `Inline::Image { image, span }`, attribute-owned
 `AttributePart::Image` (lexical = Ruby's span markup). HTML renders Ruby's
 `<span class="image|icon …">`; section ids ignore it; borrowed xref labels drop
@@ -1366,7 +1367,24 @@ the output directory and copies stylesheets with `linkcss`+`copycss`. The
 bench runs `-s -a showtitle`; `golden/document/` compares the standalone shell
 with `asciidoctor-reference.rb --standalone`. adoctra.css lays out the header,
 details, footer and the fixed `toc2` sidebar like Ruby (checked with
-screenshots). Not modeled: `allow-uri-read`, safe mode.
+screenshots).
+**Safe mode**: `ParseOptions.safe: SafeMode` (Unsafe/Safe/Server/Secure,
+default Safe — Ruby's API defaults to Secure, its CLI to Unsafe; providers
+own access policy) sets Ruby's `safe-mode-*` overrides; `allow-uri-read` is
+host-only. Server+: `copycss`/`source-highlighter` locked unset, `backend`
+locked html5, `docdir` '' and `docfile` relative, `user-home` `.`. Secure:
+`max-attribute-value-size` 4096 (ParseContext truncates entry values with
+`limit_bytesize` over parts), `linkcss` and `icons` locks, include directives
+become generated `link:target[role=include]` lines (reader.rs include_link,
+also without a provider and in verbatim), no docinfo (HTML) and no CLI
+stylesheet copy. URI includes (or relative targets in a URI include) without
+`allow-uri-read` become the same link; with it the provider loads them; a URI
+stylesheet is read through the HTML resources. `SafeMode::of(attributes)`
+reads the level back. The CLI takes `-S`/`--safe-mode`/`--safe` (default
+safe), unjails FileResources in unsafe mode, passes `user-home` below server
+and fetches http/https with `ureq`; the bench runs it with `-S secure`
+(include fixtures `-S safe`). Not modeled: `cache-uri`, data URIs, inline/
+interactive SVG, Ruby's jail recovery (providers deny).
 
 When asked to "add a feature," check this list first and say plainly whether it
 is new work or wiring up an existing seam.

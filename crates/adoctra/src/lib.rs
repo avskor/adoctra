@@ -18,7 +18,7 @@ pub use adoctra_core::{
     DocinfoLocation, Document, DocumentDates, DocumentHeader, Error, IncludeLimits, Inline,
     MemoryResources, ParseOptions, ParseResult, Registry, Resource, ResourceError,
     ResourceErrorKind, ResourceProvider, ResourceRequest, ResourceResult, Result, Revision,
-    Severity, SourceFile, SourceId, SourceMap, SourcePosition, Span, Token, TokenKind,
+    SafeMode, Severity, SourceFile, SourceId, SourceMap, SourcePosition, Span, Token, TokenKind,
     TreeProcessor,
 };
 

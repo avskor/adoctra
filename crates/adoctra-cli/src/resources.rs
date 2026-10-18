@@ -6,6 +6,52 @@ use std::path::{Path, PathBuf};
 
 pub(crate) struct FileResources {
     root: PathBuf,
+    /// Confine paths to the root (safe mode and above); unsafe mode reads
+    /// any path, like Ruby without a jail.
+    jail: bool,
+}
+
+/// Ruby's `uriish?`: a scheme of two or more characters and a colon.
+fn uriish(value: &str) -> bool {
+    value.split_once(':').is_some_and(|(scheme, _)| {
+        scheme.len() > 1
+            && scheme.chars().next().is_some_and(|c| c.is_alphabetic())
+            && scheme
+                .chars()
+                .all(|c| c.is_alphanumeric() || matches!(c, '.' | '+' | '-'))
+    })
+}
+
+/// Read a URI (the core asks only with `allow-uri-read`), like Ruby's
+/// `open-uri`.
+fn fetch(uri: &str) -> ResourceResult<Resource> {
+    let scheme = uri
+        .split(':')
+        .next()
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+    if scheme != "http" && scheme != "https" {
+        return Err(ResourceError::new(
+            ResourceErrorKind::InvalidTarget,
+            uri,
+            "unsupported URI scheme",
+        ));
+    }
+    let response = ureq::get(uri).call().map_err(|error| {
+        let kind = match &error {
+            ureq::Error::Status(404 | 410, _) => ResourceErrorKind::NotFound,
+            ureq::Error::Status(401 | 403, _) => ResourceErrorKind::AccessDenied,
+            _ => ResourceErrorKind::Io,
+        };
+        ResourceError::new(kind, uri, error.to_string())
+    })?;
+    let text = response.into_string().map_err(|error| {
+        ResourceError::new(ResourceErrorKind::InvalidEncoding, uri, error.to_string())
+    })?;
+    Ok(Resource {
+        name: uri.to_owned(),
+        text,
+    })
 }
 
 impl FileResources {
@@ -21,7 +67,13 @@ impl FileResources {
                 "resource root is not a directory",
             ));
         }
-        Ok(Self { root })
+        Ok(Self { root, jail: true })
+    }
+
+    /// Read paths outside the root too (unsafe mode).
+    pub fn unjailed(mut self) -> Self {
+        self.jail = false;
+        self
     }
 }
 
@@ -36,6 +88,16 @@ impl ResourceProvider for FileResources {
 
     fn load(&self, request: ResourceRequest<'_>) -> ResourceResult<Resource> {
         let target = request.target;
+        // A URI, or a relative target inside a URI resource.
+        if uriish(target) {
+            return fetch(target);
+        }
+        if let Some(referrer) = request.referrer.filter(|referrer| uriish(referrer)) {
+            let base = referrer
+                .rfind('/')
+                .map_or(referrer, |slash| &referrer[..slash]);
+            return fetch(&format!("{base}/{target}"));
+        }
         if target.is_empty()
             || target.contains('\0')
             || target.contains("://")
@@ -53,7 +115,7 @@ impl ResourceProvider for FileResources {
             .unwrap_or(&self.root);
         let path = self.root.join(parent).join(target);
         let path = path.canonicalize().map_err(|e| io_error(target, e))?;
-        if !path.starts_with(&self.root) {
+        if self.jail && !path.starts_with(&self.root) {
             return Err(ResourceError::new(
                 ResourceErrorKind::AccessDenied,
                 target,
@@ -175,10 +237,8 @@ mod tests {
             ("../outside.adoc", ResourceErrorKind::AccessDenied),
             ("bad.adoc", ResourceErrorKind::InvalidEncoding),
             ("chapters", ResourceErrorKind::InvalidTarget),
-            (
-                "https://example.org/a.adoc",
-                ResourceErrorKind::InvalidTarget,
-            ),
+            ("file:///etc/hostname", ResourceErrorKind::InvalidTarget),
+            ("ftp://example.org/a.adoc", ResourceErrorKind::InvalidTarget),
         ] {
             assert_eq!(
                 sources.load(target, None, &provider).unwrap_err().kind,
@@ -187,6 +247,68 @@ mod tests {
             );
         }
         assert!(sources.get(adoctra::SourceId(0)).is_none());
+    }
+
+    #[test]
+    fn unsafe_mode_reads_outside_the_root() {
+        let tree = Tree::new();
+        std::fs::write(tree.0.join("outside.adoc"), "outside").unwrap();
+        let provider = FileResources::new(tree.0.join("docs")).unwrap().unjailed();
+        let mut sources = SourceMap::new();
+        let id = sources.load("../outside.adoc", None, &provider).unwrap();
+        assert_eq!(sources.get(id).unwrap().text(), "outside");
+    }
+
+    /// A one-request-per-connection HTTP server for `paths`.
+    fn serve(paths: &'static [(&'static str, &'static str)]) -> String {
+        use std::io::{BufRead, BufReader, Write};
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        std::thread::spawn(move || {
+            for stream in listener.incoming() {
+                let mut stream = stream.unwrap();
+                let mut line = String::new();
+                BufReader::new(&stream).read_line(&mut line).unwrap();
+                let path = line.split(' ').nth(1).unwrap_or_default().to_owned();
+                let response = match paths.iter().find(|(p, _)| *p == path) {
+                    Some((_, body)) => format!(
+                        "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                        body.len()
+                    ),
+                    None => {
+                        "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+                            .to_owned()
+                    }
+                };
+                let _ = stream.write_all(response.as_bytes());
+            }
+        });
+        format!("http://{address}")
+    }
+
+    #[test]
+    fn uris_are_fetched_and_relative_targets_resolve_against_them() {
+        let base = serve(&[("/docs/a.adoc", "remote"), ("/docs/part/b.adoc", "child")]);
+        let tree = Tree::new();
+        let provider = FileResources::new(tree.0.join("docs")).unwrap();
+        let mut sources = SourceMap::new();
+        let a = sources
+            .load(&format!("{base}/docs/a.adoc"), None, &provider)
+            .unwrap();
+        assert_eq!(sources.get(a).unwrap().text(), "remote");
+        assert_eq!(
+            sources.get(a).unwrap().name(),
+            format!("{base}/docs/a.adoc")
+        );
+        let b = sources.load("part/b.adoc", Some(a), &provider).unwrap();
+        assert_eq!(sources.get(b).unwrap().text(), "child");
+        assert_eq!(
+            sources
+                .load(&format!("{base}/none.adoc"), None, &provider)
+                .unwrap_err()
+                .kind,
+            ResourceErrorKind::NotFound
+        );
     }
 
     #[cfg(unix)]

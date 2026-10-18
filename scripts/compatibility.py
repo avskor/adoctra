@@ -349,7 +349,9 @@ def validate_resources(case):
 def case_commands(case, binary):
     validate_resources(case)
     reference = ["ruby", str(ROOT / "scripts/asciidoctor-reference.rb"), "--showtitle"]
-    actual = [str(binary.resolve()), "-", "--to", "html", "--embedded", "-a", "showtitle", "--stdout"]
+    # Like the reference: secure mode, safe mode for include fixtures.
+    actual = [str(binary.resolve()), "-", "--to", "html", "--embedded", "-a", "showtitle",
+              "-S", "secure", "--stdout"]
     if "resources" not in case:
         yield reference, actual
         return
@@ -362,6 +364,7 @@ def case_commands(case, binary):
             path.write_text(text, encoding="utf-8", newline="")
         reference += ["--include-root", directory]
         actual[1] = str(root / "main.adoc")
+        actual[actual.index("secure")] = "safe"
         yield reference, actual
 
 

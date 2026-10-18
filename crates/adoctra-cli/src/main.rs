@@ -5,7 +5,8 @@
 //!   adoctra <input.adoc> [--to html|docx|json] [-s] [-a name[=value]]... [-o out] [--stdout]
 //!   adoctra -            (read from stdin)
 //!
-//! Like Ruby's CLI, it supplies the clock (`SOURCE_DATE_EPOCH` or the local
+//! The safe mode (`-S unsafe|safe|server|secure`, default safe) confines
+//! paths to the input's directory below unsafe. Like Ruby's CLI, it supplies the clock (`SOURCE_DATE_EPOCH` or the local
 //! time and the input's modification time) for the date attributes, reads a
 //! custom stylesheet and docinfo files next to the input, and copies the
 //! stylesheet next to the output with `linkcss` and `copycss`.
@@ -36,6 +37,7 @@ struct Args {
     to_stdout: bool,
     embedded: bool,
     attributes: adoctra::Attributes,
+    safe: adoctra::SafeMode,
 }
 
 fn run() -> adoctra::Result<()> {
@@ -48,13 +50,21 @@ fn run() -> adoctra::Result<()> {
     };
 
     let mut sources = adoctra::SourceMap::new();
-    let (source_id, provider) = load_source(&args.input, &mut sources)?;
+    let (source_id, provider) = load_source(&args.input, &mut sources, args.safe)?;
+    // Like Ruby below server mode, the document sees the user's home.
+    let mut attributes = args.attributes.clone();
+    if args.safe < adoctra::SafeMode::Server && attributes.get("user-home").is_none() {
+        if let Some(home) = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE")) {
+            attributes.set("user-home", home.to_string_lossy().replace('\\', "/"));
+        }
+    }
 
     // Parsing never fails on syntax; surface diagnostics, then keep going.
     let options = adoctra::ParseOptions {
         source_id,
-        attributes: args.attributes.clone(),
+        attributes,
         embedded: args.embedded,
+        safe: args.safe,
         dates: Some(dates(&args.input)?),
         ..Default::default()
     };
@@ -104,7 +114,7 @@ fn run() -> adoctra::Result<()> {
     }
     std::fs::write(&out_path, &bytes)?;
     eprintln!("wrote {}", out_path.display());
-    if args.backend == "html" {
+    if args.backend == "html" && args.safe < adoctra::SafeMode::Secure {
         let base = match &args.input[..] {
             "-" => std::env::current_dir()?,
             input => std::fs::canonicalize(input)?
@@ -229,6 +239,9 @@ fn parse_args() -> Option<Args> {
     let mut to_stdout = false;
     let mut embedded = false;
     let mut attributes = adoctra::Attributes::new();
+    // adoctra's CLI defaults to safe mode (Ruby's to unsafe): paths stay in
+    // the input's directory.
+    let mut safe = adoctra::SafeMode::Safe;
 
     let mut it = std::env::args().skip(1);
     while let Some(arg) = it.next() {
@@ -238,6 +251,8 @@ fn parse_args() -> Option<Args> {
             "-o" | "--out" => output = Some(PathBuf::from(it.next()?)),
             "--stdout" => to_stdout = true,
             "-s" | "--embedded" | "--no-header-footer" => embedded = true,
+            "-S" | "--safe-mode" => safe = adoctra::SafeMode::from_name(&it.next()?)?,
+            "--safe" => safe = adoctra::SafeMode::Safe,
             // Ruby's `-a name[=value]` as a hard override (the soft `@` and
             // unset `!` forms are not supported).
             "-a" | "--attribute" => {
@@ -268,12 +283,14 @@ fn parse_args() -> Option<Args> {
         to_stdout,
         embedded,
         attributes,
+        safe,
     })
 }
 
 fn load_source(
     input: &str,
     sources: &mut adoctra::SourceMap,
+    safe: adoctra::SafeMode,
 ) -> adoctra::Result<(adoctra::SourceId, Option<Arc<resources::FileResources>>)> {
     if input == "-" {
         let mut s = String::new();
@@ -298,6 +315,10 @@ fn load_source(
                 )
             })?;
         let provider = resources::FileResources::new(parent)?;
+        let provider = match safe {
+            adoctra::SafeMode::Unsafe => provider.unjailed(),
+            _ => provider,
+        };
         Ok((
             sources.load(name, None, &provider)?,
             Some(Arc::new(provider)),
@@ -361,6 +382,7 @@ fn print_usage() {
          OPTIONS:\n  -b, --to <BACKEND>   output format [default: html]\n  \
          -s, --embedded       HTML body content only (no document shell, header or footer)\n  \
          -a, --attribute <NAME[=VALUE]>  set a document attribute\n  \
+         -S, --safe-mode <MODE>  unsafe, safe (default), server or secure\n  \
          -o, --out <FILE>     output path\n      --stdout         write to stdout\n  \
          -h, --help           show this help"
     );

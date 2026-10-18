@@ -57,10 +57,10 @@ python3 -m unittest discover -s scripts -p 'test_*.py'
 `--verify-reference` заново запускает закреплённый gem и проверяет эталоны.
 Установка: `gem install asciidoctor --version 2.0.23 --no-document`.
 Ruby-процесс явно активирует эту версию; другая установленная версия не заменяет её.
-Обычный профиль работает в secure mode без файловых включений. Сценарии
-`include-body-dom-v1` задают словарь `resources`: стенд создаёт временное дерево
-с `main.adoc`, запускает Ruby в safe mode с этим base_dir, а CLI — с тем же
-основным файлом и корнем ресурсов. Нормализация HTML совпадает с `body-dom-v1`.
+Обычный профиль работает в secure mode без файловых включений (CLI с
+`-S secure`). Сценарии `include-body-dom-v1` задают словарь `resources`: стенд
+создаёт временное дерево с `main.adoc`, запускает Ruby в safe mode с этим
+base_dir, а CLI — с тем же основным файлом, корнем ресурсов и `-S safe`. Нормализация HTML совпадает с `body-dom-v1`.
 Пути fixtures проверяются до записи; выход за дерево и подмена main.adoc запрещены.
 
 `--update-reference` пересоздаёт эталоны, но не меняет ожидаемые результаты adoctra.
@@ -89,7 +89,7 @@ Ruby-процесс явно активирует эту версию; друг�
 |Ссылки и метаданные |Частично |Ссылки в заголовках, очистка автоматических ID, грамматика, объединение и подстановки списков атрибутов блоков и атрибуции проверены; title/reftext из списков и перенос названия через разделы проверены; каталог inline-якорей проверен; подписи xref при преобразовании (reftext при каждом обращении, названия блоков, ранние ID разделов) проверены; распознавание inline-якорей и xref после a-стадии проверено; междокументные пути, каталог include и естественные xref проверены; xref в pass:m и параметрах ссылок проверены; xrefstyle для подписей примеров и глав книги проверен
 |Подписи примеров, рисунков и таблиц |Частично |Изменение/удаление префикса, вложенная нумерация и контексты проверены; сворачиваемые примеры (`%collapsible`, без номера) проверены; `figure-caption` изображений и `table-caption` таблиц проверены
 |Изображения |Блочный макрос реализован |`image::` с alt/размерами, link/window, float/align, imagesdir, подписи и xref проверены; SVG inline/interactive и data-uri (небезопасные режимы) впереди
-|Inline-изображения и иконки |Реализованы |`image:`/`icon:` в стадии макросов: alt/размеры/title/link/role/float, экранирование, грамматика цели и списка, imagesdir, значения атрибутов, ссылки и форматирование, заголовки/ID/xref, drop-line; режимы `icons` font/image проверены вручную в safe mode; блокировка `icons` в secure mode — XFAIL
+|Inline-изображения и иконки |Реализованы |`image:`/`icon:` в стадии макросов: alt/размеры/title/link/role/float, экранирование, грамматика цели и списка, imagesdir, значения атрибутов, ссылки и форматирование, заголовки/ID/xref, drop-line; режимы `icons` font/image проверены вручную в safe mode; блокировка `icons` в secure mode — PASS
 |Видео и аудио |Блочные макросы реализованы |`video::` (локальный, YouTube, Vimeo: poster, размеры, start/end, опции, playlist/list/hash, `asset-uri-scheme`) и `audio::` с imagesdir, названиями, xref, drop-line и продолжениями списков проверены
 |Источники и позиции |Базовая модель готова |SourceMap/source_id и provenance для диапазонов через включения; общие substitutions ещё впереди
 |Комментарии |Базовые формы реализованы |//, //// и [comment], header/list/container, verbatim, позиции и незакрытые блоки проверены
@@ -941,10 +941,9 @@ window/noopener/nofollow, role/float, alt по умолчанию из имен�
 список, `x[1]`, пробелы и `::`), специальные символы в цели и alt, иконки в
 текстовом режиме, изображения в метках ссылок, форматировании и значениях
 атрибутов, `pass:m`/`pass:q`, заголовки разделов и блоков (ID, подписи xref
-без ссылки изображения), imagesdir в месте макроса и drop-line. XFAIL
-`icons-secure-mode-lock`: secure mode Ruby принудительно снимает `icons`, а
-adoctra не моделирует блокировки safe mode, поэтому `:icons: font` выводит
-глиф. Режимы font/image (`iconsdir`, `icontype`, атрибут `icon`, нормализация
+без ссылки изображения), imagesdir в месте макроса и drop-line. Бывший XFAIL
+`icons-secure-mode-lock` теперь PASS: secure mode снимает и блокирует `icons`
+(см. «Safe mode»). Режимы font/image (`iconsdir`, `icontype`, атрибут `icon`, нормализация
 `icons` в header) сверены с Ruby в safe mode в модульных тестах.
 Добавлена golden fixture; прежние эталоны и baseline не изменены.
 
@@ -1279,6 +1278,38 @@ Rust-тестами (эталон стенда работает в secure mode, 
 связь `showtitle`/`notitle`. Вид шапки, подвала и боковой TOC (`toc: left/right`)
 сверен со скриншотами Ruby в Chrome.
 
+== Safe mode
+
+`ParseOptions.safe` (`SafeMode::Unsafe`/`Safe`/`Server`/`Secure`, CLI
+`-S`/`--safe-mode`, `--safe`) воспроизводит `Document#initialize` Ruby: атрибуты
+`safe-mode-name`, `safe-mode-<имя>`, `safe-mode-level` (заблокированы),
+`allow-uri-read` задаёт только host. Начиная с server: `copycss`,
+`source-highlighter` сняты и заблокированы, `backend` заблокирован как `html5`,
+`docdir` пуст, `docfile` относителен, `user-home` равен `.` (ниже server CLI
+передаёт домашний каталог). Secure: `max-attribute-value-size` 4096 (значения
+записей усекаются по границе символа, как `limit_bytesize`), принудительный
+`linkcss`, снятый `icons`; `include::` становится `link:цель[role=include]`
+(цель с пробелами — в `pass:c[…]`, также в verbatim-блоках и без provider),
+docinfo не читается, CLI не копирует stylesheet. Значения host имеют приоритет,
+где Ruby использует `||=`. Include по URI (или относительная цель внутри
+URI-включения) без `allow-uri-read` становится той же ссылкой; с ним цель
+передаётся provider. Пользовательский stylesheet по URI читается так же
+(предупреждения Ruby при отсутствии `allow-uri-read` и при ошибке чтения). CLI
+загружает URI через `ureq` (http/https), а в unsafe mode снимает ограничение
+путей каталогом входного файла.
+
+Умолчания отличаются от Ruby намеренно: `ParseOptions` по умолчанию `Safe`
+(Ruby API — `Secure`), так как provider уже задаёт политику доступа; CLI по
+умолчанию `safe` (Ruby CLI — `unsafe`), сохраняя ограничение путей. В safe mode
+выход за каталог запрещается provider, тогда как Ruby восстанавливает путь
+внутри jail с предупреждением. Нечитаемый include оставляет исходную директиву
+вместо строки `Unresolved directive` Ruby. `cache-uri`, data URI изображений и
+встраивание SVG (`inline`/`interactive`, доступные ниже secure) не реализованы.
+7 PASS проверяют атрибуты и блокировки secure mode, ссылки include, усечение
+значений, а также бывший XFAIL `icons-secure-mode-lock`; уровни unsafe/safe/
+server, include и stylesheet по URI сверены с Ruby вручную и закреплены
+Rust-тестами (включая локальный HTTP-сервер в тестах CLI).
+
 == Встроенные атрибуты
 
 Как `Document#initialize` Ruby, документ начинается с `attribute-undefined`
@@ -1305,7 +1336,5 @@ Rust-тестами (эталон стенда работает в secure mode, 
 `ifdef`, ячейки AsciiDoc, метки, `attribute-missing`, `htmlsyntax` и
 `outfilesuffix`. Эталон работает в secure mode, где `backend` заблокирован,
 поэтому смена backend в header проверена только Rust-тестами. Не реализованы
-`asciidoctor`/`asciidoctor-version`, атрибуты safe mode (`safe-mode-*`,
-`max-attribute-value-size`, `user-home`, `docdir` в secure mode),
-`max-include-depth`,
+`asciidoctor`/`asciidoctor-version`, `max-include-depth`,
 включение `toc`/`sectnums` для DocBook и XHTML-разметка HTML backend.
