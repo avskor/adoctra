@@ -1510,7 +1510,7 @@ fn capture_verbatim_body(
     opening: Span,
     fence: &str,
     block_name: &str,
-    context: &ParseContext,
+    context: &mut ParseContext,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> (usize, usize, usize, Option<Span>) {
     let body_start = if lines.has(*i, context) {
@@ -2082,7 +2082,7 @@ fn read_nested_document(
 ) -> Vec<Block> {
     // Ruby preprocesses the first line again (`a|include::…[]`).
     let cell = lines
-        .preprocess_cell(text, &context.attributes)
+        .preprocess_cell(text, context)
         .unwrap_or_else(|| Reader::cell_lines(text));
     let mut nested = Reader::nested(cell, lines.include_catalog.clone());
     let outer = context.enter_nested();
@@ -3045,7 +3045,7 @@ enum Continuation {
 fn read_item_line(
     lines: &mut Reader<'_>,
     i: &mut usize,
-    context: &ParseContext,
+    context: &mut ParseContext,
 ) -> Option<ItemLine> {
     if !lines.has(*i, context) {
         return None;
@@ -3080,7 +3080,7 @@ fn nested_list(line: &str, within_nested: bool) -> Option<(crate::lists::ListTyp
 fn read_literal_lines(
     lines: &mut Reader<'_>,
     i: &mut usize,
-    context: &ParseContext,
+    context: &mut ParseContext,
     sibling: Option<&crate::lists::Sibling>,
 ) -> Vec<ItemLine> {
     let mut out = Vec::new();
@@ -3103,7 +3103,7 @@ fn read_literal_lines(
 fn read_list_item_lines(
     lines: &mut Reader<'_>,
     i: &mut usize,
-    context: &ParseContext,
+    context: &mut ParseContext,
     list_type: crate::lists::ListType,
     sibling: &crate::lists::Sibling,
     mut has_text: bool,

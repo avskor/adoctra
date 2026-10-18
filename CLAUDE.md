@@ -796,9 +796,14 @@ and `inactive`; tokenizer uses the parser's processed lines and trivia, with cor
 and coercion rules (including arbitrary-length integers, first-operator splitting,
 and the retained closing quote in string values). It always opens a block; malformed
 active expressions diagnose without pushing, skipped expressions only balance nesting.
-Ordinary/intrinsic attributes and escaped references are supported; set/counter side
-effects in conditional expressions remain unimplemented; effects from preceding
-definitions are visible to the reader. Basic include expansion is available with an explicit provider.
+Operands containing `{` run Ruby's `sub_attributes(attribute_missing: 'drop')`
+through ParseContext::preprocessor_subs (inline_attributes.rs preprocessor:
+the shared a-stage over raw source, Unicode Word names, values in Ruby's stored
+spelling via reference_text, e.g. `a&lt;b`), left operand first; set/counter
+expressions execute there as reading effects only (later conditions see them,
+conversion restarts from the header snapshot; before header completion they
+enter it), never in skipped branches. Reader::has/step/process take the mutable
+ParseContext for this. Effects from preceding definitions are visible to the reader. Basic include expansion is available with an explicit provider.
 ResourceProvider/ResourceRequest/Resource and typed ResourceError now define host
 resource loading. SourceMap::load resolves through an explicit provider, reuses an
 identical canonical-name/text snapshot, and preserves older ids after edits. Core's
@@ -857,9 +862,7 @@ path for primary docfile/docdir/docname/docfilesuffix attributes. MemoryResource
 and CLI opt in; opaque providers default to None. Resource parsing/highlighting
 locks these attributes before the header, overriding caller values and preserving
 them across includes. Keep metadata separate from canonical referrers, never reload
-the primary snapshot, and do not infer cwd or paths in string APIs. Side-effecting
-substitutions and safe-mode compatibility are follow-up work; see the
-implementation plan and parser API. Include parameter lists now follow the pinned
+the primary snapshot, and do not infer cwd or paths in string APIs. Include parameter lists now follow the pinned
 AttributeList grammar, including ignored positional/unknown fields, quote recovery,
 duplicate/None rules and options merging/spacing. Encoding remains unsupported by
 the UTF-8 provider contract. Ordinary/intrinsic attribute substitution runs once
@@ -879,8 +882,17 @@ generated `Unresolved directive in <path> - include::<target>[<attrlist>]` line
 file name (`<stdin>` without document_path) or the include's path relative to
 the document directory (xref_target::relative_path), else its source name.
 Exceeded depth, cycles, byte limits and `encoding` keep the directive; without a
-provider (stdin, string APIs) includes stay literal. set/counter side effects
-remain follow-up work.
+provider (stdin, string APIs) includes stay literal.
+Targets and parameter lists use the same preprocessor_subs (set/counter are
+reading effects) exactly where Ruby's preprocess_include_directive calls
+sub_attributes: a target containing `{` once (missing policy fixed, warn →
+drop-line); when blank, `target + ' '` again for drop-line, the list
+(`parse_attributes sub_input`, document policy read lazily) for optional, and
+`target + ' '` once more for the warn message; otherwise the list only after the
+secure-mode link, the provider and depth checks. Informational drop-line
+messages of directive substitutions are not reported (reader.rs
+directive_diagnostics); warnings are. Highlighting reads processed lines with
+Reader::plain and never executes them again.
 
 Working: parser for header attributes, headings, listing blocks, literal blocks
 (`....` and `[literal]`), admonitions (paragraph form), paragraphs,
@@ -1365,9 +1377,9 @@ emitted *completely raw* (no escaping, no wrapper, id/roles dropped). The **open
 block** (`--` / `[open]`) is done, including *both* its *container* masquerades
 (`[quote]`/`[example]`/`[sidebar]`/`[NOTE]` on `--`) and its **verbatim**
 masquerades (`[source]`/`[literal]`/`[verse]`/`[pass]` on `--`, switched at the
-`--` fence into a `Listing`/`Literal`/`Verse`/`Passthrough`). Also unimplemented is
-**rendering of remaining options** (`%nowrap`, …); `%hardbreaks` now affects
-inline substitutions. For
+`--` fence into a `Listing`/`Literal`/`Verse`/`Passthrough`). `%hardbreaks`
+affects inline substitutions and `%nowrap`/`prewrap` render (see **Collapsible
+examples and nowrap**); other options are carried but mostly not rendered. For
 **admonitions**, the *paragraph* forms (`[NOTE]` style and `NOTE: ` label) and the
 **delimited form** (`[NOTE]` on a `====` block) are done. **Block titles**
 (`.Title`) are kept on `Block.title` and rendered except on passthrough blocks; still missing

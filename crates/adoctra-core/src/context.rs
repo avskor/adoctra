@@ -787,6 +787,37 @@ impl ParseContext<'_> {
         parts_text(&parts)
     }
 
+    /// Ruby's `Document#sub_attributes` from the preprocessor (`ifeval`
+    /// operands, include targets and parameter lists) while reading: set and
+    /// counter expressions change the reading attributes only, like other
+    /// reading effects.
+    pub fn preprocessor_subs(
+        &mut self,
+        value: &str,
+        policy: Option<&str>,
+        span: crate::Span,
+        diagnostics: &mut Vec<crate::Diagnostic>,
+    ) -> String {
+        let mut evaluation = crate::substitution_context::Evaluation::definition(
+            &self.attributes,
+            &self.locked,
+            &mut self.counters,
+            self.quote_compat,
+        )
+        .with_root(root_of(&mut self.root));
+        let result = crate::inline_attributes::preprocessor(
+            value,
+            &mut evaluation,
+            span,
+            policy,
+            diagnostics,
+        );
+        if let Some(attributes) = evaluation.changed_attributes() {
+            self.attributes = Arc::new(attributes);
+        }
+        result
+    }
+
     /// Keep the read reftext for references; the model gets a snapshot.
     pub fn attach_reftext(&mut self, block: &mut crate::Block, value: crate::reftext::Read) {
         block.reftext = Some(value.snapshot(&self.attributes));

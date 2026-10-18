@@ -283,20 +283,20 @@ impl<'a> Reader<'a> {
         self.loaded[index].clone()
     }
 
-    pub fn has(&mut self, index: usize, context: &ParseContext) -> bool {
-        self.ensure(index, Some(&context.attributes))
+    pub fn has(&mut self, index: usize, context: &mut ParseContext) -> bool {
+        self.ensure(index, Some(context))
     }
 
     pub fn raw_has(&mut self, index: usize) -> bool {
         self.ensure(index, None)
     }
 
-    fn ensure(&mut self, index: usize, attributes: Option<&Attributes>) -> bool {
+    fn ensure(&mut self, index: usize, mut context: Option<&mut ParseContext>) -> bool {
         if index >= self.limit {
             return false;
         }
         while self.loaded.len() <= index {
-            if !self.step(attributes) {
+            if !self.step(context.as_deref_mut()) {
                 return false;
             }
         }
@@ -305,7 +305,7 @@ impl<'a> Reader<'a> {
 
     /// Read the next line of the innermost input (dropping exhausted inputs);
     /// false at the end of every input.
-    fn step(&mut self, attributes: Option<&Attributes>) -> bool {
+    fn step(&mut self, context: Option<&mut ParseContext>) -> bool {
         let Some(input) = self.inputs.last_mut() else {
             return false;
         };
@@ -343,9 +343,9 @@ impl<'a> Reader<'a> {
             });
         }
         if preprocess {
-            if let Some(attributes) = attributes {
+            if let Some(context) = context {
                 let eol_start = off + line.len();
-                if let Some(emitted) = self.process(off, line, attributes) {
+                if let Some(emitted) = self.process(off, line, context) {
                     self.endings.push((eol_start, eol));
                     self.loaded.push(emitted);
                 }
@@ -366,7 +366,7 @@ impl<'a> Reader<'a> {
     pub fn preprocess_cell(
         &mut self,
         text: &[(usize, char)],
-        attributes: &Attributes,
+        context: &mut ParseContext,
     ) -> Option<Vec<(usize, Arc<str>, String)>> {
         // Each line's characters and the offset of the line feed ending it.
         let mut lines: Vec<(crate::table::Chars, Option<usize>)> = vec![(Vec::new(), None)];
@@ -446,7 +446,7 @@ impl<'a> Reader<'a> {
         let loaded = self.loaded.len();
         let stack = std::mem::take(&mut self.stack);
         while self.inputs.len() > depth {
-            self.step(Some(attributes));
+            self.step(Some(context));
         }
         self.stack = stack;
         let endings = self.endings.split_off(loaded);
@@ -565,7 +565,7 @@ impl<'a> Reader<'a> {
         &mut self,
         off: usize,
         line: Arc<str>,
-        attributes: &Attributes,
+        context: &mut ParseContext,
     ) -> Option<(usize, Arc<str>)> {
         let active = self.stack.last().map_or(true, |c| c.active);
         let span = Span::new(off, off + line.len());
@@ -593,12 +593,13 @@ impl<'a> Reader<'a> {
             // Secure mode turns the directive into a link, even without a
             // provider; otherwise only a provider expands includes.
             if self.resources.is_none()
-                && crate::context::SafeMode::of(attributes) < crate::context::SafeMode::Secure
+                && crate::context::SafeMode::of(&context.attributes)
+                    < crate::context::SafeMode::Secure
             {
                 return Some((off, line));
             }
             self.includes.push(span);
-            if self.expand_include(target, text, span, attributes) {
+            if self.expand_include(target, text, span, context) {
                 return None;
             }
             return Some((off, line));
@@ -639,8 +640,16 @@ impl<'a> Reader<'a> {
                     "malformed ifeval directive: target is not permitted".into(),
                 );
                 return None;
-            } else if let Some(include) = crate::conditional_expression::evaluate(text, attributes)
-            {
+            } else if let Some(include) = {
+                // Ruby's `resolve_expr_val`: `sub_attributes` with the `drop`
+                // policy, executing set/counter expressions while reading.
+                let mut diagnostics = Vec::new();
+                let include = crate::conditional_expression::evaluate(text, &mut |value| {
+                    context.preprocessor_subs(value, Some("drop"), span, &mut diagnostics)
+                });
+                self.directive_diagnostics(diagnostics);
+                include
+            } {
                 include
             } else {
                 self.error(
@@ -671,6 +680,7 @@ impl<'a> Reader<'a> {
             );
             return None;
         }
+        let attributes = &context.attributes;
         // Ruby's regexp selects the first separator. Mixed operators do not
         // introduce precedence: the other separator remains part of a name.
         let defined = match target.chars().find(|c| matches!(c, ',' | '+')) {
@@ -764,48 +774,88 @@ impl<'a> Reader<'a> {
         true
     }
 
+    /// Ruby's `parse_attributes attrlist, [], sub_input: true`: the list's
+    /// a-stage executes set/counter expressions with the document's
+    /// attribute-missing policy before the AttributeList is parsed.
+    fn include_attributes(
+        &mut self,
+        attrlist: &str,
+        span: Span,
+        context: &mut ParseContext,
+    ) -> std::collections::BTreeMap<String, String> {
+        if !attrlist.contains('{') {
+            return crate::include_attributes::parse(attrlist);
+        }
+        let mut diagnostics = Vec::new();
+        let input = context.preprocessor_subs(attrlist, None, span, &mut diagnostics);
+        self.directive_diagnostics(diagnostics);
+        crate::include_attributes::parse(&input)
+    }
+
+    /// Diagnostics of a directive's substitutions. The reader reports what
+    /// happens to the directive itself, so the informational drop-line
+    /// messages (hidden by Ruby's default log level) are not repeated.
+    fn directive_diagnostics(&mut self, diagnostics: Vec<Diagnostic>) {
+        self.diagnostics.extend(
+            diagnostics
+                .into_iter()
+                .filter(|diagnostic| diagnostic.severity != Severity::Info),
+        );
+    }
+
     fn expand_include(
         &mut self,
         target: &str,
         attrlist: &str,
         span: Span,
-        attributes: &Attributes,
+        context: &mut ParseContext,
     ) -> bool {
-        let policy = attributes.get("attribute-missing").unwrap_or("skip");
+        let policy = context
+            .attributes
+            .get("attribute-missing")
+            .unwrap_or("skip")
+            .to_owned();
         let target_policy = if policy == "warn" {
             "drop-line"
         } else {
-            policy
+            &policy
         };
-        let (expanded_target, _) =
-            crate::include_attributes::substitute(target, attributes, target_policy);
-        let blank_target = target.contains('{') && expanded_target.is_empty();
-        // The extra space distinguishes a missing reference that drops its line
-        // from a defined attribute whose value is empty (also for multiline values).
-        let missing_target = blank_target
-            && matches!(policy, "drop-line" | "warn")
-            && crate::include_attributes::substitute(
-                &format!("{target} "),
-                attributes,
-                "drop-line",
-            )
-            .0
-            .is_empty();
-        if missing_target && policy == "drop-line" {
-            return true;
-        }
-        let (attrs, warnings) = crate::include_attributes::parse(attrlist, attributes);
-        self.diagnostics
-            .extend(warnings.into_iter().map(|message| Diagnostic {
-                span,
-                severity: Severity::Warning,
-                message,
-            }));
-        let optional = attrs.contains_key("optional-option");
-        if blank_target {
-            if optional {
+        // Every `sub_attributes` call of Ruby's branches below can execute
+        // set/counter expressions, so substitute exactly where it does.
+        let substituted = target.contains('{');
+        let expanded_target = if substituted {
+            let mut diagnostics = Vec::new();
+            let expanded =
+                context.preprocessor_subs(target, Some(target_policy), span, &mut diagnostics);
+            self.directive_diagnostics(diagnostics);
+            expanded
+        } else {
+            target.to_owned()
+        };
+        if substituted && expanded_target.is_empty() {
+            // The extra space distinguishes a missing reference that drops its
+            // line from a defined attribute whose value is empty (also for
+            // multiline values). Ruby ignores its drop-line messages.
+            let missing = |context: &mut ParseContext| {
+                context
+                    .preprocessor_subs(
+                        &format!("{target} "),
+                        Some("drop-line"),
+                        span,
+                        &mut Vec::new(),
+                    )
+                    .is_empty()
+            };
+            if policy == "drop-line" && missing(context) {
                 return true;
             }
+            if self
+                .include_attributes(attrlist, span, context)
+                .contains_key("optional-option")
+            {
+                return true;
+            }
+            let missing_target = policy == "warn" && missing(context);
             self.diagnostics.push(Diagnostic {
                 span,
                 severity: Severity::Warning,
@@ -823,12 +873,20 @@ impl<'a> Reader<'a> {
         }
         // Ruby's secure mode does not process the directive; it leaves a
         // link to the target instead.
-        if crate::context::SafeMode::of(attributes) >= crate::context::SafeMode::Secure {
+        if crate::context::SafeMode::of(&context.attributes) >= crate::context::SafeMode::Secure {
             return self.include_link(&expanded_target, span);
         }
         if self.resources.is_none() {
             return false;
         }
+        // Ruby checks the depth before it parses the parameter list.
+        if self.inputs.len() > self.inputs.last().expect("current input").max_depth {
+            self.error(span, "maximum include depth exceeded".into());
+            return false;
+        }
+        let attrs = self.include_attributes(attrlist, span, context);
+        let attributes = &context.attributes;
+        let optional = attrs.contains_key("optional-option");
         // Resources are immutable UTF-8 snapshots supplied by the host. Keep
         // rejecting transcoding requests until the provider contract defines it.
         if attrs.contains_key("encoding") {
@@ -844,10 +902,6 @@ impl<'a> Reader<'a> {
         let current = parent.source_id;
         let inherited_depth = parent.max_depth;
         let resources = self.resources.as_mut().expect("explicit resource provider");
-        if self.inputs.len() > inherited_depth {
-            self.error(span, "maximum include depth exceeded".into());
-            return false;
-        }
         // A URI (or a target inside a URI include) is read only with
         // `allow-uri-read`; otherwise Ruby links to it.
         let parent_name = resources
@@ -1020,7 +1074,7 @@ impl<'a> Reader<'a> {
     pub fn bound(
         &mut self,
         start: usize,
-        context: &ParseContext,
+        context: &mut ParseContext,
         stop: impl Fn(&str) -> bool,
     ) -> usize {
         let old = self.limit;

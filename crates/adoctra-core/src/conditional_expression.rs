@@ -1,9 +1,13 @@
 //! The restricted comparison grammar of Asciidoctor 2.0.23's Reader.
-//! Only value comparisons are evaluated; substitutions cannot execute code.
-use crate::Attributes;
+//! Only value comparisons are evaluated. Operands containing `{` are
+//! substituted by the caller (Ruby's `sub_attributes` with `drop`), which may
+//! execute set/counter expressions, left operand first.
 use std::cmp::Ordering;
 
-pub(crate) fn evaluate(expression: &str, attributes: &Attributes) -> Option<bool> {
+pub(crate) fn evaluate(
+    expression: &str,
+    substitute: &mut dyn FnMut(&str) -> String,
+) -> Option<bool> {
     let expression = expression.trim_matches(|c: char| c.is_ascii_whitespace());
     // EvalExpressionRx finds the first operator after at least one character.
     // It is deliberately not quote-aware; substitution happens after splitting.
@@ -16,8 +20,8 @@ pub(crate) fn evaluate(expression: &str, attributes: &Attributes) -> Option<bool
             continue;
         };
         let right = &rest[operator.len()..];
-        let left = Value::resolve(expression[..index].trim_end_matches(' '), attributes);
-        let right = Value::resolve(right.trim_start_matches(' '), attributes);
+        let left = Value::resolve(expression[..index].trim_end_matches(' '), substitute);
+        let right = Value::resolve(right.trim_start_matches(' '), substitute);
         let order = left.compare(&right);
         let equal = match (&left, &right) {
             (Value::Nil, Value::Nil) => true,
@@ -46,12 +50,17 @@ enum Value {
 }
 
 impl Value {
-    fn resolve(raw: &str, attributes: &Attributes) -> Self {
+    fn resolve(raw: &str, substitute: &mut dyn FnMut(&str) -> String) -> Self {
         let quoted = (raw.starts_with('"') && raw.ends_with('"'))
             || (raw.starts_with('\'') && raw.ends_with('\''));
         // The pinned Ruby version removes only the opening quote (slice 1,
         // length - 1). Keep this quirk, including comparisons of mixed quotes.
-        let value = substitute(if quoted { &raw[1..] } else { raw }, attributes);
+        let value = if quoted { &raw[1..] } else { raw };
+        let value = if value.contains('{') {
+            substitute(value)
+        } else {
+            value.to_owned()
+        };
         if quoted {
             Self::String(value)
         } else {
@@ -184,49 +193,4 @@ fn float_prefix(raw: &str) -> f64 {
         }
     }
     raw[..end].replace('_', "").parse().unwrap_or(0.0)
-}
-
-fn substitute(raw: &str, attributes: &Attributes) -> String {
-    let mut output = String::new();
-    let mut chars = raw.char_indices().peekable();
-    while let Some((index, c)) = chars.next() {
-        let escaped = c == '\\' && chars.peek().is_some_and(|(_, c)| *c == '{');
-        if c != '{' && !escaped {
-            output.push(c);
-            continue;
-        }
-        let open = index + usize::from(escaped);
-        let Some(close) = raw[open + 1..].find('}').map(|i| open + 1 + i) else {
-            output.push(c);
-            continue;
-        };
-        let name = &raw[open + 1..close];
-        let trailing_escape = name.ends_with('\\');
-        let name = name.strip_suffix('\\').unwrap_or(name);
-        if name.is_empty()
-            || !name
-                .chars()
-                .enumerate()
-                .all(|(i, c)| c.is_alphanumeric() || c == '_' || (i > 0 && c == '-'))
-        {
-            output.push(c);
-            continue;
-        }
-        if escaped || trailing_escape {
-            output.push('{');
-            output.push_str(name);
-            output.push('}');
-        } else {
-            output.push_str(
-                attributes
-                    .get(name)
-                    .or_else(|| crate::context::intrinsic(&name.to_lowercase()))
-                    .unwrap_or(""),
-            );
-        }
-        while chars.peek().is_some_and(|(i, _)| *i <= close) {
-            chars.next();
-        }
-    }
-    output
 }

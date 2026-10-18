@@ -20178,6 +20178,90 @@
       "source": ":source-highlighter: pygments\n\n[source,ruby]\n----\nputs 1 # <1>\n----\n<1> Output\n\n[source.r]\n----\nx\n----\n\n[source%nowrap,c]\n----\ny\n----",
       "resources": {},
       "expect": "pass"
+    },
+    {
+      "id": "ifeval-counter-effects",
+      "category": "conditionals",
+      "source": "= T\n\nintro {n}\n\nifeval::[{counter:n} == 1]\nfirst {n}\nendif::[]\n\nifeval::[\"{set:foo:bar}{counter:n}\" == \"2\"]\nfoo={foo} {n}\nendif::[]\n\nifeval::[\"{foo}\" == \"bar\"]\nreading sees foo\nendif::[]",
+      "expect": "pass"
+    },
+    {
+      "id": "ifeval-counter-headerless",
+      "category": "conditionals",
+      "source": "ifeval::[{counter:n} == 1]\nfirst {n}\nendif::[]\nifeval::[{counter:n} == 2]\nsecond {n}\nendif::[]\nifeval::[\"{set:foo:bar}\" == \"\"]\nfoo={foo}\nendif::[]\nifdef::x[]\nifeval::[{counter:n} > 0]\nskipped\nendif::[]\nendif::[]\nafter {n}",
+      "expect": "pass"
+    },
+    {
+      "id": "ifeval-set-effects-order",
+      "category": "conditionals",
+      "source": "ifeval::[{counter:a} < {counter:a}]\nordered\nendif::[]\n\nifdef::missing[]\nifeval::[{counter:z} == 1]\nendif::[]\nendif::[]\n\nifndef::z[]\nz untouched\nendif::[]\n\nifeval::[{counter:e}{set:g:h} == 1]\nset hides itself\nendif::[]\n\nifeval::[\"{g}\" == \"h\"]\ng set\nendif::[]\n\nifeval::[{set:u!}{counter:x} == 1]\nunset drops the operand\nendif::[]",
+      "expect": "pass"
+    },
+    {
+      "id": "ifeval-stored-spelling",
+      "category": "conditionals",
+      "source": ":x: a<b\n:café: 1\n\nifeval::[\"{x}\" == \"a&lt;b\"]\nstored\nendif::[]\n\nifeval::[{café} == 1]\nunicode\nendif::[]\n\nifeval::[\"{nope}\" == \"\"]\ndropped\nendif::[]",
+      "expect": "pass"
+    },
+    {
+      "id": "ifeval-header-effects",
+      "category": "conditionals",
+      "source": "= T\nifeval::[\"{set:early:1}{counter:c:5}\" == \"5\"]\n:after: {early}\nendif::[]\n\n{early} {after} {c}",
+      "expect": "pass"
+    },
+    {
+      "id": "include-target-counter",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "= Doc\n\ninclude::part-{counter:n}.adoc[]\n\ninclude::part-{counter:n}.adoc[]\n\nifeval::[{n} == 2]\nn is two\nendif::[]\n\nafter {n}",
+      "resources": {
+        "part-1.adoc": "one",
+        "part-2.adoc": "two"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-target-counter-headerless",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "include::part-{counter:n}.adoc[]\n\ninclude::part-{counter:n}.adoc[]\n\nafter {n}",
+      "resources": {
+        "part-1.adoc": "one",
+        "part-2.adoc": "two"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-parameter-counter",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "= Doc\n\ninclude::p.adoc[lines={counter:l}]\n\ninclude::p.adoc[lines={counter:l}..3]\n\ninclude::p.adoc[lines=\"{counter:l}..3\",{set:x:y}]\n\nifeval::[{l} == 3]\nl is three\nendif::[]\n\nifdef::x[]\nx set\nendif::[]",
+      "resources": {
+        "p.adoc": "l1\nl2\nl3"
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "include-blank-target-set",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "= Doc\n\ninclude::{set:foo:bar}[]\n\nifeval::[\"{foo}\" == \"bar\"]\nfoo set\nendif::[]\n\nfoo={foo}",
+      "resources": {},
+      "expect": "pass"
+    },
+    {
+      "id": "include-missing-target-effects",
+      "category": "include",
+      "profile": "include-body-dom-v1",
+      "source": "= Doc\n\n:attribute-missing: drop-line\n\ninclude::{counter:c}{missing}.adoc[lines={counter:k}]\n\nifeval::[{c} == 2]\nc twice\nendif::[]\n\nifndef::k[]\nlist skipped\nendif::[]\n\n:attribute-missing: warn\n\ninclude::{counter:w}{missing}[]\n\nifeval::[{w} == 2]\nw twice\nendif::[]\n\ninclude::{counter:v}{missing}[opts=optional]\n\nifeval::[{v} == 1]\nv once\nendif::[]",
+      "resources": {},
+      "expect": "pass"
+    },
+    {
+      "id": "include-secure-parameters",
+      "category": "include",
+      "source": "include::x-{counter:t}.adoc[lines={counter:s}]\n\nifndef::s[]\nno s\nendif::[]\n\nifeval::[{t} == 1]\nt one\nendif::[]",
+      "expect": "pass"
     }
   ]
 }

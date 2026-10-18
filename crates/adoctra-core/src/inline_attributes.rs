@@ -82,6 +82,33 @@ pub(crate) fn implicit_title(
         .into_parts()
 }
 
+/// Ruby's `Document#sub_attributes` on a preprocessor string (`ifeval`
+/// operands, include targets and parameter lists). The source is raw text;
+/// substituted values keep the spelling Ruby stores, and set/counter
+/// expressions execute. `Some(policy)` fixes attribute-missing (Ruby's
+/// `attribute_missing:` option), `None` reads it when first needed.
+pub(crate) fn preprocessor(
+    value: &str,
+    attrs: &mut Evaluation<'_>,
+    span: Span,
+    policy: Option<&str>,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> String {
+    let mut text = Text::default();
+    text.append_part(&P::Raw(value.into()), 0, span);
+    let (fixed, policy) = match policy {
+        Some(policy) => (true, policy.to_owned()),
+        None => (
+            false,
+            attrs.get("attribute-missing").unwrap_or("skip").to_owned(),
+        ),
+    };
+    let parts = apply_with_policy(text, attrs, &policy, fixed, diagnostics)
+        .0
+        .into_parts();
+    crate::attributes::reference_text(&parts)
+}
+
 fn apply_with_policy(
     text: Text,
     attrs: &mut Evaluation<'_>,
