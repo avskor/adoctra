@@ -83,6 +83,7 @@ impl HtmlBackend {
             doc,
             book: doc.attributes.get("doctype") == Some("book"),
             highlighter: highlight::Highlighter::of(&doc.attributes),
+            source_listing: std::cell::Cell::new(false),
         };
         let mut out = String::new();
         let mut warnings = Vec::new();
@@ -91,6 +92,12 @@ impl HtmlBackend {
             render_footnotes(&doc.footnotes, &doc.attributes, "", &mut out);
         } else {
             render_document(&cx, self.resources.as_ref(), &mut warnings, &mut out);
+        }
+        if let (true, Some(warning)) = (
+            cx.source_listing.get(),
+            cx.highlighter.and_then(|h| h.unavailable_warning()),
+        ) {
+            warnings.insert(0, warning.to_owned());
         }
         Output {
             html: out,
@@ -772,6 +779,9 @@ struct Cx<'a> {
     /// The document's client-side syntax highlighter, shared by nested
     /// documents like Ruby's `parent_doc.syntax_highlighter`.
     highlighter: Option<highlight::Highlighter>,
+    /// Whether a source listing was converted (an unavailable highlighter
+    /// library then warns once).
+    source_listing: std::cell::Cell<bool>,
 }
 
 impl Cx<'_> {
@@ -819,6 +829,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             if let (Some("source"), Some(highlighter)) =
                 (block.attrs.style.as_deref(), cx.highlighter)
             {
+                cx.source_listing.set(true);
                 let close = highlighter.open(block, nowrap(block), out);
                 render_verbatim(text, callouts, inlines, out);
                 out.push_str(close);
@@ -3508,17 +3519,59 @@ mod tests {
             html.contains("<pre class=\"prettyprint highlight nowrap linenums:3\"><code data-lang=\"ruby\">b</code></pre>"),
             "{html}"
         );
-        // html-pipeline: `lang` on a classless `<pre>`, no nowrap.
+        // html-pipeline: `lang` on Ruby's classless `<pre>` (adoctra's
+        // `listing` stands for the wrapper), no nowrap.
         let html = render(
             ":source-highlighter: html-pipeline\n:prewrap!:\n\n[source,ruby]\n----\na\n----\n\n\
              [source.r]\n----\nb\n----\n",
         );
         assert!(
-            html.contains("<pre lang=\"ruby\"><code>a</code></pre>"),
+            html.contains("<pre class=\"listing\" lang=\"ruby\"><code>a</code></pre>"),
             "{html}"
         );
         assert!(
-            html.contains("<pre class=\"r\"><code>b</code></pre>"),
+            html.contains("<pre class=\"listing r\"><code>b</code></pre>"),
+            "{html}"
+        );
+    }
+
+    #[test]
+    fn unavailable_server_side_highlighters_warn_like_ruby_without_gems() {
+        let convert =
+            |src: &str| HtmlBackend::embedded().render(&adoctra_core::parse(src).document);
+        let output = convert(
+            ":source-highlighter: coderay\n\n[source%nowrap,ruby]\n----\na <1>\n----\n<1> x\n\n\
+             [source]\n----\nb\n----\n",
+        );
+        assert!(
+            output.html.contains(
+                "<pre class=\"CodeRay highlight nowrap\"><code data-lang=\"ruby\">a <b class=\"conum\">(1)</b></code></pre>"
+            ),
+            "{}",
+            output.html
+        );
+        assert!(output
+            .html
+            .contains("<pre class=\"CodeRay highlight\"><code>b</code></pre>"));
+        // Logged once, only when a source listing asks.
+        assert_eq!(
+            output.warnings,
+            ["optional gem 'coderay' is not available. Functionality disabled."]
+        );
+        let output = convert(":source-highlighter: pygments\n\n[source,c]\n----\nx\n----\n");
+        assert!(output
+            .html
+            .contains("<pre class=\"pygments highlight\"><code data-lang=\"c\">x</code></pre>"));
+        assert_eq!(
+            output.warnings,
+            ["optional gem 'pygments.rb' is not available (reason: cannot load 'pygments'). Functionality disabled."]
+        );
+        let output = convert(":source-highlighter: coderay\n\n----\nplain\n----\n");
+        assert!(output.warnings.is_empty(), "{:?}", output.warnings);
+        // No head or footer docinfo.
+        let html = render_standalone("= T\n:source-highlighter: pygments\n\nx\n");
+        assert!(
+            !html.contains("<script") && !html.contains("pygments"),
             "{html}"
         );
     }

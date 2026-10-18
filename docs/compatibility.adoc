@@ -43,7 +43,7 @@ entities и нормализует пробелы обычного текста.
 метке. Текст `blockquote` сравнивается как есть: простое содержимое цитаты
 (абзацная форма) отличается от абзаца `<p>`.
 Спроецированные узлы `quote`/`verse` в пункте списка — блоки, как и остальные.
-Корпус содержит 3139 сценариев: 3139 PASS.
+Корпус содержит 3142 сценария: 3142 PASS.
 
 [source,sh]
 ----
@@ -1328,12 +1328,16 @@ Rust-тестами (включая локальный HTTP-сервер в те
 `language-<язык|none> hljs`, тема `highlightjs-theme` в head, скрипты 9.18.3,
 `highlightjs-languages` и инициализация в конце body), `prettify` (`prettyprint`,
 `linenums[:start]`, `prettify-theme` — имя или URL, `run_prettify`) и
-`html-pipeline` (`<pre lang>`). Каталоги `highlightjsdir`/`prettifydir`, тема и
+`html-pipeline` (`<pre lang>`; класс `listing` у adoctra заменяет обёртку
+`listingblock`, как у обычного листинга). Каталоги `highlightjsdir`/`prettifydir`, тема и
 языки читаются из итоговых атрибутов, схема CDN — из `asset-uri-scheme`
 заголовка, как в `convert_document`. Подсветку выполняет браузер; adoctra не
-разбирает исходный код. Серверные адаптеры (rouge, coderay, pygments) требуют
-своих библиотек и не реализованы: как неизвестное имя, они дают обычный
-листинг `highlight`. Secure mode блокирует атрибут, поэтому 4 PASS стенда
+разбирает исходный код. coderay и pygments ведут себя как Ruby в закреплённом
+окружении эталона, где их gem нет: предупреждение Ruby (`optional gem … is not
+available…`, один раз при первом листинге source) и `<pre class="CodeRay
+highlight">`/`<pre class="pygments highlight">` без подсветки и docinfo.
+rouge (в эталоне 4.7.0) пока не реализован и даёт обычный листинг
+`highlight`. Secure mode блокирует атрибут, поэтому 7 PASS стенда
 работают в safe mode (профиль include без ресурсов), ещё один проверяет
 блокировку secure. Golden-тест `golden/highlight/` сравнивает шапку, подвал и
 разметку листингов standalone-документа с `asciidoctor-reference.rb

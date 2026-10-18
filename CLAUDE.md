@@ -1391,10 +1391,14 @@ choice (`source-highlighter` in the header snapshot, basebackend html, no
 `<name>-unavailable`; Cx carries it, so AsciiDoc cells share it):
 `highlightjs`/`highlight.js` (`<pre class="highlightjs highlight">`, code
 `language-<lang|none> hljs`), `prettify` (`prettyprint`, `linenums[:start]`),
-`html-pipeline` (`<pre lang>`); id/roles on the `<pre>` as for plain source.
+`html-pipeline` (`<pre class="listing" lang>`, listing = Ruby's wrapper);
+id/roles on the `<pre>` as for plain source. coderay/pygments act like Ruby
+without their gems (the reference environment): `CodeRay`/`pygments` pre
+class and Ruby's `optional gem … not available` warning in Output.warnings,
+once when a source listing converts (Cx.source_listing).
 Head theme and footer scripts (before MathJax) read final attributes with the
 header `asset-uri-scheme`; embedded output has none. Server-side rouge/coderay/
-pygments (and unknown names) keep the plain `highlight` listing. adoctra.css
+Rouge (and unknown names) keep the plain `highlight` listing. adoctra.css
 carries Ruby's `pre.highlightjs`/`pre.prettyprint` rules (checked with
 screenshots). `golden/highlight/` runs the reference `--standalone --safe`.
 **Safe mode**: `ParseOptions.safe: SafeMode` (Unsafe/Safe/Server/Secure,

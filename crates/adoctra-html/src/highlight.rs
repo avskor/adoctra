@@ -1,9 +1,9 @@
-//! Ruby's client-side syntax highlighter adapters (`highlight.js`,
-//! `prettify`, `html-pipeline`): the source listing's `<pre>`/`<code>` and
-//! the markup they add to the document head and the end of the body. The
-//! browser highlights; adoctra does not tokenize source code. Ruby's
-//! server-side adapters (rouge, coderay, pygments) need their libraries and
-//! are not modeled: like an unknown name they leave the plain listing.
+//! Ruby's syntax highlighter adapters: the source listing's `<pre>`/`<code>`
+//! and the markup they add to the document head and the end of the body.
+//! For the client-side ones (`highlight.js`, `prettify`, `html-pipeline`)
+//! the browser highlights. coderay and pygments behave like Ruby without
+//! their libraries (the pinned reference environment): a warning and the
+//! adapter's plain `<pre>`.
 
 use adoctra_core::ast::Block;
 use adoctra_core::Attributes;
@@ -16,6 +16,10 @@ pub(super) enum Highlighter {
     HighlightJs,
     Prettify,
     HtmlPipeline,
+    /// coderay without its gem: `CodeRay` pre class, no highlighting.
+    CodeRay,
+    /// pygments without pygments.rb.
+    Pygments,
 }
 
 impl Highlighter {
@@ -33,6 +37,23 @@ impl Highlighter {
             "highlightjs" | "highlight.js" => Some(Self::HighlightJs),
             "prettify" => Some(Self::Prettify),
             "html-pipeline" => Some(Self::HtmlPipeline),
+            "coderay" => Some(Self::CodeRay),
+            "pygments" => Some(Self::Pygments),
+            _ => None,
+        }
+    }
+
+    /// The warning Ruby logs once when a source listing asks whether the
+    /// adapter highlights (`library_available?`, at block completion).
+    pub(super) fn unavailable_warning(self) -> Option<&'static str> {
+        match self {
+            Self::CodeRay => {
+                Some("optional gem 'coderay' is not available. Functionality disabled.")
+            }
+            Self::Pygments => Some(
+                "optional gem 'pygments.rb' is not available (reason: cannot load 'pygments'). \
+                 Functionality disabled.",
+            ),
             _ => None,
         }
     }
@@ -49,14 +70,17 @@ impl Highlighter {
         let id = super::id_attr(&block.id);
         let base = match self {
             Self::HtmlPipeline => {
-                // Its own markup: no class (so no roles' base), no nowrap.
-                let class = super::class_attr(&[], &block.roles);
+                // Its own markup without nowrap; `listing` stands for Ruby's
+                // `listingblock` wrapper, as on adoctra's plain listing.
+                let class = super::class_attr(&["listing"], &block.roles);
                 let lang = lang.map_or_else(String::new, |lang| format!(" lang=\"{lang}\""));
                 out.push_str(&format!("<pre{class}{id}{lang}><code>"));
                 return "</code></pre>\n";
             }
             Self::HighlightJs => "highlightjs",
             Self::Prettify => "prettyprint",
+            Self::CodeRay => "CodeRay",
+            Self::Pygments => "pygments",
         };
         // prettify's transform appends `linenums[:start]` with `linenums`.
         let linenums = match (self, block.attrs.named.get("linenums")) {
@@ -99,7 +123,7 @@ impl Highlighter {
                     format!("{}/{theme}.min.css", prettify_dir(attrs, header))
                 }
             }
-            Self::HtmlPipeline => return,
+            Self::HtmlPipeline | Self::CodeRay | Self::Pygments => return,
         };
         out.push_str(&format!(
             "<link rel=\"stylesheet\" href=\"{}\">\n",
@@ -135,7 +159,7 @@ impl Highlighter {
                 "<script src=\"{}/run_prettify.min.js\"></script>\n",
                 super::attr_value(&prettify_dir(attrs, header))
             )),
-            Self::HtmlPipeline => {}
+            Self::HtmlPipeline | Self::CodeRay | Self::Pygments => {}
         }
     }
 }

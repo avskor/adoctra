@@ -1526,7 +1526,11 @@ fn pre_tags(html: &str) -> Vec<String> {
             end += rest[end..].find('>').unwrap() + 1;
         }
         // adoctra's plain listing carries Ruby's wrapper class on the `<pre>`.
-        tags.push(rest[..end].replace("<pre class=\"listing\">", "<pre>"));
+        tags.push(
+            rest[..end]
+                .replace("<pre class=\"listing\">", "<pre>")
+                .replace("<pre class=\"listing\" ", "<pre "),
+        );
         rest = &rest[end..];
     }
     tags
