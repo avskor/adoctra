@@ -92,6 +92,7 @@ cargo clippy --workspace --all-features
 
 # CLI
 cargo run -p adoctra-cli -- examples/sample.adoc --to html --stdout
+cargo run -p adoctra-cli -- examples/sample.adoc --to html -s --stdout   # embedded
 cargo run -p adoctra-cli -- examples/sample.adoc --to json --stdout
 
 # WASM (run on a toolchain with the target installed)
@@ -1334,6 +1335,25 @@ images (`Figure N.`) and tables (`Table N.`). The unset forms
 counter increments; a custom per-block `caption=` or document `caption` overrides
 the prefix without incrementing the counter. Also: ids of individual list items,
 incremental/block reparse, and a pull/event API over the AST.
+
+**Standalone document**: `HtmlBackend::new()` writes Ruby's
+`convert_document`: head metadata (`lang`/`nolang`, `encoding`, generator
+adoctra, `app-name`, `description`, `keywords`, `author` from
+`Document::authors_line`, `copyright`, `favicon`, `<title>` = Ruby's sanitized
+doctitle with fallbacks), `<body id class>` (doctype, auto-TOC `toc-class`
+and `toc-<position>`, the `role` attribute), `<header id="header">` (title
+unless `notitle`, `.details` from `Document::authors` — names with
+replacements, emails with macros — and revnumber/revdate/revremark, then the
+auto TOC; manpage: title, TOC, NAME), `<main id="content">`, footnotes and
+`<footer id="footer">` (version and last update from final_attributes; dates
+are not modeled, so only an explicit `docdatetime`, never with
+`reproducible`), `noheader`/`nofooter`/`max-width`. `HtmlBackend::embedded()`
+(CLI `-s`/`--embedded`) is Ruby's `convert_embedded`; the compatibility bench
+and golden tests use it, `golden/document/` compares the standalone shell with
+`asciidoctor-reference.rb --standalone`. adoctra.css lays out the header,
+details, footer and the fixed `toc2` sidebar like Ruby (checked with
+screenshots). Not modeled: `embedded`/embedded `notitle` default, stylesheet/
+linkcss/webfonts/copycss, docinfo.
 
 When asked to "add a feature," check this list first and say plainly whether it
 is new work or wiring up an existing seam.

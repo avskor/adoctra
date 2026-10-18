@@ -337,7 +337,7 @@ fn html_inline_markup_matches_asciidoctor() {
         let expected = fs::read_to_string(&expected_path).unwrap();
 
         let doc = adoctra_core::parse(&adoc).document;
-        let ours = String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap();
+        let ours = String::from_utf8(HtmlBackend::embedded().convert(&doc).unwrap()).unwrap();
 
         assert_eq!(
             paragraph_inner(&ours),
@@ -370,7 +370,7 @@ fn html_lists_match_asciidoctor() {
         let expected = fs::read_to_string(&expected_path).unwrap();
 
         let doc = adoctra_core::parse(&adoc).document;
-        let ours = String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap();
+        let ours = String::from_utf8(HtmlBackend::embedded().convert(&doc).unwrap()).unwrap();
 
         assert_eq!(
             flat_list(&ours),
@@ -418,7 +418,7 @@ fn html_description_lists_match_asciidoctor() {
         let expected = fs::read_to_string(path.with_extension("expected.html")).unwrap();
         let name = path.file_stem().unwrap().to_string_lossy().into_owned();
         let doc = adoctra_core::parse(&fs::read_to_string(&path).unwrap()).document;
-        let ours = String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap();
+        let ours = String::from_utf8(HtmlBackend::embedded().convert(&doc).unwrap()).unwrap();
         assert_eq!(
             flat_dlist(&ours),
             flat_dlist(&expected),
@@ -443,7 +443,7 @@ fn html_callouts_match_asciidoctor() {
         let expected = fs::read_to_string(path.with_extension("expected.html")).unwrap();
         let name = path.file_stem().unwrap().to_string_lossy().into_owned();
         let doc = adoctra_core::parse(&fs::read_to_string(&path).unwrap()).document;
-        let ours = String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap();
+        let ours = String::from_utf8(HtmlBackend::embedded().convert(&doc).unwrap()).unwrap();
         assert_eq!(
             pre_inner(&ours),
             pre_inner(&expected),
@@ -479,7 +479,7 @@ fn html_source_blocks_match_asciidoctor() {
         let expected = fs::read_to_string(&expected_path).unwrap();
 
         let doc = adoctra_core::parse(&adoc).document;
-        let ours = String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap();
+        let ours = String::from_utf8(HtmlBackend::embedded().convert(&doc).unwrap()).unwrap();
 
         assert_eq!(
             listing_block(&ours),
@@ -509,7 +509,7 @@ fn html_literal_blocks_match_asciidoctor() {
         let expected = fs::read_to_string(&expected_path).unwrap();
 
         let doc = adoctra_core::parse(&adoc).document;
-        let ours = String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap();
+        let ours = String::from_utf8(HtmlBackend::embedded().convert(&doc).unwrap()).unwrap();
 
         assert_eq!(
             pre_inner(&ours),
@@ -539,7 +539,7 @@ fn html_passthrough_blocks_match_asciidoctor() {
         let expected = fs::read_to_string(&expected_path).unwrap();
 
         let doc = adoctra_core::parse(&adoc).document;
-        let ours = String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap();
+        let ours = String::from_utf8(HtmlBackend::embedded().convert(&doc).unwrap()).unwrap();
 
         assert_eq!(
             passthrough_body(&ours),
@@ -570,7 +570,7 @@ fn html_breaks_match_asciidoctor() {
         let expected = fs::read_to_string(&expected_path).unwrap();
 
         let doc = adoctra_core::parse(&adoc).document;
-        let ours = String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap();
+        let ours = String::from_utf8(HtmlBackend::embedded().convert(&doc).unwrap()).unwrap();
 
         assert_eq!(
             passthrough_body(&ours),
@@ -600,7 +600,7 @@ fn html_admonition_blocks_match_asciidoctor() {
         let expected = fs::read_to_string(&expected_path).unwrap();
 
         let doc = adoctra_core::parse(&adoc).document;
-        let ours = String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap();
+        let ours = String::from_utf8(HtmlBackend::embedded().convert(&doc).unwrap()).unwrap();
 
         assert_eq!(
             admonition(&ours),
@@ -630,7 +630,7 @@ fn html_example_blocks_match_asciidoctor() {
         let expected = fs::read_to_string(&expected_path).unwrap();
 
         let doc = adoctra_core::parse(&adoc).document;
-        let ours = String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap();
+        let ours = String::from_utf8(HtmlBackend::embedded().convert(&doc).unwrap()).unwrap();
 
         assert_eq!(
             example_body(&ours),
@@ -660,7 +660,7 @@ fn html_sidebar_blocks_match_asciidoctor() {
         let expected = fs::read_to_string(&expected_path).unwrap();
 
         let doc = adoctra_core::parse(&adoc).document;
-        let ours = String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap();
+        let ours = String::from_utf8(HtmlBackend::embedded().convert(&doc).unwrap()).unwrap();
 
         assert_eq!(
             sidebar_body(&ours),
@@ -690,7 +690,7 @@ fn html_open_blocks_match_asciidoctor() {
         let expected = fs::read_to_string(&expected_path).unwrap();
 
         let doc = adoctra_core::parse(&adoc).document;
-        let ours = String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap();
+        let ours = String::from_utf8(HtmlBackend::embedded().convert(&doc).unwrap()).unwrap();
 
         assert_eq!(
             open_body(&ours),
@@ -723,7 +723,7 @@ fn html_tocs_match_asciidoctor() {
         let adoc = fs::read_to_string(&path).unwrap();
         let expected = fs::read_to_string(&expected_path).unwrap();
         let doc = adoctra_core::parse(&adoc).document;
-        let ours = String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap();
+        let ours = String::from_utf8(HtmlBackend::embedded().convert(&doc).unwrap()).unwrap();
         assert_eq!(
             toc_body(&ours),
             toc_body(&expected),
@@ -751,7 +751,7 @@ fn html_images_match_asciidoctor() {
         let adoc = fs::read_to_string(&path).unwrap();
         let expected = fs::read_to_string(&expected_path).unwrap();
         let doc = adoctra_core::parse(&adoc).document;
-        let ours = String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap();
+        let ours = String::from_utf8(HtmlBackend::embedded().convert(&doc).unwrap()).unwrap();
         assert_eq!(
             toc_body(&ours),
             toc_body(&expected),
@@ -780,7 +780,7 @@ fn html_media_match_asciidoctor() {
         let adoc = fs::read_to_string(&path).unwrap();
         let expected = fs::read_to_string(&expected_path).unwrap();
         let doc = adoctra_core::parse(&adoc).document;
-        let ours = String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap();
+        let ours = String::from_utf8(HtmlBackend::embedded().convert(&doc).unwrap()).unwrap();
         assert_eq!(
             toc_body(&ours),
             toc_body(&expected.replace(" frameborder=\"0\"", "")),
@@ -816,7 +816,7 @@ fn html_tables_match_asciidoctor() {
         let adoc = fs::read_to_string(&path).unwrap();
         let expected = fs::read_to_string(&expected_path).unwrap();
         let doc = adoctra_core::parse(&adoc).document;
-        let ours = String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap();
+        let ours = String::from_utf8(HtmlBackend::embedded().convert(&doc).unwrap()).unwrap();
         assert_eq!(
             lines(&ours),
             lines(&expected),
@@ -843,7 +843,7 @@ fn html_footnotes_match_asciidoctor() {
         let adoc = fs::read_to_string(&path).unwrap();
         let expected = fs::read_to_string(&expected_path).unwrap();
         let doc = adoctra_core::parse(&adoc).document;
-        let ours = String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap();
+        let ours = String::from_utf8(HtmlBackend::embedded().convert(&doc).unwrap()).unwrap();
         assert_eq!(
             toc_body(&ours),
             toc_body(&expected),
@@ -874,7 +874,7 @@ fn html_block_titles_match_asciidoctor() {
         let expected = fs::read_to_string(&expected_path).unwrap();
 
         let doc = adoctra_core::parse(&adoc).document;
-        let ours = String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap();
+        let ours = String::from_utf8(HtmlBackend::embedded().convert(&doc).unwrap()).unwrap();
 
         assert_eq!(
             block_title(&ours),
@@ -904,7 +904,7 @@ fn html_quote_blocks_match_asciidoctor() {
         let expected = fs::read_to_string(&expected_path).unwrap();
 
         let doc = adoctra_core::parse(&adoc).document;
-        let ours = String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap();
+        let ours = String::from_utf8(HtmlBackend::embedded().convert(&doc).unwrap()).unwrap();
 
         assert_eq!(
             quote_verse_body(&ours),
@@ -934,7 +934,7 @@ fn html_verse_blocks_match_asciidoctor() {
         let expected = fs::read_to_string(&expected_path).unwrap();
 
         let doc = adoctra_core::parse(&adoc).document;
-        let ours = String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap();
+        let ours = String::from_utf8(HtmlBackend::embedded().convert(&doc).unwrap()).unwrap();
 
         assert_eq!(
             quote_verse_body(&ours),
@@ -951,7 +951,8 @@ fn offset_heading_levels_match_asciidoctor() {
     let expected = fs::read_to_string(dir.join("leveloffset-attributes.expected.html")).unwrap();
     let result = adoctra_core::parse(&source);
     assert!(result.diagnostics.is_empty());
-    let ours = String::from_utf8(HtmlBackend.convert(&result.document).unwrap()).unwrap();
+    let ours =
+        String::from_utf8(HtmlBackend::embedded().convert(&result.document).unwrap()).unwrap();
     let headings = |html: &str| -> Vec<String> {
         html.lines()
             .map(str::trim)
@@ -1021,7 +1022,8 @@ fn section_hierarchy_and_preamble_match_asciidoctor() {
     let expected = fs::read_to_string(dir.join("sections.expected.html")).unwrap();
     let result = adoctra_core::parse(&source);
     assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
-    let ours = String::from_utf8(HtmlBackend.convert(&result.document).unwrap()).unwrap();
+    let ours =
+        String::from_utf8(HtmlBackend::embedded().convert(&result.document).unwrap()).unwrap();
     // The reference omits the document title (no `showtitle`).
     let mut outline = section_outline(&ours);
     assert_eq!(outline.remove(0), "<h1>Doc");
@@ -1045,7 +1047,8 @@ fn setext_body_sections_match_asciidoctor() {
         messages,
         ["section title out of sequence: expected level 2, got level 4"]
     );
-    let ours = String::from_utf8(HtmlBackend.convert(&result.document).unwrap()).unwrap();
+    let ours =
+        String::from_utf8(HtmlBackend::embedded().convert(&result.document).unwrap()).unwrap();
     let headings = |html: &str| -> Vec<String> {
         html.lines()
             .map(str::trim)
@@ -1074,7 +1077,8 @@ fn setext_document_title_and_metadata_match_asciidoctor() {
     let expected = fs::read_to_string(dir.join("header-setext.expected.html")).unwrap();
     let result = adoctra_core::parse(&source);
     assert!(result.diagnostics.is_empty());
-    let ours = String::from_utf8(HtmlBackend.convert(&result.document).unwrap()).unwrap();
+    let ours =
+        String::from_utf8(HtmlBackend::embedded().convert(&result.document).unwrap()).unwrap();
     let heading = |html: &str| {
         html.lines()
             .find(|line| line.starts_with("<h1>"))
@@ -1094,7 +1098,8 @@ fn doctitle_override_and_attribute_match_asciidoctor() {
     let result = adoctra_core::parse(&source);
     assert!(result.diagnostics.is_empty());
     assert_eq!(result.document.header.as_ref().unwrap().title, "Исходный");
-    let ours = String::from_utf8(HtmlBackend.convert(&result.document).unwrap()).unwrap();
+    let ours =
+        String::from_utf8(HtmlBackend::embedded().convert(&result.document).unwrap()).unwrap();
     let heading = |html: &str| {
         html.lines()
             .find(|line| line.starts_with("<h1>"))
@@ -1112,7 +1117,8 @@ fn indexed_author_names_match_asciidoctor() {
     let expected = fs::read_to_string(dir.join("header-indexed-authors.expected.html")).unwrap();
     let result = adoctra_core::parse(&source);
     assert!(result.diagnostics.is_empty());
-    let ours = String::from_utf8(HtmlBackend.convert(&result.document).unwrap()).unwrap();
+    let ours =
+        String::from_utf8(HtmlBackend::embedded().convert(&result.document).unwrap()).unwrap();
     assert_eq!(paragraph_inner(&ours), paragraph_inner(&expected));
     assert_eq!(
         result.document.header.unwrap().authors[1].name,
@@ -1126,7 +1132,8 @@ fn author_markup_and_literal_values_match_asciidoctor() {
     let source = fs::read_to_string(dir.join("header-author-markup.adoc")).unwrap();
     let expected = fs::read_to_string(dir.join("header-author-markup.expected.html")).unwrap();
     let result = adoctra_core::parse(&source);
-    let ours = String::from_utf8(HtmlBackend.convert(&result.document).unwrap()).unwrap();
+    let ours =
+        String::from_utf8(HtmlBackend::embedded().convert(&result.document).unwrap()).unwrap();
     assert_eq!(paragraph_inner(&ours), paragraph_inner(&expected));
     assert!(ours.contains("<strong>Анна</strong> Смирнова"));
     assert!(ours.contains("&lt;b&gt;Literal&lt;/b&gt; Name"));
@@ -1139,7 +1146,8 @@ fn attribute_entities_and_escapes_match_asciidoctor() {
     let expected = fs::read_to_string(dir.join("attribute-entities.expected.html")).unwrap();
     let result = adoctra_core::parse(&source);
     assert!(result.diagnostics.is_empty());
-    let ours = String::from_utf8(HtmlBackend.convert(&result.document).unwrap()).unwrap();
+    let ours =
+        String::from_utf8(HtmlBackend::embedded().convert(&result.document).unwrap()).unwrap();
     assert_eq!(paragraph_inner(&ours), paragraph_inner(&expected));
     assert!(ours.contains("<h1>Entities &copy; &#65; &#x1F642;</h1>"));
     assert!(ours.contains("<p>&amp;copy;</p>"));
@@ -1153,7 +1161,8 @@ fn shared_replacements_match_reference_including_raw_and_escaped_entities() {
     let expected = fs::read_to_string(dir.join("shared-replacements.expected.html")).unwrap();
     let result = adoctra_core::parse(&source);
     assert!(result.diagnostics.is_empty());
-    let ours = String::from_utf8(HtmlBackend.convert(&result.document).unwrap()).unwrap();
+    let ours =
+        String::from_utf8(HtmlBackend::embedded().convert(&result.document).unwrap()).unwrap();
     assert_eq!(paragraph_inner(&ours), paragraph_inner(&expected));
     assert!(ours.contains("<h1>&#169; &copy;</h1>"));
     assert!(ours.contains("<p>(C) &amp;copy;</p>"));
@@ -1166,7 +1175,8 @@ fn pass_quotes_preserve_semantic_formatting_and_ordered_substitutions() {
     let expected = fs::read_to_string(dir.join("pass-quotes.expected.html")).unwrap();
     let result = adoctra_core::parse(&source);
     assert!(result.diagnostics.is_empty());
-    let ours = String::from_utf8(HtmlBackend.convert(&result.document).unwrap()).unwrap();
+    let ours =
+        String::from_utf8(HtmlBackend::embedded().convert(&result.document).unwrap()).unwrap();
     assert_eq!(paragraph_inner(&ours), paragraph_inner(&expected));
     assert!(ours.contains("<strong><em>Ada</em></strong>"));
     assert!(ours.contains("<strong>_Ada_</strong>"));
@@ -1180,7 +1190,8 @@ fn pass_replacements_match_reference_with_ordered_protection_and_expansion() {
     let expected = fs::read_to_string(dir.join("pass-replacements.expected.html")).unwrap();
     let result = adoctra_core::parse(&source);
     assert!(result.diagnostics.is_empty());
-    let ours = String::from_utf8(HtmlBackend.convert(&result.document).unwrap()).unwrap();
+    let ours =
+        String::from_utf8(HtmlBackend::embedded().convert(&result.document).unwrap()).unwrap();
     assert_eq!(paragraph_inner(&ours), paragraph_inner(&expected));
     assert!(ours.contains("<p>&#169; -></p>"));
     assert!(ours.contains("<p>&lt;b&gt;&#174;&lt;/b&gt; &#8594;</p>"));
@@ -1194,7 +1205,8 @@ fn section_ids_strip_entities_and_raw_tags_and_preserve_heading_and_link_markup(
     let expected = fs::read_to_string(dir.join("section-id-entities.expected.html")).unwrap();
     let result = adoctra_core::parse(&source);
     assert!(result.diagnostics.is_empty());
-    let ours = String::from_utf8(HtmlBackend.convert(&result.document).unwrap()).unwrap();
+    let ours =
+        String::from_utf8(HtmlBackend::embedded().convert(&result.document).unwrap()).unwrap();
     let headings = |html: &str| -> Vec<String> {
         html.lines()
             .filter(|line| line.starts_with("<h2"))
@@ -1215,7 +1227,8 @@ fn quote_attributes_match_reference_and_ordered_protection() {
     let expected = fs::read_to_string(dir.join("pass-quote-attributes.expected.html")).unwrap();
     let result = adoctra_core::parse(&source);
     assert!(result.diagnostics.is_empty());
-    let ours = String::from_utf8(HtmlBackend.convert(&result.document).unwrap()).unwrap();
+    let ours =
+        String::from_utf8(HtmlBackend::embedded().convert(&result.document).unwrap()).unwrap();
     assert_eq!(paragraph_inner(&ours), paragraph_inner(&expected));
     assert!(ours.contains("<strong id=\"anchor\" class=\"red\">Ж&amp;</strong>"));
     assert!(ours.contains("<span class=\"\">empty role</span>"));
@@ -1228,7 +1241,7 @@ fn ordered_inline_quotes_match_reference_with_metadata_and_escapes() {
     let source = fs::read_to_string(dir.join("inline-quotes.adoc")).unwrap();
     let expected = fs::read_to_string(dir.join("inline-quotes.expected.html")).unwrap();
     let actual = String::from_utf8(
-        HtmlBackend
+        HtmlBackend::embedded()
             .convert(&adoctra_core::parse(&source).document)
             .unwrap(),
     )
@@ -1242,7 +1255,7 @@ fn direct_link_macros_follow_ordered_substitutions() {
     let source = fs::read_to_string(dir.join("direct-link-macros.adoc")).unwrap();
     let expected = fs::read_to_string(dir.join("direct-link-macros.expected.html")).unwrap();
     let doc = adoctra_core::parse(&source).document;
-    let actual = String::from_utf8(HtmlBackend.convert(&doc).unwrap()).unwrap();
+    let actual = String::from_utf8(HtmlBackend::embedded().convert(&doc).unwrap()).unwrap();
     assert_eq!(paragraph_inner(&actual), paragraph_inner(&expected));
 }
 
@@ -1253,7 +1266,8 @@ fn post_attribute_link_macros_match_reference_across_text_and_reference_parts() 
     let expected = fs::read_to_string(dir.join("post-attribute-macros.expected.html")).unwrap();
     let result = adoctra_core::parse(&source);
     assert!(result.diagnostics.is_empty());
-    let ours = String::from_utf8(HtmlBackend.convert(&result.document).unwrap()).unwrap();
+    let ours =
+        String::from_utf8(HtmlBackend::embedded().convert(&result.document).unwrap()).unwrap();
     assert_eq!(paragraph_inner(&ours), paragraph_inner(&expected));
     assert!(ours.contains("<a href=\"page\" class=\"red\" title=\"Title\">Ж&amp;</a>"));
     assert!(ours.contains("<a href=\"page\"><strong>Bold</strong></a>"));
@@ -1266,7 +1280,8 @@ fn pass_link_macros_match_reference_and_preserve_ordered_protection() {
     let expected = fs::read_to_string(dir.join("pass-link-macros.expected.html")).unwrap();
     let result = adoctra_core::parse(&source);
     assert!(result.diagnostics.is_empty());
-    let ours = String::from_utf8(HtmlBackend.convert(&result.document).unwrap()).unwrap();
+    let ours =
+        String::from_utf8(HtmlBackend::embedded().convert(&result.document).unwrap()).unwrap();
     assert_eq!(paragraph_inner(&ours), paragraph_inner(&expected));
     assert!(ours.contains("<a href=\"page\" id=\"anchor\" class=\"red\" title=\"Title\" target=\"_blank\" rel=\"nofollow noopener\"><strong>Ж&amp;</strong></a>"));
     assert!(ours.contains("<a href=\"#_alpha\">Alpha</a>"));
@@ -1309,7 +1324,7 @@ fn html_manual_pages_match_asciidoctor() {
         let adoc = fs::read_to_string(&path).unwrap();
         let expected = fs::read_to_string(path.with_extension("expected.html")).unwrap();
         let doc = adoctra_core::parse(&adoc).document;
-        let ours = String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap();
+        let ours = String::from_utf8(HtmlBackend::embedded().convert(&doc).unwrap()).unwrap();
         assert!(ours.contains(" Manual Page</h1>"), "{ours}");
         assert!(!elements(&expected).is_empty());
         assert_eq!(
@@ -1329,7 +1344,8 @@ fn section_id_policy_matches_asciidoctor() {
     let expected = fs::read_to_string(dir.join("section-id-policy.expected.html")).unwrap();
     let result = adoctra_core::parse(&source);
     assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
-    let ours = String::from_utf8(HtmlBackend.convert(&result.document).unwrap()).unwrap();
+    let ours =
+        String::from_utf8(HtmlBackend::embedded().convert(&result.document).unwrap()).unwrap();
     // Headings, TOC entries and resolved references carry the same ids.
     let ids = |html: &str| -> Vec<String> {
         html.lines()
@@ -1358,7 +1374,7 @@ fn html_section_titles_match_asciidoctor() {
         let source = fs::read_to_string(&path).unwrap();
         let expected = fs::read_to_string(path.with_extension("expected.html")).unwrap();
         let ours = String::from_utf8(
-            HtmlBackend
+            HtmlBackend::embedded()
                 .convert(&adoctra_core::parse(&source).document)
                 .unwrap(),
         )
@@ -1381,6 +1397,94 @@ fn html_section_titles_match_asciidoctor() {
             "section titles diverge from asciidoctor for `{name}`"
         );
         assert!(!headings(&ours).is_empty(), "{name}");
+        checked += 1;
+    }
+    assert!(checked > 0, "no golden fixtures found in {dir:?}");
+}
+
+/// The document shell of a standalone document: the head without the
+/// stylesheet, X-UA-Compatible and generator, the header, footnotes and
+/// footer, with the content replaced by a marker. adoctra's semantic
+/// `<header>`/`<main>`/`<footer>`/`<nav>` map to Ruby's divs and its
+/// escaped quotes in `content` attributes to Ruby's literal ones.
+fn document_shell(html: &str) -> Vec<String> {
+    let mut html = html.to_owned();
+    if let (Some(start), Some(end)) = (html.find("<style>\n"), html.find("</style>\n")) {
+        html.replace_range(start..end + "</style>\n".len(), "");
+    }
+    let lines: Vec<String> = html
+        .lines()
+        // adoctra wraps a manual page's NAME section in a `sect1` section
+        // where Ruby's has a `sectionbody` div after the title.
+        .filter(|line| {
+            !line.starts_with("<meta http-equiv")
+                && !line.starts_with("<meta name=\"generator\"")
+                && *line != "<section class=\"sect1\">"
+                && *line != "<div class=\"sectionbody\">"
+        })
+        .map(|line| {
+            let line = line
+                .replace("<header id=\"header\"", "<div id=\"header\"")
+                .replace("</header>", "</div>")
+                .replace("<main id=\"content\"", "<div id=\"content\"")
+                .replace("</main>", "</div>")
+                .replace("<footer id=\"footer\"", "<div id=\"footer\"")
+                .replace("</footer>", "</div>")
+                .replace("<nav id=\"toc\"", "<div id=\"toc\"")
+                .replace("</nav>", "</div>")
+                .replace("</section>", "</div>");
+            if line.starts_with("<meta ") {
+                line.replace("&quot;", "\"")
+            } else {
+                line
+            }
+        })
+        .collect();
+    let Some(start) = lines
+        .iter()
+        .position(|l| l.starts_with("<div id=\"content\""))
+    else {
+        return lines;
+    };
+    let end = lines
+        .iter()
+        .position(|l| {
+            l.starts_with("<div id=\"footnotes\"")
+                || l.starts_with("<div id=\"footer\"")
+                || l == "</body>"
+        })
+        .unwrap();
+    let mut shell = lines[..start].to_vec();
+    shell.push("<content/>".to_owned());
+    shell.extend_from_slice(&lines[end..]);
+    shell
+}
+
+#[test]
+fn html_standalone_documents_match_asciidoctor() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/document");
+    let mut checked = 0usize;
+    for entry in fs::read_dir(&dir).expect("golden/document dir is missing") {
+        let path = entry.unwrap().path();
+        if path.extension().and_then(|e| e.to_str()) != Some("adoc") {
+            continue;
+        }
+        let name = path.file_stem().unwrap().to_string_lossy().into_owned();
+        let source = fs::read_to_string(&path).unwrap();
+        let expected = fs::read_to_string(path.with_extension("expected.html")).unwrap();
+        // The reference converts with `reproducible`, which hides the
+        // last-update line adoctra omits without date attributes.
+        let ours = String::from_utf8(
+            HtmlBackend::new()
+                .convert(&adoctra_core::parse(&source).document)
+                .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            document_shell(&ours),
+            document_shell(&expected),
+            "document shell diverges from asciidoctor for `{name}`"
+        );
         checked += 1;
     }
     assert!(checked > 0, "no golden fixtures found in {dir:?}");

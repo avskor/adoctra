@@ -17,6 +17,8 @@
   --adoctra-fg: #1f2328;
   --adoctra-bg: #ffffff;
   --adoctra-code-bg: #f6f8fa;
+  --adoctra-rule: #dddddf;
+  --adoctra-sidebar-bg: #f8f8f7;
   color-scheme: light dark;
 }
 
@@ -25,9 +27,85 @@ body {
   line-height: 1.6;
   color: var(--adoctra-fg);
   background: var(--adoctra-bg);
+  margin: 0;
+}
+
+/* --- Document header and footer -------------------------------------------
+
+   Like Ruby's stylesheet, the header, content and footnotes share one
+   centred column (`max-width` overrides it), the header shows the title
+   above a line of author/revision details, and the footer is a full-width
+   dark band. */
+body > :is(#header, #content, #footnotes) {
+  box-sizing: border-box;
   max-width: 46rem;
   margin-inline: auto;
-  padding: 2rem 1.25rem;
+  padding-inline: 1.25rem;
+}
+body > #header { padding-block-start: 2rem; }
+body > #content { padding-block: 1rem 2rem; }
+body > #footnotes { padding-block-end: 0.75em; margin-block-end: 0.625em; }
+#header > h1:first-child { margin-block: 0; }
+#header > h1:only-child,
+body.toc2 #header > h1:nth-last-child(2) {
+  border-block-end: 1px solid var(--adoctra-rule);
+  padding-block-end: 0.5rem;
+}
+#header .details {
+  display: flex;
+  flex-flow: row wrap;
+  padding: 0.25em 0 0.25em 0.25em;
+  border-block-end: 1px solid var(--adoctra-rule);
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--adoctra-fg) 60%, transparent);
+}
+#header .details span:first-child { margin-inline-start: -0.125em; }
+#header .details span.email a { color: color-mix(in srgb, var(--adoctra-fg) 85%, transparent); }
+#header .details br { display: none; }
+#header .details br + span::before { content: "\00a0\2013\00a0"; }
+#header .details br + span.author::before {
+  content: "\00a0\22c5\00a0";
+  color: color-mix(in srgb, var(--adoctra-fg) 85%, transparent);
+}
+#header .details br + span#revremark::before { content: "\00a0|\00a0"; }
+#header #revnumber { text-transform: capitalize; }
+#header #revnumber::after { content: "\00a0"; }
+#header > h1:first-child + #toc { margin-block-start: 0.5rem; }
+body > #footer {
+  padding: 1.25em;
+  background: rgb(0 0 0 / 0.8);
+}
+#footer-text { color: rgb(255 255 255 / 0.8); line-height: 1.44; }
+
+/* `toc: left`/`right`: a fixed sidebar on wide screens, like Ruby's toc2. */
+@media screen and (min-width: 768px) {
+  body.toc2 { padding-inline-start: 15em; }
+  body.toc2.toc-right { padding-inline: 0 15em; }
+  nav#toc.toc2 {
+    box-sizing: border-box;
+    position: fixed;
+    inset-block: 0;
+    inset-inline-start: 0;
+    z-index: 1000;
+    width: 15em;
+    margin: 0;
+    padding: 1.25em 1em;
+    overflow: auto;
+    border: 0;
+    border-inline-end: 1px solid var(--adoctra-rule);
+    background: var(--adoctra-sidebar-bg);
+  }
+  nav#toc.toc2 > ul { font-size: 0.9em; }
+  body.toc2.toc-right nav#toc.toc2 {
+    inset-inline: auto 0;
+    border-inline-end: 0;
+    border-inline-start: 1px solid var(--adoctra-rule);
+  }
+}
+@media screen and (min-width: 1280px) {
+  body.toc2 { padding-inline-start: 20em; }
+  body.toc2.toc-right { padding-inline: 0 20em; }
+  nav#toc.toc2 { width: 20em; }
 }
 
 h1, h2, h3, h4, h5, h6 {

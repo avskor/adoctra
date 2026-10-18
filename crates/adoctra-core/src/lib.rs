@@ -54,8 +54,8 @@ mod unicode_word;
 pub mod visit;
 
 pub use ast::{
-    Author, Block, BlockKind, Document, DocumentHeader, Inline, Manpage, NameSection, Revision,
-    Span,
+    Author, AuthorDetails, Block, BlockKind, Document, DocumentHeader, Inline, Manpage,
+    NameSection, Revision, Span,
 };
 pub use attributes::{
     AttributeFormat, AttributeLink, AttributePart, Attributes, Footnote, FootnoteKind, IndexTerm,

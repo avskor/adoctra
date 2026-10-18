@@ -11,12 +11,26 @@ mod math;
 /// that want their own styling can ignore it and read the semantic markup.
 pub const STYLESHEET: &str = include_str!("../assets/adoctra.css");
 
+/// The HTML5 converter. [`HtmlBackend::new`] writes a standalone document
+/// like Ruby's `convert_document` (head metadata, a header with the title,
+/// author/revision details and an automatic TOC, the content, footnotes and a
+/// footer); [`HtmlBackend::embedded`] writes only the body content, like
+/// Ruby's `convert_embedded` (`-s`).
 #[derive(Debug, Default, Clone, Copy)]
-pub struct HtmlBackend;
+pub struct HtmlBackend {
+    embedded: bool,
+}
 
 impl HtmlBackend {
+    /// A standalone document.
     pub fn new() -> Self {
-        Self
+        Self::default()
+    }
+
+    /// Embedded output: the title, an automatic TOC, the content and the
+    /// footnotes, without the document shell, header details or footer.
+    pub fn embedded() -> Self {
+        Self { embedded: true }
     }
 }
 
@@ -30,97 +44,364 @@ impl Backend for HtmlBackend {
     }
 
     fn convert(&self, doc: &Document) -> Result<Vec<u8>> {
-        let mut out = String::new();
-        out.push_str("<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"utf-8\">\n<style>\n");
-        out.push_str(STYLESHEET);
-        out.push_str("</style>\n");
-        icon_font(&doc.attributes, &mut out);
-        math::configuration(&doc.final_attributes, &doc.attributes, &mut out);
-        out.push_str("</head>\n<body>\n");
         let cx = Cx {
             doc,
             book: doc.attributes.get("doctype") == Some("book"),
         };
-        let attributes = &doc.attributes;
-        // Ruby's embedded document puts an automatic TOC after the title. Like
-        // its converter, every TOC reads the header attributes except the
-        // `toc::[]` macro, which reads them at its position.
-        let auto_toc = cx.has_sections()
-            && attributes.get("toc").is_some()
-            && !matches!(attributes.get("toc-placement"), Some("macro" | "preamble"));
-        let title = usize::from(doc.has_title);
-        if doc.manpage.is_some() && !doc.has_title {
-            render_manpage_header(doc, &mut out);
+        let mut out = String::new();
+        if self.embedded {
+            render_content(&cx, true, &mut out);
+            render_footnotes(&doc.footnotes, &doc.attributes, "", &mut out);
+        } else {
+            render_document(&cx, &mut out);
         }
-        for (i, block) in doc.blocks.iter().enumerate() {
-            if i == title && auto_toc {
-                render_toc(&cx, attributes, "toc", None, None, &mut out);
-            }
-            match &block.kind {
-                BlockKind::Heading { .. } if i == 0 && doc.manpage.is_some() && doc.has_title => {
-                    render_manpage_header(doc, &mut out);
-                }
-                BlockKind::Heading { level, inlines } if i == 0 && doc.has_title => {
-                    render_heading(block, *level, inlines, false, &block.roles, &mut out);
-                }
-                // Like Ruby, a partintro renders only as a child of a book part.
-                BlockKind::Section { level: 0, blocks } if cx.book => {
-                    for child in blocks {
-                        match &child.kind {
-                            BlockKind::Open { blocks } if is_style(child, "partintro") => {
-                                render_open(child, blocks, &cx, &mut out)
-                            }
-                            _ => render_block(child, &cx, &mut out),
-                        }
-                    }
-                }
-                // Ruby excludes an abstract directly in a book (no preamble).
-                BlockKind::Open { .. } if cx.book && is_style(block, "abstract") => {}
-                // asciidoctor's `<div id="preamble">` (without its `sectionbody`),
-                // ending with the TOC when `toc-placement` is `preamble`.
-                BlockKind::Preamble { blocks } => {
-                    out.push_str("<section id=\"preamble\">\n");
-                    for child in blocks {
-                        render_block(child, &cx, &mut out);
-                    }
-                    if cx.has_sections()
-                        && attributes.get("toc").is_some()
-                        && attributes.get("toc-placement") == Some("preamble")
-                    {
-                        let class = attributes.get("toc-class").unwrap_or("toc");
-                        render_toc(&cx, attributes, class, None, None, &mut out);
-                    }
-                    out.push_str("</section>\n");
-                }
-                _ => render_block(block, &cx, &mut out),
-            }
-        }
-        if doc.blocks.len() == title && auto_toc {
-            render_toc(&cx, attributes, "toc", None, None, &mut out);
-        }
-        render_footnotes(&doc.footnotes, attributes, &mut out);
-        out.push_str("</body>\n</html>\n");
         Ok(out.into_bytes())
     }
 }
 
-/// Ruby's manual page header (`convert_embedded`): the document title with
-/// ` Manual Page` (without a title, the first section's, like Ruby's
-/// `doctitle`), then the NAME section from the header attributes when it has
-/// a purpose (`generate_manname_section`), before an automatic TOC. adoctra
-/// renders that section like the others.
-fn render_manpage_header(doc: &Document, out: &mut String) {
-    let first_section = doc.blocks.iter().find_map(|block| match &block.kind {
+/// Ruby's `convert_document`. The head, body classes and header read the
+/// header attributes, the footer the attributes after conversion. adoctra
+/// uses semantic `<header>`/`<main>`/`<footer>` elements for Ruby's
+/// `#header`/`#content`/`#footer` divs and always inlines its stylesheet.
+/// Date attributes are not modeled, so the last-update line needs an
+/// explicit `docdatetime`.
+fn render_document(cx: &Cx, out: &mut String) {
+    let doc = cx.doc;
+    let attributes = &doc.attributes;
+    let content =
+        |key: &str| attribute_html(attributes, key).map(|value| value.replace('"', "&quot;"));
+    let lang = match attributes.get("nolang") {
+        Some(_) => String::new(),
+        None => format!(
+            " lang=\"{}\"",
+            content("lang").unwrap_or_else(|| "en".into())
+        ),
+    };
+    out.push_str(&format!(
+        "<!DOCTYPE html>\n<html{lang}>\n<head>\n<meta charset=\"{}\">\n\
+         <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n\
+         <meta name=\"generator\" content=\"adoctra {}\">\n",
+        content("encoding").unwrap_or_else(|| "UTF-8".into()),
+        env!("CARGO_PKG_VERSION"),
+    ));
+    for (name, key) in [
+        ("application-name", "app-name"),
+        ("description", "description"),
+        ("keywords", "keywords"),
+    ] {
+        if let Some(value) = content(key) {
+            out.push_str(&format!("<meta name=\"{name}\" content=\"{value}\">\n"));
+        }
+    }
+    if let Some(parts) = doc.authors_line() {
+        let mut authors = String::new();
+        render_parts(&parts, &mut authors);
+        if authors.contains('<') {
+            authors = strip_tags(&authors);
+        }
+        out.push_str(&format!(
+            "<meta name=\"author\" content=\"{}\">\n",
+            authors.replace('"', "&quot;")
+        ));
+    }
+    if let Some(value) = content("copyright") {
+        out.push_str(&format!("<meta name=\"copyright\" content=\"{value}\">\n"));
+    }
+    if let Some(href) = content("favicon") {
+        // Ruby's icon type from the extension (`Helpers.extname`).
+        let (href, kind) = match href.as_str() {
+            "" => ("favicon.ico".to_owned(), "image/x-icon".to_owned()),
+            _ => {
+                let basename = href.rsplit('/').next().unwrap_or_default();
+                let kind = match basename.rfind('.').map(|dot| &basename[dot..]) {
+                    Some(".ico") | None => "image/x-icon".to_owned(),
+                    Some(ext) => format!("image/{}", &ext[1..]),
+                };
+                (href, kind)
+            }
+        };
+        out.push_str(&format!(
+            "<link rel=\"icon\" type=\"{kind}\" href=\"{href}\">\n"
+        ));
+    }
+    out.push_str(&format!("<title>{}</title>\n", document_title(doc)));
+    out.push_str("<style>\n");
+    out.push_str(STYLESHEET);
+    out.push_str("</style>\n");
+    icon_font(attributes, out);
+    math::configuration(&doc.final_attributes, attributes, out);
+    out.push_str("</head>\n");
+
+    let sectioned = cx.has_sections();
+    let auto_toc = sectioned
+        && attributes.get("toc").is_some()
+        && attributes.get("toc-placement") == Some("auto");
+    let title = doc.blocks.first().filter(|_| doc.has_title);
+    let mut classes = vec![match &doc.manpage {
+        Some(_) => "manpage",
+        None => attributes.get("doctype").unwrap_or("article"),
+    }
+    .to_owned()];
+    if let (true, Some(class)) = (auto_toc, attributes.get("toc-class")) {
+        classes.push(class.to_owned());
+        classes.push(format!(
+            "toc-{}",
+            attributes.get("toc-position").unwrap_or("header")
+        ));
+    }
+    // The document role is its `role` attribute (Ruby's `node.role`).
+    if let Some(role) = attributes.get("role").filter(|role| !role.is_empty()) {
+        classes.push(role.to_owned());
+    }
+    let id = title.map_or_else(String::new, |block| id_attr(&block.id));
+    out.push_str(&format!(
+        "<body{id} class=\"{}\">\n",
+        escape(&classes.join(" "))
+    ));
+    let max_width = attributes
+        .get("max-width")
+        .filter(|value| !value.is_empty())
+        .map_or_else(String::new, |_| {
+            format!(
+                " style=\"max-width: {};\"",
+                content("max-width").unwrap_or_default()
+            )
+        });
+    let toc = |out: &mut String| {
+        if auto_toc {
+            let class = attributes.get("toc-class").unwrap_or("toc");
+            render_toc(cx, attributes, class, None, None, out);
+        }
+    };
+    if attributes.get("noheader").is_none() {
+        out.push_str(&format!("<header id=\"header\"{max_width}>\n"));
+        if doc.manpage.is_some() {
+            render_manpage_title(doc, false, out);
+            toc(out);
+            render_manname_section(doc, out);
+        } else {
+            if let Some(BlockKind::Heading { inlines, .. }) = title.map(|block| &block.kind) {
+                if attributes.get("notitle").is_none() {
+                    out.push_str("<h1>");
+                    render_inlines(inlines, out);
+                    out.push_str("</h1>\n");
+                }
+            }
+            render_details(doc, out);
+            toc(out);
+        }
+        out.push_str("</header>\n");
+    }
+    out.push_str(&format!("<main id=\"content\"{max_width}>\n"));
+    render_content(cx, false, out);
+    out.push_str("</main>\n");
+    render_footnotes(&doc.footnotes, attributes, &max_width, out);
+    if attributes.get("nofooter").is_none() {
+        render_footer(&doc.final_attributes, &max_width, out);
+    }
+    out.push_str("</body>\n</html>\n");
+}
+
+/// Ruby's `doctitle sanitize: true, use_fallback: true` for `<title>`: the
+/// `title` attribute, the document title, the first section's title or
+/// `untitled-label`, without tags and with spaces squeezed.
+fn document_title(doc: &Document) -> String {
+    let mut title = String::new();
+    if let Some(value) = attribute_html(&doc.attributes, "title") {
+        title = value;
+    } else if let Some(inlines) = doc.blocks.iter().find_map(|block| match &block.kind {
+        BlockKind::Heading { inlines, .. } if doc.has_title => Some(inlines),
         BlockKind::Section { blocks, .. } => match blocks.first().map(|b| &b.kind) {
             Some(BlockKind::Heading { inlines, .. }) => Some(inlines),
             _ => None,
         },
         _ => None,
-    });
+    }) {
+        render_inlines(inlines, &mut title);
+    } else if let Some(value) = attribute_html(&doc.attributes, "untitled-label") {
+        title = value;
+    }
+    if !title.contains('<') {
+        return title;
+    }
+    let mut squeezed = String::new();
+    for ch in strip_tags(&title).chars() {
+        if !(ch == ' ' && squeezed.ends_with(' ')) {
+            squeezed.push(ch);
+        }
+    }
+    squeezed.trim().to_owned()
+}
+
+/// Remove XML tags (Ruby's `XmlSanitizeRx`, `<[^>]+>`).
+fn strip_tags(html: &str) -> String {
+    let mut out = String::with_capacity(html.len());
+    let mut rest = html;
+    while let Some(start) = rest.find('<') {
+        match rest[start + 1..].find('>') {
+            Some(len) if len > 0 => {
+                out.push_str(&rest[..start]);
+                rest = &rest[start + len + 2..];
+            }
+            _ => {
+                out.push_str(&rest[..=start]);
+                rest = &rest[start + 1..];
+            }
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
+/// The header details of Ruby's `convert_document`: each author (with an
+/// email), then the revision number, date and remark.
+fn render_details(doc: &Document, out: &mut String) {
+    let attributes = &doc.attributes;
+    let mut details = Vec::new();
+    for (index, author) in doc.authors().iter().enumerate() {
+        let n = match index {
+            0 => String::new(),
+            _ => (index + 1).to_string(),
+        };
+        let mut name = String::new();
+        render_parts(&author.name, &mut name);
+        details.push(format!(
+            "<span id=\"author{n}\" class=\"author\">{name}</span><br>"
+        ));
+        if let Some(email) = &author.email {
+            let mut html = String::new();
+            render_parts(email, &mut html);
+            details.push(format!(
+                "<span id=\"email{n}\" class=\"email\">{html}</span><br>"
+            ));
+        }
+    }
+    if let Some(number) = attribute_html(attributes, "revnumber") {
+        let label = attribute_html(attributes, "version-label").unwrap_or_default();
+        let comma = if attributes.get("revdate").is_some() {
+            ","
+        } else {
+            ""
+        };
+        details.push(format!(
+            "<span id=\"revnumber\">{} {number}{comma}</span>",
+            map_text(&label, str::to_lowercase)
+        ));
+    }
+    if let Some(date) = attribute_html(attributes, "revdate") {
+        details.push(format!("<span id=\"revdate\">{date}</span>"));
+    }
+    if let Some(remark) = attribute_html(attributes, "revremark") {
+        details.push(format!("<br><span id=\"revremark\">{remark}</span>"));
+    }
+    if !details.is_empty() {
+        out.push_str("<div class=\"details\">\n");
+        for detail in details {
+            out.push_str(&detail);
+            out.push('\n');
+        }
+        out.push_str("</div>\n");
+    }
+}
+
+/// Ruby's footer: the version and the last update (unless `reproducible`).
+fn render_footer(attributes: &adoctra_core::Attributes, max_width: &str, out: &mut String) {
+    out.push_str(&format!(
+        "<footer id=\"footer\"{max_width}>\n<div id=\"footer-text\">\n"
+    ));
+    if let Some(number) = attribute_html(attributes, "revnumber") {
+        let label = attribute_html(attributes, "version-label").unwrap_or_default();
+        out.push_str(&format!("{label} {number}<br>\n"));
+    }
+    if let (Some(label), Some(date), None) = (
+        attribute_html(attributes, "last-update-label"),
+        attribute_html(attributes, "docdatetime"),
+        attributes.get("reproducible"),
+    ) {
+        out.push_str(&format!("{label} {date}\n"));
+    }
+    out.push_str("</div>\n</footer>\n");
+}
+
+/// The document's blocks. Embedded output also renders the title and an
+/// automatic TOC after it, like Ruby's `convert_embedded`; a standalone
+/// document has them in its header.
+fn render_content(cx: &Cx, embedded: bool, out: &mut String) {
+    let doc = cx.doc;
+    let attributes = &doc.attributes;
+    // Ruby's embedded document puts an automatic TOC after the title. Like
+    // its converter, every TOC reads the header attributes except the
+    // `toc::[]` macro, which reads them at its position.
+    let auto_toc = embedded
+        && cx.has_sections()
+        && attributes.get("toc").is_some()
+        && !matches!(attributes.get("toc-placement"), Some("macro" | "preamble"));
+    let title = usize::from(doc.has_title);
+    if embedded && doc.manpage.is_some() && !doc.has_title {
+        render_manpage_title(doc, true, out);
+        render_manname_section(doc, out);
+    }
+    for (i, block) in doc.blocks.iter().enumerate() {
+        if i == title && auto_toc {
+            render_toc(cx, attributes, "toc", None, None, out);
+        }
+        match &block.kind {
+            BlockKind::Heading { .. } if i == 0 && doc.has_title && !embedded => {}
+            BlockKind::Heading { .. } if i == 0 && doc.manpage.is_some() && doc.has_title => {
+                render_manpage_title(doc, true, out);
+                render_manname_section(doc, out);
+            }
+            BlockKind::Heading { level, inlines } if i == 0 && doc.has_title => {
+                render_heading(block, *level, inlines, false, &block.roles, out);
+            }
+            // Like Ruby, a partintro renders only as a child of a book part.
+            BlockKind::Section { level: 0, blocks } if cx.book => {
+                for child in blocks {
+                    match &child.kind {
+                        BlockKind::Open { blocks } if is_style(child, "partintro") => {
+                            render_open(child, blocks, cx, out)
+                        }
+                        _ => render_block(child, cx, out),
+                    }
+                }
+            }
+            // Ruby excludes an abstract directly in a book (no preamble).
+            BlockKind::Open { .. } if cx.book && is_style(block, "abstract") => {}
+            // asciidoctor's `<div id="preamble">` (without its `sectionbody`),
+            // ending with the TOC when `toc-placement` is `preamble`.
+            BlockKind::Preamble { blocks } => {
+                out.push_str("<section id=\"preamble\">\n");
+                for child in blocks {
+                    render_block(child, cx, out);
+                }
+                if cx.has_sections()
+                    && attributes.get("toc").is_some()
+                    && attributes.get("toc-placement") == Some("preamble")
+                {
+                    let class = attributes.get("toc-class").unwrap_or("toc");
+                    render_toc(cx, attributes, class, None, None, out);
+                }
+                out.push_str("</section>\n");
+            }
+            _ => render_block(block, cx, out),
+        }
+    }
+    if doc.blocks.len() == title && auto_toc {
+        render_toc(cx, attributes, "toc", None, None, out);
+    }
+}
+
+/// Ruby's manual page title: the document title with ` Manual Page`
+/// (without a title, the first section's, like Ruby's `doctitle`). Embedded
+/// output keeps the document id on it.
+fn render_manpage_title(doc: &Document, embedded: bool, out: &mut String) {
+    let first_section = first_section_title(doc);
     let title = doc.blocks.first().filter(|_| doc.has_title);
-    let (id, class) = title.map_or_else(Default::default, |block| {
-        (id_attr(&block.id), class_attr(&[], &block.roles))
-    });
+    let (id, class) = title
+        .filter(|_| embedded)
+        .map_or_else(Default::default, |block| {
+            (id_attr(&block.id), class_attr(&[], &block.roles))
+        });
     out.push_str(&format!("<h1{id}{class}>"));
     let inlines = match title.map(|block| &block.kind) {
         Some(BlockKind::Heading { inlines, .. }) => Some(inlines),
@@ -130,6 +411,23 @@ fn render_manpage_header(doc: &Document, out: &mut String) {
         render_inlines(inlines, out);
     }
     out.push_str(" Manual Page</h1>\n");
+}
+
+fn first_section_title(doc: &Document) -> Option<&Vec<Inline>> {
+    doc.blocks.iter().find_map(|block| match &block.kind {
+        BlockKind::Section { blocks, .. } => match blocks.first().map(|b| &b.kind) {
+            Some(BlockKind::Heading { inlines, .. }) => Some(inlines),
+            _ => None,
+        },
+        _ => None,
+    })
+}
+
+/// The NAME section from the header attributes when it has a purpose
+/// (`generate_manname_section`). adoctra renders that section like the
+/// others.
+fn render_manname_section(doc: &Document, out: &mut String) {
+    let first_section = first_section_title(doc);
     let attributes = &doc.attributes;
     let (Some(manpage), Some(_)) = (&doc.manpage, attributes.get("manpurpose")) else {
         return;
@@ -178,6 +476,13 @@ fn attribute_html(attributes: &adoctra_core::Attributes, key: &str) -> Option<St
 /// Uppercase the text of an HTML fragment outside tags and character
 /// references.
 fn upcase_text(html: &str) -> String {
+    map_text(html, str::to_uppercase)
+}
+
+/// Map the text of an HTML fragment outside tags and character references,
+/// one character at a time (Ruby's `upcase`/`downcase` of converted text,
+/// without touching its markup).
+fn map_text(html: &str, map: impl Fn(&str) -> String) -> String {
     let mut out = String::with_capacity(html.len());
     let mut rest = html;
     while let Some(ch) = rest.chars().next() {
@@ -199,7 +504,7 @@ fn upcase_text(html: &str) -> String {
                 rest = &rest[end..];
             }
             None => {
-                out.extend(ch.to_uppercase());
+                out.push_str(&map(&rest[..ch.len_utf8()]));
                 rest = &rest[ch.len_utf8()..];
             }
         }
@@ -1158,7 +1463,7 @@ fn render_table(block: &Block, table: &adoctra_core::ast::Table, cx: &Cx, out: &
                         for child in blocks {
                             render_block(child, cx, out);
                         }
-                        render_footnotes(footnotes, &cx.doc.attributes, out);
+                        render_footnotes(footnotes, &cx.doc.attributes, "", out);
                         out.push_str("</div>");
                     }
                     CellContent::Literal(text) => {
@@ -1763,12 +2068,13 @@ fn render_ui(ui: &adoctra_core::UiMacro, out: &mut String) {
 fn render_footnotes(
     footnotes: &[adoctra_core::ast::FootnoteDefinition],
     attributes: &adoctra_core::Attributes,
+    max_width: &str,
     out: &mut String,
 ) {
     if footnotes.is_empty() || attributes.get("nofootnotes").is_some() {
         return;
     }
-    out.push_str("<div id=\"footnotes\">\n<hr>\n");
+    out.push_str(&format!("<div id=\"footnotes\"{max_width}>\n<hr>\n"));
     for footnote in footnotes {
         let index = escape(&footnote.index);
         out.push_str(&format!(
@@ -1872,9 +2178,16 @@ fn render_parts(parts: &[adoctra_core::AttributePart], out: &mut String) {
 mod tests {
     use super::*;
 
+    /// Embedded output, the body content Ruby's `-s` writes.
     fn render(src: &str) -> String {
         let doc = adoctra_core::parse(src).document;
-        String::from_utf8(HtmlBackend.convert(&doc).unwrap()).unwrap()
+        String::from_utf8(HtmlBackend::embedded().convert(&doc).unwrap()).unwrap()
+    }
+
+    /// A standalone document.
+    fn render_standalone(src: &str) -> String {
+        let doc = adoctra_core::parse(src).document;
+        String::from_utf8(HtmlBackend::new().convert(&doc).unwrap()).unwrap()
     }
 
     #[test]
@@ -1917,7 +2230,7 @@ mod tests {
         );
         assert!(
             html.contains(
-                "<body>\n<h1>git-foo(1) Manual Page</h1>\n<section class=\"sect1\">\n\
+                "<h1>git-foo(1) Manual Page</h1>\n<section class=\"sect1\">\n\
                  <h2 id=\"_name\">NAME</h2>\n<p>git-foo, git-bar - does <b>it</b> & manpage</p>\n\
                  </section>\n<nav id=\"toc\" class=\"toc\">"
             ),
@@ -1954,7 +2267,7 @@ mod tests {
         );
         // Without a title, Ruby's doctitle is the first section's title.
         let html = render(":doctype: manpage\n\n== NAME\n\nx - y\n\n== Synopsis\n");
-        assert!(html.contains("<body>\n<h1>Synopsis Manual Page</h1>\n<section class=\"sect1\">\n<h2 id=\"_name\">NAME</h2>"), "{html}");
+        assert!(html.contains("<h1>Synopsis Manual Page</h1>\n<section class=\"sect1\">\n<h2 id=\"_name\">NAME</h2>"), "{html}");
         // A nonconforming NAME section stays in the body.
         let html = render("= x(1)\n:doctype: manpage\n\n== NAME\n\nx y\n");
         assert!(html.contains("<h1>x(1) Manual Page</h1>\n<section class=\"sect1\">\n<h2 id=\"_name_2\">NAME</h2>\n<p>x y</p>"), "{html}");
@@ -2628,6 +2941,137 @@ mod tests {
     }
 
     #[test]
+    fn standalone_document_has_head_metadata_header_and_footer_like_ruby() {
+        let html = render_standalone(
+            "[#top.big]\n= The *Doc* (C)\nJohn O'Doe <john@example.com>; Jane -- Roe\n\
+             v1.2, 2020-01-01: A <remark>\n:toc: left\n:description: D & \"q\"\n\
+             :keywords: a, b\n:copyright: (C) Me\n:app-name: App\n:lang: ru\n\
+             :favicon: img/icon.png\n\n== Section\n\nText footnote:[Note].\n",
+        );
+        let head = html.split("<style>").next().unwrap();
+        assert_eq!(
+            head,
+            "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<meta charset=\"UTF-8\">\n\
+             <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n\
+             <meta name=\"generator\" content=\"adoctra 0.1.0\">\n\
+             <meta name=\"application-name\" content=\"App\">\n\
+             <meta name=\"description\" content=\"D &amp; &quot;q&quot;\">\n\
+             <meta name=\"keywords\" content=\"a, b\">\n\
+             <meta name=\"author\" content=\"John O&#8217;Doe, Jane&#8201;&#8212;&#8201;Roe\">\n\
+             <meta name=\"copyright\" content=\"(C) Me\">\n\
+             <link rel=\"icon\" type=\"image/png\" href=\"img/icon.png\">\n\
+             <title>The Doc &#169;</title>\n"
+                .replace("0.1.0", env!("CARGO_PKG_VERSION"))
+        );
+        let body = html.split("</head>\n").nth(1).unwrap();
+        assert!(
+            body.starts_with(
+                "<body id=\"top\" class=\"article toc2 toc-left big\">\n<header id=\"header\">\n\
+                 <h1>The <strong>Doc</strong> &#169;</h1>\n<div class=\"details\">\n\
+                 <span id=\"author\" class=\"author\">John O&#8217;Doe</span><br>\n\
+                 <span id=\"email\" class=\"email\"><a href=\"mailto:john@example.com\">john@example.com</a></span><br>\n\
+                 <span id=\"author2\" class=\"author\">Jane&#8201;&#8212;&#8201;Roe</span><br>\n\
+                 <span id=\"revnumber\">version 1.2,</span>\n<span id=\"revdate\">2020-01-01</span>\n\
+                 <br><span id=\"revremark\">A &lt;remark&gt;</span>\n</div>\n\
+                 <nav id=\"toc\" class=\"toc2\">\n<div id=\"toctitle\">Table of Contents</div>\n"
+            ),
+            "{body}"
+        );
+        assert!(
+            body.contains(
+                "</header>\n<main id=\"content\">\n<section class=\"sect1\">\n<h2 id=\"_section\">"
+            ),
+            "{body}"
+        );
+        assert!(
+            body.ends_with(
+                "</main>\n<div id=\"footnotes\">\n<hr>\n<div class=\"footnote\" id=\"_footnotedef_1\">\n\
+                 <a href=\"#_footnoteref_1\">1</a>. Note\n</div>\n</div>\n<footer id=\"footer\">\n\
+                 <div id=\"footer-text\">\nVersion 1.2<br>\n</div>\n</footer>\n</body>\n</html>\n"
+            ),
+            "{body}"
+        );
+    }
+
+    #[test]
+    fn standalone_document_options_follow_ruby() {
+        // Without a header the title falls back to the first section, then to
+        // `untitled-label`; the header element stays.
+        let html = render_standalone("== First *One*\n\ntext\n");
+        assert!(html.contains("<title>First One</title>"), "{html}");
+        assert!(
+            html.contains("<body class=\"article\">\n<header id=\"header\">\n</header>\n<main id=\"content\">"),
+            "{html}"
+        );
+        assert!(render_standalone("x").contains("<title>Untitled</title>"));
+        assert!(render_standalone("= D\n:title: pass:q[A *B*  C]\n\nx")
+            .contains("<title>A B C</title>"));
+        let html = render_standalone(
+            "= Doc\nA Author\n:notitle:\n:nolang:\n:max-width: 50em\n\nx footnote:[f]\n\n\
+             :revnumber: 9\n:version-label: Rev\n:docdatetime: 2020-02-02 10:00:00 UTC\n\ny\n",
+        );
+        assert!(html.contains("<html>\n"), "{html}");
+        assert!(!html.contains("<h1>"), "{html}");
+        assert!(
+            html.contains(
+                "<header id=\"header\" style=\"max-width: 50em;\">\n<div class=\"details\">"
+            ),
+            "{html}"
+        );
+        assert!(
+            html.contains("<main id=\"content\" style=\"max-width: 50em;\">"),
+            "{html}"
+        );
+        assert!(
+            html.contains("<div id=\"footnotes\" style=\"max-width: 50em;\">"),
+            "{html}"
+        );
+        // The footer reads the attributes after conversion (entries before a
+        // block); the last update needs an explicit date (date attributes are
+        // not modeled).
+        assert!(
+            html.contains("<footer id=\"footer\" style=\"max-width: 50em;\">\n<div id=\"footer-text\">\nRev 9<br>\nLast updated 2020-02-02 10:00:00 UTC\n</div>"),
+            "{html}"
+        );
+        let html = render_standalone("= Doc\n:noheader:\n:nofooter:\n:toc:\n\n== S\n");
+        assert!(
+            !html.contains("<header") && !html.contains("<footer") && !html.contains("id=\"toc\""),
+            "{html}"
+        );
+        let html = render_standalone("= Doc\n:reproducible:\n:docdatetime: now\n\nx");
+        assert!(html.contains("<div id=\"footer-text\">\n</div>"), "{html}");
+        // An automatic TOC goes in the header; other placements stay in the
+        // content and do not classify the body.
+        let html = render_standalone("= Book\n:doctype: book\n:toc: right\n\n= P\n\n== C\n");
+        assert!(
+            html.contains("<body class=\"book toc2 toc-right\">"),
+            "{html}"
+        );
+        let html = render_standalone("= Doc\n:toc: preamble\n\npre\n\n== S\n");
+        assert!(html.contains("<body class=\"article\">"), "{html}");
+        assert!(
+            html.contains("<section id=\"preamble\">\n<p>pre</p>\n<nav id=\"toc\" class=\"toc\">"),
+            "{html}"
+        );
+        // A manual page puts the TOC between its title and the NAME section.
+        let html = render_standalone("= prog(1)\n:doctype: manpage\n:toc:\n\n== NAME\n\nprog - does things\n\n== SYNOPSIS\n\nprog\n");
+        assert!(
+            html.contains("<body class=\"manpage\">\n<header id=\"header\">\n<h1>prog(1) Manual Page</h1>\n<nav id=\"toc\" class=\"toc\">"),
+            "{html}"
+        );
+        assert!(
+            html.contains("</nav>\n<section class=\"sect1\">\n<h2 id=\"_name\">NAME</h2>"),
+            "{html}"
+        );
+        // Further authors from `author_N`/`email_N`; a URL email is a link.
+        let html = render_standalone("= Doc\nA B <a@b.c>; C D <https://example.org>; E F\n\nx\n");
+        assert!(
+            html.contains("<span id=\"email2\" class=\"email\"><a href=\"https://example.org\" class=\"bare\">https://example.org</a></span><br>\n<span id=\"author3\" class=\"author\">E F</span><br>\n</div>"),
+            "{html}"
+        );
+    }
+
+    #[test]
     fn section_anchors_and_links_wrap_section_titles_like_ruby() {
         let html = render(
             "= Doc\n:sectanchors:\n:sectlinks:\n:sectnums:\n:showtitle:\n\n== One *B*\n\n\
@@ -2968,8 +3412,8 @@ mod tests {
     fn reference_stylesheet_is_embedded_in_head() {
         // The converter inlines the reference stylesheet so output is styled out
         // of the box.
-        let html = render("Hello.");
-        assert!(html.contains("<meta charset=\"utf-8\">"), "got: {html}");
+        let html = render_standalone("Hello.");
+        assert!(html.contains("<meta charset=\"UTF-8\">"), "got: {html}");
         assert!(html.contains("<style>"), "got: {html}");
         assert!(html.contains(".admonition"), "stylesheet missing: {html}");
     }
@@ -3008,7 +3452,7 @@ mod tests {
 
     #[test]
     fn example_stylesheet_rule_is_shipped() {
-        let html = render("Hello.");
+        let html = render_standalone("Hello.");
         assert!(html.contains(".exampleblock"), "stylesheet missing: {html}");
     }
 
@@ -3059,7 +3503,7 @@ mod tests {
 
     #[test]
     fn sidebar_stylesheet_rule_is_shipped() {
-        let html = render("Hello.");
+        let html = render_standalone("Hello.");
         assert!(html.contains(".sidebarblock"), "stylesheet missing: {html}");
     }
 
@@ -3110,7 +3554,7 @@ mod tests {
 
     #[test]
     fn open_stylesheet_rule_is_shipped() {
-        let html = render("Hello.");
+        let html = render_standalone("Hello.");
         assert!(html.contains(".openblock"), "stylesheet missing: {html}");
     }
 
@@ -3178,7 +3622,7 @@ mod tests {
 
     #[test]
     fn block_title_stylesheet_rule_is_shipped() {
-        let html = render("Hello.");
+        let html = render_standalone("Hello.");
         assert!(html.contains(".title {"), "stylesheet missing: {html}");
     }
 
@@ -3373,7 +3817,7 @@ mod tests {
 
     #[test]
     fn quote_and_verse_stylesheet_rules_are_shipped() {
-        let html = render("Hello.");
+        let html = render_standalone("Hello.");
         assert!(
             html.contains(".quoteblock"),
             "stylesheet missing quote: {html}"
@@ -3506,7 +3950,7 @@ mod tests {
     }
 
     fn body(html: &str) -> &str {
-        html.split("<body>\n").nth(1).unwrap()
+        html
     }
 
     #[test]
@@ -3514,7 +3958,7 @@ mod tests {
         let html = render("[#hr.r]\n.T\n'''\n\n<<<\n\n* * *");
         assert_eq!(
             body(&html),
-            "<hr>\n<div style=\"page-break-after: always;\"></div>\n<hr>\n</body>\n</html>\n"
+            "<hr>\n<div style=\"page-break-after: always;\"></div>\n<hr>\n"
         );
     }
 
@@ -3640,13 +4084,10 @@ mod tests {
             "{html}"
         );
         // A partintro outside a part is excluded, like Ruby's converter.
-        assert!(
-            !html.split("<body>").nth(1).unwrap().contains("hidden"),
-            "{html}"
-        );
+        assert!(!html.contains("hidden"), "{html}");
         // Outside a book there is no partintro container at all.
         let html = render("= A\n\n= P\n\n[partintro]\nhidden\n\n== C");
-        let body = html.split("<body>").nth(1).unwrap();
+        let body = &html;
         assert!(
             !body.contains("hidden") && !body.contains("partintro"),
             "{html}"
@@ -3674,7 +4115,7 @@ mod tests {
         // every abstract directly in the document is excluded...
         let html = render(":doctype: book\n\n[abstract]\nhidden\n\nx\n\n[abstract]\nhidden");
         assert!(
-            !html.split("<body>").nth(1).unwrap().contains("hidden") && html.contains("<p>x</p>"),
+            !html.contains("hidden") && html.contains("<p>x</p>"),
             "{html}"
         );
         // ...while one inside the preamble renders.
@@ -3775,7 +4216,7 @@ mod tests {
     #[test]
     fn font_icons_link_the_icon_font_stylesheet_like_ruby() {
         let link = |src: &str| {
-            render(src)
+            render_standalone(src)
                 .lines()
                 .filter(|l| l.starts_with("<link rel=\"stylesheet\""))
                 .map(str::to_owned)
@@ -3814,7 +4255,7 @@ mod tests {
             assert!(link(src).is_empty(), "{src}");
         }
         // The icon font renders `icon:` glyphs.
-        let html = render(":icons: font\n\nicon:heart[2x]");
+        let html = render_standalone(":icons: font\n\nicon:heart[2x]");
         assert!(
             html.contains("font-awesome.min.css\">\n</head>")
                 || html.contains("font-awesome.min.css\">\n<"),
@@ -3839,7 +4280,7 @@ mod tests {
             "<p>A <span class=\"image left r\"><a class=\"image\" href=\"l\" target=\"_blank\" rel=\"nofollow noopener\"><img src=\"img/a%20b.png\" alt=\"Alt <strong>b</strong> &amp; &#169;\" width=\"20\" title=\"T\"></a></span> \
              <span class=\"icon\">[heart&#93;</span> <span class=\"image\"><img src=\"img/v.png\" alt=\"V &quot;q&quot;\"></span></p>\n\
              <p><span class=\"icon\"><i class=\"fa fa-heart fa-2x fa-flip-h\" title=\"L\"></i></span></p>\n\
-             <p><span class=\"icon\"><img src=\"./images/icons/y.png\" alt=\"x\" width=\"5\"></span></p>\n</body>\n</html>\n"
+             <p><span class=\"icon\"><img src=\"./images/icons/y.png\" alt=\"x\" width=\"5\"></span></p>\n"
         );
     }
 
@@ -3856,7 +4297,7 @@ mod tests {
              <figure class=\"videoblock\">\n<iframe src=\"https://www.youtube.com/embed/id?rel=0&amp;fs=0&amp;theme=&lt;&amp;&gt;\"></iframe>\n</figure>\n\
              <figure class=\"videoblock\">\n<iframe src=\"https://player.vimeo.com/video/7\" allowfullscreen></iframe>\n</figure>\n\
              <figure class=\"audioblock q\">\n<figcaption class=\"title\">Theme</figcaption>\n<audio src=\"m/s.ogg#t=,3\" autoplay>\nYour browser does not support the audio tag.\n</audio>\n</figure>\n\
-             <figure class=\"audioblock\">\n<audio src=\"m/t.ogg\" controls>\nYour browser does not support the audio tag.\n</audio>\n</figure>\n</body>\n</html>\n"
+             <figure class=\"audioblock\">\n<audio src=\"m/t.ogg\" controls>\nYour browser does not support the audio tag.\n</audio>\n</figure>\n"
         );
     }
 
@@ -3929,7 +4370,7 @@ mod tests {
         assert!(html.contains("A <sup class=\"footnote\">[<a id=\"_footnoteref_1\" class=\"footnote\" href=\"#_footnotedef_1\" title=\"View footnote.\">1</a>]</sup> B <sup class=\"footnote\" id=\"_footnote_x\">[<a id=\"_footnoteref_2\""), "{html}");
         assert!(html.contains("C <sup class=\"footnoteref\">[<a class=\"footnote\" href=\"#_footnotedef_2\" title=\"View footnote.\">2</a>]</sup>"), "{html}");
         assert!(html.contains("D <sup class=\"footnoteref red\" title=\"Unresolved footnote reference.\">[y]</sup>"), "{html}");
-        assert!(html.contains("<div id=\"footnotes\">\n<hr>\n<div class=\"footnote\" id=\"_footnotedef_1\">\n<a href=\"#_footnoteref_1\">1</a>. <strong>note</strong> &lt;x&gt;\n</div>\n<div class=\"footnote\" id=\"_footnotedef_2\">\n<a href=\"#_footnoteref_2\">2</a>. named\n</div>\n</div>\n</body>"), "{html}");
+        assert!(html.contains("<div id=\"footnotes\">\n<hr>\n<div class=\"footnote\" id=\"_footnotedef_1\">\n<a href=\"#_footnoteref_1\">1</a>. <strong>note</strong> &lt;x&gt;\n</div>\n<div class=\"footnote\" id=\"_footnotedef_2\">\n<a href=\"#_footnoteref_2\">2</a>. named\n</div>\n</div>\n"), "{html}");
         assert!(STYLESHEET.contains("#footnotes"));
         let html = render(":nofootnotes:\n\nA footnote:[hidden]");
         assert!(!html.contains("id=\"footnotes\""), "{html}");
@@ -4009,7 +4450,7 @@ mod tests {
             "<figure id=\"fig1\" class=\"imageblock left text-center r1\">\n<a class=\"image\" href=\"https://x.org\" target=\"_blank\" rel=\"noopener\"><img src=\"a%20b.png\" alt=\"Alt &quot;q&quot; &#169; it&#8217;s\" width=\"200\" height=\"100\"></a>\n<figcaption class=\"title\">Figure 1. A <strong>bold</strong> title</figcaption>\n</figure>\n\
              <figure class=\"imageblock\">\n<a class=\"image\" href=\"l.html\" rel=\"nofollow\"><img src=\"img/b.png\" alt=\"b\"></a>\n</figure>\n\
              <figure class=\"imageblock\">\n<a class=\"image\" href=\"l.html\" target=\"w\" rel=\"nofollow noopener\"><img src=\"img/c.png\" alt=\"c\"></a>\n</figure>\n\
-             <figure class=\"imageblock\">\n<img src=\"img/d&lt;&amp;&gt;.png\" alt=\"d&lt;&amp;&gt;\">\n</figure>\n</body>\n</html>\n"
+             <figure class=\"imageblock\">\n<img src=\"img/d&lt;&amp;&gt;.png\" alt=\"d&lt;&amp;&gt;\">\n</figure>\n"
         );
     }
 }

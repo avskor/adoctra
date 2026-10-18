@@ -249,3 +249,55 @@ fn derive_author(value: &[AttributePart]) -> Attributes {
     result.set("authorinitials", initials);
     result
 }
+
+/// Ruby's `Document#authors` for the HTML header: `author`/`email`, then
+/// `author_N`/`email_N` up to `authorcount`, from the given attributes. The
+/// name gets replacements (`sub_replacements`), the email macros
+/// (`sub_macros`, so an address or URL becomes a link).
+pub(crate) fn document_authors(attributes: &Attributes) -> Vec<crate::ast::AuthorDetails> {
+    if attributes.get("author").is_none() {
+        return Vec::new();
+    }
+    let count = attributes
+        .get("authorcount")
+        .and_then(|count| count.parse::<usize>().ok())
+        .unwrap_or(0)
+        .max(1);
+    (1..=count)
+        .map(|index| {
+            let key = |name: &str| match index {
+                1 => name.to_owned(),
+                _ => format!("{name}_{index}"),
+            };
+            let name = attributes
+                .value_parts(&key("author"))
+                .map(crate::replacements::apply_parts)
+                .unwrap_or_default();
+            let email = attributes
+                .value_parts(&key("email"))
+                .map(|parts| macros(parts, attributes));
+            crate::ast::AuthorDetails { name, email }
+        })
+        .collect()
+}
+
+/// Ruby's `sub_replacements` of an attribute value (the `authors` meta).
+pub(crate) fn replaced(attributes: &Attributes, key: &str) -> Option<Vec<AttributePart>> {
+    attributes
+        .value_parts(key)
+        .map(crate::replacements::apply_parts)
+}
+
+fn macros(parts: Vec<AttributePart>, attributes: &Attributes) -> Vec<AttributePart> {
+    let mut evaluation = crate::substitution_context::Evaluation::read_only(attributes);
+    let compat = attributes.get("compat-mode").is_some();
+    let (_, mut passes) = crate::inline_pass::Passes::extract("", 0, &mut evaluation, compat);
+    crate::attribute_macros::apply(
+        parts,
+        &mut evaluation,
+        compat,
+        crate::Span::new(0, 0),
+        0,
+        &mut passes,
+    )
+}

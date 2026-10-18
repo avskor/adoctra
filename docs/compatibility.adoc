@@ -24,7 +24,7 @@ entities и нормализует пробелы обычного текста.
 Этот профиль проверяет наблюдаемое содержимое HTML, а не полный ASG, диагностики,
 атрибуты документа или точное совпадение HTML. Для них нужны отдельные профили.
 При генерации этого профиля задан `showtitle`, чтобы заголовок документа входил
-в сравнение. Quote и verse проецируются в общие узлы: Ruby `div.attribution`
+в сравнение; adoctra запускается с `--embedded` (как `-s` Ruby). Quote и verse проецируются в общие узлы: Ruby `div.attribution`
 и `pre.content` согласуются с `figcaption` и `pre.verse`, а единственный параграф
 внутри `blockquote` сравнивается с текстом простой цитаты. `figure.imageblock`,
 `figure.videoblock`, `figure.audioblock` и их `figcaption.title` adoctra
@@ -1231,6 +1231,35 @@ adoctra.css, как стили Ruby, скрывает `<br>` атрибуции 
 `sectlinks`) добавляют 8 PASS: нумерация, приложения, части книги, разделы без
 id и с явным id, изменения в теле, ячейки AsciiDoc с унаследованной блокировкой
 и название документа без якоря.
+
+== Документ standalone
+
+По умолчанию HTML backend, как `convert_document` Ruby, пишет полный документ:
+`<html lang>` (`nolang`), `<head>` с `charset` (`encoding`), viewport,
+generator adoctra, `application-name`, `description`, `keywords`, `author`
+(`authors` с replacements, без тегов), `copyright`, `favicon` (тип по
+расширению) и `<title>` (атрибут `title`, название документа, первый раздел
+или `untitled-label`, без тегов и со сжатыми пробелами). `<body>` получает id
+документа и классы doctype, `toc-class`/`toc-<позиция>` для автоматического TOC
+и роль документа. Шапка (кроме `noheader`) содержит название (кроме `notitle`),
+сведения об авторах (`Document::authors`, как `Document#authors`: имена с
+replacements, email с macros), версии, дате и примечании ревизии, затем
+автоматический TOC; у manpage — заголовок `… Manual Page`, TOC и раздел NAME.
+Затем идут содержимое, сноски и подвал (кроме `nofooter`) с версией и датой
+обновления по атрибутам после преобразования. `max-width` задаёт стиль
+шапки, содержимого, сносок и подвала. `HtmlBackend::embedded()` и флаг CLI
+`-s`/`--embedded` дают прежний embedded-вывод.
+
+Golden fixtures `golden/document/` сравнивают оболочку документа с
+`asciidoctor-reference.rb --standalone` (с `reproducible`). Намеренные отличия:
+семантические `<header>`/`<main>`/`<footer>`/`<nav>` вместо div Ruby, нет
+устаревшего `X-UA-Compatible`, generator — adoctra, кавычки в `content`
+экранируются (у Ruby атрибут получается некорректным), стили всегда встроены
+(`stylesheet`, `linkcss`, `webfonts`, `copycss` и docinfo не поддерживаются).
+Атрибуты дат не моделируются, поэтому строка `Last updated` выводится только
+при явном `docdatetime`. Разбор не различает embedded и standalone: атрибут
+`embedded` и умолчание `notitle` Ruby для embedded не заданы. Вид шапки,
+подвала и боковой TOC (`toc: left/right`) сверен со скриншотами Ruby в Chrome.
 
 == Встроенные атрибуты
 

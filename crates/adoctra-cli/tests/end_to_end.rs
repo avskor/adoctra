@@ -180,13 +180,28 @@ fn header_declarations_and_resolved_values_reach_backends() {
         "= Doc\nJane Doe <jane@example.org>\nv2, today: Draft\n\nBy {author}, version {revnumber}.",
     );
     let html = String::from_utf8(
-        adoctra::html::HtmlBackend::new()
+        adoctra::html::HtmlBackend::embedded()
             .convert(&result.document)
             .unwrap(),
     )
     .unwrap();
     assert!(html.contains("<p>By Jane Doe, version 2.</p>"), "{html}");
     assert!(!html.contains("jane@example.org"));
+    // A standalone document shows the declarations in its header.
+    let html = String::from_utf8(
+        adoctra::html::HtmlBackend::new()
+            .convert(&result.document)
+            .unwrap(),
+    )
+    .unwrap();
+    assert!(
+        html.contains(
+            "<span id=\"email\" class=\"email\"><a href=\"mailto:jane@example.org\">jane@example.org</a></span><br>\n\
+             <span id=\"revnumber\">version 2,</span>\n<span id=\"revdate\">today</span>\n\
+             <br><span id=\"revremark\">Draft</span>"
+        ),
+        "{html}"
+    );
     let json = String::from_utf8(
         adoctra::json::JsonBackend::new()
             .convert(&result.document)
@@ -326,6 +341,39 @@ fn included_document_has_the_same_html_and_json_as_a_single_logical_stream() {
         assert_eq!(
             backend.convert(&result.document).unwrap(),
             backend.convert(&expected.document).unwrap()
+        );
+    }
+}
+
+#[test]
+fn cli_writes_a_standalone_document_or_embedded_content() {
+    use std::io::Write;
+    use std::process::{Command, Stdio};
+    let run = |args: &[&str]| {
+        let mut child = Command::new(env!("CARGO_BIN_EXE_adoctra"))
+            .args(args)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .spawn()
+            .unwrap();
+        child
+            .stdin
+            .take()
+            .unwrap()
+            .write_all(b"= Doc\nAnn Lee\n\nText.\n")
+            .unwrap();
+        let output = child.wait_with_output().unwrap();
+        assert!(output.status.success());
+        String::from_utf8(output.stdout).unwrap()
+    };
+    let standalone = run(&["-", "--stdout"]);
+    assert!(standalone.starts_with("<!DOCTYPE html>\n<html lang=\"en\">"));
+    assert!(standalone.contains("<span id=\"author\" class=\"author\">Ann Lee</span>"));
+    assert!(standalone.contains("<footer id=\"footer\">"));
+    for flag in ["-s", "--embedded", "--no-header-footer"] {
+        assert_eq!(
+            run(&["-", flag, "--stdout"]),
+            "<h1>Doc</h1>\n<p>Text.</p>\n"
         );
     }
 }

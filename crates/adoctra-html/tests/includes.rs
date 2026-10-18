@@ -108,8 +108,10 @@ fn include_options_render_the_resolved_content() {
         let actual = parse_resource(&mut sources, &options, &resources).unwrap();
         assert!(actual.diagnostics.is_empty(), "{:?}", actual.diagnostics);
         assert_eq!(
-            HtmlBackend.convert(&actual.document).unwrap(),
-            HtmlBackend.convert(&parse(expected).document).unwrap(),
+            HtmlBackend::new().convert(&actual.document).unwrap(),
+            HtmlBackend::new()
+                .convert(&parse(expected).document)
+                .unwrap(),
             "{source}",
         );
     }
@@ -119,6 +121,6 @@ fn include_options_render_the_resolved_content() {
 fn extreme_heading_levels_render_without_overflow() {
     let result = parse(":leveloffset: 9999999999999999999999999999999999999999999\n\n== Huge");
     assert_eq!(result.diagnostics.len(), 1);
-    let html = String::from_utf8(HtmlBackend.convert(&result.document).unwrap()).unwrap();
+    let html = String::from_utf8(HtmlBackend::new().convert(&result.document).unwrap()).unwrap();
     assert!(html.contains("<h6 id=\"_huge\">Huge</h6>"), "{html}");
 }

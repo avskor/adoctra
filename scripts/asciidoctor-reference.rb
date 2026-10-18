@@ -9,13 +9,23 @@ options = { safe: :secure, header_footer: false }
 options[:attributes] = { 'showtitle' => '' } if ARGV.delete('--showtitle')
 mathjax_config = ARGV.delete('--mathjax-config')
 options[:header_footer] = true if mathjax_config
+# A standalone document without the date-dependent footer line and the
+# stylesheet, for comparing the document shell (head, header and footer).
+standalone = ARGV.delete('--standalone')
+if standalone
+  options[:header_footer] = true
+  options[:attributes] = (options[:attributes] || {}).merge('reproducible' => '')
+end
 if ARGV.length == 2 && ARGV[0] == '--include-root'
   root = File.realpath(ARGV[1])
   options.merge! safe: :safe, base_dir: root, to_file: false
   puts Asciidoctor.convert_file(File.join(root, 'main.adoc'), options)
 else
-  abort 'usage: ruby scripts/asciidoctor-reference.rb [--showtitle] [--mathjax-config] [--include-root DIR] < input.adoc' unless ARGV.empty?
+  abort 'usage: ruby scripts/asciidoctor-reference.rb [--showtitle] [--mathjax-config] [--standalone] [--include-root DIR] < input.adoc' unless ARGV.empty?
   output = Asciidoctor.convert($stdin.read, options)
+  if standalone
+    output = output.gsub(/<link rel="stylesheet"[^>]*>\n/, '').sub(/<style>\n.*?<\/style>\n/m, '')
+  end
   if mathjax_config
     output = output[/<script type="text\/x-mathjax-config">.*?<\/script>\n<script src="[^"]+\/MathJax\.js[^\"]*"><\/script>/m] or abort 'MathJax configuration not found'
   end

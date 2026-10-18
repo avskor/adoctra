@@ -7,15 +7,14 @@ fn render(source: &str) -> String {
 
 #[test]
 fn block_math_matches_pinned_golden_markup() {
-    let html = render(include_str!("golden/math/blocks.adoc"));
-    let body = html
-        .split_once("<body>\n")
-        .unwrap()
-        .1
-        .split_once("</body>")
-        .unwrap()
-        .0;
-    assert_eq!(body, include_str!("golden/math/blocks.expected.html"));
+    let source = include_str!("golden/math/blocks.adoc");
+    let body = HtmlBackend::embedded()
+        .convert(&parse(source).document)
+        .unwrap();
+    assert_eq!(
+        String::from_utf8(body).unwrap(),
+        include_str!("golden/math/blocks.expected.html")
+    );
 }
 
 #[test]

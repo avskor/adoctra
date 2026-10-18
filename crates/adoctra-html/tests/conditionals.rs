@@ -32,8 +32,10 @@ fn selected_content_renders_in_all_content_models() {
         let actual = parse(source);
         assert!(actual.diagnostics.is_empty());
         assert_eq!(
-            HtmlBackend.convert(&actual.document).unwrap(),
-            HtmlBackend.convert(&parse(expected).document).unwrap(),
+            HtmlBackend::new().convert(&actual.document).unwrap(),
+            HtmlBackend::new()
+                .convert(&parse(expected).document)
+                .unwrap(),
             "{source}"
         );
     }

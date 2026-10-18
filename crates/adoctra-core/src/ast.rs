@@ -115,6 +115,20 @@ pub struct FootnoteDefinition {
 }
 
 impl Document {
+    /// The authors of the header attributes, like Ruby's `Document#authors`
+    /// as the HTML header converts them: `author`/`email`, then
+    /// `author_N`/`email_N` up to `authorcount`, names with replacements and
+    /// emails with macros (an address becomes a `mailto:` link).
+    pub fn authors(&self) -> Vec<AuthorDetails> {
+        crate::author_values::document_authors(&self.attributes)
+    }
+
+    /// The `authors` header attribute with replacements, like Ruby's
+    /// `sub_replacements` for the `author` meta element.
+    pub fn authors_line(&self) -> Option<Vec<crate::AttributePart>> {
+        crate::author_values::replaced(&self.attributes, "authors")
+    }
+
     /// The blocks in document order with the section structure flattened: a
     /// [`BlockKind::Section`] contributes its title heading followed by its
     /// content, and a [`BlockKind::Preamble`] its blocks. Other containers are
@@ -176,6 +190,14 @@ pub struct Author {
     pub lastname: Option<String>,
     pub initials: String,
     pub email: Option<String>,
+}
+
+/// An author as the HTML header shows it ([`Document::authors`]): the
+/// effective name after replacements and the email after macros.
+#[derive(Debug, Clone, PartialEq)]
+pub struct AuthorDetails {
+    pub name: Vec<crate::AttributePart>,
+    pub email: Option<Vec<crate::AttributePart>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

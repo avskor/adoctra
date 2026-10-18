@@ -2,7 +2,7 @@
 //! stderr, and converts via the chosen backend.
 //!
 //! Usage:
-//!   adoctra <input.adoc> [--to html|docx|json] [-o out] [--stdout]
+//!   adoctra <input.adoc> [--to html|docx|json] [-s] [-o out] [--stdout]
 //!   adoctra -            (read from stdin)
 
 use std::io::{Read, Write};
@@ -28,6 +28,7 @@ struct Args {
     backend: String,
     output: Option<PathBuf>,
     to_stdout: bool,
+    embedded: bool,
 }
 
 fn run() -> adoctra::Result<()> {
@@ -73,7 +74,7 @@ fn run() -> adoctra::Result<()> {
         );
     }
 
-    let backend = select_backend(&args.backend)?;
+    let backend = select_backend(&args.backend, args.embedded)?;
     let bytes = backend.convert(&result.document)?;
 
     if args.to_stdout || (args.input == "-" && args.output.is_none()) {
@@ -94,6 +95,7 @@ fn parse_args() -> Option<Args> {
     let mut backend = "html".to_string();
     let mut output: Option<PathBuf> = None;
     let mut to_stdout = false;
+    let mut embedded = false;
 
     let mut it = std::env::args().skip(1);
     while let Some(arg) = it.next() {
@@ -102,6 +104,7 @@ fn parse_args() -> Option<Args> {
             "--to" | "-b" => backend = it.next()?,
             "-o" | "--out" => output = Some(PathBuf::from(it.next()?)),
             "--stdout" => to_stdout = true,
+            "-s" | "--embedded" | "--no-header-footer" => embedded = true,
             other => {
                 if input.is_some() {
                     return None;
@@ -116,6 +119,7 @@ fn parse_args() -> Option<Args> {
         backend,
         output,
         to_stdout,
+        embedded,
     })
 }
 
@@ -150,8 +154,9 @@ fn load_source(
     }
 }
 
-fn select_backend(name: &str) -> adoctra::Result<Box<dyn Backend>> {
+fn select_backend(name: &str, embedded: bool) -> adoctra::Result<Box<dyn Backend>> {
     match name {
+        "html" if embedded => Ok(Box::new(adoctra::html::HtmlBackend::embedded())),
         "html" => Ok(Box::new(adoctra::html::HtmlBackend::new())),
         "docx" => Ok(Box::new(adoctra::docx::DocxBackend::new())),
         "json" => Ok(Box::new(adoctra::json::JsonBackend::new())),
@@ -168,9 +173,10 @@ fn default_output(input: &str, ext: &str) -> PathBuf {
 fn print_usage() {
     eprintln!(
         "adoctra — AsciiDoc processor\n\n\
-         USAGE:\n  adoctra <input.adoc> [--to html|docx|json] [-o <out>] [--stdout]\n  \
+         USAGE:\n  adoctra <input.adoc> [--to html|docx|json] [-s] [-o <out>] [--stdout]\n  \
          adoctra -   (read from stdin)\n\n\
          OPTIONS:\n  -b, --to <BACKEND>   output format [default: html]\n  \
+         -s, --embedded       HTML body content only (no document shell, header or footer)\n  \
          -o, --out <FILE>     output path\n      --stdout         write to stdout\n  \
          -h, --help           show this help"
     );

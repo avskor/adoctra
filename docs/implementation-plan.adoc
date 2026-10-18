@@ -1643,6 +1643,26 @@ Ruby API и выполнение Ruby-расширений относятся к
   всего 3095 PASS и 2 XFAIL. Прежние эталоны не изменены. Проверены
   Rust-тесты, fmt, clippy и тесты стенда.
 
+Восемьдесят восьмой рабочий набор изменений:
+
+* HTML-документ standalone, как `convert_document` Ruby: `<head>` (`lang`,
+  `encoding`, generator, `app-name`, `description`, `keywords`, `author`,
+  `copyright`, `favicon`, `<title>` по `doctitle sanitize: true, use_fallback:
+  true`), класс и id `<body>`, шапка с названием, авторами, email, ревизией и
+  автоматическим TOC (manpage: заголовок, TOC, раздел NAME), содержимое,
+  сноски и подвал с версией и датой обновления по итоговым атрибутам;
+  `noheader`, `notitle`, `nofooter`, `nolang`, `max-width`, `reproducible`.
+* `Document::authors()`/`authors_line()` в ядре: авторы шапки, как
+  `Document#authors`, с replacements имени и macros email.
+* `HtmlBackend::embedded()` и флаг CLI `-s`/`--embedded`/`--no-header-footer`
+  дают embedded-вывод; стенд и golden-тесты сравнивают его.
+* adoctra.css: колонка шапки/содержимого/сносок, строка сведений и тёмный
+  подвал, фиксированная боковая TOC `toc2` (`left`/`right`), как стили Ruby;
+  вид сверен со скриншотами Ruby в Chrome (широкий и мобильный экран).
+* Golden fixtures `golden/document/` (`asciidoctor-reference.rb
+  --standalone`), корпус без изменений: 3095 PASS и 2 XFAIL. Проверены
+  Rust-тесты, fmt, clippy и тесты стенда.
+
 *Следующее изменение:* оставшиеся блочные семейства и substitutions — по приоритетам этапов 4–6.
 Исполнение выражений reftext в ранних ссылках
 заголовков и порядок регистрации контейнеров после содержимого — отдельная работа.
@@ -1655,8 +1675,8 @@ Ruby API и выполнение Ruby-расширений относятся к
 потребителей, включая замену doctitle целиком.
 Отдельно остаётся согласование Unicode word-грамматики остальных потребителей (например, include/conditional).
 Encoding, URI и safe mode (включая атрибуты `safe-mode-*`) требуют отдельного
-согласования с контрактом provider; атрибуты дат и режима embedded/standalone
-тоже впереди.
+согласования с контрактом provider; атрибуты дат (строка `Last updated`),
+атрибут `embedded`, `stylesheet`/`linkcss` и docinfo тоже впереди.
 Полная совместимость header ещё требует
 полного набора header substitutions и остальных стадий pass:. Карта фрагментов покрывает
 комментарии, условия и составные источники;
