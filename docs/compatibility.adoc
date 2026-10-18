@@ -1336,8 +1336,10 @@ Rust-тестами (включая локальный HTTP-сервер в те
 окружении эталона, где их gem нет: предупреждение Ruby (`optional gem … is not
 available…`, один раз при первом листинге source) и `<pre class="CodeRay
 highlight">`/`<pre class="pygments highlight">` без подсветки и docinfo.
-rouge (в эталоне 4.7.0) пока не реализован и даёт обычный листинг
-`highlight`. Secure mode блокирует атрибут, поэтому 7 PASS стенда
+rouge (в эталоне 4.7.0) намеренно не переносится: он раскрашивает код при
+конвертации, что требует порта движка и 228 лексеров Rouge; adoctra выдаёт
+обычный листинг `highlight` (известное расхождение, без XFAIL в корпусе).
+Подсветка без отличий от Ruby доступна через `highlight.js` или `prettify`. Secure mode блокирует атрибут, поэтому 7 PASS стенда
 работают в safe mode (профиль include без ресурсов), ещё один проверяет
 блокировку secure. Golden-тест `golden/highlight/` сравнивает шапку, подвал и
 разметку листингов standalone-документа с `asciidoctor-reference.rb

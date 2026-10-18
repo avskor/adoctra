@@ -1398,7 +1398,8 @@ class and Ruby's `optional gem … not available` warning in Output.warnings,
 once when a source listing converts (Cx.source_listing).
 Head theme and footer scripts (before MathJax) read final attributes with the
 header `asset-uri-scheme`; embedded output has none. Server-side rouge/coderay/
-Rouge (and unknown names) keep the plain `highlight` listing. adoctra.css
+Rouge (and unknown names) keep the plain `highlight` listing; porting Rouge is
+deliberately out of scope (project decision), use highlight.js/prettify. adoctra.css
 carries Ruby's `pre.highlightjs`/`pre.prettyprint` rules (checked with
 screenshots). `golden/highlight/` runs the reference `--standalone --safe`.
 **Safe mode**: `ParseOptions.safe: SafeMode` (Unsafe/Safe/Server/Secure,
