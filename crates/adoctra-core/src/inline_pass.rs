@@ -11,6 +11,7 @@ struct Slot {
     parts: Vec<P>,
     span: Span,
     mono: bool,
+    stem: Option<crate::StemStyle>,
     pending: Option<(String, Vec<Stage>, Option<P>)>,
 }
 
@@ -73,6 +74,7 @@ impl Passes {
         for constrained in [false, true] {
             text = passes.stage(text, attrs, compat, constrained);
         }
+        text = passes.stem_stage(text, attrs);
         passes.token_slots = passes.slots.len();
         if !attrs.stateful() {
             passes.evaluate_all(0, attrs, compat, 0);
@@ -165,12 +167,97 @@ impl Passes {
                     parts: Vec::new(),
                     span,
                     mono: m.mono,
+                    stem: None,
                     pending: Some((body.into(), stages, wrapper)),
                 });
                 output.append(&key, true, 0, span, false);
             }
             copied = m.end;
             at = m.end;
+        }
+        text.copy(copied..src.len(), &mut output);
+        output
+    }
+
+    /// Ruby extracts STEM after ordinary passthroughs, so those can protect
+    /// the macro itself or parts of its body. Slots keep the notation chosen
+    /// at extraction time, before any stateful inner substitutions run.
+    fn stem_stage(&mut self, text: Text, attrs: &Evaluation<'_>) -> Text {
+        let src = &text.text;
+        if !src.contains(':') || !(src.contains("stem:") || src.contains("math:")) {
+            return text;
+        }
+        let index = Index::new(src, false);
+        let mut output = Text::default();
+        let mut copied = 0;
+        let mut at = 0;
+        while at < src.len() {
+            let escaped = src.as_bytes()[at] == b'\\';
+            let start = at + usize::from(escaped);
+            let rest = &src[start..];
+            let prefix = ["stem:", "asciimath:", "latexmath:"]
+                .into_iter()
+                .find(|prefix| rest.starts_with(prefix));
+            let matched = prefix.and_then(|prefix| {
+                let selector = start + prefix.len();
+                let bracket = Index::next(&index.opens, selector)?;
+                let subs = &src[selector..bracket];
+                if !pass_subs::syntax(subs) {
+                    return None;
+                }
+                // Unlike pass:[], STEM requires at least one content byte.
+                let close = Index::next(&index.macro_ends, bracket + 2)?;
+                Some((prefix, selector, bracket, close))
+            });
+            let Some((prefix, selector, bracket, close)) = matched else {
+                at += src[at..].chars().next().unwrap().len_utf8();
+                continue;
+            };
+            text.copy(copied..at, &mut output);
+            let end = close + 1;
+            if escaped {
+                text.copy(start..end, &mut output);
+            } else {
+                let span = text.match_span(at..end);
+                let style = crate::StemStyle::from_alias(if prefix == "stem:" {
+                    attrs.get("stem")
+                } else {
+                    Some(prefix.trim_end_matches(':'))
+                });
+                let mut body = src[bracket + 1..close]
+                    .replace("\\]", "]")
+                    .replace("\r\n", "\n");
+                if style == crate::StemStyle::LatexMath
+                    && body.starts_with('$')
+                    && body.ends_with('$')
+                {
+                    // Ruby raises on a single dollar; keep editor input safe.
+                    body = body
+                        .get(1..body.len().saturating_sub(1))
+                        .unwrap_or("")
+                        .to_owned();
+                }
+                let stages = if selector == bracket {
+                    vec![Stage::Specials]
+                } else {
+                    pass_subs::resolve(
+                        &src[selector..bracket],
+                        text.match_span(selector..bracket),
+                        &mut self.diagnostics,
+                    )
+                };
+                let key = format!("{}{}\u{97}", self.prefix, self.slots.len());
+                self.slots.push(Slot {
+                    parts: Vec::new(),
+                    span,
+                    mono: false,
+                    stem: Some(style),
+                    pending: Some((body, stages, None)),
+                });
+                output.append(&key, true, 0, span, false);
+            }
+            at = end;
+            copied = end;
         }
         text.copy(copied..src.len(), &mut output);
         output
@@ -217,7 +304,12 @@ impl Passes {
             parts.insert(0, open);
             parts.push(P::Close(kind));
         }
-        self.slots[i].parts = self.restore_parts(parts);
+        let parts = self.restore_parts(parts);
+        self.slots[i].parts = if let Some(style) = self.slots[i].stem {
+            vec![P::Stem(Box::new(crate::Stem { style, parts }))]
+        } else {
+            parts
+        };
     }
 
     fn restore_evaluated(
@@ -238,6 +330,10 @@ impl Passes {
                     *label = self.restore_evaluated(std::mem::take(label), attrs, compat, depth);
                 }
                 out.push(P::Ui(ui));
+            } else if let P::Stem(mut stem) = part {
+                stem.parts =
+                    self.restore_evaluated(std::mem::take(&mut stem.parts), attrs, compat, depth);
+                out.push(P::Stem(stem));
             } else if let P::IndexTerm(mut term) = part {
                 for label in term.labels_mut() {
                     *label = self.restore_evaluated(std::mem::take(label), attrs, compat, depth);
@@ -316,6 +412,7 @@ impl Passes {
             for constrained in [false, true] {
                 text = self.stage(text, attrs, compat, constrained);
             }
+            text = self.stem_stage(text, attrs);
             if !attrs.stateful() {
                 self.evaluate_all(first, attrs, compat, depth + 1);
             }
@@ -404,7 +501,9 @@ impl Passes {
         // link origin; they must not invent passthrough highlight tokens.
         self.slots.iter().take(self.token_slots).map(|s| Token {
             span: s.span,
-            kind: if s.mono {
+            kind: if s.stem.is_some() {
+                TokenKind::InlineMacro
+            } else if s.mono {
                 TokenKind::Monospace
             } else {
                 TokenKind::PassthroughText
@@ -551,6 +650,10 @@ impl Passes {
                         *label = self.restore_evaluated(std::mem::take(label), attrs, compat, 0);
                     }
                 }
+                Inline::Stem { stem, .. } => {
+                    stem.parts =
+                        self.restore_evaluated(std::mem::take(&mut stem.parts), attrs, compat, 0);
+                }
                 Inline::IndexTerm { term, .. } => {
                     for label in term.labels_mut() {
                         *label = self.restore_evaluated(std::mem::take(label), attrs, compat, 0);
@@ -565,6 +668,14 @@ impl Passes {
                     ));
                 }
                 _ => {}
+            }
+            if let Inline::Substituted { parts, span, .. } = node {
+                if let [P::Stem(stem)] = parts.as_slice() {
+                    *node = Inline::Stem {
+                        stem: *stem.clone(),
+                        span: *span,
+                    };
+                }
             }
         }
     }

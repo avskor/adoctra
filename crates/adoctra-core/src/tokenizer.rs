@@ -182,7 +182,7 @@ pub(crate) fn tokens_reader<'a>(
     // The line-based highlighting scan cannot know a block's final line or local hardbreaks
     // option. Generated attribute content retains its attribute-ref token;
     // passthroughs retain their existing outer token.
-    struct SourceTokens(Vec<(Span, TokenKind)>);
+    struct SourceTokens(Vec<(Span, TokenKind)>, Vec<Span>);
     impl crate::visit::VisitorMut for SourceTokens {
         // Callout marks at the ends of verbatim lines.
         fn visit_block(&mut self, block: &mut crate::Block) {
@@ -214,6 +214,12 @@ pub(crate) fn tokens_reader<'a>(
             if let Inline::Footnote { span, .. } = inline {
                 self.0.push((*span, TokenKind::InlineMacro));
             }
+            // The complete parse sees formulas spanning physical lines; the
+            // line scanner must not highlight protected contents as quotes.
+            if let Inline::Stem { span, .. } = inline {
+                self.0.push((*span, TokenKind::InlineMacro));
+                self.1.push(*span);
+            }
             if let Inline::AttributeRef { name, span, .. } = inline {
                 if name.starts_with("set:")
                     || name.starts_with("counter:")
@@ -225,7 +231,7 @@ pub(crate) fn tokens_reader<'a>(
             crate::visit::walk_inline_mut(self, inline);
         }
     }
-    let mut source_tokens = SourceTokens(Vec::new());
+    let mut source_tokens = SourceTokens(Vec::new(), Vec::new());
     crate::visit::walk_document_mut(&mut source_tokens, &mut result.document);
     // A transformed doctitle carries its entire declaration as origin. Reject
     // that origin before splitting provenance: fragments may include newlines
@@ -241,6 +247,38 @@ pub(crate) fn tokens_reader<'a>(
         .map(|t| t.span)
         .collect();
     protected.sort_by_key(|s| (s.source_id, s.start, s.end));
+    let covered_by_pass = |span: Span| {
+        let end =
+            protected.partition_point(|s| (s.source_id, s.start) <= (span.source_id, span.start));
+        protected[..end]
+            .last()
+            .is_some_and(|s| s.source_id == span.source_id && s.end >= span.end)
+    };
+    let mut formulas = Vec::new();
+    for span in source_tokens.1 {
+        if declarations.contains(&(span.source_id, span.start)) {
+            continue;
+        }
+        let fragments = span.provenance.map(|p| result.provenance[p].as_slice());
+        formulas.extend(
+            fragments
+                .unwrap_or(std::slice::from_ref(&span))
+                .iter()
+                .copied()
+                .filter(|span| !covered_by_pass(*span)),
+        );
+    }
+    formulas.sort_by_key(|s| (s.source_id, s.start, s.end));
+    out.retain(|token| {
+        let span = token.span;
+        let end =
+            formulas.partition_point(|s| (s.source_id, s.start) <= (span.source_id, span.start));
+        !formulas[..end].last().is_some_and(|s| {
+            s.source_id == span.source_id
+                && s.end >= span.end
+                && !(token.kind == TokenKind::InlineMacro && *s == span)
+        })
+    });
     for (span, kind) in source_tokens.0 {
         if declarations.contains(&(span.source_id, span.start)) {
             continue;
@@ -719,7 +757,8 @@ pub(crate) fn flatten_inlines(inlines: &[Inline], out: &mut Vec<Token>) {
             // keyboard, button or menu macro, or an index term.
             Inline::Image { span, .. }
             | Inline::Ui { span, .. }
-            | Inline::IndexTerm { span, .. } => {
+            | Inline::IndexTerm { span, .. }
+            | Inline::Stem { span, .. } => {
                 out.push(Token {
                     span: *span,
                     kind: TokenKind::InlineMacro,

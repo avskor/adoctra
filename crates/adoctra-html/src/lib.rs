@@ -1209,6 +1209,7 @@ fn render_inlines(inlines: &[Inline], out: &mut String) {
             Inline::Footnote { footnote, .. } => render_footnote(footnote, out),
             Inline::Ui { ui, .. } => render_ui(ui, out),
             Inline::IndexTerm { term, .. } => render_index_term(term, out),
+            Inline::Stem { stem, .. } => render_stem(stem, out),
             // Resolved in core: emit the value, or fall back to the literal
             // `{name}` for a missing attribute (asciidoctor's default).
             Inline::AttributeRef { value, parts, .. } if !parts.is_empty() && value.is_some() => {
@@ -1420,6 +1421,15 @@ fn render_footnote(footnote: &adoctra_core::Footnote, out: &mut String) {
     }
 }
 
+/// Ruby's inline math delimiters. Parts already encode the selected subs;
+/// the backend escapes protected text and emits explicitly raw parts as-is.
+fn render_stem(stem: &adoctra_core::Stem, out: &mut String) {
+    let (open, close) = stem.style.delimiters();
+    out.push_str(open);
+    render_parts(&stem.parts, out);
+    out.push_str(close);
+}
+
 /// Ruby's `convert_inline_indexterm`: a flow term shows its text, a
 /// concealed term nothing.
 fn render_index_term(term: &adoctra_core::IndexTerm, out: &mut String) {
@@ -1555,6 +1565,7 @@ fn render_parts(parts: &[adoctra_core::AttributePart], out: &mut String) {
             adoctra_core::AttributePart::Footnote(footnote) => render_footnote(footnote, out),
             adoctra_core::AttributePart::Ui(ui) => render_ui(ui, out),
             adoctra_core::AttributePart::IndexTerm(term) => render_index_term(term, out),
+            adoctra_core::AttributePart::Stem(stem) => render_stem(stem, out),
             adoctra_core::AttributePart::Anchor(id) => {
                 out.push_str("<a id=\"");
                 out.push_str(id);
@@ -3136,6 +3147,26 @@ mod tests {
              <figure class=\"audioblock q\">\n<figcaption class=\"title\">Theme</figcaption>\n<audio src=\"m/s.ogg#t=,3\" autoplay>\nYour browser does not support the audio tag.\n</audio>\n</figure>\n\
              <figure class=\"audioblock\">\n<audio src=\"m/t.ogg\" controls>\nYour browser does not support the audio tag.\n</audio>\n</figure>\n</body>\n</html>\n"
         );
+    }
+
+    #[test]
+    fn stem_macros_emit_math_delimiters_and_selected_content() {
+        let html = render(
+            r"A stem:[x < y & {a} *b*] latexmath:[$\sqrt{4}$] stem:q[*x*] stem:none[<b>raw</b>]",
+        );
+        assert!(html.contains(r"<p>A \$x &lt; y &amp; {a} *b*\$ \(\sqrt{4}\) \$<strong>x</strong>\$ \$<b>raw</b>\$</p>"), "{}", body(&html));
+        let html = render("[[t]]Target.\n\nstem:c,m[<<t>>] stem:m[footnote:[Note\\]]");
+        assert!(
+            html.contains(r##"\$<a href="#t">[t]</a>\$"##),
+            "{}",
+            body(&html)
+        );
+        assert!(
+            html.contains(r#"\$<sup class="footnote">"#),
+            "{}",
+            body(&html)
+        );
+        assert!(html.contains("1</a>. Note\n</div>"), "{}", body(&html));
     }
 
     #[test]

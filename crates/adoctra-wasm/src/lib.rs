@@ -955,6 +955,7 @@ fn write_inlines(inlines: &[Inline], s: &mut String) {
             Inline::Ui { ui, .. } => adoctra_core::json::write_ui(ui, "name", s),
             // An index term: a flow term's text parts, a concealed one's terms.
             Inline::IndexTerm { term, .. } => adoctra_core::json::write_index_term(term, "name", s),
+            Inline::Stem { stem, .. } => adoctra_core::json::write_stem(stem, "name", s),
             // A footnote marker; definitions carry their content parts.
             Inline::Footnote { footnote, .. } => {
                 s.push_str("\"name\":\"footnote\",");
@@ -2604,6 +2605,26 @@ mod header_tests {
         assert!(
             tokens.contains(r#"{"span":{"source_id":3,"start":3,"end":5},"kind":"list-marker"}"#),
             "{tokens}"
+        );
+    }
+
+    #[test]
+    fn stem_macros_export_source_spans_and_multiline_tokens() {
+        let source = "Ж stem:[а\r\n*б*]";
+        let json = super::parse_json_with_source(source, 7);
+        assert!(json.contains(r#"{"span":{"source_id":7,"start":3,"end":18},"name":"stem","style":"asciimath","parts":[{"kind":"text","value":"а\n*б*"}]}"#), "{json}");
+        let tokens = super::tokens_json_with_source(source, 7);
+        assert!(
+            tokens.contains(r#"{"span":{"source_id":7,"start":3,"end":18},"kind":"inline-macro"}"#),
+            "{tokens}"
+        );
+        assert!(!tokens.contains(r#""kind":"strong""#), "{tokens}");
+        let json = super::parse_json(":s: pass:m[latexmath:[x]]\n\n{s}");
+        assert!(
+            json.contains(
+                r#"{"kind":"stem","style":"latexmath","parts":[{"kind":"text","value":"x"}]}"#
+            ),
+            "{json}"
         );
     }
 

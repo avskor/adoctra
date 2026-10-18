@@ -813,6 +813,11 @@ fn write_inlines(inlines: &[Inline], s: &mut String) {
                 adoctra_core::json::write_ui(ui, "name", s);
                 s.push('}');
             }
+            Inline::Stem { stem, .. } => {
+                s.push('{');
+                adoctra_core::json::write_stem(stem, "name", s);
+                s.push('}');
+            }
             Inline::IndexTerm { term, .. } => {
                 s.push('{');
                 adoctra_core::json::write_index_term(term, "name", s);
@@ -1679,6 +1684,29 @@ mod tests {
         assert!(
             json.contains(
                 r#"{"inlines":[{"name":"text","value":"a"}],"checkbox":true,"blocks":[]}"#
+            ),
+            "{json}"
+        );
+    }
+
+    #[test]
+    fn stem_macros_serialize_notation_and_protected_parts() {
+        let json = render(":s: pass:m[stem:[x]]\n\nA stem:[<x>] latexmath:[$y$] {s}");
+        assert!(
+            json.contains(
+                r#"{"name":"stem","style":"asciimath","parts":[{"kind":"text","value":"<x>"}]}"#
+            ),
+            "{json}"
+        );
+        assert!(
+            json.contains(
+                r#"{"name":"stem","style":"latexmath","parts":[{"kind":"text","value":"y"}]}"#
+            ),
+            "{json}"
+        );
+        assert!(
+            json.contains(
+                r#"{"kind":"stem","style":"asciimath","parts":[{"kind":"text","value":"x"}]}"#
             ),
             "{json}"
         );

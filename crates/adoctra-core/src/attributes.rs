@@ -303,6 +303,56 @@ pub enum AttributePart {
     /// concealed term has an empty lexical spelling, like Ruby's empty
     /// output, so the later stages see the same text as in Ruby.
     IndexTerm(Box<IndexTerm>),
+    /// A protected inline formula extracted before normal substitutions.
+    Stem(Box<Stem>),
+}
+
+/// The notation selected by an inline mathematical macro.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StemStyle {
+    AsciiMath,
+    LatexMath,
+}
+
+impl StemStyle {
+    /// Ruby's STEM_TYPE_ALIASES; unknown and unset values use AsciiMath.
+    pub(crate) fn from_alias(value: Option<&str>) -> Self {
+        match value {
+            Some("latexmath" | "latex" | "tex") => Self::LatexMath,
+            _ => Self::AsciiMath,
+        }
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::AsciiMath => "asciimath",
+            Self::LatexMath => "latexmath",
+        }
+    }
+
+    /// The inline delimiters used by the HTML5 converter and lexical subs.
+    pub fn delimiters(self) -> (&'static str, &'static str) {
+        match self {
+            Self::AsciiMath => (r"\$", r"\$"),
+            Self::LatexMath => (r"\(", r"\)"),
+        }
+    }
+}
+
+/// A formula protected from the outer substitutions. Its parts preserve the
+/// requested inner substitutions (special characters by default), without
+/// embedding HTML or a particular mathematical typesetter in the AST.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Stem {
+    pub style: StemStyle,
+    pub parts: Vec<AttributePart>,
+}
+
+impl Stem {
+    pub(crate) fn lexical(&self) -> String {
+        let (open, close) = self.style.delimiters();
+        format!("{open}{}{close}", reference_text(&self.parts))
+    }
 }
 
 /// One of Ruby's experimental UI macros (its `:kbd`, `:button` and `:menu`
@@ -512,7 +562,8 @@ impl AttributePart {
             | Self::Image(_)
             | Self::Footnote(_)
             | Self::Ui(_)
-            | Self::IndexTerm(_) => "",
+            | Self::IndexTerm(_)
+            | Self::Stem(_) => "",
         }
     }
 
@@ -540,6 +591,7 @@ impl AttributePart {
                 | Self::Footnote(_)
                 | Self::Ui(_)
                 | Self::IndexTerm(_)
+                | Self::Stem(_)
         )
     }
 
@@ -669,6 +721,7 @@ impl AttributePart {
             Self::Image(image) => return Cow::Owned(image.lexical()),
             Self::Footnote(footnote) => return Cow::Owned(footnote.lexical()),
             Self::Ui(ui) => return Cow::Owned(ui.lexical()),
+            Self::Stem(stem) => return Cow::Owned(stem.lexical()),
             Self::IndexTerm(term) => {
                 return Cow::Owned(term.text.as_deref().map(reference_text).unwrap_or_default())
             }

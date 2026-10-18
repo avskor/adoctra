@@ -907,7 +907,9 @@ pub enum Inline {
     /// construct; one generated entirely by an attribute value stays an
     /// [`AttributePart::IndexTerm`](crate::AttributePart::IndexTerm).
     IndexTerm { term: crate::IndexTerm, span: Span },
-    // TODO: other inline macros (stem:, …)
+    /// A protected inline formula (`stem:`, `asciimath:` or `latexmath:`),
+    /// extracted before quotes/attributes, restored after the outer subs.
+    Stem { stem: crate::Stem, span: Span },
 }
 
 impl Inline {
@@ -929,7 +931,8 @@ impl Inline {
             | Inline::Image { span, .. }
             | Inline::Footnote { span, .. }
             | Inline::Ui { span, .. }
-            | Inline::IndexTerm { span, .. } => span,
+            | Inline::IndexTerm { span, .. }
+            | Inline::Stem { span, .. } => span,
         }
     }
 
@@ -952,7 +955,8 @@ impl Inline {
             | Inline::Image { span, .. }
             | Inline::Footnote { span, .. }
             | Inline::Ui { span, .. }
-            | Inline::IndexTerm { span, .. } => *span,
+            | Inline::IndexTerm { span, .. }
+            | Inline::Stem { span, .. } => *span,
         }
     }
 }

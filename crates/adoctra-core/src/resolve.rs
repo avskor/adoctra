@@ -509,6 +509,9 @@ pub(crate) fn fill_labels(
                 fill_part_labels(label, &mut f);
             }
         }
+        Inline::Stem { stem, .. } => {
+            fill_part_labels(&mut stem.parts, &mut f);
+        }
         // References inside a flow index term.
         Inline::IndexTerm { term, .. } => {
             for label in term.labels_mut() {
@@ -535,6 +538,11 @@ fn fill_part_labels(
             for label in ui.labels_mut() {
                 filled |= fill_part_labels(label, f);
             }
+            i += 1;
+            continue;
+        }
+        if let crate::AttributePart::Stem(stem) = &mut parts[i] {
+            filled |= fill_part_labels(&mut stem.parts, f);
             i += 1;
             continue;
         }
@@ -598,6 +606,7 @@ pub(crate) fn label_parts(nodes: &[Inline]) -> Vec<crate::AttributePart> {
             }
             Inline::Ui { ui, .. } => parts.push(Part::Ui(Box::new(ui.clone()))),
             Inline::IndexTerm { term, .. } => parts.push(Part::IndexTerm(Box::new(term.clone()))),
+            Inline::Stem { stem, .. } => parts.push(Part::Stem(Box::new(stem.clone()))),
             node => {
                 let format = crate::attribute_macros::format(node).expect("formatting node");
                 let (Inline::Strong { children, .. }
@@ -935,6 +944,7 @@ fn push_text(inlines: &[Inline], s: &mut String) {
             Inline::Ui { ui, .. } => s.push_str(&crate::attributes::reference_text(&[
                 crate::AttributePart::Ui(Box::new(ui.clone())),
             ])),
+            Inline::Stem { stem, .. } => s.push_str(&stem.lexical()),
             // Ruby's flow term leaves its text, a concealed one nothing.
             Inline::IndexTerm { term, .. } => s.push_str(&crate::attributes::reference_text(&[
                 crate::AttributePart::IndexTerm(Box::new(term.clone())),
@@ -1013,6 +1023,10 @@ pub(crate) fn strip_label(inlines: &mut Vec<Inline>) {
                 }
                 stripped.push(inline);
             }
+            Inline::Stem { stem, .. } => {
+                strip_parts(&mut stem.parts);
+                stripped.push(inline);
+            }
             Inline::IndexTerm { term, .. } => {
                 for label in term.labels_mut() {
                     strip_parts(label);
@@ -1062,6 +1076,7 @@ fn strip_parts(parts: &mut Vec<crate::AttributePart>) {
                     strip_parts(label);
                 }
             }
+            crate::AttributePart::Stem(stem) => strip_parts(&mut stem.parts),
             crate::AttributePart::IndexTerm(term) => {
                 for label in term.labels_mut() {
                     strip_parts(label);

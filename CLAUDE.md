@@ -1085,8 +1085,20 @@ HTML shows only visible text; JSON/WASM expose `indexterm` and the metadata;
 the tokenizer uses parser-reported `inline-macro` spans. Covered in core and
 all consumers, `golden/index_terms.adoc`, and the compatibility corpus.
 
+Inline math (`stem:`, `asciimath:`, `latexmath:`) is extracted by `inline_pass`
+after ordinary passthroughs, before quotes/attributes, as Ruby's
+`InlineStemMacroRx`. `StemStyle` is selected at extraction; generic `stem:`
+uses the effective `stem` attribute (`latexmath`/`latex`/`tex`, else AsciiMath).
+`Inline::Stem` / `AttributePart::Stem` retain notation and substituted parts;
+selectors use the shared pass pipeline (special characters by default).
+HTML emits math delimiters, JSON/WASM expose `stem` with `style` and `parts`.
+The tokenizer uses extraction spans and projects multiline source formulas
+from the complete parse to suppress protected contents' tokens. Block math
+and loading MathJax in full HTML are still pending. Core/all-consumer tests,
+`golden/stem.adoc`, and compatibility fixtures cover this step.
+
 Not yet implemented (common asks — treat as roadmap, do not assume present):
-broader language coverage (remaining block/inline macros: stem). The full block-attribute list is now *parsed* (style, named
+broader language coverage (block math, bibliography lists). The full block-attribute list is now *parsed* (style, named
 attributes, `%options`, id/role folding), but most of it has nothing to render
 against yet: a few **styles that change a block's type** (`[stem]`/`[latexmath]` →
 math, …) remain unimplemented — `[source,<lang>]`, `[literal]`, `[pass]`,

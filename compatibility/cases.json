@@ -18665,6 +18665,78 @@
       "category": "indexterms",
       "expect": "pass",
       "source": "indexterm:[Hidden,unused='\\{counter:n}'] {n} indexterm2:['((Inner))',see=X] indexterm2:['*A*',see='<B>',see-also='C, D']\n"
+    },
+    {
+      "id": "stem-forms-and-protection",
+      "category": "stem",
+      "expect": "pass",
+      "source": "A stem:[x < y & {a} *b* (C)] latexmath:[$\\sqrt{4}$] asciimath:[a_b^2] stem:[x]stem:[y] latexmath:[$$] latexmath:[ $x$ ]\n"
+    },
+    {
+      "id": "stem-aliases-and-scope",
+      "category": "stem",
+      "expect": "pass",
+      "source": ":stem: tex\n\nstem:[x] asciimath:[y] latexmath:[z]\n\n:stem: latex\n\nstem:[x]\n\n:stem: latexmath\n\nstem:[x]\n\n:stem: LaTeX\n\nstem:[x]\n\n:stem!:\n\nstem:[x]\n"
+    },
+    {
+      "id": "stem-escapes-and-empty",
+      "category": "stem",
+      "expect": "pass",
+      "source": "\\stem:[*x*] \\asciimath:[a_b] \\latexmath:[a\\]b] xstem:[z] stem:[a\\]b] stem:[] stem:[x] stem:[ ]\n"
+    },
+    {
+      "id": "stem-selected-substitutions",
+      "category": "stem",
+      "expect": "pass",
+      "source": ":x: VALUE\n\nstem:a[{x}] stem:q[*x*] stem:r[(C)] stem:none[<b>x</b>] stem:c,-c[<i>y</i>] stem:normal[x +\ny] stem:c,a[{x} < y] stem:verbatim[{x} < y]\n"
+    },
+    {
+      "id": "stem-passes-and-attributes",
+      "category": "stem",
+      "expect": "pass",
+      "source": ":a: stem:[x]\n:b: pass:m[stem:[y]]\n\n{a} {b} stem:[+<x>+] stem:[pass:q[*x*]] +stem:[y]+ pass:m[stem:[z\\]] pass:a[stem:[w]] pass:[stem:[q]]\n\n:compat-mode:\n\n`stem:[x]` +stem:[y]+ ++stem:[z]++\n"
+    },
+    {
+      "id": "stem-links-and-footnotes",
+      "category": "stem",
+      "expect": "pass",
+      "source": "[[t]]Target.\n\nstem:c,m[<<t>>] stem:c,m[link:x[Label\\]] stem:m[footnote:[Note\\]] footnote:[stem:[x]] link:x[stem:[y]] ((stem:[z])) stem:m[https://example.org]\n"
+    },
+    {
+      "id": "stem-titles-and-xrefs",
+      "category": "stem",
+      "expect": "pass",
+      "source": "= Document stem:[x]\n\n== Math stem:c,m[link:x[Label\\]]\n\n<<_math_label>>\n"
+    },
+    {
+      "id": "stem-ui-labels",
+      "category": "stem",
+      "expect": "pass",
+      "source": ":experimental:\n\nkbd:[stem:[x]] btn:[latexmath:[y]] menu:Math[stem:[z]] stem:m[kbd:[X\\]]\n"
+    },
+    {
+      "id": "stem-unicode-crlf",
+      "category": "stem",
+      "expect": "pass",
+      "source": "Ж stem:[а\r\n*б* {x}] latexmath:[\\sqrt{ё} < ж] Z\r\n"
+    },
+    {
+      "id": "stem-stateful-order",
+      "category": "stem",
+      "expect": "pass",
+      "source": "stem:a[{set:stem:latex}{counter:n}] stem:[y] {n}\n\nstem:[z] {n}\n\n:stem: asciimath\n\nstem:a[{counter:n}] {n}\n"
+    },
+    {
+      "id": "stem-lists-and-cells",
+      "category": "stem",
+      "expect": "pass",
+      "source": "* stem:[x] item\n* latexmath:[y] item\n\n|===\n|stem:[plain] a|:stem: latex\n\nstem:[nested]\n|===\n"
+    },
+    {
+      "id": "stem-partial-and-selectors",
+      "category": "stem",
+      "expect": "pass",
+      "source": "stem:bogus[x] stem:c,bogus[y] stem:ABC[z] stem:q,-q[*z*]\n\nstem:[]\n\nstem:[Ж\\]\n\nstem:[ stem:[ stem:[\n"
     }
   ]
 }

@@ -108,6 +108,15 @@ pub fn write_ui(ui: &crate::UiMacro, key: &str, out: &mut String) {
     }
 }
 
+/// Inline math fields without braces, shared by JSON/ASG and editor output.
+pub fn write_stem(stem: &crate::Stem, key: &str, out: &mut String) {
+    escape_into(key, out);
+    out.push_str(":\"stem\",\"style\":");
+    escape_into(stem.style.as_str(), out);
+    out.push_str(",\"parts\":");
+    write_parts_array(&stem.parts, out);
+}
+
 /// An index term's fields (without braces), led by `"<key>":"indexterm"`
 /// (Ruby's node type): a flow term's shown `parts` (`null` when concealed),
 /// the concealed `terms`, `see` (or `null`) and `see_also`, all lexical.
@@ -271,6 +280,12 @@ fn write_parts_array(parts: &[crate::AttributePart], out: &mut String) {
         if let crate::AttributePart::Ui(ui) = part {
             out.push('{');
             write_ui(ui, "kind", out);
+            out.push('}');
+            continue;
+        }
+        if let crate::AttributePart::Stem(stem) = part {
+            out.push('{');
+            write_stem(stem, "kind", out);
             out.push('}');
             continue;
         }

@@ -172,6 +172,7 @@ pub fn walk_inline_mut(visitor: &mut (impl VisitorMut + ?Sized), inline: &mut In
         | Inline::Footnote { .. }
         | Inline::Ui { .. }
         | Inline::IndexTerm { .. }
+        | Inline::Stem { .. }
         | Inline::Text { .. }
         | Inline::Raw { .. }
         | Inline::Substituted { .. }
