@@ -253,6 +253,32 @@ pub fn write_inline_image(image: &crate::InlineImage, out: &mut String) {
     }
     out.push(']');
     write_attribute_parts(&image.alt, out);
+    write_svg(image.svg.as_ref(), out);
+}
+
+/// An embedded SVG (`,"svg":{…}`), omitted for an ordinary image: `inline`
+/// with its `content` (`null` when unreadable), or `interactive` with its
+/// `fallback` source.
+pub fn write_svg(svg: Option<&crate::Svg>, out: &mut String) {
+    match svg {
+        None => {}
+        Some(crate::Svg::Inline(content)) => {
+            out.push_str(",\"svg\":{\"mode\":\"inline\",\"content\":");
+            match content {
+                Some(content) => escape_into(content, out),
+                None => out.push_str("null"),
+            }
+            out.push('}');
+        }
+        Some(crate::Svg::Interactive { fallback }) => {
+            out.push_str(",\"svg\":{\"mode\":\"interactive\",\"fallback\":");
+            match fallback {
+                Some(fallback) => escape_into(fallback, out),
+                None => out.push_str("null"),
+            }
+            out.push('}');
+        }
+    }
 }
 
 pub fn write_parts_array(parts: &[crate::AttributePart], out: &mut String) {

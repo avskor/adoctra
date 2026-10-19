@@ -1626,3 +1626,59 @@ fn html_syntax_highlighters_match_asciidoctor() {
     }
     assert!(checked > 0, "no golden fixtures found in {dir:?}");
 }
+
+/// The embedded SVG markup of a document, in order: inline `<svg>` elements,
+/// `<object>` elements and alt spans.
+fn svg_markup(html: &str) -> Vec<String> {
+    let body = html.split("<body>").nth(1).unwrap_or(html);
+    let mut out = Vec::new();
+    let mut rest = body;
+    while let Some(at) = ["<svg", "<object", "<span class=\"alt\">"]
+        .iter()
+        .filter_map(|m| rest.find(m))
+        .min()
+    {
+        let close = if rest[at..].starts_with("<svg") {
+            "</svg>"
+        } else if rest[at..].starts_with("<object") {
+            "</object>"
+        } else {
+            "</span>"
+        };
+        let end = at + rest[at..].find(close).unwrap() + close.len();
+        out.push(rest[at..end].to_owned());
+        rest = &rest[end..];
+    }
+    out
+}
+
+/// SVG images, like Ruby's `convert_image`/`convert_inline_image` in safe
+/// mode: the fixture's files load through the resource provider.
+#[test]
+fn html_svg_images_match_asciidoctor() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/svg");
+    let mut resources = adoctra_core::MemoryResources::new();
+    let adoc = fs::read_to_string(dir.join("svg.adoc")).unwrap();
+    resources.insert("/g/svg.adoc", adoc.as_str()).unwrap();
+    resources
+        .insert_binary("/g/logo.svg", fs::read(dir.join("logo.svg")).unwrap())
+        .unwrap();
+    let mut sources = adoctra_core::SourceMap::new();
+    let source_id = sources.load("/g/svg.adoc", None, &resources).unwrap();
+    let options = adoctra_core::ParseOptions {
+        source_id,
+        ..Default::default()
+    };
+    let doc = adoctra_core::parse_resource(&mut sources, &options, &resources)
+        .unwrap()
+        .document;
+    let ours = String::from_utf8(HtmlBackend::embedded().convert(&doc).unwrap()).unwrap();
+    let expected = fs::read_to_string(dir.join("svg.expected.html")).unwrap();
+    let markup = svg_markup(&expected);
+    assert_eq!(markup.len(), 6, "{markup:?}");
+    assert_eq!(
+        svg_markup(&ours),
+        markup,
+        "HTML SVG images diverge from asciidoctor"
+    );
+}

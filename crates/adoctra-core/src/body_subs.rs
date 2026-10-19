@@ -847,8 +847,26 @@ impl Execution<'_> {
             // Ruby's `image_uri` and `media_uri` read `imagesdir` (and
             // `asset-uri-scheme`) from the document at conversion./`asset-uri-scheme`
             let span = block.span;
-            if let BlockKind::Image { target, src, .. } = &mut block.kind {
-                *src = self.image_uri(target, "imagesdir", span);
+            if let BlockKind::Image {
+                target, src, svg, ..
+            } = &mut block.kind
+            {
+                // Ruby reads an inline SVG instead of resolving its source.
+                *svg = crate::data_uri::Images::svg(
+                    self.images,
+                    target,
+                    &block.attrs.named,
+                    &block.attrs.options,
+                    &self.attributes,
+                    span,
+                    self.diagnostics,
+                );
+                *src = match svg {
+                    Some(crate::Svg::Inline(_)) => {
+                        crate::image::web_path(target, self.attributes.get("imagesdir"))
+                    }
+                    _ => self.image_uri(target, "imagesdir", span),
+                };
             }
             crate::media::resolve(block, &self.attributes);
             // Callout icons follow the `icons` mode where the block converts.

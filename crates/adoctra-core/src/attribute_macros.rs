@@ -937,7 +937,15 @@ fn inline_image(
         .icon
         .then(|| attributes.get("icons").map(str::to_owned))
         .flatten();
-    let src = if !m.icon {
+    // Ruby reads an inline SVG instead of resolving its source.
+    let svg = if m.icon {
+        None
+    } else {
+        attributes.svg(&target, &named, &options, span, diagnostics)
+    };
+    let src = if matches!(svg, Some(crate::Svg::Inline(_))) {
+        crate::image::web_path(&target, attributes.get("imagesdir"))
+    } else if !m.icon {
         attributes.image_uri(&target, attributes.get("imagesdir"), span, diagnostics)
     } else if icons.as_deref().is_some_and(|icons| icons != "font") {
         let icon = crate::image::icon_target(
@@ -957,6 +965,7 @@ fn inline_image(
         icons,
         attributes: named,
         options,
+        svg,
     }
 }
 

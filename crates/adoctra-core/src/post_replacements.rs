@@ -5,6 +5,9 @@ use crate::{substitution_text::Text, AttributePart};
 pub(crate) fn apply(text: Text, hardbreaks: bool, right_edge: bool) -> Text {
     let mut out = Text::default();
     let mut start = 0;
+    // Copy contiguous runs: an atomic part whose spelling spans lines (an
+    // inline SVG) splits only where a break is inserted.
+    let mut copied = 0;
     for line in text.text.split_inclusive('\n') {
         let newline = line.ends_with('\n');
         let end = start + line.len() - usize::from(newline) - usize::from(line.ends_with("\r\n"));
@@ -17,7 +20,7 @@ pub(crate) fn apply(text: Text, hardbreaks: bool, right_edge: bool) -> Text {
             explicit && (newline || right_edge)
         } {
             let content_end = end - if explicit { 2 } else { 0 };
-            text.copy(start..content_end, &mut out);
+            text.copy(copied..content_end, &mut out);
             let anchor_end = if explicit { end } else { start + line.len() };
             text.replace_parts(
                 content_end..anchor_end,
@@ -25,10 +28,10 @@ pub(crate) fn apply(text: Text, hardbreaks: bool, right_edge: bool) -> Text {
                 &mut out,
             );
             text.copy(end..start + line.len(), &mut out);
-        } else {
-            text.copy(start..start + line.len(), &mut out);
+            copied = start + line.len();
         }
         start += line.len();
     }
+    text.copy(copied..text.text.len(), &mut out);
     out
 }

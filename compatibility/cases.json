@@ -21072,6 +21072,174 @@
       "category": "tables",
       "source": "= Out\n:toc:\n\n== O\n\n|===\na|\n= In\n:toc:\n:sectids!:\n\n== S {counter:n}\n\n{n}\n|===",
       "expect": "pass"
+    },
+    {
+      "id": "svg-inline-block",
+      "category": "images",
+      "profile": "include-body-dom-v1",
+      "source": "image::a.svg[opts=inline]",
+      "resources": {
+        "a.svg": "<?xml version=\"1.0\"?>\n<!-- c -->\n<svg width=\"10\" height=\"20\" style=\"a:b\" viewBox=\"0 0 1 1\">  \n <rect/>  \n</svg>\n",
+        "img/b.svg": "<?xml version=\"1.0\"?>\n<!-- c -->\n<svg width=\"10\" height=\"20\" style=\"a:b\" viewBox=\"0 0 1 1\">  \n <rect/>  \n</svg>\n",
+        "empty.svg": ""
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "svg-inline-dimensions",
+      "category": "images",
+      "profile": "include-body-dom-v1",
+      "source": "image::a.svg[opts=inline,height=7,width=5]",
+      "resources": {
+        "a.svg": "<?xml version=\"1.0\"?>\n<!-- c -->\n<svg width=\"10\" height=\"20\" style=\"a:b\" viewBox=\"0 0 1 1\">  \n <rect/>  \n</svg>\n",
+        "img/b.svg": "<?xml version=\"1.0\"?>\n<!-- c -->\n<svg width=\"10\" height=\"20\" style=\"a:b\" viewBox=\"0 0 1 1\">  \n <rect/>  \n</svg>\n",
+        "empty.svg": ""
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "svg-inline-imagesdir",
+      "category": "images",
+      "profile": "include-body-dom-v1",
+      "source": ":imagesdir: img\n\nimage::b.svg[opts=inline]",
+      "resources": {
+        "a.svg": "<?xml version=\"1.0\"?>\n<!-- c -->\n<svg width=\"10\" height=\"20\" style=\"a:b\" viewBox=\"0 0 1 1\">  \n <rect/>  \n</svg>\n",
+        "img/b.svg": "<?xml version=\"1.0\"?>\n<!-- c -->\n<svg width=\"10\" height=\"20\" style=\"a:b\" viewBox=\"0 0 1 1\">  \n <rect/>  \n</svg>\n",
+        "empty.svg": ""
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "svg-inline-empty",
+      "category": "images",
+      "profile": "include-body-dom-v1",
+      "source": "image::empty.svg[E,opts=inline]",
+      "resources": {
+        "a.svg": "<?xml version=\"1.0\"?>\n<!-- c -->\n<svg width=\"10\" height=\"20\" style=\"a:b\" viewBox=\"0 0 1 1\">  \n <rect/>  \n</svg>\n",
+        "img/b.svg": "<?xml version=\"1.0\"?>\n<!-- c -->\n<svg width=\"10\" height=\"20\" style=\"a:b\" viewBox=\"0 0 1 1\">  \n <rect/>  \n</svg>\n",
+        "empty.svg": ""
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "svg-inline-missing",
+      "category": "images",
+      "profile": "include-body-dom-v1",
+      "source": "image::missing.svg[Alt *x*,opts=inline]",
+      "resources": {
+        "a.svg": "<?xml version=\"1.0\"?>\n<!-- c -->\n<svg width=\"10\" height=\"20\" style=\"a:b\" viewBox=\"0 0 1 1\">  \n <rect/>  \n</svg>\n",
+        "img/b.svg": "<?xml version=\"1.0\"?>\n<!-- c -->\n<svg width=\"10\" height=\"20\" style=\"a:b\" viewBox=\"0 0 1 1\">  \n <rect/>  \n</svg>\n",
+        "empty.svg": ""
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "svg-inline-uri-without-read",
+      "category": "images",
+      "profile": "include-body-dom-v1",
+      "source": "image::http://e/a.svg[opts=inline]",
+      "resources": {
+        "a.svg": "<?xml version=\"1.0\"?>\n<!-- c -->\n<svg width=\"10\" height=\"20\" style=\"a:b\" viewBox=\"0 0 1 1\">  \n <rect/>  \n</svg>\n",
+        "img/b.svg": "<?xml version=\"1.0\"?>\n<!-- c -->\n<svg width=\"10\" height=\"20\" style=\"a:b\" viewBox=\"0 0 1 1\">  \n <rect/>  \n</svg>\n",
+        "empty.svg": ""
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "svg-interactive",
+      "category": "images",
+      "profile": "include-body-dom-v1",
+      "source": "image::a.svg[opts=interactive]",
+      "resources": {
+        "a.svg": "<?xml version=\"1.0\"?>\n<!-- c -->\n<svg width=\"10\" height=\"20\" style=\"a:b\" viewBox=\"0 0 1 1\">  \n <rect/>  \n</svg>\n",
+        "img/b.svg": "<?xml version=\"1.0\"?>\n<!-- c -->\n<svg width=\"10\" height=\"20\" style=\"a:b\" viewBox=\"0 0 1 1\">  \n <rect/>  \n</svg>\n",
+        "empty.svg": ""
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "svg-interactive-fallback",
+      "category": "images",
+      "profile": "include-body-dom-v1",
+      "source": "image::a.svg[A,100,opts=interactive,fallback=f.png]",
+      "resources": {
+        "a.svg": "<?xml version=\"1.0\"?>\n<!-- c -->\n<svg width=\"10\" height=\"20\" style=\"a:b\" viewBox=\"0 0 1 1\">  \n <rect/>  \n</svg>\n",
+        "img/b.svg": "<?xml version=\"1.0\"?>\n<!-- c -->\n<svg width=\"10\" height=\"20\" style=\"a:b\" viewBox=\"0 0 1 1\">  \n <rect/>  \n</svg>\n",
+        "empty.svg": ""
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "svg-interactive-format",
+      "category": "images",
+      "profile": "include-body-dom-v1",
+      "source": ":imagesdir: img\n\nimage::x[format=svg,opts=interactive]",
+      "resources": {
+        "a.svg": "<?xml version=\"1.0\"?>\n<!-- c -->\n<svg width=\"10\" height=\"20\" style=\"a:b\" viewBox=\"0 0 1 1\">  \n <rect/>  \n</svg>\n",
+        "img/b.svg": "<?xml version=\"1.0\"?>\n<!-- c -->\n<svg width=\"10\" height=\"20\" style=\"a:b\" viewBox=\"0 0 1 1\">  \n <rect/>  \n</svg>\n",
+        "empty.svg": ""
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "svg-other-extension",
+      "category": "images",
+      "profile": "include-body-dom-v1",
+      "source": "image::a.png[opts=inline]",
+      "resources": {
+        "a.svg": "<?xml version=\"1.0\"?>\n<!-- c -->\n<svg width=\"10\" height=\"20\" style=\"a:b\" viewBox=\"0 0 1 1\">  \n <rect/>  \n</svg>\n",
+        "img/b.svg": "<?xml version=\"1.0\"?>\n<!-- c -->\n<svg width=\"10\" height=\"20\" style=\"a:b\" viewBox=\"0 0 1 1\">  \n <rect/>  \n</svg>\n",
+        "empty.svg": ""
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "svg-inline-inline-macro",
+      "category": "images",
+      "profile": "include-body-dom-v1",
+      "source": "Text image:a.svg[opts=inline,width=5] after",
+      "resources": {
+        "a.svg": "<?xml version=\"1.0\"?>\n<!-- c -->\n<svg width=\"10\" height=\"20\" style=\"a:b\" viewBox=\"0 0 1 1\">  \n <rect/>  \n</svg>\n",
+        "img/b.svg": "<?xml version=\"1.0\"?>\n<!-- c -->\n<svg width=\"10\" height=\"20\" style=\"a:b\" viewBox=\"0 0 1 1\">  \n <rect/>  \n</svg>\n",
+        "empty.svg": ""
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "svg-interactive-inline-macro",
+      "category": "images",
+      "profile": "include-body-dom-v1",
+      "source": "Text image:a.svg[A,opts=interactive,fallback=f.png,title=T] after",
+      "resources": {
+        "a.svg": "<?xml version=\"1.0\"?>\n<!-- c -->\n<svg width=\"10\" height=\"20\" style=\"a:b\" viewBox=\"0 0 1 1\">  \n <rect/>  \n</svg>\n",
+        "img/b.svg": "<?xml version=\"1.0\"?>\n<!-- c -->\n<svg width=\"10\" height=\"20\" style=\"a:b\" viewBox=\"0 0 1 1\">  \n <rect/>  \n</svg>\n",
+        "empty.svg": ""
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "svg-inline-data-uri",
+      "category": "images",
+      "profile": "include-body-dom-v1",
+      "source": ":data-uri:\n\nimage::a.svg[opts=inline]",
+      "resources": {
+        "a.svg": "<?xml version=\"1.0\"?>\n<!-- c -->\n<svg width=\"10\" height=\"20\" style=\"a:b\" viewBox=\"0 0 1 1\">  \n <rect/>  \n</svg>\n",
+        "img/b.svg": "<?xml version=\"1.0\"?>\n<!-- c -->\n<svg width=\"10\" height=\"20\" style=\"a:b\" viewBox=\"0 0 1 1\">  \n <rect/>  \n</svg>\n",
+        "empty.svg": ""
+      },
+      "expect": "pass"
+    },
+    {
+      "id": "svg-inline-link",
+      "category": "images",
+      "profile": "include-body-dom-v1",
+      "source": "image::a.svg[opts=inline,link=http://e]",
+      "resources": {
+        "a.svg": "<?xml version=\"1.0\"?>\n<!-- c -->\n<svg width=\"10\" height=\"20\" style=\"a:b\" viewBox=\"0 0 1 1\">  \n <rect/>  \n</svg>\n",
+        "img/b.svg": "<?xml version=\"1.0\"?>\n<!-- c -->\n<svg width=\"10\" height=\"20\" style=\"a:b\" viewBox=\"0 0 1 1\">  \n <rect/>  \n</svg>\n",
+        "empty.svg": ""
+      },
+      "expect": "pass"
     }
   ]
 }

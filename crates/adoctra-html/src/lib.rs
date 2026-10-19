@@ -945,7 +945,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             }
             out.push('\n');
         }
-        BlockKind::Image { src, alt, .. } => {
+        BlockKind::Image { src, alt, svg, .. } => {
             // A semantic `<figure class="imageblock">` holding the image (inside
             // an `<a class="image">` with `link`) and a trailing `<figcaption>`
             // for the captioned title. asciidoctor nests a `content` div and
@@ -958,24 +958,50 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             base.extend(align.as_deref());
             let class = class_attr(&base, &block.roles);
             out.push_str(&format!("<figure{id}{class}>\n"));
-            let mut img = format!("<img src=\"{}\" alt=\"", reference_value(src));
+            let mut alt_attr = String::new();
             for part in alt {
                 match part {
                     adoctra_core::AttributePart::Raw(raw) => {
-                        img.push_str(&raw.replace('"', "&quot;"))
+                        alt_attr.push_str(&raw.replace('"', "&quot;"))
                     }
-                    part => img.push_str(&attr_value(&adoctra_core::attributes::parts_text(
+                    part => alt_attr.push_str(&attr_value(&adoctra_core::attributes::parts_text(
                         std::slice::from_ref(part),
                     ))),
                 }
             }
-            img.push('"');
+            let mut sized = String::new();
             for key in ["width", "height"] {
                 if let Some(value) = named.get(key) {
-                    img.push_str(&format!(" {key}=\"{}\"", attr_value(value)));
+                    sized.push_str(&format!(" {key}=\"{}\"", attr_value(value)));
                 }
             }
-            img.push('>');
+            let image = |src: &str| {
+                format!(
+                    "<img src=\"{}\" alt=\"{alt_attr}\"{sized}>",
+                    reference_value(src)
+                )
+            };
+            // Ruby's SVG branch of `convert_image` (below secure mode).
+            let alt_span = || {
+                let mut span = String::from("<span class=\"alt\">");
+                render_parts(alt, &mut span);
+                span.push_str("</span>");
+                span
+            };
+            let img = match svg {
+                Some(adoctra_core::Svg::Inline(Some(contents))) => adoctra_core::inline_svg(
+                    contents,
+                    named.get("width").map(String::as_str),
+                    named.get("height").map(String::as_str),
+                ),
+                Some(adoctra_core::Svg::Inline(None)) => alt_span(),
+                Some(adoctra_core::Svg::Interactive { fallback }) => format!(
+                    "<object type=\"image/svg+xml\" data=\"{}\"{sized}>{}</object>",
+                    reference_value(src),
+                    fallback.as_deref().map_or_else(alt_span, image)
+                ),
+                None => image(src),
+            };
             match named.get("link") {
                 Some(link) => out.push_str(&format!(
                     "<a class=\"image\" href=\"{}\"{}>{img}</a>\n",
@@ -2334,18 +2360,34 @@ fn render_inline_image(image: &adoctra_core::InlineImage, out: &mut String) {
         }
         (true, None) => format!("[{alt}&#93;"),
         _ => {
-            let mut img = format!(
-                "<img src=\"{}\" alt=\"{}\"",
-                image.src,
-                alt.replace('"', "&quot;")
-            );
+            let mut sized = String::new();
             for key in ["width", "height", "title"] {
                 if let Some(value) = attr(key) {
-                    img.push_str(&format!(" {key}=\"{value}\""));
+                    sized.push_str(&format!(" {key}=\"{value}\""));
                 }
             }
-            img.push('>');
-            img
+            let img = |src: &str| {
+                format!(
+                    "<img src=\"{src}\" alt=\"{}\"{sized}>",
+                    alt.replace('"', "&quot;")
+                )
+            };
+            // Ruby's SVG branch of `convert_inline_image` (below secure mode).
+            let alt_span = || format!("<span class=\"alt\">{alt}</span>");
+            match &image.svg {
+                Some(adoctra_core::Svg::Inline(Some(contents))) => adoctra_core::inline_svg(
+                    contents,
+                    attr("width").map(String::as_str),
+                    attr("height").map(String::as_str),
+                ),
+                Some(adoctra_core::Svg::Inline(None)) => alt_span(),
+                Some(adoctra_core::Svg::Interactive { fallback }) => format!(
+                    "<object type=\"image/svg+xml\" data=\"{}\"{sized}>{}</object>",
+                    image.src,
+                    fallback.as_deref().map_or_else(alt_span, img)
+                ),
+                None => img(&image.src),
+            }
         }
     };
     out.push_str(&format!("<span class=\"{}\">", image.classes()));
@@ -3412,6 +3454,40 @@ mod tests {
             resources.insert(name, *text).unwrap();
         }
         resources
+    }
+
+    #[test]
+    fn svg_images_embed_like_ruby() {
+        // Ruby's SVG branch of `convert_image`/`convert_inline_image`.
+        let mut resources = memory(&[(
+            "/d/guide.adoc",
+            "image::a.svg[opts=inline,width=5]\n\nimage::a.svg[A,100,opts=interactive,fallback=f.png]\n\nimage::gone.svg[Alt *x*,opts=inline]\n\nText image:a.svg[opts=inline] image:a.svg[B,opts=interactive,title=T] after",
+        )]);
+        resources
+            .insert_binary(
+                "/d/a.svg",
+                b"<?xml version=\"1.0\"?>\n<svg width=\"10\" style=\"a\" viewBox=\"0 0 1 1\">\n<g/></svg>\n".to_vec(),
+            )
+            .unwrap();
+        let mut sources = adoctra_core::SourceMap::new();
+        let source_id = sources.load("/d/guide.adoc", None, &resources).unwrap();
+        let options = adoctra_core::ParseOptions {
+            source_id,
+            ..Default::default()
+        };
+        let doc = adoctra_core::parse_resource(&mut sources, &options, &resources)
+            .unwrap()
+            .document;
+        let html = String::from_utf8(HtmlBackend::embedded().convert(&doc).unwrap()).unwrap();
+        for expected in [
+            "<figure class=\"imageblock\">\n<svg viewBox=\"0 0 1 1\" width=\"5\">\n<g/></svg>\n</figure>",
+            "<object type=\"image/svg+xml\" data=\"a.svg\" width=\"100\"><img src=\"f.png\" alt=\"A\" width=\"100\"></object>",
+            "<span class=\"alt\">Alt *x*</span>",
+            "<span class=\"image\"><svg width=\"10\" style=\"a\" viewBox=\"0 0 1 1\">\n<g/></svg></span>",
+            "<span class=\"image\"><object type=\"image/svg+xml\" data=\"a.svg\" title=\"T\"><span class=\"alt\">B</span></object></span> after",
+        ] {
+            assert!(html.contains(expected), "{expected}\n{html}");
+        }
     }
 
     #[test]

@@ -144,6 +144,26 @@ impl<'a> Evaluation<'a> {
             None => crate::image::web_path(target, dir),
         }
     }
+    /// Ruby's SVG embedding of an image at this point (see
+    /// [`crate::data_uri::Images::svg`]).
+    pub fn svg(
+        &self,
+        target: &str,
+        named: &BTreeMap<String, String>,
+        options: &[String],
+        span: crate::Span,
+        diagnostics: &mut Vec<crate::Diagnostic>,
+    ) -> Option<crate::Svg> {
+        crate::data_uri::Images::svg(
+            self.images,
+            target,
+            named,
+            options,
+            &self.attributes,
+            span,
+            diagnostics,
+        )
+    }
     /// Counters of a nested document read and update the root document.
     pub fn with_root(mut self, root: Option<(&'a mut Attributes, &'a BTreeSet<String>)>) -> Self {
         self.root = root;

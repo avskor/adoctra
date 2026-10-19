@@ -96,6 +96,132 @@ impl<'a> Images<'a> {
         }
     }
 
+    /// Ruby's SVG branch of `convert_image`/`convert_inline_image`: below
+    /// secure mode an SVG target (`.svg` in it, or `format=svg`) with the
+    /// `inline` option is read (`read_svg_contents`), with `interactive` it
+    /// takes a fallback source; otherwise `None` (an `<img>`).
+    #[allow(clippy::too_many_arguments)]
+    pub fn svg(
+        images: Option<&Self>,
+        target: &str,
+        named: &std::collections::BTreeMap<String, String>,
+        options: &[String],
+        attrs: &Attributes,
+        span: Span,
+        diagnostics: &mut Vec<Diagnostic>,
+    ) -> Option<crate::Svg> {
+        let svg = named.get("format").is_some_and(|f| f == "svg") || target.contains(".svg");
+        if !svg || crate::context::SafeMode::of(attrs) >= crate::context::SafeMode::Secure {
+            return None;
+        }
+        let none = Self::new(None);
+        let images = images.unwrap_or(&none);
+        let option = |name: &str| options.iter().any(|o| o == name);
+        if option("inline") {
+            Some(crate::Svg::Inline(images.read_svg(
+                target,
+                attrs.get("imagesdir"),
+                attrs,
+                span,
+                diagnostics,
+            )))
+        } else if option("interactive") {
+            let fallback = named.get("fallback").map(|fallback| {
+                images.uri(fallback, attrs.get("imagesdir"), attrs, span, diagnostics)
+            });
+            Some(crate::Svg::Interactive { fallback })
+        } else {
+            None
+        }
+    }
+
+    /// `read_contents target, start: imagesdir, normalize: true, label:
+    /// 'SVG', warn_if_empty: true`: a URI only with `allow-uri-read`, else
+    /// the file under `imagesdir`; lines are right-stripped (`prepare_source_string`).
+    /// `None` (Ruby's alt fallback) when unreadable or empty.
+    fn read_svg(
+        &self,
+        target: &str,
+        dir: Option<&str>,
+        attrs: &Attributes,
+        span: Span,
+        diagnostics: &mut Vec<Diagnostic>,
+    ) -> Option<String> {
+        let uri = if uriish(target) {
+            Some(target.to_owned())
+        } else {
+            dir.filter(|dir| uriish(dir))
+                .map(|dir| crate::image::normalize_web_path(target, Some(dir), false))
+        };
+        let (name, bytes) = match uri {
+            Some(uri) if attrs.get("allow-uri-read").is_none() => {
+                warn(
+                    diagnostics,
+                    span,
+                    format!("cannot retrieve contents of SVG at URI: {uri} (allow-uri-read attribute not enabled)"),
+                );
+                return None;
+            }
+            Some(uri) => match self.load_named(&uri) {
+                Ok(loaded) => loaded,
+                Err(_) => {
+                    warn(
+                        diagnostics,
+                        span,
+                        format!("could not retrieve contents of SVG at URI: {uri}"),
+                    );
+                    return None;
+                }
+            },
+            None => {
+                let path = match dir.filter(|dir| !dir.is_empty() && !target.starts_with('/')) {
+                    Some(dir) => format!("{}/{target}", dir.trim_end_matches('/')),
+                    None => target.to_owned(),
+                };
+                match self.load_named(&path) {
+                    Ok(loaded) => loaded,
+                    Err(name) => {
+                        warn(
+                            diagnostics,
+                            span,
+                            format!("SVG does not exist or cannot be read: {name}"),
+                        );
+                        return None;
+                    }
+                }
+            }
+        };
+        let text = String::from_utf8_lossy(&bytes);
+        let text = text.strip_prefix('\u{feff}').unwrap_or(&text);
+        let contents = text
+            .split_inclusive('\n')
+            .map(|line| line.trim_end_matches([' ', '\t', '\n', '\x0b', '\x0c', '\r', '\0']))
+            .collect::<Vec<_>>()
+            .join("\n");
+        if contents.is_empty() {
+            warn(
+                diagnostics,
+                span,
+                format!("contents of SVG is empty: {name}"),
+            );
+            return None;
+        }
+        Some(contents)
+    }
+
+    fn load_named(&self, target: &str) -> Result<(String, Vec<u8>), String> {
+        let Some((provider, referrer)) = &self.source else {
+            return Err(target.to_owned());
+        };
+        provider
+            .load_binary(ResourceRequest {
+                target,
+                referrer: Some(referrer),
+            })
+            .map(|resource| (resource.name, resource.bytes))
+            .map_err(|error| error.target)
+    }
+
     fn load(&self, target: &str) -> Result<(Option<String>, Vec<u8>), String> {
         let Some((provider, referrer)) = &self.source else {
             return Err(target.to_owned());

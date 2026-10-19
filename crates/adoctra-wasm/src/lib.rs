@@ -530,7 +530,12 @@ fn write_block(b: &Block, s: &mut String) {
             write_title(&b.title, s);
             write_caption(b, s);
         }
-        BlockKind::Image { target, src, alt } => {
+        BlockKind::Image {
+            target,
+            src,
+            alt,
+            svg,
+        } => {
             // The resolved image macro; its line span covers target and list.
             s.push_str("\"name\":\"image\",\"target\":");
             write_str(target, s);
@@ -538,6 +543,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_str(src, s);
             s.push_str(",\"alt\":");
             write_str(&adoctra_core::attributes::parts_text(alt), s);
+            adoctra_core::json::write_svg(svg.as_ref(), s);
             s.push(',');
             write_id(&b.id, s);
             write_roles(&b.roles, s);
@@ -1210,6 +1216,19 @@ mod tests {
             "{json}"
         );
         assert!(!json.contains(r#""value":"""#), "{json}");
+    }
+
+    #[test]
+    fn svg_images_export_their_embedding() {
+        let json = parse_json("image::a.svg[opts=interactive]\n\nT image:gone.svg[opts=inline] x");
+        assert!(
+            json.contains(r#""alt":"a","svg":{"mode":"interactive","fallback":null}"#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""svg":{"mode":"inline","content":null}"#),
+            "{json}"
+        );
     }
 
     #[test]

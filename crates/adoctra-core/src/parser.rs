@@ -111,6 +111,7 @@ fn read_media_macro(
             target: value,
             src: String::new(),
             alt: Vec::new(),
+            svg: None,
         },
         crate::image::Media::Video => BlockKind::Video {
             target: value,
@@ -131,7 +132,9 @@ fn read_media_macro(
 /// an image's unitless `scaledwidth` a percentage.
 fn complete_media(block: &mut Block, attributes: &Attributes) {
     match &mut block.kind {
-        BlockKind::Image { target, src, alt } => {
+        BlockKind::Image {
+            target, src, alt, ..
+        } => {
             let style = block.attrs.style.take();
             let (text, default) = match (block.attrs.named.get("alt"), style) {
                 (Some(alt), _) => (alt.clone(), false),

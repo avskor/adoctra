@@ -667,6 +667,9 @@ pub enum BlockKind {
         target: String,
         src: String,
         alt: Vec<crate::AttributePart>,
+        /// An SVG embedded below secure mode (`%inline`, `%interactive`),
+        /// decided where the block converts.
+        svg: Option<crate::Svg>,
     },
     /// The `video::target[poster, width, height]` block macro (Ruby's `:video`
     /// block). `target` is the macro target after its attribute references.

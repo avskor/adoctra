@@ -45,6 +45,10 @@ for adoc in admonition_icons/*.adoc; do
   ruby "$reference" --safe <"$adoc" >"${adoc%.adoc}.expected.html"
   echo "  ${adoc%.adoc}.expected.html"
 done
+# SVG images under svg/, in safe mode from that directory (Ruby reads the
+# fixture's files relative to it; secure mode keeps an <img>).
+(cd svg && ruby "../$reference" --safe <svg.adoc >svg.expected.html)
+echo "  svg/svg.expected.html"
 # Standalone documents (head, header and footer) under document/.
 for adoc in document/*.adoc; do
   ruby "$reference" --standalone <"$adoc" >"${adoc%.adoc}.expected.html"

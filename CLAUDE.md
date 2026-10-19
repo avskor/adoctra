@@ -546,8 +546,20 @@ Numbering::Caption carries that context for xrefstyle (`Figure 1, “T”`/`Figu
 with `<img src alt width height>` (inside `<a class="image" href>` with
 `link`, window/noopener/nofollow like append_link_constraint_attrs) and a
 trailing `<figcaption class="title">`; the DOM profile maps them to Ruby's divs.
-JSON/WASM `name:"image"` with target/src/flat alt; token `block-macro`. No SVG
-inline/interactive (the reference runs in secure mode).
+JSON/WASM `name:"image"` with target/src/flat alt; token `block-macro`.
+**SVG** (Ruby's svg branch of convert_image/convert_inline_image, below secure
+mode, target containing `.svg` or `format=svg`): data_uri.rs Images::svg decides
+`Svg::Inline(Option<contents>)` for `%inline` (read_svg = read_contents: a URI
+only with `allow-uri-read`, else the file under `imagesdir` through
+`load_binary`, BOM removed, lines right-stripped; empty/unreadable → None with
+Ruby's warnings, the alt span) or `Svg::Interactive { fallback }` (the
+`fallback` attribute's image_uri) where the image converts (block: body_subs;
+inline: the macro). An inline SVG keeps its plain web path (no data-uri read).
+`BlockKind::Image.svg` / `InlineImage.svg`; the public `inline_svg` (preamble up
+to `<svg`, `width`/`height` replacing width/height/style of the start tag) is
+shared by HTML and the inline image's lexical markup; post_replacements copies
+contiguous runs so a multi-line atomic part survives. JSON/WASM `svg` {mode,
+content|fallback}; `golden/svg/` runs the reference `--safe` in that directory.
 **data-uri**: data_uri.rs Images is Ruby's `image_uri` below secure mode:
 every image source (block/inline images, `icon:`, admonition and callout
 icons) becomes `data:<mime>;base64,…` where it converts, read through the
@@ -1507,8 +1519,8 @@ stylesheet is read through the HTML resources. `SafeMode::of(attributes)`
 reads the level back. The CLI takes `-S`/`--safe-mode`/`--safe` (default
 safe), unjails FileResources in unsafe mode, passes `user-home` below server
 and fetches http/https with `ureq`; the bench runs it with `-S secure`
-(include fixtures `-S safe`). Not modeled: `cache-uri`, inline/
-interactive SVG, Ruby's jail recovery (providers deny).
+(include fixtures `-S safe`). Not modeled: `cache-uri`, Ruby's jail recovery
+(providers deny).
 
 When asked to "add a feature," check this list first and say plainly whether it
 is new work or wiring up an existing seam.

@@ -45,7 +45,7 @@ entities и нормализует пробелы обычного текста.
 golden-тест `golden/admonition_icons/` с эталоном в safe mode. Текст `blockquote` сравнивается как есть: простое содержимое цитаты
 (абзацная форма) отличается от абзаца `<p>`.
 Спроецированные узлы `quote`/`verse` в пункте списка — блоки, как и остальные.
-Корпус содержит 3273 сценария: все PASS.
+Корпус содержит 3287 сценариев: все PASS.
 
 [source,sh]
 ----
@@ -92,7 +92,7 @@ base_dir, а CLI — с тем же основным файлом, корнем 
 |Listing и literal |Частично |Нормализация конечных пробелов reader; ограждения любой длины, маскарады `[literal]`/`[listing]`/`[source]`, fenced code и обрезка пустых крайних строк проверены; тематические разрывы и разрывы страниц проверены; абзацы `[listing]`/`[source]`, умолчания `source-language`/`source-linenums-option`/`source-indent`, `indent` и `tabsize` verbatim-блоков проверены; `nowrap`/`prewrap` проверены
 |Ссылки и метаданные |Частично |Ссылки в заголовках, очистка автоматических ID, грамматика, объединение и подстановки списков атрибутов блоков и атрибуции проверены; title/reftext из списков и перенос названия через разделы проверены; каталог inline-якорей проверен; подписи xref при преобразовании (reftext при каждом обращении, названия блоков, ранние ID разделов) проверены; распознавание inline-якорей и xref после a-стадии проверено; междокументные пути, каталог include и естественные xref проверены; xref в pass:m и параметрах ссылок проверены; xrefstyle для подписей примеров и глав книги проверен
 |Подписи примеров, рисунков, листингов и таблиц |Частично |Изменение/удаление префикса, вложенная нумерация и контексты проверены; сворачиваемые примеры (`%collapsible`, без номера) проверены; `figure-caption` изображений, `listing-caption` листингов (только заданный документом, `caption=`, xrefstyle, ячейки AsciiDoc) и `table-caption` таблиц проверены; разметка подписей (значения атрибутов, `caption=` как есть и в одинарных кавычках, метка admonition, signifier разделов, xrefstyle) — 12 сценариев `caption-*`
-|Изображения |Блочный макрос реализован |`image::` с alt/размерами, link/window, float/align, imagesdir, подписи и xref проверены; data-uri через provider (ниже secure) реализован; SVG inline/interactive впереди
+|Изображения |Блочный макрос реализован |`image::` с alt/размерами, link/window, float/align, imagesdir, подписи и xref проверены; data-uri через provider (ниже secure) реализован; SVG `%inline`/`%interactive` (ниже secure) реализованы, 14 PASS `svg-*` в профиле с ресурсами
 |Inline-изображения и иконки |Реализованы |`image:`/`icon:` в стадии макросов: alt/размеры/title/link/role/float, экранирование, грамматика цели и списка, imagesdir, значения атрибутов, ссылки и форматирование, заголовки/ID/xref, drop-line; режимы `icons` font/image проверены вручную в safe mode; блокировка `icons` в secure mode — PASS
 |Видео и аудио |Блочные макросы реализованы |`video::` (локальный, YouTube, Vimeo: poster, размеры, start/end, опции, playlist/list/hash, `asset-uri-scheme`) и `audio::` с imagesdir, названиями, xref, drop-line и продолжениями списков проверены
 |Источники и позиции |Базовая модель готова |SourceMap/source_id и provenance для диапазонов через включения; общие substitutions ещё впереди
@@ -945,9 +945,10 @@ adoctra к `<div id="toc">`. Расхождения: номера в TOC бер�
 в цели (warn и drop-line, удаляющий блок с метаданными), стили verbatim и строки
 внутри абзаца как текст, нумерацию `Figure N.` (вложенную, со своим `caption`,
 локализованную и отключённую), xref с подписью и xrefstyle, а также изображения в
-продолжениях списков. Расхождения: опорный режим secure, поэтому SVG inline/
-interactive не реализованы (data-uri — см. parser-api, сверено с Ruby в safe
-mode Rust-тестами и вручную); символы `<&>` в `src`/`href` экранируются
+продолжениях списков. Опорный режим secure не встраивает SVG; `%inline` и
+`%interactive` сравниваются в safe mode сценариями `svg-*` профиля
+`include-body-dom-v1` (файлы в `resources`) и golden `svg/` (data-uri — см.
+parser-api, сверено с Ruby в safe mode Rust-тестами и вручную); символы `<&>` в `src`/`href` экранируются
 (DOM совпадает). Добавлены golden fixtures; прежние эталоны и baseline не изменены.
 
 Ещё 6 PASS проверяют блочные макросы `video::`/`audio::`, как ветку
@@ -1334,7 +1335,7 @@ URI-включения) без `allow-uri-read` становится той же
 выход за каталог запрещается provider, тогда как Ruby восстанавливает путь
 внутри jail с предупреждением; adoctra в этом случае, как для ненайденного
 файла, выводит строку `Unresolved directive` Ruby. Data URI изображений читаются через
-`load_binary` provider; `cache-uri` и встраивание SVG (`inline`/`interactive`, доступные ниже secure) не реализованы.
+`load_binary` provider, как и встраиваемые SVG; `cache-uri` не реализован.
 7 PASS проверяют атрибуты и блокировки secure mode, ссылки include, усечение
 значений, а также бывший XFAIL `icons-secure-mode-lock`; уровни unsafe/safe/
 server, include и stylesheet по URI сверены с Ruby вручную и закреплены

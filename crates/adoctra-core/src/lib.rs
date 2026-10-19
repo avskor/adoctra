@@ -61,7 +61,7 @@ pub use ast::{
 };
 pub use attributes::{
     AttributeFormat, AttributeLink, AttributePart, Attributes, Footnote, FootnoteKind, IndexTerm,
-    InlineCallout, InlineImage, Stem, StemStyle, UiMacro, Xref,
+    InlineCallout, InlineImage, Stem, StemStyle, Svg, UiMacro, Xref,
 };
 mod anchor_catalog;
 mod attribute_list;
@@ -75,7 +75,7 @@ pub use docinfo::{docinfo, DocinfoLocation};
 pub use entity_references::character_reference_end;
 pub use error::{Error, Result};
 pub use extension::{Registry, TreeProcessor};
-pub use image::normalize_web_path;
+pub use image::{inline_svg, normalize_web_path};
 pub use resource::{
     BinaryResource, MemoryResources, Resource, ResourceError, ResourceErrorKind, ResourceProvider,
     ResourceRequest, ResourceResult,

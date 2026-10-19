@@ -152,6 +152,23 @@ pub struct InlineImage {
     pub attributes: BTreeMap<String, String>,
     /// `opts`/`options` flags (`nofollow`, `noopener`, …).
     pub options: Vec<String>,
+    /// An SVG embedded below secure mode (`%inline`, `%interactive`).
+    pub svg: Option<Svg>,
+}
+
+/// Ruby's SVG embedding in `convert_image` and `convert_inline_image`, below
+/// secure mode, for an image whose target contains `.svg` (or with
+/// `format=svg`).
+#[derive(Debug, Clone, PartialEq)]
+pub enum Svg {
+    /// `%inline`: the file's contents (Ruby's `read_svg_contents`, lines
+    /// right-stripped), written with [`crate::inline_svg`]; `None` when
+    /// unreadable or empty, which shows the alt text.
+    Inline(Option<String>),
+    /// `%interactive`: an `<object>` of the image's source, falling back to
+    /// an `<img>` of `fallback` (the `fallback` attribute's source) or the alt
+    /// text.
+    Interactive { fallback: Option<String> },
 }
 
 impl InlineImage {
@@ -221,6 +238,7 @@ impl InlineImage {
                 sized()
             )
         };
+        let span_alt = || format!("<span class=\"alt\">{alt}</span>");
         let mut out = match (self.icon, self.icons.as_deref()) {
             (true, Some("font")) => {
                 let mut class = format!("fa fa-{}", self.target);
@@ -238,7 +256,21 @@ impl InlineImage {
                 format!("<i class=\"{class}\"{title}></i>")
             }
             (true, None) => format!("[{alt}&#93;"),
-            _ => img(&self.src),
+            _ => match &self.svg {
+                Some(Svg::Inline(Some(svg))) => crate::image::inline_svg(
+                    svg,
+                    attr("width").map(String::as_str),
+                    attr("height").map(String::as_str),
+                ),
+                Some(Svg::Inline(None)) => span_alt(),
+                Some(Svg::Interactive { fallback }) => format!(
+                    "<object type=\"image/svg+xml\" data=\"{}\"{}>{}</object>",
+                    self.src,
+                    sized(),
+                    fallback.as_deref().map_or_else(span_alt, img)
+                ),
+                None => img(&self.src),
+            },
         };
         if let Some(link) = attr("link") {
             let option = |name: &str| self.options.iter().any(|o| o == name);

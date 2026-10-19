@@ -213,6 +213,82 @@ pub(crate) fn target_text(target: &str, start: usize) -> Text {
     source
 }
 
+/// Ruby's `read_svg_contents` output for inline SVG `contents`: anything
+/// before the `<svg` start tag is removed, and a `width` or `height` replaces
+/// the start tag's `width`, `height` and `style` attributes.
+pub fn inline_svg(contents: &str, width: Option<&str>, height: Option<&str>) -> String {
+    let svg = if contents.starts_with("<svg") {
+        contents
+    } else {
+        // SvgPreambleRx: up to the first `<svg` followed by space or `>`.
+        let start = contents
+            .match_indices("<svg")
+            .map(|(at, _)| at)
+            .find(|&at| {
+                contents[at + 4..]
+                    .chars()
+                    .next()
+                    .is_some_and(|c| c == '>' || ruby_space(c))
+            });
+        start.map_or(contents, |at| &contents[at..])
+    };
+    if width.is_none() && height.is_none() {
+        return svg.to_owned();
+    }
+    // SvgStartTagRx: `<svg` then nothing or whitespace and no `>`, then `>`.
+    let Some(rest) = svg.strip_prefix("<svg") else {
+        return svg.to_owned();
+    };
+    let tag_end = match rest.chars().next() {
+        Some('>') => 0,
+        Some(c) if ruby_space(c) => match rest.find('>') {
+            Some(end) => end,
+            None => return svg.to_owned(),
+        },
+        _ => return svg.to_owned(),
+    };
+    let old = &svg[..4 + tag_end + 1];
+    let mut tag = strip_dimensions(old);
+    for (name, value) in [("width", width), ("height", height)] {
+        if let Some(value) = value {
+            tag.pop();
+            tag.push_str(&format!(" {name}=\"{value}\">"));
+        }
+    }
+    format!("{tag}{}", &svg[old.len()..])
+}
+
+/// Ruby's `\s`.
+fn ruby_space(c: char) -> bool {
+    matches!(c, ' ' | '\t'..='\r')
+}
+
+/// `gsub DimensionAttributeRx, ''`: `\s(?:width|height|style)=(["'])…?\1`.
+fn strip_dimensions(tag: &str) -> String {
+    let mut out = String::new();
+    let mut rest = tag;
+    'scan: while let Some((at, c)) = rest.char_indices().find(|&(_, c)| ruby_space(c)) {
+        let after = &rest[at + c.len_utf8()..];
+        for name in ["width", "height", "style"] {
+            let Some(value) = after.strip_prefix(name).and_then(|v| v.strip_prefix('=')) else {
+                continue;
+            };
+            let Some(quote) = value.chars().next().filter(|q| *q == '"' || *q == '\'') else {
+                continue;
+            };
+            if let Some(close) = value[1..].find(quote) {
+                out.push_str(&rest[..at]);
+                rest = &value[1 + close + 1..];
+                continue 'scan;
+            }
+        }
+        out.push_str(&rest[..at + c.len_utf8()]);
+        rest = after;
+    }
+    out.push_str(rest);
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

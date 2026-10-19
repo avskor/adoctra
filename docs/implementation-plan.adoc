@@ -1957,12 +1957,24 @@ Ruby API и выполнение Ruby-расширений относятся к
 * Добавлены 8 сравнительных сценариев `nested-toc-*`: всего 3273 PASS.
   Проверены Rust-тесты, fmt, clippy и тесты стенда.
 
-*Следующее изменение:* оставшиеся блочные семейства и substitutions — по приоритетам этапов 4–6.
-Открытые пункты (сверено с кодом после сто девятого набора):
+Сто десятый рабочий набор изменений:
 
-* `encoding` include (provider отдаёт только UTF-8), `cache-uri`, встраивание
-  SVG (`inline`/`interactive`), восстановление пути в jail Ruby,
-  `asciidoctor`/`asciidoctor-version`.
+* Встраивание SVG, как ветка svg `convert_image`/`convert_inline_image` Ruby
+  ниже secure mode: `%inline` читает файл через `load_binary` provider
+  (`read_svg_contents`: URI только с `allow-uri-read`, BOM и конечные пробелы
+  строк убираются, пустой или нечитаемый файл — alt и предупреждение Ruby),
+  снимает пролог до `<svg` и заменяет `width`/`height`/`style` открывающего
+  тега заданными размерами; `%interactive` — `<object>` с `<img>` из
+  `fallback` или alt. Блочные и inline-изображения (`Svg`), JSON/WASM `svg`.
+  `post_replacements` больше не дробит многострочные атомарные части.
+* Добавлены 14 сценариев `svg-*` в профиле с ресурсами (safe mode) и golden
+  `svg/`: всего 3287 PASS. Проверены Rust-тесты, fmt, clippy и тесты стенда.
+
+*Следующее изменение:* оставшиеся блочные семейства и substitutions — по приоритетам этапов 4–6.
+Открытые пункты (сверено с кодом после сто десятого набора):
+
+* `encoding` include (provider отдаёт только UTF-8), `cache-uri`,
+  восстановление пути в jail Ruby, `asciidoctor`/`asciidoctor-version`.
 * Единый структурный проход подсветки (сейчас tokenizer сначала выполняет
   разбор; построчный scanner не видит многострочные inline-конструкции),
   инкрементальный разбор и pull/event API.

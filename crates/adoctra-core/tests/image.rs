@@ -11,7 +11,9 @@ fn blocks(source: &str) -> Vec<Block> {
 /// The image fields of a block: target, src and alt parts.
 fn image(block: &Block) -> (&str, &str, &[AttributePart]) {
     match &block.kind {
-        BlockKind::Image { target, src, alt } => (target, src, alt),
+        BlockKind::Image {
+            target, src, alt, ..
+        } => (target, src, alt),
         other => panic!("not an image: {other:?}"),
     }
 }

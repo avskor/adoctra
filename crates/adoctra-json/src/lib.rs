@@ -420,7 +420,12 @@ fn write_block(block: &Block, s: &mut String) {
             write_caption(block, s);
             s.push('}');
         }
-        BlockKind::Image { target, src, alt } => {
+        BlockKind::Image {
+            target,
+            src,
+            alt,
+            svg,
+        } => {
             // The resolved image: its target, web path and flat alt text.
             s.push_str("{\"name\":\"image\",\"target\":");
             escape_into(target, s);
@@ -428,6 +433,7 @@ fn write_block(block: &Block, s: &mut String) {
             escape_into(src, s);
             s.push_str(",\"alt\":");
             escape_into(&adoctra_core::attributes::parts_text(alt), s);
+            adoctra_core::json::write_svg(svg.as_ref(), s);
             s.push(',');
             write_id(&block.id, s);
             write_roles(&block.roles, s);
@@ -1031,6 +1037,22 @@ mod tests {
             json.contains(r#"{"name":"heading","level":1,"id":"b-c","#),
             "{json}"
         );
+    }
+
+    #[test]
+    fn svg_images_export_their_embedding() {
+        let json = render("image::a.svg[opts=interactive,fallback=f.png]\n\nT image:gone.svg[opts=inline] x\n\nimage::a.png[]");
+        assert!(
+            json.contains(
+                r#""src":"a.svg","alt":"a","svg":{"mode":"interactive","fallback":"f.png"},"id""#
+            ),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""svg":{"mode":"inline","content":null}"#),
+            "{json}"
+        );
+        assert_eq!(json.matches(r#""svg":"#).count(), 2, "{json}");
     }
 
     #[test]
