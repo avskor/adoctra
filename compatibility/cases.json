@@ -21240,6 +21240,40 @@
         "empty.svg": ""
       },
       "expect": "pass"
+    },
+    {
+      "id": "processor-attributes",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "{asciidoctor}[{asciidoctor-version}]"
+    },
+    {
+      "id": "processor-attributes-locked",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":asciidoctor-version: 1\n:asciidoctor!:\n\n{asciidoctor-version} [{asciidoctor}]\n\n:asciidoctor-version: 3\n\n{asciidoctor-version}"
+    },
+    {
+      "id": "processor-attributes-host",
+      "category": "attributes",
+      "expect": "pass",
+      "attributes": {
+        "asciidoctor-version": "9",
+        "asciidoctor": "x"
+      },
+      "source": "{asciidoctor-version} {asciidoctor}"
+    },
+    {
+      "id": "processor-attributes-conditions",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "ifdef::asciidoctor[]\nyes\nendif::[]\n\nifndef::asciidoctor[]\nno\nendif::[]\n\nifeval::[\"{asciidoctor-version}\" >= \"2.0.0\"]\nnew\nendif::[]\n\nifeval::[{asciidoctor-version} < 2]\nold\nendif::[]"
+    },
+    {
+      "id": "processor-attributes-nested-cell",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "|===\na|{asciidoctor-version}\n\nifdef::asciidoctor[]\ncell\nendif::[]\n|==="
     }
   ]
 }

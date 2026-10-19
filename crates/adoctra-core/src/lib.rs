@@ -84,6 +84,11 @@ pub use source::{SourceFile, SourceId, SourceMap, SourcePosition};
 pub use tokenizer::{Token, TokenKind};
 
 /// Parse AsciiDoc source into a [`ParseResult`] (never fails on syntax).
+/// The Asciidoctor release whose behavior adoctra reproduces
+/// (`compatibility/asciidoctor-version`), exposed to documents as the locked
+/// `asciidoctor-version` attribute like Ruby's `Document#initialize`.
+pub const COMPATIBILITY_VERSION: &str = "2.0.23";
+
 pub fn parse(source: &str) -> ParseResult {
     parse_with_options(source, &ParseOptions::default())
 }

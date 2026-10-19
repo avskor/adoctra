@@ -323,7 +323,10 @@ update them (body assignments are plain); ParseContext keeps Ruby's
 `@doctype`/`@backend` apart from the attributes (book/manpage decisions use it);
 nested documents reset the doctype to `article`. Compliance defaults
 (`attribute-missing`/`-undefined`) and the header/footer labels are defaults.
-Safe-mode and `asciidoctor*` attributes are not modeled (dates and embedded: see **Standalone document**).
+Like Ruby's Document#initialize, `asciidoctor` ('') and `asciidoctor-version`
+(`adoctra_core::COMPATIBILITY_VERSION`, the pinned reference release) are locked
+overrides replacing host and document values (safe mode, dates and embedded: see
+**Safe mode** and **Standalone document**).
 Stateful pass bodies execute lazily at restoration, after outer stages. A dropped
 slot has no body effects, while repeated slot occurrences execute independently
 (e.g. a link target and its fallback label can advance the same counter twice).

@@ -422,6 +422,11 @@ impl ParseContext<'_> {
             );
             locked.insert(effective_key.to_string());
         }
+        // Ruby's processor overrides replace host values: documents detect a
+        // compatible processor and its version (`ifdef::asciidoctor[]`).
+        attributes.set("asciidoctor", "");
+        attributes.set("asciidoctor-version", crate::COMPATIBILITY_VERSION);
+        locked.extend(["asciidoctor", "asciidoctor-version"].map(str::to_owned));
         // Ruby's safe mode overrides (`||=` keeps a host value).
         let safe = options.safe;
         fn host_or(

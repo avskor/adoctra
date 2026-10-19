@@ -1394,8 +1394,13 @@ rouge (в эталоне 4.7.0) намеренно не переносится: 
 значение, удаление и повторное присваивание doctype, manpage, блокировки,
 `ifdef`, ячейки AsciiDoc, метки, `attribute-missing`, `htmlsyntax` и
 `outfilesuffix`. Эталон работает в secure mode, где `backend` заблокирован,
-поэтому смена backend в header проверена только Rust-тестами. Не реализованы
-`asciidoctor`/`asciidoctor-version`,
+поэтому смена backend в header проверена только Rust-тестами.
+
+Как `Document#initialize` Ruby, `asciidoctor` (пустое значение) и
+`asciidoctor-version` (закреплённая версия эталона,
+`adoctra_core::COMPATIBILITY_VERSION`) — заблокированные overrides: значения
+host и присваивания/удаления в документе их не меняют, условия и ячейки
+AsciiDoc их видят (5 PASS `processor-attributes*`). Не реализованы
 включение `toc`/`sectnums` для DocBook и XHTML-разметка HTML backend.
 
 == Ленивые заголовки разделов
