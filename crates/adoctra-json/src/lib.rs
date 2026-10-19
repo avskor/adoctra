@@ -1027,6 +1027,16 @@ mod tests {
     }
 
     #[test]
+    fn titles_without_ids_export_their_conversion() {
+        let json = render(":sectids!:\n\n== A {counter:n}\n\np {n}");
+        assert!(
+            json.contains(r#""id":null,"roles":[],"style":null,"attributes":{},"options":[],"title":null,"caption":null,"inlines":[{"name":"text","value":"A "},{"name":"text","value":"1","parts":[{"kind":"raw","value":"1"}]}]}"#),
+            "{json}"
+        );
+        assert!(!json.contains(r#""value":"""#), "{json}");
+    }
+
+    #[test]
     fn manual_pages_export_names_and_the_name_section() {
         let json = render("= x(1)\n:doctype: manpage\n\n== NAME\n\na, b - p\n");
         assert!(json.ends_with(r#","manpage":{"names":["a","b"],"name_section":{"heading":{"name":"heading","level":1,"id":"_name","roles":[],"style":null,"attributes":{},"options":[],"title":null,"caption":null,"inlines":[{"name":"text","value":"NAME"}]},"conforming":true}}}"#), "{json}");

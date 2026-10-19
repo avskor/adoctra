@@ -1196,6 +1196,16 @@ mod tests {
     }
 
     #[test]
+    fn titles_without_ids_export_their_conversion_with_spans() {
+        let json = parse_json(":sectids!:\n\n== Я {counter:n}\n\np {n}");
+        assert!(
+            json.contains(r#""inlines":[{"span":{"source_id":0,"start":15,"end":18},"name":"text","value":"Я "},{"span":{"source_id":0,"start":18,"end":29},"name":"attribute-ref","attribute":"counter:n","value":"1","parts":[{"kind":"raw","value":"1"}]}]}"#),
+            "{json}"
+        );
+        assert!(!json.contains(r#""value":"""#), "{json}");
+    }
+
+    #[test]
     fn section_ids_follow_the_id_policy() {
         let json =
             parse_json(":sectids!:\n\n== A\n\n:sectids:\n:idprefix:\n:idseparator: -\n\n== B C\n");

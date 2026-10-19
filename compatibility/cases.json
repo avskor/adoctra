@@ -20565,6 +20565,116 @@
         "max-include-depth": "3"
       },
       "expect": "pass"
+    },
+    {
+      "id": "lazy-title-counter",
+      "category": "sections",
+      "source": ":sectids!:\n\n== A {counter:n}\n\np {n}\n\n== B {counter:n}\n\nq {n}",
+      "expect": "pass"
+    },
+    {
+      "id": "lazy-title-explicit-id-footnote",
+      "category": "sections",
+      "source": "a footnote:[one]\n\n[#s]\n== T footnote:[two]\n\nb footnote:[three]",
+      "expect": "pass"
+    },
+    {
+      "id": "lazy-title-xref-footnote",
+      "category": "sections",
+      "source": "<<s>> footnote:[one]\n\n[#s]\n== T footnote:[two]\n\nb footnote:[three]",
+      "expect": "xfail",
+      "reason": "xref labels resolve after the field's substitutions; Ruby converts the target title inside the macros stage, before later footnotes"
+    },
+    {
+      "id": "lazy-title-auto-toc",
+      "category": "sections",
+      "source": "= D\n:sectids!:\n:toc:\n\n== A {counter:n}\n\np {n}\n\n=== A1 {counter:n}\n\n==== A2 {counter:n}\n\n== B {counter:n}\n\nq {n}",
+      "expect": "pass"
+    },
+    {
+      "id": "lazy-title-toclevels",
+      "category": "sections",
+      "source": "= D\n:sectids!:\n:toc:\n:toclevels: 1\n\n== A {counter:n}\n\n=== A1 {counter:n}\n\n== B {counter:n}\n\nq {n}",
+      "expect": "pass"
+    },
+    {
+      "id": "lazy-title-toc-macro",
+      "category": "sections",
+      "source": "= D\n:sectids!:\n:toc: macro\n\n== A {counter:n}\n\np {n}\n\ntoc::[]\n\n== B {counter:n}\n\nq {n}",
+      "expect": "pass"
+    },
+    {
+      "id": "lazy-title-toc-macro-levels",
+      "category": "sections",
+      "source": "= D\n:sectids!:\n:toc: macro\n\n== A {counter:n}\n\ntoc::[levels=2]\n\n=== A1 {counter:n}\n\n==== A2 {counter:n}\n\nq {n}",
+      "expect": "pass"
+    },
+    {
+      "id": "lazy-title-toc-preamble",
+      "category": "sections",
+      "source": "= D\n:sectids!:\n:toc: preamble\n\npre {n}\n\n== A {counter:n}\n\np {n}",
+      "expect": "pass"
+    },
+    {
+      "id": "lazy-title-explicit-id-reading",
+      "category": "sections",
+      "source": "[#a]\n== A {counter:n}\n\np {n}\n\n[#b]\n== B *b*\n\nq {n}",
+      "expect": "pass"
+    },
+    {
+      "id": "lazy-title-body-attribute",
+      "category": "sections",
+      "source": ":sectids!:\n\n:x: 1\n\n== T {x}\n\n:x: 2\n\np {x}",
+      "expect": "pass"
+    },
+    {
+      "id": "lazy-title-discrete",
+      "category": "sections",
+      "source": ":sectids!:\n\n[discrete]\n== D {counter:n}\n\np {n}\n\n[discrete#d]\n=== E footnote:[e]\n\nf footnote:[f]",
+      "expect": "pass"
+    },
+    {
+      "id": "lazy-title-set",
+      "category": "sections",
+      "source": ":sectids!:\n\n== T {set:x:1}\n\np {x}",
+      "expect": "pass"
+    },
+    {
+      "id": "lazy-title-anchor",
+      "category": "sections",
+      "source": "a footnote:[one]\n\n== T footnote:[two] [[s]]\n\nb footnote:[three] <<s>>",
+      "expect": "pass"
+    },
+    {
+      "id": "lazy-title-nested-cell",
+      "category": "sections",
+      "source": "|===\na|\n:sectids!:\n\n== A {counter:n}\n\np {n}\n|===",
+      "expect": "pass"
+    },
+    {
+      "id": "lazy-title-book-parts",
+      "category": "sections",
+      "source": "= B\n:doctype: book\n:sectids!:\n:toc:\n\n= P {counter:n}\n\n== C {counter:n}\n\nx {n}",
+      "expect": "pass"
+    },
+    {
+      "id": "lazy-title-sectids-midway",
+      "category": "sections",
+      "source": "== A {counter:n}\n\n:sectids!:\n\n== B {counter:n}\n\np {n}",
+      "expect": "pass"
+    },
+    {
+      "id": "lazy-title-toc-macro-zero",
+      "category": "sections",
+      "source": "= D\n:sectids!:\n:toc: macro\n\n== A {counter:n}\n\np {n}\n\ntoc::[levels=0]\n\n== B {counter:n}\n\n=== C {counter:n}\n\nq {n}",
+      "expect": "pass"
+    },
+    {
+      "id": "lazy-title-xref-block-title-footnote",
+      "category": "sections",
+      "source": "<<t>> footnote:[one]\n\n[#t]\n.T footnote:[two]\n----\nx\n----",
+      "expect": "xfail",
+      "reason": "xref labels resolve after the field's substitutions; Ruby converts the target title inside the macros stage, before later footnotes"
     }
   ]
 }

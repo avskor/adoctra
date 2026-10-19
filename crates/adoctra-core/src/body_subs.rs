@@ -1,7 +1,9 @@
 //! Conversion-time inline evaluation. Reading records source and evaluated
 //! declarations; the displayed document title and surviving body fields execute
-//! after the reader finishes. Section titles and eligible anchored block titles
-//! have already been cached. Captions replay their reading-time counters at entry.
+//! after the reader finishes. Section titles with a generated id and eligible
+//! anchored titles have already been cached; other section titles convert at
+//! their first use (a TOC, `<title>`, a reference or the heading). Captions
+//! replay their reading-time counters at entry.
 //! Cross-references resolve here too, after each field's substitutions, so a
 //! label sees the conversion state at that reference (see resolve.rs).
 use crate::scanner::FilteredSource;
@@ -253,6 +255,8 @@ impl BodySubs {
             header_title: None,
             first_section: None,
             resolving: false,
+            outline: Vec::new(),
+            preamble_toc: None,
         };
         let mut body = 0;
         if let (Some(header), Some(block)) = (self.header, blocks.first_mut()) {
@@ -262,6 +266,35 @@ impl BodySubs {
                 execution.header_title = Some(inlines.clone());
                 body = 1;
             }
+        }
+        execution.outline = Outline::of(&blocks[body..]);
+        // Section titles Ruby converts at their first use: a standalone
+        // document's `<title>` falls back to the first section's, and an
+        // automatic TOC converts the outline before the body (both with the
+        // header attributes).
+        let sectioned = !execution.outline.is_empty();
+        let header = &execution.attributes;
+        let standalone = header.get("embedded").is_none();
+        if standalone && body == 0 && header.get("title").is_none() {
+            let first = execution.outline.first();
+            if let Some(first) = first.filter(|f| crate::resolve::placeholder(&f.title).is_some()) {
+                let (key, title) = (first.heading, first.title.clone());
+                execution.lazy_heading(key, &title);
+            }
+        }
+        let header = &execution.attributes;
+        let toc = sectioned && header.get("toc").is_some();
+        let placement = header.get("toc-placement");
+        if toc && placement == Some("preamble") {
+            execution.preamble_toc = Some(toclevels(header.get("toclevels")));
+        }
+        let auto = match standalone {
+            true => placement == Some("auto"),
+            false => !matches!(placement, Some("macro" | "preamble")),
+        };
+        if toc && auto {
+            let levels = toclevels(header.get("toclevels"));
+            execution.toc(levels);
         }
         // Ruby's `Document#content` deletes `title` before the body converts.
         execution.attributes.remove("title");
@@ -322,6 +355,48 @@ struct Execution<'a> {
     /// Ruby's `@resolving_xref`: references inside a label being produced
     /// display `[id]`.
     resolving: bool,
+    /// The root document's sections, for the titles a table of contents
+    /// converts first.
+    outline: Vec<Outline>,
+    /// `toclevels` of a TOC at the preamble's end (header attributes).
+    preamble_toc: Option<i128>,
+}
+
+/// A section of the root document: its heading range and title.
+struct Outline {
+    level: u8,
+    heading: (usize, usize),
+    title: Vec<Inline>,
+    sections: Vec<Outline>,
+}
+
+impl Outline {
+    fn of(blocks: &[Block]) -> Vec<Self> {
+        blocks
+            .iter()
+            .filter_map(|block| match &block.kind {
+                BlockKind::Section { level, blocks } => match blocks.first() {
+                    Some(Block {
+                        span,
+                        kind: BlockKind::Heading { inlines, .. },
+                        ..
+                    }) => Some(Self {
+                        level: *level,
+                        heading: (span.start, span.end),
+                        title: inlines.clone(),
+                        sections: Self::of(&blocks[1..]),
+                    }),
+                    _ => None,
+                },
+                _ => None,
+            })
+            .collect()
+    }
+}
+
+/// Ruby's `toclevels` (or a TOC macro's `levels`), as `to_i`.
+fn toclevels(levels: Option<&str>) -> i128 {
+    levels.map_or(2, crate::include_selection::integer_prefix)
 }
 
 impl Execution<'_> {
@@ -619,10 +694,43 @@ impl Execution<'_> {
         if let Some(resolved) = self.headings.get(&key) {
             return resolved.clone();
         }
+        if crate::resolve::placeholder(nodes).is_some() {
+            return self.lazy_heading(key, nodes);
+        }
         let mut resolved = nodes.to_vec();
         self.resolve(&mut resolved);
         self.headings.insert(key, resolved.clone());
         resolved
+    }
+
+    /// A section title Ruby converts at its first use (it had no id to
+    /// generate while reading), with the state at that use; later uses take
+    /// the result.
+    fn lazy_heading(&mut self, key: (usize, usize), nodes: &[Inline]) -> Vec<Inline> {
+        if let Some(converted) = self.headings.get(&key) {
+            return converted.clone();
+        }
+        let converted = self.title(nodes);
+        self.headings.insert(key, converted.clone());
+        converted
+    }
+
+    /// Ruby's `convert_outline`: every listed section's title, nested while
+    /// a section's level is below `toclevels`.
+    fn toc(&mut self, toclevels: i128) {
+        fn walk(execution: &mut Execution<'_>, sections: &[Outline], toclevels: i128) {
+            for section in sections {
+                if crate::resolve::placeholder(&section.title).is_some() {
+                    execution.lazy_heading(section.heading, &section.title);
+                }
+                if i128::from(section.level) < toclevels {
+                    walk(execution, &section.sections, toclevels);
+                }
+            }
+        }
+        let outline = std::mem::take(&mut self.outline);
+        walk(self, &outline, toclevels);
+        self.outline = outline;
     }
 
     /// Ruby's `image_uri` with the attributes at this point: `dir` names the
@@ -750,11 +858,19 @@ impl Execution<'_> {
                     ..
                 } => self.inlines(inlines),
                 // Section titles were converted while reading; a forward
-                // reference may already have resolved their references.
+                // reference may already have resolved their references. A
+                // title converted at its first use converts here unless a TOC
+                // or reference did (a repeated table cell converts it again).
                 BlockKind::Heading { inlines, .. } => {
                     let key = (block.span.start, block.span.end);
                     match self.headings.get(&key) {
                         Some(resolved) => *inlines = resolved.clone(),
+                        None if crate::resolve::placeholder(inlines).is_some() => {
+                            *inlines = self.title(inlines);
+                            if self.root.is_none() {
+                                self.headings.insert(key, inlines.clone());
+                            }
+                        }
                         None => {
                             self.resolve(inlines);
                             self.headings.insert(key, inlines.clone());
@@ -792,8 +908,27 @@ impl Execution<'_> {
                 | BlockKind::Quote { blocks, .. }
                 | BlockKind::Sidebar { blocks }
                 | BlockKind::Open { blocks }
-                | BlockKind::Section { blocks, .. }
-                | BlockKind::Preamble { blocks } => self.blocks(blocks),
+                | BlockKind::Section { blocks, .. } => self.blocks(blocks),
+                // Ruby's `convert_preamble` converts its TOC before the content.
+                BlockKind::Preamble { blocks } => {
+                    if let Some(levels) = self.preamble_toc.filter(|_| self.root.is_none()) {
+                        self.toc(levels);
+                    }
+                    self.blocks(blocks);
+                }
+                // Ruby's `convert_toc` with the attributes at the macro.
+                BlockKind::Toc
+                    if self.root.is_none()
+                        && !self.outline.is_empty()
+                        && self.attributes.get("toc").is_some()
+                        && self.attributes.get("toc-placement") == Some("macro") =>
+                {
+                    let levels = match block.attrs.named.get("levels") {
+                        Some(levels) => toclevels(Some(levels)),
+                        None => toclevels(self.attributes.get("toclevels")),
+                    };
+                    self.toc(levels);
+                }
                 _ => {}
             }
         }

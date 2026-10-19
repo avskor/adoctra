@@ -260,3 +260,155 @@ fn incomplete_unicode_titles_remain_error_tolerant() {
             .all(|t| t.span.end <= end));
     }
 }
+
+fn values(source: &str, embedded: bool) -> Vec<String> {
+    let options = ParseOptions {
+        embedded,
+        ..Default::default()
+    };
+    let result = parse_with_options(source, &options);
+    assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+    result
+        .document
+        .flat_blocks()
+        .iter()
+        .filter(|b| !matches!(b.kind, BlockKind::Toc))
+        .map(|b| text(inlines(b)))
+        .collect()
+}
+
+fn footnotes(source: &str, embedded: bool) -> Vec<(String, String)> {
+    let options = ParseOptions {
+        embedded,
+        ..Default::default()
+    };
+    parse_with_options(source, &options)
+        .document
+        .footnotes
+        .iter()
+        .map(|f| {
+            let content = f
+                .content
+                .iter()
+                .map(|part| match part {
+                    AttributePart::Text(text) | AttributePart::Raw(text) => text.as_str(),
+                    _ => "",
+                })
+                .collect();
+            (f.index.clone(), content)
+        })
+        .collect()
+}
+
+#[test]
+fn titles_without_generated_ids_execute_where_they_convert() {
+    let source = ":sectids!:\n\n== A {counter:n}\n\np {n}\n\n[discrete]\n== D {counter:n}\n\nq {n}";
+    let result = parse(source);
+    let doc = &result.document;
+    let blocks = doc.flat_blocks();
+    let values: Vec<_> = blocks.iter().map(|b| text(inlines(b))).collect();
+    assert_eq!(values, ["A 1", "p 1", "D 2", "q 2"]);
+    assert_eq!(blocks[0].id, None);
+    // The reading snapshot does not see the conversion effect.
+    assert_eq!(blocks[1].attribute_context.get("n"), None);
+    let reference = inlines(blocks[0])
+        .iter()
+        .find(|n| matches!(n, Inline::AttributeRef { .. }))
+        .unwrap();
+    let span = reference.span();
+    assert_eq!(&source[span.start..span.end], "{counter:n}");
+    assert_eq!(inlines(blocks[0])[0].span(), Span::new(15, 17));
+}
+
+#[test]
+fn explicit_ids_defer_titles_without_attribute_references() {
+    // Like Ruby, a footnote in such a title numbers where it converts: at
+    // the heading, or first for a standalone document's `<title>`.
+    let source = "a footnote:[one]\n\n[#s]\n== T footnote:[two]\n\nb footnote:[three]";
+    assert_eq!(
+        footnotes(source, true),
+        [("1", "one"), ("2", "two"), ("3", "three")].map(|(a, b)| (a.into(), b.into()))
+    );
+    assert_eq!(
+        footnotes(source, false),
+        [("1", "two"), ("2", "one"), ("3", "three")].map(|(a, b)| (a.into(), b.into()))
+    );
+    // A reference converts it first.
+    assert_eq!(
+        footnotes(
+            "= D\n\n<<s>>\n\n[[s]]\n== T footnote:[two]\n\nb footnote:[three]",
+            false
+        ),
+        [("1", "two"), ("2", "three")].map(|(a, b)| (a.into(), b.into()))
+    );
+    // With an attribute reference it converts while reading.
+    assert_eq!(
+        values("[#a]\n== A {counter:n}\n\np {n}", false),
+        ["A 1", "p {n}"]
+    );
+    assert_eq!(
+        values("== T {counter:n} [[s]]\n\np {n}", false),
+        ["T 1", "p {n}"]
+    );
+}
+
+#[test]
+fn a_table_of_contents_converts_titles_first() {
+    let body = "== A {counter:n}\n\np {n}\n\n=== A1 {counter:n}\n\n==== A2 {counter:n}\n\n== B {counter:n}\n\nq {n}";
+    // The automatic TOC lists levels up to `toclevels` before the body.
+    assert_eq!(
+        values(&format!("= D\n:sectids!:\n:toc:\n\n{body}"), false),
+        ["D", "A 1", "p 3", "A1 2", "A2 4", "B 3", "q 4"]
+    );
+    assert_eq!(
+        values(
+            &format!("= D\n:sectids!:\n:toc:\n:toclevels: 1\n\n{body}"),
+            true
+        ),
+        ["D", "A 1", "p 2", "A1 3", "A2 4", "B 2", "q 4"]
+    );
+    // The preamble's TOC converts before its content.
+    assert_eq!(
+        values(
+            "= D\n:sectids!:\n:toc: preamble\n\npre {n}\n\n== A {counter:n}\n\np {n}",
+            false
+        ),
+        ["D", "pre 1", "A 1", "p 1"]
+    );
+    // A macro converts the outline with the state at its position.
+    assert_eq!(
+        values(
+            "= D\n:sectids!:\n:toc: macro\n\n== A {counter:n}\n\np {n}\n\ntoc::[levels=0]\n\n== B {counter:n}\n\n=== C {counter:n}\n\nq {n}",
+            false
+        ),
+        ["D", "A 1", "p 1", "B 2", "C 3", "q 3"]
+    );
+    // Without a TOC each title converts at its heading.
+    assert_eq!(
+        values(&format!("= D\n:sectids!:\n\n{body}"), false),
+        ["D", "A 1", "p 1", "A1 2", "A2 3", "B 4", "q 4"]
+    );
+}
+
+#[test]
+fn a_standalone_title_converts_the_first_section_with_the_header_state() {
+    let source = ":sectids!:\n\npara\n\n:x: 1\n\n== A {x} {counter:n}\n\np {n}";
+    assert_eq!(values(source, false), ["para", "A {x} 1", "p 1"]);
+    assert_eq!(values(source, true), ["para", "A 1 1", "p 1"]);
+}
+
+#[test]
+fn deferred_titles_keep_their_tokens() {
+    let options = ParseOptions::default();
+    let kinds = |source: &str| -> Vec<(TokenKind, String)> {
+        tokens_with_options(source, &options)
+            .iter()
+            .map(|t| (t.kind, source[t.span.start..t.span.end].to_owned()))
+            .collect()
+    };
+    let body = "== A *b* {counter:n} footnote:[f] <<s>>\r\n\r\n[[s]]\r\n== S _Я_\r\n";
+    let deferred = kinds(&format!(":sectids!:\r\n\r\n{body}"));
+    let read = kinds(body);
+    assert_eq!(deferred[1..], read[..]);
+    assert!(read.contains(&(TokenKind::AttributeRef, "{counter:n}".into())));
+}

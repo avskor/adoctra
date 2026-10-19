@@ -4899,6 +4899,29 @@ mod tests {
     }
 
     #[test]
+    fn titles_without_ids_convert_in_the_toc_first() {
+        // Ruby converts such titles at their first use: the TOC.
+        let html = render(
+            "= D\n:sectids!:\n:toc:\n\n== A {counter:n} *b*\n\np {n}\n\n== B {counter:n}\n\nq {n}",
+        );
+        assert!(
+            html.contains(
+                "<li><a href=\"#\">A 1 <strong>b</strong></a></li>\n<li><a href=\"#\">B 2</a></li>"
+            ),
+            "{html}"
+        );
+        assert!(
+            html.contains("<h2>A 1 <strong>b</strong></h2>\n<p>p 2</p>"),
+            "{html}"
+        );
+        assert!(html.contains("<h2>B 2</h2>\n<p>q 2</p>"), "{html}");
+        // A standalone `<title>` converts the first section's title.
+        let html = render_standalone(":sectids!:\n\npara\n\n:x: 1\n\n== A {x}\n\np {x}");
+        assert!(html.contains("<title>A {x}</title>"), "{html}");
+        assert!(html.contains("<h2>A {x}</h2>\n<p>p 1</p>"), "{html}");
+    }
+
+    #[test]
     fn preamble_toc_closes_the_preamble() {
         let html = render("= D\n:toc: preamble\n:toc-class: side\n\nPre\n\n== A");
         assert!(

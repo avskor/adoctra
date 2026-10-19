@@ -2251,7 +2251,19 @@ fn parse_block_content(
             context.read_section((off, end), pending_style, level, title)
         };
         let heading_attrs = inline_attributes(&context.attributes, pending_attrs);
-        let inlines = context.reading_title(title, base, &heading_attrs, &lines.include_catalog);
+        // Ruby converts the title while reading only to generate an id
+        // (`sectids`) or, with an explicit id, when it holds an attribute
+        // reference; otherwise its first use during conversion does.
+        let explicit_id = has_id || anchor.is_some();
+        let inlines = if explicit_id && title.contains('{')
+            || !explicit_id && context.attributes.get("sectids").is_some()
+        {
+            context.reading_title(title, base, &heading_attrs, &lines.include_catalog)
+        } else {
+            context
+                .body_subs
+                .defer_title(title, base, None, &heading_attrs)
+        };
         if !has_id && anchor.is_none() {
             context.generating_id();
         }

@@ -764,6 +764,10 @@ impl VisitorMut for Ids<'_> {
         }
         let title = match &block.kind {
             BlockKind::Heading { .. } if doctitle => Some(Title::Header),
+            // A title Ruby converts at its first use is a pending block title.
+            BlockKind::Heading { inlines, .. } if placeholder(inlines).is_some() => {
+                Some(Title::Nodes(inlines.clone()))
+            }
             BlockKind::Heading { inlines, .. } => Some(Title::Heading(
                 (block.span.start, block.span.end),
                 inlines.clone(),

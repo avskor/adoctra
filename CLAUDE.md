@@ -330,9 +330,18 @@ slot has no body effects, while repeated slot occurrences execute independently
 Keep the shared 32-level bound and enclosing physical diagnostic origin.
 ParseContext keeps reading attributes separate from conversion replay after the
 header. Explicit declaration results/unsets enter source-ordered replay, without
-the effects from computing them. Section titles execute stateful substitutions once during reading;
+the effects from computing them. Section and discrete titles execute stateful
+substitutions once during reading only where Ruby converts them while reading
+(a generated id with `sectids`, or an explicit id plus a `{` in the title);
 IDs and xrefs reuse their resolved inlines. Effects reach later reading but do not
-enter declaration replay. The implicit doctitle executes an early a-stage with a
+enter declaration replay. Other titles are deferred like block titles
+(`Title::Nodes` placeholder) and convert at their first use during conversion:
+body_subs converts the outline at a TOC (header auto TOC with the header
+attributes — standalone `toc-placement=auto`, embedded not macro/preamble —,
+the preamble's TOC before its content, a `toc::[]` macro with its attributes,
+nested while level < toclevels/levels), a standalone document without a title
+converts its first section for `<title>` first, a reference label, else the
+heading itself. The implicit doctitle executes an early a-stage with a
 fixed skip policy before header completion. The displayed document title executes
 normal substitutions after reading, before body replay, starting from the header
 snapshot; locked counter state retains reading effects. It can therefore differ
