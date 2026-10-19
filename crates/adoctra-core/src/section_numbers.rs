@@ -29,7 +29,7 @@ pub(crate) struct Section {
     pub numeral: Option<String>,
     /// An appendix caption (`Appendix A: `, or `A. ` without
     /// `appendix-caption`), fixed when reading closes it.
-    pub caption: Option<String>,
+    pub caption: Option<Vec<crate::AttributePart>>,
     /// `Section#sectnum` components: the numerals from the outermost section
     /// the number continues through (an unnumbered one contributes an empty
     /// numeral, like Ruby's `nil`). Assigned when the hierarchy is built.
@@ -168,7 +168,7 @@ impl Section {
 
     /// The title prefix `convert_section` renders (with its trailing space),
     /// using the attributes at the section; `None` beyond `sectnumlevels`.
-    pub fn caption(&self, attributes: &Attributes) -> Option<String> {
+    pub fn caption(&self, attributes: &Attributes) -> Option<Vec<crate::AttributePart>> {
         if self.caption.is_some() {
             return self.caption.clone();
         }
@@ -181,9 +181,14 @@ impl Section {
         if i128::from(self.level) > levels {
             return None;
         }
-        let signified = |name: &str, number: String| match attributes.get(name) {
-            Some(signifier) => format!("{signifier} {number} "),
-            None => format!("{number} "),
+        // Ruby inserts the signifier's stored value.
+        let signified = |name: &str, number: String| {
+            let mut parts = attributes.value_parts(name).unwrap_or_default();
+            if !parts.is_empty() {
+                crate::attributes::push_part(&mut parts, " ", false);
+            }
+            crate::attributes::push_part(&mut parts, &format!("{number} "), false);
+            parts
         };
         Some(match self.sectname.as_str() {
             "chapter" if self.level < 2 && self.book => {
@@ -192,7 +197,10 @@ impl Section {
             "part" if self.level < 2 && self.book => {
                 signified("part-signifier", self.sectnum("", ":"))
             }
-            _ => format!("{} ", self.sectnum(".", ".")),
+            _ => vec![crate::AttributePart::Text(format!(
+                "{} ",
+                self.sectnum(".", ".")
+            ))],
         })
     }
 }
@@ -361,6 +369,10 @@ mod tests {
         assert_eq!(section.at(50).sectnum(".", ""), "1.2");
     }
 
+    fn text(parts: Option<Vec<crate::AttributePart>>) -> Option<String> {
+        parts.as_deref().map(crate::attributes::parts_text)
+    }
+
     #[test]
     fn captions_follow_levels_and_signifiers() {
         let mut section = Section::read(
@@ -373,8 +385,8 @@ mod tests {
         );
         section.path = vec!["1".into(), "2".into()];
         assert_eq!(
-            section.caption(&Attributes::new()).as_deref(),
-            Some("1.2. ")
+            text(section.caption(&Attributes::new())),
+            Some("1.2. ".into())
         );
         let one = attributes(&[("sectnumlevels", "1")]);
         assert_eq!(section.caption(&one), None);
@@ -383,15 +395,18 @@ mod tests {
             Section::read(None, 1, true, false, &attributes(&[("sectnums", "")]), None);
         chapter.path = vec!["3".into()];
         let signifier = attributes(&[("chapter-signifier", "Chapter")]);
-        assert_eq!(chapter.caption(&signifier).as_deref(), Some("Chapter 3. "));
+        assert_eq!(
+            text(chapter.caption(&signifier)),
+            Some("Chapter 3. ".into())
+        );
         let mut part = Section::read(None, 0, true, false, &attributes(&[("partnums", "")]), None);
         part.path = vec!["II".into()];
-        assert_eq!(part.caption(&Attributes::new()).as_deref(), Some("II: "));
+        assert_eq!(text(part.caption(&Attributes::new())), Some("II: ".into()));
         // An appendix caption is fixed at closing, beyond sectnumlevels.
         let mut appendix =
             Section::read(Some("appendix"), 1, false, false, &Attributes::new(), None);
-        appendix.caption = Some("Приложение A: ".into());
+        appendix.caption = Some(vec![crate::AttributePart::Text("Приложение A: ".into())]);
         let none = attributes(&[("sectnumlevels", "0")]);
-        assert_eq!(appendix.caption(&none).as_deref(), Some("Приложение A: "));
+        assert_eq!(text(appendix.caption(&none)), Some("Приложение A: ".into()));
     }
 }

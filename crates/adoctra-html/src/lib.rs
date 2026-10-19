@@ -813,7 +813,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
         }
         BlockKind::Paragraph { inlines } => {
             let class = class_attr(&[], &block.roles);
-            render_title(&block.title, &block.caption, out);
+            render_title(&block.title, &caption_html(block), out);
             out.push_str(&format!("<p{id}{class}>"));
             render_inlines(inlines, out);
             out.push_str("</p>\n");
@@ -823,7 +823,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             callouts,
             inlines,
         } => {
-            render_title(&block.title, &block.caption, out);
+            render_title(&block.title, &caption_html(block), out);
             // A `[source]`-style listing renders as asciidoctor's highlight form:
             // `<pre class="highlight"><code class="language-LANG" data-lang="LANG">`,
             // with the language taken from the `language` attribute that core
@@ -867,7 +867,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             // A literal block: verbatim `<pre>`, like a plain listing but with the
             // `literalblock` base class. asciidoctor wraps it in a `<div>`; adoctra
             // hangs the class/id/roles on the `<pre>` itself, as for a listing.
-            render_title(&block.title, &block.caption, out);
+            render_title(&block.title, &caption_html(block), out);
             let class = class_attr(&["literalblock", nowrap(block)], &block.roles);
             out.push_str(&format!("<pre{class}{id}>"));
             render_verbatim(text, callouts, inlines, out);
@@ -878,7 +878,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             // items explain the callout marks. With `icons` Ruby lays out the
             // number icon beside the text in a table; adoctra keeps the list
             // and the stylesheet lays out the same icon and text columns.
-            render_title(&block.title, &block.caption, out);
+            render_title(&block.title, &caption_html(block), out);
             // Core captured the `icons` mode where the list converts.
             let icons = items.first().and_then(|entry| entry.icons.as_deref());
             let base: &[&str] = if icons.is_some() {
@@ -920,7 +920,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
         BlockKind::Stem { style, inlines } => {
             let class = class_attr(&["stemblock"], &block.roles);
             out.push_str(&format!("<div{id}{class}>\n"));
-            render_title(&block.title, &block.caption, out);
+            render_title(&block.title, &caption_html(block), out);
             out.push_str("<div class=\"content\">\n");
             let mut equation = String::new();
             render_inlines(inlines, &mut equation);
@@ -983,8 +983,8 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             }
             if let Some(title) = &block.title {
                 out.push_str("<figcaption class=\"title\">");
-                if let Some(caption) = &block.caption {
-                    out.push_str(&escape(caption));
+                if let Some(caption) = caption_html(block) {
+                    out.push_str(&caption);
                 }
                 render_inlines(title, out);
                 out.push_str("</figcaption>\n");
@@ -1130,7 +1130,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             } else {
                 ("&#10003; ", "&#10063; ")
             };
-            render_title(&block.title, &block.caption, out);
+            render_title(&block.title, &caption_html(block), out);
             out.push_str(&format!("<{tag}{id}{class}{extra}>\n"));
             for item in items {
                 out.push_str("<li>");
@@ -1196,7 +1196,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             // A `.Title` on the admonition is the block's *own* title (distinct from
             // the `Note`/`Tip`/… label), rendered above the body — matching where
             // asciidoctor places it in the content cell.
-            render_title(&block.title, &block.caption, out);
+            render_title(&block.title, &caption_html(block), out);
             render_body(block, blocks, cx, out);
             out.push_str("</div>\n</aside>\n");
         }
@@ -1227,7 +1227,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             // the class plus the block's id/roles, children render straight in.
             let class = class_attr(&["exampleblock"], &block.roles);
             out.push_str(&format!("<div{class}{id}>\n"));
-            render_title(&block.title, &block.caption, out);
+            render_title(&block.title, &caption_html(block), out);
             render_body(block, blocks, cx, out);
             out.push_str("</div>\n");
         }
@@ -1239,7 +1239,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             // element), and the `.Title` renders just inside it, as for an example.
             let class = class_attr(&["sidebarblock"], &block.roles);
             out.push_str(&format!("<aside{class}{id}>\n"));
-            render_title(&block.title, &block.caption, out);
+            render_title(&block.title, &caption_html(block), out);
             render_body(block, blocks, cx, out);
             out.push_str("</aside>\n");
         }
@@ -1255,7 +1255,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             // idiom — id/roles hang on the `<figure>`.
             let class = class_attr(&["quoteblock"], &block.roles);
             out.push_str(&format!("<figure{class}{id}>\n"));
-            render_title(&block.title, &block.caption, out);
+            render_title(&block.title, &caption_html(block), out);
             out.push_str("<blockquote>\n");
             render_body(block, blocks, cx, out);
             out.push_str("</blockquote>\n");
@@ -1272,7 +1272,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             // markup). No newline after `<pre>` (it is whitespace-significant).
             let class = class_attr(&["verseblock"], &block.roles);
             out.push_str(&format!("<figure{class}{id}>\n"));
-            render_title(&block.title, &block.caption, out);
+            render_title(&block.title, &caption_html(block), out);
             out.push_str("<pre class=\"verse\">");
             render_inlines(inlines, out);
             out.push_str("</pre>\n");
@@ -1320,7 +1320,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             // adoctra uses the same figure/blockquote idiom as quotes.
             let class = class_attr(&["quoteblock", "abstract"], &block.roles);
             out.push_str(&format!("<figure{class}{id}>\n"));
-            render_title(&block.title, &block.caption, out);
+            render_title(&block.title, &caption_html(block), out);
             out.push_str("<blockquote>\n");
             render_body(block, blocks, cx, out);
             out.push_str("</blockquote>\n</figure>\n");
@@ -1414,8 +1414,8 @@ fn render_outline(blocks: &[Block], toclevels: i64, out: &mut String) -> bool {
     for (level, blocks) in sections.by_ref() {
         let heading = &blocks[0];
         let mut title = String::new();
-        if let Some(caption) = &heading.caption {
-            title.push_str(&escape(caption));
+        if let Some(caption) = caption_html(heading) {
+            title.push_str(&caption);
         }
         if let BlockKind::Heading { inlines, .. } = &heading.kind {
             render_inlines(inlines, &mut title);
@@ -1489,7 +1489,7 @@ fn render_dlist(
             render_block(child, cx, out);
         }
     };
-    render_title(&block.title, &block.caption, out);
+    render_title(&block.title, &caption_html(block), out);
     match style {
         Some("qanda") => {
             let class = class_attr(&["qanda"], &block.roles);
@@ -1694,8 +1694,8 @@ fn render_table(block: &Block, table: &adoctra_core::ast::Table, cx: &Cx, out: &
     ));
     if let Some(title) = &block.title {
         out.push_str("<caption class=\"title\">");
-        if let Some(caption) = &block.caption {
-            out.push_str(&escape(caption));
+        if let Some(caption) = caption_html(block) {
+            out.push_str(&caption);
         }
         render_inlines(title, out);
         out.push_str("</caption>\n");
@@ -1843,7 +1843,7 @@ fn render_open(block: &Block, blocks: &[Block], cx: &Cx, out: &mut String) {
     let base: Vec<&str> = std::iter::once("openblock").chain(style).collect();
     let class = class_attr(&base, &block.roles);
     out.push_str(&format!("<div{class}{}>\n", id_attr(&block.id)));
-    render_title(&block.title, &block.caption, out);
+    render_title(&block.title, &caption_html(block), out);
     render_body(block, blocks, cx, out);
     out.push_str("</div>\n");
 }
@@ -1890,8 +1890,8 @@ fn render_heading(
     render_title(&block.title, &None, out);
     out.push_str(&format!("<h{h}{}{class}>", id_attr(&block.id)));
     let mut title = String::new();
-    if let Some(caption) = &block.caption {
-        title.push_str(&escape(caption));
+    if let Some(caption) = caption_html(block) {
+        title.push_str(&caption);
     }
     render_inlines(inlines, &mut title);
     // Like Ruby's `convert_section` (not its floating titles or the document
@@ -1955,11 +1955,24 @@ fn render_attribution(attribution: &Option<Attribution>, out: &mut String) {
 /// prepended verbatim inside the same `<div>`, exactly like asciidoctor's
 /// `#{caption}#{title}`. It is `None` for every block but a numbered example, so
 /// titles elsewhere are unaffected.
+/// A block's caption as HTML: its semantic parts (Ruby's stored markup), else
+/// the escaped plain caption.
+fn caption_html(block: &Block) -> Option<String> {
+    let caption = block.caption.as_ref()?;
+    if block.caption_parts.is_empty() {
+        return Some(escape(caption));
+    }
+    let mut html = String::new();
+    render_parts(&block.caption_parts, &mut html);
+    Some(html)
+}
+
+/// A block title with its pre-rendered caption HTML.
 fn render_title(title: &Option<Vec<Inline>>, caption: &Option<String>, out: &mut String) {
     if let Some(inlines) = title {
         out.push_str("<div class=\"title\">");
         if let Some(caption) = caption {
-            out.push_str(&escape(caption));
+            out.push_str(caption);
         }
         render_inlines(inlines, out);
         out.push_str("</div>\n");
@@ -4896,6 +4909,35 @@ mod tests {
         // No sections, no TOC; a body `:toc:` does not enable it.
         assert!(!body(&render("= D\n:toc:\n\ntext")).contains("<nav"));
         assert!(!body(&render("= D\n\n:toc:\n\n== A")).contains("<nav"));
+    }
+
+    #[test]
+    fn captions_render_their_markup_like_ruby() {
+        // Attribute values and `caption=` keep Ruby's stored markup.
+        let html = render(":example-caption: pass:q[*Ex*]\n:table-caption: pass:q[_T_]\n\n.A\n====\nx\n====\n\n.B\n|===\n|c\n|===\n\n[caption=\"<i>C</i> \"]\n.D\n====\ny\n====\n\n[NOTE,caption='*Hi* &']\nz");
+        for expected in [
+            "<div class=\"title\"><strong>Ex</strong> 1. A</div>",
+            "<caption class=\"title\"><em>T</em> 1. B</caption>",
+            "<div class=\"title\"><i>C</i> D</div>",
+            "<p class=\"admonition-title\"><strong>Hi</strong> &amp;</p>",
+        ] {
+            assert!(html.contains(expected), "{expected}\n{html}");
+        }
+        // Section signifiers too, in the heading and the TOC.
+        let html = render(":doctype: book\n:sectnums:\n:toc:\n:chapter-signifier: pass:q[*Ch*]\n:appendix-caption: pass:q[_Ap_]\n\n== A\n\n[appendix]\n== B");
+        for expected in [
+            "<li><a href=\"#_a\"><strong>Ch</strong> 1. A</a></li>",
+            "<h2 id=\"_a\"><strong>Ch</strong> 1. A</h2>",
+            "<h2 id=\"_b\"><em>Ap</em> A: B</h2>",
+        ] {
+            assert!(html.contains(expected), "{expected}\n{html}");
+        }
+        // A plain caption is escaped text.
+        let html = render(":example-caption: A <b>\n\n.T\n====\nx\n====");
+        assert!(
+            html.contains("<div class=\"title\">A &lt;b&gt; 1. T</div>"),
+            "{html}"
+        );
     }
 
     #[test]

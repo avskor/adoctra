@@ -168,6 +168,13 @@ fn merge_fields(
             pending.list.positional.insert(field.index + 1, value);
             continue;
         };
+        if name == "caption" {
+            // Ruby stores the converted markup of a substituted value.
+            pending.attrs.caption = value
+                .as_ref()
+                .filter(|_| substitute)
+                .map(|value| crate::resolve::label_parts(&value.inlines));
+        }
         let text = value.map(|v| v.text).unwrap_or_default();
         match name.as_str() {
             "options" | "opts" => {

@@ -41,7 +41,8 @@ pub(crate) enum Numbering {
     #[default]
     None,
     Caption {
-        caption: String,
+        /// The caption's parts (Ruby's stored `@caption` markup).
+        caption: Vec<crate::AttributePart>,
         numeral: Option<String>,
         context: &'static str,
     },
@@ -69,7 +70,7 @@ pub(crate) fn styled(
             caption,
             numeral,
             context,
-        } if !caption.is_empty() => (caption, numeral, context),
+        } if !crate::attributes::parts_text(caption).is_empty() => (caption, numeral, context),
         _ => return title,
     };
     let signifier = match (
@@ -79,9 +80,18 @@ pub(crate) fn styled(
         (Some(numeral), Some(parts)) => {
             vec![signifier(parts, span), text(format!(" {numeral}"))]
         }
-        _ => vec![text(
-            caption.strip_suffix(". ").unwrap_or(caption).to_owned(),
-        )],
+        // Ruby's `@caption.chomp '. '`.
+        _ => {
+            let mut caption = caption.clone();
+            if let Some(crate::AttributePart::Text(last) | crate::AttributePart::Raw(last)) =
+                caption.last_mut()
+            {
+                if let Some(chomped) = last.strip_suffix(". ") {
+                    *last = chomped.to_owned();
+                }
+            }
+            vec![signifier(caption, span)]
+        }
     };
     match style {
         "full" => {
@@ -784,7 +794,11 @@ impl VisitorMut for Ids<'_> {
             },
             (kind, Some(caption)) => match crate::context::caption_context(kind) {
                 Some(context) => Numbering::Caption {
-                    caption: caption.clone(),
+                    caption: if block.caption_parts.is_empty() {
+                        vec![crate::AttributePart::Text(caption.clone())]
+                    } else {
+                        block.caption_parts.clone()
+                    },
                     numeral: self.numerals.remove(&key),
                     context,
                 },

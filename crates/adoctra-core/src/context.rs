@@ -937,8 +937,8 @@ impl ParseContext<'_> {
         kind: crate::ast::AdmonitionKind,
         attrs: Option<&crate::ast::BlockAttrs>,
     ) -> Vec<crate::AttributePart> {
-        match attrs.and_then(|attrs| attrs.named.get("caption")) {
-            Some(caption) => vec![crate::AttributePart::Raw(caption.clone())],
+        match attrs.and_then(block_caption) {
+            Some(caption) => caption,
             None => self
                 .attributes
                 .value_parts(&format!("{}-caption", kind.as_str()))
@@ -957,24 +957,18 @@ impl ParseContext<'_> {
         // Ruby's `:example` branch of `next_block` sets `caption` to '' for a
         // collapsible example, so it is never numbered.
         if context == "example" && crate::parser::has_option(&block.attrs, "collapsible") {
-            block.caption = Some(String::new());
+            block.set_caption(Some(Vec::new()));
             return;
         }
-        if let Some(caption) = block
-            .attrs
-            .named
-            .get("caption")
-            .map(String::as_str)
-            .or_else(|| self.attributes.get("caption"))
+        // Ruby inserts these values as stored: a block's raw (or substituted
+        // single-quoted) `caption`, the document's attribute values.
+        if let Some(caption) =
+            block_caption(&block.attrs).or_else(|| self.attributes.value_parts("caption"))
         {
-            block.caption = Some(caption.to_owned());
+            block.set_caption(Some(caption));
             return;
         }
-        let Some(prefix) = self
-            .attributes
-            .get(&format!("{context}-caption"))
-            .map(str::to_owned)
-        else {
+        let Some(mut caption) = self.attributes.value_parts(&format!("{context}-caption")) else {
             return;
         };
         let mut evaluation = crate::substitution_context::Evaluation::definition(
@@ -996,7 +990,18 @@ impl ParseContext<'_> {
         if let Some(attributes) = evaluation.changed_attributes() {
             self.attributes = Arc::new(attributes);
         }
-        block.caption = Some(format!("{prefix} {number}. "));
+        crate::attributes::push_part(&mut caption, " ", false);
+        for part in &effect.parts {
+            // A raw counter value needs no markup unless it spells some.
+            match part {
+                crate::AttributePart::Raw(value) if !value.contains(['&', '<', '>']) => {
+                    crate::attributes::push_part(&mut caption, value, false)
+                }
+                part => crate::attributes::push_value(&mut caption, part.clone()),
+            }
+        }
+        crate::attributes::push_part(&mut caption, ". ", false);
+        block.set_caption(Some(caption));
         self.numerals
             .insert((block.span.start, block.span.end), number);
         self.body_subs
@@ -1102,9 +1107,13 @@ impl ParseContext<'_> {
                 self.attributes = Arc::new(attributes);
             }
             let numeral = parts_text(&effect.parts);
-            let caption = appendix.then(|| match self.attributes.get("appendix-caption") {
-                Some(caption) => format!("{caption} {numeral}: "),
-                None => format!("{numeral}. "),
+            // Ruby inserts the stored `appendix-caption` value.
+            let caption = appendix.then(|| match self.attributes.value_parts("appendix-caption") {
+                Some(mut parts) => {
+                    crate::attributes::push_part(&mut parts, &format!(" {numeral}: "), false);
+                    parts
+                }
+                None => vec![crate::AttributePart::Text(format!("{numeral}. "))],
             });
             if let Some(section) = self.sections.get_mut(&key) {
                 section.numeral = Some(numeral);
@@ -1475,4 +1484,15 @@ pub(crate) fn intrinsic(name: &str) -> Option<&'static str> {
         "gt" => ">",
         _ => return None,
     })
+}
+
+/// A block's `caption` attribute as Ruby inserts it: the substituted parts of
+/// a single-quoted value, else the raw value.
+fn block_caption(attrs: &crate::ast::BlockAttrs) -> Option<Vec<crate::AttributePart>> {
+    let caption = attrs.named.get("caption")?;
+    Some(attrs.caption.clone().unwrap_or_else(|| {
+        let mut parts = Vec::new();
+        crate::attributes::push_part(&mut parts, caption, true);
+        parts
+    }))
 }

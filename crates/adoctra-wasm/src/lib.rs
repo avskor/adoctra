@@ -425,7 +425,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_attributes(&b.attrs.named, s);
             write_options(&b.attrs.options, s);
             write_title(&b.title, s);
-            write_caption(&b.caption, s);
+            write_caption(b, s);
             s.push_str(",\"inlines\":");
             write_inlines(inlines, s);
         }
@@ -437,7 +437,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_attributes(&b.attrs.named, s);
             write_options(&b.attrs.options, s);
             write_title(&b.title, s);
-            write_caption(&b.caption, s);
+            write_caption(b, s);
             s.push_str(",\"inlines\":");
             write_inlines(inlines, s);
         }
@@ -453,7 +453,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_attributes(&b.attrs.named, s);
             write_options(&b.attrs.options, s);
             write_title(&b.title, s);
-            write_caption(&b.caption, s);
+            write_caption(b, s);
             s.push_str(",\"text\":");
             write_str(text, s);
             write_callouts(callouts, s);
@@ -471,7 +471,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_attributes(&b.attrs.named, s);
             write_options(&b.attrs.options, s);
             write_title(&b.title, s);
-            write_caption(&b.caption, s);
+            write_caption(b, s);
             s.push_str(",\"text\":");
             write_str(text, s);
             write_callouts(callouts, s);
@@ -496,7 +496,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_attributes(&b.attrs.named, s);
             write_options(&b.attrs.options, s);
             write_title(&b.title, s);
-            write_caption(&b.caption, s);
+            write_caption(b, s);
             s.push_str(",\"text\":");
             write_str(text, s);
             write_substituted(inlines, s);
@@ -515,7 +515,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_attributes(&b.attrs.named, s);
             write_options(&b.attrs.options, s);
             write_title(&b.title, s);
-            write_caption(&b.caption, s);
+            write_caption(b, s);
         }
         BlockKind::Toc => {
             // The `toc::[]` macro; the editor builds the outline from sections.
@@ -526,7 +526,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_attributes(&b.attrs.named, s);
             write_options(&b.attrs.options, s);
             write_title(&b.title, s);
-            write_caption(&b.caption, s);
+            write_caption(b, s);
         }
         BlockKind::Image { target, src, alt } => {
             // The resolved image macro; its line span covers target and list.
@@ -543,7 +543,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_attributes(&b.attrs.named, s);
             write_options(&b.attrs.options, s);
             write_title(&b.title, s);
-            write_caption(&b.caption, s);
+            write_caption(b, s);
         }
         BlockKind::Table(table) => {
             s.push_str("\"name\":\"table\",");
@@ -553,7 +553,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_attributes(&b.attrs.named, s);
             write_options(&b.attrs.options, s);
             write_title(&b.title, s);
-            write_caption(&b.caption, s);
+            write_caption(b, s);
             write_table(table, s);
         }
         BlockKind::Video {
@@ -579,7 +579,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_attributes(&b.attrs.named, s);
             write_options(&b.attrs.options, s);
             write_title(&b.title, s);
-            write_caption(&b.caption, s);
+            write_caption(b, s);
         }
         BlockKind::Audio { target, src } => {
             s.push_str("\"name\":\"audio\",\"target\":");
@@ -593,7 +593,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_attributes(&b.attrs.named, s);
             write_options(&b.attrs.options, s);
             write_title(&b.title, s);
-            write_caption(&b.caption, s);
+            write_caption(b, s);
         }
         BlockKind::List { ordered, items } => {
             s.push_str(&format!("\"name\":\"list\",\"ordered\":{ordered},"));
@@ -603,7 +603,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_attributes(&b.attrs.named, s);
             write_options(&b.attrs.options, s);
             write_title(&b.title, s);
-            write_caption(&b.caption, s);
+            write_caption(b, s);
             s.push_str(",\"items\":[");
             for (i, item) in items.iter().enumerate() {
                 if i > 0 {
@@ -621,7 +621,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_attributes(&b.attrs.named, s);
             write_options(&b.attrs.options, s);
             write_title(&b.title, s);
-            write_caption(&b.caption, s);
+            write_caption(b, s);
             s.push_str(",\"items\":[");
             for (i, entry) in items.iter().enumerate() {
                 if i > 0 {
@@ -650,7 +650,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_attributes(&b.attrs.named, s);
             write_options(&b.attrs.options, s);
             write_title(&b.title, s);
-            write_caption(&b.caption, s);
+            write_caption(b, s);
             s.push_str(",\"items\":[");
             for (i, item) in items.iter().enumerate() {
                 if i > 0 {
@@ -697,7 +697,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_attributes(&b.attrs.named, s);
             write_options(&b.attrs.options, s);
             write_title(&b.title, s);
-            write_caption(&b.caption, s);
+            write_caption(b, s);
             // Children carry their own spans; recurse so the editor sees the tree.
             write_simple(b.simple, s);
             write_icon(icons, src, s);
@@ -718,7 +718,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_attributes(&b.attrs.named, s);
             write_options(&b.attrs.options, s);
             write_title(&b.title, s);
-            write_caption(&b.caption, s);
+            write_caption(b, s);
             // Children carry their own spans; recurse so the editor sees the tree.
             write_simple(b.simple, s);
             s.push_str(",\"blocks\":[");
@@ -738,7 +738,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_attributes(&b.attrs.named, s);
             write_options(&b.attrs.options, s);
             write_title(&b.title, s);
-            write_caption(&b.caption, s);
+            write_caption(b, s);
             // Children carry their own spans; recurse so the editor sees the tree.
             write_simple(b.simple, s);
             s.push_str(",\"blocks\":[");
@@ -785,7 +785,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_attributes(&b.attrs.named, s);
             write_options(&b.attrs.options, s);
             write_title(&b.title, s);
-            write_caption(&b.caption, s);
+            write_caption(b, s);
             // Children carry their own spans; recurse so the editor sees the tree.
             write_simple(b.simple, s);
             s.push_str(",\"blocks\":[");
@@ -808,7 +808,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_attributes(&b.attrs.named, s);
             write_options(&b.attrs.options, s);
             write_title(&b.title, s);
-            write_caption(&b.caption, s);
+            write_caption(b, s);
             write_attribution(attribution, s);
             // Children carry their own spans; recurse so the editor sees the tree.
             write_simple(b.simple, s);
@@ -832,7 +832,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_attributes(&b.attrs.named, s);
             write_options(&b.attrs.options, s);
             write_title(&b.title, s);
-            write_caption(&b.caption, s);
+            write_caption(b, s);
             write_attribution(attribution, s);
             s.push_str(",\"inlines\":");
             write_inlines(inlines, s);
@@ -952,11 +952,16 @@ fn write_title(title: &Option<Vec<Inline>>, s: &mut String) {
 /// Emit the leading-comma `,"caption":<string|null>` field — the block's resolved
 /// caption prefix (e.g. `"Example 1. "` on a numbered example block), or `null`
 /// when the block has none.
-fn write_caption(caption: &Option<String>, s: &mut String) {
+fn write_caption(block: &Block, s: &mut String) {
     s.push_str(",\"caption\":");
-    match caption {
+    match &block.caption {
         Some(c) => write_str(c, s),
         None => s.push_str("null"),
+    }
+    // The caption's semantic parts when it is not plain text.
+    if !block.caption_parts.is_empty() {
+        s.push_str(",\"caption_parts\":");
+        adoctra_core::json::write_parts_array(&block.caption_parts, s);
     }
 }
 
@@ -1203,6 +1208,20 @@ mod tests {
             "{json}"
         );
         assert!(!json.contains(r#""value":"""#), "{json}");
+    }
+
+    #[test]
+    fn captions_export_their_parts_when_not_plain() {
+        let json =
+            parse_json("[caption='*Я* ']\n.T\n====\nx\n====\n\n[caption=<b>]\n.U\n====\ny\n====");
+        assert!(
+            json.contains(r#""caption":"Я ","caption_parts":[{"kind":"open","format":"strong"},{"kind":"text","value":"Я"},{"kind":"close","format":"strong"},{"kind":"text","value":" "}]"#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""caption":"<b>","caption_parts":[{"kind":"raw","value":"<b>"}]"#),
+            "{json}"
+        );
     }
 
     #[test]

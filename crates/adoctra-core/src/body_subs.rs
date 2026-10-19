@@ -913,7 +913,7 @@ impl Execution<'_> {
                 &block.kind,
                 self.sections.get(&(block.span.start, block.span.end)),
             ) {
-                block.caption = section.caption(&self.attributes);
+                block.set_caption(section.caption(&self.attributes));
             }
             match &mut block.kind {
                 BlockKind::Paragraph { inlines }

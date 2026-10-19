@@ -307,7 +307,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_attributes(&block.attrs.named, s);
             write_options(&block.attrs.options, s);
             write_title(&block.title, s);
-            write_caption(&block.caption, s);
+            write_caption(block, s);
             s.push_str(",\"inlines\":");
             write_inlines(inlines, s);
             s.push('}');
@@ -320,7 +320,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_attributes(&block.attrs.named, s);
             write_options(&block.attrs.options, s);
             write_title(&block.title, s);
-            write_caption(&block.caption, s);
+            write_caption(block, s);
             s.push_str(",\"inlines\":");
             write_inlines(inlines, s);
             s.push('}');
@@ -337,7 +337,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_attributes(&block.attrs.named, s);
             write_options(&block.attrs.options, s);
             write_title(&block.title, s);
-            write_caption(&block.caption, s);
+            write_caption(block, s);
             s.push_str(",\"text\":");
             escape_into(text, s);
             write_callouts(callouts, s);
@@ -356,7 +356,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_attributes(&block.attrs.named, s);
             write_options(&block.attrs.options, s);
             write_title(&block.title, s);
-            write_caption(&block.caption, s);
+            write_caption(block, s);
             s.push_str(",\"text\":");
             escape_into(text, s);
             write_callouts(callouts, s);
@@ -383,7 +383,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_attributes(&block.attrs.named, s);
             write_options(&block.attrs.options, s);
             write_title(&block.title, s);
-            write_caption(&block.caption, s);
+            write_caption(block, s);
             s.push_str(",\"text\":");
             escape_into(text, s);
             write_substituted(inlines, s);
@@ -403,7 +403,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_attributes(&block.attrs.named, s);
             write_options(&block.attrs.options, s);
             write_title(&block.title, s);
-            write_caption(&block.caption, s);
+            write_caption(block, s);
             s.push('}');
         }
         BlockKind::Toc => {
@@ -415,7 +415,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_attributes(&block.attrs.named, s);
             write_options(&block.attrs.options, s);
             write_title(&block.title, s);
-            write_caption(&block.caption, s);
+            write_caption(block, s);
             s.push('}');
         }
         BlockKind::Image { target, src, alt } => {
@@ -433,7 +433,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_attributes(&block.attrs.named, s);
             write_options(&block.attrs.options, s);
             write_title(&block.title, s);
-            write_caption(&block.caption, s);
+            write_caption(block, s);
             s.push('}');
         }
         BlockKind::Table(table) => {
@@ -444,7 +444,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_attributes(&block.attrs.named, s);
             write_options(&block.attrs.options, s);
             write_title(&block.title, s);
-            write_caption(&block.caption, s);
+            write_caption(block, s);
             write_table(table, s);
             s.push('}');
         }
@@ -471,7 +471,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_attributes(&block.attrs.named, s);
             write_options(&block.attrs.options, s);
             write_title(&block.title, s);
-            write_caption(&block.caption, s);
+            write_caption(block, s);
             s.push('}');
         }
         BlockKind::Audio { target, src } => {
@@ -486,7 +486,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_attributes(&block.attrs.named, s);
             write_options(&block.attrs.options, s);
             write_title(&block.title, s);
-            write_caption(&block.caption, s);
+            write_caption(block, s);
             s.push('}');
         }
         BlockKind::List { ordered, items } => {
@@ -497,7 +497,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_attributes(&block.attrs.named, s);
             write_options(&block.attrs.options, s);
             write_title(&block.title, s);
-            write_caption(&block.caption, s);
+            write_caption(block, s);
             s.push_str(",\"items\":[");
             for (i, item) in items.iter().enumerate() {
                 if i > 0 {
@@ -515,7 +515,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_attributes(&block.attrs.named, s);
             write_options(&block.attrs.options, s);
             write_title(&block.title, s);
-            write_caption(&block.caption, s);
+            write_caption(block, s);
             s.push_str(",\"items\":[");
             for (i, entry) in items.iter().enumerate() {
                 if i > 0 {
@@ -544,7 +544,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_attributes(&block.attrs.named, s);
             write_options(&block.attrs.options, s);
             write_title(&block.title, s);
-            write_caption(&block.caption, s);
+            write_caption(block, s);
             s.push_str(",\"items\":[");
             for (i, item) in items.iter().enumerate() {
                 if i > 0 {
@@ -585,7 +585,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_attributes(&block.attrs.named, s);
             write_options(&block.attrs.options, s);
             write_title(&block.title, s);
-            write_caption(&block.caption, s);
+            write_caption(block, s);
             write_simple(block.simple, s);
             write_icon(icons, src, s);
             s.push_str(",\"blocks\":[");
@@ -605,7 +605,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_attributes(&block.attrs.named, s);
             write_options(&block.attrs.options, s);
             write_title(&block.title, s);
-            write_caption(&block.caption, s);
+            write_caption(block, s);
             write_simple(block.simple, s);
             s.push_str(",\"blocks\":[");
             for (i, child) in blocks.iter().enumerate() {
@@ -624,7 +624,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_attributes(&block.attrs.named, s);
             write_options(&block.attrs.options, s);
             write_title(&block.title, s);
-            write_caption(&block.caption, s);
+            write_caption(block, s);
             write_simple(block.simple, s);
             s.push_str(",\"blocks\":[");
             for (i, child) in blocks.iter().enumerate() {
@@ -669,7 +669,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_attributes(&block.attrs.named, s);
             write_options(&block.attrs.options, s);
             write_title(&block.title, s);
-            write_caption(&block.caption, s);
+            write_caption(block, s);
             write_simple(block.simple, s);
             s.push_str(",\"blocks\":[");
             for (i, child) in blocks.iter().enumerate() {
@@ -691,7 +691,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_attributes(&block.attrs.named, s);
             write_options(&block.attrs.options, s);
             write_title(&block.title, s);
-            write_caption(&block.caption, s);
+            write_caption(block, s);
             write_attribution(attribution, s);
             write_simple(block.simple, s);
             s.push_str(",\"blocks\":[");
@@ -714,7 +714,7 @@ fn write_block(block: &Block, s: &mut String) {
             write_attributes(&block.attrs.named, s);
             write_options(&block.attrs.options, s);
             write_title(&block.title, s);
-            write_caption(&block.caption, s);
+            write_caption(block, s);
             write_attribution(attribution, s);
             s.push_str(",\"inlines\":");
             write_inlines(inlines, s);
@@ -833,11 +833,16 @@ fn write_title(title: &Option<Vec<Inline>>, s: &mut String) {
 /// Emit the leading-comma `,"caption":<string|null>` field — the block's resolved
 /// caption prefix (e.g. `"Example 1. "` on a numbered example), or `null` when the
 /// block has none (every block but a titled example block).
-fn write_caption(caption: &Option<String>, s: &mut String) {
+fn write_caption(block: &Block, s: &mut String) {
     s.push_str(",\"caption\":");
-    match caption {
+    match &block.caption {
         Some(c) => escape_into(c, s),
         None => s.push_str("null"),
+    }
+    // The caption's semantic parts when it is not plain text.
+    if !block.caption_parts.is_empty() {
+        s.push_str(",\"caption_parts\":");
+        adoctra_core::json::write_parts_array(&block.caption_parts, s);
     }
 }
 
@@ -1022,6 +1027,22 @@ mod tests {
         );
         assert!(
             json.contains(r#"{"name":"heading","level":1,"id":"b-c","#),
+            "{json}"
+        );
+    }
+
+    #[test]
+    fn captions_export_their_parts_when_not_plain() {
+        let json =
+            render(":example-caption: pass:q[*Ex*]\n\n.T\n====\nx\n====\n\n.U\n====\ny\n====");
+        assert!(
+            json.contains(r#""caption":"Ex 1. ","caption_parts":[{"kind":"open","format":"strong"},{"kind":"raw","value":"Ex"},{"kind":"close","format":"strong"},{"kind":"text","value":" 1. "}]"#),
+            "{json}"
+        );
+        // A plain caption has only its text.
+        let json = render(".T\n====\nx\n====");
+        assert!(
+            json.contains(r#""caption":"Example 1. ","blocks""#),
             "{json}"
         );
     }

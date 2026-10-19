@@ -255,7 +255,7 @@ pub fn write_inline_image(image: &crate::InlineImage, out: &mut String) {
     write_attribute_parts(&image.alt, out);
 }
 
-fn write_parts_array(parts: &[crate::AttributePart], out: &mut String) {
+pub fn write_parts_array(parts: &[crate::AttributePart], out: &mut String) {
     out.push('[');
     for (i, part) in parts.iter().enumerate() {
         if i > 0 {

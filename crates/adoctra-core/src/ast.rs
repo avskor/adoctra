@@ -285,6 +285,14 @@ pub struct Block {
     ///
     /// [`title`]: Block::title
     pub caption: Option<String>,
+    /// The caption's semantic parts when it is not plain text, like the
+    /// HTML Ruby stores in `@caption`: a caption attribute's formatting or
+    /// raw markup (`pass:q[*Ex*]`), a raw unquoted or substituted
+    /// single-quoted `caption=`, a signifier. Empty when [`caption`] is plain
+    /// text; [`caption`] is always the flat text of these parts.
+    ///
+    /// [`caption`]: Block::caption
+    pub caption_parts: Vec<crate::AttributePart>,
     pub attrs: BlockAttrs,
     /// Ruby's `:simple` content model: a container built from a styled
     /// paragraph (`[NOTE]`/`NOTE:`, `[example]`, `[sidebar]`, `[open]`,
@@ -312,10 +320,24 @@ impl Block {
             roles: Vec::new(),
             title: None,
             caption: None,
+            caption_parts: Vec::new(),
             attrs: BlockAttrs::default(),
             simple: false,
             kind,
         }
+    }
+
+    /// Set the caption from its parts (see [`caption_parts`]).
+    ///
+    /// [`caption_parts`]: Block::caption_parts
+    pub fn set_caption(&mut self, parts: Option<Vec<crate::AttributePart>>) {
+        self.caption = parts.as_deref().map(crate::attributes::parts_text);
+        self.caption_parts = match parts {
+            Some(parts) if !matches!(parts.as_slice(), [] | [crate::AttributePart::Text(_)]) => {
+                parts
+            }
+            _ => Vec::new(),
+        };
     }
 
     /// The attributes a converter reads for this block: its
@@ -354,6 +376,9 @@ pub struct BlockAttrs {
     pub named: BTreeMap<String, String>,
     pub options: Vec<String>,
     pub positional: Vec<String>,
+    /// The parts of a single-quoted `caption=` after its substitutions (Ruby
+    /// stores the converted markup); another `caption` value is raw.
+    pub(crate) caption: Option<Vec<crate::AttributePart>>,
 }
 
 /// The five admonition types. An admonition is a callout produced by an
@@ -535,7 +560,8 @@ pub enum BlockKind {
     Admonition {
         kind: AdmonitionKind,
         /// asciidoctor's `textlabel`: the block's `caption` attribute (raw, as
-        /// asciidoctor emits it), else the document's `<kind>-caption` while
+        /// asciidoctor emits it, or the substituted parts of a single-quoted
+        /// value), else the document's `<kind>-caption` while
         /// reading (default `Note`, …) with its own Text/Raw parts. Empty when
         /// that attribute is unset.
         label: Vec<crate::AttributePart>,

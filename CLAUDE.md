@@ -364,9 +364,16 @@ Example captions are assigned before title caching, in child-before-parent order
 using the shared example-number counter. Its value replays on block entry before
 title/content, including locked counters, independently of explicit declarations.
 Only reading-time effects change subsequent caption prefixes. Local/document
-caption values (including empty strings) suppress numbering. Caption remains a
-flat string; rich/raw caption values, other caption families (including the
-admonition label from `caption=`) and remaining derived settings are follow-ups.
+caption values (including empty strings) suppress numbering. Captions keep the
+markup Ruby stores in `@caption`: `Block.caption` is the flat text and
+`Block::set_caption` fills `Block.caption_parts` (empty when plain) from the
+`<context>-caption`/document `caption` value parts (counter numeral as text),
+a block `caption=` (raw unless single-quoted: BlockAttrs.caption keeps the
+substituted parts via resolve::label_parts; context.rs block_caption) and
+section signifiers/`appendix-caption` (Section.caption parts). Admonition labels
+share block_caption; xrefstyle's caption fallback chomps `. ` from the parts.
+HTML renders caption_html (parts, else escaped text) in titles, figcaption,
+table caption, headings and TOC; JSON/WASM add `caption_parts` when non-empty.
 Block-anchor reftext (`[[id,text]]`) executes the early a-stage during metadata
 collection, including overwritten and orphan values. Header collection consumes
 initial block metadata once before saving attributes, then transfers it to the
@@ -1004,7 +1011,8 @@ icon-TYPE" title="label">` unless the block has `icon`, other modes `<img src
 alt>` from image.rs icon_uri (block `icon`, else the type, plus `icontype`,
 under the document `iconsdir`); JSON/WASM export `icons`/`src`;
 `golden/admonition_icons/` runs the reference in safe mode. The label is core's
-`Admonition.label` (asciidoctor's `textlabel`): a raw `caption=` attribute, else
+`Admonition.label` (asciidoctor's `textlabel`): the block's `caption=` (raw, or
+the substituted parts of a single-quoted value), else
 the document's `<kind>-caption` parts while reading (built-in `Note`/…, empty
 when unset) — *not* asciidoctor's
 table layout; id/roles hang on the `<aside>`. This is also where adoctra first **ships a
