@@ -784,6 +784,9 @@ pub enum CellContent {
         /// heading (like [`Document::has_title`]), shown unless `notitle`
         /// (the nested default, which its header entries may unset).
         has_title: bool,
+        /// The nested document's header attributes, which Ruby's
+        /// `convert_embedded` reads (its automatic TOC).
+        attributes: Arc<Attributes>,
     },
     /// A literal (`l`) cell: verbatim text (Ruby's basic substitutions are
     /// output escaping).

@@ -986,15 +986,14 @@ impl Execution<'_> {
                 | BlockKind::Section { blocks, .. } => self.blocks(blocks),
                 // Ruby's `convert_preamble` converts its TOC before the content.
                 BlockKind::Preamble { blocks } => {
-                    if let Some(levels) = self.preamble_toc.filter(|_| self.root.is_none()) {
+                    if let Some(levels) = self.preamble_toc {
                         self.toc(levels);
                     }
                     self.blocks(blocks);
                 }
                 // Ruby's `convert_toc` with the attributes at the macro.
                 BlockKind::Toc
-                    if self.root.is_none()
-                        && !self.outline.is_empty()
+                    if !self.outline.is_empty()
                         && self.attributes.get("toc").is_some()
                         && self.attributes.get("toc-placement") == Some("macro") =>
                 {
@@ -1057,7 +1056,9 @@ impl Execution<'_> {
                 }
                 // The nested document converts from its own header snapshot
                 // and entries; its effects stay inside it.
-                crate::ast::CellContent::Blocks { blocks, .. } => {
+                crate::ast::CellContent::Blocks {
+                    blocks, has_title, ..
+                } => {
                     let key = (cell.span.start, cell.span.end);
                     if let Some(nested) = self.nested.get(&key).cloned() {
                         let mut attributes =
@@ -1077,7 +1078,26 @@ impl Execution<'_> {
                         if root {
                             self.root = Some((attributes.take().unwrap(), locked.clone()));
                         }
-                        self.blocks(blocks);
+                        // Ruby's `convert_embedded`: the title, then an
+                        // automatic TOC with the header attributes, then the
+                        // body; the outline is the inner document's.
+                        let title = usize::from(*has_title);
+                        let outline =
+                            std::mem::replace(&mut self.outline, Outline::of(&blocks[title..]));
+                        let preamble_toc = self.preamble_toc.take();
+                        let header = self.attributes.clone();
+                        self.blocks(&mut blocks[..title]);
+                        if !self.outline.is_empty() && header.get("toc").is_some() {
+                            let levels = toclevels(header.get("toclevels"));
+                            match header.get("toc-placement") {
+                                Some("preamble") => self.preamble_toc = Some(levels),
+                                Some("macro") => {}
+                                _ => self.toc(levels),
+                            }
+                        }
+                        self.blocks(&mut blocks[title..]);
+                        self.outline = outline;
+                        self.preamble_toc = preamble_toc;
                         self.attributes = match attributes {
                             Some(attributes) => attributes,
                             None => self.root.take().unwrap().0,

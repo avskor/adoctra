@@ -1648,7 +1648,7 @@ fn read_table(
         let content = if cell.literal {
             CellContent::Literal(crate::table::text(&cell.text))
         } else if cell.style == Some(crate::ast::CellStyle::Asciidoc) {
-            let (blocks, has_title) = read_nested_document(
+            let (blocks, has_title, attributes) = read_nested_document(
                 lines,
                 &cell.text,
                 (cell.span.start, cell.span.end),
@@ -1659,6 +1659,7 @@ fn read_table(
                 blocks,
                 footnotes: Vec::new(),
                 has_title,
+                attributes,
             }
         } else {
             // A header cell (and a csv/dsv literal) is one run, like Ruby's
@@ -2083,7 +2084,7 @@ fn read_nested_document(
     key: (usize, usize),
     context: &mut ParseContext,
     diagnostics: &mut Vec<Diagnostic>,
-) -> (Vec<Block>, bool) {
+) -> (Vec<Block>, bool, Arc<Attributes>) {
     // Ruby preprocesses the first line again (`a|include::…[]`).
     let cell = lines
         .preprocess_cell(text, context)
@@ -2149,9 +2150,10 @@ fn read_nested_document(
         &mut context.sections,
         diagnostics,
     );
+    let header = Arc::new(snapshot.clone());
     context.exit_nested(outer, key, snapshot);
     lines.absorb(nested, true);
-    (title.into_iter().chain(blocks).collect(), has_title)
+    (title.into_iter().chain(blocks).collect(), has_title, header)
 }
 
 /// Where a block is being parsed. The only behavioural difference is how a

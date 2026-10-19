@@ -97,3 +97,28 @@ fn nested_titles_keep_their_tokens() {
     let result = parse("|===\na|\n= In\n\nc\n|===\n\n<<_in>>");
     assert_eq!(result.diagnostics.len(), 1);
 }
+
+#[test]
+fn nested_documents_keep_their_header_attributes() {
+    // Ruby's `convert_embedded` reads the inner document's header (its
+    // automatic TOC); body entries are not part of it.
+    let result = parse("|===\na|\n= In\n:toc: preamble\n\n:x: body\n\npre\n\n== S\n|===");
+    let BlockKind::Table(table) = &result.document.blocks[0].kind else {
+        panic!()
+    };
+    let CellContent::Blocks { attributes, .. } = &table.body[0][0].content else {
+        panic!()
+    };
+    assert_eq!(attributes.get("toc"), Some(""));
+    assert_eq!(attributes.get("toc-placement"), Some("preamble"));
+    assert_eq!(attributes.get("x"), None);
+    // The parent's TOC is not the inner document's.
+    let result = parse(":toc:\n\n|===\na|\n== S\n|===");
+    let BlockKind::Table(table) = &result.document.blocks[0].kind else {
+        panic!()
+    };
+    let CellContent::Blocks { attributes, .. } = &table.body[0][0].content else {
+        panic!()
+    };
+    assert_eq!(attributes.get("toc"), None);
+}

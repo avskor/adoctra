@@ -81,6 +81,8 @@ impl HtmlBackend {
     pub fn render(&self, doc: &Document) -> Output {
         let cx = Cx {
             doc,
+            outline: &doc.blocks,
+            header: &doc.attributes,
             book: doc.attributes.get("doctype") == Some("book"),
             highlighter: highlight::Highlighter::of(&doc.attributes),
             source_listing: std::cell::Cell::new(false),
@@ -780,6 +782,11 @@ fn map_text(html: &str, map: impl Fn(&str) -> String) -> String {
 /// What a block needs from its document while rendering.
 struct Cx<'a> {
     doc: &'a Document,
+    /// The converting document's top-level blocks and header attributes:
+    /// the document's, or an AsciiDoc cell's inner document (its TOC lists
+    /// its own sections, like Ruby's nested `Document`).
+    outline: &'a [Block],
+    header: &'a adoctra_core::Attributes,
     book: bool,
     /// The document's client-side syntax highlighter, shared by nested
     /// documents like Ruby's `parent_doc.syntax_highlighter`.
@@ -792,8 +799,7 @@ struct Cx<'a> {
 impl Cx<'_> {
     /// Ruby's `Document#sections?`.
     fn has_sections(&self) -> bool {
-        self.doc
-            .blocks
+        self.outline
             .iter()
             .any(|block| matches!(block.kind, BlockKind::Section { .. }))
     }
@@ -1305,11 +1311,20 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             }
             out.push_str("</section>\n");
         }
+        // An inner document's preamble (the document's renders in
+        // `render_content`), ending with its TOC when placed there.
         BlockKind::Preamble { blocks } => {
             // asciidoctor's `<div id="preamble">` (without its `sectionbody`).
             out.push_str("<section id=\"preamble\">\n");
             for child in blocks {
                 render_block(child, cx, out);
+            }
+            if cx.has_sections()
+                && cx.header.get("toc").is_some()
+                && cx.header.get("toc-placement") == Some("preamble")
+            {
+                let class = cx.header.get("toc-class").unwrap_or("toc");
+                render_toc(cx, cx.header, class, None, None, out);
             }
             out.push_str("</section>\n");
         }
@@ -1394,7 +1409,7 @@ fn render_toc(
     }
     out.push_str("</div>\n");
     let levels = levels.unwrap_or_else(|| attributes.get("toclevels").map_or(2, ruby_to_i));
-    render_outline(&cx.doc.blocks, levels, out);
+    render_outline(cx.outline, levels, out);
     out.push_str("</nav>\n");
 }
 
@@ -1754,12 +1769,31 @@ fn render_table(block: &Block, table: &adoctra_core::ast::Table, cx: &Cx, out: &
                         blocks,
                         footnotes,
                         has_title,
+                        attributes,
                     } => {
                         out.push_str("<div class=\"content\">");
+                        let inner = Cx {
+                            doc: cx.doc,
+                            outline: blocks,
+                            header: attributes,
+                            book: cx.book,
+                            highlighter: cx.highlighter,
+                            source_listing: std::cell::Cell::new(cx.source_listing.get()),
+                        };
+                        // Ruby's `convert_embedded` of the inner document:
+                        // its title unless `notitle`, then an automatic TOC.
+                        let auto_toc = inner.has_sections()
+                            && attributes.get("toc").is_some()
+                            && !matches!(
+                                attributes.get("toc-placement"),
+                                Some("macro" | "preamble")
+                            );
+                        let title = usize::from(*has_title);
                         for (i, child) in blocks.iter().enumerate() {
+                            if i == title && auto_toc {
+                                render_toc(&inner, attributes, "toc", None, None, out);
+                            }
                             match &child.kind {
-                                // Ruby's `convert_embedded` of the inner
-                                // document: its title unless `notitle`.
                                 BlockKind::Heading { level, inlines } if i == 0 && *has_title => {
                                     if child.conversion_attributes().get("notitle").is_none() {
                                         render_heading(
@@ -1772,9 +1806,10 @@ fn render_table(block: &Block, table: &adoctra_core::ast::Table, cx: &Cx, out: &
                                         );
                                     }
                                 }
-                                _ => render_block(child, cx, out),
+                                _ => render_block(child, &inner, out),
                             }
                         }
+                        cx.source_listing.set(inner.source_listing.get());
                         render_footnotes(footnotes, &cx.doc.attributes, "", out);
                         out.push_str("</div>");
                     }
@@ -4954,6 +4989,31 @@ mod tests {
             html.contains("<div class=\"content\"><h1>In <strong>b</strong></h1>\n<p>c</p>"),
             "{html}"
         );
+    }
+
+    #[test]
+    fn nested_documents_render_their_own_toc_like_ruby() {
+        // After the title, with the inner document's sections and header
+        // (an inherited `toc-title` stays locked, like Ruby's overrides).
+        let html = render("= Out\n:toc:\n\n== O\n\n|===\na|\n= In\n:toc:\n:toc-title: Inner\n:showtitle:\n\n== S\n\nx\n|===");
+        assert!(
+            html.contains("<div class=\"content\"><h1>In</h1>\n<nav id=\"toc\" class=\"toc\">\n<div id=\"toctitle\">Table of Contents</div>\n<ul class=\"sectlevel1\">\n<li><a href=\"#_s\">S</a></li>\n</ul>\n</nav>"),
+            "{html}"
+        );
+        // At the end of its preamble, or at its macro.
+        let html = render("|===\na|\n= In\n:toc: preamble\n\npre\n\n== S\n|===");
+        assert!(
+            html.contains("<p>pre</p>\n<nav id=\"toc\" class=\"toc\">"),
+            "{html}"
+        );
+        let html = render("|===\na|\n= In\n:toc: macro\n\ntoc::[]\n\n== S\n|===");
+        assert!(
+            html.contains("<div id=\"toctitle\" class=\"title\">"),
+            "{html}"
+        );
+        // A cell without its own `toc` lists nothing, even in a TOC document.
+        let html = render("= Out\n:toc:\n\n== O\n\n|===\na|\n== S\n|===");
+        assert_eq!(html.matches("<nav id=\"toc\"").count(), 1, "{html}");
     }
 
     #[test]

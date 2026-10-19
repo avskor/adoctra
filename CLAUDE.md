@@ -630,7 +630,12 @@ Heading deferred like a block title (`CellContent::Blocks.has_title`,
 ParseContext.nested_titles keeps it out of automatic ids; its lines are recorded
 as heading tokens), and nest_sections opens a preamble for it; HTML renders it as
 Ruby's convert_embedded `<h1>` unless its conversion attributes have `notitle`.
-A nested TOC is not rendered yet. Its counters (`{counter:…}`,
+`CellContent::Blocks.attributes` is the nested header snapshot: like Ruby's
+convert_embedded the inner document's automatic TOC (header `toc`, placement not
+macro/preamble) follows its title, a preamble placement ends its preamble and a
+`toc::[]` lists its own sections. body_subs swaps Execution.outline/preamble_toc
+for the cell (title first, then the TOC's lazy titles, then the body); HTML Cx
+carries the converting document's outline and header (`Cx.outline/header`). Its counters (`{counter:…}`,
 caption numbers) delegate to the root document's attributes and locks, like
 Ruby's `counter` (Evaluation::with_root, both at reading and conversion).
 BodySubs.nested keeps its header snapshot, entries and locks per cell; body_subs
