@@ -256,3 +256,37 @@ fn incomplete_references_and_titles_do_not_panic() {
             .all(|d| source.get(d.span.start..d.span.end).is_some()));
     }
 }
+
+#[test]
+fn blocks_register_after_their_content_and_sections_at_their_title() {
+    // Ruby registers a block at the end of `next_block`: a child's id is
+    // first, so the container's duplicate is reported on the container.
+    let source = "[#a]\n====\n[#a]\nchild\n====\n\n<<a>>";
+    let result = parse(source);
+    let [warning] = &result.diagnostics[..] else {
+        panic!("{:?}", result.diagnostics)
+    };
+    assert_eq!(warning.severity, Severity::Warning);
+    assert_eq!(warning.message, "id assigned to block already in use: a");
+    assert_eq!(&source[warning.span.start..warning.span.start + 4], "====");
+    // A natural reference finds the child's label first.
+    let result = parse("[[a,Outer]]\n====\n[[b,Outer]]\nchild\n====\n\n<<Outer>>");
+    let blocks = result.document.flat_blocks();
+    let Inline::CrossReference { xref, .. } = &inlines(blocks.last().unwrap())[0] else {
+        panic!()
+    };
+    assert_eq!(xref.target, "#b");
+    // An anchored title converts after the content: it sees the child's id.
+    let result = parse("[#o]\n.Title {empty}<<i>>\n====\n[[i,Inner]]\nx\n====\n\n<<o>>");
+    assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+    let blocks = result.document.flat_blocks();
+    assert_eq!(labels(blocks.last().unwrap()), ["Title Inner"]);
+    // A section registers before its content.
+    let source = "[#s]\n== S\n\n[#s]\nx";
+    let result = parse(source);
+    let [warning] = &result.diagnostics[..] else {
+        panic!("{:?}", result.diagnostics)
+    };
+    assert_eq!(warning.message, "id assigned to block already in use: s");
+    assert_eq!(&source[warning.span.start..warning.span.start + 1], "x");
+}

@@ -735,7 +735,9 @@ parts) and a document `footnotes` list; token `inline-macro` projected from AST.
 Duplicate ids warn like Ruby (resolve.rs register_id): `id assigned to
 block|section|anchor already in use: <id>` (section for non-discrete headings).
 Xref labels: resolve::register builds the registry after reading (auto ids,
-block ids, cataloged anchors in source order); at conversion apply_xrefs resolves
+block ids, cataloged anchors) in Ruby's order: a section heading at its title,
+any other block after its content and its cataloged inline anchors (end of
+`next_block`, where an anchored title also resolves its references); at conversion apply_xrefs resolves
 each source xref inside the macros stage (Evaluation::label → body_subs Execution
 as substitution_context::Labels, which borrows the evaluation's attributes/counters/
 footnotes/root via Lent), so a converted target title numbers its footnotes before

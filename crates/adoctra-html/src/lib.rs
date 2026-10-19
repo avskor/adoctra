@@ -4912,6 +4912,15 @@ mod tests {
     }
 
     #[test]
+    fn containers_register_after_their_content_like_ruby() {
+        let html = render("[[q,Quote]]\n____\n[[q2,Quote]]\nin\n____\n\n[#o]\n.T {empty}<<i>>\n====\n[[i,Inner]]\nx\n====\n\n<<Quote>> <<o>>");
+        assert!(
+            html.contains("<p><a href=\"#q2\">Quote</a> <a href=\"#o\">T Inner</a></p>"),
+            "{html}"
+        );
+    }
+
+    #[test]
     fn captions_render_their_markup_like_ruby() {
         // Attribute values and `caption=` keep Ruby's stored markup.
         let html = render(":example-caption: pass:q[*Ex*]\n:table-caption: pass:q[_T_]\n\n.A\n====\nx\n====\n\n.B\n|===\n|c\n|===\n\n[caption=\"<i>C</i> \"]\n.D\n====\ny\n====\n\n[NOTE,caption='*Hi* &']\nz");

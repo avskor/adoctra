@@ -759,6 +759,51 @@ impl VisitorMut for Ids<'_> {
     fn visit_block(&mut self, block: &mut Block) {
         self.flush(block.span.start);
         self.position = block.span.start;
+        // Ruby registers a section when it reads the title
+        // (`initialize_section`), any other block at the end of `next_block`:
+        // after its content and the inline anchors cataloged in it, converting
+        // an anchored title there.
+        let heading = matches!(block.kind, BlockKind::Heading { .. });
+        if heading {
+            self.register_block(block);
+        }
+        // A quote attribution was substituted while reading: from its
+        // attribute line before the content, or from a blockquote credit
+        // line after the content was parsed.
+        let credit = match &block.kind {
+            BlockKind::Quote {
+                attribution: Some(attribution),
+                ..
+            }
+            | BlockKind::Verse {
+                attribution: Some(attribution),
+                ..
+            } => attribution_start(attribution),
+            _ => None,
+        };
+        let before = credit.filter(|&start| start < block.span.start);
+        if before.is_some() {
+            self.resolve_attribution(block);
+        }
+        visit::walk_block_mut(self, block);
+        if let (Some(start), None) = (credit, before) {
+            self.flush(start);
+            self.position = start;
+            self.resolve_attribution(block);
+        }
+        if !heading {
+            self.flush(block.span.end);
+            self.position = block.span.end;
+            self.register_block(block);
+        }
+    }
+    fn visit_inlines(&mut self, _inlines: &mut [Inline], _context: InlineContext) {}
+}
+
+impl Ids<'_> {
+    /// Register a block's id (or a heading's automatic one), resolving the
+    /// references of a title converted while reading first.
+    fn register_block(&mut self, block: &mut Block) {
         // The document title lends its text to an explicit id but never
         // receives an automatic one.
         let doctitle = Some(block.span) == self.doctitle;
@@ -847,35 +892,8 @@ impl VisitorMut for Ids<'_> {
             self.registry.insert(unique.clone(), target);
             block.id = Some(unique);
         }
-        // A quote attribution was substituted while reading: from its
-        // attribute line before the content, or from a blockquote credit
-        // line after the content was parsed.
-        let credit = match &block.kind {
-            BlockKind::Quote {
-                attribution: Some(attribution),
-                ..
-            }
-            | BlockKind::Verse {
-                attribution: Some(attribution),
-                ..
-            } => attribution_start(attribution),
-            _ => None,
-        };
-        let before = credit.filter(|&start| start < block.span.start);
-        if before.is_some() {
-            self.resolve_attribution(block);
-        }
-        visit::walk_block_mut(self, block);
-        if let (Some(start), None) = (credit, before) {
-            self.flush(start);
-            self.position = start;
-            self.resolve_attribution(block);
-        }
     }
-    fn visit_inlines(&mut self, _inlines: &mut [Inline], _context: InlineContext) {}
-}
 
-impl Ids<'_> {
     fn resolve_attribution(&mut self, block: &mut Block) {
         let credit = self.credits.contains(&(block.span.start, block.span.end));
         let attributes = std::sync::Arc::clone(&block.attribute_context);
