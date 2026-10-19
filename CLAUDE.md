@@ -780,7 +780,8 @@ underlines and effective level zero. ATX takes precedence. The Heading/header
 title span includes both lines; inline spans cover title text only. Highlight
 both lines as separate heading tokens and retain physical source fragments across
 includes/selection/indent. Setext installs compat-mode before subsequent header
-metadata, respecting locked overrides; its substitution effects remain follow-up work.
+metadata, respecting locked overrides; substitutions then behave as with an explicit
+`:compat-mode:` (pinned by the `setext-compat-*` cases).
 Body setext sections share setext_level, but only where Ruby looks for sections
 (BlockCtx::Section: document level, not containers or list items); a
 discrete/float style accepts them anywhere. ATX wins; the underline wins over
