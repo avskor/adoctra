@@ -22,6 +22,30 @@ pub(crate) struct Evaluation<'a> {
     footnotes: Option<&'a mut Footnotes>,
     /// Image reads for `data-uri` while converting.
     images: Option<&'a crate::data_uri::Images<'a>>,
+    /// Cross-reference labels while fields convert.
+    labels: Option<&'a mut (dyn Labels + 'a)>,
+}
+
+/// Ruby converts a cross-reference inside the macros stage: the target's
+/// natural lookup and a textless reference's label (which may convert the
+/// target's title) happen there, before the field's later macros. The
+/// converter receives the evaluation's state for that conversion.
+pub(crate) trait Labels {
+    fn label(
+        &mut self,
+        state: Lent<'_>,
+        xref: &mut crate::Xref,
+        textless: bool,
+        span: Span,
+    ) -> Option<Vec<crate::Inline>>;
+}
+
+/// The state of an evaluation lent to a label conversion.
+pub(crate) struct Lent<'b> {
+    pub attributes: &'b mut Attributes,
+    pub counters: &'b mut BTreeMap<String, String>,
+    pub root: Option<&'b mut Attributes>,
+    pub footnotes: &'b mut Footnotes,
 }
 
 /// Registered footnote ids (first wins) and the registration order.
@@ -73,6 +97,7 @@ impl<'a> Evaluation<'a> {
             root: None,
             footnotes: None,
             images: None,
+            labels: None,
         }
     }
     pub fn definition(
@@ -90,6 +115,7 @@ impl<'a> Evaluation<'a> {
             root: None,
             footnotes: None,
             images: None,
+            labels: None,
         }
     }
     /// Footnote macros register in this document's footnotes.
@@ -131,6 +157,38 @@ impl<'a> Evaluation<'a> {
     }
     pub fn xrefs(&self) -> Option<crate::xref_target::Scope<'a>> {
         self.xrefs
+    }
+    /// Cross-references convert their labels in the macros stage.
+    pub fn with_labels(mut self, labels: &'a mut (dyn Labels + 'a)) -> Self {
+        self.labels = Some(labels);
+        self
+    }
+    /// Resolve a cross-reference in the macros stage: `None` without a
+    /// converter (reading, syntax scans), else the label of a textless one.
+    pub fn label(
+        &mut self,
+        xref: &mut crate::Xref,
+        textless: bool,
+        span: Span,
+    ) -> Option<Option<Vec<crate::Inline>>> {
+        let Evaluation {
+            labels: Some(labels),
+            attributes,
+            state: Some((_, counters)),
+            root,
+            footnotes: Some(footnotes),
+            ..
+        } = self
+        else {
+            return None;
+        };
+        let state = Lent {
+            attributes: attributes.to_mut(),
+            counters,
+            root: root.as_mut().map(|(attributes, _)| &mut **attributes),
+            footnotes,
+        };
+        Some(labels.label(state, xref, textless, span))
     }
     pub fn changed_attributes(self) -> Option<Attributes> {
         match self.attributes {

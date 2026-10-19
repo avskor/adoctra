@@ -78,6 +78,15 @@ pub struct Xref {
     /// converts it while defining, so its target and label are fixed there
     /// (see resolve.rs).
     pub(crate) definition: Option<usize>,
+    /// The macros stage converted this reference at conversion (Ruby's
+    /// `InlineXrefMacroRx` building its text there): the field's resolution
+    /// only reports an unknown target. Cleared by that resolution.
+    pub(crate) resolved: bool,
+    /// The label nodes the macros stage built for a source-owned textless
+    /// reference and the field range they were built at (borrowed titles
+    /// keep their own spans); the field's resolution installs them after the
+    /// field's spans are restored.
+    pub(crate) label: Option<(crate::Span, Vec<crate::Inline>)>,
 }
 
 impl Xref {

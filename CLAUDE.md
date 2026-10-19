@@ -728,8 +728,15 @@ parts) and a document `footnotes` list; token `inline-macro` projected from AST.
 Duplicate ids warn like Ruby (resolve.rs register_id): `id assigned to
 block|section|anchor already in use: <id>` (section for non-discrete headings).
 Xref labels: resolve::register builds the registry after reading (auto ids,
-block ids, cataloged anchors in source order); body_subs Execution resolves each
-textless xref after its field's subs, like Ruby's xreftext:
+block ids, cataloged anchors in source order); at conversion apply_xrefs resolves
+each source xref inside the macros stage (Evaluation::label → body_subs Execution
+as substitution_context::Labels, which borrows the evaluation's attributes/counters/
+footnotes/root via Lent), so a converted target title numbers its footnotes before
+the field's later footnotes and the label's lexical text is visible to them;
+the field's resolution then only warns (Xref.resolved) and installs the label nodes
+kept in Xref.label with their own spans (generated `[id]` text gets the reference's
+restored span). Only definition-fixed xrefs (apply_fixed) fill after the field's subs.
+Labels follow Ruby's xreftext:
 nonempty reftext formatted per reference with the current attributes/counters
 (effects persist, warnings repeat), else the block/section title, else `[id]`.
 A deferred block title converts once (first reference or the block itself);

@@ -412,3 +412,61 @@ fn deferred_titles_keep_their_tokens() {
     assert_eq!(deferred[1..], read[..]);
     assert!(read.contains(&(TokenKind::AttributeRef, "{counter:n}".into())));
 }
+
+#[test]
+fn references_convert_their_target_titles_in_the_macros_stage() {
+    let pairs = |pairs: &[(&str, &str)]| -> Vec<(String, String)> {
+        pairs
+            .iter()
+            .map(|(a, b)| (a.to_string(), b.to_string()))
+            .collect()
+    };
+    // Like Ruby, the label converts the deferred title before the field's
+    // later footnotes, for section and block titles alike.
+    assert_eq!(
+        footnotes(
+            "<<s>> footnote:[one]\n\n[#s]\n== T footnote:[two]\n\nb footnote:[three]",
+            true
+        ),
+        pairs(&[("1", "two"), ("2", "one"), ("3", "three")])
+    );
+    assert_eq!(
+        footnotes(
+            "<<t>> footnote:[one]\n\n[#t]\n.T footnote:[two]\n----\nx\n----",
+            true
+        ),
+        pairs(&[("1", "two"), ("2", "one")])
+    );
+    // A footnote's own reference converts the title before the footnote,
+    // whose lazy content then ends inside the label's marker, as in Ruby.
+    assert_eq!(
+        footnotes("footnote:[see <<s>>] x\n\n[#s]\n== T footnote:[two]", true),
+        pairs(&[("1", "two"), ("2", "see T [1")])
+    );
+}
+
+#[test]
+fn macros_stage_labels_keep_their_nodes_and_spans() {
+    let source = "<<s>> <<missing>>\n\n[#s]\n== A *b*";
+    let result = parse(source);
+    let blocks = result.document.flat_blocks();
+    let refs: Vec<_> = inlines(blocks[0])
+        .iter()
+        .filter_map(|node| match node {
+            Inline::CrossReference { children, span, .. } => Some((children, *span)),
+            _ => None,
+        })
+        .collect();
+    // The borrowed title keeps its nodes and their spans.
+    let [Inline::Text { value, .. }, strong @ Inline::Strong { .. }] = &refs[0].0[..] else {
+        panic!("{refs:?}")
+    };
+    assert_eq!(value, "A ");
+    assert_eq!(&source[strong.span().start..strong.span().end], "*b*");
+    // A generated label displays at its reference.
+    assert_eq!(text(refs[1].0), "[missing]");
+    assert_eq!(refs[1].0[0].span(), refs[1].1);
+    assert_eq!(&source[refs[1].1.start..refs[1].1.end], "<<missing>>");
+    assert_eq!(result.diagnostics.len(), 1);
+    assert_eq!(result.diagnostics[0].span, refs[1].1);
+}

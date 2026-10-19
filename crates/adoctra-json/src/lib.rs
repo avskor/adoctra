@@ -1027,6 +1027,19 @@ mod tests {
     }
 
     #[test]
+    fn reference_labels_convert_their_titles_in_the_macros_stage() {
+        let json = render("<<s>> footnote:[one]\n\n[#s]\n== T footnote:[two]");
+        assert!(
+            json.contains(r##""name":"xref","target":"#s","refid":"s","inlines":[{"name":"text","value":"T "},{"name":"substituted","value":"[1]","parts":[{"kind":"open","format":"superscript","role":"footnote"},{"kind":"text","value":"[1]"},{"kind":"close","format":"superscript"}]}]},{"name":"text","value":" "},{"name":"footnote","type":"definition","index":"2""##),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""footnotes":[{"index":"1","id":null,"parts":[{"kind":"text","value":"two"}]},{"index":"2""#),
+            "{json}"
+        );
+    }
+
+    #[test]
     fn titles_without_ids_export_their_conversion() {
         let json = render(":sectids!:\n\n== A {counter:n}\n\np {n}");
         assert!(

@@ -1206,6 +1206,20 @@ mod tests {
     }
 
     #[test]
+    fn reference_labels_convert_their_titles_in_the_macros_stage() {
+        let json = parse_json("<<s>> footnote:[one]\n\n[#s]\n== Я footnote:[two]");
+        // The label borrows the title's spans; the title numbers first.
+        assert!(
+            json.contains(r##""name":"xref","target":"#s","refid":"s","fragment":"s","inlines":[{"span":{"source_id":0,"start":30,"end":33},"name":"text","value":"Я "},{"span":{"source_id":0,"start":33,"end":47},"name":"substituted","value":"[1]""##),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""name":"footnote","type":"definition","index":"2","id":null,"parts":[{"kind":"text","value":"one"}]"#),
+            "{json}"
+        );
+    }
+
+    #[test]
     fn section_ids_follow_the_id_policy() {
         let json =
             parse_json(":sectids!:\n\n== A\n\n:sectids:\n:idprefix:\n:idseparator: -\n\n== B C\n");

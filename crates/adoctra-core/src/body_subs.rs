@@ -399,6 +399,38 @@ fn toclevels(levels: Option<&str>) -> i128 {
     levels.map_or(2, crate::include_selection::integer_prefix)
 }
 
+impl crate::substitution_context::Labels for Execution<'_> {
+    /// The natural lookup and label of a reference in the macros stage, with
+    /// the converting field's state.
+    fn label(
+        &mut self,
+        mut state: crate::substitution_context::Lent<'_>,
+        xref: &mut crate::Xref,
+        textless: bool,
+        span: Span,
+    ) -> Option<Vec<Inline>> {
+        let mut swap = |execution: &mut Self| {
+            std::mem::swap(&mut execution.attributes, state.attributes);
+            std::mem::swap(execution.counters, state.counters);
+            if let (Some((current, _)), Some(lent)) = (execution.root.as_mut(), &mut state.root) {
+                std::mem::swap(current, *lent);
+            }
+            std::mem::swap(&mut execution.footnotes, state.footnotes);
+        };
+        swap(self);
+        let hardbreaks = self.attributes.local_hardbreaks;
+        if let Some(text) = crate::resolve::natural_text(xref, self.registry, true) {
+            if let Some(id) = self.resolve_id(&text) {
+                crate::xref_target::retarget(xref, &id, true);
+            }
+        }
+        let label = textless.then(|| self.xref_label(xref, true, span));
+        self.attributes.local_hardbreaks = hardbreaks;
+        swap(self);
+        label
+    }
+}
+
 impl Execution<'_> {
     /// The current conversion attributes as a block snapshot (without the
     /// transient local hardbreaks flag).
@@ -468,8 +500,23 @@ impl Execution<'_> {
                     children,
                     span,
                 } => {
+                    let resolved = std::mem::take(&mut xref.resolved);
+                    let label = xref.label.take();
                     self.target(xref, false, *span);
-                    if children.is_empty() {
+                    if let Some((at, mut label)) = label {
+                        // Generated label text (`[id]`, a path, a style's
+                        // words) displays at the reference.
+                        struct At(Span, Span);
+                        impl crate::visit::VisitorMut for At {
+                            fn visit_span(&mut self, span: &mut Span) {
+                                if *span == self.0 {
+                                    *span = self.1;
+                                }
+                            }
+                        }
+                        crate::visit::walk_inlines_mut(&mut At(at, *span), &mut label);
+                        *children = label;
+                    } else if children.is_empty() && !resolved {
                         // Borrowed labels are not expanded again.
                         *children = self.xref_label(xref, false, *span);
                     } else {
@@ -492,6 +539,10 @@ impl Execution<'_> {
                 | Inline::Stem { span, .. } => {
                     let span = *span;
                     crate::resolve::fill_labels(node, |xref, textless| {
+                        if std::mem::take(&mut xref.resolved) {
+                            self.target(xref, true, span);
+                            return None;
+                        }
                         if let Some(label) = crate::resolve::apply_fixed(&self.fixed, xref) {
                             self.target(xref, true, span);
                             return Some(label);
@@ -743,19 +794,42 @@ impl Execution<'_> {
         }
     }
 
+    /// Convert a deferred field. Its evaluation takes the conversion state,
+    /// lending it back to the labels its cross-references build (see
+    /// [`crate::substitution_context::Labels`]); diagnostics of titles
+    /// converted for those labels follow the field's.
     fn evaluate(&mut self, nodes: &mut Vec<Inline>, pending: Pending) {
         self.attributes.local_hardbreaks = pending.hardbreaks;
         let compat = self.attributes.get("compat-mode").is_some();
-        let mut evaluation =
-            Evaluation::definition(&self.attributes, &self.locked, self.counters, compat)
-                .with_root(self.root.as_mut().map(|(a, l)| (a, &**l)))
-                .with_footnotes(&mut self.footnotes)
-                .with_images(self.images)
-                .with_xrefs(self.xrefs);
-        *nodes = run(pending, &mut evaluation, self.diagnostics);
-        if let Some(attributes) = evaluation.changed_attributes() {
-            self.attributes = attributes;
+        let attributes = std::mem::take(&mut self.attributes);
+        let locked = self.locked.clone();
+        let mut counters = std::mem::take(self.counters);
+        let mut root = self
+            .root
+            .as_mut()
+            .map(|(attributes, locked)| (std::mem::take(attributes), locked.clone()));
+        let mut footnotes = std::mem::take(&mut self.footnotes);
+        let mut diagnostics = std::mem::take(self.diagnostics);
+        let (images, xrefs) = (self.images, self.xrefs);
+        let changed = {
+            let mut evaluation =
+                Evaluation::definition(&attributes, &locked, &mut counters, compat)
+                    .with_root(root.as_mut().map(|(a, l)| (a, &**l)))
+                    .with_footnotes(&mut footnotes)
+                    .with_images(images)
+                    .with_xrefs(xrefs)
+                    .with_labels(self);
+            *nodes = run(pending, &mut evaluation, &mut diagnostics);
+            evaluation.changed_attributes()
+        };
+        self.attributes = changed.unwrap_or(attributes);
+        *self.counters = counters;
+        if let (Some((current, _)), Some((attributes, _))) = (self.root.as_mut(), root) {
+            *current = attributes;
         }
+        self.footnotes = footnotes;
+        diagnostics.append(self.diagnostics);
+        *self.diagnostics = diagnostics;
     }
 
     fn blocks(&mut self, blocks: &mut [Block]) {

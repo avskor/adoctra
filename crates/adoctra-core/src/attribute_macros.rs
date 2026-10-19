@@ -25,6 +25,9 @@ struct Report<'a> {
     xrefs: Vec<Span>,
     /// Physical label range of each cross-reference, keyed by its match range.
     labels: BTreeMap<(usize, usize), Span>,
+    /// Labels built in the macros stage, keyed by the reference's match
+    /// range: the inserted parts and the label's AST nodes.
+    filled: BTreeMap<(usize, usize), (Vec<Part>, Vec<Inline>)>,
     passes: &'a mut Passes,
 }
 
@@ -38,6 +41,7 @@ impl<'a> Report<'a> {
             anchors: Vec::new(),
             xrefs: Vec::new(),
             labels: BTreeMap::new(),
+            filled: BTreeMap::new(),
             passes,
         }
     }
@@ -358,7 +362,8 @@ fn flush_inlines(
                 .get(&(span.start, span.end))
                 .copied()
                 .unwrap_or(span);
-            xref_node(parts, span, label, fold_newlines)
+            let filled = report.filled.remove(&(span.start, span.end));
+            xref_node(parts, span, label, filled, fold_newlines)
         }
         node => node,
     }));
@@ -377,13 +382,23 @@ fn single_xref(parts: &[Part]) -> bool {
 }
 
 /// A source-owned reference becomes its AST node. The consumed label keeps
-/// its text and semantic boundaries; a textless one stays empty for conversion.
-fn xref_node(mut parts: Vec<Part>, span: Span, label: Span, fold_newlines: bool) -> Inline {
+/// its text and semantic boundaries; a textless one stays empty for conversion
+/// unless the macros stage built its label.
+fn xref_node(
+    mut parts: Vec<Part>,
+    span: Span,
+    label: Span,
+    filled: Option<(Vec<Part>, Vec<Inline>)>,
+    fold_newlines: bool,
+) -> Inline {
     parts.pop();
     let Part::OpenXref(mut xref) = parts.remove(0) else {
         unreachable!()
     };
     xref.map_fields(crate::attributes::decode_special);
+    // A label built in the macros stage keeps its nodes unless a later
+    // stage changed it.
+    xref.label = filled.and_then(|(inserted, nodes)| (inserted == parts).then_some((span, nodes)));
     let children = if parts.iter().any(Part::is_boundary) {
         vec![Inline::Substituted {
             value: crate::attributes::parts_text(&parts),
@@ -1461,7 +1476,23 @@ fn apply_xrefs(text: Text, attributes: &mut Evaluation<'_>, report: &mut Report<
         } else {
             let span = text.match_span(at..m.end);
             report.xrefs.push(span);
-            let parts = xref_parts(&text, &m, attributes, compat, span, report);
+            let mut parts = xref_parts(&text, &m, attributes, compat, span, report);
+            // At conversion the label is built here, like Ruby's xref text:
+            // later macros of the field (footnotes) see it.
+            let textless = parts.len() == 2;
+            if let Some(Part::OpenXref(xref)) = parts.first_mut() {
+                if let Some(label) = attributes.label(xref, textless, span) {
+                    xref.resolved = true;
+                    if let Some(mut nodes) = label.filter(|_| textless) {
+                        crate::resolve::strip_label(&mut nodes);
+                        let inserted = crate::resolve::label_parts(&nodes);
+                        parts.splice(1..1, inserted.clone());
+                        report
+                            .filled
+                            .insert((span.start, span.end), (inserted, nodes));
+                    }
+                }
+            }
             text.replace_parts(at..m.end, &parts, &mut output);
         }
         copied = m.end;

@@ -4899,6 +4899,27 @@ mod tests {
     }
 
     #[test]
+    fn reference_labels_convert_their_titles_in_the_macros_stage() {
+        // Ruby converts the target title inside the macros stage, before the
+        // paragraph's footnote.
+        let html = render("<<t>> footnote:[one]\n\n[#t]\n.T footnote:[two]\n----\nx\n----");
+        assert!(
+            html.contains("<p><a href=\"#t\">T <sup class=\"footnote\">[1]</sup></a> <sup class=\"footnote\">[<a id=\"_footnoteref_2\" class=\"footnote\" href=\"#_footnotedef_2\" title=\"View footnote.\">2</a>]</sup></p>"),
+            "{html}"
+        );
+        assert!(
+            html.contains(
+                "<div class=\"title\">T <sup class=\"footnote\">[<a id=\"_footnoteref_1\""
+            ),
+            "{html}"
+        );
+        assert!(
+            html.contains("<a href=\"#_footnoteref_1\">1</a>. two\n"),
+            "{html}"
+        );
+    }
+
+    #[test]
     fn titles_without_ids_convert_in_the_toc_first() {
         // Ruby converts such titles at their first use: the TOC.
         let html = render(
