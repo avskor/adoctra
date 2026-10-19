@@ -280,6 +280,9 @@ pub(crate) struct ParseContext<'i> {
     /// Section titles read in the body, keyed by the heading's reader range;
     /// the hierarchy assigns their numerals.
     pub sections: BTreeMap<(usize, usize), crate::section_numbers::Section>,
+    /// Title headings of nested documents (AsciiDoc cells), keyed by range:
+    /// like the document title they never take an automatic id.
+    pub nested_titles: BTreeSet<(usize, usize)>,
     /// Whether the doctype is book, read once the header is complete.
     pub book: bool,
     /// Whether the doctype is manpage (outside nested documents), read once
@@ -539,6 +542,7 @@ impl ParseContext<'_> {
             numerals: BTreeMap::new(),
             credits: BTreeSet::new(),
             sections: BTreeMap::new(),
+            nested_titles: BTreeSet::new(),
             book: false,
             manpage: false,
             open_sections: Vec::new(),
@@ -575,9 +579,25 @@ impl ParseContext<'_> {
                 .map(|(key, _)| key.to_owned())
                 .filter(|key| !matches!(key.as_str(), "compat-mode" | "doctype" | "toc-placement")),
         );
+        // Ruby deletes these keys from the nested document's overrides, the
+        // parent's host locks included.
+        for key in [
+            "compat-mode",
+            "doctype",
+            "notitle",
+            "showtitle",
+            "toc",
+            "toc-placement",
+            "toc-position",
+        ] {
+            locked.remove(key);
+        }
         if attributes.get("toc-placement").is_none() {
             attributes.set("toc-placement", "auto");
         }
+        // An embedded inner document hides its title unless its header shows
+        // it (not locked).
+        attributes.set("notitle", "");
         // After the locks: the derived keys it removes stay locked, the ones
         // it adds do not (Ruby updates them after copying the overrides).
         let profile = crate::builtin_attributes::Profile::nested(&mut attributes);
@@ -716,6 +736,7 @@ impl ParseContext<'_> {
             credits: std::mem::take(&mut self.credits),
             sections: &self.sections,
             definitions: std::mem::take(&mut self.definitions),
+            nested_titles: std::mem::take(&mut self.nested_titles),
         };
         let (body_subs, locked, counters) = (&mut self.body_subs, &self.locked, &self.counters);
         let inline_diagnostics = &mut self.inline_diagnostics;

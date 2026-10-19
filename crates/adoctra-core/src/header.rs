@@ -60,12 +60,15 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
         manpage: None,
         body_pending: None,
         pending,
+        // Ruby converts the stored value of a replacing `doctitle` as the
+        // title's source: its markup (`<strong>`) is text again.
         effective_title: context
             .attributes
-            .get("doctitle")
+            .value_parts("doctitle")
+            .map(|parts| reference_text(&parts))
             .filter(|s| !s.is_empty())
-            .map(|s| HeaderTitle {
-                text: s.to_owned(),
+            .map(|text| HeaderTitle {
+                text,
                 span: context.doctitle_span.unwrap_or_else(|| Span::new(0, 0)),
                 replacement: true,
             }),
@@ -204,8 +207,12 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
                 context.doctitle_span = initial_span;
             }
             Some(value) if value != initial_doctitle => {
+                let parts = context
+                    .attributes
+                    .value_parts("doctitle")
+                    .unwrap_or_default();
                 result.effective_title = Some(HeaderTitle {
-                    text: value.to_owned(),
+                    text: reference_text(&parts),
                     span: context.doctitle_span.unwrap_or_else(|| Span::new(0, 0)),
                     replacement: true,
                 });

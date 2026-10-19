@@ -220,7 +220,9 @@ fn write_cell(cell: &adoctra_core::ast::TableCell, s: &mut String) {
             }
             s.push(']');
         }
-        adoctra_core::ast::CellContent::Blocks { blocks, footnotes } => {
+        adoctra_core::ast::CellContent::Blocks {
+            blocks, footnotes, ..
+        } => {
             s.push_str(",\"blocks\":[");
             for (i, block) in blocks.iter().enumerate() {
                 if i > 0 {
@@ -1027,6 +1029,15 @@ mod tests {
         );
         assert!(
             json.contains(r#"{"name":"heading","level":1,"id":"b-c","#),
+            "{json}"
+        );
+    }
+
+    #[test]
+    fn nested_document_titles_export_their_heading() {
+        let json = render("|===\na|\n= In\n\nc\n|===");
+        assert!(
+            json.contains(r#""blocks":[{"name":"heading","level":0,"id":null,"roles":[],"style":null,"attributes":{},"options":[],"title":null,"caption":null,"inlines":[{"name":"text","value":"In"}]},{"name":"paragraph""#),
             "{json}"
         );
     }

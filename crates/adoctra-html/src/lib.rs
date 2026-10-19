@@ -1750,10 +1750,30 @@ fn render_table(block: &Block, table: &adoctra_core::ast::Table, cx: &Cx, out: &
                 match &cell.content {
                     // The nested document's blocks (Ruby's embedded inner
                     // document).
-                    CellContent::Blocks { blocks, footnotes } => {
+                    CellContent::Blocks {
+                        blocks,
+                        footnotes,
+                        has_title,
+                    } => {
                         out.push_str("<div class=\"content\">");
-                        for child in blocks {
-                            render_block(child, cx, out);
+                        for (i, child) in blocks.iter().enumerate() {
+                            match &child.kind {
+                                // Ruby's `convert_embedded` of the inner
+                                // document: its title unless `notitle`.
+                                BlockKind::Heading { level, inlines } if i == 0 && *has_title => {
+                                    if child.conversion_attributes().get("notitle").is_none() {
+                                        render_heading(
+                                            child,
+                                            *level,
+                                            inlines,
+                                            false,
+                                            &child.roles,
+                                            out,
+                                        );
+                                    }
+                                }
+                                _ => render_block(child, cx, out),
+                            }
                         }
                         render_footnotes(footnotes, &cx.doc.attributes, "", out);
                         out.push_str("</div>");
@@ -4918,6 +4938,40 @@ mod tests {
             html.contains("<p><a href=\"#q2\">Quote</a> <a href=\"#o\">T Inner</a></p>"),
             "{html}"
         );
+    }
+
+    #[test]
+    fn nested_documents_render_their_title_like_ruby() {
+        // Ruby's `convert_embedded` of the inner document: hidden by default.
+        let html = render("|===\na|\n= In\n\npre\n\n== S\n\nx\n|===");
+        assert!(!html.contains("<h1"), "{html}");
+        assert!(
+            html.contains("<section id=\"preamble\">\n<p>pre</p>"),
+            "{html}"
+        );
+        let html = render("|===\na|\n= In *b*\n:showtitle:\n\nc\n|===");
+        assert!(
+            html.contains("<div class=\"content\"><h1>In <strong>b</strong></h1>\n<p>c</p>"),
+            "{html}"
+        );
+    }
+
+    #[test]
+    fn doctitle_replacements_convert_their_stored_value_like_ruby() {
+        // A whole-value passthrough stores markup, which the title escapes;
+        // a partial one is literal and converts in the title.
+        for (source, expected) in [
+            ("pass:q[*New*]", "<h1>&lt;strong&gt;New&lt;/strong&gt;</h1>"),
+            (
+                "pass:q[*New*] {empty}*x*",
+                "<h1><strong>New</strong> <strong>x</strong></h1>",
+            ),
+        ] {
+            let doc = adoctra_core::parse(&format!("= D\n:doctitle: {source}\n:showtitle:\n\nb"))
+                .document;
+            let html = String::from_utf8(HtmlBackend::embedded().convert(&doc).unwrap()).unwrap();
+            assert!(html.contains(expected), "{html}");
+        }
     }
 
     #[test]

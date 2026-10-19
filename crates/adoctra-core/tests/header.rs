@@ -977,3 +977,46 @@ fn nested_documents_take_the_title_as_doctitle_and_delete_it() {
     };
     assert_eq!(paragraph_text(&blocks[0]), "{title} Ti");
 }
+
+#[test]
+fn doctitle_replacements_convert_their_stored_spelling() {
+    // Ruby converts the stored value as the title's source, so markup from
+    // the value's own passthrough is text again and the source's is applied.
+    let text = |source: &str| -> String {
+        heading_inlines(&parse(source).document)
+            .iter()
+            .map(|node| match node {
+                adoctra_core::Inline::Text { value, .. }
+                | adoctra_core::Inline::Raw { value, .. } => value.clone(),
+                adoctra_core::Inline::Strong { children, .. } => {
+                    let inner: String = children
+                        .iter()
+                        .map(|c| match c {
+                            adoctra_core::Inline::Text { value, .. } => value.as_str(),
+                            _ => "",
+                        })
+                        .collect();
+                    format!("[strong:{inner}]")
+                }
+                node => panic!("{node:?}"),
+            })
+            .collect()
+    };
+    assert_eq!(
+        text("= D\n:doctitle: pass:q[*New*]\n\nb"),
+        "<strong>New</strong>"
+    );
+    assert_eq!(text(":doctitle: pass:q[_N_]\n\nb"), "<em>N</em>");
+    assert_eq!(
+        text("= D\n:x: pass:q[*v*]\n:doctitle: T {x}\n\nb"),
+        "T <strong>v</strong>"
+    );
+    // The stored spelling protects special characters: entity references
+    // in it stay text (restored as raw `&amp;`).
+    assert_eq!(text("= D\n:doctitle: *x* & y\n\nb"), "[strong:x] &amp; y");
+    assert_eq!(text("= D\n:doctitle: a <b> c\n\nb"), "a &lt;b&gt; c");
+    assert_eq!(
+        text("= D\n:doctitle: x &lt; &#169;\n\nb"),
+        "x &amp;lt; &amp;#169;"
+    );
+}

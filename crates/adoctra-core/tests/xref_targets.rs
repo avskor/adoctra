@@ -480,3 +480,19 @@ fn natural_references_compare_lexical_spelling_with_generated_tags() {
         ]
     );
 }
+
+#[test]
+fn references_to_the_current_document_are_not_unresolved() {
+    // `#` names this document: Ruby labels it `[^top]` (or its title) and
+    // never reports it as an invalid reference.
+    for source in ["b <<#>>", "b xref:#[]", "b <<#,t>>", "= D\n\nb <<#>>"] {
+        let result = adoctra_core::parse(source);
+        assert!(
+            result.diagnostics.is_empty(),
+            "{source}: {:?}",
+            result.diagnostics
+        );
+    }
+    let result = adoctra_core::parse("b <<missing>>");
+    assert_eq!(result.diagnostics.len(), 1);
+}

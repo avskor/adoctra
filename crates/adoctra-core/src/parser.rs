@@ -1648,15 +1648,17 @@ fn read_table(
         let content = if cell.literal {
             CellContent::Literal(crate::table::text(&cell.text))
         } else if cell.style == Some(crate::ast::CellStyle::Asciidoc) {
+            let (blocks, has_title) = read_nested_document(
+                lines,
+                &cell.text,
+                (cell.span.start, cell.span.end),
+                context,
+                diagnostics,
+            );
             CellContent::Blocks {
-                blocks: read_nested_document(
-                    lines,
-                    &cell.text,
-                    (cell.span.start, cell.span.end),
-                    context,
-                    diagnostics,
-                ),
+                blocks,
                 footnotes: Vec::new(),
+                has_title,
             }
         } else {
             // A header cell (and a csv/dsv literal) is one run, like Ruby's
@@ -1790,7 +1792,9 @@ fn collect_footnotes_after(
                             self.visit_inlines(inlines, InlineContext::Body);
                         }
                     }
-                    crate::ast::CellContent::Blocks { blocks, footnotes } => {
+                    crate::ast::CellContent::Blocks {
+                        blocks, footnotes, ..
+                    } => {
                         *footnotes = collect_footnotes(blocks);
                     }
                     crate::ast::CellContent::Literal(_) => {}
@@ -2079,14 +2083,51 @@ fn read_nested_document(
     key: (usize, usize),
     context: &mut ParseContext,
     diagnostics: &mut Vec<Diagnostic>,
-) -> Vec<Block> {
+) -> (Vec<Block>, bool) {
     // Ruby preprocesses the first line again (`a|include::…[]`).
     let cell = lines
         .preprocess_cell(text, context)
         .unwrap_or_else(|| Reader::cell_lines(text));
     let mut nested = Reader::nested(cell, lines.include_catalog.clone());
     let outer = context.enter_nested();
-    let header = collect_header(&mut nested, context);
+    let mut header = collect_header(&mut nested, context);
+    // The root tokenizer scans only the document's own header lines.
+    for index in [header.title_line, header.title_underline]
+        .into_iter()
+        .flatten()
+    {
+        let (off, line) = nested.line(index);
+        nested.heading_lines.push(Span::new(off, off + line.len()));
+    }
+    // Like the document's, the nested document's title converts first
+    // (Ruby's `convert_embedded`); it never takes an automatic id.
+    let title = header.effective_title.take().map(|effective| {
+        let inlines = context.body_subs.defer_title(
+            &effective.text,
+            effective.span.start,
+            effective.replacement.then_some(effective.span),
+            &context.attributes,
+        );
+        let mut title = Block::new(
+            header
+                .metadata
+                .as_ref()
+                .map_or(effective.span, |metadata| metadata.title_span),
+            BlockKind::Heading { level: 0, inlines },
+        );
+        if header.metadata_for_title {
+            let metadata = std::mem::take(&mut header.pending);
+            title.id = metadata.id.or(header.title_anchor.take());
+            if let Some(value) = metadata.reftext {
+                context.attach_reftext(&mut title, value);
+            }
+        }
+        title.attribute_context = Arc::clone(&context.attributes);
+        context
+            .nested_titles
+            .insert((title.span.start, title.span.end));
+        title
+    });
     context.start_body();
     let snapshot = (*context.render_attributes()).clone();
     let mut i = header.body_start;
@@ -2099,9 +2140,10 @@ fn read_nested_document(
         header.pending,
     );
     context.close_sections(0, usize::MAX);
+    let has_title = title.is_some();
     let blocks = nest_sections(
         blocks,
-        false,
+        has_title,
         context.book,
         None,
         &mut context.sections,
@@ -2109,7 +2151,7 @@ fn read_nested_document(
     );
     context.exit_nested(outer, key, snapshot);
     lines.absorb(nested, true);
-    blocks
+    (title.into_iter().chain(blocks).collect(), has_title)
 }
 
 /// Where a block is being parsed. The only behavioural difference is how a

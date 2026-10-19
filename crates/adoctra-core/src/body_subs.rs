@@ -564,8 +564,9 @@ impl Execution<'_> {
                 crate::xref_target::retarget(xref, &id, lexical);
             }
         }
+        // An empty id (`<<#>>`) is the current document.
         if let Some(id) = crate::resolve::decoded_refid(xref, lexical) {
-            if !self.registry.contains_key(&id) {
+            if !id.is_empty() && !self.registry.contains_key(&id) {
                 self.references.push(Diagnostic {
                     span,
                     severity: crate::Severity::Warning,

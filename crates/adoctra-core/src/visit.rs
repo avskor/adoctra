@@ -155,7 +155,9 @@ pub fn walk_block_mut(visitor: &mut (impl VisitorMut + ?Sized), block: &mut Bloc
                             visitor.visit_inlines(inlines, InlineContext::Body);
                         }
                     }
-                    crate::ast::CellContent::Blocks { blocks, footnotes } => {
+                    crate::ast::CellContent::Blocks {
+                        blocks, footnotes, ..
+                    } => {
                         walk_blocks_mut(visitor, blocks);
                         for footnote in footnotes {
                             visitor.visit_span(&mut footnote.span);

@@ -780,6 +780,10 @@ pub enum CellContent {
     Blocks {
         blocks: Vec<Block>,
         footnotes: Vec<FootnoteDefinition>,
+        /// The nested document has a title: `blocks[0]` is its level-0
+        /// heading (like [`Document::has_title`]), shown unless `notitle`
+        /// (the nested default, which its header entries may unset).
+        has_title: bool,
     },
     /// A literal (`l`) cell: verbatim text (Ruby's basic substitutions are
     /// output escaping).

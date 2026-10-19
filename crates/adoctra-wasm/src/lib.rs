@@ -325,7 +325,9 @@ fn write_cell(cell: &adoctra_core::ast::TableCell, s: &mut String) {
             }
             s.push(']');
         }
-        adoctra_core::ast::CellContent::Blocks { blocks, footnotes } => {
+        adoctra_core::ast::CellContent::Blocks {
+            blocks, footnotes, ..
+        } => {
             s.push_str(",\"blocks\":[");
             for (i, block) in blocks.iter().enumerate() {
                 if i > 0 {
@@ -1208,6 +1210,21 @@ mod tests {
             "{json}"
         );
         assert!(!json.contains(r#""value":"""#), "{json}");
+    }
+
+    #[test]
+    fn nested_document_titles_export_their_heading_with_spans() {
+        let json = parse_json("|===\na|\n= Я\n\nc\n|===");
+        assert!(
+            json.contains(r#""name":"heading","level":0,"id":null"#),
+            "{json}"
+        );
+        assert!(
+            json.contains(
+                r#"{"span":{"source_id":0,"start":10,"end":12},"name":"text","value":"Я"}"#
+            ),
+            "{json}"
+        );
     }
 
     #[test]

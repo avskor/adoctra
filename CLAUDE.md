@@ -622,8 +622,15 @@ entries never apply to the parent) and runs header, body and nest_sections insid
 ParseContext::enter_nested/exit_nested. The nested document starts from the
 parent's reading attributes (without doctitle/notitle/showtitle/toc/toc-position,
 defaults are not reapplied, like Ruby's `unless parent_doc`, so a parent's
-unset default stays unset) with every inherited key locked except compat-mode, doctype
-and toc-placement; catalogs and ids are shared. Its counters (`{counter:…}`,
+unset default stays unset) with every inherited key locked except compat-mode, doctype,
+notitle, showtitle, toc, toc-placement and toc-position (Ruby deletes them from the
+overrides, the parent's host locks included) and an unlocked `notitle` default;
+catalogs and ids are shared. A nested header title becomes `blocks[0]`, a level-0
+Heading deferred like a block title (`CellContent::Blocks.has_title`,
+ParseContext.nested_titles keeps it out of automatic ids; its lines are recorded
+as heading tokens), and nest_sections opens a preamble for it; HTML renders it as
+Ruby's convert_embedded `<h1>` unless its conversion attributes have `notitle`.
+A nested TOC is not rendered yet. Its counters (`{counter:…}`,
 caption numbers) delegate to the root document's attributes and locks, like
 Ruby's `counter` (Evaluation::with_root, both at reading and conversion).
 BodySubs.nested keeps its header snapshot, entries and locks per cell; body_subs
@@ -764,8 +771,11 @@ conversion effects (a paragraph's `{set:}`) but no reading-only effects
 (orphan declarations, section-title expressions), like Ruby's converter.
 Tokenization uses isolated contexts and the same declaration replay; it never
 mutates caller attributes or previously returned snapshots.
-Early catalog registration of anchors consumed by quote metadata, non-link pass
-macros and raw whole-doctitle replacement also remain work.
+Inline anchors in quote metadata, pass macros and doctitle replacements are
+cataloged exactly where Ruby's raw scan finds them (pinned by `anchor-catalog-*`).
+A replacing `doctitle` converts its stored spelling (attributes::reference_text of
+its parts, header.rs effective_title) as the title source, like Ruby: markup from
+a whole-value passthrough is escaped text, entity references stay text.
 Automatic section IDs sanitize a temporary lexical title: raw XML tags and
 references matching the pinned entity grammar are removed, not decoded.
 Literal protection and structural inline boundaries remain distinct; title
