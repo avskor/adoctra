@@ -162,39 +162,6 @@ impl FilteredSource {
         result
     }
 
-    /// The transformed end of segment `index`.
-    fn segment_end(&self, index: usize) -> usize {
-        self.segments
-            .get(index + 1)
-            .map_or(self.text.len(), |s| s.start)
-    }
-
-    /// Map retained source trivia into the logical buffer for highlighting.
-    /// Callers supply spans produced from these same retained fragments.
-    pub fn transformed_span(&self, span: crate::Span) -> crate::Span {
-        if self.segments.is_empty() {
-            return span;
-        }
-        let start_idx = self
-            .segments
-            .partition_point(|s| s.original <= span.start)
-            .saturating_sub(1);
-        let end_idx = self
-            .segments
-            .partition_point(|s| s.original < span.end)
-            .saturating_sub(1);
-        let (s, e) = (self.segments[start_idx], self.segments[end_idx]);
-        let start = match s.generated {
-            Some(_) => s.start,
-            None => s.start + span.start - s.original,
-        };
-        let end = match e.generated {
-            Some(_) => self.segment_end(end_idx),
-            None => e.start + span.end - e.original,
-        };
-        crate::Span::new(start, end.max(start))
-    }
-
     pub fn original_span(&self, span: crate::Span) -> crate::Span {
         if self.segments.is_empty() {
             return span;

@@ -5,17 +5,13 @@
 //! delimiters/content, inline `*strong*` / `_emphasis_` / `{attribute}`).
 //! Plain text is left untokenized.
 //!
-//! Inline tokens are a *projection of the parser's inline scan*: the same
-//! [`scan_inlines`] that builds the document model is flattened to tokens here,
-//! so highlighting can never disagree with parsing about where a `*strong*`
-//! starts. There is no second grammar.
+//! Structural tokens are recorded by the parser. Inline tokens come from
+//! complete fields evaluated by the shared inline scanner, before conversion
+//! consumes their source syntax. This module projects those reader ranges into
+//! physical sources; it never reparses lines or replays document attributes.
 
-use crate::ast::{AdmonitionKind, Inline, Span};
-use crate::context::{ParseContext, ParseOptions};
-use crate::header::collect_header;
-use crate::inline::scan_for_tokens as scan_inlines;
-use crate::parser::{parse_block_anchor, parse_block_title};
-use crate::scanner::lines_with_offsets;
+use crate::ast::{Inline, Span};
+use crate::context::ParseOptions;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token {
@@ -126,86 +122,82 @@ pub(crate) fn tokens_reader<'a>(
     options: &ParseOptions,
     reader: crate::reader::Reader<'a>,
 ) -> Vec<Token> {
-    let (mut result, reader) = crate::parser::parse_reader(options, reader);
-    let processed = reader.content(0, usize::MAX);
-    let comments: Vec<_> = reader
-        .comments
+    crate::parser::parse_reader(options, reader).0.tokens
+}
+
+/// Project classifications recorded by the parser; no structural grammar or
+/// attribute replay lives in the tokenizer. All incoming spans use reader
+/// coordinates and are split into physical fragments only here.
+pub(crate) fn project(
+    result: &mut crate::ParseResult,
+    reader: &crate::reader::Reader<'_>,
+    inline_tokens: Vec<Token>,
+) -> Vec<Token> {
+    let mut structural = reader.block_tokens.clone();
+    for (spans, kind) in [
+        (&reader.comments, TokenKind::Comment),
+        (&reader.heading_lines, TokenKind::Heading),
+        (&reader.table_separators, TokenKind::CellSeparator),
+        (&reader.list_markers, TokenKind::ListMarker),
+        (&reader.quote_markers, TokenKind::QuoteDelimiter),
+    ] {
+        structural.extend(spans.iter().map(|&span| Token { span, kind }));
+    }
+    structural.extend(reader.attribute_entries.iter().map(|(span, _)| Token {
+        span: *span,
+        kind: TokenKind::AttributeEntry,
+    }));
+    // Metadata and verbatim bodies are atomic source tokens. A source-owned
+    // inline may cross a removed comment line; containment, not overlap,
+    // determines whether the structural token owns it.
+    let mut opaque: Vec<_> = structural
         .iter()
-        .map(|span| processed.transformed_span(*span))
+        .filter(|t| {
+            matches!(
+                t.kind,
+                TokenKind::Heading
+                    | TokenKind::Author
+                    | TokenKind::Revision
+                    | TokenKind::AttributeEntry
+                    | TokenKind::BlockAttributeList
+                    | TokenKind::BlockTitle
+                    | TokenKind::Anchor
+                    | TokenKind::Comment
+                    | TokenKind::ListingText
+                    | TokenKind::LiteralText
+                    | TokenKind::PassthroughText
+                    | TokenKind::StemText
+                    | TokenKind::BlockMacro
+            )
+        })
+        .map(|t| t.span)
         .collect();
-    let entries: Vec<_> = reader
-        .attribute_entries
-        .iter()
-        .map(|(span, entry)| (processed.transformed_span(*span), entry.clone()))
+    opaque.extend(&reader.verbatim_ranges);
+    opaque.sort_by_key(|s| (s.start, s.end));
+    // Prefix maxima also handle nested/overlapping structural ranges.
+    let mut ends = Vec::with_capacity(opaque.len());
+    let mut end = 0;
+    for span in &opaque {
+        end = end.max(span.end);
+        ends.push(end);
+    }
+    let inline_tokens = inline_tokens.into_iter().filter(|t| {
+        let i = opaque.partition_point(|s| s.start <= t.span.start);
+        i == 0 || ends[i - 1] < t.span.end
+    });
+    let mut out: Vec<_> = structural
+        .into_iter()
+        .chain(inline_tokens)
+        .flat_map(|token| {
+            reader
+                .token_spans(token.span)
+                .into_iter()
+                .map(move |span| Token {
+                    span,
+                    kind: token.kind,
+                })
+        })
         .collect();
-    let headings: Vec<_> = reader
-        .heading_lines
-        .iter()
-        .map(|span| processed.transformed_span(*span))
-        .collect();
-    let mut tables = Tables {
-        delimited: reader
-            .block_tokens
-            .iter()
-            .map(|t| Token {
-                span: processed.transformed_span(t.span),
-                kind: t.kind,
-            })
-            .collect(),
-        blocks: reader
-            .tables
-            .iter()
-            .map(|span| processed.transformed_span(*span))
-            .collect(),
-        separators: reader
-            .table_separators
-            .iter()
-            .map(|span| processed.transformed_span(*span))
-            .collect(),
-        list_markers: reader
-            .list_markers
-            .iter()
-            .map(|span| processed.transformed_span(*span))
-            .collect(),
-        quote_markers: reader
-            .quote_markers
-            .iter()
-            .map(|span| processed.transformed_span(*span))
-            .collect(),
-    };
-    tables.delimited.sort_by_key(|t| t.span.start);
-    let custom: Vec<_> = reader
-        .custom_subs
-        .iter()
-        .map(|(span, stages)| (processed.transformed_span(*span), stages))
-        .collect();
-    let mut out: Vec<_> = tokens_processed(
-        &processed.text,
-        options,
-        &comments,
-        &entries,
-        &headings,
-        &tables,
-    )
-    .into_iter()
-    // Text with custom substitutions keeps the inline tokens of executed stages.
-    .filter(|token| {
-        custom
-            .iter()
-            .find(|(span, _)| span.start <= token.span.start && token.span.end <= span.end)
-            .and_then(|(_, stages)| Some(stages.contains(&inline_stage(token.kind)?)))
-            .unwrap_or(true)
-    })
-    .flat_map(|token| {
-        reader
-            .token_spans(processed.original_span(token.span))
-            .into_iter()
-            .map(move |span| Token {
-                span,
-                kind: token.kind,
-            })
-    })
-    .collect();
     for &span in &reader.callout_marks {
         out.extend(reader.token_spans(span).into_iter().map(|span| Token {
             span,
@@ -218,11 +210,9 @@ pub(crate) fn tokens_reader<'a>(
             kind: TokenKind::AttributeRef,
         }));
     }
-    // Project source-owned breaks and executed expressions from the complete
-    // parse. The syntax-only scan must not execute body expressions again.
-    // The line-based highlighting scan cannot know a block's final line or local hardbreaks
-    // option. Generated attribute content retains its attribute-ref token;
-    // passthroughs retain their existing outer token.
+    // Conversion also creates source-owned breaks, footnotes and expressions.
+    // Project them without replaying effects. Generated attribute content keeps
+    // its attribute-ref token; passthroughs retain their outer token.
     struct SourceTokens(Vec<(Span, TokenKind)>, Vec<Span>);
     impl crate::visit::VisitorMut for SourceTokens {
         // Callout marks at the ends of verbatim lines.
@@ -242,7 +232,7 @@ pub(crate) fn tokens_reader<'a>(
             if let Inline::Substituted { parts, span, .. } = inline {
                 // Bibliographic anchors include their visible bracketed label
                 // in the same substituted value. Use the executed source span;
-                // a syntax-only line scan has no parent-list context.
+                // the syntax captured before conversion has no visible label.
                 if parts.iter().any(|p| matches!(p, P::Anchor(_))) {
                     self.0.push((*span, TokenKind::Anchor));
                 }
@@ -256,13 +246,11 @@ pub(crate) fn tokens_reader<'a>(
                     self.0.push((*span, TokenKind::LineBreak));
                 }
             }
-            // Footnotes are numbered during conversion; the syntax-only scan
-            // leaves their macros as text.
+            // Footnotes are numbered during conversion.
             if let Inline::Footnote { span, .. } = inline {
                 self.0.push((*span, TokenKind::InlineMacro));
             }
-            // The complete parse sees formulas spanning physical lines; the
-            // line scanner must not highlight protected contents as quotes.
+            // A formula's source is opaque even across physical lines.
             if let Inline::Stem { span, .. } = inline {
                 self.0.push((*span, TokenKind::InlineMacro));
                 self.1.push(*span);
@@ -344,13 +332,13 @@ pub(crate) fn tokens_reader<'a>(
     }
     for (spans, kind) in [
         (
-            result.conditional_directives,
+            &result.conditional_directives,
             TokenKind::ConditionalDirective,
         ),
-        (result.include_directives, TokenKind::IncludeDirective),
-        (result.inactive, TokenKind::Inactive),
+        (&result.include_directives, TokenKind::IncludeDirective),
+        (&result.inactive, TokenKind::Inactive),
     ] {
-        out.extend(spans.into_iter().map(|span| Token { span, kind }));
+        out.extend(spans.iter().map(|&span| Token { span, kind }));
     }
     out.sort_by_key(|token| (token.span.source_id, token.span.start, token.span.end));
     out.dedup();
@@ -358,7 +346,7 @@ pub(crate) fn tokens_reader<'a>(
 }
 
 /// The substitution that produces an inline token, if any.
-fn inline_stage(kind: TokenKind) -> Option<crate::pass_subs::Stage> {
+pub(crate) fn inline_stage(kind: TokenKind) -> Option<crate::pass_subs::Stage> {
     use crate::pass_subs::Stage;
     match kind {
         TokenKind::Strong
@@ -376,304 +364,6 @@ fn inline_stage(kind: TokenKind) -> Option<crate::pass_subs::Stage> {
         TokenKind::LineBreak => Some(Stage::Post),
         _ => None,
     }
-}
-
-/// Table blocks and their cell separators, and list markers (description
-/// list delimiters too), from the parser.
-struct Tables {
-    delimited: Vec<Token>,
-    blocks: Vec<Span>,
-    separators: Vec<Span>,
-    list_markers: Vec<Span>,
-    /// Markdown blockquote `>` markers.
-    quote_markers: Vec<Span>,
-}
-
-fn tokens_processed(
-    source: &str,
-    options: &ParseOptions,
-    comments: &[Span],
-    entries: &[(Span, Option<crate::context::AttributeEntry>)],
-    // Body section title lines (ATX, setext title and underline), classified by
-    // the structural parser: only it knows section contexts and paragraph
-    // continuation, and a setext underline may look like a fence.
-    headings: &[Span],
-    tables: &Tables,
-) -> Vec<Token> {
-    // Comment classification is owned by the structural parser, including
-    // verbatim styles and list continuations. Do not duplicate those rules here.
-    let mut comment_index = 0;
-    let mut entry_index = 0;
-    let lines = lines_with_offsets(source);
-    // Resolve `{attr}` against the same header table the parser uses.
-    let mut context = ParseContext::new(options);
-    let header = collect_header(&mut crate::reader::Reader::plain(source), &mut context);
-    context.start_body();
-    let mut out = Vec::new();
-    // Whether the *previous* line continued a running paragraph (or list item).
-    // Captured per line as `at_para_start` so an admonition label (`NOTE: `) is
-    // only recognised at a paragraph start, exactly like the parser — a `NOTE:`
-    // folded into a running paragraph is plain text.
-    let mut mid_paragraph = false;
-
-    for (line_index, (mut off, mut line)) in lines.into_iter().enumerate() {
-        // Markdown blockquote markers, as the parser stripped them (nested
-        // quotes repeat them): the rest of the line is the quote's own line.
-        let first = tables.quote_markers.partition_point(|s| s.start < off);
-        for marker in &tables.quote_markers[first..] {
-            if marker.start != off {
-                break;
-            }
-            out.push(Token {
-                span: *marker,
-                kind: TokenKind::QuoteDelimiter,
-            });
-            let cut = line.len().min(2);
-            off += cut;
-            line = &line[cut..];
-        }
-        let line_span = Span::new(off, off + line.len());
-        while entry_index < entries.len() && entries[entry_index].0.end <= off {
-            entry_index += 1;
-        }
-        if let Some((span, entry)) = entries
-            .get(entry_index)
-            .filter(|(span, _)| span.start == off)
-        {
-            if line_index >= header.body_start {
-                if let Some(entry) = entry {
-                    context.apply(entry.clone());
-                }
-            }
-            out.push(Token {
-                span: *span,
-                kind: TokenKind::AttributeEntry,
-            });
-            mid_paragraph = false;
-            continue;
-        }
-        while comment_index < comments.len() && comments[comment_index].end <= off {
-            comment_index += 1;
-        }
-        if let Some(span) = comments
-            .get(comment_index)
-            .filter(|span| span.start <= off && off < span.end)
-        {
-            if span.start == off {
-                out.push(Token {
-                    span: *span,
-                    kind: TokenKind::Comment,
-                });
-            }
-            if !crate::comments::is_line_comment(line) {
-                mid_paragraph = false;
-            }
-            continue;
-        }
-        if header.title_line == Some(line_index)
-            || header.title_underline == Some(line_index)
-            || headings
-                .binary_search_by_key(&off, |span| span.start)
-                .is_ok()
-        {
-            out.push(Token {
-                span: line_span,
-                kind: TokenKind::Heading,
-            });
-            mid_paragraph = false;
-            continue;
-        }
-        if header.author_line == Some(line_index) || header.revision_line == Some(line_index) {
-            out.push(Token {
-                span: line_span,
-                kind: if header.author_line == Some(line_index) {
-                    TokenKind::Author
-                } else {
-                    TokenKind::Revision
-                },
-            });
-            continue;
-        }
-        // Delimited block fences and verbatim/raw bodies come from the parser,
-        // including blocks in list continuations and AsciiDoc table cells. Only
-        // it knows which fence closes a block; never reinterpret verbatim text
-        // or raw math as formatting, comments or attribute entries.
-        let delimited_start = tables.delimited.partition_point(|t| t.span.end <= off);
-        let delimited_end = tables
-            .delimited
-            .partition_point(|t| t.span.start < line_span.end);
-        let delimited = &tables.delimited[delimited_start..delimited_end];
-        if !delimited.is_empty() {
-            out.extend(
-                tables
-                    .separators
-                    .iter()
-                    .filter(|s| s.start >= off && s.end <= delimited[0].span.start)
-                    .map(|span| Token {
-                        span: *span,
-                        kind: TokenKind::CellSeparator,
-                    }),
-            );
-            out.extend_from_slice(delimited);
-            mid_paragraph = false;
-            continue;
-        }
-        // A table, as the parser read it: its fences, then each line's cell
-        // separators (with their specs) and the cell text between them.
-        // The innermost table: a nested one inside an AsciiDoc cell.
-        if let Some(table) = tables
-            .blocks
-            .iter()
-            .filter(|t| t.start <= off && off < t.end)
-            .max_by_key(|t| t.start)
-        {
-            mid_paragraph = false;
-            if (off == table.start || off + line.len() == table.end)
-                && crate::table::delimiter(line).is_some()
-            {
-                out.push(Token {
-                    span: line_span,
-                    kind: TokenKind::TableDelimiter,
-                });
-                continue;
-            }
-            let mut at = off;
-            let first = tables.separators.partition_point(|s| s.start < off);
-            for separator in tables.separators[first..]
-                .iter()
-                .take_while(|s| s.end <= off + line.len())
-            {
-                out.extend(scan_inlines(
-                    &line[at - off..separator.start - off],
-                    at,
-                    &context.render_attributes(),
-                ));
-                out.push(Token {
-                    span: *separator,
-                    kind: TokenKind::CellSeparator,
-                });
-                at = separator.end;
-            }
-            out.extend(scan_inlines(
-                &line[at - off..],
-                at,
-                &context.render_attributes(),
-            ));
-            continue;
-        }
-        let at_para_start = !mid_paragraph;
-        // Default: structural / blank lines (all of which `continue` below) leave
-        // the next line a fresh block. The body-text and list-item branches set it
-        // back to `true`.
-        mid_paragraph = false;
-
-        if line.trim().is_empty() {
-            continue;
-        }
-        // A `[[id]]` / `[[id,reftext]]` block anchor: one token over the whole
-        // line. Recognised the same way the parser attaches it to the next block,
-        // so highlighting and parsing never disagree.
-        if parse_block_anchor(line).is_some() {
-            out.push(Token {
-                span: line_span,
-                kind: TokenKind::Anchor,
-            });
-            continue;
-        }
-        // A whole-line block-attribute list (`[style, #id.role, name=value]`):
-        // one token over the line, recognised exactly as the parser consumes it,
-        // so highlighting and parsing never disagree.
-        if crate::block_attributes::attr_list_inner(line).is_some() {
-            out.push(Token {
-                span: line_span,
-                kind: TokenKind::BlockAttributeList,
-            });
-            continue;
-        }
-        // A `.Title` line: one token over the whole line, recognised with the same
-        // helper the parser uses to attach the title to the next block (so
-        // highlighting and parsing never disagree). Like the anchor / attribute
-        // lines it leaves the next line a fresh block start, and like the block
-        // anchor's reftext its inline markup is not sub-tokenized.
-        if parse_block_title(line).is_some() {
-            out.push(Token {
-                span: line_span,
-                kind: TokenKind::BlockTitle,
-            });
-            continue;
-        }
-        // A `toc::[]` or `image::target[]` block macro line at a block start,
-        // recognized with the parser's grammar (inside a paragraph it stays text).
-        if at_para_start
-            && (crate::parser::parse_toc_macro(line.trim_end(), off).is_some()
-                || crate::image::match_macro(line.trim_end()).is_some())
-        {
-            out.push(Token {
-                span: Span::new(off, off + line.trim_end().len()),
-                kind: TokenKind::BlockMacro,
-            });
-            continue;
-        }
-        // List items, as the parser read them: each marker (or description
-        // delimiter) is a token and the text around it is scanned like any
-        // other body line, so token spans coincide with the item's inlines.
-        let first = tables.list_markers.partition_point(|s| s.start < off);
-        let markers: Vec<Span> = tables.list_markers[first..]
-            .iter()
-            .take_while(|s| s.end <= off + line.len())
-            .copied()
-            .collect();
-        if !markers.is_empty() {
-            mid_paragraph = true; // a folded line after the marker is item text
-            let mut at = off;
-            for marker in markers {
-                out.extend(scan_inlines(
-                    &line[at - off..marker.start - off],
-                    at,
-                    &context.render_attributes(),
-                ));
-                out.push(Token {
-                    span: marker,
-                    kind: TokenKind::ListMarker,
-                });
-                at = marker.end;
-            }
-            out.extend(scan_inlines(
-                &line[at - off..],
-                at,
-                &context.render_attributes(),
-            ));
-            continue;
-        }
-        // Body text line: flatten the shared inline scan to highlight tokens. An
-        // admonition label (`NOTE: `, …) at a paragraph start is one token, then
-        // the rest of the line is scanned normally — matching the parser's label
-        // form (recognised only at a paragraph start, never mid-paragraph).
-        if at_para_start {
-            if let Some((_, prefix_len)) = AdmonitionKind::from_label_prefix(line) {
-                // The token covers `NOTE:` (label + colon); the trailing space and
-                // the body are scanned/untokenized as usual.
-                out.push(Token {
-                    span: Span::new(off, off + prefix_len - 1),
-                    kind: TokenKind::AdmonitionLabel,
-                });
-                out.extend(scan_inlines(
-                    &line[prefix_len..],
-                    off + prefix_len,
-                    &context.render_attributes(),
-                ));
-                mid_paragraph = true;
-                continue;
-            }
-        }
-        out.extend(scan_inlines(line, off, &context.render_attributes()));
-        mid_paragraph = true;
-    }
-
-    for token in &mut out {
-        token.span.source_id = options.source_id;
-    }
-    out
 }
 
 /// Project the inline AST onto highlight tokens (depth-first, document order).

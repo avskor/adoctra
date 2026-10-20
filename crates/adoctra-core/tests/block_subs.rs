@@ -306,7 +306,7 @@ fn highlighting_keeps_tokens_of_executed_stages() {
     let second = at("*q*");
     assert_eq!(kinds_in(second, second + 7), [TokenKind::Strong]);
     let literal = at("*l*");
-    assert!(kinds_in(literal, literal + 7).is_empty());
+    assert_eq!(kinds_in(literal, literal + 7), [TokenKind::LiteralText]);
     let mark = at("<1>");
     assert!(ts
         .iter()

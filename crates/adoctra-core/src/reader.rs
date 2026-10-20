@@ -74,20 +74,17 @@ pub(crate) struct Reader<'a> {
     pub metadata_references: Vec<Span>,
     /// Lines of body section titles (ATX, setext title and underline), for highlighting.
     pub heading_lines: Vec<Span>,
-    /// Table blocks (fence to fence) and their cell separators with specs,
-    /// for highlighting.
-    pub tables: Vec<Span>,
+    /// Table cell separators with specs, for highlighting.
     pub table_separators: Vec<Span>,
     /// List markers and description list delimiters, for highlighting.
     pub list_markers: Vec<Span>,
     /// The `>` markers of Markdown blockquote lines.
     pub quote_markers: Vec<Span>,
-    /// Delimited block fences and verbatim/raw body lines, classified during
-    /// structural parsing.
+    /// Source classifications recorded during structural parsing: metadata,
+    /// header lines, block fences, macros and verbatim/raw bodies.
     pub block_tokens: Vec<crate::Token>,
-    /// Text whose block selected custom substitutions, with those stages:
-    /// highlighting keeps only the inline tokens of executed stages.
-    pub custom_subs: Vec<(Span, Vec<crate::pass_subs::Stage>)>,
+    /// Whole raw/verbatim bodies, including the line endings between tokens.
+    pub verbatim_ranges: Vec<Span>,
     /// Callout marks converted by custom substitutions, for highlighting.
     pub callout_marks: Vec<Span>,
     endings: Vec<(usize, String)>,
@@ -132,12 +129,11 @@ impl<'a> Reader<'a> {
             attribute_entries: Vec::new(),
             metadata_references: Vec::new(),
             heading_lines: Vec::new(),
-            tables: Vec::new(),
             table_separators: Vec::new(),
             list_markers: Vec::new(),
             quote_markers: Vec::new(),
             block_tokens: Vec::new(),
-            custom_subs: Vec::new(),
+            verbatim_ranges: Vec::new(),
             callout_marks: Vec::new(),
             endings: Vec::new(),
             limit: usize::MAX,
@@ -204,12 +200,11 @@ impl<'a> Reader<'a> {
         self.metadata_references.extend(nested.metadata_references);
         self.heading_lines.extend(nested.heading_lines);
         self.heading_lines.sort_by_key(|span| span.start);
-        self.tables.extend(nested.tables);
         self.table_separators.extend(nested.table_separators);
         self.table_separators.sort_by_key(|span| span.start);
         self.list_markers.extend(nested.list_markers);
         self.block_tokens.extend(nested.block_tokens);
-        self.custom_subs.extend(nested.custom_subs);
+        self.verbatim_ranges.extend(nested.verbatim_ranges);
         self.callout_marks.extend(nested.callout_marks);
         self.list_markers.sort_by_key(|span| span.start);
         self.quote_markers.extend(nested.quote_markers);
@@ -278,6 +273,12 @@ impl<'a> Reader<'a> {
         text: crate::TokenKind,
     ) {
         self.record_fences(opening, closing, fence);
+        self.record_text(body_start, body_end, text);
+    }
+
+    /// Classify verbatim source using the body's parser-owned boundaries.
+    pub fn record_text(&mut self, body_start: usize, body_end: usize, text: crate::TokenKind) {
+        self.verbatim_ranges.push(Span::new(body_start, body_end));
         let source = self.content(body_start, body_end);
         for (offset, line) in crate::scanner::lines_with_offsets(&source.text) {
             if !line.is_empty() {

@@ -80,6 +80,7 @@ pub(crate) struct Conversion<'a> {
 
 #[derive(Default)]
 pub(crate) struct BodySubs {
+    pub tokens: Vec<crate::Token>,
     header: Option<Pending>,
     pending: BTreeMap<(usize, usize), Pending>,
     pub entries: Vec<Declaration>,
@@ -220,7 +221,7 @@ impl BodySubs {
         let compat = attributes.get("compat-mode").is_some();
         let mut evaluation =
             Evaluation::definition(&attributes, locked, &mut counters, compat).with_xrefs(xrefs);
-        Some(run(pending, &mut evaluation, diagnostics))
+        Some(run(pending, &mut evaluation, diagnostics, &mut self.tokens))
     }
 
     pub fn execute(
@@ -228,8 +229,9 @@ impl BodySubs {
         blocks: &mut [Block],
         attributes: Attributes,
         conversion: Conversion,
-    ) -> Attributes {
+    ) -> (Attributes, Vec<crate::Token>) {
         let mut execution = Execution {
+            tokens: &mut self.tokens,
             pending: &mut self.pending,
             caption_counters: &mut self.caption_counters,
             entries: self.entries.into_iter().peekable(),
@@ -308,11 +310,12 @@ impl BodySubs {
             _ => None,
         });
         execution.blocks(&mut blocks[body..]);
-        execution.attributes
+        (execution.attributes, self.tokens)
     }
 }
 
 struct Execution<'a> {
+    tokens: &'a mut Vec<crate::Token>,
     pending: &'a mut BTreeMap<(usize, usize), Pending>,
     caption_counters: &'a mut BTreeMap<(usize, usize), (&'static str, Vec<AttributePart>)>,
     entries: std::iter::Peekable<std::vec::IntoIter<Declaration>>,
@@ -812,6 +815,7 @@ impl Execution<'_> {
         let mut footnotes = std::mem::take(&mut self.footnotes);
         let mut diagnostics = std::mem::take(self.diagnostics);
         let (images, xrefs) = (self.images, self.xrefs);
+        let mut tokens = Vec::new();
         let changed = {
             let mut evaluation =
                 Evaluation::definition(&attributes, &locked, &mut counters, compat)
@@ -820,10 +824,11 @@ impl Execution<'_> {
                     .with_images(images)
                     .with_xrefs(xrefs)
                     .with_labels(self);
-            *nodes = run(pending, &mut evaluation, &mut diagnostics);
+            *nodes = run(pending, &mut evaluation, &mut diagnostics, &mut tokens);
             evaluation.changed_attributes()
         };
         self.attributes = changed.unwrap_or(attributes);
+        self.tokens.extend(tokens);
         *self.counters = counters;
         if let (Some((current, _)), Some((attributes, _))) = (self.root.as_mut(), root) {
             *current = attributes;
@@ -1167,11 +1172,21 @@ fn run(
     pending: Pending,
     evaluation: &mut Evaluation<'_>,
     diagnostics: &mut Vec<Diagnostic>,
+    tokens: &mut Vec<crate::Token>,
 ) -> Vec<Inline> {
     evaluation.bibliography = pending.bibliography;
     let source = pending.filtered.as_ref().unwrap_or(&pending.source);
     let before = diagnostics.len();
+    let mut syntax = Vec::new();
     let mut nodes = if let Some(block) = &pending.block {
+        // Selected substitutions return semantic parts rather than source AST
+        // nodes. Scan their complete source field without replaying effects,
+        // retaining only syntax belonging to enabled stages.
+        syntax = crate::inline::scan_for_tokens(&source.text, 0, evaluation);
+        syntax.retain(|token| {
+            crate::tokenizer::inline_stage(token.kind)
+                .is_some_and(|stage| block.stages.contains(&stage))
+        });
         let text = source.text.replace("\r\n", "\n");
         let span = Span::new(0, source.text.len());
         let mut parts = crate::inline_pass::Passes::selected_stages(
@@ -1201,12 +1216,13 @@ fn run(
             span,
         }]
     } else {
-        crate::inline::scan_inlines_evaluated(
+        crate::inline::scan_inlines_recorded(
             &source.text,
             0,
             evaluation,
             pending.fold,
             diagnostics,
+            Some(&mut syntax),
         )
     };
     if let Some(filtered) = &pending.filtered {
@@ -1216,6 +1232,16 @@ fn run(
         }
     }
     pending.source.restore_inlines(&mut nodes);
+    // Replacement text is generated, not syntax at its declaration's offsets.
+    if pending.replacement_origin.is_none() {
+        tokens.extend(syntax.into_iter().map(|mut token| {
+            if let Some(filtered) = &pending.filtered {
+                token.span = filtered.original_span(token.span);
+            }
+            token.span = pending.source.original_span(token.span);
+            token
+        }));
+    }
     for diagnostic in &mut diagnostics[before..] {
         diagnostic.span = pending.source.original_span(diagnostic.span);
     }

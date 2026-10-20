@@ -296,6 +296,15 @@ fn verbatim_paragraph_forms_have_no_inline_tokens() {
     for style in ["listing", "source", "literal"] {
         let source = format!("[{style}]\n*x* {{y}}\n:a: b");
         let kinds: Vec<_> = tokens(&source).into_iter().map(|t| t.kind).collect();
-        assert_eq!(kinds, [TokenKind::BlockAttributeList], "{style}");
+        let body = if style == "literal" {
+            TokenKind::LiteralText
+        } else {
+            TokenKind::ListingText
+        };
+        assert_eq!(
+            kinds,
+            [TokenKind::BlockAttributeList, body, body],
+            "{style}"
+        );
     }
 }

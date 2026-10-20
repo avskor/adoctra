@@ -1,7 +1,7 @@
 //! WASM bindings for an AsciiDoc editor.
 //!
 //! Exposes only what an editor needs — never the converters:
-//!   * [`parse_json`]  — error-tolerant parse → JSON `{ document, diagnostics }`
+//!   * [`parse_json`]  — error-tolerant parse → JSON `{ document, diagnostics, tokens }`
 //!   * [`tokens_json`] — highlight tokens → JSON array
 //!
 //! The JSON producers below are pure Rust (no wasm-bindgen), so they compile
@@ -13,7 +13,7 @@
 //! wasm-pack build crates/adoctra-wasm --target web   # or --target bundler
 //! ```
 //!
-//! On the JS side: `JSON.parse(parse_json(src))` gives `{ document, diagnostics }`,
+//! On the JS side: `JSON.parse(parse_json(src))` gives `{ document, diagnostics, tokens }`,
 //! and diagnostics/tokens carry byte spans (`{ source_id, start, end }`). The
 //! host maps source ids to buffers and converts UTF-8 byte offsets into its
 //! editor's coordinate system (for example UTF-16 positions).
@@ -27,7 +27,7 @@ use adoctra_core::json::escape_into as write_str;
 use adoctra_core::{Token, TokenKind};
 use std::collections::BTreeMap;
 
-/// Parse `src` and return JSON `{ "document": {...}, "diagnostics": [...] }`.
+/// Parse `src` once and return document, diagnostics and source highlight tokens.
 pub fn parse_json(src: &str) -> String {
     parse_json_with_source(src, 0)
 }
@@ -69,6 +69,8 @@ fn serialize_parse_result(r: &ParseResult) -> String {
         write_diagnostic(d, &mut s);
     }
     s.push(']');
+    s.push_str(",\"tokens\":");
+    s.push_str(&serialize_tokens(&r.tokens));
     for (name, spans) in [
         ("comments", &r.comments),
         ("conditional_directives", &r.conditional_directives),
@@ -1441,6 +1443,28 @@ mod tests {
     }
 
     #[test]
+    fn parse_json_includes_tokens_from_the_same_multiline_parse() {
+        let source = "Ж *первая\r\nвторая* строка";
+        let json = parse_json_with_source(source, 7);
+        let tokens = tokens_json_with_source(source, 7);
+        assert!(json.contains(&format!(",\"tokens\":{tokens}")), "{json}");
+        let start = source.find('*').unwrap();
+        let end = source.rfind('*').unwrap() + 1;
+        assert!(
+            tokens.contains(&format!(
+                r#"{{"span":{{"source_id":7,"start":{start},"end":{end}}},"kind":"strong"}}"#
+            )),
+            "{tokens}"
+        );
+        assert!(
+            json.contains(&format!(
+                r#""span":{{"source_id":7,"start":{start},"end":{end}}},"name":"strong""#
+            )),
+            "{json}"
+        );
+    }
+
+    #[test]
     fn inline_nodes_carry_spans() {
         // The editor needs a span on every inline, not just on blocks.
         let json = parse_json("ab *cd*");
@@ -2447,7 +2471,12 @@ mod header_tests {
     fn ordinary_post_replacements_export_parts_spans_and_break_tokens() {
         let source = ":v: one + \\\n two\n\n{v} +\nlast";
         let json = super::parse_json_with_source(source, 9);
-        assert_eq!(json.matches(r#""kind":"line-break""#).count(), 2, "{json}");
+        let (document, _) = json.split_once(",\"tokens\":").unwrap();
+        assert_eq!(
+            document.matches(r#""kind":"line-break""#).count(),
+            2,
+            "{json}"
+        );
         assert!(
             json.contains(r#""attribute":"v","value":"one two""#),
             "{json}"

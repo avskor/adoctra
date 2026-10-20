@@ -258,7 +258,8 @@ pub(crate) fn parse_reader<'a>(
     let mut references = Vec::new();
     let registry = context.register_references(&mut doc, &lines.include_catalog, &mut references);
     name_attributes(&mut doc);
-    context.execute_body(&mut doc, registry, &lines.include_catalog, &mut references);
+    let inline_tokens =
+        context.execute_body(&mut doc, registry, &lines.include_catalog, &mut references);
     let name_heading = doc
         .manpage
         .as_mut()
@@ -312,18 +313,18 @@ pub(crate) fn parse_reader<'a>(
     let conditional_directives = physical(&lines.directives);
     let inactive = physical(&lines.inactive);
     let include_directives = physical(&lines.includes);
-    (
-        ParseResult {
-            document: doc,
-            diagnostics,
-            comments,
-            conditional_directives,
-            inactive,
-            include_directives,
-            provenance,
-        },
-        lines,
-    )
+    let mut result = ParseResult {
+        tokens: Vec::new(),
+        document: doc,
+        diagnostics,
+        comments,
+        conditional_directives,
+        inactive,
+        include_directives,
+        provenance,
+    };
+    result.tokens = crate::tokenizer::project(&mut result, &lines, inline_tokens);
+    (result, lines)
 }
 
 /// A manual page's NAME section resolves its references with the registry
@@ -973,6 +974,11 @@ pub(crate) fn consume_block_metadata(
         return true;
     }
     if let Some((id, reftext)) = parse_block_anchor(line) {
+        lines.record_fences(
+            Span::new(lines[*i].0, lines[*i].0 + line.len()),
+            None,
+            TokenKind::Anchor,
+        );
         pending.id = Some(id.to_string());
         if let Some(rt) = reftext {
             let value = context.block_reftext(rt, lines[*i].0 + abs_offset(line, rt));
@@ -986,6 +992,7 @@ pub(crate) fn consume_block_metadata(
     }
     if let Some(parsed) = parse_block_attr_list(line, lines[*i].0) {
         let span = Span::new(lines[*i].0, lines[*i].0 + line.len());
+        lines.record_fences(span, None, TokenKind::BlockAttributeList);
         let references =
             crate::block_attributes::merge(pending, parsed, span, context, &lines.include_catalog);
         lines.metadata_references.extend(references);
@@ -999,6 +1006,11 @@ pub(crate) fn consume_block_metadata(
     // to cache the inlines or defer them to conversion. A second `.Title`
     // overrides the first without evaluating it (last-wins).
     if let Some(title) = parse_block_title(line) {
+        lines.record_fences(
+            Span::new(lines[*i].0, lines[*i].0 + line.len()),
+            None,
+            TokenKind::BlockTitle,
+        );
         pending.title = Some(PendingTitle {
             text: title.into(),
             base: lines[*i].0 + abs_offset(line, title),
@@ -1582,6 +1594,11 @@ fn read_table(
     lines.limit = limit;
     let end = if lines.has(*i, context) && *lines[*i].1 == *fence {
         let (off, line) = lines.line(*i);
+        lines.record_fences(
+            Span::new(off, off + line.len()),
+            None,
+            TokenKind::TableDelimiter,
+        );
         *i += 1;
         off + line.len()
     } else {
@@ -1619,7 +1636,7 @@ fn read_table(
         opening,
         diagnostics,
     );
-    lines.tables.push(Span::new(opening.start, end));
+    lines.record_fences(opening, None, TokenKind::TableDelimiter);
     lines.table_separators.extend(parsed.separators);
     let columns = parsed.columns;
     // Complete the cells in Ruby's order: an AsciiDoc cell reads its nested
@@ -1884,10 +1901,18 @@ fn commit_subs(
         .verbatim_bodies
         .get(&block.span.start)
         .is_some_and(|&(start, ..)| start != block.span.start);
-    if stages == defaults.stages() {
-        if defaults != Defaults::Normal && !fenced {
-            lines.custom_subs.push((block.span, stages));
+    if !fenced {
+        let kind = match block.kind {
+            BlockKind::Listing { .. } => Some(TokenKind::ListingText),
+            BlockKind::Literal { .. } => Some(TokenKind::LiteralText),
+            BlockKind::Passthrough { .. } => Some(TokenKind::PassthroughText),
+            _ => None,
+        };
+        if let Some(kind) = kind {
+            lines.record_text(block.span.start, block.span.end, kind);
         }
+    }
+    if stages == defaults.stages() {
         return;
     }
     // The content's reader source and its comment-filtered text, if any.
@@ -1945,7 +1970,6 @@ fn commit_subs(
     lines.callout_marks.extend(marks);
     match &mut block.kind {
         BlockKind::Paragraph { inlines } | BlockKind::Verse { inlines, .. } => {
-            lines.custom_subs.push((span, subs.stages.clone()));
             context.body_subs.set_block_subs(inlines, subs);
         }
         BlockKind::Stem { inlines, .. } => context.body_subs.set_block_subs(inlines, subs),
@@ -1956,20 +1980,15 @@ fn commit_subs(
         | BlockKind::Open { blocks } => {
             if let [Block {
                 kind: BlockKind::Paragraph { inlines },
-                span,
                 ..
             }] = blocks.as_slice()
             {
-                lines.custom_subs.push((*span, subs.stages.clone()));
                 context.body_subs.set_block_subs(inlines, subs);
             }
         }
         BlockKind::Listing { inlines, .. }
         | BlockKind::Literal { inlines, .. }
         | BlockKind::Passthrough { inlines, .. } => {
-            if !fenced {
-                lines.custom_subs.push((span, subs.stages.clone()));
-            }
             let (content, filtered) = source(lines, context);
             *inlines = Some(
                 context
@@ -2355,10 +2374,20 @@ fn parse_block_content(
         return Some(Block::new(span, kind));
     }
     if let Some(found) = crate::image::match_macro(trimmed).filter(|_| !verbatim) {
+        lines.record_fences(
+            Span::new(off, off + trimmed.len()),
+            None,
+            TokenKind::BlockMacro,
+        );
         *i += 1;
         return read_media_macro(trimmed, off, found, context, &lines.include_catalog);
     }
     if let Some(meta) = parse_toc_macro(trimmed, off).filter(|_| !verbatim) {
+        lines.record_fences(
+            Span::new(off, off + trimmed.len()),
+            None,
+            TokenKind::BlockMacro,
+        );
         context.block_macro = Some(meta);
         *i += 1;
         return Some(Block::new(
@@ -2865,6 +2894,11 @@ fn parse_block_content(
     // `[NOTE]` *style* form is handled later, in the pending-attrs fixup.
     if let Some((kind, prefix_len)) = AdmonitionKind::from_label_prefix(line).filter(|_| !text_only)
     {
+        lines.record_fences(
+            Span::new(start, start + prefix_len - 1),
+            None,
+            TokenKind::AdmonitionLabel,
+        );
         let content_start = start + prefix_len;
         lines.catalog_anchors(content_start, end, false, context);
         let inlines = lines.scan_content(content_start, end, &attrs, context);

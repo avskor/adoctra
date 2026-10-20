@@ -844,8 +844,16 @@ Comments (`//`, matching slash fences of length >= 4, and `[comment]` paragraphs
 or open blocks) are omitted contextually. ParseResult.comments retains source
 ranges, exported to WASM and comment tokens. Inline scanning across removed
 comment lines restores spans through a fragment map. Verbatim regions preserve
-comment-looking text. The tokenizer currently parses first to reuse comment
-classification; consolidating the remaining structural pass is still roadmap work.
+comment-looking text. `ParseResult.tokens` is produced by the same structural
+parse as the document. Reader records metadata, header, fences, macros, list
+markers, table separators and verbatim bodies; tokenizer only projects their
+spans. Normal inline evaluation records syntax over whole fields before macros
+consume it, so multiline quotes follow AST boundaries. Selected `subs` retain a
+read-only syntax scan of the whole field filtered by enabled stages. No effects
+or structural grammar are replayed for highlighting. WASM `parse_json` (including
+ResourceWorkspace) exports `tokens` alongside document and diagnostics, so
+editors need one call and includes load once. Legacy `tokens*` APIs return the
+same result field. Incremental parsing and a pull/event API remain future work.
 Container bodies are bounded by their preprocessed closing fence before inner parsing,
 as in the Ruby reader (a nested comment cannot hide the parent's closing fence).
 Conditional preprocessing (`ifdef`/`ifndef`/`ifeval`/`endif`, nested and single-line forms,
@@ -906,8 +914,8 @@ returning to a parent restores its limit. Reader normalization also runs without
 indent: primary and AsciiDoc inputs rstrip ASCII whitespace/NUL, while raw includes
 only chomp. Unicode spaces and internal tabs survive this stage. Only primary input
 condenses final empty lines; includes preserve block boundaries. Removed suffixes
-and retained line endings have separate physical fragments; the tokenizer's plain
-reader must not normalize processed raw content again. Verbatim `tabsize`/`indent`
+and retained line endings have separate physical fragments; token projection
+must not normalize processed raw content again. Verbatim `tabsize`/`indent`
 outside include indentation follow build_block (see **Source defaults and
 verbatim indentation**). Multiline attributes now use
 one parser-owned collector for header/body: space-backslash and legacy space-plus,

@@ -51,10 +51,48 @@ pub(crate) fn scan_inlines_evaluated(
     fold_newlines: bool,
     diagnostics: &mut Vec<crate::Diagnostic>,
 ) -> Vec<Inline> {
+    scan_inlines_recorded(src, base, evaluation, fold_newlines, diagnostics, None)
+}
+
+/// Capture source syntax during the same inline evaluation that builds the AST.
+/// Macro matches survive even when conversion replaces their syntax with parts.
+pub(crate) fn scan_inlines_recorded(
+    src: &str,
+    base: usize,
+    evaluation: &mut crate::substitution_context::Evaluation<'_>,
+    fold_newlines: bool,
+    diagnostics: &mut Vec<crate::Diagnostic>,
+    mut tokens: Option<&mut Vec<crate::Token>>,
+) -> Vec<Inline> {
     let compat = evaluation.get("compat-mode").is_some();
     let mut quotes = Quotes::new(src, base, evaluation, compat);
     let mut out = scan_unprocessed(src, base, &quotes);
-    crate::attribute_macros::apply_inlines(&mut out, evaluation, fold_newlines, &mut quotes.passes);
+    if let Some(tokens) = tokens.as_deref_mut() {
+        crate::tokenizer::flatten_inlines(&out, tokens);
+    }
+    let matches = crate::attribute_macros::apply_inlines(
+        &mut out,
+        evaluation,
+        fold_newlines,
+        &mut quotes.passes,
+    );
+    if let Some(tokens) = tokens {
+        for node in quotes.syntax() {
+            crate::tokenizer::flatten_inlines(std::slice::from_ref(&node), tokens);
+        }
+        use crate::TokenKind as K;
+        for (spans, kind) in [
+            (matches.links, K::Link),
+            (matches.ui, K::InlineMacro),
+            (matches.index_terms, K::InlineMacro),
+            (matches.images, K::InlineMacro),
+            (matches.anchors, K::Anchor),
+            (matches.xrefs, K::CrossReference),
+        ] {
+            tokens.extend(spans.into_iter().map(|span| crate::Token { span, kind }));
+        }
+        tokens.extend(quotes.passes.tokens());
+    }
     quotes.passes.restore(&mut out, evaluation, compat);
     diagnostics.extend(quotes.passes.diagnostics);
     out
@@ -64,68 +102,15 @@ pub(crate) fn scan_inlines_evaluated(
 /// Links are reported by the same late matcher that produces semantic parts.
 pub(crate) fn scan_for_tokens(src: &str, base: usize, attrs: &Attributes) -> Vec<crate::Token> {
     let mut evaluation = crate::substitution_context::Evaluation::read_only(attrs);
-    let mut quotes = Quotes::new(
+    let mut tokens = Vec::new();
+    scan_inlines_recorded(
         src,
         base,
         &mut evaluation,
-        attrs.get("compat-mode").is_some(),
-    );
-    let mut syntax = scan_unprocessed(src, base, &quotes);
-    let mut processed = syntax.clone();
-    let matches = crate::attribute_macros::apply_inlines(
-        &mut processed,
-        &mut evaluation,
         true,
-        &mut quotes.passes,
+        &mut Vec::new(),
+        Some(&mut tokens),
     );
-    for span in matches.links {
-        syntax.push(Inline::Link {
-            target: String::new(),
-            children: Vec::new(),
-            bare: false,
-            span,
-        });
-    }
-    for span in matches.ui {
-        syntax.push(Inline::Ui {
-            ui: crate::UiMacro::Button { label: Vec::new() },
-            span,
-        });
-    }
-    for span in matches.index_terms {
-        syntax.push(Inline::IndexTerm {
-            term: crate::IndexTerm {
-                text: None,
-                terms: Vec::new(),
-                see: None,
-                see_also: Vec::new(),
-            },
-            span,
-        });
-    }
-    for span in matches.images {
-        syntax.push(Inline::Image {
-            image: Default::default(),
-            span,
-        });
-    }
-    for span in matches.anchors {
-        syntax.push(Inline::Anchor {
-            id: String::new(),
-            span,
-        });
-    }
-    for span in matches.xrefs {
-        syntax.push(Inline::CrossReference {
-            xref: Default::default(),
-            children: Vec::new(),
-            span,
-        });
-    }
-    syntax.extend(quotes.syntax());
-    let mut tokens = Vec::new();
-    crate::tokenizer::flatten_inlines(&syntax, &mut tokens);
-    tokens.extend(quotes.passes.tokens());
     tokens
 }
 

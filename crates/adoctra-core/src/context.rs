@@ -771,8 +771,8 @@ impl ParseContext<'_> {
         (registry, early_titles, fixed): crate::resolve::Registered,
         includes: &crate::xref_target::Includes,
         references: &mut Vec<crate::Diagnostic>,
-    ) {
-        document.final_attributes = std::mem::take(&mut self.body_subs).execute(
+    ) -> Vec<crate::Token> {
+        let (attributes, tokens) = std::mem::take(&mut self.body_subs).execute(
             &mut document.blocks,
             document.attributes.clone(),
             crate::body_subs::Conversion {
@@ -789,6 +789,8 @@ impl ParseContext<'_> {
                 images: self.images,
             },
         );
+        document.final_attributes = attributes;
+        tokens
     }
 
     pub fn implicit_doctitle(&mut self, value: &str, span: crate::Span) -> String {
@@ -907,8 +909,10 @@ impl ParseContext<'_> {
     ) -> Vec<crate::Inline> {
         let before = self.inline_diagnostics.len();
         let attributes = Arc::clone(&self.attributes);
+        let token_start = self.body_subs.tokens.len();
         let mut inlines = self.reading_title(value, span.start, &attributes, includes);
         if !exact {
+            self.body_subs.tokens.truncate(token_start);
             struct Origin(crate::Span);
             impl crate::visit::VisitorMut for Origin {
                 fn visit_span(&mut self, span: &mut crate::Span) {
@@ -942,12 +946,13 @@ impl ParseContext<'_> {
         .with_footnotes(&mut self.footnotes)
         .with_images(self.images)
         .with_xrefs(Self::xrefs(&self.outfilesuffix, includes));
-        let inlines = crate::inline::scan_inlines_evaluated(
+        let inlines = crate::inline::scan_inlines_recorded(
             value,
             base,
             &mut evaluation,
             true,
             &mut self.inline_diagnostics,
+            Some(&mut self.body_subs.tokens),
         );
         if let Some(mut attributes) = evaluation.changed_attributes() {
             attributes.local_hardbreaks = false;

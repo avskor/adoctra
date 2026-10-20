@@ -33,6 +33,9 @@ pub struct Diagnostic {
 /// The result of parsing for editor use: always succeeds, carries diagnostics.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ParseResult {
+    /// Source highlighting from the same structural parse as `document`.
+    /// Tokens crossing includes are split into physical source fragments.
+    pub tokens: Vec<crate::Token>,
     pub document: Document,
     pub diagnostics: Vec<Diagnostic>,
     /// Source trivia omitted from the semantic tree, in source order.

@@ -333,6 +333,17 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
     save_toc(Arc::make_mut(&mut context.attributes));
     save_icons(Arc::make_mut(&mut context.attributes));
     context.quote_compat = context.attributes.get("compat-mode").is_some();
+    for (index, kind) in [
+        (result.title_line, crate::TokenKind::Heading),
+        (result.title_underline, crate::TokenKind::Heading),
+        (result.author_line, crate::TokenKind::Author),
+        (result.revision_line, crate::TokenKind::Revision),
+    ] {
+        if let Some(index) = index {
+            let (off, line) = lines.line(index);
+            lines.record_fences(Span::new(off, off + line.len()), None, kind);
+        }
+    }
     result
 }
 

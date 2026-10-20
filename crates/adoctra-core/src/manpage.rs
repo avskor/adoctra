@@ -222,16 +222,14 @@ fn name_section(
         return Err((Some(Box::new(section)), "non-conforming name section body"));
     };
     lines.heading_lines.extend(title_lines);
-    // Highlighting keeps only attribute references of the name and purpose.
-    if let Some(body) = body {
-        lines
-            .custom_subs
-            .push((body, vec![crate::pass_subs::Stage::Attributes]));
-    }
     let mut text = Text::default();
     buffer.copy(name, &mut text);
     if text.text.contains('{') {
-        text = context.block_attribute_line(text).0;
+        let (expanded, references) = context.block_attribute_line(text);
+        lines
+            .metadata_references
+            .extend(references.into_iter().map(|r| r.span));
+        text = expanded;
     }
     let mut names = reference_text(&text.into_parts())
         .split(',')
@@ -244,7 +242,11 @@ fn name_section(
     let mut text = Text::default();
     buffer.copy(purpose, &mut text);
     if text.text.contains('{') {
-        text = context.block_attribute_line(text).0;
+        let (expanded, references) = context.block_attribute_line(text);
+        lines
+            .metadata_references
+            .extend(references.into_iter().map(|r| r.span));
+        text = expanded;
     }
     let purpose = text.into_parts();
     let id = heading
