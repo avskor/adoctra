@@ -5,6 +5,13 @@ version = File.read(File.expand_path('../compatibility/asciidoctor-version', __d
 gem 'asciidoctor', version
 require 'asciidoctor'
 
+report = ARGV.delete('--report')
+if report
+  require 'json'
+  logger = Asciidoctor::MemoryLogger.new
+  Asciidoctor::LoggerManager.logger = logger
+end
+
 options = { safe: :secure, header_footer: false }
 options[:attributes] = { 'showtitle' => '' } if ARGV.delete('--showtitle')
 # Safe mode keeps attributes secure mode locks (e.g. source-highlighter).
@@ -26,9 +33,9 @@ end
 if ARGV.length == 2 && ARGV[0] == '--include-root'
   root = File.realpath(ARGV[1])
   options.merge! safe: :safe, base_dir: root, to_file: false
-  puts Asciidoctor.convert_file(File.join(root, 'main.adoc'), options)
+  output = Asciidoctor.convert_file(File.join(root, 'main.adoc'), options)
 else
-  abort 'usage: ruby scripts/asciidoctor-reference.rb [--showtitle] [--safe] [--mathjax-config] [--standalone] [--attribute NAME=VALUE]... [--include-root DIR] < input.adoc' unless ARGV.empty?
+  abort 'usage: ruby scripts/asciidoctor-reference.rb [--report] [--showtitle] [--safe] [--mathjax-config] [--standalone] [--attribute NAME=VALUE]... [--include-root DIR] < input.adoc' unless ARGV.empty?
   output = Asciidoctor.convert($stdin.read, options)
   if standalone
     # Only Ruby's own stylesheet and its web fonts; other links (e.g. a
@@ -39,5 +46,18 @@ else
   if mathjax_config
     output = output[/<script type="text\/x-mathjax-config">.*?<\/script>\n<script src="[^"]+\/MathJax\.js[^\"]*"><\/script>/m] or abort 'MathJax configuration not found'
   end
+end
+if report
+  # This profile deliberately compares severity and text, not source positions.
+  # MemoryLogger records even calls below the normal WARN threshold.
+  levels = { WARN: 'warning', ERROR: 'error', FATAL: 'fatal', UNKNOWN: 'unknown' }
+  diagnostics = logger.messages.filter_map do |entry|
+    next unless (severity = levels[entry[:severity]])
+    message = entry[:message]
+    text = Hash === message ? message.fetch(:text) : message.to_s
+    { severity: severity, message: text }
+  end
+  puts JSON.generate(html: output + (output.end_with?("\n") ? '' : "\n"), diagnostics: diagnostics)
+else
   puts output
 end

@@ -137,6 +137,17 @@ status when completing a step. The machine-readable Asciidoctor version is
 failure is not evidence of conformance. Preserve the std-only core and existing
 crate boundaries while implementing the roadmap incrementally.
 
+`scripts/acceptance.py` runs the separate pinned real-document corpus in
+`compatibility/acceptance/cases.json`. Its `body-dom-diagnostics-v1` profile
+compares the existing body DOM projection plus ordered warning/error severity
+and text, including HTML backend warnings. It is not an ASG or source-position
+profile. Fixtures carry SHA-256 and provenance; retain their license notices.
+Offline runs use stored JSON references; `--verify-reference` uses the pinned
+Ruby launcher with `--report`. Never suppress diagnostic differences to pass:
+document them and freeze the complete actual result as XFAIL; drift and XPASS
+fail CI. See `docs/acceptance.adoc` for the 9 document runs and 7 diagnostic
+probes (13 PASS, 3 diagnostic XFAIL), update commands and corpus limitations.
+
 The source/context API is documented in `docs/parser-api.adoc`. `Span` now also
 contains `source_id`; keep it on blocks, inline nodes, list items, tokens and
 diagnostics. `Document.attributes` is the header snapshot; block
