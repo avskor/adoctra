@@ -80,6 +80,116 @@ class SemanticProjectionTests(unittest.TestCase):
         projected = semantics.document_projection(doc, ['a'])
         self.assertEqual(projected['attributes']['header']['a'][0]['kind'], 'strong')
 
+    def test_link_metadata_is_decoded_and_each_field_affects_comparison(self):
+        fields = {'id': 'home', 'role': 'primary wide', 'title': 'A &amp; B', 'window': '_blank', 'rel': 'nofollow noopener'}
+        parts = [dict(kind='open-link', target='https://example.org', **fields), text('Site'), {'kind': 'close-link'}]
+        projected = semantics.parts_projection(parts)
+        self.assertEqual(projected[0]['metadata'], dict(fields, title='A & B'))
+        for field in fields:
+            changed = copy.deepcopy(parts)
+            changed[0][field] = 'different'
+            self.assertNotEqual(projected, semantics.parts_projection(changed), field)
+        parts[0]['future'] = 'value'
+        with self.assertRaisesRegex(ValueError, 'link metadata'):
+            semantics.parts_projection(parts)
+
+    def test_ui_keys_menus_and_formatted_buttons_are_semantic_trees(self):
+        button = {'kind': 'button', 'parts': [{'kind': 'open', 'format': 'strong'}, text('Save'), {'kind': 'close', 'format': 'strong'}]}
+        keyboard = {'kind': 'kbd', 'keys': [[text('Ctrl')], [text('S')]]}
+        menu = {'kind': 'menu', 'menu': [text('File')], 'submenus': [[text('New')]], 'item': [text('Project')], 'font': False}
+        projected = semantics.parts_projection([button, keyboard, menu])
+        self.assertEqual(projected[0]['inlines'][0]['kind'], 'strong')
+        self.assertEqual(projected[1], {'kind': 'kbd', 'keys': [[text('Ctrl')], [text('S')]]})
+        self.assertEqual(projected[2], {k: v for k, v in menu.items() if k != 'font'})
+        native = [{'name': node['kind'], **{k: v for k, v in node.items() if k != 'kind'}} for node in [button, keyboard, menu]]
+        self.assertEqual(semantics.inline_projection(native), projected)
+        self.assertNotEqual(semantics.parts_projection([dict(keyboard, keys=list(reversed(keyboard['keys'])))]), [projected[1]])
+        self.assertNotEqual(semantics.parts_projection([dict(menu, item=None)]), semantics.parts_projection([dict(menu, item=[])]))
+        self.assertNotEqual(semantics.parts_projection([dict(menu, submenus=[])]), [projected[2]])
+        self.assertNotEqual(semantics.parts_projection([dict(button, parts=[text('Save')])]), [projected[0]])
+
+    def test_image_fields_alt_and_metadata_survive_projection_and_mutations(self):
+        node = {'name': 'image', 'target': 'cat.png', 'src': 'assets/cat.png', 'alt': 'Cat &amp; friend',
+                'attributes': {'id': 'cat', 'role': 'zoom wide', 'width': '24', 'link': 'https://example.org'},
+                'parts': [{'kind': 'open', 'format': 'strong'}, text('Cat'), {'kind': 'close', 'format': 'strong'}, {'kind': 'raw', 'value': ' &amp; friend'}]}
+        projected = semantics.inline_projection([node])
+        self.assertEqual(projected[0]['id'], 'cat')
+        self.assertEqual(projected[0]['roles'], ['zoom', 'wide'])
+        self.assertEqual(projected[0]['alt'][0]['kind'], 'strong')
+        self.assertEqual(projected[0]['alt'][1], text(' & friend'))
+        for field in ['target', 'src']:
+            self.assertNotEqual(projected, semantics.inline_projection([dict(node, **{field: 'different'})]))
+        for field in node['attributes']:
+            changed = copy.deepcopy(node)
+            changed['attributes'][field] = 'different'
+            self.assertNotEqual(projected, semantics.inline_projection([changed]), field)
+        self.assertNotEqual(projected, semantics.inline_projection([dict(node, parts=[text('Cat & friend')])]))
+
+    def test_complex_inline_unsupported_options_fields_and_raw_labels_fail(self):
+        image = {'name': 'image', 'target': 'cat.png', 'src': 'cat.png', 'alt': 'Cat'}
+        for invalid in [dict(image, icon=True), dict(image, options=['inline']), dict(image, svg={'mode': 'inline'}),
+                        dict(image, attributes={'custom': 'x'}), dict(image, future=True),
+                        {'name': 'button', 'parts': [], 'future': True},
+                        {'name': 'kbd', 'keys': [[{'kind': 'raw', 'value': '<b>x</b>'}]]}]:
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                semantics.inline_projection([invalid])
+
+    def test_lists_keep_checkboxes_descriptions_and_nested_blocks(self):
+        item = {'inlines': [{'name': 'text', 'value': 'Done'}], 'checkbox': True, 'blocks': document('Attached.')['blocks']}
+        listing = {'name': 'list', 'ordered': False, 'items': [item]}
+        projected = semantics.block_projection(listing)
+        self.assertEqual(projected['context'], 'ulist')
+        self.assertEqual(projected['items'][0]['checkbox'], True)
+        self.assertEqual(projected['items'][0]['blocks'][0]['inlines'], [text('Attached.')])
+        for field, value in [('checkbox', False), ('blocks', []), ('inlines', [])]:
+            self.assertNotEqual(projected, semantics.block_projection(dict(listing, items=[dict(item, **{field: value})])))
+        description = {'name': 'dlist', 'items': [{'terms': [[{'name': 'text', 'value': 'First'}], [{'name': 'text', 'value': 'Alias'}]], 'description': item},
+                                               {'terms': [[{'name': 'text', 'value': 'Last'}]], 'description': None}]}
+        projected = semantics.block_projection(description)
+        self.assertEqual(projected['items'][0]['terms'], [[text('First')], [text('Alias')]])
+        self.assertIsNone(projected['items'][1]['description'])
+        changed = copy.deepcopy(description)
+        changed['items'][0]['terms'].reverse()
+        self.assertNotEqual(projected, semantics.block_projection(changed))
+
+    def test_simple_and_compound_containers_remain_distinct(self):
+        simple = {'name': 'admonition', 'admonition-type': 'note', 'simple': True, 'blocks': document()['blocks']}
+        projected = semantics.block_projection(simple)
+        self.assertEqual(projected['inlines'], [text('Text.')])
+        self.assertEqual(projected['type'], 'note')
+        self.assertNotIn('blocks', projected)
+        compound = semantics.block_projection(dict(simple, simple=False))
+        self.assertEqual(compound['blocks'][0]['inlines'], projected['inlines'])
+        self.assertNotIn('inlines', compound)
+        for invalid in [dict(simple, blocks=[]), dict(simple, blocks=[dict(simple['blocks'][0], id='hidden')])]:
+            with self.assertRaises(ValueError):
+                semantics.block_projection(invalid)
+
+    def test_verbatim_whitespace_and_language_are_not_normalized_away(self):
+        node = {'name': 'listing', 'text': '  x < 2\n    y', 'attributes': {'language': 'ruby'}}
+        projected = semantics.block_projection(node)
+        self.assertEqual(projected['inlines'], [text('  x < 2\n    y')])
+        self.assertEqual(projected['language'], 'ruby')
+        self.assertNotEqual(projected, semantics.block_projection(dict(node, text='x < 2 y')))
+        self.assertNotEqual(projected, semantics.block_projection(dict(node, attributes={'language': 'python'})))
+        with self.assertRaisesRegex(ValueError, 'callouts'):
+            semantics.block_projection(dict(node, callouts=[1]))
+
+    def test_expanded_oracle_schema_decodes_labels_and_preserves_code_spacing(self):
+        doc = document()
+        doc['blocks'] = [{'name': 'listing', 'text': '  x &lt; 2\n    y'},
+                         {'name': 'image', 'target': 'cat.png', 'src': 'cat.png', 'alt': 'A &amp; B'}]
+        oracle = semantics.document_projection(doc, ['a'])
+        oracle['title'] = [{'kind': 'menu', 'menu': [text('A  &amp; B')], 'submenus': [], 'item': None}]
+        result = semantics.reference_projection(oracle, ['a'])
+        self.assertEqual(result['title'][0]['menu'], [text('A  & B')])
+        self.assertEqual(result['blocks'][0]['inlines'], [text('  x < 2\n    y')])
+        self.assertEqual(result['blocks'][1]['alt'], [text('A & B')])
+        for invalid in [dict(oracle['title'][0], submenus=[None]), dict(oracle['title'][0], extra=1),
+                        {'kind': 'image', 'id': None, 'roles': [], 'target': 'x', 'src': 'x', 'alt': [], 'attributes': {'width': 24}}]:
+            with self.assertRaises(ValueError):
+                semantics.validate_inlines([invalid])
+
     def test_unknown_nodes_raw_markup_and_malformed_schema_fail_closed(self):
         for node in [{'name': 'future'}, {'name': 'raw', 'value': '<b>x</b>'}, {'name': 'image'},
                      {'name': 'substituted', 'parts': [{'kind': 'future'}]},
@@ -112,13 +222,32 @@ class SemanticProjectionTests(unittest.TestCase):
     def test_pinned_fixture_expands_attributes_and_macros_inside_quotes(self):
         root = CORPUS / 'upstream'
         manifest, cases = acceptance.load_corpus(root / 'semantics.json')
-        self.assertEqual(len(cases), 38)
+        self.assertEqual(len(cases), 55)
         self.assertEqual(manifest['profile'], semantics.PROFILE)
         reference = json.loads((root / 'reference/semantic-attributes-macros-in-quotes.json').read_text())
         strong = reference['semantics']['blocks'][0]['inlines'][0]
         self.assertEqual(strong['kind'], 'strong')
         self.assertEqual(strong['inlines'][0], text('World '))
         self.assertEqual(strong['inlines'][1]['target'], 'https://example.org')
+
+    def test_real_pages_reuse_pinned_sources_and_host_settings(self):
+        root = CORPUS / 'acceptance'
+        manifest, cases = acceptance.load_corpus(root / 'semantics.json')
+        original_manifest, original = acceptance.load_corpus(root / 'cases.json')
+        self.assertEqual(manifest['profile'], semantics.PROFILE)
+        self.assertEqual(len(cases), 2)
+        for path, provenance in manifest['files'].items():
+            self.assertEqual(provenance, original_manifest['files'][path])
+        for origin in manifest['origins'].values():
+            self.assertIn(origin['configuration'], manifest['files'])
+        for case in cases:
+            original_case = next(entry for entry in original if 'semantic-' + entry['id'] == case['id'])
+            for key in ['source', 'attributes']:
+                self.assertEqual(case[key], original_case[key])
+            self.assertGreater(len(case['source'].splitlines()), 90)
+            self.assertEqual(case['expect'], 'pass')
+            reference = json.loads((root / 'reference' / (case['id'] + '.json')).read_text())
+            semantics.validate(reference['semantics'], case['semantic_attributes'])
 
 
 class SemanticExecutionTests(unittest.TestCase):

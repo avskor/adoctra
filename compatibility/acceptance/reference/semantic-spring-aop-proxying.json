@@ -1,0 +1,1273 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Spring AOP uses either JDK dynamic proxies or CGLIB to create the proxy for a given target object. JDK dynamic proxies are built into the JDK, whereas CGLIB is a common open-source class definition library (repackaged into "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "spring-core"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ")."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If the target object to be proxied implements at least one interface, a JDK dynamic proxy is used, and all of the interfaces implemented by the target type are proxied. If the target object does not implement any interfaces, a CGLIB proxy is created which is a runtime-generated subclass of the target type."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you want to force the use of CGLIB proxying (for example, to proxy every method defined for the target object, not only those implemented by its interfaces), you can do so. However, you should consider the following issues:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "final"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " classes cannot be proxied, because they cannot be extended."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "final"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " methods cannot be advised, because they cannot be overridden."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "private"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " methods cannot be advised, because they cannot be overridden."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Methods that are not visible – for example, package-private methods in a parent class from a different package – cannot be advised because they are effectively private."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The constructor of your proxied object will not be called twice, since the CGLIB proxy instance is created through Objenesis. However, if your JVM does not allow for constructor bypassing, you might see double invocations and corresponding debug log entries from Spring’s AOP support."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Your CGLIB proxy usage may face limitations with the Java Module System. As a typical case, you cannot create a CGLIB proxy for a class from the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "java.lang"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " package when deploying on the module path. Such cases require a JVM bootstrap flag "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "--add-opens=java.base/java.lang=ALL-UNNAMED"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " which is not available for modules."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To force the use of CGLIB proxies, set the value of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "proxy-target-class"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<aop:config>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " element to true, as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<aop:config proxy-target-class=\"true\">\n\t<!-- other beans defined here... -->\n</aop:config>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To force CGLIB proxying when you use the @AspectJ auto-proxy support, set the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "proxy-target-class"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<aop:aspectj-autoproxy>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " element to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "true"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<aop:aspectj-autoproxy proxy-target-class=\"true\"/>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Multiple "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<aop:config/>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " sections are collapsed into a single unified auto-proxy creator at runtime, which applies the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "strongest"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " proxy settings that any of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<aop:config/>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " sections (typically from different XML bean definition files) specified. This also applies to the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<tx:annotation-driven/>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<aop:aspectj-autoproxy/>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " elements."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To be clear, using "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "proxy-target-class=\"true\""
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " on "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<tx:annotation-driven/>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<aop:aspectj-autoproxy/>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", or "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<aop:config/>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " elements forces the use of CGLIB proxies "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "for all three of them"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": null,
+            "type": "note"
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Spring AOP is proxy-based. It is vitally important that you grasp the semantics of what that last statement actually means before you write your own aspects or use any of the Spring AOP-based aspects supplied with the Spring Framework."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Consider first the scenario where you have a plain-vanilla, un-proxied object reference, as the following code snippet shows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "public class SimplePojo implements Pojo {\n\n\tpublic void foo() {\n\t\t// this next method invocation is a direct call on the 'this' reference\n\t\tthis.bar();\n\t}\n\n\tpublic void bar() {\n\t\t// some logic...\n\t}\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "class SimplePojo : Pojo {\n\n\tfun foo() {\n\t\t// this next method invocation is a direct call on the 'this' reference\n\t\tthis.bar()\n\t}\n\n\tfun bar() {\n\t\t// some logic...\n\t}\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you invoke a method on an object reference, the method is invoked directly on that object reference, as the following image and listing show:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "alt": [
+              {
+                "kind": "text",
+                "value": "aop proxy plain pojo call"
+              }
+            ],
+            "attributes": {},
+            "context": "image",
+            "id": null,
+            "roles": [],
+            "src": "aop-proxy-plain-pojo-call.png",
+            "target": "aop-proxy-plain-pojo-call.png",
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "public class Main {\n\n\tpublic static void main(String[] args) {\n\t\tPojo pojo = new SimplePojo();\n\t\t// this is a direct method call on the 'pojo' reference\n\t\tpojo.foo();\n\t}\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "fun main() {\n\tval pojo = SimplePojo()\n\t// this is a direct method call on the 'pojo' reference\n\tpojo.foo()\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Things change slightly when the reference that client code has is a proxy. Consider the following diagram and code snippet:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "alt": [
+              {
+                "kind": "text",
+                "value": "aop proxy call"
+              }
+            ],
+            "attributes": {},
+            "context": "image",
+            "id": null,
+            "roles": [],
+            "src": "aop-proxy-call.png",
+            "target": "aop-proxy-call.png",
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "public class Main {\n\n\tpublic static void main(String[] args) {\n\t\tProxyFactory factory = new ProxyFactory(new SimplePojo());\n\t\tfactory.addInterface(Pojo.class);\n\t\tfactory.addAdvice(new RetryAdvice());\n\n\t\tPojo pojo = (Pojo) factory.getProxy();\n\t\t// this is a method call on the proxy!\n\t\tpojo.foo();\n\t}\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "fun main() {\n\tval factory = ProxyFactory(SimplePojo())\n\tfactory.addInterface(Pojo::class.java)\n\tfactory.addAdvice(RetryAdvice())\n\n\tval pojo = factory.proxy as Pojo\n\t// this is a method call on the proxy!\n\tpojo.foo()\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The key thing to understand here is that the client code inside the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "main(..)"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Main"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " class has a reference to the proxy. This means that method calls on that object reference are calls on the proxy. As a result, the proxy can delegate to all of the interceptors (advice) that are relevant to that particular method call. However, once the call has finally reached the target object (the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SimplePojo"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " reference in this case), any method calls that it may make on itself, such as "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "this.bar()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " or "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "this.foo()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", are going to be invoked against the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "this"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " reference, and not the proxy. This has important implications. It means that self invocation is not going to result in the advice associated with a method invocation getting a chance to run. In other words, self invocation via an explicit or implicit "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "this"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " reference will bypass the advice."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To address that, you have the following options."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "The best approach (the term \"best\" is used loosely here) is to refactor your code such that the self invocation does not happen. This does entail some work on your part, but it is the best, least-invasive approach."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Avoid self invocation "
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "An alternative approach is to make use of "
+                    },
+                    {
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "self injection"
+                        }
+                      ],
+                      "kind": "xref",
+                      "target": "core/beans/annotation-config/autowired.html#beans-autowired-annotation-self-injection"
+                    },
+                    {
+                      "kind": "text",
+                      "value": ", and invoke methods on the proxy via the self reference instead of via "
+                    },
+                    {
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "this"
+                        }
+                      ],
+                      "kind": "monospace",
+                      "roles": []
+                    },
+                    {
+                      "kind": "text",
+                      "value": "."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Inject a self reference "
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "This last approach is highly discouraged, and we hesitate to point it out, in favor of the previous options. However, as a last resort you can choose to tie the logic within your class to Spring AOP, as the following example shows."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Use "
+                    },
+                    {
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "AopContext.currentProxy()"
+                        }
+                      ],
+                      "kind": "monospace",
+                      "roles": []
+                    },
+                    {
+                      "kind": "text",
+                      "value": " "
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "public class SimplePojo implements Pojo {\n\n\tpublic void foo() {\n\t\t// This works, but it should be avoided if possible.\n\t\t((Pojo) AopContext.currentProxy()).bar();\n\t}\n\n\tpublic void bar() {\n\t\t// some logic...\n\t}\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "class SimplePojo : Pojo {\n\n\tfun foo() {\n\t\t// This works, but it should be avoided if possible.\n\t\t(AopContext.currentProxy() as Pojo).bar()\n\t}\n\n\tfun bar() {\n\t\t// some logic...\n\t}\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The use of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AopContext.currentProxy()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " totally couples your code to Spring AOP, and it makes the class itself aware of the fact that it is being used in an AOP context, which reduces some of the benefits of AOP. It also requires that the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ProxyFactory"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is configured to expose the proxy, as the following example shows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "public class Main {\n\n\tpublic static void main(String[] args) {\n\t\tProxyFactory factory = new ProxyFactory(new SimplePojo());\n\t\tfactory.addInterface(Pojo.class);\n\t\tfactory.addAdvice(new RetryAdvice());\n\t\tfactory.setExposeProxy(true);\n\n\t\tPojo pojo = (Pojo) factory.getProxy();\n\t\t// this is a method call on the proxy!\n\t\tpojo.foo();\n\t}\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "fun main() {\n\tval factory = ProxyFactory(SimplePojo())\n\tfactory.addInterface(Pojo::class.java)\n\tfactory.addAdvice(RetryAdvice())\n\tfactory.isExposeProxy = true\n\n\tval pojo = factory.proxy as Pojo\n\t// this is a method call on the proxy!\n\tpojo.foo()\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "AspectJ compile-time weaving and load-time weaving do not have this self-invocation issue because they apply advice within the bytecode instead of via a proxy."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "note"
+          }
+        ],
+        "context": "section",
+        "id": "aop-understanding-aop-proxies",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Understanding AOP Proxies"
+          }
+        ]
+      }
+    ],
+    "title": [
+      {
+        "kind": "text",
+        "value": "Proxying Mechanisms"
+      }
+    ]
+  }
+}

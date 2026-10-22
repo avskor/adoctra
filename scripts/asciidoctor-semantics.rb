@@ -65,6 +65,39 @@ class SemanticConverter < Asciidoctor::Converter::Base
     end
   end
 
+  def metadata node, context = node.node_name
+    { context: context, id: node.id, roles: node.roles,
+      title: node.title? ? inlines(node.title) : nil }
+  end
+
+  def item node
+    { inlines: inlines(node.text), checkbox: (node.attr? 'checkbox') ? (node.attr? 'checked') : nil,
+      blocks: node.blocks.map { |block| block.convert } }
+  end
+
+  def image_fields node
+    allowed = [:attribute_entries, *%w[alt default-alt width height title link float id role imagesdir target]]
+    raise 'image options are outside inline-semantics-v1' unless node.attributes.keys.all? { |key| Integer === key || allowed.include?(key) }
+    attrs = node.attributes.select { |key, _| %w[width height title link float].include? key }
+    target = node.respond_to?(:target) ? node.target : (node.attr 'target')
+    { target: target, src: node.image_uri(target), alt: inlines(node.attr 'alt'), attributes: attrs }
+  end
+
+  def link_metadata node
+    allowed = [1, *%w[role id title window nofollow-option noopener-option]]
+    raise 'link metadata is outside inline-semantics-v1' unless (node.attributes.keys - allowed).empty?
+    result = {}
+    result[:id] = node.id if node.id
+    result[:role] = node.role if node.role && node.role != 'bare'
+    %w[title window].each { |key| result[key.to_sym] = node.attr(key) if node.attr? key }
+    rel = (node.option? 'nofollow') ? 'nofollow' : nil
+    if (window = node.attr 'window') && (window == '_blank' || (node.option? 'noopener'))
+      rel = rel ? "#{rel} noopener" : 'noopener'
+    end
+    result[:rel] = rel if rel
+    result
+  end
+
   def convert node, transform = node.node_name, _opts = nil
     case transform
     when 'embedded', 'document'
@@ -78,11 +111,26 @@ class SemanticConverter < Asciidoctor::Converter::Base
     when 'section'
       { context: 'section', id: node.id, roles: node.roles, level: node.level,
         title: inlines(node.title), blocks: node.blocks.map { |block| block.convert } }
-    when 'preamble', 'open'
-      raise 'simple open is outside inline-semantics-v1' if node.content_model != :compound
-      { context: transform, id: node.id, roles: node.roles,
-        title: node.title? ? inlines(node.title) : nil,
-        blocks: node.blocks.map { |block| block.convert } }
+    when 'preamble', 'open', 'sidebar', 'example', 'admonition'
+      result = metadata node
+      result[:type] = node.attr('name') if transform == 'admonition'
+      if node.content_model == :simple
+        result[:inlines] = inlines(node.content)
+      else
+        raise 'unsupported container content model' unless node.content_model == :compound
+        result[:blocks] = node.blocks.map { |block| block.convert }
+      end
+      result
+    when 'listing', 'literal'
+      metadata(node).merge(language: node.attr('language'), inlines: inlines(node.content))
+    when 'ulist', 'olist'
+      metadata(node).merge(style: node.style, items: node.items.map { |entry| item entry })
+    when 'dlist'
+      metadata(node).merge(items: node.items.map { |terms, description|
+        { terms: terms.map { |term| inlines(term.text) }, description: description ? item(description) : nil }
+      })
+    when 'image'
+      metadata(node).merge(image_fields(node))
     when 'inline_quoted'
       kind = { strong: 'strong', emphasis: 'emphasis', monospaced: 'monospace',
                mark: 'mark', superscript: 'superscript', subscript: 'subscript', unquoted: 'span' }.fetch(node.type)
@@ -90,10 +138,10 @@ class SemanticConverter < Asciidoctor::Converter::Base
     when 'inline_anchor'
       case node.type
       when :link
-        # Link target and label are already resolved by the Ruby substitutor.
-        # Full link metadata and implicit xrefs require a later schema version.
-        raise 'link metadata is outside inline-semantics-v1' if node.id || (node.role && node.role != 'bare') || !(node.attributes.keys - ['role']).empty?
-        wrap({ kind: 'link', target: node.target }, node.text)
+        result = { kind: 'link', target: node.target }
+        fields = link_metadata node
+        result[:metadata] = fields unless fields.empty?
+        wrap(result, node.text)
       when :ref
         store(kind: 'anchor', id: node.id)
       when :xref
@@ -106,6 +154,17 @@ class SemanticConverter < Asciidoctor::Converter::Base
     when 'inline_break'
       # Ruby supplies the preceding text as part of this inline callback.
       node.text.to_s + store(kind: 'line-break')
+    when 'inline_button'
+      wrap({ kind: 'button' }, node.text)
+    when 'inline_kbd'
+      store(kind: 'kbd', keys: (node.attr 'keys').map { |key| inlines key })
+    when 'inline_menu'
+      store(kind: 'menu', menu: inlines(node.attr 'menu'),
+            submenus: (node.attr 'submenus').map { |label| inlines label },
+            item: (node.attr 'menuitem') ? inlines(node.attr 'menuitem') : nil)
+    when 'inline_image'
+      raise 'icons are outside inline-semantics-v1' if node.type == 'icon'
+      store({ kind: 'image', id: node.id || (node.attr 'id'), roles: node.roles }.merge(image_fields(node)))
     else
       raise "unsupported inline-semantics-v1 node: #{transform}"
     end

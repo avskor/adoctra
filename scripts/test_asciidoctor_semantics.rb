@@ -55,19 +55,80 @@ cases = {
   end,
   'unsupported nodes abort instead of disappearing' => lambda do
     begin
-      project('image:photo.png[]')
+      project('footnote:[text]')
       raise 'unsupported inline accepted'
     rescue RuntimeError => e
-      raise unless e.message.include? 'unsupported inline-semantics-v1 node: inline_image'
+      raise unless e.message.include? 'unsupported inline-semantics-v1 node: inline_footnote'
     end
   end,
   'unsupported link options abort instead of disappearing' => lambda do
-    ['link:https://example.org[Site,opts=nofollow]', 'link:https://example.org[Site,window=_blank]'].each do |source|
+    ['link:https://example.org[Site,opts=custom]', 'link:https://example.org[Site,custom=value]'].each do |source|
       begin
         project(source)
         raise 'unsupported link metadata accepted'
       rescue RuntimeError => e
         raise unless e.message == 'link metadata is outside inline-semantics-v1'
+      end
+    end
+  end,
+  'link metadata retains declarations and derived relation' => lambda do
+    link = project('link:https://example.org[*Site*,id=home,role="primary wide",title="A & B",window=_blank,opts=nofollow]')[:blocks][0][:inlines][0]
+    assert(link[:metadata] == { id: 'home', role: 'primary wide', title: 'A &amp; B', window: '_blank', rel: 'nofollow noopener' }, 'lost link metadata')
+    assert(link[:inlines][0][:kind] == 'strong', 'lost link label formatting')
+    named = project('link:https://example.org[Site,window=work]')[:blocks][0][:inlines][0]
+    assert(named[:metadata] == { window: 'work' }, 'invented noopener on named window')
+  end,
+  'UI labels retain formatting and key order through attributes' => lambda do
+    tree = project(":experimental:\n:label: pass:q[*Save*]\n:shortcut: pass:m[kbd:[Ctrl+S]]\n\nbtn:[{label}] {shortcut}", ['shortcut'])
+    nodes = tree[:blocks][0][:inlines]
+    assert(nodes[0][:kind] == 'button' && nodes[0][:inlines][0][:kind] == 'strong', 'button label flattened')
+    keys = [[{ kind: 'text', value: 'Ctrl' }], [{ kind: 'text', value: 'S' }]]
+    assert(nodes[2] == { kind: 'kbd', keys: keys }, 'keyboard keys changed')
+    assert(tree[:attributes][:header]['shortcut'] == [nodes[2]], 'attribute lost keyboard semantics')
+  end,
+  'menu reference and path have distinct structure' => lambda do
+    nodes = project(":experimental:\n\nmenu:File[] menu:File[New > Project]")[:blocks][0][:inlines]
+    assert(nodes[0][:item].nil? && nodes[0][:submenus] == [], 'bare menu gained an item')
+    assert(nodes[2][:menu] == [{ kind: 'text', value: 'File' }], 'lost menu name')
+    assert(nodes[2][:submenus] == [[{ kind: 'text', value: 'New' }]], 'lost submenu')
+    assert(nodes[2][:item] == [{ kind: 'text', value: 'Project' }], 'lost menu item')
+  end,
+  'image id attributes and formatted alt survive independently of HTML' => lambda do
+    node = project(":imagesdir: assets\n\nimage:cat.png[alt='*Cat* & friend',width=24,id=cat,role=zoom]")[:blocks][0][:inlines][0]
+    assert(node[:id] == 'cat' && node[:roles] == ['zoom'], 'inline image id/role lost')
+    assert(node[:target] == 'cat.png' && node[:src] == 'assets/cat.png', 'image URI lost')
+    assert(node[:attributes] == { 'width' => '24' }, 'image attributes changed')
+    assert(node[:alt][0][:kind] == 'strong' && node[:alt][1][:value] == ' &amp; friend', 'image alt flattened')
+  end,
+  'block image accepts caption replay bookkeeping without exporting it' => lambda do
+    node = project(".Picture\n[#photo.zoom]\nimage::cat.png[Cat,24,16]")[:blocks][0]
+    assert(node[:context] == 'image' && node[:id] == 'photo', 'block image metadata lost')
+    assert(node[:title] == [{ kind: 'text', value: 'Picture' }], 'image title changed')
+    assert(node[:attributes] == { 'width' => '24', 'height' => '16' }, 'internal attribute entries leaked')
+  end,
+  'list items preserve checkboxes attached blocks and absent descriptions' => lambda do
+    blocks = project("* [x] Done\n+\nAttached.\n\n* [ ] Pending")[:blocks]
+    assert(blocks[0][:items].map { |entry| entry[:checkbox] } == [true, false], 'checkbox state lost')
+    assert(blocks[0][:items][0][:blocks][0][:inlines] == [{ kind: 'text', value: 'Attached.' }], 'attached block lost')
+    entries = project("Term:: Description\nLast::")[:blocks][0][:items]
+    assert(entries[0][:terms] == [[{ kind: 'text', value: 'Term' }]], 'description term lost')
+    assert(entries[1][:description].nil?, 'absent description became empty')
+  end,
+  'verbatim substitutions preserve whitespace and container content model' => lambda do
+    blocks = project("NOTE: Simple.\n\n[WARNING]\n====\nParagraph.\n====\n\n[source,ruby,subs=\"verbatim,quotes\"]\n----\n  *x* < 2\n    y\n----")[:blocks]
+    assert(blocks[0][:inlines] == [{ kind: 'text', value: 'Simple.' }] && !blocks[0].key?(:blocks), 'simple content changed')
+    assert(blocks[1][:type] == 'warning' && blocks[1][:blocks][0][:context] == 'paragraph', 'compound content changed')
+    code = blocks[2]
+    assert(code[:language] == 'ruby', 'listing language lost')
+    assert(code[:inlines][0][:value] == '  ' && code[:inlines][1][:kind] == 'strong' && code[:inlines][2][:value] == " &lt; 2\n    y", 'verbatim content changed')
+  end,
+  'image options and icons fail closed' => lambda do
+    ['icon:heart[]', 'image:photo.svg[opts=inline]', 'image:photo.png[custom=value]'].each do |source|
+      begin
+        project(source)
+        raise 'unsupported image accepted'
+      rescue RuntimeError => e
+        raise unless e.message.include? 'outside inline-semantics-v1'
       end
     end
   end,
