@@ -4,6 +4,34 @@ use adoctra_core::{
 };
 
 #[test]
+fn selected_quotes_in_xml_do_not_panic_when_token_scanning_sees_a_url_terminator() {
+    let source =
+        "[source,xml,subs=\"verbatim,quotes\"]\r\n----\r\nЖ http://example.org> *bold*\r\n----";
+    let result = parse(source);
+    assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+    let BlockKind::Listing { text, inlines, .. } = &result.document.blocks[0].kind else {
+        panic!()
+    };
+    assert_eq!(text, "Ж http://example.org> *bold*");
+    let Inline::Substituted { parts, span, .. } = &inlines.as_ref().unwrap()[0] else {
+        panic!()
+    };
+    assert!(parts.contains(&adoctra_core::AttributePart::Open(
+        adoctra_core::AttributeFormat::Strong
+    )));
+    assert_eq!(
+        &source[span.start..span.end],
+        "Ж http://example.org> *bold*"
+    );
+    assert!(result
+        .tokens
+        .iter()
+        .any(|t| t.kind == TokenKind::ListingText));
+    assert!(!result.tokens.iter().any(|t| t.kind == TokenKind::Link));
+    assert_eq!(result.tokens, tokens(source));
+}
+
+#[test]
 fn multiline_quotes_share_ast_ranges_in_unicode_crlf_paragraphs_and_lists() {
     for source in [
         "Ж *первая\r\nвторая* строка",

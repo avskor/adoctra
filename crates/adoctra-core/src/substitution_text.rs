@@ -246,23 +246,21 @@ impl Text {
             }
             let start = range.start.max(r.start) - r.start;
             let end = range.end.min(r.end) - r.start;
-            if start != 0 || end != f.text.len() {
-                // Matchers consume protected special characters as whole units.
-                debug_assert!(f.decoded.is_none());
-            }
+            let complete = start == 0 && end == f.text.len();
+            // A bare URL can consume only part of an encoded character: Ruby
+            // trims the final semicolon even from `&gt;`. Such a slice keeps
+            // its lexical spelling, not the original decoded character. Its
+            // physical span still covers the character that produced it.
+            let partial_encoded = !complete && f.decoded.is_some();
             // Copy only the selected slice: cloning the complete fragment for
             // every match would make a long run of replacements quadratic.
             output.push(Fragment {
                 text: f.text[start..end].into(),
-                decoded: f.decoded.clone(),
-                raw: f.raw,
+                decoded: f.decoded.clone().filter(|_| complete),
+                raw: f.raw || partial_encoded,
                 owner: f.owner,
                 span: slice_span(f.span, start..end, f.exact),
-                part: if start == 0 && end == f.text.len() {
-                    f.part.clone()
-                } else {
-                    None
-                },
+                part: if complete { f.part.clone() } else { None },
                 boundary: f
                     .boundary
                     .as_ref()

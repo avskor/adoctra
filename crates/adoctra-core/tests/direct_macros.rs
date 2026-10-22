@@ -13,6 +13,56 @@ fn paragraph(source: &str) -> Vec<Inline> {
 }
 
 #[test]
+fn bare_urls_split_encoded_terminators_without_losing_their_physical_spans() {
+    for (character, encoded) in [('>', "&gt"), ('<', "&lt"), ('&', "&amp")] {
+        let source = format!("Ж\r\nhttp://example.org{character}");
+        let result = parse(&source);
+        assert!(result.diagnostics.is_empty());
+        let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+            panic!()
+        };
+        let Inline::Substituted { parts, span, .. } = &inlines[1] else {
+            panic!("{inlines:?}")
+        };
+        let P::OpenLink(link) = &parts[0] else {
+            panic!()
+        };
+        assert_eq!(link.target, format!("http://example.org{encoded}"));
+        assert_eq!(parts[2], P::Raw(encoded.into()));
+        assert_eq!(
+            &source[span.start..span.end],
+            format!("http://example.org{character}")
+        );
+        assert!(result
+            .tokens
+            .iter()
+            .any(|t| t.kind == TokenKind::Link && t.span == *span));
+        let Inline::Raw { value, span } = inlines.last().unwrap() else {
+            panic!("{inlines:?}")
+        };
+        assert_eq!(value, ";");
+        assert_eq!(&source[span.start..span.end], character.to_string());
+    }
+}
+
+#[test]
+fn partial_encoded_url_from_an_attribute_keeps_reference_ownership() {
+    let source = ":url: http://example.org>\n\nЖ {url}";
+    let nodes = paragraph(source);
+    let Inline::AttributeRef {
+        name, parts, span, ..
+    } = &nodes[1]
+    else {
+        panic!("{nodes:?}")
+    };
+    assert_eq!(name, "url");
+    assert_eq!(&source[span.start..span.end], "{url}");
+    assert!(matches!(&parts[0], P::OpenLink(link) if link.target == "http://example.org&gt"));
+    assert_eq!(parts[2], P::Raw("&gt".into()));
+    assert_eq!(parts.last(), Some(&P::Raw(";".into())));
+}
+
+#[test]
 fn direct_targets_and_parameters_expand_once_before_macros() {
     let source = ":target: page?a=1&b=2\n:role: red\n\nlink:{target}[*Ж&*,id=anchor,role={role},title=A&B,window=_blank,opts=nofollow]";
     let nodes = paragraph(source);
