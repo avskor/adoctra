@@ -8,8 +8,9 @@ require 'asciidoctor'
 report = ARGV.delete('--report')
 structure = ARGV.delete('--structure')
 semantics = ARGV.delete('--semantics')
-abort 'report modes are mutually exclusive' if [report, structure, semantics].count { |mode| mode } > 1
-if report || structure || semantics
+positions = ARGV.delete('--diagnostic-positions')
+abort 'report modes are mutually exclusive' if [report, structure, semantics, positions].count { |mode| mode } > 1
+if report || structure || semantics || positions
   require 'json'
   logger = Asciidoctor::MemoryLogger.new
   Asciidoctor::LoggerManager.logger = logger
@@ -89,17 +90,27 @@ else
     output = output[/<script type="text\/x-mathjax-config">.*?<\/script>\n<script src="[^"]+\/MathJax\.js[^\"]*"><\/script>/m] or abort 'MathJax configuration not found'
   end
 end
-if report
-  # This profile deliberately compares severity and text, not source positions.
+if report || positions
+  # The default report compares severity/text; positions adds logger cursors.
   # MemoryLogger records even calls below the normal WARN threshold.
   levels = { WARN: 'warning', ERROR: 'error', FATAL: 'fatal', UNKNOWN: 'unknown' }
   diagnostics = logger.messages.filter_map do |entry|
     next unless (severity = levels[entry[:severity]])
     message = entry[:message]
     text = Hash === message ? message.fetch(:text) : message.to_s
-    { severity: severity, message: text }
+    diagnostic = { severity: severity, message: text }
+    if positions
+      # A logger cursor is evidence; text mentioning a line is not a cursor.
+      cursor = Hash === message ? message[:source_location] : nil
+      diagnostic[:location] = cursor ? { file: cursor.file || cursor.path, line: cursor.lineno } : nil
+    end
+    diagnostic
   end
-  puts JSON.generate(html: output + (output.end_with?("\n") ? '' : "\n"), diagnostics: diagnostics)
+  if positions
+    puts JSON.generate(diagnostics: diagnostics)
+  else
+    puts JSON.generate(html: output + (output.end_with?("\n") ? '' : "\n"), diagnostics: diagnostics)
+  end
 else
   puts output
 end

@@ -183,6 +183,17 @@ fail the profile. This initial schema does not cover all nodes, all attributes,
 source positions or ASG/TCK. See `docs/semantic-profile.adoc`; keep the independent
 Ruby converter checks and offline/verify runs in CI.
 
+`compatibility/acceptance/positions.json` uses `diagnostic-positions-v1`:
+18 original probes, 10 PASS / 8 XFAIL. Ruby `--diagnostic-positions` exports
+primary MemoryLogger source_location file/line or null; the CLI adapter keeps
+the same schema, warning order and duplicates. Only stdin and the temporary
+fixture root are canonicalized. Preserve missing Ruby cursors and physical
+adoctra locations even where Ruby reports the root cursor after include EOF.
+Columns/byte spans and secondary include_location are outside this comparison;
+native include tests check adoctra physical ranges/Unicode columns separately.
+See `docs/diagnostic-positions.adoc`; retain full XFAIL baselines, strict schema,
+six Ruby exporter checks and offline/verify CI runs.
+
 The source/context API is documented in `docs/parser-api.adoc`. `Span` now also
 contains `source_id`; keep it on blocks, inline nodes, list items, tokens and
 diagnostics. `Document.attributes` is the header snapshot; block

@@ -24,6 +24,81 @@ fn setup(root: &str, files: &[(&str, &str)]) -> (SourceMap, MemoryResources, Par
 }
 
 #[test]
+fn diagnostic_positions_keep_nested_selected_unicode_crlf_byte_ranges() {
+    // Ruby has no column/byte-range oracle. Check these against the original
+    // resource, including removed indentation and excluded physical lines.
+    for selection in [
+        "tag=body,indent=0",
+        "lines=3..5,indent=0",
+        "lines=\"3;5\",indent=0",
+    ] {
+        let root = ":attribute-missing: warn\r\n\r\ninclude::sub/outer.adoc[]\r\n";
+        let outer = format!("// outer\r\n\r\ninclude::inner.adoc[{selection}]\r\n");
+        let inner =
+            "ignored\r\n// tag::body[]\r\n  Ж🙂 {first}\r\n\r\n  Я {second}\r\n// end::body[]\r\n";
+        let (mut sources, resources, options) = setup(
+            root,
+            &[
+                ("/docs/sub/outer.adoc", &outer),
+                ("/docs/sub/inner.adoc", inner),
+            ],
+        );
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        assert_eq!(result.diagnostics.len(), 2, "{:?}", result.diagnostics);
+        for (diagnostic, (text, line, column)) in result
+            .diagnostics
+            .iter()
+            .zip([("{first}", 3, 6), ("{second}", 5, 5)])
+        {
+            let span = diagnostic.span;
+            let source = sources.get(span.source_id).unwrap();
+            assert_eq!(source.name(), "/docs/sub/inner.adoc");
+            assert_eq!(span.start, inner.find(text).unwrap());
+            assert_eq!(span.end, span.start + text.len());
+            assert_eq!(sources.slice(span), Some(text));
+            let position = source.position(span.start).unwrap();
+            assert_eq!((position.line, position.column), (line, column));
+            assert_eq!(diagnostic.severity, adoctra_core::Severity::Warning);
+            assert_eq!(
+                diagnostic.message,
+                format!(
+                    "skipping reference to missing attribute: {}",
+                    &text[1..text.len() - 1]
+                )
+            );
+        }
+        check_spans(&result, &sources);
+    }
+}
+
+#[test]
+fn diagnostic_positions_keep_nested_heading_at_eof_in_physical_source() {
+    let root = "= Title\n\ninclude::sub/outer.adoc[]\n";
+    let outer = "// outer\n\ninclude::inner.adoc[]\n";
+    let inner = "// inner\r\n\r\n=== Пропуск\r\n";
+    let (mut sources, resources, options) = setup(
+        root,
+        &[
+            ("/docs/sub/outer.adoc", outer),
+            ("/docs/sub/inner.adoc", inner),
+        ],
+    );
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(result.diagnostics.len(), 1);
+    let diagnostic = &result.diagnostics[0];
+    let source = sources.get(diagnostic.span.source_id).unwrap();
+    assert_eq!(source.name(), "/docs/sub/inner.adoc");
+    assert_eq!(diagnostic.span.start, inner.find("===").unwrap());
+    let position = source.position(diagnostic.span.start).unwrap();
+    assert_eq!((position.line, position.column), (3, 1));
+    assert_eq!(
+        diagnostic.message,
+        "section title out of sequence: expected level 1, got level 2"
+    );
+    check_spans(&result, &sources);
+}
+
+#[test]
 fn block_reftext_early_effects_keep_selected_include_origins() {
     let root =
         ":attribute-missing: warn\n\ninclude::part.adoc[tag=body,indent=0]\n\n<<here>> {counter:n}";

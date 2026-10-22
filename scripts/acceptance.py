@@ -8,6 +8,8 @@ The separate block-structure-v1 manifest compares parser trees through JSON,
 without rendering HTML; see structure.py for its limited schema.
 inline-semantics-v1 uses a custom Ruby converter and the resolved JSON AST with
 selected attribute snapshots; see semantics.py for its bounded schema.
+diagnostic-positions-v1 compares ordered diagnostics with primary file/line
+cursors, including explicit absence; see diagnostic_positions.py.
 """
 
 import argparse
@@ -22,6 +24,7 @@ import sys
 
 import structure
 import semantics
+import diagnostic_positions
 
 from compatibility import (
     CORPUS, ROOT, case_commands, classify, pretty, projection, validate_attributes,
@@ -52,7 +55,7 @@ def load_corpus(path):
             or not isinstance(manifest.get("origins"), dict)
             or not isinstance(manifest.get("cases"), list)):
         raise ValueError("invalid acceptance manifest")
-    if (manifest["profile"] not in {PROFILE, structure.PROFILE, semantics.PROFILE}
+    if (manifest["profile"] not in {PROFILE, structure.PROFILE, semantics.PROFILE, diagnostic_positions.PROFILE}
             or manifest["asciidoctor"] != (CORPUS / "asciidoctor-version").read_text().strip()):
         raise ValueError("acceptance reference version/profile mismatch")
     if not manifest["files"] or not manifest["cases"] or not manifest["origins"]:
@@ -152,6 +155,8 @@ def reference_report(result, root=None, profile=PROFILE, attribute_names=None):
     if result.stderr:
         raise ValueError(f"unexpected reference stderr: {result.stderr.strip()}")
     report = json.loads(result.stdout)
+    if profile == diagnostic_positions.PROFILE:
+        return diagnostic_positions.reference_projection(report, root)
     if profile == semantics.PROFILE:
         if not isinstance(report, dict) or set(report) != {'semantics'}:
             raise ValueError('invalid semantic report')
@@ -177,6 +182,8 @@ def validate_diagnostics(diagnostics):
 
 
 def project_report(report, profile=PROFILE, attribute_names=None):
+    if profile == diagnostic_positions.PROFILE:
+        return diagnostic_positions.validate(report)
     if profile == semantics.PROFILE:
         if not isinstance(report, dict) or set(report) != {'semantics'}:
             raise ValueError('invalid semantic report')
@@ -209,7 +216,8 @@ def check_case(case, binary, root, *, update=False, verify=False, record=False, 
             for name in attribute_names:
                 reference_command.extend(['--semantic-attribute', name])
         if update or verify:
-            reference_command.insert(2, {structure.PROFILE: '--structure', semantics.PROFILE: '--semantics'}.get(profile, '--report'))
+            reference_command.insert(2, {structure.PROFILE: '--structure', semantics.PROFILE: '--semantics',
+                                         diagnostic_positions.PROFILE: '--diagnostic-positions'}.get(profile, '--report'))
             reference = reference_report(invoke(reference_command, case["source"]), fixture, profile, attribute_names)
             if update:
                 reference_path.parent.mkdir(exist_ok=True)
@@ -221,7 +229,9 @@ def check_case(case, binary, root, *, update=False, verify=False, record=False, 
         expected = project_report(json.loads(reference_path.read_text(encoding="utf-8")), profile, attribute_names)
         output = invoke(actual_command, case["source"])
         diagnostics = cli_diagnostics(output.stderr, fixture)
-        if profile == semantics.PROFILE:
+        if profile == diagnostic_positions.PROFILE:
+            actual = diagnostic_positions.cli_projection(output.stderr, fixture)
+        elif profile == semantics.PROFILE:
             if diagnostics:
                 raise ValueError('diagnostics are outside inline-semantics-v1')
             actual = {'semantics': semantics.document_projection(json.loads(output.stdout), attribute_names)}
@@ -237,7 +247,7 @@ def check_case(case, binary, root, *, update=False, verify=False, record=False, 
             baseline_path.parent.mkdir(exist_ok=True)
             baseline_path.write_text(pretty(actual), encoding="utf-8")
         baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
-        if profile in {structure.PROFILE, semantics.PROFILE}:
+        if profile in {structure.PROFILE, semantics.PROFILE, diagnostic_positions.PROFILE}:
             project_report(baseline, profile, attribute_names)
         else:
             if (not isinstance(baseline, dict) or set(baseline) != {"body", "diagnostics"}
