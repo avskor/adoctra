@@ -27,9 +27,13 @@ jobs:
         run: python3 scripts/compatibility.py
       - name: Offline acceptance corpus and diagnostics
         run: python3 scripts/acceptance.py --json-report target/acceptance-report.json
+      - name: Offline document structure
+        run: python3 scripts/acceptance.py --manifest compatibility/acceptance/structure.json --json-report target/structure-report.json
       - name: Install pinned Ruby reference
         run: gem install --user-install asciidoctor --version "$(cat compatibility/asciidoctor-version)" --no-document
       - name: Verify reference fixtures and compatibility
         run: python3 scripts/compatibility.py --verify-reference
       - name: Verify acceptance references and diagnostics
         run: python3 scripts/acceptance.py --verify-reference
+      - name: Verify document structure references
+        run: python3 scripts/acceptance.py --manifest compatibility/acceptance/structure.json --verify-reference

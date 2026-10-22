@@ -6,7 +6,9 @@ gem 'asciidoctor', version
 require 'asciidoctor'
 
 report = ARGV.delete('--report')
-if report
+structure = ARGV.delete('--structure')
+abort '--report and --structure are mutually exclusive' if report && structure
+if report || structure
   require 'json'
   logger = Asciidoctor::MemoryLogger.new
   Asciidoctor::LoggerManager.logger = logger
@@ -29,6 +31,18 @@ end
 while (index = ARGV.index('--attribute'))
   name, value = ARGV.slice!(index, 2)[1].split('=', 2)
   options[:attributes] = (options[:attributes] || {}).merge(name => value || '')
+end
+if structure
+  require_relative 'asciidoctor-structure'
+  if ARGV.length == 2 && ARGV[0] == '--include-root'
+    root = File.realpath(ARGV[1])
+    document = Asciidoctor.load_file(File.join(root, 'main.adoc'), options.merge(safe: :safe, base_dir: root))
+  else
+    abort 'unexpected structure arguments' unless ARGV.empty?
+    document = Asciidoctor.load($stdin.read, options)
+  end
+  puts JSON.generate(structure: structure_document(document))
+  exit
 end
 if ARGV.length == 2 && ARGV[0] == '--include-root'
   root = File.realpath(ARGV[1])

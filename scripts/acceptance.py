@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Check pinned real documents and diagnostic probes against Asciidoctor.
+"""Check pinned documents, diagnostics and block structure against Asciidoctor.
 
 body-dom-diagnostics-v1 combines the existing body-dom-v1 projection with an
 ordered list of warning/error severities and messages. It is not exact HTML,
 an ASG/TCK profile, or a comparison of diagnostic source positions.
+The separate block-structure-v1 manifest compares parser trees through JSON,
+without rendering HTML; see structure.py for its limited schema.
 """
 
 import argparse
@@ -15,6 +17,8 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+
+import structure
 
 from compatibility import (
     CORPUS, ROOT, case_commands, classify, pretty, projection, validate_attributes,
@@ -45,7 +49,7 @@ def load_corpus(path):
             or not isinstance(manifest.get("origins"), dict)
             or not isinstance(manifest.get("cases"), list)):
         raise ValueError("invalid acceptance manifest")
-    if (manifest["profile"] != PROFILE
+    if (manifest["profile"] not in {PROFILE, structure.PROFILE}
             or manifest["asciidoctor"] != (CORPUS / "asciidoctor-version").read_text().strip()):
         raise ValueError("acceptance reference version/profile mismatch")
     if not manifest["files"] or not manifest["cases"] or not manifest["origins"]:
@@ -81,7 +85,7 @@ def load_corpus(path):
             raise ValueError(f"invalid or duplicate case id: {identifier}")
         ids.add(identifier)
         if (case["expect"] not in {"pass", "xfail"}
-                or case.get("category") not in {"document", "diagnostics"}
+                or case.get("category") not in {"document", "diagnostics", "structure"}
                 or case["expect"] == "xfail" and not case.get("reason")):
             raise ValueError(f"invalid acceptance expectation: {identifier}")
         case["source"] = contents[case["source"]]
@@ -126,10 +130,12 @@ def cli_diagnostics(stderr, root=None):
     return diagnostics
 
 
-def reference_report(result, root=None):
+def reference_report(result, root=None, profile=PROFILE):
     if result.stderr:
         raise ValueError(f"unexpected reference stderr: {result.stderr.strip()}")
     report = json.loads(result.stdout)
+    if profile == structure.PROFILE:
+        return project_report(report, profile)
     if not isinstance(report, dict) or set(report) != {"html", "diagnostics"} or not isinstance(report["html"], str):
         raise ValueError("invalid reference report")
     validate_diagnostics(report["diagnostics"])
@@ -148,21 +154,30 @@ def validate_diagnostics(diagnostics):
         raise ValueError("invalid diagnostic report")
 
 
-def project_report(report):
+def project_report(report, profile=PROFILE):
+    if profile == structure.PROFILE:
+        if not isinstance(report, dict) or set(report) != {"structure"}:
+            raise ValueError("invalid structure report")
+        structure.validate_structure(report["structure"])
+        if report["structure"]["context"] != "document":
+            raise ValueError("structure report must contain a document")
+        return report
     if not isinstance(report, dict) or set(report) != {"html", "diagnostics"} or not isinstance(report["html"], str):
         raise ValueError("invalid stored reference report")
     validate_diagnostics(report["diagnostics"])
     return {"body": projection(report["html"]), "diagnostics": report["diagnostics"]}
 
 
-def check_case(case, binary, root, *, update=False, verify=False, record=False):
+def check_case(case, binary, root, *, update=False, verify=False, record=False, profile=PROFILE):
     reference_path = root / "reference" / f"{case['id']}.json"
     baseline_path = root / "baseline" / f"{case['id']}.json"
     with case_commands(case, binary) as (reference_command, actual_command):
         fixture = Path(actual_command[1]).parent if "resources" in case else None
+        if profile == structure.PROFILE:
+            actual_command[actual_command.index("--to") + 1] = "json"
         if update or verify:
-            reference_command.insert(2, "--report")
-            reference = reference_report(invoke(reference_command, case["source"]), fixture)
+            reference_command.insert(2, "--structure" if profile == structure.PROFILE else "--report")
+            reference = reference_report(invoke(reference_command, case["source"]), fixture, profile)
             if update:
                 reference_path.parent.mkdir(exist_ok=True)
                 reference_path.write_text(pretty(reference), encoding="utf-8")
@@ -170,9 +185,13 @@ def check_case(case, binary, root, *, update=False, verify=False, record=False):
                 raise ValueError(f"reference drift: {case['id']}; review before --update-reference")
         if update:
             return None
-        expected = project_report(json.loads(reference_path.read_text(encoding="utf-8")))
+        expected = project_report(json.loads(reference_path.read_text(encoding="utf-8")), profile)
         output = invoke(actual_command, case["source"])
-        actual = {"body": projection(output.stdout), "diagnostics": cli_diagnostics(output.stderr, fixture)}
+        diagnostics = cli_diagnostics(output.stderr, fixture)
+        if profile == structure.PROFILE:
+            actual = {"structure": structure.document_projection(json.loads(output.stdout))}
+        else:
+            actual = {"body": projection(output.stdout), "diagnostics": diagnostics}
     baseline = None
     if case["expect"] == "xfail":
         if record:
@@ -181,10 +200,13 @@ def check_case(case, binary, root, *, update=False, verify=False, record=False):
             baseline_path.parent.mkdir(exist_ok=True)
             baseline_path.write_text(pretty(actual), encoding="utf-8")
         baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
-        if (not isinstance(baseline, dict) or set(baseline) != {"body", "diagnostics"}
-                or not isinstance(baseline["body"], list)):
-            raise ValueError(f"invalid baseline: {case['id']}")
-        validate_diagnostics(baseline["diagnostics"])
+        if profile == structure.PROFILE:
+            project_report(baseline, profile)
+        else:
+            if (not isinstance(baseline, dict) or set(baseline) != {"body", "diagnostics"}
+                    or not isinstance(baseline["body"], list)):
+                raise ValueError(f"invalid baseline: {case['id']}")
+            validate_diagnostics(baseline["diagnostics"])
     status = classify(case, actual, expected, baseline)
     result = {
         "id": case["id"], "category": case["category"], "status": status,
@@ -221,7 +243,8 @@ def main(argv=None):
     for case in cases:
         try:
             result = check_case(case, args.binary, args.manifest.parent, update=args.update_reference,
-                                verify=args.verify_reference, record=args.record_known_differences)
+                                verify=args.verify_reference, record=args.record_known_differences,
+                                profile=manifest["profile"])
         except (OSError, ValueError, TypeError, RuntimeError, KeyError, subprocess.TimeoutExpired) as error:
             raise RuntimeError(f"{case['id']}: {error}") from error
         if result:
@@ -235,7 +258,7 @@ def main(argv=None):
     print(json.dumps({"counts": counts, "categories": categories}, sort_keys=True))
     if args.json_report:
         args.json_report.write_text(pretty({
-            "profile": PROFILE, "asciidoctor": manifest["asciidoctor"],
+            "profile": manifest["profile"], "asciidoctor": manifest["asciidoctor"],
             "counts": counts, "categories": categories, "cases": results,
         }), encoding="utf-8")
     return int(any(r["status"] in {"FAIL", "XPASS"} for r in results))

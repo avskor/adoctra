@@ -147,6 +147,12 @@ Ruby launcher with `--report`. Never suppress diagnostic differences to pass:
 document them and freeze the complete actual result as XFAIL; drift and XPASS
 fail CI. See `docs/acceptance.adoc` for the 9 document runs and 7 diagnostic
 probes (13 PASS, 3 diagnostic XFAIL), update commands and corpus limitations.
+The separate `compatibility/acceptance/structure.json` manifest uses
+`block-structure-v1`: Ruby `--structure` projects the loaded parser tree without
+conversion; `scripts/structure.py` adapts the CLI's JSON backend. Nine document
+runs and five structural probes pass. Keep this profile separate from HTML and
+diagnostics; it checks block topology/metadata, lists and tables, not text,
+inline semantics, all attributes, source positions or official ASG/TCK.
 
 The source/context API is documented in `docs/parser-api.adoc`. `Span` now also
 contains `source_id`; keep it on blocks, inline nodes, list items, tokens and
