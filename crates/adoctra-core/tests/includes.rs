@@ -3132,3 +3132,102 @@ fn zero_relative_depth_reports_a_depth_of_zero() {
         ["maximum include depth of 0 exceeded"]
     );
 }
+
+/// Asciidoctor 2.0.23 reader_test.rb: "include directive should resolve file
+/// relative to current include". The source snapshots are byte-for-byte upstream.
+#[test]
+fn upstream_nested_include_cursors_map_to_physical_sources() {
+    let root = include_str!("../../../compatibility/upstream/fixtures/include-relative.adoc");
+    let parent =
+        include_str!("../../../compatibility/upstream/sources/test/fixtures/parent-include.adoc");
+    let child =
+        include_str!("../../../compatibility/upstream/sources/test/fixtures/child-include.adoc");
+    let grandchild = include_str!(
+        "../../../compatibility/upstream/sources/test/fixtures/grandchild-include.adoc"
+    );
+    let (mut sources, resources, options) = setup(
+        root,
+        &[
+            ("/docs/fixtures/parent-include.adoc", parent),
+            ("/docs/fixtures/child-include.adoc", child),
+            ("/docs/fixtures/grandchild-include.adoc", grandchild),
+        ],
+    );
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty());
+    let blocks = result.document.flat_blocks();
+    assert_eq!(blocks.len(), 6);
+    for (block, (id, line, text)) in blocks.iter().zip([
+        (1, 1, "first line of parent"),
+        (2, 1, "first line of child"),
+        (3, 1, "first line of grandchild"),
+        (3, 3, "last line of grandchild"),
+        (2, 5, "last line of child"),
+        (1, 5, "last line of parent"),
+    ]) {
+        assert!(matches!(block.kind, BlockKind::Paragraph { .. }));
+        assert_eq!(block.span.source_id, SourceId(id));
+        assert_eq!(sources.slice(block.span).unwrap().trim_end(), text);
+        let position = sources
+            .get(SourceId(id))
+            .unwrap()
+            .position(block.span.start)
+            .unwrap();
+        assert_eq!((position.line, position.column), (line, 1));
+    }
+    check_spans(&result, &sources);
+}
+
+#[test]
+fn soft_host_depth_uses_normalized_name_before_reading_includes() {
+    for key in ["max-include-depth", "max-include-depth@"] {
+        let (mut sources, resources, mut options) =
+            setup("include::part.adoc[]", &[("/docs/part.adoc", "content")]);
+        options.attributes.set(key, "0@");
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        assert!(sources.get(SourceId(1)).is_none());
+        assert!(result
+            .document
+            .flat_blocks()
+            .iter()
+            .any(|block| matches!(&block.kind, BlockKind::Paragraph { .. })));
+    }
+}
+
+#[test]
+fn upstream_tag_selection_retains_physical_line_numbers() {
+    let root = include_str!("../../../compatibility/upstream/fixtures/include-tags.adoc");
+    let included =
+        include_str!("../../../compatibility/upstream/sources/test/fixtures/include-file.adoc");
+    let (mut sources, resources, options) =
+        setup(root, &[("/docs/fixtures/include-file.adoc", included)]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty());
+    let blocks = result.document.flat_blocks();
+    let BlockKind::Paragraph { inlines } = &blocks[0].kind else {
+        panic!()
+    };
+    let Inline::Text { value, span } = &inlines[0] else {
+        panic!()
+    };
+    assert_eq!(value, "snippetA content snippetB content");
+    let fragments = &result.provenance[span.provenance.unwrap()];
+    for (text, line) in [("snippetA content", 12), ("snippetB content", 18)] {
+        let fragment = fragments
+            .iter()
+            .find(|s| sources.slice(**s).unwrap().contains(text))
+            .unwrap();
+        assert_eq!(fragment.source_id, SourceId(1));
+        assert_eq!(sources.slice(*fragment).unwrap().trim_end(), text);
+        assert_eq!(
+            sources
+                .get(SourceId(1))
+                .unwrap()
+                .position(fragment.start)
+                .unwrap()
+                .line,
+            line
+        );
+    }
+    check_spans(&result, &sources);
+}

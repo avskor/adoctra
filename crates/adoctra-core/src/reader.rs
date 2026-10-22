@@ -228,7 +228,14 @@ impl<'a> Reader<'a> {
         reader.inputs[0].source_id = options.source_id;
         // Ruby reads the attribute once, when it creates the reader, so
         // only the API attributes count.
-        let max_depth = match options.attributes.get("max-include-depth") {
+        let host_depth = options
+            .attributes
+            .iter()
+            .map(|(key, value)| crate::context::host_attribute(key, value))
+            .filter(|(key, _, _)| *key == "max-include-depth")
+            .last()
+            .and_then(|(_, value, _)| value);
+        let max_depth = match host_depth {
             Some(value) => usize::try_from(crate::include_selection::integer_prefix(value))
                 .ok()
                 .filter(|depth| *depth > 0)

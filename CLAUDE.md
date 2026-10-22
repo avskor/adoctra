@@ -159,6 +159,18 @@ Antora descriptors and six real include examples. Host attributes are explicit
 resolved values; Antora site extensions/catalog resolution are not exercised.
 Keep upstream pages unchanged even when they expose parser failures.
 
+`compatibility/upstream/cases.json` is a separate selection of 43 adapted
+scenarios from 30 Asciidoctor 2.0.23 tests (20 attributes, 13 substitutions,
+10 includes), all PASS in `body-dom-diagnostics-v1`. Full original Ruby test
+files, include fixtures and LICENSE are pinned; each case identifies its test
+name/line and adaptation. See `docs/upstream-tests.adoc`. The acceptance runner
+validates provenance and runs offline/against Ruby in CI. Companion core tests
+check physical positions and composite provenance in the upstream include
+fixtures. This is not the entire upstream suite or a source-position profile.
+Host overrides now accept Ruby's string soft-default (`name@` / `value@`) and
+hard/soft unset forms. CLI repeated overrides honor the last spelling of a name;
+API callers should supply one spelling per effective key in the BTreeMap.
+
 The source/context API is documented in `docs/parser-api.adoc`. `Span` now also
 contains `source_id`; keep it on blocks, inline nodes, list items, tokens and
 diagnostics. `Document.attributes` is the header snapshot; block

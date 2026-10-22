@@ -53,7 +53,11 @@ fn run() -> adoctra::Result<()> {
     let (source_id, provider) = load_source(&args.input, &mut sources, args.safe)?;
     // Like Ruby below server mode, the document sees the user's home.
     let mut attributes = args.attributes.clone();
-    if args.safe < adoctra::SafeMode::Server && attributes.get("user-home").is_none() {
+    if args.safe < adoctra::SafeMode::Server
+        && !attributes
+            .iter()
+            .any(|(name, _)| override_name(name) == "user-home")
+    {
         if let Some(home) = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE")) {
             attributes.set("user-home", home.to_string_lossy().replace('\\', "/"));
         }
@@ -253,17 +257,22 @@ fn parse_args() -> Option<Args> {
             "-s" | "--embedded" | "--no-header-footer" => embedded = true,
             "-S" | "--safe-mode" => safe = adoctra::SafeMode::from_name(&it.next()?)?,
             "--safe" => safe = adoctra::SafeMode::Safe,
-            // Ruby's `-a name[=value]` as a hard override (the soft `@` and
-            // unset `!` forms are not supported).
+            // Keep Ruby's soft/default and unset markers for ParseOptions.
             "-a" | "--attribute" => {
                 let entry = it.next()?;
                 let (name, value) = entry.split_once('=').unwrap_or((&entry, ""));
-                if name.is_empty()
-                    || name.starts_with('!')
-                    || name.ends_with(['!', '@'])
-                    || value.ends_with('@')
-                {
+                if name.trim_matches(['!', '@']).is_empty() {
                     return None;
+                }
+                // Preserve command-line order when spellings of the same
+                // override change, e.g. `-a x! -a x=value@`.
+                let previous: Vec<_> = attributes
+                    .iter()
+                    .filter(|(key, _)| override_name(key) == override_name(name))
+                    .map(|(key, _)| key.to_owned())
+                    .collect();
+                for key in previous {
+                    attributes.remove(&key);
                 }
                 attributes.set(name, value);
             }
@@ -285,6 +294,14 @@ fn parse_args() -> Option<Args> {
         attributes,
         safe,
     })
+}
+
+fn override_name(name: &str) -> String {
+    let name = name.strip_suffix('@').unwrap_or(name);
+    name.strip_prefix('!')
+        .or_else(|| name.strip_suffix('!'))
+        .unwrap_or(name)
+        .to_lowercase()
 }
 
 fn load_source(

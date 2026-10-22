@@ -353,7 +353,7 @@ def validate_attributes(case):
     """Host attributes, passed to both processors as `name=value`."""
     attributes = case.get("attributes", {})
     if not isinstance(attributes, dict) or not all(
-            isinstance(name, str) and re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_-]*", name)
+            isinstance(name, str) and re.fullmatch(r"(?:!?[A-Za-z0-9_][A-Za-z0-9_-]*|[A-Za-z0-9_][A-Za-z0-9_-]*!)@?", name)
             and isinstance(value, str) for name, value in attributes.items()):
         raise ValueError(f"invalid host attributes: {case.get('id')}")
 

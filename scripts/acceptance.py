@@ -85,9 +85,22 @@ def load_corpus(path):
             raise ValueError(f"invalid or duplicate case id: {identifier}")
         ids.add(identifier)
         if (case["expect"] not in {"pass", "xfail"}
-                or case.get("category") not in {"document", "diagnostics", "structure"}
+                or case.get("category") not in {"document", "diagnostics", "structure", "attributes", "substitutions", "include"}
                 or case["expect"] == "xfail" and not case.get("reason")):
             raise ValueError(f"invalid acceptance expectation: {identifier}")
+        if "upstream" in case:
+            upstream = case["upstream"]
+            if (not isinstance(upstream, dict)
+                    or not isinstance(upstream.get("line"), int)
+                    or upstream["line"] < 1
+                    or not isinstance(upstream.get("test"), str)
+                    or not isinstance(upstream.get("adaptation"), str)
+                    or not upstream["adaptation"]):
+                raise ValueError(f"invalid upstream provenance: {identifier}")
+            lines = contents[upstream["file"]].splitlines()
+            if (upstream["line"] > len(lines)
+                    or lines[upstream["line"] - 1].strip() != f"test '{upstream['test']}' do"):
+                raise ValueError(f"upstream test location mismatch: {identifier}")
         case["source"] = contents[case["source"]]
         if "resources" in case:
             if not isinstance(case["resources"], dict):

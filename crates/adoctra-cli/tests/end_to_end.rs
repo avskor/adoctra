@@ -569,3 +569,45 @@ fn cli_safe_mode_controls_includes_user_home_and_copied_stylesheets() {
     assert!(!root.join("out/adoctra.css").exists());
     std::fs::remove_dir_all(&root).unwrap();
 }
+
+#[test]
+fn cli_soft_and_unset_overrides_keep_last_occurrence_across_spellings() {
+    use std::io::Write;
+    use std::process::{Command, Stdio};
+    for (flags, expected) in [
+        (vec!["cash=heroes@"], "money"),
+        (vec!["cash@=heroes"], "money"),
+        (vec!["cash!"], "{cash}"),
+        (vec!["!cash"], "{cash}"),
+        (vec!["cash!", "cash=heroes@"], "money"),
+        (vec!["cash=heroes@", "!cash"], "{cash}"),
+        (vec!["cash!@", "cash=heroes"], "heroes"),
+    ] {
+        let mut command = Command::new(env!("CARGO_BIN_EXE_adoctra"));
+        command.args(["-", "--embedded", "--stdout"]);
+        for flag in &flags {
+            command.args(["-a", flag]);
+        }
+        let mut child = command
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap();
+        child
+            .stdin
+            .take()
+            .unwrap()
+            .write_all(b":cash: money\n\n{cash}")
+            .unwrap();
+        let result = child.wait_with_output().unwrap();
+        assert!(result.status.success());
+        assert!(result.stderr.is_empty());
+        assert!(
+            String::from_utf8(result.stdout)
+                .unwrap()
+                .contains(&format!("<p>{expected}</p>")),
+            "{flags:?}"
+        );
+    }
+}

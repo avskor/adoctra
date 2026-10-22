@@ -11,9 +11,9 @@ use std::{
 pub struct ParseOptions {
     /// SourceMap id for this input. The convenience APIs use source zero.
     pub source_id: SourceId,
-    /// Hard attribute overrides: document assignments cannot change these keys.
-    /// This initial API supports set overrides; soft defaults and locked unsets
-    /// will be added alongside the remaining Asciidoctor option semantics.
+    /// Host overrides, using Ruby's string forms: ordinary values lock a key,
+    /// `name@` or a trailing `@` on the value supplies a soft default; `!name`
+    /// and `name!` lock a key unset. Combine `!` with `@` for a soft unset.
     pub attributes: Attributes,
     /// Limits for explicit resource parsing; ordinary string parsing performs no loads.
     pub includes: IncludeLimits,
@@ -405,6 +405,7 @@ impl ParseContext<'_> {
     pub fn new(options: &ParseOptions) -> Self {
         let mut attributes = default_attributes();
         let mut locked = BTreeSet::new();
+        let mut soft = BTreeSet::new();
         // Ruby's standalone defaults, before the host overrides.
         if !options.embedded {
             for key in ["copycss", "iconfont-remote", "stylesheet", "webfonts"] {
@@ -412,16 +413,37 @@ impl ParseContext<'_> {
             }
         }
         for (key, value) in options.attributes.iter() {
-            let effective_key = attribute_name(key);
-            attributes.set_parts(
-                effective_key,
-                options
+            let name_soft = key.ends_with('@');
+            let (effective_key, effective_value, is_soft) = host_attribute(key, value);
+            if effective_value.is_none() {
+                attributes.remove(effective_key);
+            } else {
+                let mut parts = options
                     .attributes
                     .raw_parts(key)
-                    .map_or_else(|| vec![AttributePart::Raw(value.to_owned())], <[_]>::to_vec),
-            );
+                    .map_or_else(|| vec![AttributePart::Raw(value.to_owned())], <[_]>::to_vec);
+                // A modifier on the name preserves a literal trailing @ in
+                // the value; Ruby appends and then removes its own marker.
+                if !name_soft && is_soft {
+                    for part in parts.iter_mut().rev() {
+                        if let AttributePart::Text(text) | AttributePart::Raw(text) = part {
+                            if text.ends_with('@') {
+                                text.pop();
+                                break;
+                            }
+                        }
+                    }
+                }
+                attributes.set_parts(effective_key, parts);
+            }
             locked.insert(effective_key.to_string());
+            if is_soft {
+                soft.insert(effective_key.to_owned());
+            } else {
+                soft.remove(effective_key);
+            }
         }
+        let quote_compat = locked.contains("compat-mode");
         // Ruby's processor overrides replace host values: documents detect a
         // compatible processor and its version (`ifdef::asciidoctor[]`).
         attributes.set("asciidoctor", "");
@@ -432,10 +454,12 @@ impl ParseContext<'_> {
         fn host_or(
             attributes: &mut Attributes,
             locked: &mut BTreeSet<String>,
+            soft: &mut BTreeSet<String>,
             key: &str,
             value: Option<&str>,
         ) {
-            if locked.insert(key.to_owned()) {
+            if locked.insert(key.to_owned()) || attributes.get(key).is_none() {
+                soft.remove(key);
                 match value {
                     Some(value) => attributes.set(key, value),
                     None => {
@@ -462,11 +486,29 @@ impl ParseContext<'_> {
                 .chain([format!("safe-mode-{}", safe.name())]),
         );
         // `allow-uri-read` is only ever set by the host.
-        host_or(&mut attributes, &mut locked, "allow-uri-read", None);
+        host_or(
+            &mut attributes,
+            &mut locked,
+            &mut soft,
+            "allow-uri-read",
+            None,
+        );
         if safe >= SafeMode::Server {
-            host_or(&mut attributes, &mut locked, "copycss", None);
-            host_or(&mut attributes, &mut locked, "source-highlighter", None);
-            host_or(&mut attributes, &mut locked, "backend", Some("html5"));
+            host_or(&mut attributes, &mut locked, &mut soft, "copycss", None);
+            host_or(
+                &mut attributes,
+                &mut locked,
+                &mut soft,
+                "source-highlighter",
+                None,
+            );
+            host_or(
+                &mut attributes,
+                &mut locked,
+                &mut soft,
+                "backend",
+                Some("html5"),
+            );
             // The document cannot see its directory; its file is relative.
             if let (Some(file), Some(dir)) = (attributes.get("docfile"), attributes.get("docdir")) {
                 if let Some(relative) = file
@@ -479,7 +521,13 @@ impl ParseContext<'_> {
             }
             attributes.set("docdir", "");
             locked.insert("docdir".to_owned());
-            host_or(&mut attributes, &mut locked, "user-home", Some("."));
+            host_or(
+                &mut attributes,
+                &mut locked,
+                &mut soft,
+                "user-home",
+                Some("."),
+            );
             if safe >= SafeMode::Secure {
                 if !locked.contains("max-attribute-value-size") {
                     attributes.set("max-attribute-value-size", "4096");
@@ -489,7 +537,7 @@ impl ParseContext<'_> {
                     attributes.set("linkcss", "");
                     locked.insert("linkcss".to_owned());
                 }
-                host_or(&mut attributes, &mut locked, "icons", None);
+                host_or(&mut attributes, &mut locked, &mut soft, "icons", None);
             }
         }
         let max_attribute_value_size = attributes
@@ -503,13 +551,51 @@ impl ParseContext<'_> {
             attributes.set("embedded", "");
             if locked.contains("showtitle") {
                 locked.insert("notitle".to_owned());
+                if attributes.get("showtitle").is_none() {
+                    attributes.set("notitle", "");
+                } else {
+                    attributes.remove("notitle");
+                }
+                if soft.contains("showtitle")
+                    && attributes.get("showtitle").map_or(true, str::is_empty)
+                {
+                    soft.insert("notitle".to_owned());
+                } else {
+                    soft.remove("notitle");
+                }
             } else if locked.contains("notitle") {
                 locked.insert("showtitle".to_owned());
+                if attributes.get("notitle").is_none() {
+                    attributes.set("showtitle", "");
+                } else {
+                    attributes.remove("showtitle");
+                }
+                if soft.contains("notitle") && attributes.get("notitle").map_or(true, str::is_empty)
+                {
+                    soft.insert("showtitle".to_owned());
+                }
             } else {
                 attributes.set("notitle", "");
             }
         } else {
             attributes.remove("embedded");
+        }
+        // Processor and mode overrides stay hard even if the host supplied
+        // their soft forms. Other soft values may be changed by the document.
+        for key in soft {
+            if matches!(
+                key.as_str(),
+                "asciidoctor"
+                    | "asciidoctor-version"
+                    | "embedded"
+                    | "safe-mode-name"
+                    | "safe-mode-level"
+            ) || key == format!("safe-mode-{}", safe.name())
+                || (key == "docdir" && safe >= SafeMode::Server)
+            {
+                continue;
+            }
+            locked.remove(&key);
         }
         // Ruby's initial backend and doctype (the backend's `outfilesuffix`
         // is set before the header); the manpage backend locks the doctype.
@@ -531,7 +617,7 @@ impl ParseContext<'_> {
         }
         Self {
             images: None,
-            quote_compat: options.attributes.get("compat-mode").is_some(),
+            quote_compat,
             attributes: Arc::new(attributes),
             doctitle_span: None,
             locked,
@@ -1374,6 +1460,23 @@ fn attribute_name(key: &str) -> &str {
         "hardbreaks" => "hardbreaks-option",
         "numbered" => "sectnums",
         _ => key,
+    }
+}
+
+/// Decode Ruby's string host override forms without changing document entries.
+pub(crate) fn host_attribute<'a>(key: &'a str, value: &'a str) -> (&'a str, Option<&'a str>, bool) {
+    let name_soft = key.ends_with('@');
+    let name = key.strip_suffix('@').unwrap_or(key);
+    let unset_name = name.strip_prefix('!').or_else(|| name.strip_suffix('!'));
+    let name = attribute_name(unset_name.unwrap_or(name));
+    if unset_name.is_some() {
+        (name, None, name_soft || value == "@")
+    } else if name_soft {
+        (name, Some(value), true)
+    } else if let Some(value) = value.strip_suffix('@') {
+        (name, Some(value), true)
+    } else {
+        (name, Some(value), false)
     }
 }
 

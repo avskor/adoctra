@@ -1,0 +1,69 @@
+= Корпус upstream-тестов
+
+`compatibility/upstream/cases.json` — отдельная выборка из Asciidoctor 2.0.23,
+commit `2c03d22eb9fe83d04ee452939581d1b842f6d8b4`.
+43 адаптированных сценария из 30 именованных Ruby-тестов дают 43 PASS:
+20 по приоритету/сбросу атрибутов, 13 по substitutions и 10 по include.
+Это не запуск полного Ruby test suite и не процент совместимости языка.
+
+== Происхождение и адаптация
+
+В `sources/test/` сохранены полные неизменённые `attributes_test.rb`,
+`substitutions_test.rb`, `reader_test.rb` и четыре include-fixture.
+`sources/LICENSE` содержит лицензию MIT Asciidoctor.
+Все восемь upstream-файлов сверены с Git blob-хешами закреплённого commit;
+манифест фиксирует SHA-256, исходные пути и лицензию.
+Для каждой адаптации указаны файл, номер строки объявления, точное имя теста
+и описание изменений. Стенд проверяет контрольные суммы и соответствие
+имени теста строке; неверное происхождение останавливает запуск.
+
+`fixtures/` содержит входы выбранных сценариев. Варианты одного Ruby-теста
+развёрнуты в отдельные случаи. В тестах атрибутов, исходно проверяющих
+`doc.attributes['cash']`, добавлены ifdef/ifndef-параграфы для наблюдения
+значения/отсутствия через HTML. В `apply normal substitutions` значение
+`inception_year=2012` передаётся как host-атрибут вместо изменения Ruby-объекта
+перед вызовом `apply_subs`. Ruby-специфичные варианты `nil`, `false`, `true`
+не импортированы: текущий контракт host API и стенда принимает строки.
+
+Выборка включает жёсткие значения и unsets, мягкие значения по имени и значению,
+четыре строковые формы мягкого unset и восстановление встроенного `sectids`.
+Substitutions проверяют normal/none, incremental pass, вложенные passthrough,
+восстановление после macro substitution, роли, экранирование и неверные
+списки substitutions. Include проверяет вложенные относительные пути,
+диапазоны строк (включая пустой, неверный и открытый диапазон), кавычки/пробелы,
+один/несколько тегов и вложенные маркеры. Исходные include-ресурсы не изменены.
+
+== Проверяемый контракт
+
+Используется существующий `body-dom-diagnostics-v1`: проекция HTML body и
+упорядоченные warning/error severity/text. Эталон вычисляется тем же закреплённым
+Ruby launcher. Исходные assertions на приватные методы Ruby не переносятся
+буквально; сравнивается наблюдаемый результат полной обработки входа.
+Позиции диагностик, все атрибуты/inline-узлы и официальный ASG/TCK в этот
+профиль не входят. XFAIL потребовал бы отдельного объяснения и полного baseline;
+сейчас в данной выборке XFAIL нет. Дрейф эталона и XPASS считаются ошибками.
+
+Дополнительные Rust-тесты используют те же upstream-fixture и проверяют
+порядок шести параграфов вложенных include, исходные source_id, byte spans
+и номера строк 1/3/5. Для `tags=snippetA;snippetB` проверяются физические строки
+12 и 18 через составной provenance объединённого текстового узла.
+Атрибутные Rust-тесты проверяют снимки header/body, сохранение исходных host-значений,
+семантических частей и диапазонов ссылок при Unicode/CRLF. Эти проверки
+составляют отдельные утверждения о модели adoctra, а не новый сравнительный профиль.
+
+== Запуск
+
+[source,shell]
+----
+cargo build -p adoctra-cli
+python3 scripts/acceptance.py --manifest compatibility/upstream/cases.json
+python3 scripts/acceptance.py --manifest compatibility/upstream/cases.json --verify-reference
+python3 scripts/acceptance.py --manifest compatibility/upstream/cases.json --case attr-soft-value
+python3 scripts/acceptance.py --manifest compatibility/upstream/cases.json --json-report target/upstream-report.json
+----
+
+Для пересоздания эталонов после проверки изменений используется
+`--update-reference`. Обычно нужен `--verify-reference`, который не меняет
+файлы. Offline-проверка и повторное вычисление эталонов включены в CI;
+установка Asciidoctor использует общую версию `compatibility/asciidoctor-version`.
+Минимальный корпус и приёмка реальных документов продолжают запускаться отдельно.
