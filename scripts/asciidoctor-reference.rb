@@ -7,8 +7,9 @@ require 'asciidoctor'
 
 report = ARGV.delete('--report')
 structure = ARGV.delete('--structure')
-abort '--report and --structure are mutually exclusive' if report && structure
-if report || structure
+semantics = ARGV.delete('--semantics')
+abort 'report modes are mutually exclusive' if [report, structure, semantics].count { |mode| mode } > 1
+if report || structure || semantics
   require 'json'
   logger = Asciidoctor::MemoryLogger.new
   Asciidoctor::LoggerManager.logger = logger
@@ -31,6 +32,33 @@ end
 while (index = ARGV.index('--attribute'))
   name, value = ARGV.slice!(index, 2)[1].split('=', 2)
   options[:attributes] = (options[:attributes] || {}).merge(name => value || '')
+end
+if semantics
+  require_relative 'asciidoctor-semantics'
+  converter = SemanticConverter.new 'html5'
+  while (index = ARGV.index('--semantic-attribute'))
+    converter.attribute_names << ARGV.slice!(index, 2).fetch(1)
+  end
+  options[:converter] = converter
+  if ARGV.length == 2 && ARGV[0] == '--include-root'
+    root = File.realpath(ARGV[1])
+    input = File.read(File.join(root, 'main.adoc'))
+    # These are the isolated text fixtures supplied by the harness.
+    Dir.glob(File.join(root, '**', '*')).select { |path| File.file? path }.each do |path|
+      abort 'reserved semantic handle character in input' if File.read(path).match?(/[\uE000\uE001]/)
+    end
+    options.merge! safe: :safe, base_dir: root, docfile: File.join(root, 'main.adoc')
+  else
+    abort 'unexpected semantic arguments' unless ARGV.empty?
+    input = $stdin.read
+  end
+  abort 'reserved semantic handle character in input' if ([input] + (options[:attributes] || {}).values).any? { |s| s.match?(/[\uE000\uE001]/) }
+  document = Asciidoctor.load(input, options)
+  result = document.convert
+  # This initial profile excludes diagnostics; never silently discard one.
+  abort 'diagnostics are outside inline-semantics-v1' if logger.messages.any? { |entry| [:WARN, :ERROR, :FATAL, :UNKNOWN].include? entry[:severity] }
+  puts JSON.generate(semantics: result)
+  exit
 end
 if structure
   require_relative 'asciidoctor-structure'

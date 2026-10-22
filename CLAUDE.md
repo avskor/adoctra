@@ -171,6 +171,18 @@ Host overrides now accept Ruby's string soft-default (`name@` / `value@`) and
 hard/soft unset forms. CLI repeated overrides honor the last spelling of a name;
 API callers should supply one spelling per effective key in the BTreeMap.
 
+`compatibility/upstream/semantics.json` uses `inline-semantics-v1`: 38 PASS
+cover 20 attribute and four include scenarios from the upstream selection plus
+14 original semantic probes. The Ruby oracle has its own converter (no HTML
+converter or HTML parsing); paired synthetic boundaries leave content exposed
+to later substitution stages. The Python adapter reads the resolved JSON AST
+and selected header/final attributes. CLI `--to json --json-attributes` opts in
+to `JsonBackend::convert_with_attributes`; default JSON stays unchanged.
+Unknown nodes, raw markup, unsupported link metadata and warning/error output
+fail the profile. This initial schema does not cover all nodes, all attributes,
+source positions or ASG/TCK. See `docs/semantic-profile.adoc`; keep the independent
+Ruby converter checks and offline/verify runs in CI.
+
 The source/context API is documented in `docs/parser-api.adoc`. `Span` now also
 contains `source_id`; keep it on blocks, inline nodes, list items, tokens and
 diagnostics. `Document.attributes` is the header snapshot; block

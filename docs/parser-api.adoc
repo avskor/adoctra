@@ -1778,3 +1778,17 @@ HTML выводит `<h1>… Manual Page</h1>` (без названия — на
 регистр (в отличие от Ruby, теги и ссылки на символы не меняются). JSON —
 `manpage` с `names` и `name_section` (`heading`, `conforming`), WASM — с `body`.
 Подсветка: заголовок — `heading`, в строках имени — только `attribute-ref`.
+
+
+== Опциональный экспорт снимков в JSON backend
+
+`adoctra_json::JsonBackend::convert_with_attributes(&document)` возвращает
+обычное JSON-дерево с добавленным `attribute_snapshots`. Поля `header` и `final`
+содержат `values` (строковый словарь) и опциональный `attribute_parts`
+(семантические части значений). Экспорт читает `Document.attributes` и
+`Document.final_attributes`, не изменяя их. Вызов обычного `Backend::convert`
+сохраняет прежний формат. В CLI используется `--to json --json-attributes`;
+с другими backend этот флаг возвращает ошибку.
+
+Экспорт используется link:semantic-profile.adoc[семантическим сравнительным
+профилем] для явной выборки имён. Это не новый официальный формат ASG.

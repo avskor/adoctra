@@ -6,6 +6,8 @@ ordered list of warning/error severities and messages. It is not exact HTML,
 an ASG/TCK profile, or a comparison of diagnostic source positions.
 The separate block-structure-v1 manifest compares parser trees through JSON,
 without rendering HTML; see structure.py for its limited schema.
+inline-semantics-v1 uses a custom Ruby converter and the resolved JSON AST with
+selected attribute snapshots; see semantics.py for its bounded schema.
 """
 
 import argparse
@@ -19,6 +21,7 @@ import subprocess
 import sys
 
 import structure
+import semantics
 
 from compatibility import (
     CORPUS, ROOT, case_commands, classify, pretty, projection, validate_attributes,
@@ -49,7 +52,7 @@ def load_corpus(path):
             or not isinstance(manifest.get("origins"), dict)
             or not isinstance(manifest.get("cases"), list)):
         raise ValueError("invalid acceptance manifest")
-    if (manifest["profile"] not in {PROFILE, structure.PROFILE}
+    if (manifest["profile"] not in {PROFILE, structure.PROFILE, semantics.PROFILE}
             or manifest["asciidoctor"] != (CORPUS / "asciidoctor-version").read_text().strip()):
         raise ValueError("acceptance reference version/profile mismatch")
     if not manifest["files"] or not manifest["cases"] or not manifest["origins"]:
@@ -85,7 +88,7 @@ def load_corpus(path):
             raise ValueError(f"invalid or duplicate case id: {identifier}")
         ids.add(identifier)
         if (case["expect"] not in {"pass", "xfail"}
-                or case.get("category") not in {"document", "diagnostics", "structure", "attributes", "substitutions", "include"}
+                or case.get("category") not in {"document", "diagnostics", "structure", "attributes", "substitutions", "include", "semantics"}
                 or case["expect"] == "xfail" and not case.get("reason")):
             raise ValueError(f"invalid acceptance expectation: {identifier}")
         if "upstream" in case:
@@ -108,6 +111,8 @@ def load_corpus(path):
             case["resources"] = {name: contents[resource] for name, resource in case["resources"].items()}
         validate_resources(case)
         validate_attributes(case)
+        if manifest['profile'] == semantics.PROFILE:
+            semantics.validate_case(case)
         cases.append(case)
     return manifest, cases
 
@@ -143,10 +148,14 @@ def cli_diagnostics(stderr, root=None):
     return diagnostics
 
 
-def reference_report(result, root=None, profile=PROFILE):
+def reference_report(result, root=None, profile=PROFILE, attribute_names=None):
     if result.stderr:
         raise ValueError(f"unexpected reference stderr: {result.stderr.strip()}")
     report = json.loads(result.stdout)
+    if profile == semantics.PROFILE:
+        if not isinstance(report, dict) or set(report) != {'semantics'}:
+            raise ValueError('invalid semantic report')
+        return {'semantics': semantics.reference_projection(report['semantics'], attribute_names)}
     if profile == structure.PROFILE:
         return project_report(report, profile)
     if not isinstance(report, dict) or set(report) != {"html", "diagnostics"} or not isinstance(report["html"], str):
@@ -167,7 +176,12 @@ def validate_diagnostics(diagnostics):
         raise ValueError("invalid diagnostic report")
 
 
-def project_report(report, profile=PROFILE):
+def project_report(report, profile=PROFILE, attribute_names=None):
+    if profile == semantics.PROFILE:
+        if not isinstance(report, dict) or set(report) != {'semantics'}:
+            raise ValueError('invalid semantic report')
+        semantics.validate(report['semantics'], attribute_names)
+        return report
     if profile == structure.PROFILE:
         if not isinstance(report, dict) or set(report) != {"structure"}:
             raise ValueError("invalid structure report")
@@ -182,15 +196,21 @@ def project_report(report, profile=PROFILE):
 
 
 def check_case(case, binary, root, *, update=False, verify=False, record=False, profile=PROFILE):
+    attribute_names = case.get('semantic_attributes')
     reference_path = root / "reference" / f"{case['id']}.json"
     baseline_path = root / "baseline" / f"{case['id']}.json"
     with case_commands(case, binary) as (reference_command, actual_command):
         fixture = Path(actual_command[1]).parent if "resources" in case else None
-        if profile == structure.PROFILE:
+        if profile in {structure.PROFILE, semantics.PROFILE}:
             actual_command[actual_command.index("--to") + 1] = "json"
+        if profile == semantics.PROFILE:
+            semantics.validate_case(case)
+            actual_command.append('--json-attributes')
+            for name in attribute_names:
+                reference_command.extend(['--semantic-attribute', name])
         if update or verify:
-            reference_command.insert(2, "--structure" if profile == structure.PROFILE else "--report")
-            reference = reference_report(invoke(reference_command, case["source"]), fixture, profile)
+            reference_command.insert(2, {structure.PROFILE: '--structure', semantics.PROFILE: '--semantics'}.get(profile, '--report'))
+            reference = reference_report(invoke(reference_command, case["source"]), fixture, profile, attribute_names)
             if update:
                 reference_path.parent.mkdir(exist_ok=True)
                 reference_path.write_text(pretty(reference), encoding="utf-8")
@@ -198,10 +218,14 @@ def check_case(case, binary, root, *, update=False, verify=False, record=False, 
                 raise ValueError(f"reference drift: {case['id']}; review before --update-reference")
         if update:
             return None
-        expected = project_report(json.loads(reference_path.read_text(encoding="utf-8")), profile)
+        expected = project_report(json.loads(reference_path.read_text(encoding="utf-8")), profile, attribute_names)
         output = invoke(actual_command, case["source"])
         diagnostics = cli_diagnostics(output.stderr, fixture)
-        if profile == structure.PROFILE:
+        if profile == semantics.PROFILE:
+            if diagnostics:
+                raise ValueError('diagnostics are outside inline-semantics-v1')
+            actual = {'semantics': semantics.document_projection(json.loads(output.stdout), attribute_names)}
+        elif profile == structure.PROFILE:
             actual = {"structure": structure.document_projection(json.loads(output.stdout))}
         else:
             actual = {"body": projection(output.stdout), "diagnostics": diagnostics}
@@ -213,8 +237,8 @@ def check_case(case, binary, root, *, update=False, verify=False, record=False, 
             baseline_path.parent.mkdir(exist_ok=True)
             baseline_path.write_text(pretty(actual), encoding="utf-8")
         baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
-        if profile == structure.PROFILE:
-            project_report(baseline, profile)
+        if profile in {structure.PROFILE, semantics.PROFILE}:
+            project_report(baseline, profile, attribute_names)
         else:
             if (not isinstance(baseline, dict) or set(baseline) != {"body", "diagnostics"}
                     or not isinstance(baseline["body"], list)):

@@ -31,8 +31,12 @@ jobs:
         run: python3 scripts/acceptance.py --manifest compatibility/acceptance/structure.json --json-report target/structure-report.json
       - name: Offline upstream tests
         run: python3 scripts/acceptance.py --manifest compatibility/upstream/cases.json --json-report target/upstream-report.json
+      - name: Offline inline semantics and attributes
+        run: python3 scripts/acceptance.py --manifest compatibility/upstream/semantics.json --json-report target/semantics-report.json
       - name: Install pinned Ruby reference
         run: gem install --user-install asciidoctor --version "$(cat compatibility/asciidoctor-version)" --no-document
+      - name: Test semantic reference converter
+        run: ruby scripts/test_asciidoctor_semantics.rb
       - name: Verify reference fixtures and compatibility
         run: python3 scripts/compatibility.py --verify-reference
       - name: Verify acceptance references and diagnostics
@@ -41,3 +45,5 @@ jobs:
         run: python3 scripts/acceptance.py --manifest compatibility/acceptance/structure.json --verify-reference
       - name: Verify upstream test references
         run: python3 scripts/acceptance.py --manifest compatibility/upstream/cases.json --verify-reference
+      - name: Verify inline semantics and attribute references
+        run: python3 scripts/acceptance.py --manifest compatibility/upstream/semantics.json --verify-reference

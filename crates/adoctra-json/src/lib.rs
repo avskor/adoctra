@@ -16,6 +16,42 @@ impl JsonBackend {
     pub fn new() -> Self {
         Self
     }
+
+    /// Include header and final effective document attributes, with semantic
+    /// parts. The ordinary JSON tree stays unchanged unless explicitly asked.
+    pub fn convert_with_attributes(&self, doc: &Document) -> Result<Vec<u8>> {
+        let mut bytes = self.convert(doc)?;
+        let closing = bytes.pop();
+        debug_assert_eq!(closing, Some(b'}'));
+        let mut suffix = String::from(",\"attribute_snapshots\":{");
+        for (index, (name, attributes)) in [
+            ("header", &doc.attributes),
+            ("final", &doc.final_attributes),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            if index > 0 {
+                suffix.push(',');
+            }
+            escape_into(name, &mut suffix);
+            suffix.push_str(":{\"values\":{");
+            for (index, (key, value)) in attributes.iter().enumerate() {
+                if index > 0 {
+                    suffix.push(',');
+                }
+                escape_into(key, &mut suffix);
+                suffix.push(':');
+                escape_into(value, &mut suffix);
+            }
+            suffix.push('}');
+            adoctra_core::json::write_attribute_parts_map(attributes, &mut suffix);
+            suffix.push('}');
+        }
+        suffix.push_str("}}");
+        bytes.extend_from_slice(suffix.as_bytes());
+        Ok(bytes)
+    }
 }
 
 impl Backend for JsonBackend {
@@ -1003,6 +1039,38 @@ mod tests {
     fn render(src: &str) -> String {
         let doc = adoctra_core::parse(src).document;
         String::from_utf8(JsonBackend.convert(&doc).unwrap()).unwrap()
+    }
+
+    #[test]
+    fn optional_document_attributes_preserve_default_tree_and_distinct_snapshots() {
+        let doc =
+            adoctra_core::parse(":value: first\n:empty:\n\n{value}\n\n:value: second\n\n{value}")
+                .document;
+        let ordinary = String::from_utf8(JsonBackend.convert(&doc).unwrap()).unwrap();
+        let extended =
+            String::from_utf8(JsonBackend.convert_with_attributes(&doc).unwrap()).unwrap();
+        assert!(!ordinary.contains("attribute_snapshots"));
+        assert!(extended.starts_with(ordinary.strip_suffix('}').unwrap()));
+        let (header, final_attributes) = extended.split_once(",\"final\":").unwrap();
+        assert!(header.contains("\"value\":\"first\""));
+        assert!(header.contains("\"empty\":\"\""));
+        assert!(final_attributes.contains("\"value\":\"second\""));
+        assert_eq!(doc.attributes.get("value"), Some("first"));
+        assert_eq!(doc.final_attributes.get("value"), Some("second"));
+    }
+
+    #[test]
+    fn optional_document_attributes_keep_semantic_parts_and_escape_values() {
+        let doc =
+            adoctra_core::parse(":v: pass:q[*Ж*]\n:escaped: A & B\n\n{v}\n\n:v!:\n\nx").document;
+        let json = String::from_utf8(JsonBackend.convert_with_attributes(&doc).unwrap()).unwrap();
+        let snapshots = json.split_once("\"attribute_snapshots\":").unwrap().1;
+        let (header, final_attributes) = snapshots.split_once(",\"final\":").unwrap();
+        assert!(header.contains("\"v\":\"Ж\""));
+        assert!(header
+            .contains("\"attribute_parts\":{\"v\":[{\"kind\":\"open\",\"format\":\"strong\"}"));
+        assert!(!final_attributes.contains("\"v\":"));
+        assert!(snapshots.ends_with("}}}"));
     }
 
     #[test]

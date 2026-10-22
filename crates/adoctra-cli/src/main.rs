@@ -38,6 +38,7 @@ struct Args {
     embedded: bool,
     attributes: adoctra::Attributes,
     safe: adoctra::SafeMode,
+    json_attributes: bool,
 }
 
 fn run() -> adoctra::Result<()> {
@@ -102,7 +103,16 @@ fn run() -> adoctra::Result<()> {
         .get(source_id)
         .map(|source| source.name().to_owned());
     let backend = select_backend(&args.backend, args.embedded, provider.clone(), referrer)?;
-    let bytes = backend.convert(&result.document)?;
+    let bytes = if args.json_attributes {
+        if args.backend != "json" {
+            return Err(adoctra::Error::Unsupported(
+                "--json-attributes requires --to json".into(),
+            ));
+        }
+        adoctra::json::JsonBackend::new().convert_with_attributes(&result.document)?
+    } else {
+        backend.convert(&result.document)?
+    };
 
     if args.to_stdout || (args.input == "-" && args.output.is_none()) {
         std::io::stdout().write_all(&bytes)?;
@@ -242,6 +252,7 @@ fn parse_args() -> Option<Args> {
     let mut output: Option<PathBuf> = None;
     let mut to_stdout = false;
     let mut embedded = false;
+    let mut json_attributes = false;
     let mut attributes = adoctra::Attributes::new();
     // adoctra's CLI defaults to safe mode (Ruby's to unsafe): paths stay in
     // the input's directory.
@@ -254,6 +265,7 @@ fn parse_args() -> Option<Args> {
             "--to" | "-b" => backend = it.next()?,
             "-o" | "--out" => output = Some(PathBuf::from(it.next()?)),
             "--stdout" => to_stdout = true,
+            "--json-attributes" => json_attributes = true,
             "-s" | "--embedded" | "--no-header-footer" => embedded = true,
             "-S" | "--safe-mode" => safe = adoctra::SafeMode::from_name(&it.next()?)?,
             "--safe" => safe = adoctra::SafeMode::Safe,
@@ -293,6 +305,7 @@ fn parse_args() -> Option<Args> {
         embedded,
         attributes,
         safe,
+        json_attributes,
     })
 }
 
@@ -401,6 +414,7 @@ fn print_usage() {
          -a, --attribute <NAME[=VALUE]>  set a document attribute\n  \
          -S, --safe-mode <MODE>  unsafe, safe (default), server or secure\n  \
          -o, --out <FILE>     output path\n      --stdout         write to stdout\n  \
+         --json-attributes   include header/final attributes with --to json\n  \
          -h, --help           show this help"
     );
 }
