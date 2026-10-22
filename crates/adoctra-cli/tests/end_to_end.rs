@@ -2,6 +2,74 @@
 
 use adoctra::Backend;
 
+fn diagnostic_output(source: &str, mode: Option<&str>) -> String {
+    use std::io::Write;
+    use std::process::{Command, Stdio};
+    let mut command = Command::new(env!("CARGO_BIN_EXE_adoctra"));
+    command.args(["-", "--stdout", "--embedded"]);
+    if let Some(mode) = mode {
+        command.args(["--diagnostics", mode]);
+    }
+    let mut child = command
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(source.as_bytes())
+        .unwrap();
+    let output = child.wait_with_output().unwrap();
+    assert!(output.status.success());
+    String::from_utf8(output.stderr).unwrap()
+}
+
+#[test]
+fn cli_default_diagnostics_match_conversion_messages_and_warn_threshold() {
+    for (source, expected) in [
+        (
+            "----\ntext\n",
+            "adoctra: -:1: warning: unterminated listing block\n",
+        ),
+        (
+            "\nendif::x[]\n",
+            "adoctra: -:2: error: unmatched preprocessor directive: endif::x[]\n",
+        ),
+        (
+            ":attribute-missing: warn\n\nЖ {missing}",
+            "adoctra: warning: skipping reference to missing attribute: missing\n",
+        ),
+        ("See <<missing>>.", ""),
+        ("ifdef::x[]\ntext\n", ""),
+    ] {
+        assert_eq!(diagnostic_output(source, None), expected, "{source}");
+        assert_eq!(
+            diagnostic_output(source, Some("compat")),
+            expected,
+            "{source}"
+        );
+        assert!(
+            !diagnostic_output(source, Some("editor")).is_empty(),
+            "{source}"
+        );
+    }
+}
+
+#[test]
+fn cli_editor_keeps_physical_unicode_coordinates_and_original_severity() {
+    let source = ":attribute-missing: warn\r\n\r\nЖ🙂 {missing}\r\n";
+    let start = source.find("{missing}").unwrap();
+    assert_eq!(diagnostic_output(source, Some("editor")), format!(
+        "adoctra: -:3:4: warning at {start}..{}: skipping reference to missing attribute: missing\n", start + 9));
+    assert_eq!(
+        diagnostic_output("----\ntext\n", Some("editor")),
+        "adoctra: -:1:1: error at 0..4: unterminated listing block (missing closing `----`)\n"
+    );
+}
+
 #[test]
 fn cli_document_paths_resolve_nested_includes_and_render_in_html_and_json() {
     use std::process::Command;
@@ -156,6 +224,7 @@ fn cli_diagnostic_has_source_line_and_unicode_column() {
     use std::io::Write;
     use std::process::{Command, Stdio};
     let mut child = Command::new(env!("CARGO_BIN_EXE_adoctra"))
+        .args(["--diagnostics", "editor"])
         .args(["-", "--stdout"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -249,6 +318,7 @@ fn cli_file_resource_reports_canonical_source_name_and_renders_content() {
         std::env::temp_dir().join(format!("adoctra-cli-resource-{}.adoc", std::process::id()));
     std::fs::write(&path, "Привет <<missing>>").unwrap();
     let output = Command::new(env!("CARGO_BIN_EXE_adoctra"))
+        .args(["--diagnostics", "editor"])
         .arg(&path)
         .arg("--stdout")
         .output()
@@ -285,6 +355,7 @@ fn cli_expands_nested_includes_and_reports_child_locations_and_denied_paths() {
     )
     .unwrap();
     let output = Command::new(env!("CARGO_BIN_EXE_adoctra"))
+        .args(["--diagnostics", "editor"])
         .arg(root.join("main.adoc"))
         .arg("--stdout")
         .output()

@@ -28,6 +28,45 @@ pub struct Diagnostic {
     pub span: Span,
     pub severity: Severity,
     pub message: String,
+    /// Conversion-facing presentation. Physical editor data above is retained.
+    pub report: DiagnosticReport,
+}
+
+/// A logger cursor need not identify the physical span (selected includes and
+/// reader lookahead can change its file and line in the reference processor).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DiagnosticCursor {
+    pub source_id: crate::SourceId,
+    pub line: usize,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum DiagnosticLocation {
+    /// Use the physical span, or resolve its reader cursor before returning.
+    #[default]
+    Source,
+    Unlocated,
+    Cursor(DiagnosticCursor),
+}
+
+/// Presentation overrides for conversion logs; never used to rewrite spans or
+/// remove editor diagnostics. Unspecified severity/text use the diagnostic's.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct DiagnosticReport {
+    pub suppressed: bool,
+    pub severity: Option<Severity>,
+    pub message: Option<String>,
+    pub location: DiagnosticLocation,
+}
+
+impl DiagnosticReport {
+    pub(crate) fn unterminated(name: &str) -> Self {
+        Self {
+            severity: Some(Severity::Warning),
+            message: Some(format!("unterminated {name} block")),
+            ..Self::default()
+        }
+    }
 }
 
 /// The result of parsing for editor use: always succeeds, carries diagnostics.

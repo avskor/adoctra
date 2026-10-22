@@ -208,6 +208,10 @@ fn apply_with_policy(
             }
             if missing && matches!(policy, "warn" | "drop-line") {
                 diagnostics.push(Diagnostic {
+                    report: crate::DiagnosticReport {
+                        location: crate::DiagnosticLocation::Unlocated,
+                        ..Default::default()
+                    },
                     span,
                     severity: if policy == "warn" {
                         Severity::Warning

@@ -291,6 +291,7 @@ impl Passes {
         let span = self.slots[i].span;
         let mut parts = if depth >= pass_subs::MAX_DEPTH {
             self.diagnostics.push(crate::Diagnostic {
+                report: Default::default(),
                 span,
                 severity: crate::Severity::Warning,
                 message: "passthrough substitution nesting limit (32) exceeded".into(),
@@ -443,6 +444,7 @@ impl Passes {
     ) -> Vec<P> {
         if depth >= pass_subs::MAX_DEPTH {
             self.diagnostics.push(crate::Diagnostic {
+                report: Default::default(),
                 span,
                 severity: crate::Severity::Warning,
                 message: "link parameter substitution nesting limit (32) exceeded".into(),

@@ -15,11 +15,11 @@
 pub use adoctra_core::{
     parse, parse_resource, parse_with_options, tokens, tokens_resource, tokens_with_options,
     Attributes, Author, AuthorDetails, Backend, BinaryResource, Block, BlockKind, DateTime,
-    Diagnostic, DocinfoLocation, Document, DocumentDates, DocumentHeader, Error, IncludeLimits,
-    Inline, MemoryResources, ParseOptions, ParseResult, Registry, Resource, ResourceError,
-    ResourceErrorKind, ResourceProvider, ResourceRequest, ResourceResult, Result, Revision,
-    SafeMode, Severity, SourceFile, SourceId, SourceMap, SourcePosition, Span, Token, TokenKind,
-    TreeProcessor,
+    Diagnostic, DiagnosticCursor, DiagnosticLocation, DiagnosticReport, DocinfoLocation, Document,
+    DocumentDates, DocumentHeader, Error, IncludeLimits, Inline, MemoryResources, ParseOptions,
+    ParseResult, Registry, Resource, ResourceError, ResourceErrorKind, ResourceProvider,
+    ResourceRequest, ResourceResult, Result, Revision, SafeMode, Severity, SourceFile, SourceId,
+    SourceMap, SourcePosition, Span, Token, TokenKind, TreeProcessor,
 };
 
 #[cfg(feature = "html")]

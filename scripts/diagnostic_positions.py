@@ -72,11 +72,16 @@ def cli_projection(stderr, root=None):
                 raise ValueError('reversed diagnostic byte range')
             location = {'file': source_name(name, root), 'line': int(lineno)}
         else:
-            match = re.fullmatch(r'adoctra: (warning|error|info): (.*)', line)
-            if not match:
-                raise ValueError(f'unrecognized adoctra diagnostic: {line!r}')
-            severity, message = match.groups()
-            location = None
+            match = re.fullmatch(r'adoctra: (.+?):([1-9]\d*): (warning|error|info): (.*)', line)
+            if match:
+                name, lineno, severity, message = match.groups()
+                location = {'file': source_name(name, root), 'line': int(lineno)}
+            else:
+                match = re.fullmatch(r'adoctra: (warning|error|info): (.*)', line)
+                if not match:
+                    raise ValueError(f'unrecognized adoctra diagnostic: {line!r}')
+                severity, message = match.groups()
+                location = None
         if severity == 'info':
             continue
         if root is not None:

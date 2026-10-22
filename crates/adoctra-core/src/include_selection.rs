@@ -153,19 +153,20 @@ impl Selection {
                 };
                 let tags: BTreeMap<_, _> = tags.into_iter().collect();
                 let mut found = BTreeSet::new();
-                let mut stack: Vec<(String, bool, Span)> = Vec::new();
+                let mut stack: Vec<(String, bool, Span, usize)> = Vec::new();
                 let mut selected = base;
-                for (off, line) in lines {
+                for (index, (off, line)) in lines.enumerate() {
                     let span = Span::in_source(source_id, off, off + line.len());
                     if let Some((end, name)) = tag_directive(line) {
                         result.keep.push(false);
                         if end {
-                            if stack.last().is_some_and(|(key, _, _)| key == name) {
+                            if stack.last().is_some_and(|(key, _, _, _)| key == name) {
                                 stack.pop();
-                                selected = stack.last().map_or(base, |(_, selected, _)| *selected);
+                                selected =
+                                    stack.last().map_or(base, |(_, selected, _, _)| *selected);
                             } else if tags.contains_key(name) {
                                 let message = if let Some(index) =
-                                    stack.iter().rposition(|(key, _, _)| key == name)
+                                    stack.iter().rposition(|(key, _, _, _)| key == name)
                                 {
                                     let expected = stack.last().unwrap().0.clone();
                                     stack.remove(index);
@@ -182,19 +183,21 @@ impl Selection {
                             if selected {
                                 found.insert(name.to_owned());
                             }
-                            stack.push((name.into(), selected, span));
+                            stack.push((name.into(), selected, span, index + 1));
                         } else if let Some(wildcard) = wildcard {
                             selected = (stack.is_empty() || selected) && wildcard;
-                            stack.push((name.into(), selected, span));
+                            stack.push((name.into(), selected, span, index + 1));
                         }
                     } else {
                         result.keep.push(selected);
                     }
                 }
-                for (name, _, span) in stack {
-                    result
-                        .diagnostics
-                        .push(warning(span, format!("unclosed tag '{name}'")));
+                for (name, _, span, line) in stack {
+                    let mut diagnostic = warning(span, format!("unclosed tag '{name}'"));
+                    diagnostic.report.message = Some(format!(
+                        "detected unclosed tag '{name}' starting at line {line}"
+                    ));
+                    result.diagnostics.push(diagnostic);
                 }
                 result
                     .missing
@@ -209,6 +212,7 @@ impl Selection {
 
 fn warning(span: Span, message: String) -> Diagnostic {
     Diagnostic {
+        report: Default::default(),
         span,
         severity: Severity::Warning,
         message,

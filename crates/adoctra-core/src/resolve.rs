@@ -365,6 +365,7 @@ impl Ids<'_> {
         let (id, entry) = self.anchors.next().unwrap();
         if entry.bibliography && self.registry.contains_key(&id) {
             self.diagnostics.push(Diagnostic {
+                report: Default::default(),
                 span: entry.span,
                 severity: Severity::Warning,
                 message: format!("id assigned to bibliography anchor already in use: {id}"),
@@ -962,6 +963,7 @@ fn register_id(
 ) {
     match registry.entry(id) {
         Entry::Occupied(e) => diagnostics.push(Diagnostic {
+            report: Default::default(),
             span,
             severity: Severity::Warning,
             message: format!("id assigned to {kind} already in use: {}", e.key()),

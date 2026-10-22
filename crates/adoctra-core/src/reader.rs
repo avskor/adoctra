@@ -23,6 +23,7 @@ struct Input {
     preprocess: bool,
     occurrence: usize,
     generated_at: Option<Span>,
+    start_line: isize,
 }
 
 impl Input {
@@ -37,6 +38,7 @@ impl Input {
             preprocess,
             occurrence,
             generated_at: None,
+            start_line: 1,
         }
     }
 }
@@ -63,6 +65,8 @@ struct Origin {
 }
 
 pub(crate) struct Reader<'a> {
+    report_cursors: Vec<(usize, crate::DiagnosticCursor)>,
+    primary_eof: crate::DiagnosticCursor,
     inputs: Vec<Input>,
     resources: Option<Resources<'a>>,
     origins: Vec<Origin>,
@@ -120,6 +124,11 @@ impl<'a> Reader<'a> {
     /// raw includes whose trailing whitespace is significant.
     pub fn plain(source: &str) -> Self {
         Self {
+            report_cursors: Vec::new(),
+            primary_eof: crate::DiagnosticCursor {
+                source_id: crate::SourceId::default(),
+                line: 1,
+            },
             inputs: vec![Input::new(source, crate::SourceId::default(), false, 0)],
             resources: None,
             origins: Vec::new(),
@@ -299,6 +308,37 @@ impl<'a> Reader<'a> {
 
     pub fn set_primary_id(&mut self, id: crate::SourceId) {
         self.inputs[0].source_id = id;
+        self.primary_eof.source_id = id;
+    }
+
+    pub fn report_cursor(&self, offset: usize) -> Option<crate::DiagnosticCursor> {
+        let index = self
+            .report_cursors
+            .partition_point(|(start, _)| *start <= offset);
+        index.checked_sub(1).map(|i| self.report_cursors[i].1)
+    }
+
+    /// Ruby's section test peeks two preprocessed lines, then pushes them back
+    /// into the currently active input. Crossing include EOF changes that input.
+    pub fn section_cursor(&self, offset: usize) -> Option<crate::DiagnosticCursor> {
+        self.report_cursor(offset)?;
+        let next = self.loaded.partition_point(|(start, _)| *start <= offset);
+        let mut cursor = self
+            .loaded
+            .get(next)
+            .and_then(|(start, _)| self.report_cursor(*start))
+            .unwrap_or(self.primary_eof);
+        cursor.line = cursor.line.saturating_sub(1).max(1);
+        Some(cursor)
+    }
+
+    pub fn map_diagnostic(&self, diagnostic: &mut Diagnostic, provenance: &mut Vec<Vec<Span>>) {
+        if diagnostic.report.location == crate::DiagnosticLocation::Source {
+            if let Some(cursor) = self.report_cursor(diagnostic.span.start) {
+                diagnostic.report.location = crate::DiagnosticLocation::Cursor(cursor);
+            }
+        }
+        diagnostic.span = self.map_span(diagnostic.span, provenance);
     }
 
     /// Clone the shared line so callers may advance the reader while using it.
@@ -345,6 +385,16 @@ impl<'a> Reader<'a> {
         let line = source_line.text.clone();
         let eol = source_line.eol.clone();
         let off = self.next_offset;
+        self.report_cursors.push((
+            off,
+            crate::DiagnosticCursor {
+                source_id: input.source_id,
+                line: (input.start_line + input.next as isize - 1).max(1) as usize,
+            },
+        ));
+        if input.occurrence == 0 {
+            self.primary_eof.line = (input.start_line + input.next as isize).max(1) as usize;
+        }
         self.next_offset += line.len() + eol.len();
         let source_id = input.source_id;
         let preprocess = input.preprocess;
@@ -471,6 +521,7 @@ impl<'a> Reader<'a> {
                 preprocess: index == 0,
                 occurrence: self.next_occurrence,
                 generated_at: None,
+                start_line: 1,
             });
             self.next_occurrence += 1;
         }
@@ -586,6 +637,7 @@ impl<'a> Reader<'a> {
 
     fn error(&mut self, span: Span, message: String) {
         self.diagnostics.push(Diagnostic {
+            report: Default::default(),
             span,
             severity: Severity::Error,
             message,
@@ -656,7 +708,17 @@ impl<'a> Reader<'a> {
                     );
                 }
             } else {
-                self.error(span, "unmatched endif directive".into());
+                self.diagnostics.push(Diagnostic {
+                    span,
+                    severity: Severity::Error,
+                    message: "unmatched endif directive".into(),
+                    report: crate::DiagnosticReport {
+                        message: Some(format!(
+                            "unmatched preprocessor directive: {directive_line}"
+                        )),
+                        ..Default::default()
+                    },
+                });
             }
             return None;
         }
@@ -888,6 +950,7 @@ impl<'a> Reader<'a> {
             }
             let missing_target = policy == "warn" && missing(context);
             self.diagnostics.push(Diagnostic {
+                report: Default::default(),
                 span,
                 severity: Severity::Warning,
                 message: format!(
@@ -1024,9 +1087,27 @@ impl<'a> Reader<'a> {
             }),
             id,
         );
-        self.resource_diagnostics.extend(selected.diagnostics);
+        let mut selection_diagnostics = selected.diagnostics;
+        for diagnostic in &mut selection_diagnostics {
+            if let Some(message) = &mut diagnostic.report.message {
+                let kind = if file.name().contains("://") {
+                    "uri"
+                } else {
+                    "file"
+                };
+                message.push_str(&format!(" of include {kind}: {}", file.name()));
+            }
+        }
+        let include_cursor = self.report_cursor(span.start);
+        for diagnostic in &mut selection_diagnostics {
+            if let Some(cursor) = include_cursor {
+                diagnostic.report.location = crate::DiagnosticLocation::Cursor(cursor);
+            }
+        }
+        self.resource_diagnostics.extend(selection_diagnostics);
         for tag in selected.missing {
             self.diagnostics.push(Diagnostic {
+                report: Default::default(),
                 span,
                 severity: Severity::Warning,
                 message: format!("tag '{tag}' not found in include: {target}"),
@@ -1050,6 +1131,7 @@ impl<'a> Reader<'a> {
                 );
             }
         }
+        input.start_line = selected.keep.iter().position(|keep| *keep).unwrap_or(0) as isize + 1;
         let mut keep = selected.keep.into_iter();
         input.lines.retain(|_| keep.next().unwrap_or(false));
         if let Some(indent) = attrs.get("indent") {
@@ -1080,6 +1162,7 @@ impl<'a> Reader<'a> {
             }
         }
         if let Some(offset) = attrs.get("leveloffset").filter(|_| !input.lines.is_empty()) {
+            input.start_line -= 2;
             // Ruby injects these entries even in raw/verbatim input. They must
             // be parsed in context (or kept as literal text), not applied here:
             // containers may be captured before their attributes are processed.
@@ -1109,6 +1192,7 @@ impl<'a> Reader<'a> {
                     open.target
                 ),
             );
+            self.diagnostics.last_mut().unwrap().report.suppressed = true;
         }
     }
 

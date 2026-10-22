@@ -251,6 +251,7 @@ pub(crate) fn parse_reader<'a>(
         doc.attributes.get("preface-title").filter(|_| book),
         &mut context.sections,
         &mut diagnostics,
+        &lines,
     );
     check_open_styles(&body, OpenParent::Document, book, &mut diagnostics);
     doc.blocks.extend(body);
@@ -295,12 +296,12 @@ pub(crate) fn parse_reader<'a>(
     context.comments.dedup();
     lines.comments = context.comments.clone();
     for diagnostic in &mut diagnostics {
-        diagnostic.span = lines.map_span(diagnostic.span, &mut provenance);
+        lines.map_diagnostic(diagnostic, &mut provenance);
     }
     // Selection warnings already refer to physical lines, including omitted tags.
     diagnostics.append(&mut lines.resource_diagnostics);
     for mut diagnostic in references {
-        diagnostic.span = lines.map_span(diagnostic.span, &mut provenance);
+        lines.map_diagnostic(&mut diagnostic, &mut provenance);
         diagnostics.push(diagnostic);
     }
     let physical = |spans: &[Span]| {
@@ -611,6 +612,7 @@ fn nest_sections(
     preface_title: Option<&str>,
     sections: &mut BTreeMap<(usize, usize), crate::section_numbers::Section>,
     diagnostics: &mut Vec<Diagnostic>,
+    lines: &Reader<'_>,
 ) -> Vec<Block> {
     use crate::section_numbers::Ordinals;
     // Close the innermost open section into its parent (or the top level).
@@ -626,6 +628,7 @@ fn nest_sections(
             let last = blocks.last().unwrap();
             if book && *level == 0 && !matches!(last.kind, BlockKind::Section { .. }) {
                 diagnostics.push(Diagnostic {
+                    report: Default::default(),
                     span: blocks[0].span,
                     severity: Severity::Error,
                     message: "invalid part, must have at least one section (e.g., chapter, appendix, etc.)"
@@ -717,6 +720,7 @@ fn nest_sections(
         let expected = match parent {
             Some((_, Some(parent))) if !parent.allows_nesting() => {
                 diagnostics.push(Diagnostic {
+                    report: Default::default(),
                     span: block.span,
                     severity: Severity::Error,
                     message: format!(
@@ -731,6 +735,7 @@ fn nest_sections(
             _ if raw == 0 => {
                 if !book {
                     diagnostics.push(Diagnostic {
+                        report: Default::default(),
                         span: block.span,
                         severity: Severity::Error,
                         message: "level 0 sections can only be used when doctype is book".into(),
@@ -747,6 +752,13 @@ fn nest_sections(
                 format!("expected level {expected}")
             };
             diagnostics.push(Diagnostic {
+                report: crate::DiagnosticReport {
+                    location: lines.section_cursor(block.span.start).map_or(
+                        crate::DiagnosticLocation::Source,
+                        crate::DiagnosticLocation::Cursor,
+                    ),
+                    ..Default::default()
+                },
                 span: block.span,
                 severity: Severity::Warning,
                 message: format!("section title out of sequence: {condition}, got level {raw}"),
@@ -857,6 +869,7 @@ fn part_content(
     } else if blocks.len() == 2 {
         match *intro {
             Intro::None => diagnostics.push(Diagnostic {
+                report: Default::default(),
                 span: block.span,
                 severity: Severity::Error,
                 message: "illegal block content outside of partintro block".into(),
@@ -928,6 +941,7 @@ fn check_open_styles(
                 };
                 if let Some((severity, message)) = excluded {
                     diagnostics.push(Diagnostic {
+                        report: Default::default(),
                         span: block.span,
                         severity,
                         message: message.into(),
@@ -1498,6 +1512,7 @@ fn read_container(
         Some(Span::new(loff, loff + lline.len()))
     } else {
         diagnostics.push(Diagnostic {
+            report: crate::DiagnosticReport::unterminated(block_name),
             span: Span::new(start, start + fence.len()),
             severity: Severity::Error,
             message: format!("unterminated {block_name} block (missing closing `{fence}`)"),
@@ -1551,6 +1566,7 @@ fn capture_verbatim_body(
     }
     if !closed {
         diagnostics.push(Diagnostic {
+            report: crate::DiagnosticReport::unterminated(block_name),
             span: Span::new(opening.start, opening.start + fence.len()),
             severity: Severity::Error,
             message: format!("unterminated {block_name} block (missing closing `{fence}`)"),
@@ -1603,6 +1619,7 @@ fn read_table(
         off + line.len()
     } else {
         diagnostics.push(Diagnostic {
+            report: Default::default(),
             span: opening,
             severity: Severity::Warning,
             message: "unterminated table block".into(),
@@ -2171,6 +2188,7 @@ fn read_nested_document(
         None,
         &mut context.sections,
         diagnostics,
+        &nested,
     );
     let header = Arc::new(snapshot.clone());
     context.exit_nested(outer, key, snapshot);
@@ -2297,6 +2315,7 @@ fn parse_block_content(
         let adjusted = context.section_level(level);
         if adjusted > u8::MAX as i128 {
             diagnostics.push(Diagnostic {
+                report: Default::default(),
                 span: Span::new(off, end),
                 severity: Severity::Warning,
                 message: "section level exceeds the supported maximum of 255".into(),
@@ -2515,6 +2534,7 @@ fn parse_block_content(
         );
         if !closed {
             diagnostics.push(Diagnostic {
+                report: crate::DiagnosticReport::unterminated(name),
                 span: Span::new(start, start + fence.len()),
                 severity: Severity::Error,
                 message: format!("unterminated {name} block (missing closing `{fence}`)"),
@@ -3524,6 +3544,7 @@ fn parse_list(
             {
                 if expected != actual {
                     diagnostics.push(Diagnostic {
+                        report: Default::default(),
                         span: Span::new(off, off + line.len()),
                         severity: Severity::Warning,
                         message: format!("list item index: expected {expected}, got {actual}"),
@@ -3641,6 +3662,7 @@ fn parse_callout_list(
         let expected = (items.len() + 1).to_string();
         if number != expected {
             diagnostics.push(Diagnostic {
+                report: Default::default(),
                 span: line_span,
                 severity: Severity::Warning,
                 message: format!("callout list item index: expected {expected}, got {number}"),
@@ -3668,6 +3690,7 @@ fn parse_callout_list(
         let coids = context.callouts.ids(ordinal);
         if coids.is_empty() {
             diagnostics.push(Diagnostic {
+                report: Default::default(),
                 span: line_span,
                 severity: Severity::Warning,
                 message: format!("no callout found for <{ordinal}>"),

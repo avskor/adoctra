@@ -146,7 +146,7 @@ Offline runs use stored JSON references; `--verify-reference` uses the pinned
 Ruby launcher with `--report`. Never suppress diagnostic differences to pass:
 document them and freeze the complete actual result as XFAIL; drift and XPASS
 fail CI. See `docs/acceptance.adoc` for the 21 document runs and 7 diagnostic
-probes (25 PASS, 3 diagnostic XFAIL), update commands and corpus limitations.
+probes (28 PASS, no XFAIL), update commands and corpus limitations.
 The separate `compatibility/acceptance/structure.json` manifest uses
 `block-structure-v1`: Ruby `--structure` projects the loaded parser tree without
 conversion; `scripts/structure.py` adapts the CLI's JSON backend. Twenty-one document
@@ -184,15 +184,20 @@ source positions or ASG/TCK. See `docs/semantic-profile.adoc`; keep the independ
 Ruby converter checks and offline/verify runs in CI.
 
 `compatibility/acceptance/positions.json` uses `diagnostic-positions-v1`:
-18 original probes, 10 PASS / 8 XFAIL. Ruby `--diagnostic-positions` exports
+18 original probes, all PASS. Ruby `--diagnostic-positions` exports
 primary MemoryLogger source_location file/line or null; the CLI adapter keeps
 the same schema, warning order and duplicates. Only stdin and the temporary
-fixture root are canonicalized. Preserve missing Ruby cursors and physical
-adoctra locations even where Ruby reports the root cursor after include EOF.
+fixture root are canonicalized. The default CLI (`--diagnostics compat`) uses
+Diagnostic.report presentation metadata, including absent cursors, include
+selection line numbering and section lookahead across include EOF. Physical
+span/severity/message remain available to API/WASM and `--diagnostics editor`.
+Do not normalize diagnostic differences away in the harness. The eight former
+XFAILs were fixed and their baselines removed without changing Ruby references.
 Columns/byte spans and secondary include_location are outside this comparison;
-native include tests check adoctra physical ranges/Unicode columns separately.
-See `docs/diagnostic-positions.adoc`; retain full XFAIL baselines, strict schema,
-six Ruby exporter checks and offline/verify CI runs.
+native include tests check physical ranges/Unicode columns separately.
+See `docs/diagnostic-positions.adoc`; retain the strict schema, six Ruby exporter
+checks and offline/verify CI runs. Diagnostic struct literals now need
+`report: Default::default()` unless explicitly setting presentation metadata.
 
 The source/context API is documented in `docs/parser-api.adoc`. `Span` now also
 contains `source_id`; keep it on blocks, inline nodes, list items, tokens and

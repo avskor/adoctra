@@ -571,6 +571,10 @@ impl Execution<'_> {
         if let Some(id) = crate::resolve::decoded_refid(xref, lexical) {
             if !id.is_empty() && !self.registry.contains_key(&id) {
                 self.references.push(Diagnostic {
+                    report: crate::DiagnosticReport {
+                        suppressed: true,
+                        ..Default::default()
+                    },
                     span,
                     severity: crate::Severity::Warning,
                     message: format!("unresolved cross reference: '{id}'"),

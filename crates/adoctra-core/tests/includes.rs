@@ -60,6 +60,10 @@ fn diagnostic_positions_keep_nested_selected_unicode_crlf_byte_ranges() {
             assert_eq!((position.line, position.column), (line, column));
             assert_eq!(diagnostic.severity, adoctra_core::Severity::Warning);
             assert_eq!(
+                diagnostic.report.location,
+                adoctra_core::DiagnosticLocation::Unlocated
+            );
+            assert_eq!(
                 diagnostic.message,
                 format!(
                     "skipping reference to missing attribute: {}",
@@ -92,10 +96,97 @@ fn diagnostic_positions_keep_nested_heading_at_eof_in_physical_source() {
     let position = source.position(diagnostic.span.start).unwrap();
     assert_eq!((position.line, position.column), (3, 1));
     assert_eq!(
+        diagnostic.report.location,
+        adoctra_core::DiagnosticLocation::Cursor(adoctra_core::DiagnosticCursor {
+            source_id: SourceId(0),
+            line: 3
+        })
+    );
+    assert_eq!(
         diagnostic.message,
         "section title out of sequence: expected level 1, got level 2"
     );
     check_spans(&result, &sources);
+}
+
+#[test]
+fn diagnostic_report_cursor_counts_selected_lines_without_rewriting_physical_spans() {
+    for (selection, inner, physical_line) in [
+        ("lines=\"3;6..9\"", "ignored\nignored\n=== First\nignored\nignored\n\n===== Second\n\nText.\n", 7),
+        ("lines=\"3;6..9\",leveloffset=+1", "ignored\nignored\n=== First\nignored\nignored\n\n===== Second\n\nText.\n", 7),
+        ("tags=a;b", "// tag::a[]\n=== First\n// end::a[]\nignored\n// tag::b[]\n\n===== Second\n\nText.\n// end::b[]\n", 7),
+    ] {
+        let root = format!("= T\n\ninclude::part.adoc[{selection}]\n");
+        let (mut sources, resources, options) = setup(&root, &[("/docs/part.adoc", inner)]);
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        assert_eq!(result.diagnostics.len(), 2);
+        let first_line = if selection.starts_with("lines") { 3 } else { 2 };
+        for (diagnostic, reported_line) in result.diagnostics.iter().zip([first_line, first_line + 2]) {
+            assert_eq!(diagnostic.report.location, adoctra_core::DiagnosticLocation::Cursor(
+                adoctra_core::DiagnosticCursor { source_id: SourceId(1), line: reported_line }
+            ));
+        }
+        let span = result.diagnostics[1].span;
+        assert_eq!(span.start, inner.find("===== Second").unwrap());
+        assert_eq!(sources.get(span.source_id).unwrap().position(span.start).unwrap().line, physical_line);
+        check_spans(&result, &sources);
+    }
+}
+
+#[test]
+fn diagnostic_report_for_unclosed_tag_points_to_include_but_editor_to_tag() {
+    let root = "= T\n\ninclude::part.adoc[tag=body]\n";
+    let inner = "ignored\r\n// tag::body[]\r\nЖ text\r\n";
+    let (mut sources, resources, options) = setup(root, &[("/docs/part.adoc", inner)]);
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(result.diagnostics.len(), 1);
+    let diagnostic = &result.diagnostics[0];
+    assert_eq!(diagnostic.span.source_id, SourceId(1));
+    assert_eq!(sources.slice(diagnostic.span), Some("// tag::body[]"));
+    assert_eq!(diagnostic.message, "unclosed tag 'body'");
+    assert_eq!(
+        diagnostic.report.message.as_deref(),
+        Some("detected unclosed tag 'body' starting at line 2 of include file: /docs/part.adoc")
+    );
+    assert_eq!(
+        diagnostic.report.location,
+        adoctra_core::DiagnosticLocation::Cursor(adoctra_core::DiagnosticCursor {
+            source_id: SourceId(0),
+            line: 3
+        })
+    );
+    check_spans(&result, &sources);
+}
+
+#[test]
+fn diagnostic_report_restores_nearest_parent_cursor_after_include_eof() {
+    for (outer, expected_source, expected_line) in [
+        ("// outer\ninclude::inner.adoc[]\n\nTail\n", SourceId(1), 2),
+        ("// outer\ninclude::inner.adoc[]\n", SourceId(0), 3),
+    ] {
+        let root = "= T\n\ninclude::sub/outer.adoc[]\n\nTail\n";
+        let inner = "=== Last\n";
+        let (mut sources, resources, options) = setup(
+            root,
+            &[
+                ("/docs/sub/outer.adoc", outer),
+                ("/docs/sub/inner.adoc", inner),
+            ],
+        );
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        assert_eq!(result.diagnostics.len(), 1);
+        let diagnostic = &result.diagnostics[0];
+        assert_eq!(diagnostic.span.source_id, SourceId(2));
+        assert_eq!(sources.slice(diagnostic.span), Some("=== Last"));
+        assert_eq!(
+            diagnostic.report.location,
+            adoctra_core::DiagnosticLocation::Cursor(adoctra_core::DiagnosticCursor {
+                source_id: expected_source,
+                line: expected_line
+            })
+        );
+        check_spans(&result, &sources);
+    }
 }
 
 #[test]

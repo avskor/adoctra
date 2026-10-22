@@ -137,9 +137,11 @@ def diagnostic_text(message, root):
 def cli_diagnostics(stderr, root=None):
     diagnostics = []
     for line in stderr.splitlines():
-        # Parser diagnostics have source/line/column and byte offsets. HTML
-        # backend warnings have only a severity. Reject any unrecognized output.
+        # Default conversion diagnostics have file/line or no cursor. Editor
+        # mode adds columns/byte offsets. Reject any unrecognized output.
         match = re.fullmatch(r"adoctra: (warning|error|info): (.*)", line)
+        if match is None:
+            match = re.fullmatch(r"adoctra: .+?:[1-9]\d*: (warning|error|info): (.*)", line)
         if match is None:
             match = re.fullmatch(
                 r"adoctra: .+?:\d+:\d+: (warning|error|info) at \d+\.\.\d+: (.*)", line,

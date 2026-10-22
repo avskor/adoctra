@@ -74,6 +74,7 @@ pub(crate) fn read(
         Span::new(end, end)
     };
     context.inline_diagnostics.push(Diagnostic {
+        report: Default::default(),
         span,
         severity: Severity::Error,
         message: error.into(),
@@ -121,6 +122,7 @@ fn read_title(lines: &mut Reader<'_>, context: &mut ParseContext) {
                 Span::new(0, 0)
             };
             context.inline_diagnostics.push(Diagnostic {
+                report: Default::default(),
                 span,
                 severity: Severity::Error,
                 message: "non-conforming manpage title".into(),

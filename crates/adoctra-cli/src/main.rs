@@ -39,6 +39,7 @@ struct Args {
     attributes: adoctra::Attributes,
     safe: adoctra::SafeMode,
     json_attributes: bool,
+    editor_diagnostics: bool,
 }
 
 fn run() -> adoctra::Result<()> {
@@ -82,6 +83,38 @@ fn run() -> adoctra::Result<()> {
         )
     };
     for d in &result.diagnostics {
+        if !args.editor_diagnostics {
+            let severity = d.report.severity.unwrap_or(d.severity);
+            if d.report.suppressed || severity == adoctra::Severity::Info {
+                continue;
+            }
+            let message = d.report.message.as_deref().unwrap_or(&d.message);
+            let cursor = match d.report.location {
+                adoctra::DiagnosticLocation::Unlocated => None,
+                adoctra::DiagnosticLocation::Cursor(cursor) => Some(cursor),
+                adoctra::DiagnosticLocation::Source => sources
+                    .get(d.span.source_id)
+                    .and_then(|source| source.position(d.span.start))
+                    .map(|position| adoctra::DiagnosticCursor {
+                        source_id: d.span.source_id,
+                        line: position.line,
+                    }),
+            };
+            if let Some(cursor) = cursor {
+                let source = sources
+                    .get(cursor.source_id)
+                    .expect("diagnostic source is registered");
+                eprintln!(
+                    "adoctra: {}:{}: {}: {message}",
+                    source.name(),
+                    cursor.line,
+                    severity.as_str()
+                );
+            } else {
+                eprintln!("adoctra: {}: {message}", severity.as_str());
+            }
+            continue;
+        }
         let file = sources
             .get(d.span.source_id)
             .expect("parser source is registered");
@@ -253,6 +286,7 @@ fn parse_args() -> Option<Args> {
     let mut to_stdout = false;
     let mut embedded = false;
     let mut json_attributes = false;
+    let mut editor_diagnostics = false;
     let mut attributes = adoctra::Attributes::new();
     // adoctra's CLI defaults to safe mode (Ruby's to unsafe): paths stay in
     // the input's directory.
@@ -266,6 +300,13 @@ fn parse_args() -> Option<Args> {
             "-o" | "--out" => output = Some(PathBuf::from(it.next()?)),
             "--stdout" => to_stdout = true,
             "--json-attributes" => json_attributes = true,
+            "--diagnostics" => {
+                editor_diagnostics = match it.next()?.as_str() {
+                    "compat" => false,
+                    "editor" => true,
+                    _ => return None,
+                }
+            }
             "-s" | "--embedded" | "--no-header-footer" => embedded = true,
             "-S" | "--safe-mode" => safe = adoctra::SafeMode::from_name(&it.next()?)?,
             "--safe" => safe = adoctra::SafeMode::Safe,
@@ -306,6 +347,7 @@ fn parse_args() -> Option<Args> {
         attributes,
         safe,
         json_attributes,
+        editor_diagnostics,
     })
 }
 
@@ -415,6 +457,7 @@ fn print_usage() {
          -S, --safe-mode <MODE>  unsafe, safe (default), server or secure\n  \
          -o, --out <FILE>     output path\n      --stdout         write to stdout\n  \
          --json-attributes   include header/final attributes with --to json\n  \
+         --diagnostics <MODE> compat (default) or editor with physical byte spans\n  \
          -h, --help           show this help"
     );
 }

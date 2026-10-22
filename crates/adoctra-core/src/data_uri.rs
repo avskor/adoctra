@@ -238,6 +238,7 @@ impl<'a> Images<'a> {
 
 fn warn(diagnostics: &mut Vec<Diagnostic>, span: Span, message: String) {
     diagnostics.push(Diagnostic {
+        report: Default::default(),
         span,
         severity: Severity::Warning,
         message,

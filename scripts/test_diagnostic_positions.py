@@ -18,6 +18,16 @@ def report(file='<stdin>', line=3):
 
 
 class PositionTests(unittest.TestCase):
+    def test_compat_cli_cursor_is_compared_without_fabricating_columns(self):
+        stderr = 'adoctra: -:3: warning: warning text\n'
+        self.assertEqual(positions.cli_projection(stderr), report())
+        self.assertEqual(acceptance.cli_diagnostics(stderr),
+                         [{'severity': 'warning', 'message': 'warning text'}])
+        for changed in [stderr.replace(':3:', ':4:'), 'adoctra: warning: warning text\n']:
+            self.assertNotEqual(positions.cli_projection(changed), report())
+        with self.assertRaises(ValueError):
+            positions.cli_projection(stderr.replace(':3:', ':0:'))
+
     def test_paths_preserve_nested_unicode_source_and_stdin(self):
         raw = report('/tmp/fixture/sub/я.adoc')
         self.assertEqual(positions.reference_projection(raw, Path('/tmp/fixture')),
@@ -127,6 +137,7 @@ class PositionHarnessTests(unittest.TestCase):
         manifest, cases = acceptance.load_corpus(acceptance.CORPUS / 'acceptance/positions.json')
         self.assertEqual(manifest['profile'], positions.PROFILE)
         self.assertEqual(len(cases), 18)
+        self.assertTrue(all(c['expect'] == 'pass' for c in cases))
         self.assertTrue(any('\r\n' in c['source'] for c in cases))
 
 
