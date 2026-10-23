@@ -221,6 +221,17 @@ package or runtime benchmark. See `docs/performance.adoc` and
 `performance/baseline.json`. CI runs a smoke check without timing thresholds;
 the separate manual workflow uploads full measurements. Keep benchmarks separate
 from concurrent builds/tests, and keep performance claims separate from conformance.
+The driver also accepts `--profile-operation parse|tokens`: it runs only that
+operation, without preflight parse/JSON, and emits `adoctra-profile-driver-v1`.
+Use external profilers on a separate symbolized release build; input loading and
+output are visible to them. The substitution-buffer study in
+`performance/substitution-buffers.json` keeps repeated timings and glibc
+libmemusage counters. Its gprofng timer warnings preclude quantitative CPU
+claims; allocation volume is neither RSS nor peak live AST size. In
+substitution_text.rs, replacement_origin computes source ownership/coverage
+without a temporary Text; restore_boundaries skips rebuilding unchanged
+fragments. Preserve zero-length marks, attribute ownership and transformed
+metadata when optimizing this stream.
 
 `compatibility/acceptance/positions.json` uses `diagnostic-positions-v1`:
 18 original probes, all PASS. Ruby `--diagnostic-positions` exports

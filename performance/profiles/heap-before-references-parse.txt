@@ -1,0 +1,194 @@
+Experiment: target/performance/optimization/heap-before-references.er
+No errors
+*** Collector Warning: Collection interval timer period was changed (0 -> 100000); profile data may be unreliable
+Archive command ` /usr/bin/gprofng-archive -n -a on --outfile /home/avskor/work/adoctra/target/performance/optimization/heap-before-references.er/archive.log /home/avskor/work/adoctra/target/performance/optimization/heap-before-references.er'
+
+Target command (64-bit): 'target/profile/release/examples/performance --source target/performance/optimization/references-512.adoc --profile-operation parse --warmup 0 --samples 1 --iterations 1'
+Process pid 2, ppid 1, pgrp 1, sid 1
+Current working directory: /home/avskor/work/adoctra
+Collector version: `2.44'; experiment version 12.4 (64-bit)
+Host `A-SKOROBOGATOV', OS `Linux 6.18.40.1-microsoft-standard-WSL2', page size 4096, architecture `x86_64'
+  8 CPUs, clock speed 4007 MHz.
+  Memory: 5121118 pages @  4096 = 20004 MB.
+Data collection parameters:
+  Heap tracing
+  Periodic sampling, 1 secs.
+  Follow descendant processes from: fork|exec|combo
+
+Experiment started Fri Oct 23 23:30:26 2026
+
+Experiment Ended: 355.581721400
+Data Collection Duration: 355.581721400
+Current metrics: i+heapallocbytes:i+heapalloccnt:name
+Current Sort Metric: Inclusive Bytes Allocated ( i+heapallocbytes )
+Functions sorted by metric: Inclusive Bytes Allocated
+
+Incl.      Incl.         Name
+Bytes      Allocations
+Allocated
+206992359  529564        <Total>
+206957059  527515        <static>@0x29c21 (<libc.so.6>)
+206957059  527515        main
+206954439  527506        performance::main
+206954439  527506        std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), alloc::boxed::Box<dyn core::error::Error>>, core::result::Result<(), alloc::boxed::Box<dyn core::error::Error>>>
+206792435  527472        adoctra_core::parse_resource
+206195649  519756        adoctra_core::parser::parse_reader
+183150306  459952        <adoctra_core::body_subs::Execution>::blocks
+178997187  398436        <adoctra_core::body_subs::Execution>::convert
+178950276  398311        <adoctra_core::body_subs::Execution>::inlines
+178844721  397517        <adoctra_core::body_subs::Execution>::evaluate
+178642651  396993        adoctra_core::body_subs::run
+178544347  396481        adoctra_core::inline::scan_inlines_recorded
+171367556  141557        <alloc::raw_vec::RawVecInner>::finish_grow
+123752406  295965        adoctra_core::attribute_macros::process_inlines
+114067904   38419        <alloc::raw_vec::RawVec<(core::ops::range::Range<usize>, adoctra_core::substitution_text::Fragment)>>::grow_one
+113577302  290327        adoctra_core::attribute_macros::flush_inlines
+111981897  487406        malloc
+ 95727902   68635        <adoctra_core::substitution_text::Text>::push
+ 95010310   42157        realloc
+ 60483221  107546        <adoctra_core::substitution_text::Text>::copy
+ 39645172  149967        adoctra_core::attribute_macros::apply_xrefs
+ 25634880   13319        <alloc::raw_vec::RawVec<adoctra_core::ast::Inline>>::grow_one
+ 23959866   53769        adoctra_core::attribute_macros::apply_stage
+ 22380414   66006        <adoctra_core::body_subs::Execution as adoctra_core::substitution_context::Labels>::label
+ 22378476   65494        <adoctra_core::body_subs::Execution>::xref_label
+ 22230048   64081        <adoctra_core::body_subs::Execution>::title
+ 22183514   63958        <adoctra_core::body_subs::Execution>::xreftext
+ 21798400    9731        adoctra_core::inline_attributes::nodes
+ 19964992    6661        <adoctra_core::substitution_text::Text>::restore_boundaries
+ 17800320    6148        <adoctra_core::substitution_text::Text>::into_fragments
+ 16339327   36672        adoctra_core::parser::collect_blocks_in
+ 15552697   40976        adoctra_core::attribute_macros::apply_footnotes
+ 13717539   27663        <adoctra_core::substitution_text::Text>::append
+ 13485062   19456        <adoctra_core::substitution_text::Text>::replace_parts
+ 13368320   21504        <adoctra_core::substitution_text::Text>::replacement
+ 12059810   19464        adoctra_core::parser::consume_block_metadata
+ 11959440   18944        adoctra_core::block_attributes::merge_fields
+ 11605963   15366        <adoctra_core::substitution_text::Text>::append_part
+ 11471744    5634        adoctra_core::attribute_macros::rebuild
+ 10029413   23045        adoctra_core::inline_attributes::apply
+ 10000881   19977        adoctra_core::inline_attributes::apply_with_policy
+  9789766   16896        adoctra_core::attribute_quotes::apply_text
+  8743678   15363        adoctra_core::post_replacements::apply
+  8593920   13824        <adoctra_core::substitution_text::Text>::match_span
+  8478812   62027        <alloc::raw_vec::RawVecInner<_>>::reserve::do_reserve_and_handle::<alloc::alloc::Global>
+  8110720    6670        <alloc::raw_vec::RawVec<adoctra_core::attributes::AttributePart>>::grow_one
+  6424320    3073        <alloc::raw_vec::RawVec<adoctra_core::substitution_text::Fragment>>::grow_one
+  5733156    9216        adoctra_core::block_attributes::field_text
+  5649177   10268        adoctra_core::attributes::push_part
+
+Summary Results: Distinct Allocations = 1129, Total Instances = 529564, Total Bytes Allocated = 206992359
+
+Allocation #1, Instances = 1024, Bytes Allocated = 5701632
+  realloc + 0x000000E8
+  <alloc::raw_vec::RawVecInner>::finish_grow + 0x00000106, line 544 in "mod.rs"
+  <alloc::raw_vec::RawVec<(core::ops::range::Range<usize>, adoctra_core::substitution_text::Fragment)>>::grow_one + 0x0000003A, line 186 in "mod.rs"
+  <adoctra_core::substitution_text::Text>::push + 0x000000C7, line 174 in "substitution_text.rs"
+  <adoctra_core::substitution_text::Text>::copy + 0x000005AD, line 239 in "substitution_text.rs"
+  adoctra_core::attribute_macros::apply_stage + 0x00003860, line 1904 in "attribute_macros.rs"
+  adoctra_core::attribute_macros::flush_inlines + 0x00000591, line 250 in "attribute_macros.rs"
+  adoctra_core::attribute_macros::process_inlines + 0x00000345, line 196 in "attribute_macros.rs"
+  adoctra_core::inline::scan_inlines_recorded + 0x00002B9D, line 59 in "inline.rs"
+  adoctra_core::body_subs::run + 0x0000073D, line 1185 in "body_subs.rs"
+  <adoctra_core::body_subs::Execution>::evaluate + 0x00000466, line 815 in "body_subs.rs"
+  <adoctra_core::body_subs::Execution>::convert + 0x00000170, line 483 in "body_subs.rs"
+  <adoctra_core::body_subs::Execution>::inlines + 0x00000157, line 468 in "body_subs.rs"
+  <adoctra_core::body_subs::Execution>::blocks + 0x00000079, line 851 in "body_subs.rs"
+  <adoctra_core::body_subs::Execution>::blocks + 0x00002022, line 851 in "body_subs.rs"
+  adoctra_core::parser::parse_reader + 0x000023C4, line 194 in "parser.rs"
+  adoctra_core::parse_resource + 0x000000EB, line 119 in "lib.rs"
+  performance::main + 0x00001BD3, line 129 in "performance.rs"
+  std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), alloc::boxed::Box<dyn core::error::Error>>, core::result::Result<(), alloc::boxed::Box<dyn core::error::Error>>> + 0x00000004, line 250 in alternate source context "function.rs"
+  main + 0x00000485
+  <static>@0x29c21 (<libc.so.6>) + 0x00000085
+
+Allocation #2, Instances = 1024, Bytes Allocated = 5701632
+  realloc + 0x000000E8
+  <alloc::raw_vec::RawVecInner>::finish_grow + 0x00000106, line 544 in "mod.rs"
+  <alloc::raw_vec::RawVec<(core::ops::range::Range<usize>, adoctra_core::substitution_text::Fragment)>>::grow_one + 0x0000003A, line 186 in "mod.rs"
+  <adoctra_core::substitution_text::Text>::push + 0x000000C7, line 174 in "substitution_text.rs"
+  <adoctra_core::substitution_text::Text>::copy + 0x000005AD, line 239 in "substitution_text.rs"
+  adoctra_core::attribute_macros::apply_stage + 0x00003860, line 1904 in "attribute_macros.rs"
+  adoctra_core::attribute_macros::flush_inlines + 0x00000633, line 250 in "attribute_macros.rs"
+  adoctra_core::attribute_macros::process_inlines + 0x00000345, line 196 in "attribute_macros.rs"
+  adoctra_core::inline::scan_inlines_recorded + 0x00002B9D, line 59 in "inline.rs"
+  adoctra_core::body_subs::run + 0x0000073D, line 1185 in "body_subs.rs"
+  <adoctra_core::body_subs::Execution>::evaluate + 0x00000466, line 815 in "body_subs.rs"
+  <adoctra_core::body_subs::Execution>::convert + 0x00000170, line 483 in "body_subs.rs"
+  <adoctra_core::body_subs::Execution>::inlines + 0x00000157, line 468 in "body_subs.rs"
+  <adoctra_core::body_subs::Execution>::blocks + 0x00000079, line 851 in "body_subs.rs"
+  <adoctra_core::body_subs::Execution>::blocks + 0x00002022, line 851 in "body_subs.rs"
+  adoctra_core::parser::parse_reader + 0x000023C4, line 194 in "parser.rs"
+  adoctra_core::parse_resource + 0x000000EB, line 119 in "lib.rs"
+  performance::main + 0x00001BD3, line 129 in "performance.rs"
+  std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), alloc::boxed::Box<dyn core::error::Error>>, core::result::Result<(), alloc::boxed::Box<dyn core::error::Error>>> + 0x00000004, line 250 in alternate source context "function.rs"
+  main + 0x00000485
+  <static>@0x29c21 (<libc.so.6>) + 0x00000085
+
+Allocation #3, Instances = 1024, Bytes Allocated = 5701632
+  realloc + 0x000000E8
+  <alloc::raw_vec::RawVecInner>::finish_grow + 0x00000106, line 544 in "mod.rs"
+  <alloc::raw_vec::RawVec<(core::ops::range::Range<usize>, adoctra_core::substitution_text::Fragment)>>::grow_one + 0x0000003A, line 186 in "mod.rs"
+  <adoctra_core::substitution_text::Text>::push + 0x000000C7, line 174 in "substitution_text.rs"
+  <adoctra_core::substitution_text::Text>::copy + 0x000005AD, line 239 in "substitution_text.rs"
+  adoctra_core::attribute_macros::apply_stage + 0x00003860, line 1904 in "attribute_macros.rs"
+  adoctra_core::attribute_macros::flush_inlines + 0x000004F3, line 250 in "attribute_macros.rs"
+  adoctra_core::attribute_macros::process_inlines + 0x00000345, line 196 in "attribute_macros.rs"
+  adoctra_core::inline::scan_inlines_recorded + 0x00002B9D, line 59 in "inline.rs"
+  adoctra_core::body_subs::run + 0x0000073D, line 1185 in "body_subs.rs"
+  <adoctra_core::body_subs::Execution>::evaluate + 0x00000466, line 815 in "body_subs.rs"
+  <adoctra_core::body_subs::Execution>::convert + 0x00000170, line 483 in "body_subs.rs"
+  <adoctra_core::body_subs::Execution>::inlines + 0x00000157, line 468 in "body_subs.rs"
+  <adoctra_core::body_subs::Execution>::blocks + 0x00000079, line 851 in "body_subs.rs"
+  <adoctra_core::body_subs::Execution>::blocks + 0x00002022, line 851 in "body_subs.rs"
+  adoctra_core::parser::parse_reader + 0x000023C4, line 194 in "parser.rs"
+  adoctra_core::parse_resource + 0x000000EB, line 119 in "lib.rs"
+  performance::main + 0x00001BD3, line 129 in "performance.rs"
+  std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), alloc::boxed::Box<dyn core::error::Error>>, core::result::Result<(), alloc::boxed::Box<dyn core::error::Error>>> + 0x00000004, line 250 in alternate source context "function.rs"
+  main + 0x00000485
+  <static>@0x29c21 (<libc.so.6>) + 0x00000085
+
+Allocation #4, Instances = 1024, Bytes Allocated = 5701632
+  realloc + 0x000000E8
+  <alloc::raw_vec::RawVecInner>::finish_grow + 0x00000106, line 544 in "mod.rs"
+  <alloc::raw_vec::RawVec<(core::ops::range::Range<usize>, adoctra_core::substitution_text::Fragment)>>::grow_one + 0x0000003A, line 186 in "mod.rs"
+  <adoctra_core::substitution_text::Text>::push + 0x000000C7, line 174 in "substitution_text.rs"
+  <adoctra_core::substitution_text::Text>::copy + 0x000005AD, line 239 in "substitution_text.rs"
+  adoctra_core::attribute_quotes::apply_text + 0x00001826, line 39 in "attribute_quotes.rs"
+  adoctra_core::inline::scan_inlines_recorded + 0x00000B59, line 59 in "inline.rs"
+  adoctra_core::body_subs::run + 0x0000073D, line 1185 in "body_subs.rs"
+  <adoctra_core::body_subs::Execution>::evaluate + 0x00000466, line 815 in "body_subs.rs"
+  <adoctra_core::body_subs::Execution>::convert + 0x00000170, line 483 in "body_subs.rs"
+  <adoctra_core::body_subs::Execution>::inlines + 0x00000157, line 468 in "body_subs.rs"
+  <adoctra_core::body_subs::Execution>::blocks + 0x00000079, line 851 in "body_subs.rs"
+  <adoctra_core::body_subs::Execution>::blocks + 0x00002022, line 851 in "body_subs.rs"
+  adoctra_core::parser::parse_reader + 0x000023C4, line 194 in "parser.rs"
+  adoctra_core::parse_resource + 0x000000EB, line 119 in "lib.rs"
+  performance::main + 0x00001BD3, line 129 in "performance.rs"
+  std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), alloc::boxed::Box<dyn core::error::Error>>, core::result::Result<(), alloc::boxed::Box<dyn core::error::Error>>> + 0x00000004, line 250 in alternate source context "function.rs"
+  main + 0x00000485
+  <static>@0x29c21 (<libc.so.6>) + 0x00000085
+
+Allocation #5, Instances = 1024, Bytes Allocated = 5701632
+  realloc + 0x000000E8
+  <alloc::raw_vec::RawVecInner>::finish_grow + 0x00000106, line 544 in "mod.rs"
+  <alloc::raw_vec::RawVec<(core::ops::range::Range<usize>, adoctra_core::substitution_text::Fragment)>>::grow_one + 0x0000003A, line 186 in "mod.rs"
+  <adoctra_core::substitution_text::Text>::push + 0x000000C7, line 174 in "substitution_text.rs"
+  <adoctra_core::substitution_text::Text>::copy + 0x000005AD, line 239 in "substitution_text.rs"
+  adoctra_core::post_replacements::apply + 0x00000414, line 5 in "post_replacements.rs"
+  adoctra_core::attribute_macros::flush_inlines + 0x000007BD, line 250 in "attribute_macros.rs"
+  adoctra_core::attribute_macros::process_inlines + 0x00000345, line 196 in "attribute_macros.rs"
+  adoctra_core::inline::scan_inlines_recorded + 0x00002B9D, line 59 in "inline.rs"
+  adoctra_core::body_subs::run + 0x0000073D, line 1185 in "body_subs.rs"
+  <adoctra_core::body_subs::Execution>::evaluate + 0x00000466, line 815 in "body_subs.rs"
+  <adoctra_core::body_subs::Execution>::convert + 0x00000170, line 483 in "body_subs.rs"
+  <adoctra_core::body_subs::Execution>::inlines + 0x00000157, line 468 in "body_subs.rs"
+  <adoctra_core::body_subs::Execution>::blocks + 0x00000079, line 851 in "body_subs.rs"
+  <adoctra_core::body_subs::Execution>::blocks + 0x00002022, line 851 in "body_subs.rs"
+  adoctra_core::parser::parse_reader + 0x000023C4, line 194 in "parser.rs"
+  adoctra_core::parse_resource + 0x000000EB, line 119 in "lib.rs"
+  performance::main + 0x00001BD3, line 129 in "performance.rs"
+  std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), alloc::boxed::Box<dyn core::error::Error>>, core::result::Result<(), alloc::boxed::Box<dyn core::error::Error>>> + 0x00000004, line 250 in alternate source context "function.rs"
+  main + 0x00000485
+  <static>@0x29c21 (<libc.so.6>) + 0x00000085
+

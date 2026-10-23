@@ -1,0 +1,92 @@
+Experiment: target/performance/optimization/cpu-before-tables-parse.er
+No errors
+*** Collector Warning: Collection interval timer period was changed (997 -> 0); profile data may be unreliable
+Archive command ` /usr/bin/gprofng-archive -n -a on --outfile /home/avskor/work/adoctra/target/performance/optimization/cpu-before-tables-parse.er/archive.log /home/avskor/work/adoctra/target/performance/optimization/cpu-before-tables-parse.er'
+
+Target command (64-bit): 'target/performance/optimization/before-profile-driver --source target/performance/optimization/tables-512.adoc --profile-operation parse --warmup 0 --samples 1 --iterations 100'
+Process pid 16, ppid 3, pgrp 1, sid 1
+Current working directory: /home/avskor/work/adoctra
+Collector version: `2.44'; experiment version 12.4 (64-bit)
+Host `A-SKOROBOGATOV', OS `Linux 6.18.40.1-microsoft-standard-WSL2', page size 4096, architecture `x86_64'
+  8 CPUs, clock speed 4007 MHz.
+  Memory: 5121118 pages @  4096 = 20004 MB.
+Data collection parameters:
+  Clock-profiling, interval = 997 microsecs.
+  Periodic sampling, 1 secs.
+  Follow descendant processes from: fork|exec|combo
+
+Experiment started Fri Oct 23 23:44:09 2026
+
+Experiment Ended: 10.469518400
+Data Collection Duration: 10.469518400
+Functions sorted by metric: Exclusive Total CPU Time
+
+Excl. Total   Incl. Total    Name
+CPU           CPU
+ sec.      %   sec.      %
+0.104 100.00  0.104 100.00   <Total>
+0.024  23.08  0.024  23.08   <static>@0x161e67 (<libc.so.6>)
+0.015  14.42  0.027  25.96   <static>@0x9fc63 (<libc.so.6>)
+0.012  11.54  0.012  11.54   <static>@0x9de00 (<libc.so.6>)
+0.006   5.77  0.016  15.38   free
+0.006   5.77  0.022  21.15   malloc
+0.004   3.85  0.014  13.46   <&str as core::str::pattern::Pattern>::is_contained_in
+0.003   2.88  0.005   4.81   <adoctra_core::attributes::Attributes>::get
+0.002   1.92  0.060  57.69   <adoctra_core::body_subs::Execution>::evaluate
+0.002   1.92  0.002   1.92   <adoctra_core::reader::Reader>::original_spans
+0.002   1.92  0.009   8.65   <alloc::raw_vec::RawVecInner>::finish_grow
+0.002   1.92  0.003   2.88   <alloc::vec::Vec<usize> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<usize, core::iter::adapters::filter_map::FilterMap<core::str::iter::CharIndices, <adoctra_core::inline_pass::Index>::new::{closure#0}::{closure#0}>>>::from_iter
+0.002   1.92  0.005   4.81   adoctra_core::attribute_macros::apply_stage
+0.002   1.92  0.002   1.92   adoctra_core::inline::flush_text
+0.001   0.96  0.001   0.96   <adoctra_core::attributes::AttributePart>::lexical
+0.001   0.96  0.001   0.96   <adoctra_core::attributes::Attributes>::remove
+0.001   0.96  0.001   0.96   <adoctra_core::context::ParseContext>::start_body
+0.001   0.96  0.001   0.96   <adoctra_core::reader::Reader>::nested
+0.001   0.96  0.003   2.88   <adoctra_core::substitution_text::Text>::copy
+0.001   0.96  0.006   5.77   <adoctra_core::substitution_text::Text>::push
+0.001   0.96  0.002   1.92   <alloc::collections::btree::map::BTreeMap<(usize, usize), adoctra_core::body_subs::Pending>>::insert
+0.001   0.96  0.001   0.96   <alloc::collections::btree::node::BalancingContext<(usize, usize), adoctra_core::body_subs::Pending>>::bulk_steal_right
+0.001   0.96  0.002   1.92   <alloc::collections::btree::node::Handle<alloc::collections::btree::node::NodeRef<alloc::collections::btree::node::marker::Mut, (usize, usize), adoctra_core::body_subs::Pending, alloc::collections::btree::node::marker::Leaf>, alloc::collections::btree::node::marker::KV>>::remove_leaf_kv::<<alloc::collections::btree::map::entry::OccupiedEntry<(usize, usize), adoctra_core::body_subs::Pending>>::remove_kv::{closure#0}, alloc::alloc::Global>
+0.001   0.96  0.001   0.96   <char as core::fmt::Display>::fmt
+0.001   0.96  0.001   0.96   <core::str::pattern::StrSearcher>::new
+0.001   0.96  0.002   1.92   <str>::to_lowercase
+0.001   0.96  0.002   1.92   adoctra_core::attribute_quotes::apply_text
+0.001   0.96  0.051  49.04   adoctra_core::inline::scan_inlines_recorded
+0.001   0.96  0.001   0.96   adoctra_core::inline_attributes::nodes
+0.001   0.96  0.017  16.35   adoctra_core::parser::collect_blocks_in
+
+Functions Call Tree. Metric: Attributed Total CPU Time
+
+Attr. Total    Name
+CPU
+ sec.      %
+0.104 100.00   +-<Total>
+0.104 100.00     +-<static>@0x29c21 (<libc.so.6>)
+0.104 100.00       +-main
+0.104 100.00         +-std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), alloc::boxed::Box<dyn core::error::Error>>, core::result::Result<(), alloc::boxed::Box<dyn core::error::Error>>>
+0.104 100.00           +-performance::main
+0.096  92.31             +-adoctra_core::parse_resource
+0.096  92.31             |  +-adoctra_core::parser::parse_reader
+0.071  68.27             |    +-<adoctra_core::body_subs::Execution>::blocks
+0.071  68.27             |    |  +-<adoctra_core::body_subs::Execution>::table
+0.035  33.65             |    |    +-<adoctra_core::body_subs::Execution>::blocks
+0.035  33.65             |    |    |  +-<adoctra_core::body_subs::Execution>::inlines
+0.034  32.69             |    |    |    +-<adoctra_core::body_subs::Execution>::convert
+0.034  32.69             |    |    |    |  +-<adoctra_core::body_subs::Execution>::evaluate
+0.025  24.04             |    |    |    |    +-adoctra_core::body_subs::run
+0.025  24.04             |    |    |    |    |  +-adoctra_core::inline::scan_inlines_recorded
+0.006   5.77             |    |    |    |    |    +-<&str as core::str::pattern::Pattern>::is_contained_in
+0.004   3.85             |    |    |    |    |    |  +-<static>@0x161e67 (<libc.so.6>)
+0.004   3.85             |    |    |    |    |    +-<adoctra_core::inline_pass::Passes>::stage
+0.003   2.88             |    |    |    |    |    |  +-<adoctra_core::inline_pass::Index>::new
+0.003   2.88             |    |    |    |    |    |  |  +-<alloc::vec::Vec<usize> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<usize, core::iter::adapters::filter_map::FilterMap<core::str::iter::CharIndices, <adoctra_core::inline_pass::Index>::new::{closure#0}::{closure#0}>>>::from_iter
+0.001   0.96             |    |    |    |    |    |  |    +-<static>@0x161e67 (<libc.so.6>)
+0.001   0.96             |    |    |    |    |    |  +-free
+0.001   0.96             |    |    |    |    |    |    +-<static>@0x9fc63 (<libc.so.6>)
+0.001   0.96             |    |    |    |    |    |      +-<static>@0x9de00 (<libc.so.6>)
+0.001   0.96             |    |    |    |    |    |        +-<static>@0x9de00 (<libc.so.6>)
+0.004   3.85             |    |    |    |    |    +-adoctra_core::attribute_macros::process_inlines
+0.003   2.88             |    |    |    |    |    |  +-adoctra_core::attribute_macros::flush_inlines
+0.001   0.96             |    |    |    |    |    |  |  +-<adoctra_core::substitution_text::Text>::append
+0.001   0.96             |    |    |    |    |    |  |  |  +-<adoctra_core::substitution_text::Text>::push
+0.001   0.96             |    |    |    |    |    |  |  |    +-<alloc::raw_vec::RawVecInner<_>>::reserve::do_reserve_and_handle::<alloc::alloc::Global>

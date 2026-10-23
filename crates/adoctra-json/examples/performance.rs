@@ -18,6 +18,7 @@ struct Config {
     warmup: usize,
     samples: usize,
     iterations: usize,
+    profile_operation: Option<String>,
 }
 
 impl Config {
@@ -32,6 +33,7 @@ impl Config {
             warmup: 2,
             samples: 5,
             iterations: 3,
+            profile_operation: None,
         };
         while let Some(flag) = args.next() {
             let value = args
@@ -52,6 +54,12 @@ impl Config {
                         "secure" => SafeMode::Secure,
                         _ => return Err("safe mode must be safe or secure".into()),
                     }
+                }
+                "--profile-operation" if config.profile_operation.is_none() => {
+                    if !matches!(value.as_str(), "parse" | "tokens") {
+                        return Err("profile operation must be parse or tokens".into());
+                    }
+                    config.profile_operation = Some(value);
                 }
                 "--warmup" | "--samples" | "--iterations" => {
                     let count = value.parse::<usize>()?;
@@ -145,6 +153,19 @@ fn measure<T>(config: &Config, mut operation: impl FnMut() -> T) -> Vec<u128> {
 }
 
 fn run(config: &Config, input: &Input) -> Result<String> {
+    if let Some(operation) = &config.profile_operation {
+        // No preflight parse/JSON/token pass: the profiler sees only the
+        // selected operation (plus process startup, input loading and output).
+        let elapsed = match operation.as_str() {
+            "parse" => measure(config, || input.parse()),
+            "tokens" => measure(config, || input.tokens()),
+            _ => unreachable!("validated operation"),
+        };
+        return Ok(format!(
+            r#"{{"schema":"adoctra-profile-driver-v1","operation":"{operation}","warmup":{},"samples":{},"iterations":{},"elapsed_ns":{elapsed:?}}}"#,
+            config.warmup, config.samples, config.iterations,
+        ));
+    }
     let parsed = input.parse();
     let json = JsonBackend.convert(&parsed.document)?;
     let tokens = input.tokens();
@@ -213,8 +234,50 @@ mod tests {
             vec!["--source", "a", "--resource", "x"],
             vec!["--source", "a", "--source", "b"],
             vec!["--unknown", "x"],
+            vec!["--source", "a", "--profile-operation", "json"],
+            vec!["--source", "a", "--profile-operation"],
+            vec![
+                "--source",
+                "a",
+                "--profile-operation",
+                "parse",
+                "--profile-operation",
+                "tokens",
+            ],
         ] {
             assert!(Config::parse(args.into_iter().map(str::to_owned)).is_err());
+        }
+    }
+
+    #[test]
+    fn profiling_selects_one_operation_and_a_separate_protocol() {
+        let input = Input {
+            source: "Ж🙂 *bold*.\n".into(),
+            resources: MemoryResources::new(),
+            resource_bytes: 0,
+            options: ParseOptions::default(),
+        };
+        for operation in ["parse", "tokens"] {
+            let config = Config::parse(
+                [
+                    "--source",
+                    "unused",
+                    "--profile-operation",
+                    operation,
+                    "--warmup",
+                    "0",
+                    "--samples",
+                    "1",
+                    "--iterations",
+                    "1",
+                ]
+                .map(str::to_owned),
+            )
+            .unwrap();
+            let output = run(&config, &input).unwrap();
+            assert!(output.contains("\"schema\":\"adoctra-profile-driver-v1\""));
+            assert!(output.contains(&format!("\"operation\":\"{operation}\"")));
+            assert!(!output.contains("observations"));
         }
     }
 

@@ -4,6 +4,7 @@ import gzip
 import io
 import json
 from pathlib import Path
+import re
 import subprocess
 import tempfile
 import unittest
@@ -191,6 +192,61 @@ class PerformanceTests(unittest.TestCase):
                  contextlib.redirect_stderr(io.StringIO()), self.assertRaisesRegex(ValueError, 'source changed'):
                 perf.main(['--skip-wasm', '--output', str(output)])
             self.assertFalse(output.exists())
+
+    def test_substitution_study_keeps_inputs_and_repeated_raw_timings(self):
+        report = json.loads((perf.ROOT / 'performance/substitution-buffers.json').read_text())
+        self.assertEqual(report['schema'], 'adoctra-substitution-buffer-study-v1')
+        originals = {case['id']: case for case in perf.workloads()}
+        workloads = {case['id']: case for case in report['workloads']}
+        self.assertEqual(set(workloads), set(originals))
+        for ident, workload in workloads.items():
+            self.assertEqual(workload['input']['source_sha256'], perf.digest(originals[ident]['source'].encode()))
+            self.assertEqual(workload['provenance'], originals[ident]['provenance'])
+            self.assertEqual(workload['input']['attributes'], originals[ident]['attributes'])
+            self.assertEqual(workload['input']['resources'], {
+                name: {'bytes': len(value.encode()), 'sha256': perf.digest(value.encode())}
+                for name, value in originals[ident]['resources'].items()})
+        for series, cases in report['summary'].items():
+            runs = [r for r in report['runs'] if r['series'] == series]
+            self.assertEqual(len(runs), 6)
+            for variant in ['before', 'after']:
+                selected = [r for r in runs if r['variant'] == variant]
+                self.assertEqual([r['index'] for r in selected], [1, 2, 3])
+                for run in selected:
+                    self.assertEqual(run['environment']['affinity'], [2])
+                    self.assertEqual(set(run['elapsed_ns']), set(cases))
+                for ident, operations in cases.items():
+                    self.assertEqual(set(operations), set(perf.OPERATIONS))
+                    for operation, medians in operations.items():
+                        expected = []
+                        for run in selected:
+                            samples = run['elapsed_ns'][ident][operation]
+                            self.assertEqual(len(samples), run['settings']['samples'])
+                            expected.append(perf.summary(samples, run['settings']['iterations'])['median_ns'])
+                        self.assertEqual(medians[variant + '_run_medians_ns'], expected)
+
+    def test_substitution_study_counters_and_profile_limitations_match_evidence(self):
+        report = json.loads((perf.ROOT / 'performance/substitution-buffers.json').read_text())
+        rows = report['allocations']['runs']
+        self.assertEqual({(r['variant'], r['id'], r['operation']) for r in rows}, {
+            (variant, f'stress-{family}-512', operation)
+            for variant in ['before', 'after'] for family in ['references', 'tables']
+            for operation in ['parse', 'tokens']})
+        for row in rows:
+            raw = row['raw_summary']
+            values = tuple(map(int, re.search(
+                r'heap total: (\d+), heap peak: (\d+), stack peak: (\d+)', raw).groups()))
+            self.assertEqual(values, tuple(row[key] for key in ['heap_total_bytes', 'heap_peak_bytes', 'stack_peak_bytes']))
+            for name, count in row['calls'].items():
+                found = re.search(rf'{name}\|\s+(\d+)\s+(\d+)\s+(\d+)', raw)
+                self.assertEqual(count, int(found[1]))
+                self.assertEqual(int(found[3]), 0)
+            self.assertEqual(row['allocation_calls'], sum(row['calls'].values()))
+        for profile in report['profiles']:
+            data = (perf.ROOT / profile['path']).read_bytes()
+            self.assertEqual(perf.digest(data), profile['sha256'])
+            self.assertIn(b'Collection interval timer period was changed', data)
+            self.assertFalse(profile['quantitative_cpu_valid'])
 
 
 if __name__ == '__main__':

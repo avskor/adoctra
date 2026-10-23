@@ -279,9 +279,7 @@ impl Text {
         decoded: Option<&str>,
         output: &mut Self,
     ) {
-        let first = self
-            .fragments
-            .partition_point(|(r, _)| r.end <= range.start);
+        let (first, span) = self.replacement_origin(range.clone());
         let (r, f) = &self.fragments[first];
         let boundary = f.boundary.as_ref().and_then(|b| {
             let mut selected = b.slice(
@@ -305,6 +303,29 @@ impl Text {
             }
             Some(selected)
         });
+        output.push(Fragment {
+            text: lexical.into(),
+            decoded: decoded.map(str::to_owned),
+            raw: decoded.is_none(),
+            owner: f.owner,
+            span,
+            part: None,
+            boundary,
+            ui: None,
+            exact: false,
+            extend_span: f.extend_span,
+        });
+        self.trailing(range.end, output);
+    }
+
+    /// Find the first owner and its physical coverage without materializing a
+    /// replacement. Span queries and semantic macros need no lexical buffer,
+    /// copied boundary metadata or trailing zero-length marks.
+    fn replacement_origin(&self, range: Range<usize>) -> (usize, Span) {
+        let first = self
+            .fragments
+            .partition_point(|(r, _)| r.end <= range.start);
+        let (r, f) = &self.fragments[first];
         let mut span = slice_span(
             f.span,
             range.start - r.start..range.end.min(r.end) - r.start,
@@ -321,19 +342,7 @@ impl Text {
                 span.end = span.end.max(end);
             }
         }
-        output.push(Fragment {
-            text: lexical.into(),
-            decoded: decoded.map(str::to_owned),
-            raw: decoded.is_none(),
-            owner: f.owner,
-            span,
-            part: None,
-            boundary,
-            ui: None,
-            exact: false,
-            extend_span: f.extend_span,
-        });
-        self.trailing(range.end, output);
+        (first, span)
     }
 
     /// Zero-length fragments at the end of a replaced range follow it: the
@@ -352,9 +361,7 @@ impl Text {
 
     /// Physical coverage of a match, using the same ownership rules as replacements.
     pub fn match_span(&self, range: Range<usize>) -> Span {
-        let mut anchor = Self::default();
-        self.replacement(range, " ", None, &mut anchor);
-        anchor.fragments[0].1.span
+        self.replacement_origin(range).1
     }
 
     /// Physical union of the fragments a range selects in the source of its
@@ -381,11 +388,10 @@ impl Text {
     /// Anchor a generated semantic value to its first source owner. References
     /// consumed later in the range are retained as empty nodes by write_back.
     pub fn replace_parts(&self, range: Range<usize>, parts: &[AttributePart], output: &mut Self) {
-        let mut anchor = Self::default();
-        self.replacement(range.clone(), " ", None, &mut anchor);
-        let (_, fragment) = &anchor.fragments[0];
+        let (first, span) = self.replacement_origin(range.clone());
+        let owner = self.fragments[first].1.owner;
         for part in parts {
-            output.append_part(part, fragment.owner, fragment.span);
+            output.append_part(part, owner, span);
         }
         self.trailing(range.end, output);
     }
@@ -394,9 +400,8 @@ impl Text {
     /// marks around its labels, so the later macro stages see the same
     /// lexical text as in Ruby and nest what they find inside a label.
     pub fn replace_ui(&self, range: Range<usize>, mut ui: Marked, output: &mut Self) {
-        let mut anchor = Self::default();
-        self.replacement(range.clone(), " ", None, &mut anchor);
-        let (owner, span) = (anchor.fragments[0].1.owner, anchor.fragments[0].1.span);
+        let (first, span) = self.replacement_origin(range.clone());
+        let owner = self.fragments[first].1.owner;
         let pieces = ui.pieces();
         let labels: Vec<Vec<AttributePart>> =
             ui.labels_mut().into_iter().map(std::mem::take).collect();
@@ -441,6 +446,13 @@ impl Text {
     /// Reassemble only boundaries we created, after replacements edit their
     /// lexical id/role values. Arbitrary raw tags never become semantic nodes.
     fn restore_boundaries(&mut self) {
+        if !self
+            .fragments
+            .iter()
+            .any(|(_, f)| f.part.is_none() && f.boundary.is_some())
+        {
+            return;
+        }
         let mut pending = std::mem::take(&mut self.fragments).into_iter().peekable();
         while let Some((range, mut fragment)) = pending.next() {
             if fragment.part.is_some() {
@@ -862,4 +874,98 @@ pub(crate) fn write_back(nodes: Vec<Inline>, mut text: Text, fold_newlines: bool
         }
     }
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{AttributeFormat, SourceId};
+
+    #[test]
+    fn match_origins_keep_encoded_unicode_and_attribute_ownership() {
+        let mut text = Text::default();
+        let source = Span {
+            provenance: Some(3),
+            ..Span::in_source(SourceId(7), 10, 13)
+        };
+        text.append_source("&Ж", false, 0, source);
+        let attribute = Span::in_source(SourceId(8), 30, 37);
+        text.append_part(&AttributePart::Text("expanded".into()), 1, attribute);
+        text.append_source("🙂\r\n", false, 2, Span::in_source(SourceId(7), 50, 56));
+        assert_eq!(text.text, "&amp;Жexpanded🙂\r\n");
+        assert_eq!(text.match_span(1..4), Span { end: 11, ..source });
+        assert_eq!(
+            text.match_span(5..7),
+            Span {
+                start: 11,
+                ..source
+            }
+        );
+        assert_eq!(
+            text.match_span(0..text.text.len()),
+            Span { end: 56, ..source }
+        );
+        // Starting inside the expansion stays owned by the attribute, even
+        // when the match also consumes following physical source characters.
+        assert_eq!(text.match_span(8..text.text.len()), attribute);
+        let part = AttributePart::Anchor("target".into());
+        let mut out = Text::default();
+        text.replace_parts(8..text.text.len(), std::slice::from_ref(&part), &mut out);
+        let fragments = out.into_fragments();
+        assert_eq!(fragments.len(), 1);
+        assert_eq!(fragments[0].owner, 1);
+        assert_eq!(fragments[0].span, attribute);
+        assert_eq!(fragments[0].part, Some(part));
+    }
+
+    #[test]
+    fn changed_boundaries_restore_metadata_but_raw_tags_stay_raw() {
+        let span = Span::in_source(SourceId(2), 5, 9);
+        let original = AttributePart::OpenWithAttributes {
+            format: AttributeFormat::Strong,
+            id: Some("Ж".into()),
+            role: Some("old".into()),
+        };
+        let mut text = Text::from_parts_at(&[original], span);
+        text.append_part(&AttributePart::Raw("<b class=\"old\">".into()), 0, span);
+        let at = text.text.find("old").unwrap();
+        let mut changed = Text::default();
+        text.copy(0..at, &mut changed);
+        text.replacement(at..at + 3, "new", None, &mut changed);
+        text.copy(at + 3..text.text.len(), &mut changed);
+        assert_eq!(
+            changed.into_parts(),
+            vec![
+                AttributePart::OpenWithAttributes {
+                    format: AttributeFormat::Strong,
+                    id: Some("Ж".into()),
+                    role: Some("new".into()),
+                },
+                AttributePart::Raw("<b class=\"old\">".into()),
+            ]
+        );
+    }
+
+    #[test]
+    fn semantic_replacements_keep_trailing_zero_length_parts_once() {
+        let span = Span::new(10, 14);
+        let hidden = AttributePart::IndexTerm(Box::new(IndexTerm {
+            text: None,
+            terms: vec!["hidden".into()],
+            see: None,
+            see_also: Vec::new(),
+        }));
+        let mut text = Text::default();
+        text.append_source("word", false, 3, span);
+        text.append_part(&hidden, 4, Span::new(14, 14));
+        let mut out = Text::default();
+        text.replace_parts(0..4, &[AttributePart::Text("Ж".into())], &mut out);
+        text.copy(4..4, &mut out);
+        let fragments = out.into_fragments();
+        assert_eq!(fragments.len(), 2);
+        assert_eq!(fragments[0].span, span);
+        assert_eq!(fragments[0].owner, 3);
+        assert_eq!(fragments[1].owner, 4);
+        assert_eq!(fragments[1].part, Some(hidden));
+    }
 }

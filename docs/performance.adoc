@@ -74,7 +74,8 @@ AST, JSON-буфера и карты источников.
 сохраняются размеры входов, число корневых блоков, токенов, байтов JSON и
 диагностик по severity. Это контроль состава работы, а не семантический эталон.
 Входные байты include считаются один раз на предоставленный ресурс, а не по
-числу его раскрытий. Память/RSS и число аллокаций пока не измеряются.
+числу его раскрытий. Основной стенд не измеряет память/RSS и число аллокаций;
+отдельное исследование аллокаций описано ниже.
 
 == Входы и воспроизводимость
 
@@ -174,3 +175,107 @@ rustc 1.99.1 (58cf8f9c3 2026-10-13). Размер WASM: 1 528 505 байт; gzip
 Начальное направление профилирования — parse/tokens на входах с xref/сносками
 и вложенными ячейками. Зависимость времени от размера нужно подтвердить
 повторными прогонами; шум этой машины заметен и в исходных выборках.
+
+== Профилирование одной операции
+
+Пример `performance` принимает `--profile-operation parse` либо `tokens`.
+В этом режиме выполняется только выбранная операция с указанными
+`--warmup`, `--samples`, `--iterations`; проверочных разборов и JSON-конвертации
+нет. Чтение входов, создание provider и вывод результата остаются в процессе,
+поэтому внешний profiler видит также эти накладные расходы.
+Выход имеет отдельную схему `adoctra-profile-driver-v1` и не принимается
+основным стендом как обычный отчёт измерений. Профиль не проверяет семантику
+и отсутствие диагностик; проверяйте входы обычным стендом и приёмкой.
+
+Пример для Linux с установленными GNU gprofng и glibc `libmemusage.so`:
+
+[source,shell]
+----
+mkdir -p target/profiling
+PYTHONPATH=scripts python3 -c 'from performance import synthetic; from pathlib import Path; Path("target/profiling/references.adoc").write_text(synthetic("references", 512), encoding="utf-8")'
+CARGO_TARGET_DIR=target/profile CARGO_PROFILE_RELEASE_DEBUG=1 RUSTFLAGS='-C dwarf-version=4 -C force-frame-pointers=yes' cargo build --locked --release -p adoctra-json --example performance
+
+# CPU: повторение одной операции; перед интерпретацией обязательно читать header.
+gprofng collect app -p hi -o target/profiling/cpu.er target/profile/release/examples/performance --source target/profiling/references.adoc --profile-operation parse --warmup 0 --samples 1 --iterations 100
+gprofng display text -header -limit 30 -functions -calltree target/profiling/cpu.er
+
+# Стэки аллокаций: дорогое инструментирование, достаточно одного вызова.
+gprofng collect app -p off -H on -o target/profiling/heap.er target/profile/release/examples/performance --source target/profiling/references.adoc --profile-operation parse --warmup 0 --samples 1 --iterations 1
+gprofng display text -header -limit 30 -metrics i+heapallocbytes:i+heapalloccnt:name -functions -allocs target/profiling/heap.er
+
+# Независимые счётчики glibc. Путь зависит от дистрибутива/архитектуры.
+LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libmemusage.so target/profile/release/examples/performance --source target/profiling/references.adoc --profile-operation parse --warmup 0 --samples 1 --iterations 1
+----
+
+Для подсветки замените операцию на `tokens`, для таблиц — генератор на `tables`.
+Храните отдельные исполняемые файлы до/после изменения до завершения профилей:
+gprofng архивирует их при выходе. Не сравнивайте времена инструментированных
+запусков с native timing. Библиотека `libmemusage` подключается только к
+процессу драйвера; не экспортируйте `LD_PRELOAD` на весь запуск Cargo/Python.
+
+== Устранение временных буферов substitutions
+
+После начальной базовой линии выполнены повторные полные native-прогоны
+на CPU 2 и исследованы `references`/`tables` по 512 единиц. Профиль стеков
+аллокаций показал создание временного `Text` ради одного source span и
+пересоздание вектора фрагментов в `restore_boundaries`, когда восстанавливать
+разделённую разметку не требуется.
+
+`replacement_origin` теперь вычисляет владельца и физический span напрямую;
+им пользуются обычная замена, `match_span`, `replace_parts` и `replace_ui`.
+`restore_boundaries` возвращается сразу, если нет разделённых semantic boundaries.
+Правила substitutions, source ownership и экспортируемый AST не меняются.
+Проверены Unicode/CRLF, происхождение атрибутов, изменение id/role,
+raw-разметка и невидимые indexterm; существующие HTML/семантические/позиционные
+корпуса проходят без изменения эталонов.
+
+В этом окружении gprofng 2.44 сообщает `Collection interval timer period was
+changed`; CPU-время и процентные доли из него не используются для выводов.
+Стэки аллокаций служат для локализации, итоговые счётчики отдельно проверяются
+glibc `libmemusage`. Его `heap total` и количество `malloc + realloc + calloc`
+характеризуют работу аллокатора за весь процесс, включая загрузку/вывод.
+Это не RSS и не объём живого AST. Значения `heap total` разных инструментов
+не смешиваются: они по-разному учитывают realloc. Пиковая память и выводы
+об утечках из gprofng в этом окружении не используются.
+
+link:../performance/substitution-buffers.json[Исходные данные исследования]
+содержат все 24 входа, три полных прогона каждой версии и три дополнительные
+пары на двух больших стресс-входах (порядок до/после, после/до, до/после).
+В каждом прогоне — 5 выборок по 3 вызова и 2 прогрева. Входы и наблюдаемые
+результаты до/после совпадают. Для профилирования сохранены команды,
+fingerprints исполняемых файлов и
+link:../performance/profiles/heap-before-references-parse.txt[стэки аллокаций],
+а также четыре CPU-профиля с исходными предупреждениями.
+
+Счётчики glibc для одного вызова на 512 единицах:
+
+[cols="2,1,1,1,1,1",options="header"]
+|===
+|Вход |Операция |Вызовы аллокатора до |После |Heap total до, байты |После, байты
+|references |parse |529564 |501399 |156621078 |128989388
+|references |tokens |529564 |501399 |156621079 |128989389
+|tables |parse |905505 |893191 |205858200 |188720838
+|tables |tokens |905505 |893191 |205858201 |188720839
+|===
+
+`Heap total` уменьшился на 17.6% и 8.3%, число вызовов — на 5.3% и 1.4%.
+Пиковый heap в parse остался 11217646 и 20394116 байт соответственно;
+в tokens оба значения на один байт больше из-за параметров процесса.
+Эти пики не равны RSS; сокращение временных буферов не уменьшило их.
+
+Медианы трёх дополнительных парных прогонов, мс на вызов:
+
+[cols="2,1,1,1",options="header"]
+|===
+|Вход |Операция |До |После
+|references-512 |parse |76.824 |74.068
+|references-512 |tokens |76.631 |78.295
+|tables-512 |parse |89.773 |89.314
+|tables-512 |tokens |86.814 |88.294
+|===
+
+Это медианы медиан отдельных прогонов, не оценка гарантированного ускорения.
+Например, после изменения медианы parse на таблицах составили 89.314,
+86.997 и 150.378 мс; шум заметен и в полных прогонах. Подтверждённый результат
+этого изменения — снижение объёма аллокаций, при сохранённой семантике.
+Raw WASM после изменения: 1529560 байт, gzip — 527051 байт.
