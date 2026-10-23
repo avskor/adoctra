@@ -124,6 +124,45 @@ class SemanticConverter < Asciidoctor::Converter::Base
     result
   end
 
+  def xref_label node
+    return inlines(node.text) if node.text
+    path = node.attr 'path'
+    return inlines(path) if path
+    refid = node.attr 'refid'
+    reference = node.document.catalog[:refs][refid]
+    if !reference && (refid.nil? || refid.empty?)
+      reference = node.document
+      reference = reference.parent_document while reference.parent_document
+      top = true
+    end
+    fallback = top ? '[^top]' : "[#{refid}]"
+    return inlines(fallback) unless Asciidoctor::AbstractNode === reference
+    return inlines(fallback) if @resolving_xref
+    begin
+      @resolving_xref = true
+      label = inlines(reference.xreftext(node.attr 'xrefstyle', nil, true) || fallback)
+      strip_xref_anchors label
+    ensure
+      @resolving_xref = false
+    end
+  end
+
+  def strip_xref_anchors nodes
+    # Ruby removes anchor tags from generated labels. Apply that operation to
+    # semantic nodes instead of rendering or parsing HTML.
+    nodes.flat_map do |node|
+      if node[:kind] == 'anchor'
+        []
+      elsif %w[link xref].include? node[:kind]
+        strip_xref_anchors node[:inlines]
+      elsif node.key? :inlines
+        [node.merge(inlines: strip_xref_anchors(node[:inlines]))]
+      else
+        [node]
+      end
+    end
+  end
+
   def convert node, transform = node.node_name, _opts = nil
     case transform
     when 'embedded', 'document'
@@ -149,6 +188,8 @@ class SemanticConverter < Asciidoctor::Converter::Base
       result
     when 'listing', 'literal'
       metadata(node).merge(language: node.attr('language'), inlines: inlines(node.content))
+    when 'stem'
+      metadata(node).merge(style: node.style, inlines: inlines(node.content))
     when 'ulist', 'olist'
       metadata(node).merge(style: node.style, items: node.items.map { |entry| item entry })
     when 'dlist'
@@ -167,6 +208,15 @@ class SemanticConverter < Asciidoctor::Converter::Base
       end
       result
     when 'inline_quoted'
+      if [:asciimath, :latexmath].include? node.type
+        raise 'stem metadata is outside inline-semantics-v1' if node.id || !node.roles.empty?
+        return wrap({ kind: 'stem', style: node.type.to_s }, node.text)
+      end
+      if [:double, :single].include? node.type
+        left, right = node.type == :double ? ['&#8220;', '&#8221;'] : ['&#8216;', '&#8217;']
+        text = left + node.text + right
+        return node.id || !node.roles.empty? ? wrap({ kind: 'span', id: node.id, roles: node.roles }, text) : text
+      end
       kind = { strong: 'strong', emphasis: 'emphasis', monospaced: 'monospace',
                mark: 'mark', superscript: 'superscript', subscript: 'subscript', unquoted: 'span' }.fetch(node.type)
       wrap({ kind: kind, id: node.id, roles: node.roles }, node.text)
@@ -180,9 +230,8 @@ class SemanticConverter < Asciidoctor::Converter::Base
       when :ref
         store(kind: 'anchor', id: node.id)
       when :xref
-        raise 'implicit xref label is outside inline-semantics-v1' unless node.text
-        raise 'xref metadata is outside inline-semantics-v1' unless (node.attributes.keys - ['path', 'fragment', 'refid']).empty?
-        wrap({ kind: 'xref', target: node.target }, node.text)
+        raise 'xref metadata is outside inline-semantics-v1' unless (node.attributes.keys - ['path', 'fragment', 'refid', 'xrefstyle']).empty?
+        node.text ? wrap({ kind: 'xref', target: node.target }, node.text) : store(kind: 'xref', target: node.target, inlines: xref_label(node))
       else
         raise "unsupported semantic anchor: #{node.type}"
       end
@@ -200,6 +249,10 @@ class SemanticConverter < Asciidoctor::Converter::Base
     when 'inline_image'
       raise 'icons are outside inline-semantics-v1' if node.type == 'icon'
       store({ kind: 'image', id: node.id || (node.attr 'id'), roles: node.roles }.merge(image_fields(node)))
+    when 'inline_indexterm'
+      raise 'indexterm metadata is outside inline-semantics-v1' unless node.attributes.keys.all? { |key| Integer === key || %w[terms see see-also].include?(key) }
+      fields = { kind: 'indexterm', terms: node.attr('terms') || [], see: node.attr('see'), see_also: node.attr('see-also') || [] }
+      node.type == :visible ? wrap(fields, node.text) : store(fields.merge(inlines: nil))
     else
       raise "unsupported inline-semantics-v1 node: #{transform}"
     end

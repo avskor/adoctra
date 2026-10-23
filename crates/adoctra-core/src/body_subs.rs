@@ -310,6 +310,7 @@ impl BodySubs {
             _ => None,
         });
         execution.blocks(&mut blocks[body..]);
+        crate::resolve::resolve_attribute_definitions(&mut execution.attributes, &execution.fixed);
         (execution.attributes, self.tokens)
     }
 }

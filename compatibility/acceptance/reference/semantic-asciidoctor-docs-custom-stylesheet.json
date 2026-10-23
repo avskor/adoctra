@@ -1,0 +1,1677 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "So far we’ve talked about different ways of using the default stylesheet. In place of the default stylesheet, you can instruct Asciidoctor to use a custom stylesheet of your choosing. On this page, you’ll learn how to apply a custom stylesheet and, if necessary, how to get Asciidoctor to copy and link to that stylesheet into the correct location. You’ll also learn about some of the limitations of this feature when processing multiple documents."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Asciidoctor looks for the stylesheet file specified by the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "stylesheet"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " document attribute. If the value of this attribute is empty (the default), Asciidoctor uses the default stylesheet. Otherwise, Asciidoctor assumes the value is the path of a custom stylesheet file relative to the source document. All the same behavior described in "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "stylesheet-modes.html"
+                  }
+                ],
+                "kind": "xref",
+                "target": "stylesheet-modes.html"
+              },
+              {
+                "kind": "text",
+                "value": " still applies, except Asciidoctor uses the specified stylesheet instead of the default stylesheet."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To begin, you must create a stylesheet file. For now, create this file adjacent to your AsciiDoc document. To keep it simple, we’ll just define a basic stylesheet that changes all text to red. Create the file "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "my-stylesheet.css"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": " the directory with your AsciiDoc source files and populate it with the following contents:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "body {\n  color: #ff0000;\n}"
+              }
+            ],
+            "language": "css",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "my-stylesheet.css"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Now let’s use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "stylesheet"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute to apply it."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "stylesheet"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " document attribute must be set by the end of the header to be effective. One way to do that is to set the attribute in the document header:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "= The Dangers of Wolpertingers\n:url-wolpertinger: https://en.wikipedia.org/wiki/Wolpertinger\n:stylesheet: my-stylesheet.css\n\nDon't worry about gumberoos or splintercats.\nSomething far more fearsome plagues the days, nights, and inbetweens.\nWolpertingers.\n\n== Origins\n\nWolpertingers are {url-wolpertinger}[ravenous beasts]."
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "stylesheet attribute set in document header"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can also set "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "stylesheet"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " using the API or CLI (shown here):"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ asciidoctor -a stylesheet=my-stylesheet.css my-document.adoc"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When you view the generated HTML file "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "my-document.html"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": " in your browser, you’ll see that all the text is red."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you want to create a custom stylesheet by extending the default stylesheet, see "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Extend the default stylesheet"
+                  }
+                ],
+                "kind": "xref",
+                "target": "default-stylesheet.html#customize-extend"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "tip"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "As with the default stylesheet, you can set the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "linkcss"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " document attribute and Asciidoctor will link to your stylesheet instead. (Note that it doesn’t copy it in this case since it’s already in the same folder as the output file)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ asciidoctor -a stylesheet=my-stylesheet.css -a linkcss my-document.adoc"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You may not want to keep your stylesheet in the same directory as your AsciiDoc documents. Let’s see how to tell Asciidoctor to look for it elsewhere."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_specify_the_custom_stylesheet",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Specify the custom stylesheet"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When your stylesheet is in a directory below your AsciiDoc document, you need to tell Asciidoctor where to look to find the stylesheet. There are two equivalent ways to do so:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Specify the name of the stylesheet file using the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "stylesheet"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute and the directory where it’s located using the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "stylesdir"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Include the directory where the stylesheet is located in the value of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "stylesheet"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute (instead of using the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "stylesdir"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute)"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The value of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "stylesdir"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute can end with a trailing directory separator ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "/"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "), but it’s not required."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "linkcss"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute is not set, the styles directory can be either relative or absolute. The situation gets trickier when "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "linkcss"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is set, which we’ll "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "get to later"
+                  }
+                ],
+                "kind": "xref",
+                "target": "#stylesdir-and-linkcss"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Let’s assume you want to put your stylesheet in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "my-styles"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": " folder relative to your AsciiDoc document(s). Go ahead and create that folder and move your custom stylesheet into it for this example. Now we need to tell Asciidoctor where it’s located using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "stylesdir"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "stylesdir"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " document attribute must be set by the end of the header to be effective. One way to do that is to set the attribute in the document header:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "= The Dangers of Wolpertingers\n:url-wolpertinger: https://en.wikipedia.org/wiki/Wolpertinger\n:stylesheet: my-stylesheet.css\n:stylesdir: my-styles\n\nDon't worry about gumberoos or splintercats.\nSomething far more fearsome plagues the days, nights, and inbetweens.\nWolpertingers.\n\n== Origins\n\nWolpertingers are {url-wolpertinger}[ravenous beasts]."
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "stylesdir attribute set in document header"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can also set "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "stylesdir"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " using the API or CLI (shown here):"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ asciidoctor -a stylesdir=my-styles -a stylesheet=my-stylesheet.css my-document.adoc"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Asciidoctor now looks for the stylesheet file "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "my-styles/my-stylesheet.css"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": " relative to the AsciiDoc document and embeds it into the HTML."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can achieve the same result by including the directory in the value of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "stylesheet"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ asciidoctor -a stylesheet=my-styles/my-stylesheet.css my-document.adoc"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you set the value of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "stylesdir"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to an absolute directory, then Asciidoctor would still locate the stylesheet and embed it into the HTML. But this can create problems if you’ve configured the converter to link to the stylesheet instead. Let’s look at those problem and ways to work through them."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_configure_the_styles_directory",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Configure the styles directory"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "stylesdir"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " gets tricky when you’re linking to the stylesheet instead of embedding it. That’s because we’re now dealing with two different paths. One is the path where the stylesheet is located on disk (either absolute or relative to the document). The other is the path the browser uses to access the stylesheet."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "First, it’s important to understand that Asciidoctor mirrors the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "stylesdir"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " path in the link reference. Let’s use the previous example to demonstrate. If you invoke Asciidoctor as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ asciidoctor -a stylesdir=my-styles -a stylesheet=my-stylesheet.css -a linkcss my-document.adoc"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Then when you inspect the HTML, you will see:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<link rel=\"stylesheet\" href=\"my-styles/asciidoctor.css\">"
+              }
+            ],
+            "language": "html",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Notice how the value of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "stylesdir"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "my-styles"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": ") is included in the referenced path. Asciidoctor will also preserve this directory if it needs to copy the stylesheet file."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "There are certain situations where this isn’t going to work (at least not when publishing the file to the public internet). Let’s consider one such case. We’ll specify the location of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "stylesdir"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " as an absolute path and generate the output file into a separate output directory."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ asciidoctor -a stylesdir=`pwd`/my-styles -a stylesheet=my-stylesheet.css -a linkcss -D public my-document.adoc"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Asciidoctor generates the HTML file into the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "public"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": " folder, but it does not copy the stylesheet. Furthermore, it uses an absolute path in the link to the stylesheet:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<link rel=\"stylesheet\" href=\"/path/to/documents/my-styles/asciidoctor.css\">"
+              }
+            ],
+            "language": "html",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "What we want is for Asciidoctor to copy the stylesheet to the output directory and link to it using a relative path."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A similar problem comes up if you want to control the styles directory and stylesheet file referenced by the HTML independently of the location where they are taken."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In brief, we need to be able to decouple the path where the stylesheet is read from the location where the stylesheet is published and referenced. That’s where the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "copycss"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute comes back into play."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "stylesdir-and-linkcss",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Styles directory and linkcss"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For complex combinations that involve "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "stylesdir"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "linkcss"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", and an explicit output directory, the meaning of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "stylesdir"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is too overloaded and needs to be reconciled. We can turn to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "copycss"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute to clear this situation up."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This situation is unique to when "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "linkcss"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is set. It’s not a problem when the converter embeds the stylesheet since there is no secondary reference involved."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "note"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "copycss"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute can accept a non-empty value. Asciidoctor uses this value as an override for where to look for the stylesheet to read. The converter, on the other hand, does not use this value. That means we can use "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "stylesdir"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "stylesheet"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to assemble the path relative to the output directory where Asciidoctor should write and link to the stylesheet independent of the location where it reads the file."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Let’s revisit the broken scenario from the previous section and use "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "copycss"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to reconcile the problem:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ asciidoctor -a stylesdir=css -a stylesheet=default.css \\\n-a copycss=$PWD/my-styles/my-stylesheet.css -a linkcss -D public my-document.adoc"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Asciidoctor copies the stylesheet from the absolute path specified by the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "copycss"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute to the path "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "public/css/default.css"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": " and links to it using the path "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "css/default.css"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": ". Notice that we changed the name of the folder and stylesheet file in the output. That demonstrates that we have decoupled the path where the stylesheet is read from the location where the stylesheet is published and referenced."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When running on JRuby, you can point "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "copycss"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to a classloader URI to load a stylesheet from a JAR file (e.g., "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "uri:classloader:/css/styles.css"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "). However, the HTML cannot link to that location. Therefore, you must use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "stylesheet"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute (and optionally the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "stylesdir"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") to specify a filename or relative path where Asciidoctor will write the stylesheet. The HTML will then be able to link to that destination."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "tip"
+          }
+        ],
+        "context": "section",
+        "id": "copy-link-split",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Copy from one place, link to another"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "invoking Asciidoctor on a nested set of documents"
+                  }
+                ],
+                "kind": "xref",
+                "target": "cli:process-multiple-files.html"
+              },
+              {
+                "kind": "text",
+                "value": ", it’s currently not possible to specify a single relative path for the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "stylesdir"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute that works for all of the documents. This is because the relative depth of the stylesheet’s location differs for the documents in the subdirectories. One way to solve this problem is to maintain the path to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "stylesdir"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " in each document."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Let’s say you have three AsciiDoc documents saved in the following directory structure:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "/my-documents\n  a.adoc\n  b.adoc\n  /my-nested-documents\n    c.adoc\n  /my-styles"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "a.adoc"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "b.adoc"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": ", set "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "stylesdir"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": ":stylesdir: my-styles"
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "c.adoc"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": ", set "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "stylesdir"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": ":stylesdir: ../my-styles"
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you’re serving your documents from a web server, you can solve this problem by providing an absolute path to the stylesheet. You can also try to use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "copycss"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " per document to control where Asciidoctor looks for the stylesheet independent of where Asciidoctor copies it and the converter configured the HTML to reference it."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_styles_directory_and_nested_documents_when_linking",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Styles directory and nested documents when linking"
+          }
+        ]
+      }
+    ],
+    "title": [
+      {
+        "kind": "text",
+        "value": "Apply a Custom Stylesheet"
+      }
+    ]
+  }
+}

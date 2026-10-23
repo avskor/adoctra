@@ -7,6 +7,45 @@ use adoctra_core::{
 
 const SECTION: &str = "[[sec]]\n== Sec Title\n\n";
 
+#[test]
+fn attribute_snapshots_keep_definition_time_xref_labels_and_use_spans() {
+    for newline in ["\n", "\r\n"] {
+        let source = ":early: pass:m[xref:s[]]\n\n[[s]]\n== Target *Ж*\n\n:late: pass:m[xref:s[]]\n\n{early} {late}".replace('\n', newline);
+        let result = parse(&source);
+        let doc = &result.document;
+        assert_eq!(doc.attributes.get("early"), Some("[s]"));
+        assert_eq!(doc.final_attributes.get("early"), Some("[s]"));
+        assert_eq!(doc.final_attributes.get("late"), Some("Target Ж"));
+        assert_eq!(doc.attributes.get("late"), None);
+        let parts = doc.final_attributes.raw_parts("late").unwrap();
+        assert!(matches!(&parts[0], P::OpenXref(xref) if xref.target == "#s"));
+        assert!(parts.contains(&P::Open(F::Strong)));
+        assert!(matches!(parts.last(), Some(P::CloseXref)));
+        let uses = paragraph(doc.blocks.last().unwrap());
+        assert_eq!(text(uses), "[s] Target Ж");
+        let spans: Vec<_> = uses
+            .iter()
+            .filter(|node| matches!(node, Inline::AttributeRef { .. }))
+            .map(|node| slice(&source, node))
+            .collect();
+        assert_eq!(spans, ["{early}", "{late}"]);
+    }
+}
+
+#[test]
+fn resolving_snapshot_xrefs_does_not_repeat_title_counters() {
+    let source = ":n: 0\n\n[[s]]\n== Title {counter:n}\n\n:r: pass:m[xref:s[]]\n\n{r} {r}";
+    let doc = parse(source).document;
+    assert_eq!(doc.final_attributes.get("r"), Some("Title 1"));
+    // The title was cached while reading; conversion restores the header
+    // counter value, as Ruby does. Snapshot completion must not run it again.
+    assert_eq!(doc.final_attributes.get("n"), Some("0"));
+    assert_eq!(
+        text(paragraph(doc.blocks.last().unwrap())),
+        "Title 1 Title 1"
+    );
+}
+
 fn text(nodes: &[Inline]) -> String {
     nodes
         .iter()

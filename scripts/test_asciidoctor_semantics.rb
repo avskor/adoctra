@@ -26,6 +26,52 @@ def project(source, names = [])
 end
 
 cases = {
+  'implicit xrefs borrow formatted titles without HTML' => lambda do
+    node = project("See <<s>>.\n\n[#s]\n== A *bold* title")[:blocks][0][:inlines][1]
+    assert(node[:target] == '#s' && node[:inlines][0][:value] == 'A ', 'missing generated label')
+    assert(node[:inlines][1][:kind] == 'strong' && node[:inlines][1][:inlines][0][:value] == 'bold', 'generated label flattened')
+  end,
+  'xref labels strip nested links and stop recursive references' => lambda do
+    node = project("See <<s>>.\n\n[#s]\n== A https://example.org[link] and <<s>>")[:blocks][0][:inlines][1]
+    assert(node[:inlines].all? { |part| part[:kind] == 'text' }, 'nested anchor survived')
+    assert(node[:inlines].map { |part| part[:value] }.join == 'A link and [s]', 'recursive fallback changed')
+  end,
+  'xref root external and missing targets use distinct fallbacks' => lambda do
+    nodes = project('xref:#[] xref:other.adoc#part[] xref:missing[]')[:blocks][0][:inlines]
+    assert(nodes[0][:inlines] == [{ kind: 'text', value: '[^top]' }], 'root fallback changed')
+    assert(nodes[2][:target] == 'other.html#part' && nodes[2][:inlines] == [{ kind: 'text', value: 'other.html' }], 'external path fallback changed')
+    assert(nodes[4][:inlines] == [{ kind: 'text', value: '[missing]' }], 'unknown target fallback changed')
+  end,
+  'xrefstyle full preserves caption number and typographic quotes' => lambda do
+    node = project(":xrefstyle: full\n\n<<ex>>\n\n[#ex]\n.A *sample*\n====\nContent.\n====")[:blocks][0][:inlines][0]
+    assert(node[:inlines][0][:value] == 'Example 1, &#8220;A ', 'caption prefix changed')
+    assert(node[:inlines][1][:kind] == 'strong' && node[:inlines][-1][:value] == '&#8221;', 'caption formatting changed')
+  end,
+  'attribute xrefs freeze labels at definition time in snapshots' => lambda do
+    tree = project(":early: pass:m[xref:s[]]\n\n[[s]]\n== Target *Ж*\n\n:late: pass:m[xref:s[]]\n\n{early} {late}", ['early', 'late'])
+    assert(tree[:attributes][:header]['early'][0][:inlines] == [{ kind: 'text', value: '[s]' }], 'forward definition borrowed a later title')
+    assert(tree[:attributes][:header]['late'].nil?, 'body definition leaked to header')
+    assert(tree[:attributes][:final]['late'][0][:inlines][1][:kind] == 'strong', 'final snapshot lost label formatting')
+  end,
+  'indexterms keep visibility hierarchy see and see-also independently' => lambda do
+    nodes = project('((*Visible*)) (((Animals,Cats))) indexterm2:[Entry,see-also="First,Second"] indexterm:[Top,Leaf,see=Other]')[:blocks][0][:inlines]
+    assert(nodes[0][:kind] == 'indexterm' && nodes[0][:inlines][0][:kind] == 'strong', 'visible term flattened')
+    assert(nodes[2][:inlines].nil? && nodes[2][:terms] == ['Animals', 'Cats'], 'concealed hierarchy lost')
+    assert(nodes[4][:see_also] == ['First', 'Second'], 'see-also order lost')
+    assert(nodes[6][:terms] == ['Top', 'Leaf'] && nodes[6][:see] == 'Other', 'see target lost')
+  end,
+  'inline and block formulas preserve notation content and whitespace' => lambda do
+    nodes = project(":stem: latexmath\n\nstem:[x_1] asciimath:[a  +\n  b]")[:blocks][0][:inlines]
+    assert(nodes[0][:kind] == 'stem' && nodes[0][:style] == 'latexmath', 'stem alias lost')
+    assert(nodes[2][:style] == 'asciimath' && nodes[2][:inlines] == [{ kind: 'text', value: "a  +\n  b" }], 'formula whitespace folded')
+    block = project("[asciimath]\n++++\na  < b\n  + c\n++++")[:blocks][0]
+    assert(block[:style] == 'asciimath' && block[:inlines] == [{ kind: 'text', value: "a  &lt; b\n  + c" }], 'block formula content changed')
+  end,
+  'typographic quotes preserve span metadata and nested formatting' => lambda do
+    node = project('[.quoted]"`A *word*`"')[:blocks][0][:inlines][0]
+    assert(node[:kind] == 'span' && node[:roles] == ['quoted'], 'quote metadata lost')
+    assert(node[:inlines][0][:value] == '&#8220;A ' && node[:inlines][1][:kind] == 'strong' && node[:inlines][-1][:value] == '&#8221;', 'quote text or formatting lost')
+  end,
   'tables retain columns header footer spans and alignment' => lambda do
     node = project(".Table *title*\n[#tab.wide,cols=\"1,2\",options=\"header,footer\"]\n|===\n|Name |Value\n2+^.^|*Wide*\n|Last |End\n|===")[:blocks][0]
     assert(node[:id] == 'tab' && node[:roles] == ['wide'] && node[:title][1][:kind] == 'strong', 'table metadata lost')

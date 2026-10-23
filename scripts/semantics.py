@@ -32,8 +32,8 @@ def canonical(nodes, prose=True):
     result = []
     for node in nodes:
         node = copy.deepcopy(node)
-        if 'inlines' in node:
-            node['inlines'] = canonical(node['inlines'], prose)
+        if node.get('inlines') is not None:
+            node['inlines'] = canonical(node['inlines'], False if node['kind'] == 'stem' else prose)
         for key in ['alt', 'menu', 'item']:
             if node.get(key) is not None:
                 node[key] = canonical(node[key], prose=False)
@@ -78,7 +78,7 @@ def append_parts(parts, stack):
             else:
                 allowed = {'kind', 'target', *LINK_METADATA}
                 if kind == 'open-xref':
-                    allowed = {'kind', 'target', 'refid', 'path', 'fragment', 'role'}
+                    allowed = {'kind', 'target', 'refid', 'path', 'fragment', 'role', 'xrefstyle'}
                     require(part.get('role') in {None, 'bare'}, 'xref metadata is outside inline-semantics-v1')
                 require(set(part) <= allowed, 'link metadata is outside inline-semantics-v1')
                 node = {'kind': 'xref' if kind == 'open-xref' else 'link', 'target': lexical(part['target']), 'inlines': []}
@@ -98,7 +98,7 @@ def append_parts(parts, stack):
         elif kind == 'anchor':
             require(set(part) == {'kind', 'id'})
             stack[-1][1].append({'kind': 'anchor', 'id': lexical(part['id'])})
-        elif kind in {'kbd', 'button', 'menu', 'image'}:
+        elif kind in {'kbd', 'button', 'menu', 'image', 'indexterm', 'stem'}:
             stack[-1][1].append(complex_inline(part, kind))
         else:
             raise ValueError(f'unsupported semantic part: {kind}')
@@ -120,7 +120,7 @@ def inline_projection(nodes):
             stack[-1][1].append({'kind': name, 'target': node['target'], 'inlines': inline_projection(node['inlines'])})
         elif name == 'anchor':
             stack[-1][1].append({'kind': name, 'id': node['id']})
-        elif name in {'kbd', 'button', 'menu', 'image'}:
+        elif name in {'kbd', 'button', 'menu', 'image', 'indexterm', 'stem'}:
             stack[-1][1].append(complex_inline(node, name))
         else:
             raise ValueError(f'unsupported semantic inline: {name}')
@@ -140,8 +140,16 @@ def image_fields(node):
 
 def complex_inline(node, kind):
     fields = {'image': {'icon', 'target', 'src', 'alt', 'icons', 'attributes', 'options', 'parts', 'svg'},
-              'button': {'parts'}, 'kbd': {'keys'}, 'menu': {'menu', 'submenus', 'item', 'font'}}[kind]
+              'button': {'parts'}, 'kbd': {'keys'}, 'menu': {'menu', 'submenus', 'item', 'font'},
+              'indexterm': {'parts', 'terms', 'see', 'see_also'}, 'stem': {'style', 'parts'}}[kind]
     require(set(node) <= fields | {'name', 'kind'}, 'unsupported complex inline field')
+    if kind == 'stem':
+        return {'kind': kind, 'style': node['style'], 'inlines': parts_projection(node['parts'])}
+    if kind == 'indexterm':
+        return {'kind': kind, 'inlines': parts_projection(node['parts']) if node['parts'] is not None else None,
+                'terms': [lexical(term) for term in node['terms']],
+                'see': lexical(node['see']) if node['see'] is not None else None,
+                'see_also': [lexical(term) for term in node['see_also']]}
     if kind == 'image':
         fields = image_fields(node)
         attrs = node.get('attributes', {})
@@ -191,7 +199,7 @@ def block_projection(block):
     context = block['name']
     if context == 'list':
         context = 'olist' if block['ordered'] else 'ulist'
-    require(context in CONTAINERS | LISTS | VERBATIM | {'paragraph', 'image', 'table'}, f'unsupported semantic block: {context}')
+    require(context in CONTAINERS | LISTS | VERBATIM | {'paragraph', 'image', 'table', 'stem'}, f'unsupported semantic block: {context}')
     metadata = block
     children = block.get('blocks', [])
     if context == 'section':
@@ -217,6 +225,9 @@ def block_projection(block):
         result['columns'] = copy.deepcopy(block['columns'])
         for group in ['head', 'body', 'foot']:
             result[group] = [[cell_projection(cell, group) for cell in row] for row in block[group]]
+    elif context == 'stem':
+        result['style'] = block['style']
+        result['inlines'] = canonical(inline_projection(block['inlines']), prose=False)
     elif context in VERBATIM:
         require(not block.get('callouts'), 'callouts are outside inline-semantics-v1')
         result['language'] = block.get('attributes', {}).get('language')
@@ -274,8 +285,13 @@ def reference_projection(result, names):
                     node[key] = lexical(node[key])
             if 'roles' in node:
                 node['roles'] = [lexical(role) for role in node['roles']]
-            if 'inlines' in node:
-                node['inlines'] = inlines(node['inlines'], prose)
+            if node.get('inlines') is not None:
+                node['inlines'] = inlines(node['inlines'], False if node['kind'] == 'stem' else prose)
+            if node['kind'] == 'indexterm':
+                node['terms'] = [lexical(term) for term in node['terms']]
+                node['see_also'] = [lexical(term) for term in node['see_also']]
+                if node['see'] is not None:
+                    node['see'] = lexical(node['see'])
             for key in ['metadata', 'attributes']:
                 if key in node:
                     node[key] = {name: lexical(value) for name, value in node[key].items()}
@@ -294,7 +310,7 @@ def reference_projection(result, names):
         if node['title'] is not None:
             node['title'] = inlines(node['title'])
         if 'inlines' in node:
-            node['inlines'] = inlines(node['inlines'], node['context'] not in VERBATIM)
+            node['inlines'] = inlines(node['inlines'], node['context'] not in VERBATIM | {'stem'})
         if node['context'] == 'image':
             for key in ['target', 'src']:
                 node[key] = lexical(node[key])
@@ -382,10 +398,19 @@ def validate_inlines(nodes):
             keys.update({'id', 'roles', 'target', 'src', 'alt', 'attributes'})
             metadata(node)
             validate_image(node)
+        elif kind == 'stem':
+            keys.update({'style', 'inlines'})
+            require(node.get('style') in {'asciimath', 'latexmath'})
+        elif kind == 'indexterm':
+            keys.update({'terms', 'see', 'see_also', 'inlines'})
+            for key in ['terms', 'see_also']:
+                require(isinstance(node.get(key), list) and all(isinstance(term, str) for term in node[key]))
+            require(node.get('see') is None or isinstance(node['see'], str))
+            require(node.get('inlines') is None or node['terms'] == [])
         else:
             require(kind == 'line-break')
         require(set(node) == keys)
-        if 'inlines' in keys:
+        if 'inlines' in keys and not (kind == 'indexterm' and node['inlines'] is None):
             validate_inlines(node['inlines'])
 
 
@@ -469,7 +494,7 @@ def validate_block(node):
     metadata(node)
     keys = {'context', 'id', 'roles', 'title'}
     context = node.get('context')
-    require(context in CONTAINERS | LISTS | VERBATIM | {'paragraph', 'image', 'table'})
+    require(context in CONTAINERS | LISTS | VERBATIM | {'paragraph', 'image', 'table', 'stem'})
     if node['title'] is not None:
         validate_inlines(node['title'])
     if context == 'section':
@@ -499,6 +524,10 @@ def validate_block(node):
     elif context == 'image':
         keys.update({'target', 'src', 'alt', 'attributes'})
         validate_image(node)
+    elif context == 'stem':
+        keys.update({'style', 'inlines'})
+        require(node.get('style') in {'asciimath', 'latexmath'})
+        validate_inlines(node.get('inlines'))
     elif context in VERBATIM:
         keys.update({'language', 'inlines'})
         require(node.get('language') is None or isinstance(node['language'], str))

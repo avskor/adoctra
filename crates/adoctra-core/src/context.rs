@@ -858,6 +858,7 @@ impl ParseContext<'_> {
         includes: &crate::xref_target::Includes,
         references: &mut Vec<crate::Diagnostic>,
     ) -> Vec<crate::Token> {
+        crate::resolve::resolve_attribute_definitions(&mut document.attributes, &fixed);
         let (attributes, tokens) = std::mem::take(&mut self.body_subs).execute(
             &mut document.blocks,
             document.attributes.clone(),

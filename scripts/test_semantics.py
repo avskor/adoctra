@@ -30,6 +30,75 @@ def table():
 
 
 class SemanticProjectionTests(unittest.TestCase):
+    def test_generated_xref_labels_and_selected_style_remain_semantic(self):
+        parts = [{'kind': 'open-xref', 'target': '#s', 'refid': 's', 'xrefstyle': 'full'},
+                 text('Section 1, “'), {'kind': 'open', 'format': 'strong'}, text('Title'),
+                 {'kind': 'close', 'format': 'strong'}, text('”'), {'kind': 'close-xref'}]
+        projected = semantics.parts_projection(parts)
+        self.assertEqual(projected[0]['inlines'][1]['kind'], 'strong')
+        semantics.validate_inlines(projected)
+        changed = copy.deepcopy(parts)
+        changed[1]['value'] = 'Section 2, “'
+        self.assertNotEqual(projected, semantics.parts_projection(changed))
+        with self.assertRaisesRegex(ValueError, 'xref metadata'):
+            semantics.parts_projection([dict(parts[0], role='custom'), *parts[1:]])
+
+    def test_indexterms_preserve_visibility_hierarchy_and_cross_references(self):
+        node = {'name': 'indexterm', 'parts': None, 'terms': ['A &amp; B', 'Leaf'], 'see': 'Other', 'see_also': ['First', 'Second']}
+        original = semantics.inline_projection([node])
+        semantics.validate_inlines(original)
+        self.assertEqual(original[0]['terms'], ['A & B', 'Leaf'])
+        self.assertIsNone(original[0]['inlines'])
+        for field, value in [('terms', ['Leaf', 'A &amp; B']), ('see', None), ('see_also', ['Second', 'First'])]:
+            self.assertNotEqual(original, semantics.inline_projection([dict(node, **{field: value})]), field)
+        visible = dict(node, parts=[{'kind': 'open', 'format': 'strong'}, text('Visible'), {'kind': 'close', 'format': 'strong'}], terms=[])
+        projected = semantics.inline_projection([visible])
+        semantics.validate_inlines(projected)
+        self.assertEqual(projected[0]['inlines'][0]['kind'], 'strong')
+        self.assertNotEqual(semantics.inline_projection([dict(visible, parts=[])]), semantics.inline_projection([dict(visible, parts=None)]))
+        self.assertEqual(semantics.parts_projection([dict(kind='indexterm', **{key: value for key, value in visible.items() if key != 'name'})]), projected)
+
+    def test_stem_inline_and_block_whitespace_is_never_folded(self):
+        node = {'name': 'stem', 'style': 'asciimath', 'parts': [text('a  +\n  b')]}
+        original = semantics.canonical(semantics.inline_projection([node]))
+        semantics.validate_inlines(original)
+        self.assertEqual(original[0]['inlines'], [text('a  +\n  b')])
+        self.assertNotEqual(original, semantics.inline_projection([dict(node, style='latexmath')]))
+        self.assertNotEqual(original, semantics.inline_projection([dict(node, parts=[text('a + b')])]))
+        block = {'name': 'stem', 'style': 'latexmath', 'inlines': [{'name': 'text', 'value': 'a  < b\n  + c'}]}
+        projected = semantics.block_projection(block)
+        semantics.validate_block(projected)
+        self.assertEqual(projected['inlines'], [text('a  < b\n  + c')])
+
+    def test_new_semantic_nodes_reject_unknown_fields_and_invalid_types(self):
+        term = {'kind': 'indexterm', 'inlines': None, 'terms': ['A'], 'see': None, 'see_also': []}
+        stem = {'kind': 'stem', 'style': 'latexmath', 'inlines': [text('x')]}
+        for invalid in [dict(term, extra=True), dict(term, terms=[None]), dict(term, see=[]),
+                        dict(term, see_also='x'), dict(term, inlines=[]),
+                        dict(stem, style='unknown'), dict(stem, inlines=None), dict(stem, extra=True)]:
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                semantics.validate_inlines([invalid])
+        for invalid in [{'kind': 'stem', 'style': 'asciimath', 'parts': [], 'extra': True},
+                        {'kind': 'indexterm', 'parts': None, 'terms': ['<b>x</b>'], 'see': None, 'see_also': []}]:
+            with self.assertRaises(ValueError):
+                semantics.parts_projection([invalid])
+
+    def test_formula_and_indexterm_reference_decoding_is_single_pass(self):
+        doc = document()
+        doc['blocks'][0]['inlines'] = [
+            {'name': 'stem', 'style': 'asciimath', 'parts': [text('a  &amp;lt;\n  b')]},
+            {'name': 'indexterm', 'parts': None, 'terms': ['A &amp; B'], 'see': 'C &amp; D', 'see_also': ['&amp;lt;']}]
+        oracle = semantics.document_projection(doc, ['a'])
+        # Native metadata is lexical; the oracle independently starts with its
+        # own lexical values, prior to the reference adapter's decoding pass.
+        oracle['blocks'][0]['inlines'][1].update(terms=['A &amp; B'], see='C &amp; D', see_also=['&amp;lt;'])
+        projected = semantics.reference_projection(oracle, ['a'])['blocks'][0]['inlines']
+        self.assertEqual(projected[0]['inlines'], [text('a  &lt;\n  b')])
+        self.assertEqual(projected[1]['terms'], ['A & B'])
+        self.assertEqual(projected[1]['see'], 'C & D')
+        self.assertEqual(projected[1]['see_also'], ['&lt;'])
+        self.assertEqual(oracle['blocks'][0]['inlines'][0]['inlines'], [text('a  &amp;lt;\n  b')])
+
     def test_tables_keep_columns_groups_spans_alignment_and_paragraph_boundaries(self):
         node = table()
         original = semantics.block_projection(node)
@@ -324,7 +393,7 @@ class SemanticProjectionTests(unittest.TestCase):
     def test_pinned_fixture_expands_attributes_and_macros_inside_quotes(self):
         root = CORPUS / 'upstream'
         manifest, cases = acceptance.load_corpus(root / 'semantics.json')
-        self.assertEqual(len(cases), 69)
+        self.assertEqual(len(cases), 96)
         self.assertEqual(manifest['profile'], semantics.PROFILE)
         reference = json.loads((root / 'reference/semantic-attributes-macros-in-quotes.json').read_text())
         strong = reference['semantics']['blocks'][0]['inlines'][0]
@@ -337,15 +406,15 @@ class SemanticProjectionTests(unittest.TestCase):
         manifest, cases = acceptance.load_corpus(root / 'semantics.json')
         original_manifest, original = acceptance.load_corpus(root / 'cases.json')
         self.assertEqual(manifest['profile'], semantics.PROFILE)
-        self.assertEqual(len(cases), 7)
+        self.assertEqual(len(cases), 9)
         for path, provenance in manifest['files'].items():
             self.assertEqual(provenance, original_manifest['files'][path])
         for origin in manifest['origins'].values():
             self.assertIn(origin['configuration'], manifest['files'])
         for case in cases:
             original_case = next(entry for entry in original if 'semantic-' + entry['id'] == case['id'])
-            for key in ['source', 'attributes']:
-                self.assertEqual(case[key], original_case[key])
+            for key in ['source', 'attributes', 'resources']:
+                self.assertEqual(case.get(key), original_case.get(key))
             self.assertGreater(len(case['source'].splitlines()), 90)
             self.assertEqual(case['expect'], 'pass')
             reference = json.loads((root / 'reference' / (case['id'] + '.json')).read_text())

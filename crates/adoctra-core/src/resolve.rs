@@ -207,6 +207,27 @@ pub(crate) fn apply_fixed(fixed: &FixedXrefs, xref: &mut crate::Xref) -> Option<
     resolved.label.clone()
 }
 
+/// Attribute snapshots expose the same definition-time targets and labels as
+/// their uses in the body. Install the already computed result without running
+/// substitutions again or resolving against a later document state.
+pub(crate) fn resolve_attribute_definitions(
+    attributes: &mut crate::Attributes,
+    fixed: &FixedXrefs,
+) {
+    let values: Vec<_> = attributes
+        .iter()
+        .filter_map(|(name, _)| {
+            attributes
+                .raw_parts_exact(name)
+                .map(|parts| (name.to_owned(), parts.to_vec()))
+        })
+        .collect();
+    for (name, mut parts) in values {
+        fill_part_labels(&mut parts, &mut |xref, _| apply_fixed(fixed, xref));
+        attributes.set_parts(name, parts);
+    }
+}
+
 /// Converts a deferred block title while reading (BodySubs::convert_early).
 pub(crate) type EarlyTitle<'a> =
     dyn FnMut((usize, usize), &crate::Attributes) -> Option<Vec<Inline>> + 'a;

@@ -171,10 +171,11 @@ Host overrides now accept Ruby's string soft-default (`name@` / `value@`) and
 hard/soft unset forms. CLI repeated overrides honor the last spelling of a name;
 API callers should supply one spelling per effective key in the BTreeMap.
 
-`compatibility/upstream/semantics.json` uses `inline-semantics-v1`: 69 PASS
+`compatibility/upstream/semantics.json` uses `inline-semantics-v1`: 96 PASS
 cover 20 attribute and four include scenarios from the upstream selection plus
-45 original semantic probes (14 tables). `compatibility/acceptance/semantics.json` adds
-7 PASS on unchanged full Asciidoctor/Spring pages, with the same sources,
+72 original semantic probes (14 tables; 27 xref/indexterm/stem/typographic quote
+probes). `compatibility/acceptance/semantics.json` adds
+9 PASS on unchanged full Asciidoctor/Spring pages, with the same sources,
 include resources and host attributes as the HTML corpus. The Ruby oracle has its own converter (no HTML
 converter or HTML parsing); paired synthetic boundaries leave content exposed
 to later substitution stages. The Python adapter reads the resolved JSON AST
@@ -191,10 +192,17 @@ the parser fix has Unicode/LF/CRLF span, HTML golden, JSON and WASM tests.
 Table-wide layout attributes and nested document attribute snapshots are not
 compared. Unknown nodes, raw markup,
 unsupported link/image options and warning/error output fail the profile.
-Implicit xrefs, footnotes/indexterm/stem/callouts and embedded SVG/icons
+Implicit xrefs use Ruby's catalog/xreftext and strip nested semantic anchors,
+with recursion guards and root/path/id fallbacks. Indexterms retain visible
+inlines or null, term hierarchy and see/see-also. Inline/block stem keeps notation
+and exact whitespace; typographic quotes preserve formatting and metadata.
+Attribute snapshots now complete definition-time xref targets/labels from the
+existing fixed-reference registry, without repeating substitutions/counters.
+Keep forward-definition fallbacks fixed; test header/final snapshots and use spans.
+Footnotes/callouts, extra xref metadata and embedded SVG/icons
 remain outside it. The schema does not cover all nodes, all attributes,
 source positions or ASG/TCK. See `docs/semantic-profile.adoc`; keep the independent
-23 Ruby converter checks and offline/verify runs for both manifests in CI.
+31 Ruby converter checks and offline/verify runs for both manifests in CI.
 
 `compatibility/acceptance/positions.json` uses `diagnostic-positions-v1`:
 18 original probes, all PASS. Ruby `--diagnostic-positions` exports

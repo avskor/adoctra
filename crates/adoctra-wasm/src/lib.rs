@@ -1561,6 +1561,12 @@ mod tests {
     }
 
     #[test]
+    fn document_attribute_parts_export_definition_time_xref_label() {
+        let json = parse_json(":ref: pass:m[xref:s[]]\n\n[[s]]\n== Target\n\n{ref}");
+        assert!(json.contains(r##""attribute_parts":{"ref":[{"kind":"open-xref","target":"#s","refid":"s","fragment":"s"},{"kind":"text","value":"[s]"},{"kind":"close-xref"}]}"##), "{json}");
+    }
+
+    #[test]
     fn definition_xref_keeps_the_reference_span_and_fixed_label() {
         let src = ":r: pass:c,m[<<s>>]\n\n[[s]]\n== T\n\n:t: pass:c,m[<<s>>]\n\n{r}{t}";
         let json = parse_json(src);

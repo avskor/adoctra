@@ -1042,6 +1042,16 @@ mod tests {
     }
 
     #[test]
+    fn optional_attribute_snapshots_export_fixed_xref_labels() {
+        let doc = adoctra_core::parse(":early: pass:m[xref:s[]]\n\n[[s]]\n== Target *Ж*\n\n:late: pass:m[xref:s[]]\n\n{early} {late}").document;
+        let json = String::from_utf8(JsonBackend.convert_with_attributes(&doc).unwrap()).unwrap();
+        let snapshots = json.split_once("\"attribute_snapshots\":").unwrap().1;
+        let (header, final_attributes) = snapshots.split_once(",\"final\":").unwrap();
+        assert!(header.contains(r##""early":[{"kind":"open-xref","target":"#s","refid":"s","fragment":"s"},{"kind":"text","value":"[s]"},{"kind":"close-xref"}]"##), "{header}");
+        assert!(final_attributes.contains(r##""late":[{"kind":"open-xref","target":"#s","refid":"s","fragment":"s"},{"kind":"text","value":"Target "},{"kind":"open","format":"strong"},{"kind":"text","value":"Ж"},{"kind":"close","format":"strong"},{"kind":"close-xref"}]"##), "{final_attributes}");
+    }
+
+    #[test]
     fn optional_document_attributes_preserve_default_tree_and_distinct_snapshots() {
         let doc =
             adoctra_core::parse(":value: first\n:empty:\n\n{value}\n\n:value: second\n\n{value}")
