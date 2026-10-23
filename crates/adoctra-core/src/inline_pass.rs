@@ -328,6 +328,9 @@ impl Passes {
             if let P::Footnote(mut footnote) = part {
                 let content = std::mem::take(&mut footnote.content);
                 footnote.content = self.restore_evaluated(content, attrs, compat, depth);
+                if let Some(registry) = attrs.footnotes() {
+                    registry.restore(&footnote);
+                }
                 out.push(P::Footnote(footnote));
             } else if let P::Ui(mut ui) = part {
                 for label in ui.labels_mut() {
@@ -663,6 +666,9 @@ impl Passes {
                 Inline::Footnote { footnote, .. } => {
                     let content = std::mem::take(&mut footnote.content);
                     footnote.content = self.restore_evaluated(content, attrs, compat, 0);
+                    if let Some(registry) = attrs.footnotes() {
+                        registry.restore(footnote);
+                    }
                 }
                 Inline::Ui { ui, .. } => {
                     for label in ui.labels_mut() {

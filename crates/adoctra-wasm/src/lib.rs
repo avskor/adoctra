@@ -385,6 +385,10 @@ fn write_callouts(callouts: &[adoctra_core::ast::Callout], s: &mut String) {
         }
         s.push_str(&format!(",\"xml\":{}", callout.xml));
         write_icon(&callout.icons, &callout.src, s);
+        s.push_str(&format!(
+            ",\"text_range\":{{\"start\":{},\"end\":{}}}",
+            callout.start, callout.end
+        ));
         s.push('}');
     }
     s.push(']');
@@ -3066,7 +3070,7 @@ mod header_tests {
         );
         assert!(
             json.contains(
-                r#""number":"1","id":"CO1-1","guard":null,"xml":false,"icons":"font","src":""}]"#
+                r#""number":"1","id":"CO1-1","guard":null,"xml":false,"icons":"font","src":"","text_range":{"start":2,"end":5}}]"#
             ),
             "{json}"
         );
@@ -3076,8 +3080,26 @@ mod header_tests {
         );
         assert!(
             json.contains(
-                r#""number":"1","id":"CO2-1","guard":null,"xml":false,"icons":null,"src":""}]"#
+                r#""number":"1","id":"CO2-1","guard":null,"xml":false,"icons":null,"src":"","text_range":{"start":2,"end":5}}]"#
             ),
+            "{json}"
+        );
+    }
+
+    #[test]
+    fn callout_text_ranges_are_separate_from_physical_source_spans() {
+        let source = "----\r\nЖ🙂 \\<1>\r\nreal // <1>\r\n----\r\n<1> Text";
+        let json = super::parse_json_with_source(source, 7);
+        let start = source.find("// <1>").unwrap();
+        assert!(
+            json.contains(&format!(
+                r#""span":{{"source_id":7,"start":{start},"end":{}}},"number":"1""#,
+                start + 6
+            )),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""text_range":{"start":16,"end":22}"#),
             "{json}"
         );
     }
@@ -3086,7 +3108,7 @@ mod header_tests {
     fn callouts_export_spans_and_tokens() {
         let source = "----\nx <1>\n----\n<1> one";
         let json = super::parse_json_with_source(source, 3);
-        assert!(json.contains(r#""callouts":[{"span":{"source_id":3,"start":7,"end":10},"number":"1","id":"CO1-1","guard":null,"xml":false,"icons":null,"src":""}]"#), "{json}");
+        assert!(json.contains(r#""callouts":[{"span":{"source_id":3,"start":7,"end":10},"number":"1","id":"CO1-1","guard":null,"xml":false,"icons":null,"src":"","text_range":{"start":2,"end":5}}]"#), "{json}");
         assert!(
             json.contains(r#""blocks":[],"coids":["CO1-1"],"icons":null,"src":""}"#),
             "{json}"
@@ -3184,6 +3206,15 @@ mod header_tests {
                 "{tokens}"
             );
         }
+    }
+
+    #[test]
+    fn unused_attribute_footnotes_export_definition_origins() {
+        let source = ":note: pass:m[footnote:n[Ж]]\r\n\r\nBody.";
+        let json = super::parse_json_with_source(source, 7);
+        let end = source.find('\r').unwrap();
+        assert!(json.contains(&format!(r#""footnotes":[{{"span":{{"source_id":7,"start":0,"end":{end}}},"index":"1","id":"n","parts":[{{"kind":"raw","value":"Ж"}}]}}]"#)), "{json}");
+        assert!(!json.contains(r#""name":"footnote""#), "{json}");
     }
 
     #[test]

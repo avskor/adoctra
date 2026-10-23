@@ -26,6 +26,65 @@ def project(source, names = [])
 end
 
 cases = {
+  'footnote markers and ordered catalog survive repeated references' => lambda do
+    tree = project('First footnote:n[A *note*]. Again footnote:n[] footnote:n[Ignored].')
+    markers = tree[:blocks][0][:inlines].select { |n| n[:kind] == 'footnote' }
+    assert(markers.map { |n| n[:type] } == ['definition', 'reference', 'reference'], 'marker types lost')
+    assert(markers.map { |n| n[:index] } == ['1', '1', '1'], 'reference number changed')
+    assert(tree[:footnotes].size == 1 && tree[:footnotes][0][:id] == 'n', 'catalog duplicated')
+    assert(tree[:footnotes][0][:inlines][1][:kind] == 'strong', 'definition formatting lost')
+  end,
+  'unused removed and suppressed footnotes remain cataloged' => lambda do
+    tree = project(":note: pass:q,m[footnote:n[Stored *note*]]\n:nofootnotes:\n\n:note!:\n\nBody.")
+    assert(tree[:footnotes].size == 1 && tree[:footnotes][0][:id] == 'n', 'unused definition missing')
+    assert(tree[:footnotes][0][:inlines][1][:kind] == 'strong', 'unused definition flattened')
+    assert(tree[:blocks][0][:inlines] == [{ kind: 'text', value: 'Body.' }], 'invented visible marker')
+  end,
+  'footnote catalogs preserve duplicate counter values and nested ownership' => lambda do
+    tree = project("Outer footnote:o[Outer].\n\n[cols=a,options=noheader]\n|===\n|:note: pass:m[footnote:i[Inner]]\n\nCell.\n|===\n\nAfter footnote:[Last].")
+    assert(tree[:footnotes].map { |n| n[:index] } == ['1', '2'], 'root counter changed')
+    nested = tree[:blocks][1][:body][0][0][:document]
+    assert(nested[:footnotes].map { |n| [n[:index], n[:id]] } == [['1', 'i']], 'nested catalog leaked')
+    reset = project("footnote:a[One]\n\n:footnote-number: 0\n\nfootnote:b[Two]")
+    assert(reset[:footnotes].map { |n| n[:index] } == ['1', '1'], 'duplicate indices collapsed')
+  end,
+  'xref borrowed footnotes strip anchors but keep visible superscript' => lambda do
+    tree = project("See <<s>>.\n\n[#s]\n== Title footnote:n[Note]")
+    label = tree[:blocks][0][:inlines][1][:inlines]
+    assert(label[-1] == { kind: 'superscript', id: '_footnote_n', roles: ['footnote'], inlines: [{ kind: 'text', value: '[1]' }] }, 'borrowed footnote marker changed')
+    assert(tree[:footnotes].size == 1, 'borrowed marker registered twice')
+  end,
+  'callouts keep guards numbering and list bindings without parsing HTML' => lambda do
+    tree = project("----\nЖ // <.>\nx <!--2-->\nagain <1>\n----\n<1> First.\n<2> Second.")
+    marks = tree[:blocks][0][:inlines].select { |n| n[:kind] == 'callout' }
+    assert(marks.map { |n| n[:number] } == ['1', '2', '1'], 'automatic numbering lost')
+    assert(marks[0][:guard] == '// ' && !marks[0][:xml] && marks[1][:xml] && marks[1][:guard].nil?, 'guards lost')
+    items = tree[:blocks][1][:items]
+    assert(items[0][:coids] == [marks[0][:id], marks[2][:id]] && items[1][:coids] == [marks[1][:id]], 'list binding lost')
+  end,
+  'escaped callouts remain text and custom substitutions retain formatting' => lambda do
+    tree = project("[subs=\"verbatim,quotes\"]\n----\nЖ \\<1>\n*bold* <1>\n----\n<1> Explanation.")
+    nodes = tree[:blocks][0][:inlines]
+    assert(nodes[0][:value] == "Ж &lt;1&gt;\n", 'escaped mark consumed')
+    assert(nodes[1][:kind] == 'strong' && nodes[-1][:kind] == 'callout', 'custom substitutions lost')
+  end,
+  'callout lists capture icon mode before their text converts' => lambda do
+    converter = SemanticConverter.new 'html5'
+    converter.attribute_names = []
+    source = ":icons:\n:iconsdir: assets/icons\n\n----\nx <1>\ny <2>\n----\n<1> First.\n<2> Second."
+    tree = Asciidoctor.load(source, safe: :safe, header_footer: false, converter: converter).convert
+    marks = tree[:blocks][0][:inlines].select { |n| n[:kind] == 'callout' }
+    assert(marks.map { |n| n[:src] } == ['assets/icons/callouts/1.png', 'assets/icons/callouts/2.png'], 'image icon paths lost')
+    assert(tree[:blocks][1][:items].map { |n| n[:icons] } == ['', ''], 'image mode lost')
+    font = Asciidoctor.load(source.sub(':icons:', ':icons: font'), safe: :safe, header_footer: false, converter: SemanticConverter.new('html5')).convert
+    assert(font[:blocks][1][:items][0][:icons] == 'font' && font[:blocks][1][:items][0][:src] == '', 'font mode changed')
+  end,
+  'successive callout lists have independent ids and attached footnotes' => lambda do
+    tree = project("----\nx <1>\n----\n<1> First footnote:[Note].\n+\nAttached.\n\n----\ny <1>\n----\n<1> Second.")
+    first, second = tree[:blocks][1][:items][0], tree[:blocks][3][:items][0]
+    assert(first[:coids] == ['CO1-1'] && second[:coids] == ['CO2-1'], 'list ids reused')
+    assert(first[:blocks][0][:inlines][0][:value] == 'Attached.' && tree[:footnotes].size == 1, 'attached content lost')
+  end,
   'implicit xrefs borrow formatted titles without HTML' => lambda do
     node = project("See <<s>>.\n\n[#s]\n== A *bold* title")[:blocks][0][:inlines][1]
     assert(node[:target] == '#s' && node[:inlines][0][:value] == 'A ', 'missing generated label')
@@ -142,10 +201,10 @@ cases = {
   end,
   'unsupported nodes abort instead of disappearing' => lambda do
     begin
-      project('footnote:[text]')
+      project('video::clip.mp4[]')
       raise 'unsupported inline accepted'
     rescue RuntimeError => e
-      raise unless e.message.include? 'unsupported inline-semantics-v1 node: inline_footnote'
+      raise unless e.message.include? 'unsupported inline-semantics-v1 node: video'
     end
   end,
   'unsupported link options abort instead of disappearing' => lambda do

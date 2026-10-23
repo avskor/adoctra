@@ -1594,14 +1594,15 @@ fn apply_footnotes(text: Text, attributes: &mut Evaluation<'_>, report: &mut Rep
                     &mut report.passes.diagnostics,
                 );
                 let index = crate::attributes::parts_text(&effect.parts);
+                let content = normalize_text(content);
                 let sequence = attributes
                     .footnotes()
-                    .map(|f| f.register(id.as_deref(), &index));
+                    .map(|f| f.register(id.as_deref(), &index, &content, span));
                 crate::Footnote {
                     kind: crate::FootnoteKind::Definition,
                     index: Some(index),
                     id,
-                    content: normalize_text(content),
+                    content,
                     sequence,
                 }
             }

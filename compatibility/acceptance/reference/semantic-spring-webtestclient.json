@@ -1,0 +1,3238 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "WebTestClient"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is an HTTP client designed for testing server applications. It wraps Spring’s "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "WebClient"
+                  }
+                ],
+                "kind": "xref",
+                "target": "web/webflux-webclient.html"
+              },
+              {
+                "kind": "text",
+                "value": " and uses it to perform requests but exposes a testing facade for verifying responses. "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "WebTestClient"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " can be used to perform end-to-end HTTP tests. It can also be used to test Spring MVC and Spring WebFlux applications without a running server via mock server request and response objects."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To set up a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "WebTestClient"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " you need to choose a server setup to bind to. This can be one of several mock server setup choices or a connection to a live server."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "This setup allows you to test specific controller(s) via mock request and response objects, without a running server."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "For WebFlux applications, use the following which loads infrastructure equivalent to the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "WebFlux Java config"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webflux/dispatcher-handler.html#webflux-framework-config"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", registers the given controller(s), and creates a "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "WebHandler chain"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webflux/reactive-spring.html#webflux-web-handler-api"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to handle requests:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "WebTestClient client =\n\t\tWebTestClient.bindToController(new TestController()).build();"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "val client = WebTestClient.bindToController(TestController()).build()"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "For Spring MVC, use the following which delegates to the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "StandaloneMockMvcBuilder"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/test/web/servlet/setup/StandaloneMockMvcBuilder.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to load infrastructure equivalent to the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "WebMvc Java config"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webmvc/mvc-config.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", registers the given controller(s), and creates an instance of "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "MockMvc"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "testing/mockmvc.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to handle requests:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "WebTestClient client =\n\t\tMockMvcWebTestClient.bindToController(new TestController()).build();"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "val client = MockMvcWebTestClient.bindToController(TestController()).build()"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "webtestclient-controller-config",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Bind to Controller"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "This setup allows you to load Spring configuration with Spring MVC or Spring WebFlux infrastructure and controller declarations and use it to handle requests via mock request and response objects, without a running server."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "For WebFlux, use the following where the Spring "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ApplicationContext"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is passed to "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "WebHttpHandlerBuilder"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/web/server/adapter/WebHttpHandlerBuilder.html#applicationContext-org.springframework.context.ApplicationContext-"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to create the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "WebHandler chain"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webflux/reactive-spring.html#webflux-web-handler-api"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to handle requests:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@SpringJUnitConfig(WebConfig.class) "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO1-1",
+                                  "kind": "callout",
+                                  "number": "1",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\nclass MyTests {\n\n\tWebTestClient client;\n\n\t@BeforeEach\n\tvoid setUp(ApplicationContext context) {  "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO1-2",
+                                  "kind": "callout",
+                                  "number": "2",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\t\tclient = WebTestClient.bindToApplicationContext(context).build(); "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO1-3",
+                                  "kind": "callout",
+                                  "number": "3",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\t}\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            },
+                            {
+                              "context": "colist",
+                              "id": null,
+                              "items": [
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO1-1"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Specify the configuration to load"
+                                    }
+                                  ],
+                                  "src": ""
+                                },
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO1-2"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Inject the configuration"
+                                    }
+                                  ],
+                                  "src": ""
+                                },
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO1-3"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Create the "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "WebTestClient"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    }
+                                  ],
+                                  "src": ""
+                                }
+                              ],
+                              "roles": [],
+                              "style": "arabic",
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@SpringJUnitConfig(WebConfig::class) "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO2-1",
+                                  "kind": "callout",
+                                  "number": "1",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\nclass MyTests {\n\n\tlateinit var client: WebTestClient\n\n\t@BeforeEach\n\tfun setUp(context: ApplicationContext) { "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO2-2",
+                                  "kind": "callout",
+                                  "number": "2",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\t\tclient = WebTestClient.bindToApplicationContext(context).build() "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO2-3",
+                                  "kind": "callout",
+                                  "number": "3",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\t}\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            },
+                            {
+                              "context": "colist",
+                              "id": null,
+                              "items": [
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO2-1"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Specify the configuration to load"
+                                    }
+                                  ],
+                                  "src": ""
+                                },
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO2-2"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Inject the configuration"
+                                    }
+                                  ],
+                                  "src": ""
+                                },
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO2-3"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Create the "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "WebTestClient"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    }
+                                  ],
+                                  "src": ""
+                                }
+                              ],
+                              "roles": [],
+                              "style": "arabic",
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "For Spring MVC, use the following where the Spring "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ApplicationContext"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is passed to "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "MockMvcBuilders.webAppContextSetup"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/test/web/servlet/setup/MockMvcBuilders.html#webAppContextSetup-org.springframework.web.context.WebApplicationContext-"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to create a "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "MockMvc"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "testing/mockmvc.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " instance to handle requests:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@ExtendWith(SpringExtension.class)\n@WebAppConfiguration(\"classpath:META-INF/web-resources\") "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO3-1",
+                                  "kind": "callout",
+                                  "number": "1",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n@ContextHierarchy({\n\t@ContextConfiguration(classes = RootConfig.class),\n\t@ContextConfiguration(classes = WebConfig.class)\n})\nclass MyTests {\n\n\t@Autowired\n\tWebApplicationContext wac; "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO3-2",
+                                  "kind": "callout",
+                                  "number": "2",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\n\tWebTestClient client;\n\n\t@BeforeEach\n\tvoid setUp() {\n\t\tclient = MockMvcWebTestClient.bindToApplicationContext(this.wac).build(); "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO3-3",
+                                  "kind": "callout",
+                                  "number": "3",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\t}\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            },
+                            {
+                              "context": "colist",
+                              "id": null,
+                              "items": [
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO3-1"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Specify the configuration to load"
+                                    }
+                                  ],
+                                  "src": ""
+                                },
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO3-2"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Inject the configuration"
+                                    }
+                                  ],
+                                  "src": ""
+                                },
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO3-3"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Create the "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "WebTestClient"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    }
+                                  ],
+                                  "src": ""
+                                }
+                              ],
+                              "roles": [],
+                              "style": "arabic",
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@ExtendWith(SpringExtension.class)\n@WebAppConfiguration(\"classpath:META-INF/web-resources\") "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO4-1",
+                                  "kind": "callout",
+                                  "number": "1",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n@ContextHierarchy({\n\t@ContextConfiguration(classes = RootConfig.class),\n\t@ContextConfiguration(classes = WebConfig.class)\n})\nclass MyTests {\n\n\t@Autowired\n\tlateinit var wac: WebApplicationContext; "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO4-2",
+                                  "kind": "callout",
+                                  "number": "2",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\n\tlateinit var client: WebTestClient\n\n\t@BeforeEach\n\tfun setUp() { "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO4-3",
+                                  "kind": "callout",
+                                  "number": "2",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\t\tclient = MockMvcWebTestClient.bindToApplicationContext(wac).build() "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO4-4",
+                                  "kind": "callout",
+                                  "number": "3",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\t}\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            },
+                            {
+                              "context": "colist",
+                              "id": null,
+                              "items": [
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO4-1"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Specify the configuration to load"
+                                    }
+                                  ],
+                                  "src": ""
+                                },
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO4-2",
+                                    "CO4-3"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Inject the configuration"
+                                    }
+                                  ],
+                                  "src": ""
+                                },
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO4-4"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Create the "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "WebTestClient"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    }
+                                  ],
+                                  "src": ""
+                                }
+                              ],
+                              "roles": [],
+                              "style": "arabic",
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "webtestclient-context-config",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Bind to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ApplicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "This setup allows you to test "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "functional endpoints"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web-reactive.html#webflux-fn"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " via mock request and response objects, without a running server."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "For WebFlux, use the following which delegates to "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "RouterFunctions.toWebHandler"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to create a server setup to handle requests:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "RouterFunction<?> route = ...\nclient = WebTestClient.bindToRouterFunction(route).build();"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "val route: RouterFunction<*> = ...\nval client = WebTestClient.bindToRouterFunction(route).build()"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "For Spring MVC there are currently no options to test "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "WebMvc functional endpoints"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webmvc-functional.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "webtestclient-fn-config",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Bind to Router Function"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "This setup connects to a running server to perform full, end-to-end HTTP tests:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "client = WebTestClient.bindToServer().baseUrl(\"http://localhost:8080\").build();"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "client = WebTestClient.bindToServer().baseUrl(\"http://localhost:8080\").build()"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "webtestclient-server-config",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Bind to Server"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "In addition to the server setup options described earlier, you can also configure client options, including base URL, default headers, client filters, and others. These options are readily available following "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "bindToServer()"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". For all other configuration options, you need to use "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "configureClient()"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to transition from server to client configuration, as follows:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "client = WebTestClient.bindToController(new TestController())\n\t\t.configureClient()\n\t\t.baseUrl(\"/test\")\n\t\t.build();"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "client = WebTestClient.bindToController(TestController())\n\t\t.configureClient()\n\t\t.baseUrl(\"/test\")\n\t\t.build()"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "webtestclient-client-config",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Client Config"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "webtestclient-setup",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Setup"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "WebTestClient"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " provides an API identical to "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "WebClient"
+                  }
+                ],
+                "kind": "xref",
+                "target": "web/webflux-webclient.html"
+              },
+              {
+                "kind": "text",
+                "value": " up to the point of performing a request by using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "exchange()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". See the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "WebClient"
+                  }
+                ],
+                "kind": "xref",
+                "target": "web/webflux-webclient/client-body.html"
+              },
+              {
+                "kind": "text",
+                "value": " documentation for examples on how to prepare a request with any content including form data, multipart data, and more."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "After the call to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "exchange()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "WebTestClient"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " diverges from the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "WebClient"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and instead continues with a workflow to verify responses."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To assert the response status and headers, use the following:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "client.get().uri(\"/persons/1\")\n\t.accept(MediaType.APPLICATION_JSON)\n\t.exchange()\n\t.expectStatus().isOk()\n\t.expectHeader().contentType(MediaType.APPLICATION_JSON);"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "client.get().uri(\"/persons/1\")\n\t.accept(MediaType.APPLICATION_JSON)\n\t.exchange()\n\t.expectStatus().isOk()\n\t.expectHeader().contentType(MediaType.APPLICATION_JSON)"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you would like for all expectations to be asserted even if one of them fails, you can use "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "expectAll(..)"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instead of multiple chained "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "expect*(..)"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " calls. This feature is similar to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "soft assertions"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " support in AssertJ and the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "assertAll()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " support in JUnit Jupiter."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "client.get().uri(\"/persons/1\")\n\t.accept(MediaType.APPLICATION_JSON)\n\t.exchange()\n\t.expectAll(\n\t\tspec -> spec.expectStatus().isOk(),\n\t\tspec -> spec.expectHeader().contentType(MediaType.APPLICATION_JSON)\n\t);"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "client.get().uri(\"/persons/1\")\n\t.accept(MediaType.APPLICATION_JSON)\n\t.exchange()\n\t.expectAll(\n\t\t{ spec -> spec.expectStatus().isOk() },\n\t\t{ spec -> spec.expectHeader().contentType(MediaType.APPLICATION_JSON) }\n\t)"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can then choose to decode the response body through one of the following:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "expectBody(Class<T>)"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ": Decode to single object."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "expectBodyList(Class<T>)"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ": Decode and collect objects to "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "List<T>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "expectBody()"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ": Decode to "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "byte[]"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "JSON Content"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "testing/webtestclient.html#webtestclient-json"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " or an empty body."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "And perform assertions on the resulting higher level Object(s):"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "client.get().uri(\"/persons\")\n\t\t.exchange()\n\t\t.expectStatus().isOk()\n\t\t.expectBodyList(Person.class).hasSize(3).contains(person);"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "import org.springframework.test.web.reactive.server.expectBodyList\n\nclient.get().uri(\"/persons\")\n\t\t.exchange()\n\t\t.expectStatus().isOk()\n\t\t.expectBodyList<Person>().hasSize(3).contains(person)"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If the built-in assertions are insufficient, you can consume the object instead and perform any other assertions:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "   import org.springframework.test.web.reactive.server.expectBody\n\nclient.get().uri(\"/persons/1\")\n\t\t.exchange()\n\t\t.expectStatus().isOk()\n\t\t.expectBody(Person.class)\n\t\t.consumeWith(result -> {\n\t\t\t// custom assertions (for example, AssertJ)...\n\t\t});"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "client.get().uri(\"/persons/1\")\n\t\t.exchange()\n\t\t.expectStatus().isOk()\n\t\t.expectBody<Person>()\n\t\t.consumeWith {\n\t\t\t// custom assertions (for example, AssertJ)...\n\t\t}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Or you can exit the workflow and obtain an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "EntityExchangeResult"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ":"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "EntityExchangeResult<Person> result = client.get().uri(\"/persons/1\")\n\t\t.exchange()\n\t\t.expectStatus().isOk()\n\t\t.expectBody(Person.class)\n\t\t.returnResult();"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "import org.springframework.test.web.reactive.server.expectBody\n\nval result = client.get().uri(\"/persons/1\")\n\t\t.exchange()\n\t\t.expectStatus().isOk\n\t\t.expectBody<Person>()\n\t\t.returnResult()"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When you need to decode to a target type with generics, look for the overloaded methods that accept "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ParameterizedTypeReference"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/core/ParameterizedTypeReference.html"
+              },
+              {
+                "kind": "text",
+                "value": " instead of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Class<T>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "tip"
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If the response is not expected to have content, you can assert that as follows:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "client.post().uri(\"/persons\")\n\t\t.body(personMono, Person.class)\n\t\t.exchange()\n\t\t.expectStatus().isCreated()\n\t\t.expectBody().isEmpty();"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "client.post().uri(\"/persons\")\n\t\t.bodyValue(person)\n\t\t.exchange()\n\t\t.expectStatus().isCreated()\n\t\t.expectBody().isEmpty()"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If you want to ignore the response content, the following releases the content without any assertions:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "client.get().uri(\"/persons/123\")\n\t\t.exchange()\n\t\t.expectStatus().isNotFound()\n\t\t.expectBody(Void.class);"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "client.get().uri(\"/persons/123\")\n\t\t.exchange()\n\t\t.expectStatus().isNotFound\n\t\t.expectBody<Unit>()"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "webtestclient-no-content",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "No Content"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You can use "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "expectBody()"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " without a target type to perform assertions on the raw content rather than through higher level Object(s)."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To verify the full JSON content with "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "JSONAssert"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://jsonassert.skyscreamer.org"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ":"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "client.get().uri(\"/persons/1\")\n\t\t.exchange()\n\t\t.expectStatus().isOk()\n\t\t.expectBody()\n\t\t.json(\"{\\\"name\\\":\\\"Jane\\\"}\")"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "client.get().uri(\"/persons/1\")\n\t\t.exchange()\n\t\t.expectStatus().isOk()\n\t\t.expectBody()\n\t\t.json(\"{\\\"name\\\":\\\"Jane\\\"}\")"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To verify JSON content with "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "JSONPath"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://github.com/jayway/JsonPath"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ":"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "client.get().uri(\"/persons\")\n\t\t.exchange()\n\t\t.expectStatus().isOk()\n\t\t.expectBody()\n\t\t.jsonPath(\"$[0].name\").isEqualTo(\"Jane\")\n\t\t.jsonPath(\"$[1].name\").isEqualTo(\"Jason\");"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "client.get().uri(\"/persons\")\n\t\t.exchange()\n\t\t.expectStatus().isOk()\n\t\t.expectBody()\n\t\t.jsonPath(\"$[0].name\").isEqualTo(\"Jane\")\n\t\t.jsonPath(\"$[1].name\").isEqualTo(\"Jason\")"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "webtestclient-json",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "JSON Content"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To test potentially infinite streams such as "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "\"text/event-stream\""
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " or "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "\"application/x-ndjson\""
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", start by verifying the response status and headers, and then obtain a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "FluxExchangeResult"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ":"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "FluxExchangeResult<MyEvent> result = client.get().uri(\"/events\")\n\t\t.accept(TEXT_EVENT_STREAM)\n\t\t.exchange()\n\t\t.expectStatus().isOk()\n\t\t.returnResult(MyEvent.class);"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "import org.springframework.test.web.reactive.server.returnResult\n\nval result = client.get().uri(\"/events\")\n\t\t.accept(TEXT_EVENT_STREAM)\n\t\t.exchange()\n\t\t.expectStatus().isOk()\n\t\t.returnResult<MyEvent>()"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Now you’re ready to consume the response stream with "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "StepVerifier"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " from "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "reactor-test"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ":"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "Flux<Event> eventFlux = result.getResponseBody();\n\nStepVerifier.create(eventFlux)\n\t\t.expectNext(person)\n\t\t.expectNextCount(4)\n\t\t.consumeNextWith(p -> ...)\n\t\t.thenCancel()\n\t\t.verify();"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "val eventFlux = result.getResponseBody()\n\nStepVerifier.create(eventFlux)\n\t\t.expectNext(person)\n\t\t.expectNextCount(4)\n\t\t.consumeNextWith { p -> ... }\n\t\t.thenCancel()\n\t\t.verify()"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "webtestclient-stream",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Streaming Responses"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "WebTestClient"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is an HTTP client and as such it can only verify what is in the client response including status, headers, and body."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "When testing a Spring MVC application with a MockMvc server setup, you have the extra choice to perform further assertions on the server response. To do that start by obtaining an "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ExchangeResult"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " after asserting the body:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "// For a response with a body\nEntityExchangeResult<Person> result = client.get().uri(\"/persons/1\")\n\t\t.exchange()\n\t\t.expectStatus().isOk()\n\t\t.expectBody(Person.class)\n\t\t.returnResult();\n\n// For a response without a body\nEntityExchangeResult<Void> result = client.get().uri(\"/path\")\n\t\t.exchange()\n\t\t.expectBody().isEmpty();"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "// For a response with a body\nval result = client.get().uri(\"/persons/1\")\n\t\t.exchange()\n\t\t.expectStatus().isOk()\n\t\t.expectBody<Person>()\n\t\t.returnResult()\n\n// For a response without a body\nval result = client.get().uri(\"/path\")\n\t\t.exchange()\n\t\t.expectBody().isEmpty()"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Then switch to MockMvc server response assertions:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "MockMvcWebTestClient.resultActionsFor(result)\n\t\t.andExpect(model().attribute(\"integer\", 3))\n\t\t.andExpect(model().attribute(\"string\", \"a string value\"));"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "MockMvcWebTestClient.resultActionsFor(result)\n\t\t.andExpect(model().attribute(\"integer\", 3))\n\t\t.andExpect(model().attribute(\"string\", \"a string value\"));"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "webtestclient-mockmvc",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "MockMvc Assertions"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "webtestclient-tests",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Writing Tests"
+          }
+        ]
+      }
+    ],
+    "title": [
+      {
+        "kind": "text",
+        "value": "WebTestClient"
+      }
+    ]
+  }
+}

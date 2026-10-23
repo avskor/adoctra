@@ -171,16 +171,16 @@ Host overrides now accept Ruby's string soft-default (`name@` / `value@`) and
 hard/soft unset forms. CLI repeated overrides honor the last spelling of a name;
 API callers should supply one spelling per effective key in the BTreeMap.
 
-`compatibility/upstream/semantics.json` uses `inline-semantics-v1`: 96 PASS
+`compatibility/upstream/semantics.json` uses `inline-semantics-v1`: 129 PASS
 cover 20 attribute and four include scenarios from the upstream selection plus
-72 original semantic probes (14 tables; 27 xref/indexterm/stem/typographic quote
-probes). `compatibility/acceptance/semantics.json` adds
-9 PASS on unchanged full Asciidoctor/Spring pages, with the same sources,
+105 original semantic probes (14 tables; 27 xref/indexterm/stem/typographic quote
+probes; 33 footnote/callout probes). `compatibility/acceptance/semantics.json` adds
+12 PASS on unchanged full Asciidoctor/Spring pages, with the same sources,
 include resources and host attributes as the HTML corpus. The Ruby oracle has its own converter (no HTML
 converter or HTML parsing); paired synthetic boundaries leave content exposed
 to later substitution stages. The Python adapter reads the resolved JSON AST
 and selected header/final attributes. CLI `--to json --json-attributes` opts in
-to `JsonBackend::convert_with_attributes`; default JSON stays unchanged.
+to `JsonBackend::convert_with_attributes`; default JSON omits these snapshots.
 The schema includes link metadata, UI labels, inline/block images, lists with
 checkboxes/description/attached blocks, simple/compound containers and verbatim
 content with exact whitespace and language. Tables include column style/width/
@@ -199,10 +199,16 @@ and exact whitespace; typographic quotes preserve formatting and metadata.
 Attribute snapshots now complete definition-time xref targets/labels from the
 existing fixed-reference registry, without repeating substitutions/counters.
 Keep forward-definition fallbacks fixed; test header/final snapshots and use spans.
-Footnotes/callouts, extra xref metadata and embedded SVG/icons
-remain outside it. The schema does not cover all nodes, all attributes,
+Footnotes retain markers and ordered root/nested catalogs, including unused or
+removed attribute definitions and duplicate counter values. Callouts retain exact
+position, number/id, guards/XML, icons/src and ordered colist coids. JSON/WASM
+export `text_range` byte offsets into normalized block text, separate from source
+spans; adapters must not reparse callout syntax. The core keeps registered
+footnotes even without a visible attribute use; lazy outer titles belong to the
+outer document even when a table-cell xref first converts them. Extra xref
+metadata and embedded SVG/inline icons remain outside the profile. The schema does not cover all nodes, all attributes,
 source positions or ASG/TCK. See `docs/semantic-profile.adoc`; keep the independent
-31 Ruby converter checks and offline/verify runs for both manifests in CI.
+39 Ruby converter checks and offline/verify runs for both manifests in CI.
 
 `compatibility/acceptance/positions.json` uses `diagnostic-positions-v1`:
 18 original probes, all PASS. Ruby `--diagnostic-positions` exports

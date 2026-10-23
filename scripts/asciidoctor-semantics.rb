@@ -105,7 +105,7 @@ class SemanticConverter < Asciidoctor::Converter::Base
       result[:inlines] = inlines(cell.text)
     elsif cell.style == :asciidoc
       document = cell.inner_document.convert
-      result[:document] = document.slice(:title, :blocks)
+      result[:document] = document.slice(:title, :blocks, :footnotes)
     elsif cell.style == :literal
       result[:literal] = inlines(cell.text)
     else
@@ -155,12 +155,21 @@ class SemanticConverter < Asciidoctor::Converter::Base
         []
       elsif %w[link xref].include? node[:kind]
         strip_xref_anchors node[:inlines]
-      elsif node.key? :inlines
+      elsif node[:kind] == 'footnote' && node[:index]
+        [ { kind: 'superscript', id: node[:id] ? "_footnote_#{node[:id]}" : nil,
+            roles: [node[:type] == 'definition' ? 'footnote' : 'footnoteref'],
+            inlines: [{ kind: 'text', value: "[#{node[:index]}]" }] } ]
+      elsif node[:inlines]
         [node.merge(inlines: strip_xref_anchors(node[:inlines]))]
       else
         [node]
       end
     end
+  end
+
+  def callout_icon node, number
+    icons = node.document.attr 'icons'
+    { icons: icons, src: icons && icons != 'font' ? node.icon_uri("callouts/#{number}") : '' }
   end
 
   def convert node, transform = node.node_name, _opts = nil
@@ -169,7 +178,11 @@ class SemanticConverter < Asciidoctor::Converter::Base
       header = snapshot node
       title = node.header? ? inlines(node.doctitle) : nil
       blocks = node.blocks.map { |block| block.convert }
-      { attributes: { header: header, final: snapshot(node) }, title: title, blocks: blocks }
+      result = { attributes: { header: header, final: snapshot(node) }, title: title, blocks: blocks }
+      if node.footnotes?
+        result[:footnotes] = node.footnotes.map { |entry| { index: entry.index.to_s, id: entry.id, inlines: inlines(entry.text) } }
+      end
+      result
     when 'paragraph'
       { context: 'paragraph', id: node.id, roles: node.roles,
         title: node.title? ? inlines(node.title) : nil, inlines: inlines(node.content) }
@@ -192,6 +205,13 @@ class SemanticConverter < Asciidoctor::Converter::Base
       metadata(node).merge(style: node.style, inlines: inlines(node.content))
     when 'ulist', 'olist'
       metadata(node).merge(style: node.style, items: node.items.map { |entry| item entry })
+    when 'colist'
+      result = metadata(node).merge(style: node.style)
+      icons = node.items.each_with_index.map { |_, index| callout_icon node, (index + 1).to_s }
+      result[:items] = node.items.each_with_index.map { |entry, index|
+        item(entry).merge(coids: (entry.attr('coids') || '').split, **icons[index])
+      }
+      result
     when 'dlist'
       metadata(node).merge(items: node.items.map { |terms, description|
         { terms: terms.map { |term| inlines(term.text) }, description: description ? item(description) : nil }
@@ -253,6 +273,19 @@ class SemanticConverter < Asciidoctor::Converter::Base
       raise 'indexterm metadata is outside inline-semantics-v1' unless node.attributes.keys.all? { |key| Integer === key || %w[terms see see-also].include?(key) }
       fields = { kind: 'indexterm', terms: node.attr('terms') || [], see: node.attr('see'), see_also: node.attr('see-also') || [] }
       node.type == :visible ? wrap(fields, node.text) : store(fields.merge(inlines: nil))
+    when 'inline_callout'
+      raise 'callout metadata is outside inline-semantics-v1' unless (node.attributes.keys - ['guard']).empty?
+      guard = node.attr 'guard'
+      xml = Array === guard
+      raise 'unsupported callout guard' if xml && guard != ['<!--', '-->']
+      store({ kind: 'callout', number: node.text, id: node.id, guard: xml ? nil : guard, xml: xml }.merge(callout_icon(node, node.text)))
+    when 'inline_footnote'
+      raise 'footnote metadata is outside inline-semantics-v1' unless (node.attributes.keys - ['index']).empty?
+      index = node.attr 'index'
+      type = node.type == :xref ? (index ? 'reference' : 'unresolved') : 'definition'
+      store(kind: 'footnote', type: type, index: index&.to_s,
+            id: type == 'unresolved' ? node.target : node.id,
+            inlines: type == 'definition' ? inlines(node.text) : [])
     else
       raise "unsupported inline-semantics-v1 node: #{transform}"
     end

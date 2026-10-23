@@ -859,7 +859,7 @@ impl ParseContext<'_> {
         references: &mut Vec<crate::Diagnostic>,
     ) -> Vec<crate::Token> {
         crate::resolve::resolve_attribute_definitions(&mut document.attributes, &fixed);
-        let (attributes, tokens) = std::mem::take(&mut self.body_subs).execute(
+        let (attributes, tokens, footnotes) = std::mem::take(&mut self.body_subs).execute(
             &mut document.blocks,
             document.attributes.clone(),
             crate::body_subs::Conversion {
@@ -877,6 +877,7 @@ impl ParseContext<'_> {
             },
         );
         document.final_attributes = attributes;
+        document.footnotes = footnotes;
         tokens
     }
 
@@ -1351,6 +1352,24 @@ impl ParseContext<'_> {
     /// keep their own tag).
     fn fix_xrefs(&mut self, parts: &mut [AttributePart], span: crate::Span) {
         for i in 0..parts.len() {
+            match &mut parts[i] {
+                AttributePart::Footnote(footnote) => {
+                    self.fix_xrefs(&mut footnote.content, span);
+                    self.footnotes.restore(footnote);
+                }
+                AttributePart::Ui(ui) => {
+                    for label in ui.labels_mut() {
+                        self.fix_xrefs(label, span);
+                    }
+                }
+                AttributePart::Stem(stem) => self.fix_xrefs(&mut stem.parts, span),
+                AttributePart::IndexTerm(term) => {
+                    for label in term.labels_mut() {
+                        self.fix_xrefs(label, span);
+                    }
+                }
+                _ => {}
+            }
             let textless = matches!(parts.get(i + 1), Some(AttributePart::CloseXref));
             if let AttributePart::OpenXref(xref) = &mut parts[i] {
                 if xref.definition.is_none() {

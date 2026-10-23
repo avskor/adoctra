@@ -10,7 +10,7 @@ import re
 PROFILE = 'inline-semantics-v1'
 FORMATS = {'strong', 'emphasis', 'monospace', 'mark', 'superscript', 'subscript', 'span'}
 CONTAINERS = {'section', 'preamble', 'open', 'sidebar', 'example', 'admonition'}
-LISTS = {'ulist', 'olist', 'dlist'}
+LISTS = {'ulist', 'olist', 'dlist', 'colist'}
 VERBATIM = {'listing', 'literal'}
 IMAGE_ATTRIBUTES = {'width', 'height', 'title', 'link', 'float'}
 LINK_METADATA = {'id', 'role', 'title', 'window', 'rel'}
@@ -98,7 +98,7 @@ def append_parts(parts, stack):
         elif kind == 'anchor':
             require(set(part) == {'kind', 'id'})
             stack[-1][1].append({'kind': 'anchor', 'id': lexical(part['id'])})
-        elif kind in {'kbd', 'button', 'menu', 'image', 'indexterm', 'stem'}:
+        elif kind in {'kbd', 'button', 'menu', 'image', 'indexterm', 'stem', 'footnote', 'callout'}:
             stack[-1][1].append(complex_inline(part, kind))
         else:
             raise ValueError(f'unsupported semantic part: {kind}')
@@ -120,7 +120,7 @@ def inline_projection(nodes):
             stack[-1][1].append({'kind': name, 'target': node['target'], 'inlines': inline_projection(node['inlines'])})
         elif name == 'anchor':
             stack[-1][1].append({'kind': name, 'id': node['id']})
-        elif name in {'kbd', 'button', 'menu', 'image', 'indexterm', 'stem'}:
+        elif name in {'kbd', 'button', 'menu', 'image', 'indexterm', 'stem', 'footnote', 'callout'}:
             stack[-1][1].append(complex_inline(node, name))
         else:
             raise ValueError(f'unsupported semantic inline: {name}')
@@ -141,8 +141,16 @@ def image_fields(node):
 def complex_inline(node, kind):
     fields = {'image': {'icon', 'target', 'src', 'alt', 'icons', 'attributes', 'options', 'parts', 'svg'},
               'button': {'parts'}, 'kbd': {'keys'}, 'menu': {'menu', 'submenus', 'item', 'font'},
-              'indexterm': {'parts', 'terms', 'see', 'see_also'}, 'stem': {'style', 'parts'}}[kind]
+              'indexterm': {'parts', 'terms', 'see', 'see_also'}, 'stem': {'style', 'parts'},
+              'footnote': {'type', 'index', 'id', 'parts'},
+              'callout': {'number', 'id', 'guard', 'xml', 'icons', 'src'}}[kind]
     require(set(node) <= fields | {'name', 'kind'}, 'unsupported complex inline field')
+    if kind == 'footnote':
+        return {'kind': kind, 'type': node['type'], 'index': node['index'],
+                'id': lexical(node['id']) if node['id'] is not None else None,
+                'inlines': parts_projection(node['parts'])}
+    if kind == 'callout':
+        return {'kind': kind, **{key: node[key] for key in fields}}
     if kind == 'stem':
         return {'kind': kind, 'style': node['style'], 'inlines': parts_projection(node['parts'])}
     if kind == 'indexterm':
@@ -164,16 +172,51 @@ def complex_inline(node, kind):
             'item': parts_projection(node['item']) if node['item'] is not None else None}
 
 
-def item_projection(item):
-    return {'inlines': canonical(inline_projection(item['inlines'])), 'checkbox': item.get('checkbox'),
-            'blocks': [block_projection(child) for child in item['blocks']]}
+def item_projection(item, callout=False):
+    result = {'inlines': canonical(inline_projection(item['inlines'])), 'checkbox': item.get('checkbox'),
+              'blocks': [block_projection(child) for child in item['blocks']]}
+    if callout:
+        result.update({key: item[key] for key in ['coids', 'icons', 'src']})
+    return result
+
+
+def footnotes_projection(entries):
+    result = []
+    for entry in entries:
+        require(isinstance(entry, dict) and set(entry) == {'index', 'id', 'parts'}, 'invalid footnote definition')
+        result.append({'index': entry['index'], 'id': lexical(entry['id']) if entry['id'] is not None else None,
+                       'inlines': canonical(parts_projection(entry['parts']))})
+    return result
+
+
+def verbatim_projection(block):
+    if 'inlines' in block:
+        require(not block.get('callouts'), 'ambiguous verbatim content')
+        return inline_projection(block['inlines'])
+    source = block['text'].encode('utf-8')
+    result, previous = [], 0
+    require(isinstance(block.get('callouts', []), list), 'invalid callouts')
+    for callout in block.get('callouts', []):
+        require(isinstance(callout, dict) and 'text_range' in callout, 'invalid callouts entry')
+        interval = callout['text_range']
+        require(isinstance(interval, dict) and set(interval) == {'start', 'end'}, 'invalid callout text range')
+        start, end = interval['start'], interval['end']
+        require(type(start) is int and type(end) is int and previous <= start < end <= len(source), 'invalid callout text range')
+        # Offsets address the converted UTF-8 block text, not Python characters
+        # or original source spans. Decode each boundary to reject split codepoints.
+        source[start:end].decode('utf-8')
+        result.append({'kind': 'text', 'value': source[previous:start].decode('utf-8')})
+        result.append(complex_inline({key: value for key, value in callout.items() if key != 'text_range'}, 'callout'))
+        previous = end
+    result.append({'kind': 'text', 'value': source[previous:].decode('utf-8')})
+    return result
 
 
 def cell_projection(cell, group):
     keys = {'style', 'halign', 'valign', 'colspan', 'rowspan', 'background'}
     content = set(cell) & {'paragraphs', 'blocks', 'literal'}
     require(len(content) == 1 and set(cell) <= keys | content | {'footnotes'}, 'invalid semantic cell')
-    require(not cell.get('footnotes'), 'footnotes are outside inline-semantics-v1')
+    require('footnotes' not in cell or 'blocks' in cell, 'footnotes require a nested document')
     result = {key: cell[key] for key in keys}
     for key in ['colspan', 'rowspan']:
         result[key] = 1 if result[key] is None else result[key]
@@ -181,9 +224,11 @@ def cell_projection(cell, group):
         require('paragraphs' in cell and len(cell['paragraphs']) <= 1, 'invalid header cell')
         result['inlines'] = canonical(inline_projection(cell['paragraphs'][0]) if cell['paragraphs'] else [])
     elif 'blocks' in cell:
-        nested = document_projection({'name': 'document', 'blocks': cell['blocks'],
+        nested = document_projection({'name': 'document', 'blocks': cell['blocks'], 'footnotes': cell.get('footnotes', []),
                                       'attribute_snapshots': {'header': {'values': {}}, 'final': {'values': {}}}}, [])
         result['document'] = {key: nested[key] for key in ['title', 'blocks']}
+        if 'footnotes' in nested:
+            result['document']['footnotes'] = nested['footnotes']
     elif 'literal' in cell:
         result['literal'] = canonical([{'kind': 'text', 'value': cell['literal']}], prose=False)
     elif cell['style'] == 'literal':
@@ -220,7 +265,7 @@ def block_projection(block):
                                for item in block['items']]
         else:
             result['style'] = block.get('style') or ('arabic' if context == 'olist' else None)
-            result['items'] = [item_projection(item) for item in block['items']]
+            result['items'] = [item_projection(item, callout=context == 'colist') for item in block['items']]
     elif context == 'table':
         result['columns'] = copy.deepcopy(block['columns'])
         for group in ['head', 'body', 'foot']:
@@ -229,10 +274,8 @@ def block_projection(block):
         result['style'] = block['style']
         result['inlines'] = canonical(inline_projection(block['inlines']), prose=False)
     elif context in VERBATIM:
-        require(not block.get('callouts'), 'callouts are outside inline-semantics-v1')
         result['language'] = block.get('attributes', {}).get('language')
-        result['inlines'] = canonical(inline_projection(block['inlines']) if 'inlines' in block else [
-            {'kind': 'text', 'value': block['text']}], prose=False)
+        result['inlines'] = canonical(verbatim_projection(block), prose=False)
     elif context == 'image':
         fields = image_fields(block)
         fields['alt'] = canonical(fields['alt'], prose=False)
@@ -268,6 +311,8 @@ def document_projection(document, names):
                 value = canonical([{'kind': 'text', 'value': snapshot['values'][name]}], prose=False)
             attributes[stage][name] = value
     result = {'attributes': attributes, 'title': title, 'blocks': [block_projection(block) for block in blocks]}
+    if document.get('footnotes'):
+        result['footnotes'] = footnotes_projection(document['footnotes'])
     validate(result, names)
     return result
 
@@ -332,6 +377,7 @@ def reference_projection(result, names):
                                 nested['title'] = inlines(nested['title'])
                             for child in nested['blocks']:
                                 block(child)
+                            footnotes(nested)
         for entry in node.get('items', []):
             if node['context'] == 'dlist':
                 entry['terms'] = [inlines(term) for term in entry['terms']]
@@ -344,8 +390,17 @@ def reference_projection(result, names):
 
     def item(node):
         node['inlines'] = inlines(node['inlines'])
+        if 'coids' in node:
+            node['coids'] = [lexical(value) for value in node['coids']]
+            node['src'] = lexical(node['src'])
         for child in node['blocks']:
             block(child)
+
+    def footnotes(document):
+        for entry in document.get('footnotes', []):
+            if entry['id'] is not None:
+                entry['id'] = lexical(entry['id'])
+            entry['inlines'] = inlines(entry['inlines'])
 
     # Validate the raw oracle schema before walking it, then canonical output.
     validate(result, names)
@@ -357,6 +412,7 @@ def reference_projection(result, names):
         result['title'] = inlines(result['title'])
     for node in result['blocks']:
         block(node)
+    footnotes(result)
     validate(result, names)
     return result
 
@@ -407,6 +463,25 @@ def validate_inlines(nodes):
                 require(isinstance(node.get(key), list) and all(isinstance(term, str) for term in node[key]))
             require(node.get('see') is None or isinstance(node['see'], str))
             require(node.get('inlines') is None or node['terms'] == [])
+        elif kind == 'footnote':
+            keys.update({'type', 'index', 'id', 'inlines'})
+            require(node.get('type') in {'definition', 'reference', 'unresolved'})
+            require(node.get('id') is None or isinstance(node['id'], str))
+            if node['type'] == 'unresolved':
+                require(node.get('index') is None and isinstance(node['id'], str))
+            else:
+                require(isinstance(node.get('index'), str) and bool(node['index']))
+            if node['type'] != 'definition':
+                require(node.get('inlines') == [])
+            if node['type'] == 'reference':
+                require(node['id'] is None)
+        elif kind == 'callout':
+            keys.update({'number', 'id', 'guard', 'xml', 'icons', 'src'})
+            require(isinstance(node.get('number'), str) and re.fullmatch(r'[0-9]+', node['number']))
+            require(node.get('id') is None or isinstance(node['id'], str))
+            require(node.get('guard') is None or isinstance(node['guard'], str))
+            require(type(node.get('xml')) is bool and (not node['xml'] or node['guard'] is None))
+            validate_icon(node)
         else:
             require(kind == 'line-break')
         require(set(node) == keys)
@@ -435,8 +510,28 @@ def validate_image(node):
     validate_strings(node.get('attributes'), IMAGE_ATTRIBUTES)
 
 
-def validate_item(item):
-    require(isinstance(item, dict) and set(item) == {'inlines', 'checkbox', 'blocks'})
+def validate_icon(node):
+    require(node.get('icons') is None or isinstance(node['icons'], str))
+    require(isinstance(node.get('src'), str))
+
+
+def validate_footnotes(node):
+    if 'footnotes' not in node:
+        return
+    require(isinstance(node['footnotes'], list) and bool(node['footnotes']))
+    for entry in node['footnotes']:
+        require(isinstance(entry, dict) and set(entry) == {'index', 'id', 'inlines'})
+        require(isinstance(entry['index'], str) and bool(entry['index']))
+        require(entry['id'] is None or isinstance(entry['id'], str))
+        validate_inlines(entry['inlines'])
+
+
+def validate_item(item, callout=False):
+    keys = {'inlines', 'checkbox', 'blocks'} | ({'coids', 'icons', 'src'} if callout else set())
+    require(isinstance(item, dict) and set(item) == keys)
+    if callout:
+        require(isinstance(item['coids'], list) and all(isinstance(value, str) for value in item['coids']))
+        validate_icon(item)
     require(item['checkbox'] is None or type(item['checkbox']) is bool)
     validate_inlines(item['inlines'])
     require(isinstance(item['blocks'], list))
@@ -474,7 +569,8 @@ def validate_table(node):
                 elif cell['style'] == 'asciidoc':
                     keys.add('document')
                     nested = cell.get('document')
-                    require(isinstance(nested, dict) and set(nested) == {'title', 'blocks'})
+                    require(isinstance(nested, dict) and {'title', 'blocks'} <= set(nested) <= {'title', 'blocks', 'footnotes'})
+                    validate_footnotes(nested)
                     if nested['title'] is not None:
                         validate_inlines(nested['title'])
                     require(isinstance(nested['blocks'], list))
@@ -517,7 +613,7 @@ def validate_block(node):
                 if entry['description'] is not None:
                     validate_item(entry['description'])
             else:
-                validate_item(entry)
+                validate_item(entry, callout=context == 'colist')
     elif context == 'table':
         keys.update({'columns', 'head', 'body', 'foot'})
         validate_table(node)
@@ -545,7 +641,8 @@ def validate_block(node):
 
 
 def validate(result, names=None):
-    require(isinstance(result, dict) and set(result) == {'attributes', 'title', 'blocks'})
+    require(isinstance(result, dict) and {'attributes', 'title', 'blocks'} <= set(result) <= {'attributes', 'title', 'blocks', 'footnotes'})
+    validate_footnotes(result)
     require(isinstance(result['attributes'], dict) and set(result['attributes']) == {'header', 'final'})
     for snapshot in result['attributes'].values():
         require(isinstance(snapshot, dict) and all(isinstance(key, str) for key in snapshot))

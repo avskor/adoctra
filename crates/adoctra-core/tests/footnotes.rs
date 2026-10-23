@@ -255,3 +255,115 @@ fn footnote_macros_are_highlighted_as_inline_macros() {
     assert!(tokens.iter().any(|t| t.kind == TokenKind::InlineMacro
         && &source[t.span.start..t.span.end] == "footnote:[x *b*]"));
 }
+
+#[test]
+fn unused_and_removed_attribute_definitions_keep_catalog_order_and_origins() {
+    for newline in ["\n", "\r\n"] {
+        let source =
+            ":note: pass:q,m[footnote:n[Stored *Ж* note]]\n\n:note!:\n\nBody footnote:[Next].\n"
+                .replace('\n', newline);
+        let result = parse(&source);
+        assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+        let catalog = &result.document.footnotes;
+        assert_eq!(catalog.len(), 2);
+        assert_eq!(
+            (
+                catalog[0].index.as_str(),
+                catalog[0].id.as_deref(),
+                content(&catalog[0])
+            ),
+            ("1", Some("n"), "Stored Ж note".into())
+        );
+        assert!(catalog[0]
+            .content
+            .contains(&AttributePart::Open(adoctra_core::AttributeFormat::Strong)));
+        assert_eq!(
+            &source[catalog[0].span.start..catalog[0].span.end],
+            ":note: pass:q,m[footnote:n[Stored *Ж* note]]"
+        );
+        assert_eq!(
+            (catalog[1].index.as_str(), content(&catalog[1])),
+            ("2", "Next".into())
+        );
+        assert_eq!(
+            &source[catalog[1].span.start..catalog[1].span.end],
+            "footnote:[Next]"
+        );
+        assert!(result.document.final_attributes.get("note").is_none());
+    }
+}
+
+#[test]
+fn unused_nested_attribute_footnotes_stay_in_the_cell_catalog() {
+    let source = "Outer footnote:o[Outer].\n\n[cols=a,options=noheader]\n|===\n|:note: pass:m[footnote:i[Inner]]\n\nCell.\n|===\n\nAfter footnote:[Last].\n";
+    let document = parse(source).document;
+    assert_eq!(
+        document
+            .footnotes
+            .iter()
+            .map(|f| (f.index.as_str(), content(f)))
+            .collect::<Vec<_>>(),
+        [("1", "Outer".into()), ("2", "Last".into())]
+    );
+    let BlockKind::Table(table) = &document.blocks[1].kind else {
+        panic!()
+    };
+    let CellContent::Blocks { footnotes, .. } = &table.body[0][0].content else {
+        panic!()
+    };
+    assert_eq!(footnotes.len(), 1);
+    assert_eq!(
+        (footnotes[0].index.as_str(), content(&footnotes[0])),
+        ("1", "Inner".into())
+    );
+    assert_eq!(
+        &source[footnotes[0].span.start..footnotes[0].span.end],
+        ":note: pass:m[footnote:i[Inner]]"
+    );
+}
+
+#[test]
+fn unused_footnote_content_restores_passes_and_definition_time_xrefs() {
+    let source =
+        ":note: pass:m[footnote:n[See xref:s[] and pass:q[*Ж*]]]\n\n[[s]]\n== Target\n\nBody.\n";
+    let result = parse(source);
+    assert!(result.diagnostics.is_empty());
+    let catalog = &result.document.footnotes;
+    assert_eq!(catalog.len(), 1);
+    assert_eq!(content(&catalog[0]), "See [s] and Ж");
+    assert!(catalog[0]
+        .content
+        .contains(&AttributePart::Open(adoctra_core::AttributeFormat::Strong)));
+    assert_eq!(
+        &source[catalog[0].span.start..catalog[0].span.end],
+        ":note: pass:m[footnote:n[See xref:s[] and pass:q[*Ж*]]]"
+    );
+}
+
+#[test]
+fn lazy_outer_title_footnotes_do_not_leak_into_the_converting_cell() {
+    let source = "|===\na|<<s>> footnote:[one]\n|===\n\n[#s]\n== T footnote:[two]";
+    let options = adoctra_core::ParseOptions {
+        embedded: true,
+        ..Default::default()
+    };
+    let document = adoctra_core::parse_with_options(source, &options).document;
+    assert_eq!(document.footnotes.len(), 1);
+    assert_eq!(content(&document.footnotes[0]), "two");
+    assert_eq!(
+        &source[document.footnotes[0].span.start..document.footnotes[0].span.end],
+        "footnote:[two]"
+    );
+    let BlockKind::Table(table) = &document.blocks[0].kind else {
+        panic!()
+    };
+    let CellContent::Blocks { footnotes, .. } = &table.body[0][0].content else {
+        panic!()
+    };
+    assert_eq!(footnotes.len(), 1);
+    assert_eq!(content(&footnotes[0]), "one");
+    assert_eq!(
+        &source[footnotes[0].span.start..footnotes[0].span.end],
+        "footnote:[one]"
+    );
+}

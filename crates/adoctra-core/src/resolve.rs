@@ -223,9 +223,13 @@ pub(crate) fn resolve_attribute_definitions(
         })
         .collect();
     for (name, mut parts) in values {
-        fill_part_labels(&mut parts, &mut |xref, _| apply_fixed(fixed, xref));
+        resolve_definition_parts(&mut parts, fixed);
         attributes.set_parts(name, parts);
     }
+}
+
+pub(crate) fn resolve_definition_parts(parts: &mut Vec<crate::AttributePart>, fixed: &FixedXrefs) {
+    fill_part_labels(parts, &mut |xref, _| apply_fixed(fixed, xref));
 }
 
 /// Converts a deferred block title while reading (BodySubs::convert_early).

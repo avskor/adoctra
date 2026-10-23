@@ -312,6 +312,10 @@ fn write_callouts(callouts: &[adoctra_core::ast::Callout], s: &mut String) {
         }
         s.push_str(&format!(",\"xml\":{}", callout.xml));
         write_icon(&callout.icons, &callout.src, s);
+        s.push_str(&format!(
+            ",\"text_range\":{{\"start\":{},\"end\":{}}}",
+            callout.start, callout.end
+        ));
         s.push('}');
     }
     s.push(']');
@@ -2125,15 +2129,31 @@ mod tests {
     }
 
     #[test]
+    fn callout_text_ranges_use_utf8_bytes_after_reader_normalization() {
+        for newline in ["\n", "\r\n"] {
+            let source = "----\nЖ🙂 \\<1>\nreal // <1>\n----\n<1> Text".replace('\n', newline);
+            let json = render(&source);
+            assert!(json.contains(r#""text":"Ж🙂 <1>\nreal // <1>""#), "{json}");
+            // The escaped mark remains text. The real range includes its
+            // comment guard and addresses normalized block text, not source.
+            assert!(
+                json.contains(r#""text_range":{"start":16,"end":22}"#),
+                "{json}"
+            );
+            assert_eq!(json.matches("text_range").count(), 1);
+        }
+    }
+
+    #[test]
     fn callouts_and_callout_lists_serialize() {
         let json = render("----\nx // <1>\n----\n<1> one");
-        assert!(json.contains(r#""text":"x // <1>","callouts":[{"number":"1","id":"CO1-1","guard":"// ","xml":false,"icons":null,"src":""}]"#), "{json}");
+        assert!(json.contains(r#""text":"x // <1>","callouts":[{"number":"1","id":"CO1-1","guard":"// ","xml":false,"icons":null,"src":"","text_range":{"start":2,"end":8}}]"#), "{json}");
         assert!(json.contains(r#"{"name":"colist","id":null,"roles":[],"style":"arabic","attributes":{},"options":[],"title":null,"caption":null,"items":[{"inlines":[{"name":"text","value":"one"}],"blocks":[],"coids":["CO1-1"],"icons":null,"src":""}]}"#), "{json}");
         // Icons follow the `icons` mode where each block converts.
         let json =
             render("----\nx <1>\n----\n<1> a\n\n:icons:\n:iconsdir: i\n\n----\ny <1>\n----\n<1> b");
-        assert!(json.contains(r#""text":"x <1>","callouts":[{"number":"1","id":"CO1-1","guard":null,"xml":false,"icons":null,"src":""}]"#), "{json}");
-        assert!(json.contains(r#""text":"y <1>","callouts":[{"number":"1","id":"CO2-1","guard":null,"xml":false,"icons":"","src":"i/callouts/1.png"}]"#), "{json}");
+        assert!(json.contains(r#""text":"x <1>","callouts":[{"number":"1","id":"CO1-1","guard":null,"xml":false,"icons":null,"src":"","text_range":{"start":2,"end":5}}]"#), "{json}");
+        assert!(json.contains(r#""text":"y <1>","callouts":[{"number":"1","id":"CO2-1","guard":null,"xml":false,"icons":"","src":"i/callouts/1.png","text_range":{"start":2,"end":5}}]"#), "{json}");
         assert!(
             json.contains(r#""coids":["CO2-1"],"icons":"","src":"i/callouts/1.png"}"#),
             "{json}"
@@ -2216,6 +2236,18 @@ mod tests {
         // A nested macro is a part of its label.
         let json = render(":experimental:\n\nbtn:[link:x[y]]");
         assert!(json.contains(r#"{"name":"button","parts":[{"kind":"open-link","target":"x"},{"kind":"text","value":"y"},{"kind":"close-link"}]}"#), "{json}");
+    }
+
+    #[test]
+    fn unused_attribute_footnotes_are_exported_without_inline_markers() {
+        let json = render(":note: pass:m[footnote:n[Stored]]\n\nBody.");
+        assert!(
+            json.contains(
+                r#""footnotes":[{"index":"1","id":"n","parts":[{"kind":"raw","value":"Stored"}]}]"#
+            ),
+            "{json}"
+        );
+        assert!(!json.contains(r#""name":"footnote""#), "{json}");
     }
 
     #[test]

@@ -52,10 +52,33 @@ pub(crate) struct Lent<'b> {
 #[derive(Clone, Default, Debug)]
 pub(crate) struct Footnotes {
     ids: Vec<(String, String)>,
-    next: usize,
+    definitions: Vec<crate::ast::FootnoteDefinition>,
 }
 
 impl Footnotes {
+    pub fn len(&self) -> usize {
+        self.definitions.len()
+    }
+
+    /// Deferred inline fields first register with local coordinates. Once the
+    /// field's source mapping is restored, retain those same reader origins.
+    pub fn restore_origins(&mut self, nodes: &mut [crate::Inline], first: usize) {
+        struct Restore<'a>(&'a mut Footnotes, usize);
+        impl crate::visit::VisitorMut for Restore<'_> {
+            fn visit_inline(&mut self, inline: &mut crate::Inline) {
+                inline_footnotes(inline, &mut |footnote, span| {
+                    if let Some(sequence) = footnote.sequence.filter(|&i| i >= self.1) {
+                        if let Some(definition) = self.0.definitions.get_mut(sequence) {
+                            definition.span = span;
+                        }
+                    }
+                });
+                crate::visit::walk_inline_mut(self, inline);
+            }
+        }
+        crate::visit::walk_inlines_mut(&mut Restore(self, first), nodes);
+    }
+
     pub fn find(&self, id: &str) -> Option<&str> {
         self.ids
             .iter()
@@ -64,12 +87,80 @@ impl Footnotes {
     }
 
     /// Register a definition; returns its registration sequence.
-    pub fn register(&mut self, id: Option<&str>, index: &str) -> usize {
+    pub fn register(&mut self, id: Option<&str>, index: &str, content: &[P], span: Span) -> usize {
         if let Some(id) = id {
             self.ids.push((id.to_owned(), index.to_owned()));
         }
-        self.next += 1;
-        self.next - 1
+        self.definitions.push(crate::ast::FootnoteDefinition {
+            index: index.to_owned(),
+            id: id.map(str::to_owned),
+            content: content.to_vec(),
+            span,
+        });
+        self.definitions.len() - 1
+    }
+
+    /// Passthrough placeholders are restored after macro registration.
+    pub fn restore(&mut self, footnote: &crate::Footnote) {
+        if let Some(definition) = footnote.sequence.and_then(|i| self.definitions.get_mut(i)) {
+            definition.content.clone_from(&footnote.content);
+        }
+    }
+
+    pub fn into_definitions(
+        self,
+        fixed: &crate::resolve::FixedXrefs,
+    ) -> Vec<crate::ast::FootnoteDefinition> {
+        let mut definitions = self.definitions;
+        for definition in &mut definitions {
+            crate::resolve::resolve_definition_parts(&mut definition.content, fixed);
+        }
+        definitions
+    }
+}
+
+/// Footnotes owned by one inline node, including semantic parts in UI labels.
+/// The caller handles traversal of ordinary inline children.
+pub(crate) fn inline_footnotes(inline: &crate::Inline, f: &mut impl FnMut(&crate::Footnote, Span)) {
+    fn visit_parts(parts: &[P], span: Span, f: &mut impl FnMut(&crate::Footnote, Span)) {
+        for part in parts {
+            match part {
+                P::Footnote(footnote) => f(footnote, span),
+                P::Ui(ui) => {
+                    for label in ui.clone().labels_mut() {
+                        visit_parts(label, span, f);
+                    }
+                }
+                P::Stem(stem) => visit_parts(&stem.parts, span, f),
+                P::IndexTerm(term) => {
+                    for label in term.clone().labels_mut() {
+                        visit_parts(label, span, f);
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+    match inline {
+        crate::Inline::Footnote { footnote, span } => f(footnote, *span),
+        crate::Inline::AttributeRef {
+            parts: value, span, ..
+        }
+        | crate::Inline::Substituted {
+            parts: value, span, ..
+        } => visit_parts(value, *span, f),
+        crate::Inline::Ui { ui, span } => {
+            for label in ui.clone().labels_mut() {
+                visit_parts(label, *span, f);
+            }
+        }
+        crate::Inline::Stem { stem, span } => visit_parts(&stem.parts, *span, f),
+        crate::Inline::IndexTerm { term, span } => {
+            for label in term.clone().labels_mut() {
+                visit_parts(label, *span, f);
+            }
+        }
+        _ => {}
     }
 }
 

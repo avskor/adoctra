@@ -1,0 +1,2078 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Asciidoctor supports custom converters. If you want to produce an output format that’s not supported by a built-in converter or any of the available converters in the ecosystem, you can create and use your own converter. You may also decide to create a custom converter to customize the output of a supported output format or to take an entirely different approach. A custom converter gives you that ability, offering a more formal alternative to "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "converter templates"
+                  }
+                ],
+                "kind": "xref",
+                "target": "templates.html"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In addition to Asciidoctor’s {url-org}/asciidoctor/tree/main/lib/asciidoctor/converter[built-in converters], there are numerous custom converters you can use as a reference, including {url-org}/asciidoctor-epub3[Asciidoctor EPUB3], {url-org}/asciidoctor-pdf[Asciidoctor PDF], {url-org}/asciidoctor-reveal.js[Asciidoctor reveal.js], {url-org}/asciidoctor-fb2[Asciidoctor FB2], and {url-org}/asciidoctor-docbook45[Asciidoctor DocBook 4.5]."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "tip"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "On this page, you’ll learn how to create a custom converter in Ruby, register it, then make use of it. After a brief overview, we’ll begin by extending and replacing a registered converter. Then we’ll move on to making a new converter from scratch."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The converter in Asciidoctor is a specialized extension point. Even Asciidoctor’s built-in converters use this facility. That means, in addition to being able to introduce a new converter, you can replace any of the existing ones. Since Asciidoctor is written in the Ruby programming language, you write custom converters in Ruby as well."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can also write a converter in Java using AsciidoctorJ or in JavaScript using Asciidoctor.js. The advantage of writing the converter in Ruby is that you can use the same code regardless of which Asciidoctor runtime you choose. That’s the best strategy if you plan to share the converter with the community."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "tip"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When creating a custom converter, you can either write one from scratch or you can extend a built-in converter. You can then register that converter with a "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "known backend"
+                  }
+                ],
+                "kind": "xref",
+                "target": "available.html"
+              },
+              {
+                "kind": "text",
+                "value": " to replace the previously registered converter, or you can register it with a new backend to create a new output target. If you don’t want to register the converter with a backend, you can pass the converter class or instance to the API using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": ":converter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " option."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "An important point to keep in mind is that converters (and, in general, AsciiDoc processors like Asciidoctor) are biased towards creating SGML output (e.g., XML and HTML). This means that when producing other output formats, you’ll need to decode XML character references and employ techniques that preserve the expected behavior of the processor. One such technique is to use temporary XML tags around boundaries of inline elements such as formatted text so the processor can still recognize those boundaries when performing inline substitutions. The "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "built-in man page converter"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://github.com/asciidoctor/asciidoctor/blob/HEAD/lib/asciidoctor/converter/manpage.rb"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " provides a good example of these techniques."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "sidebar",
+            "id": null,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Producing non-SGML output formats"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Unless a converter instance is passed to the processor, the converter is instantiated each time an AsciiDoc document is processed. A converter in Asciidoctor is not designed to be reused from one conversion to the next and is therefore stateless."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Implementing a custom converter consists of the following steps:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "olist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Write a Ruby class that includes the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Asciidoctor::Converter"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://www.rubydoc.info/gems/asciidoctor/2.0.23/Asciidoctor/Converter"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " module or extends a class that does."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Implement a callback method to convert the nodes (i.e., block or inline elements) in the parsed document to the target output format."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Optionally register the converter with one or more backend names."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Require (i.e., load) the Ruby file containing the converter class."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Activate the converter by setting the backend on the document if the converter is registered with a backend, otherwise passing the converter class or instance to the API using the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": ":converter"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " option"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To get our feet wet, let’s start by extending and replacing a registered converter."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_overview",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Overview"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The best way to get started developing converters is to extend a registered converter and play around with changing its behavior."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To create a custom converter, you define a Ruby class in a Ruby source file that you pass to Asciidoctor when you run it. To get started, create a file named "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "my-html5-converter.rb"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": " and open it. The Ruby code in this file will run in the context of Asciidoctor, so you don’t need to add a require statement to use the Ruby APIs from Asciidoctor."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To extend a registered converter, you first need to get a reference to it. That’s the purpose of the "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Asciidoctor::Converter.for"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "link",
+                "target": "https://www.rubydoc.info/gems/asciidoctor/2.0.23/Asciidoctor/Converter/Factory#for-instance_method"
+              },
+              {
+                "kind": "text",
+                "value": " method. This method will resolve the class of the converter that’s currently registered for a backend. If we’re looking for the converter for the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "html5"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " backend (i.e., the HTML 5 converter), we pass in the string "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "html5"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Asciidoctor::Converter.for 'html5'\n# => Asciidoctor::Converter::Html5Converter"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Next, we want to extend this class. To extend a class in Ruby, you declare the class, then use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " operator to indicate the class from which to extend."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class MyHtml5Converter < (Asciidoctor::Converter.for 'html5')\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Congratulations! You’ve created your first custom converter. But wait, it’s not yet registered, which means it isn’t going to be used. Let’s fix that."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To register the converter class, you need to declare the backend you want it to be mapped to. In order to customize the HTML that Asciidoctor produces, you declare the backend as "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "html5"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "register_for"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method. In doing so, this registers the custom converter over the built-in converter, effectively replacing it."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class MyHtml5Converter < (Asciidoctor::Converter.for 'html5')\n  register_for 'html5'\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Although we haven’t changed any of the behavior, this converter can be used…​almost. The final step is to tell Asciidoctor to load this file when it starts. You can do that by passing the file’s path to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "-r"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " CLI option as follows."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ asciidoctor -r ./my-html5-converter.rb doc.adoc"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When Asciidoctor starts, it will tell Ruby to evaluate the Ruby source file. When it does, Ruby will define the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MyHtml5Converter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " class. While defining the class, it will call the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "register_for"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method, which will register the class with the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "html5"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " backend (replacing the built-in converter). This means Asciidoctor is now using your custom converter."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Now that you’ve configured Asciidoctor to use your custom converter, it’s time to get it to do something different. Let’s say that you want to simplify the HTML that the built-in converter produces for a paragraph down to a single "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<p>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " element. A custom converter is exactly the tool you need to accomplish this goal."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In this case, we’ll be overriding the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "convert_paragraph"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method. When extending a built-in converter (or any converter that extends "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Asciidoctor::Converter::Base"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "link",
+                "target": "https://www.rubydoc.info/gems/asciidoctor/2.0.23/Asciidoctor/Converter/Base"
+              },
+              {
+                "kind": "text",
+                "value": "), the name of the convert method for a node (i.e., block or inline element) in the parsed document model is the context of the node (e.g., "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "paragraph"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") prefixed with "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "convert_"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". That’s how we arrive at the method name "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "convert_paragraph"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " for a paragraph. You can find a list of all such methods in "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "contexts-ref.html"
+                  }
+                ],
+                "kind": "xref",
+                "target": "contexts-ref.html"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The converter method accepts the node as the first parameter. For blocks, the node is an instance of "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Asciidoctor::Block"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "link",
+                "target": "https://www.rubydoc.info/gems/asciidoctor/2.0.23/Asciidoctor/Block"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Let’s add the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "convert_paragraph"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method to our custom converter to provide a custom implementation."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class MyHtml5Converter < (Asciidoctor::Converter.for 'html5')\n  register_for 'html5'\n\n  def convert_paragraph node\n    logger.warn 'Converting a paragraph...' "
+              },
+              {
+                "guard": null,
+                "icons": null,
+                "id": "CO1-1",
+                "kind": "callout",
+                "number": "1",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n    super\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "colist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-1"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The base converter automatically includes the Logging module, which gives your converter access to Asciidoctor’s logger."
+                  }
+                ],
+                "src": ""
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "So far, all we’ve done is print an intent to convert a paragraph, then delegate back to the super method (i.e., the original implementation). If you run Asciidoctor as before:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ asciidoctor -r ./my-html5-converter.rb doc.adoc"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "you should now see the following message in your terminal window:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "asciidoctor: WARNING: Converting a paragraph..."
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Showing how to delegate to the super method is important as it demonstrates that you can still use the built-in logic in certain cases (or even decorate the HTML it produces). But let’s replace it with our own logic instead."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class MyHtml5Converter < (Asciidoctor::Converter.for 'html5')\n  register_for 'html5'\n\n  def convert_paragraph node\n    %(<p>#{node.content}</p>)\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you run Asciidoctor as before, you should now see that paragraphs are converted to a simple "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<p>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " element."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<p>Content of paragraph.</p>"
+              }
+            ],
+            "language": "html",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "But we’re missing some things, such as the ID, the role, and the title. Let’s fill in those gaps."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class MyHtml5Converter < (Asciidoctor::Converter.for 'html5')\n  register_for 'html5'\n\n  def convert_paragraph node\n    attributes = []\n    attributes << %( id=\"#{node.id}\") if node.id\n    attributes << %( class=\"#{node.role}\") if node.role\n    title = node.title? ? %(<span class=\"title\">#{node.title}</span> ) : ''\n    %(<p#{attributes.join}>#{title}#{node.content}</p>)\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Assuming the paragraph has an ID, role, and title, here’s the output this converter will produce:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<p id=\"intro\" class=\"summary\"><span class=\"title\">What is a wolpertinger?</span> A wolpertinger is a ravenous beast.</p>"
+              }
+            ],
+            "language": "html",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You’ve not only created your first custom converter, but you’re well on your way to customizing the HTML that Asciidoctor produces to suit your own needs!"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Now that you’ve successfully extended and replaced a registered converter, let’s look at how to create a converter from scratch."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_extend_and_replace_a_registered_converter",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Extend and replace a registered converter"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Instead of modifying the behavior of a built-in converter, you can create a converter from scratch for a new or existing backend. Let’s create a new converter that converts (some) AsciiDoc to DITA. Here’s the AsciiDoc sample we’re aiming to convert."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "= Document Title\n\n== Section Title\n\nThis is the *main* content."
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Once again, you’ll begin by creating a Ruby source file, this time naming it "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "dita-converter.rb"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": ". We’ll start by mixing in the "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Asciidoctor::Converter"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "link",
+                "target": "https://www.rubydoc.info/gems/asciidoctor/2.0.23/Asciidoctor/Converter"
+              },
+              {
+                "kind": "text",
+                "value": " module, which turns the class into a converter class. You’ll quickly learn, however, that this is tedious and that extending the base converter is an easier route."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Let’s set up our converter and map it to the backend named "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "dita"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class DitaConverter\n  include Asciidoctor::Converter\n  register_for 'dita'\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "By default, a converter will assume it produces a file with the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": ".html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " extension. Since we intend to create a DITA file, we’ll need to call the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "outfilesuffix"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " in the constructor to change that to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": ".dita"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class DitaConverter\n  include Asciidoctor::Converter\n  register_for 'dita'\n\n  def initialize *args\n    super\n    outfilesuffix '.dita'\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Now let’s implement the required "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "convert"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method so the converter can start receiving the nodes to convert. We’ll only process the main structural nodes to start, then pass through the raw output for the remaining nodes (to finish later)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class DitaConverter\n  include Asciidoctor::Converter\n  register_for 'dita'\n\n  def initialize *args\n    super\n    outfilesuffix '.dita'\n  end\n\n  def convert node, transform = node.node_name, opts = nil "
+              },
+              {
+                "guard": null,
+                "icons": null,
+                "id": "CO2-1",
+                "kind": "callout",
+                "number": "1",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n    case transform "
+              },
+              {
+                "guard": null,
+                "icons": null,
+                "id": "CO2-2",
+                "kind": "callout",
+                "number": "2",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n    when 'document'\n      <<~EOS.chomp\n      <!DOCTYPE topic PUBLIC \"-//OASIS//DTD DITA Topic//EN\" \"topic.dtd\">\n      <topic>\n      <title>#{node.doctitle}</title>\n      <body>\n      #{node.content} "
+              },
+              {
+                "guard": null,
+                "icons": null,
+                "id": "CO2-3",
+                "kind": "callout",
+                "number": "3",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n      </body>\n      </topic>\n      EOS\n    when 'section'\n      <<~EOS.chomp\n      <section id=\"#{node.id}\">\n      <title>#{node.title}</title>\n      #{node.content} "
+              },
+              {
+                "guard": null,
+                "icons": null,
+                "id": "CO2-4",
+                "kind": "callout",
+                "number": "3",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n      </section>\n      EOS\n    when 'paragraph'\n      %(<p>#{node.content}</p>)\n    else\n      (transform.start_with? 'inline_') ? node.text : node.content\n    end\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "colist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO2-1"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "node_name"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " method returns the node’s context as a string."
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO2-2"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "transform"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " parameter is only set in special cases, such as for an embedded document."
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO2-3",
+                  "CO2-4"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Calling "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "node.content"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " on a block continues the traversal of the document structure from that node."
+                  }
+                ],
+                "src": ""
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "#content"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method controls whether a block is traversed, not the processor. Thus, when converting a block element, the converter should invoke the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "#content"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method on the node (e.g., "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "node.content"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "). This method call is what continues the document traversal from that node and returns the converted subtree. When the method is called, Asciidoctor visits each child node in document order and passes it to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "convert"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method of the converter to be converted. The return values are then joined. If you don’t call this method, the child nodes will be skipped."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "important"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "As you can see, having to write a switch statement to handle each type of node is more clumsy than the discrete methods we were writing when extending a built-in converter. If we change the definition of our converter class to extend "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Asciidoctor::Converter::Base"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "link",
+                "target": "https://www.rubydoc.info/gems/asciidoctor/2.0.23/Asciidoctor/Converter/Base"
+              },
+              {
+                "kind": "text",
+                "value": ", Asciidoctor will handle this dispatching for us. One noticeable difference is that we now either have to provide a handler for every "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "convertible context"
+                  }
+                ],
+                "kind": "xref",
+                "target": "contexts-ref.html"
+              },
+              {
+                "kind": "text",
+                "value": ", or implement a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "method_missing"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method as a catch all. Here’s how that looks:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class DitaConverter < Asciidoctor::Converter::Base\n  register_for 'dita'\n\n  def initialize *args\n    super\n    outfilesuffix '.dita'\n  end\n\n  def convert_document node\n    <<~EOS.chomp\n    <!DOCTYPE topic PUBLIC \"-//OASIS//DTD DITA Topic//EN\" \"topic.dtd\">\n    <topic>\n    <title>#{node.doctitle}</title>\n    <body>\n    #{node.content}\n    </body>\n    </topic>\n    EOS\n  end\n\n  def convert_section node\n    <<~EOS.chomp\n    <section id=\"#{node.id}\">\n    <title>#{node.title}</title>\n    #{node.content}\n    </section>\n    EOS\n  end\n\n  def convert_paragraph node\n    %(<p>#{node.content}</p>)\n  end\n\n  def convert_inline_quoted node\n    node.type == :strong ? %(<b>#{node.text}</b>) : node.text\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "dita-converter.rb"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can now use this converter to convert the sample AsciiDoc document to DITA. To do so, pass the converter to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "-r"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " CLI option and set the backend to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "dita"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "b"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " CLI option."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ asciidoctor -r ./dita-converter.rb -b dita doc.adoc"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Here’s an example of the output you will get, which is automatically written to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "doc.dita"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": " file."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<!DOCTYPE topic PUBLIC \"-//OASIS//DTD DITA Topic//EN\" \"topic.dtd\">\n<topic>\n<title>Document Title</title>\n<body>\n<section id=\"_section_title\">\n<title>Section Title</title>\n<p>This is the <b>main</b> content.</p>\n</section>\n</body>\n</topic>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "doc.dita"
+              }
+            ]
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If the value of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": ":to_file"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " option passed to Asciidoctor’s convert API responds to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "write"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method (e.g., an IO object), Asciidoctor will ensure the output has a trailing newline character. Otherwise, it’s up to the converter to decide whether to append a trailing newline character to the output."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "note"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you don’t register the converter with a backend, you can pass the converter class (or instance) using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": ":converter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " option of the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Asciidoctor API"
+                  }
+                ],
+                "kind": "xref",
+                "target": "api:index.html"
+              },
+              {
+                "kind": "text",
+                "value": ", as shown in the following code snippet:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "require 'asciidoctor'\nrequire_relative 'dita-converter.rb'\n\nAsciidoctor.convert_file 'doc.adoc', safe: :safe, backend: 'dita', converter: DitaConverter"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To write a fully-functional converter, you’ll need to provide a convert method for all convertible contexts (or provide a fallback for contexts the converter does not handle)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_create_and_register_a_new_converter",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Create and register a new converter"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You may want to extract the text from an AsciiDoc document without any markup. Since there’s no single definition of what \"plain text\" is, this is a perfect opportunity to use a custom converter."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Begin by defining a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "TextConverter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " that is registered with the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "text"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " backend, as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class TextConverter\n  include Asciidoctor::Converter\n  register_for 'text'\n  def initialize *args\n    super\n    outfilesuffix '.txt'\n  end\n  def convert node, transform = node.node_name, opts = nil\n    case transform\n    when 'document', 'section'\n      [node.title, node.content].join %(\\n\\n)\n    when 'paragraph'\n      (node.content.tr ?\\n, ' ') << ?\\n\n    else\n      (transform.start_with? 'inline_') ? node.text : node.content\n    end\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "text-converter.rb"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can now use this converter to convert the sample AsciiDoc document to text. To do so, pass the converter to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "-r"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " CLI option and set the backend to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "text"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "b"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " CLI option."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ asciidoctor -r ./text-converter.rb -b text doc.adoc"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Here’s an example of the output you will get, which is automatically written to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "doc.txt"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": " file."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Document Title\n\nSection Title\n\nThis is the main content."
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "doc.txt"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you need to retain some text notations, you can add them back while the document is converted, where necessary."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_convert_to_text_only",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Convert to text only"
+          }
+        ]
+      }
+    ],
+    "title": [
+      {
+        "kind": "text",
+        "value": "Custom Converter"
+      }
+    ]
+  }
+}

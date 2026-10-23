@@ -229,7 +229,11 @@ impl BodySubs {
         blocks: &mut [Block],
         attributes: Attributes,
         conversion: Conversion,
-    ) -> (Attributes, Vec<crate::Token>) {
+    ) -> (
+        Attributes,
+        Vec<crate::Token>,
+        Vec<crate::ast::FootnoteDefinition>,
+    ) {
         let mut execution = Execution {
             tokens: &mut self.tokens,
             pending: &mut self.pending,
@@ -311,7 +315,8 @@ impl BodySubs {
         });
         execution.blocks(&mut blocks[body..]);
         crate::resolve::resolve_attribute_definitions(&mut execution.attributes, &execution.fixed);
-        (execution.attributes, self.tokens)
+        let footnotes = execution.footnotes.into_definitions(&execution.fixed);
+        (execution.attributes, self.tokens, footnotes)
     }
 }
 
@@ -1085,7 +1090,10 @@ impl Execution<'_> {
                 // The nested document converts from its own header snapshot
                 // and entries; its effects stay inside it.
                 crate::ast::CellContent::Blocks {
-                    blocks, has_title, ..
+                    blocks,
+                    has_title,
+                    footnotes: catalog,
+                    ..
                 } => {
                     let key = (cell.span.start, cell.span.end);
                     if let Some(nested) = self.nested.get(&key).cloned() {
@@ -1132,7 +1140,8 @@ impl Execution<'_> {
                         };
                         self.entries = entries;
                         self.locked = locked;
-                        self.footnotes = footnotes;
+                        *catalog = std::mem::replace(&mut self.footnotes, footnotes)
+                            .into_definitions(&self.fixed);
                     }
                 }
                 crate::ast::CellContent::Literal(_) => {}
@@ -1179,6 +1188,7 @@ fn run(
     diagnostics: &mut Vec<Diagnostic>,
     tokens: &mut Vec<crate::Token>,
 ) -> Vec<Inline> {
+    let first_footnote = evaluation.footnotes().map(|registry| registry.len());
     evaluation.bibliography = pending.bibliography;
     let source = pending.filtered.as_ref().unwrap_or(&pending.source);
     let before = diagnostics.len();
@@ -1261,6 +1271,9 @@ fn run(
         for diagnostic in &mut diagnostics[before..] {
             diagnostic.span = origin;
         }
+    }
+    if let (Some(first), Some(registry)) = (first_footnote, evaluation.footnotes()) {
+        registry.restore_origins(&mut nodes, first);
     }
     nodes
 }

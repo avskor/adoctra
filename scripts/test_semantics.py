@@ -30,6 +30,105 @@ def table():
 
 
 class SemanticProjectionTests(unittest.TestCase):
+    def test_footnote_markers_catalog_order_and_content_are_independent(self):
+        definition = {'name': 'footnote', 'type': 'definition', 'index': '1', 'id': 'n', 'parts': [text('Note')]}
+        source = document()
+        source['blocks'][0]['inlines'] += [definition, dict(definition, type='reference', id=None, parts=[])]
+        source['footnotes'] = [{'index': '1', 'id': 'n', 'parts': [text('Note')]},
+                               {'index': '1', 'id': 'unused', 'parts': [text('Stored')]}]
+        original = semantics.document_projection(source, [])
+        self.assertEqual(len(original['footnotes']), 2)  # Duplicate counter values are legal.
+        for change in ['order', 'content', 'id', 'index', 'missing', 'marker']:
+            changed = copy.deepcopy(source)
+            if change == 'order': changed['footnotes'].reverse()
+            elif change == 'content': changed['footnotes'][0]['parts'] = [text('Different')]
+            elif change in {'id', 'index'}: changed['footnotes'][0][change] = 'other'
+            elif change == 'missing': del changed['footnotes']
+            else: changed['blocks'][0]['inlines'][1]['index'] = '2'
+            self.assertNotEqual(original, semantics.document_projection(changed, []), change)
+        self.assertEqual(semantics.parts_projection([dict(kind='footnote', **{k: v for k, v in definition.items() if k != 'name'})]),
+                         semantics.inline_projection([definition]))
+
+    def test_nested_footnote_catalog_does_not_leak_to_root(self):
+        source = document()
+        nested = table()
+        cell = nested['body'][0][0]
+        del cell['paragraphs']
+        cell['blocks'] = []
+        cell['style'] = 'asciidoc'
+        cell['footnotes'] = [{'index': '2', 'id': 'n', 'parts': [text('Nested')]}]
+        source['blocks'] = [nested]
+        original = semantics.document_projection(source, [])
+        self.assertNotIn('footnotes', original)
+        self.assertEqual(original['blocks'][0]['body'][0][0]['document']['footnotes'][0]['index'], '2')
+        changed = copy.deepcopy(source)
+        changed['footnotes'] = changed['blocks'][0]['body'][0][0].pop('footnotes')
+        self.assertNotEqual(original, semantics.document_projection(changed, []))
+
+    def test_callout_ranges_address_utf8_text_and_preserve_literal_markers(self):
+        mark = {'number': '1', 'id': 'CO1-1', 'guard': '//', 'xml': False, 'icons': None, 'src': '',
+                'text_range': {'start': 16, 'end': 22}}
+        source = {'name': 'listing', 'text': 'Ж🙂 <1>\nreal // <1>', 'callouts': [mark]}
+        original = semantics.block_projection(source)
+        semantics.validate_block(original)
+        self.assertEqual(original['inlines'][0], text('Ж🙂 <1>\nreal '))
+        self.assertEqual(original['inlines'][1]['kind'], 'callout')
+        for field, value in [('number', '2'), ('id', 'CO1-2'), ('guard', '#'), ('icons', 'font'), ('src', '1.png'),
+                             ('text_range', {'start': 7, 'end': 10})]:
+            changed = copy.deepcopy(source)
+            changed['callouts'][0][field] = value
+            self.assertNotEqual(original, semantics.block_projection(changed), field)
+        xml = copy.deepcopy(source)
+        xml['callouts'][0].update(xml=True, guard=None)
+        self.assertNotEqual(original, semantics.block_projection(xml))
+
+    def test_callout_ranges_reject_overlap_invalid_types_and_split_codepoints(self):
+        mark = {'number': '1', 'id': 'CO1-1', 'guard': None, 'xml': False, 'icons': None, 'src': '',
+                'text_range': {'start': 3, 'end': 6}}
+        source = {'name': 'listing', 'text': 'Ж <1>', 'callouts': [mark]}
+        for interval in [{'start': 1, 'end': 6}, {'start': -1, 'end': 6}, {'start': 3, 'end': 9},
+                         {'start': 3, 'end': 3}, {'start': True, 'end': 6}, {'start': 3, 'end': 6, 'extra': 1}]:
+            changed = copy.deepcopy(source)
+            changed['callouts'][0]['text_range'] = interval
+            with self.subTest(interval=interval), self.assertRaises(ValueError):
+                semantics.block_projection(changed)
+        with self.assertRaises(ValueError):
+            semantics.block_projection(dict(source, callouts=[mark, mark]))
+        with self.assertRaises(ValueError):
+            semantics.block_projection(dict(source, inlines=[]))
+
+    def test_callout_substitution_parts_and_list_bindings_keep_semantics(self):
+        mark = {'kind': 'callout', 'number': '1', 'id': 'CO1-1', 'guard': None, 'xml': False, 'icons': '', 'src': 'icons/1.png'}
+        self.assertEqual(semantics.parts_projection([mark]), [mark])
+        source = {'name': 'colist', 'style': 'arabic', 'items': [
+            {'inlines': [{'name': 'text', 'value': 'One'}], 'blocks': [], 'coids': ['CO1-1', 'CO1-2'], 'icons': '', 'src': 'icons/1.png'}]}
+        original = semantics.block_projection(source)
+        semantics.validate_block(original)
+        for field, value in [('coids', ['CO1-2', 'CO1-1']), ('coids', []), ('icons', 'font'), ('src', 'other.png')]:
+            changed = copy.deepcopy(source)
+            changed['items'][0][field] = value
+            self.assertNotEqual(original, semantics.block_projection(changed))
+
+    def test_footnote_and_callout_schema_rejects_inconsistent_or_unknown_fields(self):
+        note = {'kind': 'footnote', 'type': 'reference', 'index': '1', 'id': None, 'inlines': []}
+        mark = {'kind': 'callout', 'number': '1', 'id': 'CO1-1', 'guard': None, 'xml': False, 'icons': None, 'src': ''}
+        for invalid in [dict(note, extra=1), dict(note, index=1), dict(note, type='other'), dict(note, id='n'),
+                        dict(note, inlines=[text('bad')]), dict(note, type='unresolved'), dict(mark, number=1),
+                        dict(mark, xml=1), dict(mark, xml=True, guard='//'), dict(mark, icons=True), dict(mark, extra=1)]:
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                semantics.validate_inlines([invalid])
+        for entries in [[], [{}], [{'index': '1', 'id': None, 'inlines': [], 'extra': 1}]]:
+            with self.assertRaises(ValueError):
+                semantics.validate_footnotes({'footnotes': entries})
+
+    def test_reference_footnote_catalog_decodes_entities_once(self):
+        source = document()
+        source['footnotes'] = [{'index': '1', 'id': 'A&amp;B', 'parts': [text('&lt;')]}]
+        expected = semantics.document_projection(source, [])
+        raw = copy.deepcopy(expected)
+        raw['footnotes'][0].update(id='A&amp;B', inlines=[text('&amp;lt;')])
+        self.assertEqual(expected, semantics.reference_projection(raw, []))
+
     def test_generated_xref_labels_and_selected_style_remain_semantic(self):
         parts = [{'kind': 'open-xref', 'target': '#s', 'refid': 's', 'xrefstyle': 'full'},
                  text('Section 1, “'), {'kind': 'open', 'format': 'strong'}, text('Title'),
@@ -148,7 +247,7 @@ class SemanticProjectionTests(unittest.TestCase):
         changed['paragraphs'][0][1]['value'] = ' < 2     next'
         self.assertNotEqual(result, semantics.cell_projection(changed, 'body'))
 
-    def test_asciidoc_cells_keep_nested_documents_tables_and_reject_footnotes(self):
+    def test_asciidoc_cells_keep_nested_documents_tables_and_reject_invalid_footnotes(self):
         cell = dict(table()['body'][0][0], style='asciidoc')
         del cell['paragraphs']
         cell['blocks'] = [table()]
@@ -393,7 +492,7 @@ class SemanticProjectionTests(unittest.TestCase):
     def test_pinned_fixture_expands_attributes_and_macros_inside_quotes(self):
         root = CORPUS / 'upstream'
         manifest, cases = acceptance.load_corpus(root / 'semantics.json')
-        self.assertEqual(len(cases), 96)
+        self.assertEqual(len(cases), 129)
         self.assertEqual(manifest['profile'], semantics.PROFILE)
         reference = json.loads((root / 'reference/semantic-attributes-macros-in-quotes.json').read_text())
         strong = reference['semantics']['blocks'][0]['inlines'][0]
@@ -406,7 +505,7 @@ class SemanticProjectionTests(unittest.TestCase):
         manifest, cases = acceptance.load_corpus(root / 'semantics.json')
         original_manifest, original = acceptance.load_corpus(root / 'cases.json')
         self.assertEqual(manifest['profile'], semantics.PROFILE)
-        self.assertEqual(len(cases), 9)
+        self.assertEqual(len(cases), 12)
         for path, provenance in manifest['files'].items():
             self.assertEqual(provenance, original_manifest['files'][path])
         for origin in manifest['origins'].values():

@@ -261,12 +261,18 @@ pub(crate) fn parse_reader<'a>(
     name_attributes(&mut doc);
     let inline_tokens =
         context.execute_body(&mut doc, registry, &lines.include_catalog, &mut references);
+    let visible_footnotes = visible_footnote_origins(&mut doc);
     let name_heading = doc
         .manpage
         .as_mut()
         .and_then(|manpage| manpage.name_section.as_mut())
         .map(|section| &mut section.heading);
-    doc.footnotes = collect_footnotes_after(name_heading, &mut doc.blocks);
+    doc.footnotes = collect_footnotes_after(
+        name_heading,
+        &mut doc.blocks,
+        doc.footnotes,
+        &visible_footnotes,
+    );
 
     // All grammar operates on monotonically increasing reader coordinates.
     // Restore physical source ranges before resolution copies metadata spans.
@@ -1768,43 +1774,43 @@ fn read_table(
     )
 }
 
-/// A document's registered footnotes in registration order, from the
-/// converted fields; an AsciiDoc cell keeps its nested document's own.
-fn collect_footnotes(blocks: &mut [Block]) -> Vec<crate::ast::FootnoteDefinition> {
-    collect_footnotes_after(None, blocks)
+/// A lazy title may convert while another document (an AsciiDoc cell) is
+/// active. Its source node, not that temporary registry, owns its definition.
+type FootnoteOrigins = std::collections::BTreeSet<(crate::SourceId, usize, usize)>;
+
+fn visible_footnote_origins(document: &mut crate::Document) -> FootnoteOrigins {
+    #[derive(Default)]
+    struct Origins(FootnoteOrigins);
+    impl crate::visit::VisitorMut for Origins {
+        fn visit_inline(&mut self, inline: &mut Inline) {
+            crate::substitution_context::inline_footnotes(inline, &mut |footnote, span| {
+                if footnote.sequence.is_some() {
+                    self.0.insert((span.source_id, span.start, span.end));
+                }
+            });
+            crate::visit::walk_inline_mut(self, inline);
+        }
+    }
+    let mut origins = Origins::default();
+    crate::visit::walk_document_mut(&mut origins, document);
+    origins.0
 }
 
 /// Footnotes of `blocks`, after those of a block read before them (a manual
-/// page's NAME title).
+/// page's NAME title). Visible fields supply final resolved content; the
+/// registration catalog retains definitions without a visible use.
 fn collect_footnotes_after(
     first: Option<&mut Block>,
     blocks: &mut [Block],
+    registered: Vec<crate::ast::FootnoteDefinition>,
+    visible: &FootnoteOrigins,
 ) -> Vec<crate::ast::FootnoteDefinition> {
     use crate::visit::{InlineContext, VisitorMut};
-    #[derive(Default)]
-    struct Collect(BTreeMap<usize, crate::ast::FootnoteDefinition>);
-    impl Collect {
-        /// Footnotes among generated parts, including inside the labels of
-        /// keyboard, button and menu macros.
-        fn add_parts(&mut self, parts: &[crate::AttributePart], span: Span) {
-            for part in parts {
-                match part {
-                    crate::AttributePart::Footnote(footnote) => self.add(footnote, span),
-                    crate::AttributePart::Ui(ui) => {
-                        for label in ui.clone().labels_mut() {
-                            self.add_parts(label, span);
-                        }
-                    }
-                    crate::AttributePart::Stem(stem) => self.add_parts(&stem.parts, span),
-                    crate::AttributePart::IndexTerm(term) => {
-                        for label in term.clone().labels_mut() {
-                            self.add_parts(label, span);
-                        }
-                    }
-                    _ => {}
-                }
-            }
-        }
+    struct Collect<'a>(
+        BTreeMap<usize, crate::ast::FootnoteDefinition>,
+        &'a FootnoteOrigins,
+    );
+    impl Collect<'_> {
         fn add(&mut self, footnote: &crate::Footnote, span: Span) {
             if let (Some(sequence), Some(index)) = (footnote.sequence, &footnote.index) {
                 self.0
@@ -1818,7 +1824,7 @@ fn collect_footnotes_after(
             }
         }
     }
-    impl VisitorMut for Collect {
+    impl VisitorMut for Collect<'_> {
         fn visit_block(&mut self, block: &mut Block) {
             let BlockKind::Table(table) = &mut block.kind else {
                 return crate::visit::walk_block_mut(self, block);
@@ -1836,7 +1842,12 @@ fn collect_footnotes_after(
                     crate::ast::CellContent::Blocks {
                         blocks, footnotes, ..
                     } => {
-                        *footnotes = collect_footnotes(blocks);
+                        *footnotes = collect_footnotes_after(
+                            None,
+                            blocks,
+                            std::mem::take(footnotes),
+                            self.1,
+                        );
                     }
                     crate::ast::CellContent::Literal(_) => {}
                 }
@@ -1844,33 +1855,23 @@ fn collect_footnotes_after(
         }
 
         fn visit_inline(&mut self, inline: &mut Inline) {
-            match inline {
-                Inline::Footnote { footnote, span } => self.add(footnote, *span),
-                Inline::AttributeRef { parts, span, .. }
-                | Inline::Substituted { parts, span, .. } => self.add_parts(parts, *span),
-                Inline::Ui { ui, span } => {
-                    let span = *span;
-                    for label in ui.labels_mut() {
-                        self.add_parts(label, span);
-                    }
-                }
-                Inline::Stem { stem, span } => self.add_parts(&stem.parts, *span),
-                Inline::IndexTerm { term, span } => {
-                    let span = *span;
-                    for label in term.labels_mut() {
-                        self.add_parts(label, span);
-                    }
-                }
-                _ => {}
-            }
+            crate::substitution_context::inline_footnotes(inline, &mut |footnote, span| {
+                self.add(footnote, span)
+            });
             crate::visit::walk_inline_mut(self, inline);
         }
     }
-    let mut collect = Collect::default();
+    let mut collect = Collect(BTreeMap::new(), visible);
     if let Some(first) = first {
         collect.visit_block(first);
     }
     crate::visit::walk_blocks_mut(&mut collect, blocks);
+    for (sequence, definition) in registered.into_iter().enumerate() {
+        let span = definition.span;
+        if !visible.contains(&(span.source_id, span.start, span.end)) {
+            collect.0.entry(sequence).or_insert(definition);
+        }
+    }
     collect.0.into_values().collect()
 }
 
