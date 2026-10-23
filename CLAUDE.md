@@ -171,23 +171,30 @@ Host overrides now accept Ruby's string soft-default (`name@` / `value@`) and
 hard/soft unset forms. CLI repeated overrides honor the last spelling of a name;
 API callers should supply one spelling per effective key in the BTreeMap.
 
-`compatibility/upstream/semantics.json` uses `inline-semantics-v1`: 55 PASS
+`compatibility/upstream/semantics.json` uses `inline-semantics-v1`: 69 PASS
 cover 20 attribute and four include scenarios from the upstream selection plus
-31 original semantic probes. `compatibility/acceptance/semantics.json` adds
-2 PASS on the unchanged full Safe Modes and AOP Proxying pages, with the same
-host attributes as the HTML corpus. The Ruby oracle has its own converter (no HTML
+45 original semantic probes (14 tables). `compatibility/acceptance/semantics.json` adds
+7 PASS on unchanged full Asciidoctor/Spring pages, with the same sources,
+include resources and host attributes as the HTML corpus. The Ruby oracle has its own converter (no HTML
 converter or HTML parsing); paired synthetic boundaries leave content exposed
 to later substitution stages. The Python adapter reads the resolved JSON AST
 and selected header/final attributes. CLI `--to json --json-attributes` opts in
 to `JsonBackend::convert_with_attributes`; default JSON stays unchanged.
 The schema includes link metadata, UI labels, inline/block images, lists with
 checkboxes/description/attached blocks, simple/compound containers and verbatim
-content with exact whitespace and language. Unknown nodes, raw markup,
+content with exact whitespace and language. Tables include column style/width/
+autowidth/alignment, head/body/foot, cell spans/style/alignment/background,
+paragraph boundaries, literal text and nested AsciiDoc documents. Header cells
+have one inline stream; cell styles remain separate from explicit formatting.
+CSV/DSV literal cells retain normal substitutions but must not fold newlines;
+the parser fix has Unicode/LF/CRLF span, HTML golden, JSON and WASM tests.
+Table-wide layout attributes and nested document attribute snapshots are not
+compared. Unknown nodes, raw markup,
 unsupported link/image options and warning/error output fail the profile.
-Tables, implicit xrefs, footnotes/indexterm/stem/callouts and embedded SVG/icons
+Implicit xrefs, footnotes/indexterm/stem/callouts and embedded SVG/icons
 remain outside it. The schema does not cover all nodes, all attributes,
 source positions or ASG/TCK. See `docs/semantic-profile.adoc`; keep the independent
-17 Ruby converter checks and offline/verify runs for both manifests in CI.
+23 Ruby converter checks and offline/verify runs for both manifests in CI.
 
 `compatibility/acceptance/positions.json` uses `diagnostic-positions-v1`:
 18 original probes, all PASS. Ruby `--diagnostic-positions` exports

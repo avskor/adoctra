@@ -3203,6 +3203,16 @@ mod header_tests {
     }
 
     #[test]
+    fn csv_literal_cells_export_significant_newlines_with_physical_spans() {
+        let source =
+            "[format=csv,cols=\"l,1\",options=noheader]\n|===\n\"*Ж* < 2\n    next\",value\n|===";
+        let json = super::parse_json_with_source(source, 3);
+        let start = source.find(" < 2").unwrap();
+        let end = source.find("\",value").unwrap();
+        assert!(json.contains(&format!(r#"{{"span":{{"source_id":3,"start":{start},"end":{end}}},"name":"text","value":" < 2\n    next"}}"#)), "{json}");
+    }
+
+    #[test]
     fn tables_export_columns_cells_with_spans_and_tokens() {
         let source = ".T\n[cols=\"1,2\"]\n|===\n|H |*I*\n\n2+|l\n|===";
         let json = super::parse_json_with_source(source, 3);

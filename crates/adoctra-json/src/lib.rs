@@ -2239,6 +2239,14 @@ mod tests {
     }
 
     #[test]
+    fn csv_literal_cells_export_significant_newlines_and_formatting() {
+        let json = render(
+            "[format=csv,cols=\"l,1\",options=noheader]\n|===\n\"*Ж* < 2\n    next\",value\n|===",
+        );
+        assert!(json.contains(r#""paragraphs":[[{"name":"strong","inlines":[{"name":"text","value":"Ж"}]},{"name":"text","value":" < 2\n    next"}]]"#), "{json}");
+    }
+
+    #[test]
     fn tables_serialize_columns_rows_and_cells() {
         let json = render(
             "[%footer,cols=\"1,1l\",frame=topbot]\n|===\n|H |I\n\n|a |  lit\n|{set:cellbgcolor:red}f |g\n|===",

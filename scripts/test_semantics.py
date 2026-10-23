@@ -22,7 +22,109 @@ def document(value='Text.'):
             'attribute_snapshots': {'header': {'values': {'a': 'before'}}, 'final': {'values': {'a': 'after'}}}}
 
 
+def table():
+    cell = {'style': None, 'halign': 'left', 'valign': 'top', 'colspan': None, 'rowspan': None,
+            'background': None, 'paragraphs': [[{'name': 'text', 'value': 'First.'}], [{'name': 'text', 'value': 'Second.'}]]}
+    return {'name': 'table', 'columns': [{'style': None, 'halign': 'left', 'valign': 'top', 'width': '100', 'autowidth': False}],
+            'head': [], 'body': [[cell]], 'foot': []}
+
+
 class SemanticProjectionTests(unittest.TestCase):
+    def test_tables_keep_columns_groups_spans_alignment_and_paragraph_boundaries(self):
+        node = table()
+        original = semantics.block_projection(node)
+        semantics.validate_block(original)
+        cell = original['body'][0][0]
+        self.assertEqual(cell['paragraphs'], [[text('First.')], [text('Second.')]])
+        self.assertEqual((cell['colspan'], cell['rowspan']), (1, 1))
+        for field, value in [('style', 'strong'), ('halign', 'right'), ('valign', 'middle'),
+                             ('colspan', 2), ('rowspan', 2), ('background', 'red'),
+                             ('paragraphs', [[{'name': 'text', 'value': 'First.Second.'}]])]:
+            changed = copy.deepcopy(node)
+            changed['body'][0][0][field] = value
+            self.assertNotEqual(original, semantics.block_projection(changed), field)
+        for field, value in [('style', 'emphasis'), ('halign', 'center'), ('valign', 'bottom'),
+                             ('width', '50'), ('autowidth', True)]:
+            changed = copy.deepcopy(node)
+            changed['columns'][0][field] = value
+            self.assertNotEqual(original, semantics.block_projection(changed), field)
+        changed = copy.deepcopy(node)
+        changed['foot'], changed['body'] = changed['body'], []
+        self.assertNotEqual(original, semantics.block_projection(changed))
+
+    def test_header_cells_are_single_inline_runs_including_empty_content(self):
+        node = table()
+        node['head'] = [[dict(node['body'][0][0], paragraphs=[])]]
+        projected = semantics.block_projection(node)
+        self.assertEqual(projected['head'][0][0]['inlines'], [])
+        node['head'][0][0]['paragraphs'] = [[{'name': 'strong', 'inlines': [{'name': 'text', 'value': 'H'}]}]]
+        self.assertEqual(semantics.block_projection(node)['head'][0][0]['inlines'][0]['kind'], 'strong')
+        node['head'][0][0]['paragraphs'] *= 2
+        with self.assertRaisesRegex(ValueError, 'header cell'):
+            semantics.block_projection(node)
+
+    def test_literal_cells_preserve_whitespace_and_csv_substitutions(self):
+        cell = dict(table()['body'][0][0], style='literal')
+        del cell['paragraphs']
+        cell['literal'] = '  < &\n    next'
+        result = semantics.cell_projection(cell, 'body')
+        self.assertEqual(result['literal'], [text('  < &\n    next')])
+        del cell['literal']
+        cell['paragraphs'] = [[{'name': 'strong', 'inlines': [{'name': 'text', 'value': 'Ж'}]},
+                               {'name': 'text', 'value': ' < 2\n    next'}]]
+        result = semantics.cell_projection(cell, 'body')
+        self.assertEqual(result['literal'][0]['kind'], 'strong')
+        self.assertEqual(result['literal'][1], text(' < 2\n    next'))
+        changed = copy.deepcopy(cell)
+        changed['paragraphs'][0][1]['value'] = ' < 2     next'
+        self.assertNotEqual(result, semantics.cell_projection(changed, 'body'))
+
+    def test_asciidoc_cells_keep_nested_documents_tables_and_reject_footnotes(self):
+        cell = dict(table()['body'][0][0], style='asciidoc')
+        del cell['paragraphs']
+        cell['blocks'] = [table()]
+        result = semantics.cell_projection(cell, 'body')
+        self.assertIsNone(result['document']['title'])
+        self.assertEqual(result['document']['blocks'][0]['body'][0][0]['paragraphs'][0], [text('First.')])
+        for invalid in [dict(cell, footnotes=[{}]), dict(cell, literal='extra'), dict(cell, future=True)]:
+            with self.assertRaises(ValueError):
+                semantics.cell_projection(invalid, 'body')
+
+    def test_table_schema_rejects_unknown_fields_styles_and_invalid_spans(self):
+        valid = semantics.block_projection(table())
+        for field, value in [('style', 'future'), ('halign', 'future'), ('valign', 'future'),
+                             ('colspan', 0), ('rowspan', True), ('background', []),
+                             ('paragraphs', [None]), ('future', True)]:
+            invalid = copy.deepcopy(valid)
+            invalid['body'][0][0][field] = value
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                semantics.validate_block(invalid)
+        for field, value in [('width', 50), ('width', 'nan'), ('autowidth', 1), ('future', True)]:
+            invalid = copy.deepcopy(valid)
+            invalid['columns'][0][field] = value
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                semantics.validate_block(invalid)
+
+    def test_reference_table_text_is_decoded_once_at_every_depth(self):
+        doc = document()
+        node = table()
+        normal = node['body'][0][0]
+        normal['paragraphs'] = [[{'name': 'text', 'value': '&amp;lt;'}]]
+        node['head'] = [[copy.deepcopy(normal)]]
+        nested = dict(normal, style='asciidoc', blocks=[copy.deepcopy(node)])
+        del nested['paragraphs']
+        literal = dict(normal, style='literal', literal='  &lt;\n    &amp;')
+        del literal['paragraphs']
+        node['body'].append([literal, nested])
+        doc['blocks'] = [node]
+        oracle = semantics.document_projection(doc, ['a'])
+        result = semantics.reference_projection(oracle, ['a'])['blocks'][0]
+        self.assertEqual(result['head'][0][0]['inlines'], [text('&lt;')])
+        self.assertEqual(result['body'][0][0]['paragraphs'], [[text('&lt;')]])
+        self.assertEqual(result['body'][1][0]['literal'], [text('  <\n    &')])
+        self.assertEqual(result['body'][1][1]['document']['blocks'][0]['body'][0][0]['paragraphs'], [[text('&lt;')]])
+        self.assertEqual(oracle['blocks'][0]['body'][0][0]['paragraphs'], [[text('&amp;lt;')]])
+
     def test_text_merging_preserves_order_and_whitespace_policy(self):
         self.assertEqual(semantics.canonical([text('a '), text('\n b')]), [text('a b')])
         self.assertEqual(semantics.canonical([text('a '), text('\n b')], prose=False), [text('a \n b')])
@@ -201,7 +303,7 @@ class SemanticProjectionTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 semantics.validate(invalid, ['a'])
         with self.assertRaises(ValueError):
-            semantics.block_projection({'name': 'table'})
+            semantics.block_projection({'name': 'future'})
 
     def test_oracle_normalization_does_not_mutate_or_decode_twice(self):
         original = semantics.document_projection(document('&amp;lt;'), ['a'])
@@ -222,7 +324,7 @@ class SemanticProjectionTests(unittest.TestCase):
     def test_pinned_fixture_expands_attributes_and_macros_inside_quotes(self):
         root = CORPUS / 'upstream'
         manifest, cases = acceptance.load_corpus(root / 'semantics.json')
-        self.assertEqual(len(cases), 55)
+        self.assertEqual(len(cases), 69)
         self.assertEqual(manifest['profile'], semantics.PROFILE)
         reference = json.loads((root / 'reference/semantic-attributes-macros-in-quotes.json').read_text())
         strong = reference['semantics']['blocks'][0]['inlines'][0]
@@ -235,7 +337,7 @@ class SemanticProjectionTests(unittest.TestCase):
         manifest, cases = acceptance.load_corpus(root / 'semantics.json')
         original_manifest, original = acceptance.load_corpus(root / 'cases.json')
         self.assertEqual(manifest['profile'], semantics.PROFILE)
-        self.assertEqual(len(cases), 2)
+        self.assertEqual(len(cases), 7)
         for path, provenance in manifest['files'].items():
             self.assertEqual(provenance, original_manifest['files'][path])
         for origin in manifest['origins'].values():

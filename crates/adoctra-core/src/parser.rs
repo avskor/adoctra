@@ -1712,9 +1712,12 @@ fn read_table(
             CellContent::Paragraphs(
                 runs.iter()
                     .map(|run| {
-                        context
-                            .body_subs
-                            .defer(crate::table::source(run), None, &render, true)
+                        context.body_subs.defer(
+                            crate::table::source(run),
+                            None,
+                            &render,
+                            cell.style != Some(crate::ast::CellStyle::Literal),
+                        )
                     })
                     .collect(),
             )

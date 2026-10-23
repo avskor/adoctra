@@ -14,6 +14,7 @@ LISTS = {'ulist', 'olist', 'dlist'}
 VERBATIM = {'listing', 'literal'}
 IMAGE_ATTRIBUTES = {'width', 'height', 'title', 'link', 'float'}
 LINK_METADATA = {'id', 'role', 'title', 'window', 'rel'}
+CELL_STYLES = {None, 'asciidoc', 'none', 'emphasis', 'header', 'literal', 'monospaced', 'strong'}
 
 
 def require(condition, message='invalid inline-semantics-v1 projection'):
@@ -160,11 +161,37 @@ def item_projection(item):
             'blocks': [block_projection(child) for child in item['blocks']]}
 
 
+def cell_projection(cell, group):
+    keys = {'style', 'halign', 'valign', 'colspan', 'rowspan', 'background'}
+    content = set(cell) & {'paragraphs', 'blocks', 'literal'}
+    require(len(content) == 1 and set(cell) <= keys | content | {'footnotes'}, 'invalid semantic cell')
+    require(not cell.get('footnotes'), 'footnotes are outside inline-semantics-v1')
+    result = {key: cell[key] for key in keys}
+    for key in ['colspan', 'rowspan']:
+        result[key] = 1 if result[key] is None else result[key]
+    if group == 'head':
+        require('paragraphs' in cell and len(cell['paragraphs']) <= 1, 'invalid header cell')
+        result['inlines'] = canonical(inline_projection(cell['paragraphs'][0]) if cell['paragraphs'] else [])
+    elif 'blocks' in cell:
+        nested = document_projection({'name': 'document', 'blocks': cell['blocks'],
+                                      'attribute_snapshots': {'header': {'values': {}}, 'final': {'values': {}}}}, [])
+        result['document'] = {key: nested[key] for key in ['title', 'blocks']}
+    elif 'literal' in cell:
+        result['literal'] = canonical([{'kind': 'text', 'value': cell['literal']}], prose=False)
+    elif cell['style'] == 'literal':
+        # CSV/DSV literal cells retain normal substitutions in the JSON AST.
+        require(len(cell['paragraphs']) <= 1, 'invalid literal cell')
+        result['literal'] = canonical(inline_projection(cell['paragraphs'][0]) if cell['paragraphs'] else [], prose=False)
+    else:
+        result['paragraphs'] = [canonical(inline_projection(paragraph)) for paragraph in cell['paragraphs']]
+    return result
+
+
 def block_projection(block):
     context = block['name']
     if context == 'list':
         context = 'olist' if block['ordered'] else 'ulist'
-    require(context in CONTAINERS | LISTS | VERBATIM | {'paragraph', 'image'}, f'unsupported semantic block: {context}')
+    require(context in CONTAINERS | LISTS | VERBATIM | {'paragraph', 'image', 'table'}, f'unsupported semantic block: {context}')
     metadata = block
     children = block.get('blocks', [])
     if context == 'section':
@@ -186,6 +213,10 @@ def block_projection(block):
         else:
             result['style'] = block.get('style') or ('arabic' if context == 'olist' else None)
             result['items'] = [item_projection(item) for item in block['items']]
+    elif context == 'table':
+        result['columns'] = copy.deepcopy(block['columns'])
+        for group in ['head', 'body', 'foot']:
+            result[group] = [[cell_projection(cell, group) for cell in row] for row in block[group]]
     elif context in VERBATIM:
         require(not block.get('callouts'), 'callouts are outside inline-semantics-v1')
         result['language'] = block.get('attributes', {}).get('language')
@@ -269,6 +300,22 @@ def reference_projection(result, names):
                 node[key] = lexical(node[key])
             node['alt'] = inlines(node['alt'], False)
             node['attributes'] = {key: lexical(value) for key, value in node['attributes'].items()}
+        if node['context'] == 'table':
+            for group in ['head', 'body', 'foot']:
+                for row in node[group]:
+                    for cell in row:
+                        if 'inlines' in cell:
+                            cell['inlines'] = inlines(cell['inlines'])
+                        elif 'paragraphs' in cell:
+                            cell['paragraphs'] = [inlines(paragraph) for paragraph in cell['paragraphs']]
+                        elif 'literal' in cell:
+                            cell['literal'] = inlines(cell['literal'], False)
+                        else:
+                            nested = cell['document']
+                            if nested['title'] is not None:
+                                nested['title'] = inlines(nested['title'])
+                            for child in nested['blocks']:
+                                block(child)
         for entry in node.get('items', []):
             if node['context'] == 'dlist':
                 entry['terms'] = [inlines(term) for term in entry['terms']]
@@ -372,12 +419,57 @@ def validate_item(item):
         validate_block(block)
 
 
+def validate_alignment(node):
+    require(node.get('style') in CELL_STYLES)
+    require(node.get('halign') in {'left', 'center', 'right'})
+    require(node.get('valign') in {'top', 'middle', 'bottom'})
+
+
+def validate_table(node):
+    require(isinstance(node.get('columns'), list) and bool(node['columns']))
+    for column in node['columns']:
+        require(isinstance(column, dict) and set(column) == {'style', 'halign', 'valign', 'width', 'autowidth'})
+        validate_alignment(column)
+        require(isinstance(column['width'], str) and re.fullmatch(r'[0-9]+(?:\.[0-9]+)?', column['width']))
+        require(type(column['autowidth']) is bool)
+    for group in ['head', 'body', 'foot']:
+        require(isinstance(node.get(group), list))
+        for row in node[group]:
+            require(isinstance(row, list))
+            for cell in row:
+                require(isinstance(cell, dict))
+                validate_alignment(cell)
+                keys = {'style', 'halign', 'valign', 'colspan', 'rowspan', 'background'}
+                for span in ['colspan', 'rowspan']:
+                    require(type(cell.get(span)) is int and cell[span] > 0)
+                require(cell.get('background') is None or isinstance(cell['background'], str))
+                if group == 'head':
+                    keys.add('inlines')
+                    validate_inlines(cell.get('inlines'))
+                elif cell['style'] == 'asciidoc':
+                    keys.add('document')
+                    nested = cell.get('document')
+                    require(isinstance(nested, dict) and set(nested) == {'title', 'blocks'})
+                    if nested['title'] is not None:
+                        validate_inlines(nested['title'])
+                    require(isinstance(nested['blocks'], list))
+                    for child in nested['blocks']:
+                        validate_block(child)
+                elif cell['style'] == 'literal':
+                    keys.add('literal')
+                    validate_inlines(cell.get('literal'))
+                else:
+                    keys.add('paragraphs')
+                    validate_labels(cell.get('paragraphs'))
+                require(set(cell) == keys)
+
+
 def validate_block(node):
     require(isinstance(node, dict))
     metadata(node)
     keys = {'context', 'id', 'roles', 'title'}
     context = node.get('context')
-    require(context in CONTAINERS | LISTS | VERBATIM | {'paragraph', 'image'})
+    require(context in CONTAINERS | LISTS | VERBATIM | {'paragraph', 'image', 'table'})
     if node['title'] is not None:
         validate_inlines(node['title'])
     if context == 'section':
@@ -401,6 +493,9 @@ def validate_block(node):
                     validate_item(entry['description'])
             else:
                 validate_item(entry)
+    elif context == 'table':
+        keys.update({'columns', 'head', 'body', 'foot'})
+        validate_table(node)
     elif context == 'image':
         keys.update({'target', 'src', 'alt', 'attributes'})
         validate_image(node)

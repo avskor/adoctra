@@ -46,6 +46,36 @@ fn paragraphs(cell: &TableCell) -> Vec<String> {
     }
 }
 
+#[test]
+fn csv_literal_cells_preserve_newlines_with_normal_substitutions_and_spans() {
+    for newline in ["\n", "\r\n"] {
+        let source =
+            "[format=csv,cols=\"l,1\",options=noheader]\n|===\n\"*Ж* < 2\n    next\",value\n|==="
+                .replace('\n', newline);
+        let result = parse(&source);
+        assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+        let cell = &table(&result.document.blocks[0]).body[0][0];
+        assert_eq!(cell.style, Some(CellStyle::Literal));
+        assert_eq!(paragraphs(cell), ["Ж < 2\n    next"]);
+        let CellContent::Paragraphs(paragraphs) = &cell.content else {
+            panic!()
+        };
+        let Inline::Strong { children, span } = &paragraphs[0][0] else {
+            panic!()
+        };
+        assert_eq!(&source[span.start..span.end], "*Ж*");
+        assert_eq!(text(children), "Ж");
+        let Inline::Text { value, span } = &paragraphs[0][1] else {
+            panic!()
+        };
+        assert_eq!(value, " < 2\n    next");
+        assert_eq!(
+            &source[span.start..span.end],
+            format!(" < 2{newline}    next")
+        );
+    }
+}
+
 fn rows(rows: &[Vec<TableCell>]) -> Vec<Vec<String>> {
     rows.iter()
         .map(|row| row.iter().map(|cell| paragraphs(cell).join("|")).collect())

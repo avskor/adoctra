@@ -26,6 +26,47 @@ def project(source, names = [])
 end
 
 cases = {
+  'tables retain columns header footer spans and alignment' => lambda do
+    node = project(".Table *title*\n[#tab.wide,cols=\"1,2\",options=\"header,footer\"]\n|===\n|Name |Value\n2+^.^|*Wide*\n|Last |End\n|===")[:blocks][0]
+    assert(node[:id] == 'tab' && node[:roles] == ['wide'] && node[:title][1][:kind] == 'strong', 'table metadata lost')
+    assert(node[:columns].map { |col| col[:width] } == ['33.3333', '66.6667'], 'column widths lost')
+    assert(node[:head][0][0][:inlines] == [{ kind: 'text', value: 'Name' }], 'header text lost')
+    cell = node[:body][0][0]
+    assert(cell[:colspan] == 2 && cell[:rowspan] == 1 && cell[:halign] == 'center' && cell[:valign] == 'middle', 'cell layout lost')
+    assert(cell[:paragraphs][0][0][:kind] == 'strong' && node[:foot][0][0][:paragraphs][0][0][:value] == 'Last', 'cell contents lost')
+  end,
+  'cell styles remain distinct from explicit inline formatting' => lambda do
+    node = project("[cols=\"s,l\",options=noheader]\n|===\n|*Bold*\n\nSecond.\nl|  *literal* < &\n    next\n|===")[:blocks][0]
+    cell = node[:body][0][0]
+    assert(cell[:style] == 'strong' && cell[:paragraphs].size == 2, 'style or paragraph boundaries lost')
+    assert(cell[:paragraphs][0][0][:kind] == 'strong' && cell[:paragraphs][1] == [{ kind: 'text', value: 'Second.' }], 'invented style wrapper')
+    assert(node[:body][0][1][:literal] == [{ kind: 'text', value: "  *literal* &lt; &amp;\n    next" }], 'literal whitespace or escaping changed')
+  end,
+  'CSV literal cells keep normal substitutions and significant newlines' => lambda do
+    cell = project("[format=csv,cols=\"l,1\",options=noheader]\n|===\n\"*Ж* < 2\n    next\",value\n|===")[:blocks][0][:body][0][0]
+    assert(cell[:literal][0][:kind] == 'strong', 'CSV substitutions disabled')
+    assert(cell[:literal][1][:value] == " &lt; 2\n    next", 'CSV literal newline folded')
+  end,
+  'AsciiDoc cells convert nested documents without using HTML' => lambda do
+    node = project("[cols=a,options=noheader]\n|===\n|* Item\n\n[cols=\"1,1\",options=header]\n!===\n!Key !Value\n!A !*B*\n!===\n|===")[:blocks][0]
+    nested = node[:body][0][0][:document]
+    assert(nested[:title].nil? && nested[:blocks][0][:context] == 'ulist', 'nested document/list lost')
+    assert(nested[:blocks][1][:body][0][1][:paragraphs][0][0][:kind] == 'strong', 'nested table formatting lost')
+  end,
+  'cell substitutions execute once in header body footer order' => lambda do
+    result = project(":n: 0\n\n[cols=\"1,1\",options=\"header,footer\"]\n|===\n|{counter:n} |H\n|{counter:n} |{set:cellbgcolor:red}Color\n|{counter:n} |End\n|===", ['n'])
+    node = result[:blocks][0]
+    assert(node[:head][0][0][:inlines][0][:value] == '1', 'header counter changed')
+    assert(node[:body][0][0][:paragraphs][0][0][:value] == '2', 'body counter changed')
+    assert(node[:foot][0][0][:paragraphs][0][0][:value] == '3', 'footer counter changed')
+    assert(node[:body][0][0][:background].nil? && node[:body][0][1][:background] == 'red' && node[:foot][0][0][:background] == 'red', 'background state lost')
+    assert(result[:attributes][:final]['n'] == [{ kind: 'text', value: '3' }], 'cell substitutions executed twice')
+  end,
+  'empty headers have no inline text and empty body cells have no paragraphs' => lambda do
+    node = project("[cols=\"1,1\",options=header]\n|===\n| |Title\n| |Value\n|===")[:blocks][0]
+    assert(node[:head][0][0][:inlines] == [], 'empty header gained content')
+    assert(node[:body][0][0][:paragraphs] == [], 'empty body cell gained a paragraph')
+  end,
   'attributes and macros remain exposed inside quote boundaries' => lambda do
     tree = project(":who: World\n\n*{who} https://example.org*")
     strong = tree[:blocks][0][:inlines][0]

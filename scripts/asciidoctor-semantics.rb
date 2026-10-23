@@ -98,6 +98,32 @@ class SemanticConverter < Asciidoctor::Converter::Base
     result
   end
 
+  def table_cell cell, group
+    result = { style: cell.style&.to_s, halign: cell.attr('halign'), valign: cell.attr('valign'),
+               colspan: cell.colspan || 1, rowspan: cell.rowspan || 1 }
+    if group == :head
+      result[:inlines] = inlines(cell.text)
+    elsif cell.style == :asciidoc
+      document = cell.inner_document.convert
+      result[:document] = document.slice(:title, :blocks)
+    elsif cell.style == :literal
+      result[:literal] = inlines(cell.text)
+    else
+      # Style is an explicit field, so do not introduce the presentation-only
+      # quoted wrapper from Cell#content. Keep paragraph boundaries and run
+      # substitutions once, including their attribute/counter side effects.
+      value = cell.text
+      paragraphs = if cell.instance_variable_get(:@text).include? "\n\n"
+        value.split Asciidoctor::BlankLineRx
+      else
+        value.empty? ? [] : [value]
+      end
+      result[:paragraphs] = paragraphs.map { |paragraph| inlines paragraph }
+    end
+    result[:background] = cell.document.attr 'cellbgcolor'
+    result
+  end
+
   def convert node, transform = node.node_name, _opts = nil
     case transform
     when 'embedded', 'document'
@@ -131,6 +157,15 @@ class SemanticConverter < Asciidoctor::Converter::Base
       })
     when 'image'
       metadata(node).merge(image_fields(node))
+    when 'table'
+      result = metadata(node).merge(columns: node.columns.map { |column|
+        { style: column.style&.to_s, halign: column.attr('halign'), valign: column.attr('valign'),
+          width: column.attr('colpcwidth').to_s, autowidth: column.option?('autowidth') }
+      })
+      [:head, :body, :foot].each do |group|
+        result[group] = node.rows.public_send(group).map { |row| row.map { |cell| table_cell cell, group } }
+      end
+      result
     when 'inline_quoted'
       kind = { strong: 'strong', emphasis: 'emphasis', monospaced: 'monospace',
                mark: 'mark', superscript: 'superscript', subscript: 'subscript', unquoted: 'span' }.fetch(node.type)

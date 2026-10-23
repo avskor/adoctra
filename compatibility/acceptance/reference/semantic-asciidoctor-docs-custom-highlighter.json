@@ -1,0 +1,800 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can integrate additional syntax highlighters into Asciidoctor by implementing and registering a syntax highlighter adapter. You can either write a new adapter from scratch or you can extend and even replace one of the built-in adapters."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To implement a new adapter, you must create a class that extends the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Asciidoctor::SyntaxHighlighter::Base"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://www.rubydoc.info/gems/asciidoctor/2.0.23/Asciidoctor/SyntaxHighlighter/Base"
+              },
+              {
+                "kind": "text",
+                "value": " class, register the adapter for a value of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "source-highlighter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute, and implement the required methods. Which methods are required depends on whether the adapter is for a client-side (runs in the browser) or build-time (runs when the document is converted) syntax highlighter."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Here’s an example of how to write and register a syntax highlighter adapter for the Prism.js syntax highlighting library. Prism.js is a client-side syntax highlighter, meaning it runs in the browser. That means the adapter only has to implement methods that pertain to client-side syntax highlighting, which include "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "format"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "docinfo?"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "docinfo"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class PrismSyntaxHighlighter < Asciidoctor::SyntaxHighlighter::Base\n  register_for 'prism'\n\n  def format node, lang, opts\n    opts[:transform] = proc do |pre, code|\n      code['class'] = %(language-#{lang}) if lang\n    end\n    super\n  end\n\n  def docinfo? location\n    location == :footer\n  end\n\n  def docinfo location, doc, opts\n    base_url = doc.attr 'prismdir', %(#{opts[:cdn_base_url]}/prism/1.15.0)\n    slash = opts[:self_closing_tag_slash]\n    unless (theme_name = doc.attr 'prism-style', 'prism') == 'prism'\n      theme_name = %(prism-#{theme_name})\n    end\n    %(<link rel=\"stylesheet\" href=\"#{base_url}/themes/#{theme_name}.min.css\"#{slash}>\n<script src=\"#{base_url}/prism.min.js\"></script>\n<script src=\"#{base_url}/components/prism-ruby.min.js\"></script>)\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Syntax highlighter adapter for Prism.js"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Save this code to a file named "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "prism-syntax-highlighter.rb"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": ". Then, require this file when invoking Asciidoctor and set "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "source-highlighter=prism"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to activate it:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ asciidoctor -r ./prism-syntax-highlighter -a source-highlighter=prism document.adoc"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can also define an adapter for a syntax highlighter that runs during conversion. We’ll look at doing that while also extending a built-in adapter."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "new",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Create a new adapter"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Instead of creating a new adapter, you can customize a built-in adapter by extending it, overriding its behavior, and optionally replacing it."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To extend an adapter, you need to look up a reference to the built-in adapter by name using the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Asciidoctor::SyntaxHighlighter.for"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://www.rubydoc.info/gems/asciidoctor/2.0.23/Asciidoctor/SyntaxHighlighter/Factory#for-instance_method"
+              },
+              {
+                "kind": "text",
+                "value": " method, create a class that extends it, register the adapter with a unique name (or the same name, if you want to replace it), and override any methods that provide the behavior you want to modify."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Here’s the basic template for customizing an existing adapter:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class CustomAdapter < (Asciidoctor::SyntaxHighlighter.for 'rouge')\n  register_for 'rouge'\n\n  # override methods go here\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Let’s look at some examples of how to customize a built-in adapter."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Let’s override the adapter for Pygments to prevent it from adding a stylesheet to the HTML (presumably because the styles will be provided by a different stylesheet)."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "class ExtendedPygmentsSyntaxHighlighter < (Asciidoctor::SyntaxHighlighter.for 'pygments')\n  register_for 'pygments'\n\n  def docinfo? location\n    false\n  end\nend"
+                  }
+                ],
+                "language": "ruby",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Extended syntax highlighter adapter for Pygments"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Save this code to a file named "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "extended-pygments-syntax-highlighter.rb"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": [
+                      "path"
+                    ]
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". Then, require this file when invoking Asciidoctor, setting "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "source-highlighter=pygments"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to activate it, as you would normally do:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "literal",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "$ asciidoctor -r ./extended-pygments-syntax-highlighter.rb -a source-highlighter=pygments document.adoc"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If, instead, you wanted to modify the built-in adapter to honor the location of a custom stylesheet specified by the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "pygments-stylesheet"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute, you can do so by extending the adapter and overriding the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "docinfo"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " method."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "class ExtendedPygmentsSyntaxHighlighter < (Asciidoctor::SyntaxHighlighter.for 'pygments')\n  register_for :pygments\n\n  def docinfo location, doc, opts\n    stylesheet = doc.attr 'pygments-stylesheet', './pygments.css'\n    if opts[:linkcss]\n      slash = opts[:self_closing_tag_slash]\n      %(<link rel=\"stylesheet\" href=\"#{stylesheet}\"#{slash}>)\n    else\n      stylesheet = doc.normalize_system_path stylesheet\n      %(<style>\n#{doc.read_asset stylesheet, label: 'stylesheet', normalize: true}\n</style>)\n    end\n  end\nend"
+                  }
+                ],
+                "language": "ruby",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If you want to decorate built-in behavior, you can invoke the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "super"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " method anywhere inside the method to delegate to the behavior provided by the built-in adapter."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "_docinfo",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "docinfo"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Let’s say you always want lines to be numbered, regardless of the setting in the document. You can do so by overriding the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "highlight"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " method, setting the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": ":number_lines"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " key on the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "opts"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " argument, then delegating back to the built-in adapter using "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "super"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "def highlight node, source, lang, opts\n  opts[:number_lines] = true\n  super\nend"
+                  }
+                ],
+                "language": "ruby",
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "_highlight",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "highlight"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "When using Rouge as the syntax highlighter, you can customize the formatter by overriding the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "create_formatter"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " method. This allows you to add custom logic for handling certain tokens in the source language."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Let’s assume that you want to look for bare URLs in code comments and translate them into links (i.e., autolinks), just like in AsciiDoc. You can do that by weaving extra logic into the formatter that looks for tokens in the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Comment"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " category and applies a substitution to the value."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "class ExtendedRougeSyntaxHighlighter < (Asciidoctor::SyntaxHighlighter.for 'rouge')\n  register_for 'rouge'\n\n  def create_formatter node, source, lang, opts\n    formatter = super\n    formatter.singleton_class.prepend (Module.new do\n      def safe_span tok, safe_val\n        if tok.token_chain[0].matches? ::Rouge::Token::Tokens::Comment\n          safe_val = safe_val.gsub(/https?:\\/\\/\\S+/, '<a href=\"\\&\">\\&</a>')\n        end\n        super\n      end\n    end)\n    formatter\n  end\nend"
+                  }
+                ],
+                "language": "ruby",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Since the formatter has access to all the tokens in the code identified by the syntax highlighter, this technique opens up a lot of possibilities. For example, you could look for the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Type"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " token in the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Keyword"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " category in Java code and create a link to the API docs. The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "lang"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " argument to the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "create_formatter"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " method lets you know the source language (e.g., "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "java"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ") to which the tokens belong."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To study the logic you may be interesting in overriding, browse the code for the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "built-in syntax highlighter adapters"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://github.com/asciidoctor/asciidoctor/tree/{page-origin-refname}/lib/asciidoctor/syntax_highlighter"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "_create_formatter_rouge",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "create_formatter (Rouge)"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "extend",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Extend an existing adapter"
+          }
+        ]
+      }
+    ],
+    "title": [
+      {
+        "kind": "text",
+        "value": "Custom Syntax Highlighter Adapter"
+      }
+    ]
+  }
+}
