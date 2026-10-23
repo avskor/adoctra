@@ -210,6 +210,18 @@ metadata and embedded SVG/inline icons remain outside the profile. The schema do
 source positions or ASG/TCK. See `docs/semantic-profile.adoc`; keep the independent
 39 Ruby converter checks and offline/verify runs for both manifests in CI.
 
+`scripts/performance.py` measures native parse, tokens, JSON serialization and
+parse-plus-JSON on all 12 pinned manual pages and 12 deterministic stress inputs.
+It builds a release example in adoctra-json with no new dependencies; disk I/O
+is outside timers, source registration and destruction are inside. Tokens runs
+its own full parse; JSON serialization reuses an AST. Reports retain raw samples,
+input/source/artifact fingerprints and host/toolchain metadata. Raw Cargo WASM
+size (plus deterministic gzip) is measured before wasm-bindgen, not as a web
+package or runtime benchmark. See `docs/performance.adoc` and
+`performance/baseline.json`. CI runs a smoke check without timing thresholds;
+the separate manual workflow uploads full measurements. Keep benchmarks separate
+from concurrent builds/tests, and keep performance claims separate from conformance.
+
 `compatibility/acceptance/positions.json` uses `diagnostic-positions-v1`:
 18 original probes, all PASS. Ruby `--diagnostic-positions` exports
 primary MemoryLogger source_location file/line or null; the CLI adapter keeps

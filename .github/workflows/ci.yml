@@ -23,6 +23,8 @@ jobs:
         run: cargo build -p adoctra-cli
       - name: Test compatibility harness
         run: python3 -m unittest discover -s scripts -p 'test_*.py'
+      - name: Performance harness smoke (no timing thresholds)
+        run: python3 scripts/performance.py --smoke --samples 1 --iterations 1 --warmup 0 --skip-wasm
       - name: Offline compatibility corpus
         run: python3 scripts/compatibility.py
       - name: Offline acceptance corpus and diagnostics

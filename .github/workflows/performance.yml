@@ -1,0 +1,23 @@
+name: performance report
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rust toolchain
+        run: rustup show
+      - name: Install WASM target
+        run: rustup target add wasm32-unknown-unknown
+      - name: Measure native operations and raw WASM size
+        run: python3 scripts/performance.py --output target/performance/report.json
+      - name: Upload measurements
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-report
+          path: target/performance/report.json
+          if-no-files-found: error
