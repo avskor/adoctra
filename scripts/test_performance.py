@@ -195,7 +195,10 @@ class PerformanceTests(unittest.TestCase):
 
     def test_substitution_study_keeps_inputs_and_repeated_raw_timings(self):
         report = json.loads((perf.ROOT / 'performance/substitution-buffers.json').read_text())
-        self.assertEqual(report['schema'], 'adoctra-substitution-buffer-study-v1')
+        self.assert_study_timings(report, 'adoctra-substitution-buffer-study-v1')
+
+    def assert_study_timings(self, report, schema):
+        self.assertEqual(report['schema'], schema)
         originals = {case['id']: case for case in perf.workloads()}
         workloads = {case['id']: case for case in report['workloads']}
         self.assertEqual(set(workloads), set(originals))
@@ -227,6 +230,9 @@ class PerformanceTests(unittest.TestCase):
 
     def test_substitution_study_counters_and_profile_limitations_match_evidence(self):
         report = json.loads((perf.ROOT / 'performance/substitution-buffers.json').read_text())
+        self.assert_study_allocations(report)
+
+    def assert_study_allocations(self, report):
         rows = report['allocations']['runs']
         self.assertEqual({(r['variant'], r['id'], r['operation']) for r in rows}, {
             (variant, f'stress-{family}-512', operation)
@@ -245,8 +251,16 @@ class PerformanceTests(unittest.TestCase):
         for profile in report['profiles']:
             data = (perf.ROOT / profile['path']).read_bytes()
             self.assertEqual(perf.digest(data), profile['sha256'])
-            self.assertIn(b'Collection interval timer period was changed', data)
+            self.assertIn(profile.get('diagnostic', 'Collection interval timer period was changed').encode(), data)
             self.assertFalse(profile['quantitative_cpu_valid'])
+
+    def test_link_stage_study_preserves_inputs_samples_and_profiler_failures(self):
+        report = json.loads((perf.ROOT / 'performance/link-stages.json').read_text())
+        self.assert_study_timings(report, 'adoctra-link-stage-study-v1')
+        self.assert_study_allocations(report)
+        self.assertEqual(len(report['runs']), 6)
+        self.assertEqual([run['variant'] for run in report['runs']],
+                         ['before', 'after', 'after', 'before', 'before', 'after'])
 
 
 if __name__ == '__main__':

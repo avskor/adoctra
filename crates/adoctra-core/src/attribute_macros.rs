@@ -1911,6 +1911,17 @@ fn apply_stage(
     report: &mut Report<'_>,
 ) -> Text {
     let src = &text.text;
+    // Test the current lexical stream at each stage: earlier macro stages
+    // can introduce new link syntax. These are necessary, not sufficient,
+    // markers, so matching/escaping rules still belong to the scanners.
+    let possible = match stage {
+        0 => src.contains("://"),
+        1 => src.contains("link:") || src.contains("mailto:"),
+        _ => src.contains('@'),
+    };
+    if !possible {
+        return text;
+    }
     let index = Index::new(src);
     let mut output = Text::default();
     let mut copied = 0;
@@ -1951,8 +1962,14 @@ fn apply_stage(
         copied = m.end;
         at = m.end;
     }
-    text.copy(copied..src.len(), &mut output);
-    output
+    if copied == 0 {
+        // A candidate can be malformed or deliberately ignored. No match
+        // was applied, so retain source fragments and semantic marks intact.
+        text
+    } else {
+        text.copy(copied..src.len(), &mut output);
+        output
+    }
 }
 
 fn explicit(src: &str, at: usize, index: &Index) -> Option<LinkMatch> {
@@ -2400,6 +2417,139 @@ fn parse_label(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn unchanged_link_stages_reuse_buffers_and_preserve_source_owners() {
+        for (stage, source) in [
+            (0, "Ж🙂 plain & text\r\n"),
+            (1, "Ж🙂 plain & text\r\n"),
+            (2, "Ж🙂 plain & text\r\n"),
+            (0, "http://"),
+            (0, "\"https://example.org\""),
+            (0, "link:https://example.org"),
+            (1, "link:page.adoc"),
+            (1, "mailto:unfinished"),
+            (2, "name@example.invalid"),
+            (2, ":name@example.org"),
+        ] {
+            let mut text = Text::default();
+            let span = Span::in_source(crate::SourceId(7), 13, 13 + source.len());
+            text.append_source(source, false, 3, span);
+            text.append_part(
+                &Part::IndexTerm(Box::new(IndexTerm {
+                    text: None,
+                    terms: vec!["hidden".into()],
+                    see: None,
+                    see_also: vec![],
+                })),
+                4,
+                Span::in_source(crate::SourceId(8), 50, 60),
+            );
+            let expected = text.clone().into_parts();
+            let owners: Vec<_> = text
+                .fragments
+                .iter()
+                .map(|(_, f)| (f.owner, f.span))
+                .collect();
+            let text_buffer = text.text.as_ptr();
+            let fragment_buffer = text.fragments.as_ptr();
+            let attrs = crate::Attributes::new();
+            let mut attributes = Evaluation::read_only(&attrs);
+            let (_, mut passes) = Passes::extract("", 0, &mut attributes, false);
+            let mut report = Report::new(&mut passes);
+            let result = apply_stage(text, stage, &mut attributes, false, 0, true, &mut report);
+            assert_eq!(result.text.as_ptr(), text_buffer, "{stage}: {source}");
+            assert_eq!(
+                result.fragments.as_ptr(),
+                fragment_buffer,
+                "{stage}: {source}"
+            );
+            assert_eq!(
+                result
+                    .fragments
+                    .iter()
+                    .map(|(_, f)| (f.owner, f.span))
+                    .collect::<Vec<_>>(),
+                owners
+            );
+            assert!(report.links.is_empty());
+            assert_eq!(result.into_parts(), expected);
+        }
+    }
+
+    #[test]
+    fn link_stage_prefilters_keep_all_schemes_explicit_links_and_email() {
+        for (stage, syntax, target) in [
+            (0, "https://example.org", "https://example.org"),
+            (0, "http://example.org", "http://example.org"),
+            (0, "file:///tmp/file", "file:///tmp/file"),
+            (0, "ftp://example.org/file", "ftp://example.org/file"),
+            (0, "irc://example.org/channel", "irc://example.org/channel"),
+            (1, "link:page.adoc[Ж🙂]", "page.adoc"),
+            (1, "mailto:me@example.org[Ж🙂]", "mailto:me@example.org"),
+            (2, "me@example.org", "mailto:me@example.org"),
+        ] {
+            for escaped in [false, true] {
+                let prefix = "Ж🙂\r\n";
+                let source = format!("{prefix}{}{syntax}", if escaped { "\\" } else { "" });
+                let span = Span::in_source(crate::SourceId(9), 20, 20 + source.len());
+                let mut text = Text::default();
+                text.append_source(&source, false, 0, span);
+                let attrs = crate::Attributes::new();
+                let mut attributes = Evaluation::read_only(&attrs);
+                let (_, mut passes) = Passes::extract("", 0, &mut attributes, false);
+                let mut report = Report::new(&mut passes);
+                let result = apply_stage(text, stage, &mut attributes, false, 0, true, &mut report);
+                if escaped {
+                    assert!(report.links.is_empty(), "{source}");
+                    assert_eq!(
+                        result.into_parts(),
+                        vec![Part::Text(format!("{prefix}{syntax}"))]
+                    );
+                } else {
+                    assert_eq!(
+                        report.links,
+                        vec![Span::in_source(
+                            crate::SourceId(9),
+                            20 + prefix.len(),
+                            span.end
+                        )],
+                        "{source}"
+                    );
+                    assert!(
+                        result
+                            .into_parts()
+                            .iter()
+                            .any(|p| matches!(p, Part::OpenLink(link) if link.target == target)),
+                        "{source}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn link_stage_markers_can_cross_source_and_attribute_fragments() {
+        for (stage, prefix, suffix, target) in [
+            (0, "https", "://example.org", "https://example.org"),
+            (1, "link", ":page[Ж🙂]", "page"),
+            (2, "me", "@example.org", "mailto:me@example.org"),
+        ] {
+            let mut text = Text::default();
+            text.append_source(prefix, false, 0, Span::new(10, 10 + prefix.len()));
+            text.append_part(&Part::Text(suffix.into()), 1, Span::new(20, 23));
+            let attrs = crate::Attributes::new();
+            let mut attributes = Evaluation::read_only(&attrs);
+            let (_, mut passes) = Passes::extract("", 0, &mut attributes, false);
+            let mut report = Report::new(&mut passes);
+            let result = apply_stage(text, stage, &mut attributes, false, 0, true, &mut report);
+            assert_eq!(report.links, vec![Span::new(10, 23)]);
+            assert!(result
+                .into_parts()
+                .iter()
+                .any(|part| matches!(part, Part::OpenLink(link) if link.target == target)));
+        }
+    }
 
     fn found(src: &str) -> Option<(bool, &str, &str, usize)> {
         let m = image_at(src, 0)?;

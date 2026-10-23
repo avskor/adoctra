@@ -232,6 +232,13 @@ substitution_text.rs, replacement_origin computes source ownership/coverage
 without a temporary Text; restore_boundaries skips rebuilding unchanged
 fragments. Preserve zero-length marks, attribute ownership and transformed
 metadata when optimizing this stream.
+The follow-up `performance/link-stages.json` measures skipping the three link
+stages when their current lexical stream lacks the necessary markers, or when
+all candidates are malformed/ignored. Check the assembled stream at each stage,
+not individual fragments or the original source: attributes and earlier stages
+can supply syntax. Keep scanner rules, escaping and source ownership intact.
+The gprofng timer warning reproduces outside the sandbox too; a 100 ms probe
+fails initialization. Neither probe supplies usable quantitative CPU evidence.
 
 `compatibility/acceptance/positions.json` uses `diagnostic-positions-v1`:
 18 original probes, all PASS. Ruby `--diagnostic-positions` exports
