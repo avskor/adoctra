@@ -364,3 +364,44 @@ fn unicode_declarations_and_unsets_use_the_same_word_grammar_as_references() {
         Inline::AttributeRef { value: None, .. }
     ));
 }
+
+#[test]
+fn shared_attribute_tables_preserve_header_block_values_and_reference_spans() {
+    for newline in ["\n", "\r\n"] {
+        let source =
+            ":v: pass:q[*Ж🙂*]\n\n{v}\n\n:v: plain\n\n{v}\n\n:v!:\n\n{v}".replace('\n', newline);
+        let result = parse(&source);
+        assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+        let header = &result.document.attributes;
+        assert_eq!(header.get("v"), Some("Ж🙂"));
+        let formatted = header.raw_parts("v").unwrap();
+        assert!(matches!(formatted[0], P::Open(_)));
+        let blocks = result.document.flat_blocks();
+        assert_eq!(blocks.len(), 3);
+        for (index, (at, _)) in source.match_indices("{v}").enumerate() {
+            let block = blocks[index];
+            let BlockKind::Paragraph { inlines } = &block.kind else {
+                panic!("{block:?}")
+            };
+            let [Inline::AttributeRef {
+                name,
+                value,
+                parts,
+                span,
+            }] = inlines.as_slice()
+            else {
+                panic!("{inlines:?}")
+            };
+            assert_eq!(name, "v");
+            assert_eq!(*span, Span::new(at, at + 3));
+            assert_eq!(value.as_deref(), [Some("Ж🙂"), Some("plain"), None][index]);
+            assert_eq!(block.attribute_context.get("v"), value.as_deref());
+            if index == 0 {
+                assert_eq!(parts, formatted);
+                assert_eq!(block.attribute_context.raw_parts("v"), Some(formatted));
+            } else {
+                assert_eq!(block.attribute_context.raw_parts("v"), None);
+            }
+        }
+    }
+}

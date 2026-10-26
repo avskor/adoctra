@@ -262,6 +262,30 @@ class PerformanceTests(unittest.TestCase):
         self.assertEqual([run['variant'] for run in report['runs']],
                          ['before', 'after', 'after', 'before', 'before', 'after'])
 
+    def test_attribute_snapshot_study_preserves_inputs_samples_and_allocation_evidence(self):
+        report = json.loads((perf.ROOT / 'performance/attribute-snapshots.json').read_text())
+        self.assert_study_timings(report, 'adoctra-attribute-snapshot-study-v1')
+        self.assert_study_allocations(report)
+        self.assertEqual(len(report['runs']), 6)
+        self.assertEqual([run['variant'] for run in report['runs']],
+                         ['before', 'after', 'after', 'before', 'before', 'after'])
+        self.assertEqual(report['profiles'], [])
+        workloads = {case['id']: case for case in report['workloads']}
+        for row in report['allocations']['runs']:
+            driver = row['driver']
+            self.assertEqual(driver['schema'], 'adoctra-profile-driver-v1')
+            self.assertEqual(row['source_sha256'], workloads[row['id']]['input']['source_sha256'])
+            self.assertEqual(driver['operation'], row['operation'])
+            self.assertEqual({key: driver[key] for key in ('warmup', 'samples', 'iterations')},
+                             {'warmup': 0, 'samples': 1, 'iterations': 1})
+            self.assertEqual(len(driver['elapsed_ns']), 1)
+            self.assertGreater(driver['elapsed_ns'][0], 0)
+            identity = report['allocations']['binaries'][row['variant']]
+            for run in report['runs']:
+                if run['variant'] == row['variant']:
+                    self.assertEqual(run['code_sha256'], identity['code_sha256'])
+                    self.assertEqual(run['native']['sha256'], identity['native_sha256'])
+
 
 if __name__ == '__main__':
     unittest.main()

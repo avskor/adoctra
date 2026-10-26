@@ -239,6 +239,12 @@ not individual fragments or the original source: attributes and earlier stages
 can supply syntax. Keep scanner rules, escaping and source ownership intact.
 The gprofng timer warning reproduces outside the sandbox too; a 100 ms probe
 fails initialization. Neither probe supplies usable quantitative CPU evidence.
+`Attributes` now shares its two ordered tables independently through `Arc` and
+copies a table on mutation. Keep `local_hardbreaks` outside this storage; clones
+must isolate plain/semantic writes, removals and case-sensitive counters.
+Removing an absent key must not detach either table. Public value/parts APIs,
+deterministic iteration and snapshot semantics are unchanged. Measurements live
+in `performance/attribute-snapshots.json`; do not equate allocation volume with RSS.
 
 `compatibility/acceptance/positions.json` uses `diagnostic-positions-v1`:
 18 original probes, all PASS. Ruby `--diagnostic-positions` exports
