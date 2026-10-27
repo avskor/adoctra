@@ -9,41 +9,67 @@ fn cli_decodes_include_files_and_reports_read_errors_at_the_directive() {
     std::fs::create_dir_all(&root).unwrap();
     let source = root.join("main.adoc");
     let included = root.join("part.adoc");
-    std::fs::write(&source, "include::part.adoc[encoding=CP1251]\n").unwrap();
-    std::fs::write(&included, b"*\xcf\xf0\xe8\xe2\xe5\xf2*\r\n").unwrap();
-    for backend in ["html", "json"] {
+    for (encoding, bytes, expected) in [
+        ("CP1251", &b"*\xcf\xf0\xe8\xe2\xe5\xf2*\r\n"[..], "Привет"),
+        (
+            "Shift_JIS",
+            &b"*\x93\xfa\x96\x7b\x8c\xea*\r\n"[..],
+            "日本語",
+        ),
+        ("Windows-31J", &b"*\x81\x60\xfa\x40*\r\n"[..], "～ⅰ"),
+        ("EUC-JP", &b"*\x8f\xa2\xaf\xa1\xc1*\r\n"[..], "˘〜"),
+        ("eucJP-ms", &b"*\x8f\xf3\xf3\xa1\xc1*\r\n"[..], "ⅰ～"),
+        ("CP51932", &b"*\xc6\xfc\xcb\xdc\xb8\xec*\r\n"[..], "日本語"),
+    ] {
+        std::fs::write(
+            &source,
+            format!("include::part.adoc[encoding={encoding}]\n"),
+        )
+        .unwrap();
+        std::fs::write(&included, bytes).unwrap();
+        for backend in ["html", "json"] {
+            let output = Command::new(env!("CARGO_BIN_EXE_adoctra"))
+                .arg(&source)
+                .args(["--embedded", "--stdout", "--to", backend])
+                .output()
+                .unwrap();
+            assert!(output.status.success());
+            assert!(output.stderr.is_empty(), "{:?}", output.stderr);
+            assert!(String::from_utf8(output.stdout).unwrap().contains(expected));
+        }
+    }
+    for (encoding, bytes) in [
+        ("UTF-16LE", &b"\x00\xd8"[..]),
+        ("Shift_JIS", &b"\x81"[..]),
+        ("Windows-31J", &b"\xfc\xfc"[..]),
+        ("EUC-JP", &b"\x8f\xa2"[..]),
+        ("eucJP-ms", &b"\x8e\xe0"[..]),
+        ("CP51932", &b"\x8f\xa2\xaf"[..]),
+    ] {
+        std::fs::write(
+            &source,
+            format!("include::part.adoc[encoding={encoding},opts=optional]\n\nafter\n"),
+        )
+        .unwrap();
+        std::fs::write(&included, bytes).unwrap();
         let output = Command::new(env!("CARGO_BIN_EXE_adoctra"))
             .arg(&source)
-            .args(["--embedded", "--stdout", "--to", backend])
+            .args(["--embedded", "--stdout"])
             .output()
             .unwrap();
         assert!(output.status.success());
-        assert!(output.stderr.is_empty(), "{:?}", output.stderr);
-        assert!(String::from_utf8(output.stdout).unwrap().contains("Привет"));
+        assert_eq!(
+            String::from_utf8(output.stderr).unwrap(),
+            format!(
+                "adoctra: {}:1: error: include file not readable: {}\n",
+                source.display(),
+                included.canonicalize().unwrap().display()
+            )
+        );
+        let html = String::from_utf8(output.stdout).unwrap();
+        assert!(html.contains("Unresolved directive in main.adoc"), "{html}");
+        assert!(html.contains("after"));
     }
-    std::fs::write(
-        &source,
-        "include::part.adoc[encoding=UTF-16LE,opts=optional]\n\nafter\n",
-    )
-    .unwrap();
-    std::fs::write(&included, b"\x00\xd8").unwrap();
-    let output = Command::new(env!("CARGO_BIN_EXE_adoctra"))
-        .arg(&source)
-        .args(["--embedded", "--stdout"])
-        .output()
-        .unwrap();
-    assert!(output.status.success());
-    assert_eq!(
-        String::from_utf8(output.stderr).unwrap(),
-        format!(
-            "adoctra: {}:1: error: include file not readable: {}\n",
-            source.display(),
-            included.canonicalize().unwrap().display()
-        )
-    );
-    let html = String::from_utf8(output.stdout).unwrap();
-    assert!(html.contains("Unresolved directive in main.adoc"), "{html}");
-    assert!(html.contains("after"));
     std::fs::remove_dir_all(root).unwrap();
 }
 

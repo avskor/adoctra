@@ -1,5 +1,5 @@
 //! Decode include bytes before registering their UTF-8 source snapshot.
-//! Names and single-byte mappings follow the pinned Ruby reference. Multibyte
+//! Names and byte mappings follow the pinned Ruby reference. Unimplemented
 //! legacy encodings require a host decoder; never mistake a known unsupported
 //! encoding for an unknown name (which Ruby ignores).
 use crate::{BinaryResource, Resource, ResourceError, ResourceErrorKind, ResourceResult};
@@ -14,6 +14,7 @@ enum Encoding {
     Utf16(Option<bool>),
     Utf32(Option<bool>),
     Single(&'static [u32]),
+    Japanese { table: &'static [u64], sjis: bool },
     Unavailable,
     Unsupported,
 }
@@ -23,7 +24,8 @@ impl BinaryResource {
     /// as in Ruby. UTF-16 BOM detection applies to default/UTF-8 and BINARY;
     /// explicit other encodings take precedence. BOM and CR/LF are retained in
     /// the UTF-8 snapshot for the parser's existing normalization and spans.
-    /// Known legacy multibyte encodings unsupported here return `Unsupported`;
+    /// Japanese Shift_JIS/EUC-JP families use the reference's byte mappings.
+    /// Other known legacy encodings unsupported here return `Unsupported`;
     /// a host may implement them in `ResourceProvider::load_with_encoding`.
     pub fn decode(self, encoding: Option<&str>) -> ResourceResult<Resource> {
         let name = encoding.unwrap_or_default().to_ascii_lowercase();
@@ -77,6 +79,40 @@ impl BinaryResource {
                         table[usize::from(byte) - (256 - table.len())]
                     };
                     text.push(char::from_u32(value).ok_or_else(invalid)?);
+                }
+                text
+            }
+            Encoding::Japanese { table, sjis } => {
+                let mut text = String::with_capacity(bytes.len());
+                let mut remaining = bytes.as_slice();
+                while let Some(&first) = remaining.first() {
+                    if first < 128 {
+                        text.push(char::from(first));
+                        remaining = &remaining[1..];
+                        continue;
+                    }
+                    let width = if sjis {
+                        match first {
+                            0xa1..=0xdf => 1,
+                            0x81..=0x9f | 0xe0..=0xfc => 2,
+                            _ => return Err(invalid()),
+                        }
+                    } else {
+                        match first {
+                            0x8e | 0xa1..=0xfe => 2,
+                            0x8f => 3,
+                            _ => return Err(invalid()),
+                        }
+                    };
+                    let sequence = remaining.get(..width).ok_or_else(invalid)?;
+                    let key = sequence
+                        .iter()
+                        .fold(0_u64, |key, byte| (key << 8) | u64::from(*byte));
+                    let index = table
+                        .binary_search_by_key(&key, |entry| entry >> 32)
+                        .map_err(|_| invalid())?;
+                    text.push(char::from_u32(table[index] as u32).ok_or_else(invalid)?);
+                    remaining = &remaining[width..];
                 }
                 text
             }
@@ -259,12 +295,145 @@ mod tests {
         );
         // These are recognized names, not misspellings that may fall back to UTF-8.
         assert_eq!(
-            decode(b"ASCII", Some("Shift_JIS")).unwrap_err().kind,
+            decode(b"ASCII", Some("GB18030")).unwrap_err().kind,
             ResourceErrorKind::Unsupported
         );
         assert_eq!(
             decode(b"ASCII", Some("Windows-1258")).unwrap_err().kind,
             ResourceErrorKind::InvalidEncoding
         );
+    }
+
+    #[test]
+    fn japanese_codecs_preserve_reference_variants_and_aliases() {
+        for (label, bytes, expected) in [
+            (
+                "Shift_JIS",
+                &b"\x81\x5c\x81\x60\x81\x61\x81\x7c\x81\x91\x81\x92\x81\xca"[..],
+                "—〜‖−¢£¬",
+            ),
+            (
+                "sHiFt_JiS",
+                &b"\x93\xfa\x96\x7b\x8c\xea \xb1\\~\r\n"[..],
+                "日本語 ｱ\\~\r\n",
+            ),
+            (
+                "EUC-JP",
+                &b"\xa1\xc1\xa1\xc2\xa1\xdd\xa1\xf1\xa1\xf2\xa2\xcc\x8f\xa2\xaf"[..],
+                "〜‖−¢£¬˘",
+            ),
+            (
+                "eucJP-ms",
+                &b"\xa1\xc1\xa1\xc2\xa1\xdd\xa1\xf1\xa1\xf2\xa2\xcc\x8f\xf3\xf3"[..],
+                "～∥－￠￡￢ⅰ",
+            ),
+            (
+                "CP51932",
+                &b"\xa1\xc1\xa1\xc2\xa1\xdd\xa1\xf1\xa1\xf2\xa2\xcc"[..],
+                "～∥－￠￡￢",
+            ),
+        ] {
+            assert_eq!(
+                decode(bytes, Some(label)).unwrap().text,
+                expected,
+                "{label}"
+            );
+        }
+        // Ruby's SJIS alias means Windows-31J, not strict Shift_JIS.
+        for name in ["Windows-31J", "CP932", "csWindows31J", "PCK", "SJIS"] {
+            assert_eq!(
+                decode(b"\x81\x5c\x81\x60\xfa\x40\xf0\x40", Some(name))
+                    .unwrap()
+                    .text,
+                "―～ⅰ\u{e000}",
+                "{name}"
+            );
+        }
+        for name in ["eucJP", "EUC-JP-MS", "eucJP-ms", "CP51932"] {
+            assert_eq!(
+                decode(b"\xc6\xfc\xcb\xdc\xb8\xec \x8e\xb1\\~\r\n", Some(name))
+                    .unwrap()
+                    .text,
+                "日本語 ｱ\\~\r\n",
+                "{name}"
+            );
+        }
+    }
+
+    #[test]
+    fn japanese_decoding_matches_exhaustive_ruby_fingerprints() {
+        // Ruby 3.3.8, pinned Asciidoctor environment. Regenerate independently:
+        // ruby scripts/generate_encodings.rb --fingerprints
+        // All single bytes and pairs, plus every 8f-prefixed triple for EUC.
+        for (name, expected, euc) in [
+            ("Shift_JIS", 0xfcf4d82721c2f680_u64, false),
+            ("Windows-31J", 0x800435c6fe305fcd, false),
+            ("EUC-JP", 0x588386992351e229, true),
+            ("eucJP-ms", 0x2d57700417373809, true),
+            ("CP51932", 0x8a0af9cc4847e1c0, true),
+        ] {
+            let mut hash = 0xcbf29ce484222325_u64;
+            let mut feed = |byte| {
+                hash = (hash ^ u64::from(byte)).wrapping_mul(0x100000001b3);
+            };
+            let mut check = |bytes: &[u8]| match decode(bytes, Some(name)) {
+                Ok(resource) => {
+                    feed(1_u8);
+                    for byte in resource.text.bytes() {
+                        feed(byte);
+                    }
+                    feed(255);
+                }
+                Err(error) => {
+                    assert_eq!(error.kind, ResourceErrorKind::InvalidEncoding);
+                    feed(0);
+                }
+            };
+            check(&[]);
+            for a in 0..=255 {
+                check(&[a]);
+            }
+            for a in 0..=255 {
+                for b in 0..=255 {
+                    check(&[a, b]);
+                }
+            }
+            if euc {
+                for a in 0..=255 {
+                    for b in 0..=255 {
+                        check(&[0x8f, a, b]);
+                    }
+                }
+            }
+            assert_eq!(hash, expected, "{name}");
+        }
+    }
+
+    #[test]
+    fn japanese_codecs_reject_incomplete_invalid_and_unmapped_sequences() {
+        for (name, bad) in [
+            ("Shift_JIS", &b"\x81"[..]),
+            ("Shift_JIS", &b"\x81\x7f"[..]),
+            ("Shift_JIS", &b"\xfa\x40"[..]),
+            ("Windows-31J", &b"\xfc\xfc"[..]),
+            ("Windows-31J", &b"\x80"[..]),
+            ("EUC-JP", &b"\x8e"[..]),
+            ("EUC-JP", &b"\x8e\xe0"[..]),
+            ("EUC-JP", &b"\x8f\xa2"[..]),
+            ("EUC-JP", &b"\x8f\xf3\xf3"[..]),
+            ("eucJP-ms", &b"\x8f\xa0\xa1"[..]),
+            ("CP51932", &b"\x8f\xa2\xaf"[..]),
+        ] {
+            for prefix in [&b""[..], &b"good\r\n"[..]] {
+                let bytes = [prefix, bad].concat();
+                let error = decode(&bytes, Some(name)).unwrap_err();
+                assert_eq!(
+                    error.kind,
+                    ResourceErrorKind::InvalidEncoding,
+                    "{name}: {bad:?}"
+                );
+                assert_eq!(error.target, "/part.adoc");
+            }
+        }
     }
 }

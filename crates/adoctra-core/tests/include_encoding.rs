@@ -21,14 +21,28 @@ fn setup(source: &str) -> (MemoryResources, SourceMap, ParseOptions) {
 #[test]
 fn encoded_include_selection_keeps_decoded_utf8_spans_and_physical_lines() {
     for selector in ["tag=body", "lines=3"] {
-        for encoding in ["UTF-16LE", "CP1251"] {
+        for (encoding, glyph) in [
+            ("UTF-16LE", &b""[..]),
+            ("CP1251", &b"\xc6"[..]),
+            ("Shift_JIS", &b"\x84\x47"[..]),
+            ("Windows-31J", &b"\x84\x47"[..]),
+            ("EUC-JP", &b"\xa7\xa8"[..]),
+            ("eucJP-ms", &b"\xa7\xa8"[..]),
+            ("CP51932", &b"\xa7\xa8"[..]),
+        ] {
             let root = format!(":attribute-missing: warn\n:codec: {encoding}\n\ninclude::part.adoc[encoding={{codec}},{selector},indent=0]");
             let text = "ignored\r\n// tag::body[]\r\n  Ж {missing}\r\n// end::body[]\r\n";
             let bytes: Vec<u8> = if encoding == "UTF-16LE" {
                 text.encode_utf16().flat_map(u16::to_le_bytes).collect()
             } else {
                 text.chars()
-                    .map(|ch| if ch == 'Ж' { 0xc6 } else { ch as u8 })
+                    .flat_map(|ch| {
+                        if ch == 'Ж' {
+                            glyph.to_vec()
+                        } else {
+                            vec![ch as u8]
+                        }
+                    })
                     .collect()
             };
             let (mut resources, mut sources, options) = setup(&root);
@@ -95,6 +109,55 @@ fn repeated_include_decodings_have_independent_immutable_snapshots() {
     assert_eq!(error.kind, ResourceErrorKind::InvalidEncoding);
     assert!(sources.get(SourceId(3)).is_none());
     assert_eq!(sources.get(SourceId(1)).unwrap().text(), "é");
+}
+
+#[test]
+fn japanese_variant_snapshots_keep_their_own_text_and_aliases_reuse_sources() {
+    let (mut resources, mut sources, options) = setup(
+        "include::part.adoc[encoding=Shift_JIS]\n\ninclude::part.adoc[encoding=SJIS]\n\ninclude::part.adoc[encoding=CP932]",
+    );
+    resources
+        .insert_binary("/docs/part.adoc", b"\x81\x60\r\n")
+        .unwrap();
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty());
+    assert_eq!(sources.get(SourceId(1)).unwrap().text(), "〜\r\n");
+    assert_eq!(sources.get(SourceId(2)).unwrap().text(), "～\r\n");
+    assert!(sources.get(SourceId(3)).is_none());
+    let blocks = result.document.flat_blocks();
+    assert_eq!(
+        blocks.iter().map(|b| b.span.source_id).collect::<Vec<_>>(),
+        [SourceId(1), SourceId(2), SourceId(2)]
+    );
+    for (block, expected) in blocks.iter().zip(["〜", "～", "～"]) {
+        assert_eq!(sources.slice(block.span).unwrap().trim(), expected);
+    }
+}
+
+#[test]
+fn invalid_japanese_includes_report_the_directive_without_registering_a_source() {
+    for (encoding, bytes) in [
+        ("Shift_JIS", &b"\x81"[..]),
+        ("Windows-31J", &b"\xfc\xfc"[..]),
+        ("EUC-JP", &b"\x8f\xa2"[..]),
+        ("eucJP-ms", &b"\x8e\xe0"[..]),
+        ("CP51932", &b"\x8f\xa2\xaf"[..]),
+    ] {
+        let directive = format!("include::part.adoc[encoding={encoding},opts=optional]");
+        let (mut resources, mut sources, options) =
+            setup(&format!("before\n\n{directive}\n\nafter"));
+        resources.insert_binary("/docs/part.adoc", bytes).unwrap();
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        assert_eq!(result.diagnostics.len(), 1, "{encoding}");
+        let diagnostic = &result.diagnostics[0];
+        assert_eq!(
+            diagnostic.report.message.as_deref(),
+            Some("include file not readable: /docs/part.adoc")
+        );
+        assert_eq!(sources.slice(diagnostic.span), Some(directive.as_str()));
+        assert!(sources.get(SourceId(1)).is_none());
+        assert_eq!(result.document.flat_blocks().len(), 3);
+    }
 }
 
 #[test]

@@ -141,7 +141,8 @@ completed requirements. Ruby API/extension execution remains outside the
 existing document-processing contract; do not describe that scoped contract
 as unrestricted replacement of Asciidoctor. Do not resume allocation
 micro-optimizations as the next task. Include encoding now supports Unicode and
-53 single-byte codecs. Remaining include work is legacy multibyte decoding,
+53 single-byte codecs, plus Shift_JIS, Windows-31J, EUC-JP, eucJP-ms and CP51932.
+Remaining include work is other legacy multibyte decoding,
 selection/validation ordering on malformed bytes and the documented URI/jail gaps.
 
 The accepted compatibility roadmap and continuation status live in
@@ -1110,11 +1111,15 @@ keeps text-only providers working; hosts can override it for other codecs.
 SourceMap registers the decoded UTF-8 snapshot, so spans are offsets in that
 snapshot, not offsets in the original non-UTF-8 file. Names and text jointly
 identify reusable snapshots. BOM/CRLF are retained for existing normalization.
-Unicode and 53 single-byte codecs use std-only decoding with mappings generated
+Unicode, 53 single-byte codecs and five Japanese multibyte codecs use std-only decoding with mappings generated
 by `scripts/generate_encodings.rb` from the pinned Ruby environment. Unknown
 names fall back to UTF-8 like Ruby; known unsupported multibyte names fail
 explicitly, and codecs unavailable in the reference fail as unreadable.
-Legacy multibyte codecs and Ruby's lazy validation of unselected malformed
+Japanese variants retain Ruby's distinct mappings (notably SJIS aliases
+Windows-31J, not Shift_JIS); malformed and unmapped sequences are unreadable.
+The decoder's exhaustive short-input fingerprints can be reproduced with
+`ruby scripts/generate_encodings.rb --fingerprints`. Other legacy multibyte
+codecs and Ruby's lazy validation of unselected malformed
 bytes remain open; never claim that the entire encoding surface is covered.
 Binary fixtures use `binary_resources` (hex bytes) in the minimal corpus.
 Ordinary/intrinsic attribute substitution runs once

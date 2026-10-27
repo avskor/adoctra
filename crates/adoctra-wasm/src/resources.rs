@@ -171,6 +171,38 @@ mod tests {
     }
 
     #[test]
+    fn japanese_includes_export_utf8_offsets_and_preserve_variant_snapshots() {
+        let mut workspace = ResourceWorkspace::new();
+        workspace.set("/main.adoc", "include::part.adoc[encoding=Shift_JIS,lines=2]\n\ninclude::part.adoc[encoding=SJIS,lines=2]").unwrap();
+        workspace
+            .set_binary("/part.adoc", b"ignored\r\n*\x95\x5c\x81\x60*\r\n")
+            .unwrap();
+        let main = workspace.load("/main.adoc", None).unwrap();
+        let json = workspace.parse_json(main).unwrap();
+        assert!(json.contains(r#""diagnostics":[]"#), "{json}");
+        assert!(json.contains("表〜"), "{json}");
+        assert!(json.contains("表～"), "{json}");
+        assert_eq!(workspace.source(1).unwrap().text(), "ignored\r\n*表〜*\r\n");
+        assert_eq!(workspace.source(2).unwrap().text(), "ignored\r\n*表～*\r\n");
+        let tokens = workspace.tokens_json(main).unwrap();
+        assert!(tokens.contains(r#""start":9,"end":17"#), "{tokens}");
+        assert!(tokens.contains(r#""source_id":1"#), "{tokens}");
+        assert!(tokens.contains(r#""source_id":2"#), "{tokens}");
+
+        workspace
+            .set("/main.adoc", "include::part.adoc[encoding=EUC-JP,lines=2]")
+            .unwrap();
+        workspace
+            .set_binary("/part.adoc", b"ignored\r\n*\xc9\xbd\x8f\xa2\xaf*\r\n")
+            .unwrap();
+        let updated_main = workspace.load("/main.adoc", None).unwrap();
+        let updated = workspace.parse_json(updated_main).unwrap();
+        assert!(updated.contains("表˘"), "{updated}");
+        assert!(updated.contains(r#""diagnostics":[]"#), "{updated}");
+        assert_eq!(workspace.source(1).unwrap().text(), "ignored\r\n*表〜*\r\n");
+    }
+
+    #[test]
     fn binary_buffers_embed_images_with_data_uri() {
         let mut workspace = ResourceWorkspace::new();
         workspace
