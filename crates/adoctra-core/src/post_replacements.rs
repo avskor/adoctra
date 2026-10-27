@@ -32,6 +32,64 @@ pub(crate) fn apply(text: Text, hardbreaks: bool, right_edge: bool) -> Text {
         }
         start += line.len();
     }
+    if copied == 0 {
+        return text;
+    }
     text.copy(copied..text.text.len(), &mut out);
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::substitution_text::tests::{assert_reused, marked_text};
+    use crate::{SourceId, Span};
+
+    #[test]
+    fn unchanged_break_stage_reuses_buffers_for_both_modes_and_edges() {
+        for hardbreaks in [false, true] {
+            for right_edge in [false, true] {
+                for source in ["Ж🙂 & text", "plus + in text"] {
+                    assert_reused(marked_text(source), |text| {
+                        apply(text, hardbreaks, right_edge)
+                    });
+                }
+            }
+        }
+        assert_reused(marked_text("Ж🙂\r\nnext\n"), |text| {
+            apply(text, false, true)
+        });
+        for (hardbreaks, right_edge) in [(true, true), (true, false), (false, false)] {
+            let mut text = Text::default();
+            text.append_source("Ж🙂 +", false, 2, Span::in_source(SourceId(7), 10, 18));
+            assert_reused(text, |text| apply(text, hardbreaks, right_edge));
+        }
+    }
+
+    #[test]
+    fn break_marker_across_fragments_still_changes_text_and_keeps_its_origin() {
+        let source = Span::in_source(SourceId(7), 10, 17);
+        let attribute = Span::in_source(SourceId(8), 50, 57);
+        let mut text = Text::default();
+        text.append_source("Ж🙂 ", false, 2, source);
+        text.append_part(&AttributePart::Text("+".into()), 3, attribute);
+        let result = apply(text, false, true);
+        let linebreak = result
+            .fragments
+            .iter()
+            .find(|(_, f)| f.part == Some(AttributePart::LineBreak))
+            .unwrap();
+        assert_eq!(linebreak.1.owner, 2);
+        assert_eq!(linebreak.1.span.source_id, source.source_id);
+        assert_eq!(
+            result.into_parts(),
+            [AttributePart::Text("Ж🙂".into()), AttributePart::LineBreak]
+        );
+        for (source, hardbreaks) in [(" +", false), ("\n", true)] {
+            let text = Text::from_parts(&[AttributePart::Text(source.into())]);
+            assert!(apply(text, hardbreaks, true)
+                .into_parts()
+                .contains(&AttributePart::LineBreak));
+        }
+    }
 }

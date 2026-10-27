@@ -245,6 +245,13 @@ must isolate plain/semantic writes, removals and case-sensitive counters.
 Removing an absent key must not detach either table. Public value/parts APIs,
 deterministic iteration and snapshot semantics are unchanged. Measurements live
 in `performance/attribute-snapshots.json`; do not equate allocation volume with RSS.
+The `performance/unchanged-stages.json` study removes whole-stream copies when
+attribute expansion, quote formatting, passthrough/STEM extraction or final
+line-break substitution makes no match. Use the scanner's consumed position,
+not equal output text or an empty result, to detect this: missing references
+still report diagnostics, and invisible counter/set expressions have effects.
+Check attribute braces in the assembled stream, preserving metadata, source
+owners and zero-length parts. The six new core tests cover these boundaries.
 
 `compatibility/acceptance/positions.json` uses `diagnostic-positions-v1`:
 18 original probes, all PASS. Ruby `--diagnostic-positions` exports

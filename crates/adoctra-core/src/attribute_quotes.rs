@@ -280,6 +280,9 @@ fn apply_stage(
         copied = end;
         at = end;
     }
+    if copied == 0 {
+        return text;
+    }
     text.copy(copied..src.len(), &mut output);
     output
 }
@@ -320,4 +323,43 @@ pub(crate) fn parse_attributes(
         Some(roles.replace('.', " "))
     };
     ((!id.is_empty()).then(|| id.to_owned()), role)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::substitution_text::tests::{assert_reused, marked_text};
+
+    #[test]
+    fn unmatched_quote_stages_reuse_buffers_and_preserve_metadata() {
+        for source in [
+            "Ж🙂 & text\r\n",
+            "*a *b",
+            "**",
+            "_unfinished",
+            "\\*unfinished",
+            "`unfinished",
+            "^a b^",
+            "~a b~",
+        ] {
+            for compat in [false, true] {
+                let attrs = crate::Attributes::new();
+                let mut evaluation = Evaluation::read_only(&attrs);
+                let mut quotes = Vec::new();
+                let mut diagnostics = Vec::new();
+                assert_reused(marked_text(source), |text| {
+                    apply_text(
+                        text,
+                        compat,
+                        &mut evaluation,
+                        &mut quotes,
+                        true,
+                        &mut diagnostics,
+                    )
+                });
+                assert!(quotes.is_empty());
+                assert!(diagnostics.is_empty());
+            }
+        }
+    }
 }

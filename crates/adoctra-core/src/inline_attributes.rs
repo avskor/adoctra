@@ -116,6 +116,11 @@ fn apply_with_policy(
     fixed_policy: bool,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> (Text, Vec<Reference>) {
+    // Both ordinary references and stateful expressions need a brace pair in
+    // the assembled lexical stream, possibly supplied by different fragments.
+    if !text.text.contains('{') || !text.text.contains('}') {
+        return (text, Vec::new());
+    }
     let mut output = Text::default();
     let mut refs = Vec::new();
     let mut dropped = Vec::new();
@@ -252,6 +257,9 @@ fn apply_with_policy(
         copied = end;
         at = end;
     }
+    if copied == 0 {
+        return (text, refs);
+    }
     text.copy(copied..text.text.len(), &mut output);
     if !dropped.is_empty() {
         let mut retained = Text::default();
@@ -342,6 +350,82 @@ pub(crate) fn nodes(text: Text, refs: Vec<Reference>) -> Vec<Inline> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn unmatched_attribute_stage_reuses_buffers_without_effects_or_diagnostics() {
+        use crate::substitution_text::tests::{assert_reused, marked_text};
+        for source in [
+            "Ж🙂 & text\r\n",
+            "{unfinished",
+            "stray}",
+            "{} {bad name}",
+            "{counter:n",
+        ] {
+            for policy in ["skip", "warn", "drop", "drop-line"] {
+                for stateful in [false, true] {
+                    let attrs = crate::Attributes::new();
+                    let locked = std::collections::BTreeSet::new();
+                    let mut counters = std::collections::BTreeMap::new();
+                    let mut evaluation = if stateful {
+                        Evaluation::definition(&attrs, &locked, &mut counters, false)
+                    } else {
+                        Evaluation::read_only(&attrs)
+                    };
+                    let mut diagnostics = Vec::new();
+                    assert_reused(marked_text(source), |text| {
+                        let (result, refs) = apply_with_policy(
+                            text,
+                            &mut evaluation,
+                            policy,
+                            false,
+                            &mut diagnostics,
+                        );
+                        assert!(refs.is_empty());
+                        result
+                    });
+                    assert!(evaluation.changed_attributes().is_none());
+                    assert!(counters.is_empty());
+                    assert!(diagnostics.is_empty());
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn matched_attributes_keep_reports_and_effects_even_without_visible_changes() {
+        let attrs = crate::Attributes::new();
+        let locked = std::collections::BTreeSet::new();
+        let mut counters = std::collections::BTreeMap::new();
+        let mut evaluation = Evaluation::definition(&attrs, &locked, &mut counters, false);
+        let span = Span::in_source(crate::SourceId(7), 10, 22);
+        let mut diagnostics = Vec::new();
+        let mut text = Text::default();
+        text.append_part(&P::Text("{counter2:".into()), 0, span);
+        text.append_part(&P::Text("n}".into()), 1, span);
+        let (result, refs) =
+            apply_with_policy(text, &mut evaluation, "skip", false, &mut diagnostics);
+        assert!(result.text.is_empty());
+        assert_eq!(refs.len(), 1);
+        assert_eq!(refs[0].span, span);
+        assert_eq!(evaluation.get("n"), Some("1"));
+
+        let text = Text::from_parts_at(&[P::Text("{missing}".into())], span);
+        let (result, refs) =
+            apply_with_policy(text, &mut evaluation, "warn", true, &mut diagnostics);
+        assert_eq!(result.text, "{missing}");
+        assert_eq!(refs.len(), 1);
+        assert!(refs[0].missing);
+        assert_eq!(refs[0].span, span);
+        assert_eq!(diagnostics.len(), 1);
+        assert_eq!(diagnostics[0].span, span);
+
+        let text = Text::from_parts_at(&[P::Text("\\{n}".into())], span);
+        let (result, refs) =
+            apply_with_policy(text, &mut evaluation, "skip", false, &mut diagnostics);
+        assert_eq!(result.text, "{n}");
+        assert!(refs.is_empty());
+        assert_eq!(evaluation.get("n"), Some("1"));
+    }
     use crate::Attributes;
 
     #[test]

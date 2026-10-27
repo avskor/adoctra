@@ -178,6 +178,9 @@ impl Passes {
             copied = m.end;
             at = m.end;
         }
+        if copied == 0 {
+            return text;
+        }
         text.copy(copied..src.len(), &mut output);
         output
     }
@@ -261,6 +264,9 @@ impl Passes {
             }
             at = end;
             copied = end;
+        }
+        if copied == 0 {
+            return text;
         }
         text.copy(copied..src.len(), &mut output);
         output
@@ -896,5 +902,39 @@ impl Index {
             mono,
             macro_form: false,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::substitution_text::tests::{assert_reused, marked_text};
+
+    #[test]
+    fn unmatched_pass_and_stem_stages_reuse_buffers_without_registering_slots() {
+        for source in [
+            "Ж🙂 & text\r\n",
+            "+ unfinished",
+            "++",
+            "$$",
+            "\\+unfinished",
+            "pass:q[unfinished",
+            "stem:[]",
+            "latexmath:unfinished",
+        ] {
+            for compat in [false, true] {
+                let attrs = crate::Attributes::new();
+                let mut evaluation = Evaluation::read_only(&attrs);
+                let (_, mut passes) = Passes::extract("", 0, &mut evaluation, compat);
+                assert_reused(marked_text(source), |mut text| {
+                    for constrained in [false, true] {
+                        text = passes.stage(text, &mut evaluation, compat, constrained);
+                    }
+                    passes.stem_stage(text, &evaluation)
+                });
+                assert!(passes.slots.is_empty());
+                assert!(passes.diagnostics.is_empty());
+            }
+        }
     }
 }

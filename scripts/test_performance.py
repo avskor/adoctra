@@ -264,7 +264,14 @@ class PerformanceTests(unittest.TestCase):
 
     def test_attribute_snapshot_study_preserves_inputs_samples_and_allocation_evidence(self):
         report = json.loads((perf.ROOT / 'performance/attribute-snapshots.json').read_text())
-        self.assert_study_timings(report, 'adoctra-attribute-snapshot-study-v1')
+        self.assert_paired_native_study(report, 'adoctra-attribute-snapshot-study-v1')
+
+    def test_unchanged_stage_study_preserves_inputs_samples_and_allocation_evidence(self):
+        report = json.loads((perf.ROOT / 'performance/unchanged-stages.json').read_text())
+        self.assert_paired_native_study(report, 'adoctra-unchanged-stage-study-v1')
+
+    def assert_paired_native_study(self, report, schema):
+        self.assert_study_timings(report, schema)
         self.assert_study_allocations(report)
         self.assertEqual(len(report['runs']), 6)
         self.assertEqual([run['variant'] for run in report['runs']],

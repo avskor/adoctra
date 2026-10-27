@@ -877,9 +877,68 @@ pub(crate) fn write_back(nodes: Vec<Inline>, mut text: Text, fold_newlines: bool
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use crate::{AttributeFormat, SourceId};
+
+    /// A mixed stream with physical origins, transformed attribute metadata and
+    /// a trailing zero-width value. Used to check no-op substitution stages.
+    pub(crate) fn marked_text(source: &str) -> Text {
+        let mut text = Text::default();
+        text.append_source(
+            source,
+            false,
+            3,
+            Span {
+                provenance: Some(2),
+                ..Span::in_source(SourceId(7), 13, 13 + source.len())
+            },
+        );
+        let attribute = Span::in_source(SourceId(8), 50, 57);
+        for part in [
+            AttributePart::OpenWithAttributes {
+                format: AttributeFormat::Strong,
+                id: Some("keep".into()),
+                role: Some("plain".into()),
+            },
+            AttributePart::Text("Attribute Ж🙂".into()),
+            AttributePart::Close(AttributeFormat::Strong),
+            AttributePart::IndexTerm(Box::new(crate::IndexTerm {
+                text: None,
+                terms: vec!["hidden".into()],
+                see: None,
+                see_also: vec![],
+            })),
+        ] {
+            text.append_part(&part, 4, attribute);
+        }
+        text
+    }
+
+    pub(crate) fn assert_reused(text: Text, transform: impl FnOnce(Text) -> Text) {
+        let expected = text.clone().into_parts();
+        let lexical = text.text.clone();
+        let owners: Vec<_> = text
+            .fragments
+            .iter()
+            .map(|(r, f)| (r.clone(), f.owner, f.span))
+            .collect();
+        let text_buffer = text.text.as_ptr();
+        let fragment_buffer = text.fragments.as_ptr();
+        let result = transform(text);
+        assert_eq!(result.text.as_ptr(), text_buffer, "{lexical}");
+        assert_eq!(result.fragments.as_ptr(), fragment_buffer, "{lexical}");
+        assert_eq!(result.text, lexical);
+        assert_eq!(
+            result
+                .fragments
+                .iter()
+                .map(|(r, f)| (r.clone(), f.owner, f.span))
+                .collect::<Vec<_>>(),
+            owners
+        );
+        assert_eq!(result.into_parts(), expected);
+    }
 
     #[test]
     fn match_origins_keep_encoded_unicode_and_attribute_ownership() {
