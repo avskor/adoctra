@@ -270,6 +270,17 @@ class PerformanceTests(unittest.TestCase):
         report = json.loads((perf.ROOT / 'performance/unchanged-stages.json').read_text())
         self.assert_paired_native_study(report, 'adoctra-unchanged-stage-study-v1')
 
+    def test_source_protection_study_preserves_inputs_samples_and_allocation_evidence(self):
+        report = json.loads((perf.ROOT / 'performance/source-protection.json').read_text())
+        self.assert_paired_native_study(report, 'adoctra-source-protection-study-v1', ('paired', 'focused'))
+        self.assertEqual(set(report['summary']['focused']),
+                         {'asciidoctor-docs-custom-converter', 'stress-references-512'})
+        for run in report['runs']:
+            if run['series'] == 'focused':
+                self.assertEqual(run['settings'], {'warmup': 4, 'samples': 9, 'iterations': 10})
+        self.assert_study_process_times(report, 'stress-references-512', 'tokens',
+                                        {'warmup': 20, 'samples': 1, 'iterations': 200})
+
     def test_owned_part_study_preserves_inputs_samples_and_allocation_evidence(self):
         report = json.loads((perf.ROOT / 'performance/owned-parts.json').read_text())
         self.assert_paired_native_study(report, 'adoctra-owned-part-study-v1', ('paired', 'focused'))
@@ -278,12 +289,16 @@ class PerformanceTests(unittest.TestCase):
         for run in report['runs']:
             if run['series'] == 'focused':
                 self.assertEqual(run['settings'], {'warmup': 4, 'samples': 9, 'iterations': 10})
+        self.assert_study_process_times(report, 'stress-incomplete-128', 'parse',
+                                        {'warmup': 20, 'samples': 1, 'iterations': 2000})
+
+    def assert_study_process_times(self, report, ident, operation, settings):
         process = report['process_times']
-        self.assertEqual(process['id'], 'stress-incomplete-128')
-        self.assertEqual(process['operation'], 'parse')
+        self.assertEqual(process['id'], ident)
+        self.assertEqual(process['operation'], operation)
         workload = next(case for case in report['workloads'] if case['id'] == process['id'])
         self.assertEqual(process['source_sha256'], workload['input']['source_sha256'])
-        self.assertEqual(process['settings'], {'warmup': 20, 'samples': 1, 'iterations': 2000})
+        self.assertEqual(process['settings'], settings)
         self.assertEqual([run['variant'] for run in process['runs']],
                          ['before', 'after', 'after', 'before', 'before', 'after'])
         for run in process['runs']:

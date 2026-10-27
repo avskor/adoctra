@@ -104,6 +104,29 @@ pub(crate) struct Text {
 }
 
 impl Text {
+    /// Protect the source-only stream after passthrough/STEM extraction. At
+    /// this point fragments contain source spelling or private slot keys, not
+    /// semantic parts. Match append_source's mapping even for transformed keys
+    /// whose byte length happens to equal their physical span.
+    pub fn protect_source(mut self) -> Self {
+        if !self.text.contains(['&', '<', '>']) {
+            for (_, fragment) in &mut self.fragments {
+                debug_assert!(fragment.part.is_none() && fragment.boundary.is_none());
+                debug_assert!(fragment.ui.is_none() && fragment.decoded.is_none());
+                fragment.raw = false;
+                fragment.owner = 0;
+                fragment.exact = fragment.span.end - fragment.span.start == fragment.text.len();
+                fragment.extend_span = true;
+            }
+            return self;
+        }
+        let mut escaped = Self::default();
+        for fragment in self.into_fragments() {
+            escaped.append_source(&fragment.text, false, 0, fragment.span);
+        }
+        escaped
+    }
+
     /// A source text node may already have undergone replacements. Its byte
     /// mapping is then coarse, but a macro starting here still covers later
     /// source constructs it consumes.
@@ -1013,6 +1036,89 @@ pub(crate) mod tests {
                 matches!(&result[4], Inline::AttributeRef { value: Some(value), parts, span, .. }
                 if value.is_empty() && parts.is_empty() && *span == empty_span)
             );
+        }
+    }
+
+    #[test]
+    fn source_protection_reuses_plain_buffers_and_resets_transformed_mapping() {
+        for newline in ["\n", "\r\n"] {
+            let mut text = Text::default();
+            let source = format!("Ж🙂{newline}plain");
+            let span = Span {
+                provenance: Some(2),
+                ..Span::in_source(SourceId(7), 13, 13 + source.len())
+            };
+            text.append_source(&source, true, 0, span);
+            // Like extracted slot keys: coarse mapping, including the case
+            // where the replacement and the source have equal byte lengths.
+            text.append("key", true, 0, Span::in_source(SourceId(7), 50, 53), false);
+            text.append("slot", true, 0, Span::in_source(SourceId(7), 60, 80), false);
+            let lexical_buffer = text.text.as_ptr();
+            let fragments_buffer = text.fragments.as_ptr();
+            let buffers: Vec<_> = text
+                .fragments
+                .iter()
+                .map(|(_, f)| f.text.as_ptr())
+                .collect();
+            let text = text.protect_source();
+            assert_eq!(text.text.as_ptr(), lexical_buffer);
+            assert_eq!(text.fragments.as_ptr(), fragments_buffer);
+            assert_eq!(
+                text.fragments
+                    .iter()
+                    .map(|(_, f)| f.text.as_ptr())
+                    .collect::<Vec<_>>(),
+                buffers
+            );
+            assert!(text
+                .fragments
+                .iter()
+                .all(|(_, f)| !f.raw && f.extend_span && f.owner == 0));
+            assert!(text.fragments[0].1.exact);
+            assert!(text.fragments[1].1.exact);
+            assert!(!text.fragments[2].1.exact);
+            assert_eq!(text.match_span(0..2), Span { end: 15, ..span });
+            assert_eq!(
+                text.match_span(source.len() + 1..source.len() + 2),
+                Span::in_source(SourceId(7), 51, 52)
+            );
+            assert_eq!(
+                text.match_span(source.len() + 3..source.len() + 4),
+                Span::in_source(SourceId(7), 60, 80)
+            );
+            assert_eq!(
+                text.into_parts(),
+                vec![AttributePart::Text(format!("{source}keyslot"))]
+            );
+        }
+        assert!(Text::default().protect_source().fragments.is_empty());
+    }
+
+    #[test]
+    fn source_protection_encodes_specials_and_keeps_physical_unicode_spans() {
+        for source in ["Ж🙂 &<>\n", "Ж🙂 &amp;\r\n", "&", "<", ">"] {
+            let mut text = Text::default();
+            let span = Span::in_source(SourceId(4), 10, 10 + source.len());
+            text.append_source(source, true, 0, span);
+            let text = text.protect_source();
+            assert_eq!(
+                text.text,
+                source
+                    .replace('&', "&amp;")
+                    .replace('<', "&lt;")
+                    .replace('>', "&gt;")
+            );
+            for (range, fragment) in &text.fragments {
+                assert_eq!(text.match_span(range.clone()), fragment.span);
+                assert_eq!(fragment.owner, 0);
+                assert!(!fragment.raw);
+                assert_eq!(fragment.span.source_id, span.source_id);
+                assert_eq!(
+                    &source[fragment.span.start - 10..fragment.span.end - 10],
+                    fragment.decoded.as_deref().unwrap_or(&fragment.text)
+                );
+            }
+            assert_eq!(text.into_parts(), vec![AttributePart::Text(source.into())]);
         }
     }
 

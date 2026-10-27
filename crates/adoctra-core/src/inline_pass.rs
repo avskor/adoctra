@@ -83,11 +83,7 @@ impl Passes {
             passes.evaluate_all(0, attrs, compat, 0);
         }
         // Special-character protection follows extraction, before quotes.
-        let mut escaped = Text::default();
-        for fragment in text.into_fragments() {
-            escaped.append_source(&fragment.text, false, 0, fragment.span);
-        }
-        (escaped, passes)
+        (text.protect_source(), passes)
     }
 
     fn stage(
@@ -909,6 +905,60 @@ impl Index {
 mod tests {
     use super::*;
     use crate::substitution_text::tests::{assert_reused, marked_text};
+
+    #[test]
+    fn extracted_source_protection_matches_rebuilt_stream_and_positions() {
+        for source in [
+            "Ж🙂 plain\r\ntext",
+            "Ж🙂 +raw <&>+ end",
+            "Ж🙂 pass:q[*bold*] stem:[x < y] end\r\n",
+            "Ж🙂 \\+escaped+ and \\stem:[x] end\n",
+            "Ж🙂 pass:[unfinished + and stem:[",
+            "Ж🙂 [.role]++raw++ and &amp; <tag>\r\n",
+            "\u{96} Ж🙂 +slot collision+",
+        ] {
+            for compat in [false, true] {
+                let attrs = crate::Attributes::new();
+                let mut evaluation = Evaluation::read_only(&attrs);
+                let (actual, passes) = Passes::extract(source, 17, &mut evaluation, compat);
+                let (_, mut reference_passes) = Passes::extract("", 0, &mut evaluation, compat);
+                reference_passes.prefix.clone_from(&passes.prefix);
+                let mut text = Text::default();
+                text.append_source(source, true, 0, Span::new(17, 17 + source.len()));
+                for constrained in [false, true] {
+                    text = reference_passes.stage(text, &mut evaluation, compat, constrained);
+                }
+                text = reference_passes.stem_stage(text, &evaluation);
+                let mut expected = Text::default();
+                for fragment in text.into_fragments() {
+                    expected.append_source(&fragment.text, false, 0, fragment.span);
+                }
+                assert_eq!(actual.text, expected.text, "{source}");
+                assert_eq!(actual.fragments.len(), expected.fragments.len(), "{source}");
+                for ((range, fragment), (expected_range, expected_fragment)) in
+                    actual.fragments.iter().zip(&expected.fragments)
+                {
+                    assert_eq!(range, expected_range);
+                    assert_eq!(fragment.span, expected_fragment.span);
+                    assert_eq!(fragment.owner, expected_fragment.owner);
+                    assert_eq!(fragment.raw, expected_fragment.raw);
+                }
+                for (start, ch) in actual.text.char_indices() {
+                    assert_eq!(
+                        actual.match_span(start..start + ch.len_utf8()),
+                        expected.match_span(start..start + ch.len_utf8()),
+                        "{source}"
+                    );
+                    assert_eq!(
+                        actual.match_span(start..actual.text.len()),
+                        expected.match_span(start..expected.text.len()),
+                        "{source}"
+                    );
+                }
+                assert_eq!(actual.into_parts(), expected.into_parts(), "{source}");
+            }
+        }
+    }
 
     #[test]
     fn unmatched_pass_and_stem_stages_reuse_buffers_without_registering_slots() {

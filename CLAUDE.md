@@ -261,6 +261,14 @@ consuming fragments where needed. Shared-table copy-on-write rules are unchanged
 When writing the AST, newline folding retains the owned string if it has no
 CR/LF; raw text and fields with folding disabled stay untouched. Preserve the
 existing byte-for-byte replacement of each CR and LF with one space.
+`Text::protect_source` reuses the source-only stream after passthrough/STEM
+extraction when its assembled spelling contains no `&`, `<` or `>`. It still
+resets raw protection and mapping exactly like `append_source`: slot keys can
+have the same byte length as their physical spans. This helper is for source
+fragments and private slot keys, before semantic parts/marks enter the stream;
+do not apply it to arbitrary substitution streams. Inputs containing special
+characters keep the previous rebuilding path. The paired measurements and
+allocation counters are in `performance/source-protection.json`.
 
 `compatibility/acceptance/positions.json` uses `diagnostic-positions-v1`:
 18 original probes, all PASS. Ruby `--diagnostic-positions` exports
