@@ -48,6 +48,7 @@ pub mod resource;
 mod scanner;
 mod section_numbers;
 pub mod source;
+mod source_encoding;
 mod substitution_context;
 mod substitution_text;
 mod table;

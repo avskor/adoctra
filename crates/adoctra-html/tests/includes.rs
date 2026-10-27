@@ -2,6 +2,41 @@ use adoctra_core::{parse, parse_resource, Backend, MemoryResources, ParseOptions
 use adoctra_html::HtmlBackend;
 
 #[test]
+fn encoded_includes_render_decoded_formatting_and_special_characters() {
+    let mut resources = MemoryResources::new();
+    resources
+        .insert("/main.adoc", "include::part.adoc[encoding=UTF-16LE]")
+        .unwrap();
+    let text = "*Ж🙂* & <text>\r\n";
+    resources
+        .insert_binary(
+            "/part.adoc",
+            text.encode_utf16()
+                .flat_map(u16::to_le_bytes)
+                .collect::<Vec<_>>(),
+        )
+        .unwrap();
+    let mut sources = SourceMap::new();
+    let source_id = sources.load("/main.adoc", None, &resources).unwrap();
+    let actual = parse_resource(
+        &mut sources,
+        &ParseOptions {
+            source_id,
+            ..Default::default()
+        },
+        &resources,
+    )
+    .unwrap();
+    assert!(actual.diagnostics.is_empty());
+    assert_eq!(
+        HtmlBackend::embedded().convert(&actual.document).unwrap(),
+        HtmlBackend::embedded()
+            .convert(&parse(text).document)
+            .unwrap()
+    );
+}
+
+#[test]
 fn include_options_render_the_resolved_content() {
     for (source, child, expected) in [
         (

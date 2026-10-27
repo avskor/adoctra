@@ -336,17 +336,24 @@ def run(command, source):
 
 
 def validate_resources(case):
+    binaries = case.get("binary_resources", {})
+    if not isinstance(binaries, dict):
+        raise ValueError("binary_resources must be a hex-encoded resource map")
     if "resources" not in case:
-        if case.get("profile", "body-dom-v1") != "body-dom-v1":
+        if case.get("profile", "body-dom-v1") != "body-dom-v1" or binaries:
             raise ValueError("include profile requires resources")
         return
     if case.get("profile") != "include-body-dom-v1" or not isinstance(case["resources"], dict):
         raise ValueError("resources require include-body-dom-v1")
-    for name, text in case["resources"].items():
+    if set(binaries) & set(case["resources"]):
+        raise ValueError("text and binary fixture resource names overlap")
+    for name, text in {**case["resources"], **binaries}.items():
         if (not isinstance(name, str) or not name or name == "main.adoc"
                 or name.startswith("/") or any(part in {"", ".", ".."} for part in name.split("/"))
                 or any(char in name for char in "\\:\0") or not isinstance(text, str)):
             raise ValueError(f"invalid fixture resource: {name!r}")
+        if name in binaries and re.fullmatch(r"(?:[0-9a-fA-F]{2})*", text) is None:
+            raise ValueError(f"invalid binary fixture hex: {name!r}")
 
 
 def validate_attributes(case):
@@ -379,6 +386,10 @@ def case_commands(case, binary):
             path = root / name
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(text, encoding="utf-8", newline="")
+        for name, encoded in case.get("binary_resources", {}).items():
+            path = root / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(bytes.fromhex(encoded))
         reference += ["--include-root", directory]
         actual[1] = str(root / "main.adoc")
         actual[actual.index("secure")] = "safe"

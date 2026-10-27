@@ -24,7 +24,8 @@ impl ResourceWorkspace {
         Ok(())
     }
 
-    /// A binary buffer, e.g. an image the document embeds with `data-uri`.
+    /// Original bytes of an image or an encoded include. For includes, source
+    /// ids and spans address the decoded UTF-8 snapshot returned by `source`.
     pub fn set_binary(&mut self, name: &str, bytes: &[u8]) -> ResourceResult<()> {
         self.resources.insert_binary(name, bytes)?;
         Ok(())
@@ -133,6 +134,41 @@ mod wasm {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn encoded_binary_includes_export_decoded_snapshots_ast_and_tokens() {
+        let mut workspace = ResourceWorkspace::new();
+        workspace
+            .set(
+                "/main.adoc",
+                "include::part.adoc[encoding=UTF-16LE,lines=2]",
+            )
+            .unwrap();
+        let text = "ignored\r\n*Ж🙂*\r\n";
+        let bytes: Vec<_> = text.encode_utf16().flat_map(u16::to_le_bytes).collect();
+        workspace.set_binary("/part.adoc", &bytes).unwrap();
+        let main = workspace.load("/main.adoc", None).unwrap();
+        let json = workspace.parse_json(main).unwrap();
+        assert!(json.contains(r#""diagnostics":[]"#), "{json}");
+        assert!(json.contains("Ж🙂"), "{json}");
+        assert_eq!(workspace.source(1).unwrap().text(), text);
+        assert_eq!(workspace.source(1).unwrap().name(), "/part.adoc");
+        let tokens = workspace.tokens_json(main).unwrap();
+        assert!(tokens.contains(r#""source_id":1"#), "{tokens}");
+        assert!(tokens.contains(r#""start":9,"end":17"#), "{tokens}");
+        assert_eq!(&text[9..17], "*Ж🙂*");
+        assert_eq!(workspace.source(1).unwrap().text(), text);
+        let replacement = "ignored\r\n*новый*\r\n";
+        let bytes: Vec<_> = replacement
+            .encode_utf16()
+            .flat_map(u16::to_le_bytes)
+            .collect();
+        workspace.set_binary("/part.adoc", &bytes).unwrap();
+        let updated = workspace.parse_json(main).unwrap();
+        assert!(updated.contains("новый"), "{updated}");
+        assert_eq!(workspace.source(1).unwrap().text(), text);
+        assert_eq!(workspace.source(2).unwrap().text(), replacement);
+    }
 
     #[test]
     fn binary_buffers_embed_images_with_data_uri() {

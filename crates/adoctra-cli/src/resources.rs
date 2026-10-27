@@ -96,6 +96,14 @@ impl FileResources {
 }
 
 impl ResourceProvider for FileResources {
+    fn load_with_encoding(
+        &self,
+        request: ResourceRequest<'_>,
+        encoding: Option<&str>,
+    ) -> ResourceResult<Resource> {
+        self.load_binary(request)?.decode(encoding)
+    }
+
     fn document_path(&self, name: &str) -> Option<String> {
         Some(if std::path::MAIN_SEPARATOR == '/' {
             name.to_owned()
@@ -278,6 +286,46 @@ mod tests {
         let mut sources = SourceMap::new();
         let id = sources.load("../outside.adoc", None, &provider).unwrap();
         assert_eq!(sources.get(id).unwrap().text(), "outside");
+    }
+
+    #[test]
+    fn encoding_aware_reads_preserve_access_policy_and_decode_http_bytes() {
+        use std::io::{BufRead, BufReader, Write};
+        let tree = Tree::new();
+        std::fs::write(tree.0.join("outside.adoc"), b"\xff").unwrap();
+        let provider = FileResources::new(tree.0.join("docs")).unwrap();
+        let error = provider
+            .load_with_encoding(
+                ResourceRequest {
+                    target: "../outside.adoc",
+                    referrer: None,
+                },
+                Some("ISO-8859-1"),
+            )
+            .unwrap_err();
+        assert_eq!(error.kind, ResourceErrorKind::AccessDenied);
+
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let target = format!("http://{}/part.adoc", listener.local_addr().unwrap());
+        let server = std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut line = String::new();
+            BufReader::new(&stream).read_line(&mut line).unwrap();
+            assert!(line.starts_with("GET /part.adoc "));
+            stream.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 6\r\nConnection: close\r\n\r\n\xcf\xf0\xe8\xe2\xe5\xf2").unwrap();
+        });
+        let resource = provider
+            .load_with_encoding(
+                ResourceRequest {
+                    target: &target,
+                    referrer: None,
+                },
+                Some("CP1251"),
+            )
+            .unwrap();
+        assert_eq!(resource.name, target);
+        assert_eq!(resource.text, "Привет");
+        server.join().unwrap();
     }
 
     /// A one-request-per-connection HTTP server for `paths`.

@@ -2,6 +2,51 @@
 
 use adoctra::Backend;
 
+#[test]
+fn cli_decodes_include_files_and_reports_read_errors_at_the_directive() {
+    use std::process::Command;
+    let root = std::env::temp_dir().join(format!("adoctra-cli-encodings-{}", std::process::id()));
+    std::fs::create_dir_all(&root).unwrap();
+    let source = root.join("main.adoc");
+    let included = root.join("part.adoc");
+    std::fs::write(&source, "include::part.adoc[encoding=CP1251]\n").unwrap();
+    std::fs::write(&included, b"*\xcf\xf0\xe8\xe2\xe5\xf2*\r\n").unwrap();
+    for backend in ["html", "json"] {
+        let output = Command::new(env!("CARGO_BIN_EXE_adoctra"))
+            .arg(&source)
+            .args(["--embedded", "--stdout", "--to", backend])
+            .output()
+            .unwrap();
+        assert!(output.status.success());
+        assert!(output.stderr.is_empty(), "{:?}", output.stderr);
+        assert!(String::from_utf8(output.stdout).unwrap().contains("Привет"));
+    }
+    std::fs::write(
+        &source,
+        "include::part.adoc[encoding=UTF-16LE,opts=optional]\n\nafter\n",
+    )
+    .unwrap();
+    std::fs::write(&included, b"\x00\xd8").unwrap();
+    let output = Command::new(env!("CARGO_BIN_EXE_adoctra"))
+        .arg(&source)
+        .args(["--embedded", "--stdout"])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    assert_eq!(
+        String::from_utf8(output.stderr).unwrap(),
+        format!(
+            "adoctra: {}:1: error: include file not readable: {}\n",
+            source.display(),
+            included.canonicalize().unwrap().display()
+        )
+    );
+    let html = String::from_utf8(output.stdout).unwrap();
+    assert!(html.contains("Unresolved directive in main.adoc"), "{html}");
+    assert!(html.contains("after"));
+    std::fs::remove_dir_all(root).unwrap();
+}
+
 fn diagnostic_output(source: &str, mode: Option<&str>) -> String {
     use std::io::Write;
     use std::process::{Command, Stdio};

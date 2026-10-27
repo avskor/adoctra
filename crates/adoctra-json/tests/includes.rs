@@ -2,6 +2,39 @@ use adoctra_core::{parse, parse_resource, Backend, MemoryResources, ParseOptions
 use adoctra_json::JsonBackend;
 
 #[test]
+fn encoded_includes_serialize_decoded_inline_semantics() {
+    let mut resources = MemoryResources::new();
+    resources
+        .insert("/main.adoc", "include::part.adoc[encoding=UTF-16LE]")
+        .unwrap();
+    let text = "*Ж🙂* & <text>\r\n";
+    resources
+        .insert_binary(
+            "/part.adoc",
+            text.encode_utf16()
+                .flat_map(u16::to_le_bytes)
+                .collect::<Vec<_>>(),
+        )
+        .unwrap();
+    let mut sources = SourceMap::new();
+    let source_id = sources.load("/main.adoc", None, &resources).unwrap();
+    let actual = parse_resource(
+        &mut sources,
+        &ParseOptions {
+            source_id,
+            ..Default::default()
+        },
+        &resources,
+    )
+    .unwrap();
+    assert!(actual.diagnostics.is_empty());
+    assert_eq!(
+        JsonBackend::new().convert(&actual.document).unwrap(),
+        JsonBackend::new().convert(&parse(text).document).unwrap()
+    );
+}
+
+#[test]
 fn include_options_render_the_resolved_content() {
     for (source, child, expected) in [
         (

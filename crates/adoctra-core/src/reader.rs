@@ -984,12 +984,6 @@ impl<'a> Reader<'a> {
         let attrs = self.include_attributes(attrlist, span, context);
         let attributes = &context.attributes;
         let optional = attrs.contains_key("optional-option");
-        // Resources are immutable UTF-8 snapshots supplied by the host. Keep
-        // rejecting transcoding requests until the provider contract defines it.
-        if attrs.contains_key("encoding") {
-            self.error(span, "unsupported include options: encoding".into());
-            return false;
-        }
         let selection = crate::include_selection::Selection::parse(&attrs);
         let target = expanded_target;
         if optional && target.is_empty() {
@@ -1020,22 +1014,33 @@ impl<'a> Reader<'a> {
             return self.include_link(&uri, span);
         }
         let resources = self.resources.as_mut().expect("explicit resource provider");
-        let id = match resources
-            .sources
-            .load(&target, Some(current), resources.provider)
-        {
+        let id = match resources.sources.load_with_encoding(
+            &target,
+            Some(current),
+            resources.provider,
+            attrs.get("encoding").map(String::as_str),
+        ) {
             Ok(id) => id,
             Err(error) if optional && error.kind == crate::ResourceErrorKind::NotFound => {
                 return true;
             }
             Err(error) => {
+                if error.kind == crate::ResourceErrorKind::InvalidEncoding {
+                    let kind = if uri_target.is_some() { "uri" } else { "file" };
+                    self.diagnostics.push(Diagnostic {
+                        span,
+                        severity: Severity::Error,
+                        message: format!("include failed ({:?}): {error}", error.kind),
+                        report: crate::DiagnosticReport {
+                            message: Some(format!("include {kind} not readable: {}", error.target)),
+                            ..Default::default()
+                        },
+                    });
+                    return self.unresolved_include(&target, attrlist, span);
+                }
                 self.error(span, format!("include failed ({:?}): {error}", error.kind));
                 // Ruby cannot tell a denied target (its jail resolves it to
-                // another path) from a missing or unreadable one. An encoding
-                // the provider contract does not support keeps the directive.
-                if error.kind == crate::ResourceErrorKind::InvalidEncoding {
-                    return false;
-                }
+                // another path) from a missing or unreadable one.
                 return self.unresolved_include(&target, attrlist, span);
             }
         };

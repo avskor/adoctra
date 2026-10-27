@@ -1018,7 +1018,7 @@ fn repeated_include_reuses_snapshot_and_preserves_occurrences() {
 }
 
 #[test]
-fn cycles_limits_missing_files_and_unsupported_options_leave_partial_output() {
+fn cycles_limits_missing_files_and_invalid_encoding_leave_partial_output() {
     for (root, limits, error) in [
         (
             "include::main.adoc[]\n\nafter",
@@ -1033,7 +1033,7 @@ fn cycles_limits_missing_files_and_unsupported_options_leave_partial_output() {
         (
             "include::part.adoc[encoding=UTF-16]\n\nafter",
             IncludeLimits::default(),
-            "options",
+            "InvalidEncoding",
         ),
         (
             "include::part.adoc[]\n\nafter",
@@ -1431,9 +1431,9 @@ fn optional_does_not_disable_cycles_limits_or_option_validation() {
             "byte count",
         ),
         (
-            "include::missing.adoc[opts=optional,encoding=UTF-16]",
+            "include::part.adoc[opts=optional,encoding=UTF-16]",
             IncludeLimits::default(),
-            "options",
+            "InvalidEncoding",
         ),
     ] {
         let (mut sources, resources, mut options) = setup(root, &[("docs/part.adoc", "text")]);

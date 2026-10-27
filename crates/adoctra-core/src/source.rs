@@ -77,6 +77,31 @@ impl SourceMap {
         relative_to: Option<SourceId>,
         provider: &dyn crate::ResourceProvider,
     ) -> crate::ResourceResult<SourceId> {
+        self.load_using(target, relative_to, |request| provider.load(request))
+    }
+
+    /// Register an include after decoding its external encoding. Source spans
+    /// address the decoded UTF-8 snapshot. Repeated loads reuse an id only when
+    /// both the canonical name and decoded text match; different decoding of
+    /// the same bytes cannot invalidate earlier source ranges.
+    pub fn load_with_encoding(
+        &mut self,
+        target: &str,
+        relative_to: Option<SourceId>,
+        provider: &dyn crate::ResourceProvider,
+        encoding: Option<&str>,
+    ) -> crate::ResourceResult<SourceId> {
+        self.load_using(target, relative_to, |request| {
+            provider.load_with_encoding(request, encoding)
+        })
+    }
+
+    fn load_using(
+        &mut self,
+        target: &str,
+        relative_to: Option<SourceId>,
+        load: impl FnOnce(crate::ResourceRequest<'_>) -> crate::ResourceResult<crate::Resource>,
+    ) -> crate::ResourceResult<SourceId> {
         let referrer = relative_to
             .map(|id| {
                 self.get(id).map(SourceFile::name).ok_or_else(|| {
@@ -88,7 +113,7 @@ impl SourceMap {
                 })
             })
             .transpose()?;
-        let resource = provider.load(crate::ResourceRequest { target, referrer })?;
+        let resource = load(crate::ResourceRequest { target, referrer })?;
         if let Some(index) = self
             .files
             .iter()

@@ -129,6 +129,21 @@ later".
 
 ## Current state (so you don't assume more than exists)
 
+**Current user priority: complete compatibility with pinned Asciidoctor
+2.0.23 comes before further performance optimization, incremental parsing,
+DOCX or new extension APIs.** Follow the compatibility-first queue in
+`docs/implementation-plan.adoc` and the open-gap register at the start of
+`docs/compatibility.adoc`. Passing the existing normalized corpus is not proof
+of full compatibility. Exact HTML, CLI behavior, diagnostics, resource loading
+and untested language combinations must remain visible in the audit. Historical
+exceptions (including Rouge) are limitations of any compatibility claim, not
+completed requirements. Ruby API/extension execution remains outside the
+existing document-processing contract; do not describe that scoped contract
+as unrestricted replacement of Asciidoctor. Do not resume allocation
+micro-optimizations as the next task. Include encoding now supports Unicode and
+53 single-byte codecs. Remaining include work is legacy multibyte decoding,
+selection/validation ordering on malformed bytes and the documented URI/jail gaps.
+
 The accepted compatibility roadmap and continuation status live in
 `docs/implementation-plan.adoc`; the reference contract is in
 `docs/compatibility.adoc`. Read these before compatibility work and update their
@@ -1088,8 +1103,21 @@ locks these attributes before the header, overriding caller values and preservin
 them across includes. Keep metadata separate from canonical referrers, never reload
 the primary snapshot, and do not infer cwd or paths in string APIs. Include parameter lists now follow the pinned
 AttributeList grammar, including ignored positional/unknown fields, quote recovery,
-duplicate/None rules and options merging/spacing. Encoding remains unsupported by
-the UTF-8 provider contract. Ordinary/intrinsic attribute substitution runs once
+duplicate/None rules and options merging/spacing. Encoding is handled by
+`ResourceProvider::load_with_encoding` before selection; CLI/MemoryResources
+decode original bytes through `BinaryResource::decode`. The default trait method
+keeps text-only providers working; hosts can override it for other codecs.
+SourceMap registers the decoded UTF-8 snapshot, so spans are offsets in that
+snapshot, not offsets in the original non-UTF-8 file. Names and text jointly
+identify reusable snapshots. BOM/CRLF are retained for existing normalization.
+Unicode and 53 single-byte codecs use std-only decoding with mappings generated
+by `scripts/generate_encodings.rb` from the pinned Ruby environment. Unknown
+names fall back to UTF-8 like Ruby; known unsupported multibyte names fail
+explicitly, and codecs unavailable in the reference fail as unreadable.
+Legacy multibyte codecs and Ruby's lazy validation of unselected malformed
+bytes remain open; never claim that the entire encoding surface is covered.
+Binary fixtures use `binary_resources` (hex bytes) in the minimal corpus.
+Ordinary/intrinsic attribute substitution runs once
 before parsing the list, with both reference escapes and attribute-missing policies.
 Single quotes do not run inline substitutions here: the pinned reader omits
 sub_result. Missing-attribute warnings map to physical include directives; preserve
@@ -1100,12 +1128,14 @@ result unless optional; drop-line skips missing targets before parameter parsing
 Blank expanded targets never call the provider and are handled before encoding/depth
 validation. Diagnostics retain physical directive spans after selection/indent.
 Like Ruby's replace_next_line, a blank target (unexpanded in the text) or a
-failed load (any kind but InvalidEncoding: Ruby's jail cannot deny) becomes a
+failed load becomes a
 generated `Unresolved directive in <path> - include::<target>[<attrlist>]` line
 (reader.rs unresolved_include, origin = the directive): `<path>` is the primary
 file name (`<stdin>` without document_path) or the include's path relative to
 the document directory (xref_target::relative_path), else its source name.
-Exceeded depth, cycles, byte limits and `encoding` keep the directive; without a
+InvalidEncoding is reported as `include file/uri not readable` at the directive;
+optional suppresses only NotFound. Exceeded depth, cycles and byte limits keep
+the directive; without a
 provider (stdin, string APIs) includes stay literal.
 Targets and parameter lists use the same preprocessor_subs (set/counter are
 reading effects) exactly where Ruby's preprocess_include_directive calls
@@ -1660,8 +1690,10 @@ class and Ruby's `optional gem … not available` warning in Output.warnings,
 once when a source listing converts (Cx.source_listing).
 Head theme and footer scripts (before MathJax) read final attributes with the
 header `asset-uri-scheme`; embedded output has none. Server-side rouge/coderay/
-Rouge (and unknown names) keep the plain `highlight` listing; porting Rouge is
-deliberately out of scope (project decision), use highlight.js/prettify. adoctra.css
+Rouge (and unknown names) keep the plain `highlight` listing. Rouge was excluded
+by an earlier project decision; this remains an open limitation under the new
+compatibility-first priority. Its implementation approach is undecided;
+highlight.js/prettify are available today. adoctra.css
 carries Ruby's `pre.highlightjs`/`pre.prettyprint` rules (checked with
 screenshots). `golden/highlight/` runs the reference `--standalone --safe`.
 **Safe mode**: `ParseOptions.safe: SafeMode` (Unsafe/Safe/Server/Secure,

@@ -2,7 +2,7 @@
 //! network loader.
 //!
 //! Providers resolve a target relative to the referring resource's canonical
-//! name and return an unmodified UTF-8 snapshot. Include selection, normalization,
+//! name and return a UTF-8 snapshot. Include selection, normalization,
 //! attribute substitution and recursion belong to the reader, not the provider.
 use std::{collections::BTreeMap, fmt};
 
@@ -19,11 +19,13 @@ pub struct Resource {
     /// Canonical identity within the provider. Nested requests use this name
     /// as their referrer; aliases must resolve to the same name.
     pub name: String,
-    /// Original UTF-8 text, including its BOM and line endings, if present.
+    /// UTF-8 text, including its BOM and line endings, if present. For an encoded
+    /// include this is the decoded snapshot; spans address these UTF-8 bytes,
+    /// not the byte offsets in the original encoded file.
     pub text: String,
 }
 
-/// A binary resource (an image embedded as a data URI). `content_type` is a
+/// Original resource bytes (an encoded include or an embedded image). `content_type` is a
 /// type the source reports (e.g. an HTTP `Content-Type`), if any.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BinaryResource {
@@ -37,6 +39,30 @@ pub trait ResourceProvider {
     /// so optional includes can suppress only the appropriate failures.
     /// Providers own access policy; the parser must not fall back to ambient I/O.
     fn load(&self, request: ResourceRequest<'_>) -> ResourceResult<Resource>;
+
+    /// Load an include with its declared external encoding, before line/tag
+    /// selection. The default keeps existing text-only providers working:
+    /// without a selector it uses `load`; with a selector it interprets that
+    /// snapshot's UTF-8 bytes as the requested encoding. Providers with original
+    /// bytes should override this method and decode those bytes instead.
+    /// Hosts may implement additional codecs here. Access policy and canonical
+    /// identity must be the same as for `load`; no ambient I/O fallback exists.
+    fn load_with_encoding(
+        &self,
+        request: ResourceRequest<'_>,
+        encoding: Option<&str>,
+    ) -> ResourceResult<Resource> {
+        let resource = self.load(request)?;
+        if encoding.is_none() {
+            return Ok(resource);
+        }
+        BinaryResource {
+            name: resource.name,
+            bytes: resource.text.into_bytes(),
+            content_type: None,
+        }
+        .decode(encoding)
+    }
 
     /// Opt into document path attributes for a registered canonical name.
     /// Return an absolute, slash-separated file path in this provider's
@@ -129,8 +155,9 @@ impl MemoryResources {
         Ok(self.files.insert(name, text.into()))
     }
 
-    /// Insert or replace a binary buffer (e.g. an image), loaded only by
-    /// [`ResourceProvider::load_binary`]. Returns the previous bytes, if any.
+    /// Insert or replace original bytes (e.g. an image or encoded include).
+    /// `load_binary` and `load_with_encoding` prefer these bytes to a text
+    /// buffer with the same name. Returns the previous bytes, if any.
     pub fn insert_binary(
         &mut self,
         name: &str,
@@ -161,6 +188,14 @@ impl MemoryResources {
 }
 
 impl ResourceProvider for MemoryResources {
+    fn load_with_encoding(
+        &self,
+        request: ResourceRequest<'_>,
+        encoding: Option<&str>,
+    ) -> ResourceResult<Resource> {
+        self.load_binary(request)?.decode(encoding)
+    }
+
     fn document_path(&self, name: &str) -> Option<String> {
         Some(name.to_owned())
     }

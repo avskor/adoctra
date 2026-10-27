@@ -210,6 +210,27 @@ class ExpectationTests(unittest.TestCase):
 
 
 class ResourceFixtureTests(unittest.TestCase):
+    def test_binary_resources_preserve_non_utf8_bytes_for_both_renderers(self):
+        case = {"profile": "include-body-dom-v1", "source": "include::sub/a.adoc[encoding=UTF-16LE]",
+                "resources": {}, "binary_resources": {"sub/a.adoc": "fffe16040d000a00"}}
+        with case_commands(case, Path("adoctra")) as (reference, actual):
+            root = Path(reference[-1])
+            self.assertEqual(Path(actual[1]), root / "main.adoc")
+            self.assertEqual((root / "sub/a.adoc").read_bytes(), bytes.fromhex("fffe16040d000a00"))
+        self.assertFalse(root.exists())
+
+    def test_binary_resource_hex_paths_and_collisions_are_validated(self):
+        for binaries in [[], {"../escape": "ff"}, {"main.adoc": "ff"},
+                         {"a": "f"}, {"a": "ff 00"}, {"a": "xy"}, {"a": 1}]:
+            with self.assertRaises(ValueError):
+                validate_resources({"profile": "include-body-dom-v1", "resources": {},
+                                    "binary_resources": binaries})
+        with self.assertRaises(ValueError):
+            validate_resources({"profile": "include-body-dom-v1", "resources": {"a": "x"},
+                                "binary_resources": {"a": "ff"}})
+        with self.assertRaises(ValueError):
+            validate_resources({"binary_resources": {"a": "ff"}})
+
     def test_invalid_resource_paths_and_profiles_are_rejected(self):
         for name in ["/absolute", "../escape", "a/../b", "a//b", "main.adoc", "a\\b", "x:y", ""]:
             with self.assertRaises(ValueError):
