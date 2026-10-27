@@ -840,9 +840,15 @@ impl AttributePart {
 }
 
 pub(crate) fn push_value(parts: &mut Vec<AttributePart>, part: AttributePart) {
-    match part {
-        part if part.is_boundary() => parts.push(part),
-        _ => push_part(parts, part.text(), part.is_raw()),
+    // Keep owned strings when starting a new run; only merging adjacent runs
+    // needs to copy bytes. Empty semantic boundaries must still survive.
+    use AttributePart::{Raw, Text};
+    if matches!(&part, Text(text) | Raw(text) if text.is_empty()) {
+        return;
+    }
+    match (parts.last_mut(), &part) {
+        (Some(Text(last)), Text(text)) | (Some(Raw(last)), Raw(text)) => last.push_str(text),
+        _ => parts.push(part),
     }
 }
 
@@ -1005,6 +1011,58 @@ pub(crate) fn reference_text(parts: &[AttributePart]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn owned_parts_reuse_strings_and_merge_only_adjacent_equal_kinds() {
+        let mut text = String::with_capacity(64);
+        text.push('Ж');
+        let text_buffer = text.as_ptr();
+        let raw = "&amp;🙂".to_owned();
+        let raw_buffer = raw.as_ptr();
+        let mut parts = Vec::new();
+        push_value(&mut parts, AttributePart::Text(text));
+        assert_eq!(parts[0].text().as_ptr(), text_buffer);
+        push_value(&mut parts, AttributePart::Text("🙂".into()));
+        assert_eq!(parts[0].text().as_ptr(), text_buffer);
+        push_value(&mut parts, AttributePart::Raw(String::new()));
+        push_value(&mut parts, AttributePart::Raw(raw));
+        assert_eq!(parts[1].text().as_ptr(), raw_buffer);
+        push_value(&mut parts, AttributePart::Text(String::new()));
+        push_value(&mut parts, AttributePart::Anchor("target".into()));
+        push_value(&mut parts, AttributePart::Text("tail".into()));
+        push_value(&mut parts, AttributePart::LineBreak);
+        assert_eq!(
+            parts,
+            [
+                AttributePart::Text("Ж🙂".into()),
+                AttributePart::Raw("&amp;🙂".into()),
+                AttributePart::Anchor("target".into()),
+                AttributePart::Text("tail".into()),
+                AttributePart::LineBreak,
+            ]
+        );
+
+        // Attribute normalization also owns these strings. Installing them
+        // must not duplicate their buffers, and later writes isolate snapshots.
+        let mut attributes = Attributes::new();
+        attributes.set_parts("v", parts);
+        assert_eq!(
+            attributes.raw_parts("v").unwrap()[0].text().as_ptr(),
+            text_buffer
+        );
+        assert_eq!(
+            attributes.raw_parts("v").unwrap()[1].text().as_ptr(),
+            raw_buffer
+        );
+        let snapshot = attributes.clone();
+        attributes.set("v", "changed");
+        assert_eq!(snapshot.get("v"), Some("Ж🙂&amp;🙂tail"));
+        assert_eq!(
+            snapshot.raw_parts("v").unwrap()[0].text().as_ptr(),
+            text_buffer
+        );
+        assert_eq!(attributes.raw_parts("v"), None);
+    }
 
     fn formatted() -> Vec<AttributePart> {
         vec![

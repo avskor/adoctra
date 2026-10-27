@@ -82,6 +82,21 @@ pub(crate) struct Fragment {
     extend_span: bool,
 }
 
+impl Fragment {
+    /// End the lexical view without copying its owned spelling. Semantic parts
+    /// take precedence; decoded characters retain the fragment's protection.
+    pub(crate) fn into_part(self) -> AttributePart {
+        self.part.unwrap_or_else(|| {
+            let value = self.decoded.unwrap_or(self.text);
+            if self.raw {
+                AttributePart::Raw(value)
+            } else {
+                AttributePart::Text(value)
+            }
+        })
+    }
+}
+
 #[derive(Clone, Default)]
 pub(crate) struct Text {
     pub text: String,
@@ -155,15 +170,7 @@ impl Text {
         self.restore_ui();
         let mut parts = Vec::new();
         for (_, fragment) in self.fragments {
-            if let Some(part) = fragment.part {
-                crate::attributes::push_value(&mut parts, part);
-            } else {
-                crate::attributes::push_part(
-                    &mut parts,
-                    fragment.decoded.as_deref().unwrap_or(&fragment.text),
-                    fragment.raw,
-                );
-            }
+            crate::attributes::push_value(&mut parts, fragment.into_part());
         }
         parts
     }
@@ -743,7 +750,7 @@ pub(crate) fn write_back(nodes: Vec<Inline>, mut text: Text, fold_newlines: bool
         while fragments.peek().is_some_and(|(_, f)| f.owner == owner) {
             let (_, mut f) = fragments.next().unwrap();
             f.text = f.decoded.take().unwrap_or(f.text);
-            if fold_newlines && !f.raw {
+            if fold_newlines && !f.raw && f.text.contains(['\r', '\n']) {
                 f.text = f.text.replace(['\r', '\n'], " ");
             }
             pieces.push(f);
@@ -754,11 +761,7 @@ pub(crate) fn write_back(nodes: Vec<Inline>, mut text: Text, fold_newlines: bool
             } => {
                 parts.clear();
                 for f in pieces {
-                    if let Some(part) = f.part {
-                        crate::attributes::push_value(parts, part);
-                    } else {
-                        crate::attributes::push_part(parts, &f.text, f.raw);
-                    }
+                    crate::attributes::push_value(parts, f.into_part());
                 }
                 let resolved = crate::attributes::parts_text(parts);
                 if value.is_some()
@@ -797,11 +800,7 @@ pub(crate) fn write_back(nodes: Vec<Inline>, mut text: Text, fold_newlines: bool
                         let mut parts = Vec::new();
                         let semantic = group.iter().any(|f| f.part.is_some());
                         for f in group {
-                            if let Some(part) = f.part {
-                                crate::attributes::push_value(&mut parts, part);
-                            } else {
-                                crate::attributes::push_part(&mut parts, &f.text, f.raw);
-                            }
+                            crate::attributes::push_value(&mut parts, f.into_part());
                         }
                         if semantic {
                             result.push(Inline::Substituted {
@@ -811,16 +810,10 @@ pub(crate) fn write_back(nodes: Vec<Inline>, mut text: Text, fold_newlines: bool
                             });
                         } else {
                             for part in parts {
-                                result.push(if part.is_raw() {
-                                    Inline::Raw {
-                                        value: part.text().into(),
-                                        span,
-                                    }
-                                } else {
-                                    Inline::Text {
-                                        value: part.text().into(),
-                                        span,
-                                    }
+                                result.push(match part {
+                                    AttributePart::Raw(value) => Inline::Raw { value, span },
+                                    AttributePart::Text(value) => Inline::Text { value, span },
+                                    _ => unreachable!("the group has no semantic parts"),
                                 });
                             }
                         }
@@ -880,6 +873,148 @@ pub(crate) fn write_back(nodes: Vec<Inline>, mut text: Text, fold_newlines: bool
 pub(crate) mod tests {
     use super::*;
     use crate::{AttributeFormat, SourceId};
+
+    #[test]
+    fn write_back_keeps_buffers_when_newline_folding_has_nothing_to_change() {
+        for (source, raw, fold, expected, reuse) in [
+            ("Ж🙂 no breaks", false, true, "Ж🙂 no breaks", true),
+            ("Ж🙂\r\nnext", false, false, "Ж🙂\r\nnext", true),
+            ("Ж🙂\r\nnext", true, true, "Ж🙂\r\nnext", true),
+            ("Ж🙂\nnext", false, true, "Ж🙂 next", false),
+            ("Ж🙂\r\nnext", false, true, "Ж🙂  next", false),
+        ] {
+            let span = Span::in_source(SourceId(7), 10, 10 + source.len());
+            let mut text = Text::default();
+            text.append_source(source, raw, 0, span);
+            let buffer = text.fragments[0].1.text.as_ptr();
+            let nodes = vec![Inline::Text {
+                value: source.into(),
+                span,
+            }];
+            let result = write_back(nodes, text, fold);
+            assert_eq!(result.len(), 1);
+            let (value, actual_span) = match &result[0] {
+                Inline::Text { value, span } if !raw => (value, span),
+                Inline::Raw { value, span } if raw => (value, span),
+                _ => panic!("{result:?}"),
+            };
+            assert_eq!(value, expected);
+            assert_eq!(*actual_span, span);
+            if reuse {
+                assert_eq!(value.as_ptr(), buffer);
+            }
+        }
+    }
+
+    #[test]
+    fn into_parts_moves_decoded_raw_and_literal_buffers_without_losing_boundaries() {
+        let mut text = Text::default();
+        let span = Span::in_source(SourceId(7), 10, 11);
+        text.append_source("&", false, 0, span);
+        let decoded_buffer = text.fragments[0].1.decoded.as_ref().unwrap().as_ptr();
+        text.append_part(&AttributePart::Anchor("target".into()), 0, span);
+        text.append_source("Ж🙂\r\n", false, 0, Span::in_source(SourceId(7), 20, 28));
+        let literal_buffer = text.fragments.last().unwrap().1.text.as_ptr();
+        text.append_source("&amp;", true, 0, Span::in_source(SourceId(7), 30, 35));
+        let raw_buffer = text.fragments.last().unwrap().1.text.as_ptr();
+        let hidden = AttributePart::IndexTerm(Box::new(crate::IndexTerm {
+            text: None,
+            terms: vec!["hidden".into()],
+            see: None,
+            see_also: vec![],
+        }));
+        text.append_part(&hidden, 1, Span::in_source(SourceId(8), 50, 57));
+        let parts = text.into_parts();
+        assert_eq!(parts[0].text().as_ptr(), decoded_buffer);
+        assert_eq!(parts[2].text().as_ptr(), literal_buffer);
+        assert_eq!(parts[3].text().as_ptr(), raw_buffer);
+        assert_eq!(
+            parts,
+            [
+                AttributePart::Text("&".into()),
+                AttributePart::Anchor("target".into()),
+                AttributePart::Text("Ж🙂\r\n".into()),
+                AttributePart::Raw("&amp;".into()),
+                hidden,
+            ]
+        );
+    }
+
+    #[test]
+    fn write_back_moves_owned_strings_to_source_and_attribute_nodes_with_original_spans() {
+        for newline in ["\n", "\r\n"] {
+            let source = format!("Ж🙂{newline}");
+            let source_span = Span::in_source(SourceId(7), 10, 10 + source.len());
+            let break_span = Span::in_source(SourceId(7), source_span.end, source_span.end + 2);
+            let raw_span = Span::in_source(SourceId(7), break_span.end, break_span.end + 5);
+            let attribute_span = Span::in_source(SourceId(8), 50, 57);
+            let empty_span = Span::in_source(SourceId(8), 60, 67);
+            let mut text = Text::default();
+            text.append_source(&source, false, 0, source_span);
+            let source_buffer = text.fragments[0].1.text.as_ptr();
+            text.append_part(&AttributePart::LineBreak, 0, break_span);
+            text.append_source("&amp;", true, 0, raw_span);
+            let raw_buffer = text.fragments.last().unwrap().1.text.as_ptr();
+            for part in [
+                AttributePart::Open(AttributeFormat::Strong),
+                AttributePart::Text("label".into()),
+                AttributePart::Close(AttributeFormat::Strong),
+            ] {
+                text.append_part(&part, 1, attribute_span);
+            }
+            let label_buffer = text.fragments[text.fragments.len() - 2].1.text.as_ptr();
+            let nodes = vec![
+                Inline::Text {
+                    value: String::new(),
+                    span: Span {
+                        end: raw_span.end,
+                        ..source_span
+                    },
+                },
+                Inline::AttributeRef {
+                    name: "v".into(),
+                    value: Some("old".into()),
+                    parts: vec![],
+                    span: attribute_span,
+                },
+                Inline::AttributeRef {
+                    name: "empty".into(),
+                    value: Some("old".into()),
+                    parts: vec![],
+                    span: empty_span,
+                },
+            ];
+            let result = write_back(nodes, text, false);
+            assert_eq!(result.len(), 5);
+            let Inline::Text { value, span } = &result[0] else {
+                panic!("{result:?}")
+            };
+            assert_eq!(value, &source);
+            assert_eq!(value.as_ptr(), source_buffer);
+            assert_eq!(*span, source_span);
+            assert!(matches!(&result[1], Inline::Substituted { parts, span, .. }
+                if parts == &[AttributePart::LineBreak] && *span == break_span));
+            let Inline::Raw { value, span } = &result[2] else {
+                panic!("{result:?}")
+            };
+            assert_eq!(value, "&amp;");
+            assert_eq!(value.as_ptr(), raw_buffer);
+            assert_eq!(*span, raw_span);
+            let Inline::AttributeRef {
+                value, parts, span, ..
+            } = &result[3]
+            else {
+                panic!("{result:?}")
+            };
+            assert_eq!(value.as_deref(), Some("label"));
+            assert_eq!(parts[1].text().as_ptr(), label_buffer);
+            assert_eq!(*span, attribute_span);
+            assert!(
+                matches!(&result[4], Inline::AttributeRef { value: Some(value), parts, span, .. }
+                if value.is_empty() && parts.is_empty() && *span == empty_span)
+            );
+        }
+    }
 
     /// A mixed stream with physical origins, transformed attribute metadata and
     /// a trailing zero-width value. Used to check no-op substitution stages.

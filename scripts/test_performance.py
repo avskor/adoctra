@@ -270,12 +270,43 @@ class PerformanceTests(unittest.TestCase):
         report = json.loads((perf.ROOT / 'performance/unchanged-stages.json').read_text())
         self.assert_paired_native_study(report, 'adoctra-unchanged-stage-study-v1')
 
-    def assert_paired_native_study(self, report, schema):
+    def test_owned_part_study_preserves_inputs_samples_and_allocation_evidence(self):
+        report = json.loads((perf.ROOT / 'performance/owned-parts.json').read_text())
+        self.assert_paired_native_study(report, 'adoctra-owned-part-study-v1', ('paired', 'focused'))
+        self.assertEqual(set(report['summary']['focused']),
+                         {'stress-incomplete-32', 'stress-incomplete-128', 'stress-tables-32'})
+        for run in report['runs']:
+            if run['series'] == 'focused':
+                self.assertEqual(run['settings'], {'warmup': 4, 'samples': 9, 'iterations': 10})
+        process = report['process_times']
+        self.assertEqual(process['id'], 'stress-incomplete-128')
+        self.assertEqual(process['operation'], 'parse')
+        workload = next(case for case in report['workloads'] if case['id'] == process['id'])
+        self.assertEqual(process['source_sha256'], workload['input']['source_sha256'])
+        self.assertEqual(process['settings'], {'warmup': 20, 'samples': 1, 'iterations': 2000})
+        self.assertEqual([run['variant'] for run in process['runs']],
+                         ['before', 'after', 'after', 'before', 'before', 'after'])
+        for run in process['runs']:
+            self.assertEqual(run['environment']['affinity'], [2])
+            self.assertEqual(run['native_sha256'],
+                             report['allocations']['binaries'][run['variant']]['native_sha256'])
+            self.assertGreater(run['wall_ns'], 0)
+            self.assertGreater(run['user_cpu_seconds'], 0)
+            self.assertGreaterEqual(run['system_cpu_seconds'], 0)
+            self.assertEqual(run['driver']['operation'], process['operation'])
+            for name, value in process['settings'].items():
+                self.assertEqual(run['driver'][name], value)
+            self.assertEqual(len(run['driver']['elapsed_ns']), 1)
+            self.assertGreater(run['driver']['elapsed_ns'][0], 0)
+
+    def assert_paired_native_study(self, report, schema, series=('paired',)):
         self.assert_study_timings(report, schema)
         self.assert_study_allocations(report)
-        self.assertEqual(len(report['runs']), 6)
-        self.assertEqual([run['variant'] for run in report['runs']],
-                         ['before', 'after', 'after', 'before', 'before', 'after'])
+        self.assertEqual(set(report['summary']), set(series))
+        self.assertEqual(len(report['runs']), 6 * len(series))
+        for name in series:
+            self.assertEqual([run['variant'] for run in report['runs'] if run['series'] == name],
+                             ['before', 'after', 'after', 'before', 'before', 'after'])
         self.assertEqual(report['profiles'], [])
         workloads = {case['id']: case for case in report['workloads']}
         for row in report['allocations']['runs']:

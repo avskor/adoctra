@@ -252,6 +252,15 @@ not equal output text or an empty result, to detect this: missing references
 still report diagnostics, and invisible counter/set expressions have effects.
 Check attribute braces in the assembled stream, preserving metadata, source
 owners and zero-length parts. The six new core tests cover these boundaries.
+The `performance/owned-parts.json` study moves owned strings through semantic
+part normalization and lexical-to-AST conversion. `push_value` drops only empty
+Text/Raw and merges only adjacent parts of the same kind; boundaries survive.
+`Fragment::into_part` gives stored semantic parts priority, then decoded text,
+then lexical spelling, preserving raw protection. Save source owner/span before
+consuming fragments where needed. Shared-table copy-on-write rules are unchanged.
+When writing the AST, newline folding retains the owned string if it has no
+CR/LF; raw text and fields with folding disabled stay untouched. Preserve the
+existing byte-for-byte replacement of each CR and LF with one space.
 
 `compatibility/acceptance/positions.json` uses `diagnostic-positions-v1`:
 18 original probes, all PASS. Ruby `--diagnostic-positions` exports

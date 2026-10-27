@@ -299,30 +299,18 @@ pub(crate) fn nodes(text: Text, refs: Vec<Reference>) -> Vec<Inline> {
     let mut parts = vec![Vec::new(); refs.len()];
     let mut nodes = Vec::new();
     for f in text.into_fragments() {
-        let part = f.part.unwrap_or_else(|| {
-            let value = f.decoded.unwrap_or(f.text);
-            if f.raw {
-                P::Raw(value)
-            } else {
-                P::Text(value)
-            }
-        });
-        if f.owner > 0 {
-            push_value(&mut parts[f.owner - 1], part);
+        let (owner, span) = (f.owner, f.span);
+        let part = f.into_part();
+        if owner > 0 {
+            push_value(&mut parts[owner - 1], part);
         } else {
             nodes.push(match part {
-                P::Text(value) => Inline::Text {
-                    value,
-                    span: f.span,
-                },
-                P::Raw(value) => Inline::Raw {
-                    value,
-                    span: f.span,
-                },
+                P::Text(value) => Inline::Text { value, span },
+                P::Raw(value) => Inline::Raw { value, span },
                 part => Inline::Substituted {
                     value: String::new(),
                     parts: vec![part],
-                    span: f.span,
+                    span,
                 },
             });
         }
