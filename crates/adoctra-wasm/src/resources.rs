@@ -117,6 +117,13 @@ mod wasm {
                 .map_err(js_error)
         }
 
+        pub fn source_is_complete(&self, source_id: usize) -> Result<bool, JsValue> {
+            self.0
+                .source(source_id)
+                .map(|source| source.is_complete())
+                .map_err(js_error)
+        }
+
         pub fn parse_json(&mut self, source_id: usize) -> Result<String, JsValue> {
             self.0.parse_json(source_id).map_err(js_error)
         }
@@ -134,6 +141,42 @@ mod wasm {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn finite_includes_export_prefix_completeness_without_replacing_bad_bytes() {
+        let mut workspace = ResourceWorkspace::new();
+        workspace
+            .set(
+                "/main.adoc",
+                "include::part.adoc[encoding=Shift_JIS,lines=2]",
+            )
+            .unwrap();
+        workspace
+            .set_binary("/part.adoc", b"ignored\r\n*\x95\x5c*\r\n\x81")
+            .unwrap();
+        let main = workspace.load("/main.adoc", None).unwrap();
+        let json = workspace.parse_json(main).unwrap();
+        assert!(json.contains(r#""diagnostics":[]"#), "{json}");
+        assert!(json.contains("表"), "{json}");
+        let source = workspace.source(1).unwrap();
+        assert!(!source.is_complete());
+        assert_eq!(source.text(), "ignored\r\n*表*\r\n");
+        let tokens = workspace.tokens_json(main).unwrap();
+        assert!(tokens.contains(r#""source_id":1"#), "{tokens}");
+        assert!(tokens.contains(r#""start":9,"end":14"#), "{tokens}");
+        assert!(workspace.source(2).is_err());
+        workspace
+            .set_binary("/part.adoc", b"ignored\r\n*\x95\x5c*\r\n")
+            .unwrap();
+        let updated = workspace.parse_json(main).unwrap();
+        assert!(updated.contains(r#""diagnostics":[]"#), "{updated}");
+        assert!(workspace.source(2).unwrap().is_complete());
+        assert_eq!(
+            workspace.source(2).unwrap().text(),
+            workspace.source(1).unwrap().text()
+        );
+        assert!(!workspace.source(1).unwrap().is_complete());
+    }
 
     #[test]
     fn encoded_binary_includes_export_decoded_snapshots_ast_and_tokens() {

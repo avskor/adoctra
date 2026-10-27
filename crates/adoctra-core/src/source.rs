@@ -19,6 +19,7 @@ pub struct SourceFile {
     name: String,
     text: String,
     line_starts: Vec<usize>,
+    complete: bool,
 }
 
 impl SourceFile {
@@ -27,6 +28,13 @@ impl SourceFile {
     }
     pub fn text(&self) -> &str {
         &self.text
+    }
+
+    /// Whether this snapshot covers the entire decoded resource. A finite
+    /// include line selection may retain an intact prefix of a resource with
+    /// an undecodable tail. Its ranges still address the text returned here.
+    pub fn is_complete(&self) -> bool {
+        self.complete
     }
 
     pub fn position(&self, offset: usize) -> Option<SourcePosition> {
@@ -51,14 +59,18 @@ impl SourceMap {
 
     /// IDs are stable within this map; two files may have the same display name.
     pub fn add(&mut self, name: impl Into<String>, text: impl Into<String>) -> SourceId {
-        let text = text.into();
+        self.add_snapshot(name.into(), text.into(), true)
+    }
+
+    fn add_snapshot(&mut self, name: String, text: String, complete: bool) -> SourceId {
         let mut line_starts = vec![0];
         line_starts.extend(text.match_indices('\n').map(|(index, _)| index + 1));
         let id = SourceId(self.files.len());
         self.files.push(SourceFile {
-            name: name.into(),
+            name,
             text,
             line_starts,
+            complete,
         });
         id
     }
@@ -77,7 +89,9 @@ impl SourceMap {
         relative_to: Option<SourceId>,
         provider: &dyn crate::ResourceProvider,
     ) -> crate::ResourceResult<SourceId> {
-        self.load_using(target, relative_to, |request| provider.load(request))
+        self.load_using(target, relative_to, |request| {
+            provider.load(request).map(Into::into)
+        })
     }
 
     /// Register an include after decoding its external encoding. Source spans
@@ -92,7 +106,25 @@ impl SourceMap {
         encoding: Option<&str>,
     ) -> crate::ResourceResult<SourceId> {
         self.load_using(target, relative_to, |request| {
-            provider.load_with_encoding(request, encoding)
+            provider
+                .load_with_encoding(request, encoding)
+                .map(Into::into)
+        })
+    }
+
+    /// Register a complete include snapshot, or an explicitly incomplete
+    /// decoded prefix recovered for a finite line selection. Completeness is
+    /// part of snapshot identity, along with canonical name and decoded text.
+    pub fn load_include(
+        &mut self,
+        target: &str,
+        relative_to: Option<SourceId>,
+        provider: &dyn crate::ResourceProvider,
+        encoding: Option<&str>,
+        line_limit: Option<usize>,
+    ) -> crate::ResourceResult<SourceId> {
+        self.load_using(target, relative_to, |request| {
+            provider.load_include(request, encoding, line_limit)
         })
     }
 
@@ -100,7 +132,7 @@ impl SourceMap {
         &mut self,
         target: &str,
         relative_to: Option<SourceId>,
-        load: impl FnOnce(crate::ResourceRequest<'_>) -> crate::ResourceResult<crate::Resource>,
+        load: impl FnOnce(crate::ResourceRequest<'_>) -> crate::ResourceResult<crate::IncludeResource>,
     ) -> crate::ResourceResult<SourceId> {
         let referrer = relative_to
             .map(|id| {
@@ -113,15 +145,14 @@ impl SourceMap {
                 })
             })
             .transpose()?;
-        let resource = load(crate::ResourceRequest { target, referrer })?;
-        if let Some(index) = self
-            .files
-            .iter()
-            .position(|file| file.name == resource.name && file.text == resource.text)
-        {
+        let crate::IncludeResource { resource, complete } =
+            load(crate::ResourceRequest { target, referrer })?;
+        if let Some(index) = self.files.iter().position(|file| {
+            file.name == resource.name && file.text == resource.text && file.complete == complete
+        }) {
             return Ok(SourceId(index));
         }
-        Ok(self.add(resource.name, resource.text))
+        Ok(self.add_snapshot(resource.name, resource.text, complete))
     }
 
     /// Invalid ids, reversed ranges and non-UTF-8 boundaries return None.

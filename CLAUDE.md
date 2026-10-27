@@ -142,8 +142,10 @@ existing document-processing contract; do not describe that scoped contract
 as unrestricted replacement of Asciidoctor. Do not resume allocation
 micro-optimizations as the next task. Include encoding now supports Unicode and
 53 single-byte codecs, plus Shift_JIS, Windows-31J, EUC-JP, eucJP-ms and CP51932.
-Remaining include work is other legacy multibyte decoding,
-selection/validation ordering on malformed bytes and the documented URI/jail gaps.
+Finite positive `lines` selections recover an intact decoded prefix when only
+the unread tail is malformed; `SourceFile::is_complete` exposes this explicitly.
+Remaining include work is other legacy multibyte decoding, skipped malformed
+UTF-8/BINARY lines and tags, and the documented URI/jail gaps.
 
 The accepted compatibility roadmap and continuation status live in
 `docs/implementation-plan.adoc`; the reference contract is in
@@ -1105,12 +1107,19 @@ them across includes. Keep metadata separate from canonical referrers, never rel
 the primary snapshot, and do not infer cwd or paths in string APIs. Include parameter lists now follow the pinned
 AttributeList grammar, including ignored positional/unknown fields, quote recovery,
 duplicate/None rules and options merging/spacing. Encoding is handled by
-`ResourceProvider::load_with_encoding` before selection; CLI/MemoryResources
-decode original bytes through `BinaryResource::decode`. The default trait method
-keeps text-only providers working; hosts can override it for other codecs.
+`ResourceProvider::load_include` before selection; CLI/MemoryResources decode
+original bytes through `BinaryResource::decode_include`. The default trait method
+delegates to `load_with_encoding`, preserving text-only and custom host decoders.
+Only finite positive line selections pass a decoding bound; open ranges,
+invalid first line numbers and tag selections read the whole resource.
+If the full decoding fails but the consumed prefix is valid, `IncludeResource`
+returns that prefix with `complete=false`. Valid resources retain full snapshots.
+No replacement characters are fabricated. I/O still fetches the whole resource.
 SourceMap registers the decoded UTF-8 snapshot, so spans are offsets in that
-snapshot, not offsets in the original non-UTF-8 file. Names and text jointly
-identify reusable snapshots. BOM/CRLF are retained for existing normalization.
+snapshot, not offsets in the original non-UTF-8 file. Names, text and completeness
+jointly identify reusable snapshots. `SourceFile::is_complete` and WASM
+`source_is_complete` distinguish incomplete prefixes from full files, even if
+their text is identical. BOM/CRLF are retained for existing normalization.
 Unicode, 53 single-byte codecs and five Japanese multibyte codecs use std-only decoding with mappings generated
 by `scripts/generate_encodings.rb` from the pinned Ruby environment. Unknown
 names fall back to UTF-8 like Ruby; known unsupported multibyte names fail
@@ -1119,8 +1128,10 @@ Japanese variants retain Ruby's distinct mappings (notably SJIS aliases
 Windows-31J, not Shift_JIS); malformed and unmapped sequences are unreadable.
 The decoder's exhaustive short-input fingerprints can be reproduced with
 `ruby scripts/generate_encodings.rb --fingerprints`. Other legacy multibyte
-codecs and Ruby's lazy validation of unselected malformed
-bytes remain open; never claim that the entire encoding surface is covered.
+codecs and Ruby's lazy validation of malformed UTF-8/BINARY bytes on skipped
+lines or outside selected tags remain open; never claim that the entire encoding
+surface is covered. Selected malformed UTF-8 and implicit UTF-16 BOM selection
+can crash Ruby outside its include error handler; adoctra must stay error-tolerant.
 Binary fixtures use `binary_resources` (hex bytes) in the minimal corpus.
 Ordinary/intrinsic attribute substitution runs once
 before parsing the list, with both reference escapes and attribute-missing policies.

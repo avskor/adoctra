@@ -2,7 +2,10 @@
 //! Names and byte mappings follow the pinned Ruby reference. Unimplemented
 //! legacy encodings require a host decoder; never mistake a known unsupported
 //! encoding for an unknown name (which Ruby ignores).
-use crate::{BinaryResource, Resource, ResourceError, ResourceErrorKind, ResourceResult};
+use crate::{
+    BinaryResource, IncludeResource, Resource, ResourceError, ResourceErrorKind, ResourceResult,
+};
+use std::borrow::Cow;
 
 #[path = "source_encoding_tables.rs"]
 mod tables;
@@ -28,9 +31,120 @@ impl BinaryResource {
     /// Other known legacy encodings unsupported here return `Unsupported`;
     /// a host may implement them in `ResourceProvider::load_with_encoding`.
     pub fn decode(self, encoding: Option<&str>) -> ResourceResult<Resource> {
+        self.decode_include(encoding, None)
+            .map(|decoded| decoded.resource)
+    }
+
+    /// Prefer the complete decoded snapshot. If its tail is invalid and a
+    /// finite line selection can stop before it, retain only the intact prefix
+    /// and mark the snapshot incomplete. Bytes before the boundary are always
+    /// validated, including lines the reader will discard. No lossy decoding
+    /// is used. This method does not bound the provider's filesystem/network I/O.
+    pub fn decode_include(
+        mut self,
+        encoding: Option<&str>,
+        line_limit: Option<usize>,
+    ) -> ResourceResult<IncludeResource> {
+        let mut complete = true;
+        let text = loop {
+            match self.decode_text(encoding) {
+                Ok(Cow::Borrowed(_)) => {
+                    break String::from_utf8(self.bytes).expect("validated UTF-8")
+                }
+                Ok(Cow::Owned(text)) => break text,
+                Err(error) => {
+                    let end = if complete && error.kind == ResourceErrorKind::InvalidEncoding {
+                        line_limit.and_then(|limit| self.prefix_end(encoding, limit))
+                    } else {
+                        None
+                    };
+                    let Some(end) = end.filter(|&end| end < self.bytes.len()) else {
+                        return Err(error);
+                    };
+                    self.bytes.truncate(end);
+                    complete = false;
+                }
+            }
+        };
+        Ok(IncludeResource {
+            resource: Resource {
+                name: self.name,
+                text,
+            },
+            complete,
+        })
+    }
+
+    /// Locate the last consumed LF in the external encoding. A malformed
+    /// sequence before this boundary still fails when decoding the prefix.
+    fn prefix_end(&self, encoding: Option<&str>, mut lines: usize) -> Option<usize> {
+        if lines == 0 {
+            return None;
+        }
+        let name = encoding.unwrap_or_default().to_ascii_lowercase();
+        let encoding = tables::lookup(&name).unwrap_or(Encoding::Utf8);
+        let mut lf = [0; 4];
+        let width = match encoding {
+            Encoding::Utf16(endian) => {
+                let little = endian.or_else(|| match self.bytes.get(..2) {
+                    Some([0xff, 0xfe]) => Some(true),
+                    Some([0xfe, 0xff]) => Some(false),
+                    _ => None,
+                })?;
+                lf[..2].copy_from_slice(&if little {
+                    10_u16.to_le_bytes()
+                } else {
+                    10_u16.to_be_bytes()
+                });
+                2
+            }
+            Encoding::Utf32(endian) => {
+                let little = endian.or_else(|| match self.bytes.get(..4) {
+                    Some([0xff, 0xfe, 0, 0]) => Some(true),
+                    Some([0, 0, 0xfe, 0xff]) => Some(false),
+                    _ => None,
+                })?;
+                lf = if little {
+                    10_u32.to_le_bytes()
+                } else {
+                    10_u32.to_be_bytes()
+                };
+                4
+            }
+            Encoding::Single(table) if table.len() == 256 => {
+                lf[0] = table.iter().position(|&value| value == 10)? as u8;
+                1
+            }
+            Encoding::Unsupported | Encoding::Unavailable => return None,
+            // Ruby reads default/BINARY UTF-16 BOM resources as byte lines
+            // before normalization. Its selection can fail outside the include
+            // error handler; do not manufacture a successful prefix for it.
+            Encoding::Utf8 | Encoding::Binary
+                if self.bytes.starts_with(&[0xff, 0xfe])
+                    || self.bytes.starts_with(&[0xfe, 0xff]) =>
+            {
+                return None
+            }
+            _ => {
+                lf[0] = b'\n';
+                1
+            }
+        };
+        for (index, unit) in self.bytes.chunks_exact(width).enumerate() {
+            if unit == &lf[..width] {
+                lines -= 1;
+                if lines == 0 {
+                    return Some((index + 1) * width);
+                }
+            }
+        }
+        None
+    }
+
+    fn decode_text(&self, encoding: Option<&str>) -> ResourceResult<Cow<'_, str>> {
         let name = encoding.unwrap_or_default().to_ascii_lowercase();
         let mut encoding = tables::lookup(&name).unwrap_or(Encoding::Utf8);
-        let bytes = self.bytes;
+        let bytes = &self.bytes;
         let invalid = || {
             ResourceError::new(
                 ResourceErrorKind::InvalidEncoding,
@@ -51,28 +165,36 @@ impl BinaryResource {
             }
         }
         let text = match encoding {
-            Encoding::Utf8 => String::from_utf8(bytes).map_err(|_| invalid())?,
+            Encoding::Utf8 => {
+                return std::str::from_utf8(bytes)
+                    .map(Cow::Borrowed)
+                    .map_err(|_| invalid())
+            }
             Encoding::Binary => {
                 // Ruby retains ASCII-8BIT until prepare_source_string: a BOM
                 // is recognized there, then only ASCII bytes convert to UTF-8.
                 if !bytes
                     .strip_prefix(&[0xef, 0xbb, 0xbf])
-                    .unwrap_or(&bytes)
+                    .unwrap_or(bytes)
                     .is_ascii()
                 {
                     return Err(invalid());
                 }
-                String::from_utf8(bytes).map_err(|_| invalid())?
+                return std::str::from_utf8(bytes)
+                    .map(Cow::Borrowed)
+                    .map_err(|_| invalid());
             }
             Encoding::Ascii => {
                 if !bytes.is_ascii() {
                     return Err(invalid());
                 }
-                String::from_utf8(bytes).map_err(|_| invalid())?
+                return std::str::from_utf8(bytes)
+                    .map(Cow::Borrowed)
+                    .map_err(|_| invalid());
             }
             Encoding::Single(table) => {
                 let mut text = String::with_capacity(bytes.len());
-                for byte in bytes {
+                for &byte in bytes {
                     let value = if table.len() == 128 && byte < 128 {
                         u32::from(byte)
                     } else {
@@ -172,10 +294,7 @@ impl BinaryResource {
                 ))
             }
         };
-        Ok(Resource {
-            name: self.name,
-            text,
-        })
+        Ok(Cow::Owned(text))
     }
 }
 
@@ -190,6 +309,101 @@ mod tests {
             content_type: None,
         }
         .decode(encoding)
+    }
+
+    #[test]
+    fn finite_include_reads_recover_only_intact_prefixes_and_keep_valid_full_sources() {
+        for (encoding, good, bad) in [
+            (None, &b"\xef\xbb\xbf\xd0\x96\r\n"[..], &b"\xff"[..]),
+            (Some("unknown-codec"), &b"good\n"[..], &b"\xff"[..]),
+            (Some("ASCII"), &b"good\n"[..], &b"\x80"[..]),
+            (Some("BINARY"), &b"good\n"[..], &b"\x80"[..]),
+            (Some("CP1252"), &b"caf\xe9\r\n"[..], &b"\x81"[..]),
+            (Some("Shift_JIS"), &b"\x95\x5c\r\n"[..], &b"\x81"[..]),
+            (Some("EUC-JP"), &b"\x8f\xa2\xaf\r\n"[..], &b"\x8f\xa2"[..]),
+            (Some("UTF-16LE"), &b"\x00\x0a\x0a\x00"[..], &b"\x00\xd8"[..]),
+            (Some("UTF-16BE"), &b"\x0a\x00\x00\x0a"[..], &b"\xd8"[..]),
+            (
+                Some("UTF-16"),
+                &b"\xff\xfe\x16\x04\x0a\x00"[..],
+                &b"\x00\xd8"[..],
+            ),
+            (
+                Some("UTF-32LE"),
+                &b"\x0a\x00\x01\x00\x0a\x00\x00\x00"[..],
+                &b"\x00\x00\x11\x00"[..],
+            ),
+            (
+                Some("UTF-32BE"),
+                &b"\x00\x01\x00\x0a\x00\x00\x00\x0a"[..],
+                &b"\x00"[..],
+            ),
+            (
+                Some("UTF-32"),
+                &b"\x00\x00\xfe\xff\x00\x00\x00\x0a"[..],
+                &b"\x00"[..],
+            ),
+        ] {
+            let resource = |bytes: Vec<u8>| BinaryResource {
+                name: "/part.adoc".into(),
+                bytes,
+                content_type: None,
+            };
+            let prefix = decode(good, encoding).unwrap().text;
+            let broken = [good, bad].concat();
+            let result = resource(broken.clone())
+                .decode_include(encoding, Some(1))
+                .unwrap();
+            assert!(!result.complete, "{encoding:?}");
+            assert_eq!(result.resource.text, prefix);
+            assert_eq!(result.resource.name, "/part.adoc");
+            for bound in [None, Some(0), Some(2), Some(usize::MAX)] {
+                assert_eq!(
+                    resource(broken.clone())
+                        .decode_include(encoding, bound)
+                        .unwrap_err()
+                        .kind,
+                    ResourceErrorKind::InvalidEncoding,
+                    "{encoding:?} {bound:?}"
+                );
+            }
+            let good_full = [good, good].concat();
+            let expected = decode(&good_full, encoding).unwrap().text;
+            let full = resource(good_full)
+                .decode_include(encoding, Some(1))
+                .unwrap();
+            assert!(full.complete);
+            assert_eq!(full.resource.text, expected);
+        }
+        // Unsupported codecs and Ruby's implicit UTF-16 BOM selection boundary
+        // must not silently fall back to a successful ASCII-prefix decode.
+        for (encoding, bytes, kind) in [
+            (
+                Some("GB18030"),
+                &b"good\n\xff"[..],
+                ResourceErrorKind::Unsupported,
+            ),
+            (
+                Some("Windows-1258"),
+                &b"good\n\xff"[..],
+                ResourceErrorKind::InvalidEncoding,
+            ),
+            (
+                None,
+                &b"\xff\xfe\x16\x04\x0a\x00\x00\xd8"[..],
+                ResourceErrorKind::InvalidEncoding,
+            ),
+        ] {
+            let resource = BinaryResource {
+                name: "/part.adoc".into(),
+                bytes: bytes.to_vec(),
+                content_type: None,
+            };
+            assert_eq!(
+                resource.decode_include(encoding, Some(1)).unwrap_err().kind,
+                kind
+            );
+        }
     }
 
     #[test]

@@ -25,6 +25,26 @@ pub struct Resource {
     pub text: String,
 }
 
+/// An include's immutable decoded source. A finite line selection may recover
+/// an intact prefix when the unread tail cannot be decoded. The prefix starts
+/// at byte zero, so physical line numbers and decoded UTF-8 offsets stay valid.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IncludeResource {
+    pub resource: Resource,
+    /// False only when `resource.text` omits an undecodable tail. No replacement
+    /// characters or fabricated lines are inserted into a partial snapshot.
+    pub complete: bool,
+}
+
+impl From<Resource> for IncludeResource {
+    fn from(resource: Resource) -> Self {
+        Self {
+            resource,
+            complete: true,
+        }
+    }
+}
+
 /// Original resource bytes (an encoded include or an embedded image). `content_type` is a
 /// type the source reports (e.g. an HTTP `Content-Type`), if any.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -62,6 +82,23 @@ pub trait ResourceProvider {
             content_type: None,
         }
         .decode(encoding)
+    }
+
+    /// Load an include, optionally stopping decoding after this many physical
+    /// LF-terminated lines. `line_limit` is set only for a finite, positive
+    /// `lines` selection; tag selection and open ranges require the whole file.
+    /// A complete snapshot is preferred when the entire resource is valid.
+    /// Existing host decoders keep their behavior through the default method.
+    /// Byte providers can opt in using [`BinaryResource::decode_include`].
+    /// This is a decoding bound, not permission to bypass access policy.
+    fn load_include(
+        &self,
+        request: ResourceRequest<'_>,
+        encoding: Option<&str>,
+        line_limit: Option<usize>,
+    ) -> ResourceResult<IncludeResource> {
+        let _ = line_limit;
+        self.load_with_encoding(request, encoding).map(Into::into)
     }
 
     /// Opt into document path attributes for a registered canonical name.
@@ -188,6 +225,16 @@ impl MemoryResources {
 }
 
 impl ResourceProvider for MemoryResources {
+    fn load_include(
+        &self,
+        request: ResourceRequest<'_>,
+        encoding: Option<&str>,
+        line_limit: Option<usize>,
+    ) -> ResourceResult<IncludeResource> {
+        self.load_binary(request)?
+            .decode_include(encoding, line_limit)
+    }
+
     fn load_with_encoding(
         &self,
         request: ResourceRequest<'_>,

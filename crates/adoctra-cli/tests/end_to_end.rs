@@ -3,6 +3,51 @@
 use adoctra::Backend;
 
 #[test]
+fn cli_finite_include_selection_ignores_only_the_unconsumed_invalid_tail() {
+    use std::process::Command;
+    let root =
+        std::env::temp_dir().join(format!("adoctra-cli-include-prefix-{}", std::process::id()));
+    std::fs::create_dir_all(&root).unwrap();
+    let source = root.join("main.adoc");
+    std::fs::write(root.join("part.adoc"), b"*\x95\x5c*\r\n\x81\nlast\n").unwrap();
+    for selection in [
+        "lines=1",
+        "lines=1..1,tag=missing",
+        "lines=2",
+        "lines=3",
+        "lines=1..",
+        "tag=body",
+    ] {
+        std::fs::write(
+            &source,
+            format!("include::part.adoc[encoding=Shift_JIS,{selection},opts=optional]"),
+        )
+        .unwrap();
+        for backend in ["html", "json"] {
+            let output = Command::new(env!("CARGO_BIN_EXE_adoctra"))
+                .arg(&source)
+                .args(["--embedded", "--stdout", "--to", backend])
+                .output()
+                .unwrap();
+            assert!(output.status.success());
+            let text = String::from_utf8(output.stdout).unwrap();
+            let error = String::from_utf8(output.stderr).unwrap();
+            if selection.starts_with("lines=1") && selection != "lines=1.." {
+                assert!(error.is_empty(), "{error}");
+                assert!(text.contains("表"), "{text}");
+            } else {
+                assert!(
+                    error.contains("include file not readable:"),
+                    "{selection}: {error}"
+                );
+                assert!(text.contains("Unresolved directive"), "{text}");
+            }
+        }
+    }
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn cli_decodes_include_files_and_reports_read_errors_at_the_directive() {
     use std::process::Command;
     let root = std::env::temp_dir().join(format!("adoctra-cli-encodings-{}", std::process::id()));

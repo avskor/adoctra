@@ -20,6 +20,18 @@ pub(crate) struct Selected {
 }
 
 impl Selection {
+    /// Ruby stops reading only after consuming its entire sorted line queue.
+    /// Invalid first numbers block that queue, and open ranges read to EOF.
+    pub fn line_limit(&self) -> Option<usize> {
+        match self {
+            Self::Lines {
+                ranges,
+                tail: false,
+            } if ranges.first()?.0 > 0 => usize::try_from(ranges.last()?.1).ok(),
+            _ => None,
+        }
+    }
+
     pub fn parse(attrs: &BTreeMap<String, String>) -> Self {
         if let Some(value) = attrs.get("lines") {
             let mut ranges = Vec::new();
@@ -296,4 +308,40 @@ fn tag_directive(line: &str) -> Option<(bool, &str)> {
         }
     }
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn decoding_bound_follows_the_readers_sorted_line_queue() {
+        for (lines, expected) in [
+            ("1", Some(1)),
+            ("3;1;2;2", Some(3)),
+            ("2..4;8..7", Some(4)),
+            ("2,4", Some(4)),
+            ("1;", Some(1)),
+            ("2suffix", Some(2)),
+            ("0;1", None),
+            ("-1;2", None),
+            ("no-number", None),
+            ("1..", None),
+            ("1..-1", None),
+            ("1;4..", None),
+            ("2..1", None),
+            ("", None),
+            ("999999999999999999999999999999", None),
+        ] {
+            let attrs = BTreeMap::from([
+                ("lines".into(), lines.into()),
+                ("tag".into(), "body".into()),
+            ]);
+            assert_eq!(Selection::parse(&attrs).line_limit(), expected, "{lines}");
+        }
+        assert_eq!(
+            Selection::parse(&BTreeMap::from([("tag".into(), "body".into())])).line_limit(),
+            None
+        );
+    }
 }

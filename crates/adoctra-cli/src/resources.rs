@@ -1,7 +1,7 @@
 //! Native filesystem adapter; the parser and WASM never import this module.
 use adoctra::{
-    BinaryResource, Resource, ResourceError, ResourceErrorKind, ResourceProvider, ResourceRequest,
-    ResourceResult,
+    BinaryResource, IncludeResource, Resource, ResourceError, ResourceErrorKind, ResourceProvider,
+    ResourceRequest, ResourceResult,
 };
 use std::path::{Path, PathBuf};
 
@@ -96,6 +96,16 @@ impl FileResources {
 }
 
 impl ResourceProvider for FileResources {
+    fn load_include(
+        &self,
+        request: ResourceRequest<'_>,
+        encoding: Option<&str>,
+        line_limit: Option<usize>,
+    ) -> ResourceResult<IncludeResource> {
+        self.load_binary(request)?
+            .decode_include(encoding, line_limit)
+    }
+
     fn load_with_encoding(
         &self,
         request: ResourceRequest<'_>,
@@ -305,14 +315,34 @@ mod tests {
             .unwrap_err();
         assert_eq!(error.kind, ResourceErrorKind::AccessDenied);
 
+        let error = provider
+            .load_include(
+                ResourceRequest {
+                    target: "../outside.adoc",
+                    referrer: None,
+                },
+                Some("Shift_JIS"),
+                Some(1),
+            )
+            .unwrap_err();
+        assert_eq!(error.kind, ResourceErrorKind::AccessDenied);
+
         let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
         let target = format!("http://{}/part.adoc", listener.local_addr().unwrap());
         let server = std::thread::spawn(move || {
-            let (mut stream, _) = listener.accept().unwrap();
-            let mut line = String::new();
-            BufReader::new(&stream).read_line(&mut line).unwrap();
-            assert!(line.starts_with("GET /part.adoc "));
-            stream.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 6\r\nConnection: close\r\n\r\n\xcf\xf0\xe8\xe2\xe5\xf2").unwrap();
+            for bytes in [&b"\xcf\xf0\xe8\xe2\xe5\xf2"[..], &b"\x95\x5c\r\n\x81"[..]] {
+                let (mut stream, _) = listener.accept().unwrap();
+                let mut line = String::new();
+                BufReader::new(&stream).read_line(&mut line).unwrap();
+                assert!(line.starts_with("GET /part.adoc "));
+                write!(
+                    stream,
+                    "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                    bytes.len()
+                )
+                .unwrap();
+                stream.write_all(bytes).unwrap();
+            }
         });
         let resource = provider
             .load_with_encoding(
@@ -325,6 +355,19 @@ mod tests {
             .unwrap();
         assert_eq!(resource.name, target);
         assert_eq!(resource.text, "Привет");
+        let prefix = provider
+            .load_include(
+                ResourceRequest {
+                    target: &target,
+                    referrer: None,
+                },
+                Some("Shift_JIS"),
+                Some(1),
+            )
+            .unwrap();
+        assert_eq!(prefix.resource.name, target);
+        assert_eq!(prefix.resource.text, "表\r\n");
+        assert!(!prefix.complete);
         server.join().unwrap();
     }
 

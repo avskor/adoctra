@@ -19,6 +19,173 @@ fn setup(source: &str) -> (MemoryResources, SourceMap, ParseOptions) {
 }
 
 #[test]
+fn finite_line_selection_preserves_positions_in_an_explicitly_incomplete_prefix() {
+    for (encoding, glyph, bad) in [
+        ("Shift_JIS", &b"\x95\x5c"[..], &b"\x81"[..]),
+        ("EUC-JP", &b"\xc9\xbd"[..], &b"\x8f"[..]),
+        ("UTF-8", "表".as_bytes(), &b"\xff"[..]),
+    ] {
+        let root = format!(":attribute-missing: warn\n:codec: {encoding}\n\ninclude::part.adoc[encoding={{codec}},lines=2,indent=0]\n\ninclude::part.adoc[encoding={{codec}},lines=2,indent=0]");
+        let (mut resources, mut sources, options) = setup(&root);
+        let prefix = "ignored\r\n  表 {missing}\r\n";
+        resources
+            .insert_binary(
+                "/docs/part.adoc",
+                [
+                    b"ignored\r\n  ".as_slice(),
+                    glyph,
+                    b" {missing}\r\nlast\r\n",
+                    bad,
+                ]
+                .concat(),
+            )
+            .unwrap();
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        assert_eq!(result.diagnostics.len(), 2, "{:?}", result.diagnostics);
+        let file = sources.get(SourceId(1)).unwrap();
+        assert!(!file.is_complete());
+        assert_eq!(file.text(), prefix);
+        assert!(sources.get(SourceId(2)).is_none());
+        for diagnostic in &result.diagnostics {
+            assert_eq!(diagnostic.span.source_id, SourceId(1));
+            assert_eq!(sources.slice(diagnostic.span), Some("{missing}"));
+            assert_eq!(diagnostic.span.start, prefix.find("{missing}").unwrap());
+            let position = file.position(diagnostic.span.start).unwrap();
+            assert_eq!((position.line, position.column), (2, 5));
+        }
+        for block in result.document.flat_blocks() {
+            assert_eq!(block.span.source_id, SourceId(1));
+            let BlockKind::Paragraph { inlines } = &block.kind else {
+                panic!("{block:?}")
+            };
+            assert!(matches!(&inlines[0], Inline::Text { value, .. } if value.starts_with('表')));
+        }
+        assert!(result
+            .tokens
+            .iter()
+            .all(|token| sources.slice(token.span).is_some()));
+        assert!(result
+            .tokens
+            .iter()
+            .any(|token| sources.slice(token.span) == Some("{missing}")));
+    }
+}
+
+#[test]
+fn complete_and_prefix_snapshots_keep_distinct_immutable_identity() {
+    let (mut resources, mut sources, options) =
+        setup("include::part.adoc[encoding=Shift_JIS,lines=1]");
+    resources
+        .insert_binary("/docs/part.adoc", b"\x95\x5c\r\n\x81")
+        .unwrap();
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty());
+    assert!(!sources.get(SourceId(1)).unwrap().is_complete());
+    assert_eq!(sources.get(SourceId(1)).unwrap().text(), "表\r\n");
+    // A full read still fails; the earlier prefix is never used as a cache hit.
+    assert_eq!(
+        sources
+            .load_with_encoding(
+                "part.adoc",
+                Some(options.source_id),
+                &resources,
+                Some("Shift_JIS")
+            )
+            .unwrap_err()
+            .kind,
+        ResourceErrorKind::InvalidEncoding
+    );
+    assert!(sources.get(SourceId(2)).is_none());
+    resources
+        .insert_binary("/docs/part.adoc", b"\x95\x5c\r\n")
+        .unwrap();
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty());
+    assert_eq!(result.document.flat_blocks()[0].span.source_id, SourceId(2));
+    assert!(sources.get(SourceId(2)).unwrap().is_complete());
+    assert_eq!(sources.get(SourceId(2)).unwrap().text(), "表\r\n");
+    assert!(!sources.get(SourceId(1)).unwrap().is_complete());
+    let again = sources
+        .load_with_encoding(
+            "part.adoc",
+            Some(options.source_id),
+            &resources,
+            Some("Shift_JIS"),
+        )
+        .unwrap();
+    assert_eq!(again, SourceId(2));
+}
+
+#[test]
+fn nested_prefix_includes_keep_relative_paths_and_source_provenance() {
+    let (mut resources, mut sources, options) =
+        setup("include::sub/outer.adoc[encoding=Shift_JIS,lines=1..3]");
+    resources
+        .insert_binary(
+            "/docs/sub/outer.adoc",
+            b"\x95\x5c\r\n\r\ninclude::inner.adoc[encoding=EUC-JP,lines=1]\r\n\x81",
+        )
+        .unwrap();
+    resources
+        .insert_binary("/docs/sub/inner.adoc", b"*\xc6\xfc\xcb\xdc*\r\n\x8f")
+        .unwrap();
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+    for (id, name, text) in [
+        (
+            SourceId(1),
+            "/docs/sub/outer.adoc",
+            "表\r\n\r\ninclude::inner.adoc[encoding=EUC-JP,lines=1]\r\n",
+        ),
+        (SourceId(2), "/docs/sub/inner.adoc", "*日本*\r\n"),
+    ] {
+        let file = sources.get(id).unwrap();
+        assert_eq!(file.name(), name);
+        assert_eq!(file.text(), text);
+        assert!(!file.is_complete());
+    }
+    let blocks = result.document.flat_blocks();
+    assert_eq!(blocks.len(), 2);
+    assert_eq!(blocks[0].span.source_id, SourceId(1));
+    assert_eq!(blocks[1].span.source_id, SourceId(2));
+    assert_eq!(sources.slice(blocks[1].span).unwrap().trim(), "*日本*");
+    assert!(result
+        .tokens
+        .iter()
+        .all(|token| sources.slice(token.span).is_some()));
+}
+
+#[test]
+fn finite_reads_do_not_hide_errors_in_consumed_lines_or_unbounded_selections() {
+    for selection in [
+        "lines=2",
+        "lines=3",
+        "lines=1;3",
+        "lines=0;1",
+        "lines=1..",
+        "lines=2..1",
+        "lines=",
+        "tag=body",
+        "tags=**",
+    ] {
+        let directive = format!("include::part.adoc[encoding=Shift_JIS,{selection},opts=optional]");
+        let (mut resources, mut sources, options) = setup(&directive);
+        resources
+            .insert_binary("/docs/part.adoc", b"good\n\x81\nlast\n")
+            .unwrap();
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        assert_eq!(result.diagnostics.len(), 1, "{selection}");
+        let diagnostic = &result.diagnostics[0];
+        assert_eq!(
+            diagnostic.report.message.as_deref(),
+            Some("include file not readable: /docs/part.adoc")
+        );
+        assert_eq!(sources.slice(diagnostic.span), Some(directive.as_str()));
+        assert!(sources.get(SourceId(1)).is_none());
+    }
+}
+
+#[test]
 fn encoded_include_selection_keeps_decoded_utf8_spans_and_physical_lines() {
     for selector in ["tag=body", "lines=3"] {
         for (encoding, glyph) in [
@@ -201,7 +368,7 @@ fn text_only_providers_remain_compatible_and_hosts_can_supply_other_decoders() {
         let mut sources = SourceMap::new();
         let id = sources.add(
             "/main.adoc",
-            format!("include::part.adoc[encoding={encoding}]"),
+            format!("include::part.adoc[encoding={encoding},lines=1]"),
         );
         let result = parse_resource(
             &mut sources,

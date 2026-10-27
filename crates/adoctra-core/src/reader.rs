@@ -1014,11 +1014,12 @@ impl<'a> Reader<'a> {
             return self.include_link(&uri, span);
         }
         let resources = self.resources.as_mut().expect("explicit resource provider");
-        let id = match resources.sources.load_with_encoding(
+        let id = match resources.sources.load_include(
             &target,
             Some(current),
             resources.provider,
             attrs.get("encoding").map(String::as_str),
+            selection.line_limit(),
         ) {
             Ok(id) => id,
             Err(error) if optional && error.kind == crate::ResourceErrorKind::NotFound => {
