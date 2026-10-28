@@ -61,6 +61,20 @@ fn gb_selections_preserve_decoded_spans_and_unicode_columns() {
     for (encoding, glyph, decoded) in [
         ("GB2312", &b"\xd6\xd0"[..], "中"),
         ("ISO-2022-JP", &b"\x1b$BF|\x1b(B"[..], "日"),
+        ("UTF8-DoCoMo", "\u{e6e2}".as_bytes(), "1\u{20e3}"),
+        ("utf8-docomo", "\u{e66c}".as_bytes(), "🅿"),
+        ("SJIS-SoftBank", &b"\xf6\xe4"[..], "🇯🇵"),
+        ("SJIS-SoftBank", &b"\xfb\xab"[..], "🇯🇵"),
+        ("SJIS-SoftBank", &b"\xf2\xe5"[..], "1\u{20e3}"),
+        ("SJIS-SoftBank", &b"\xf1\xd4"[..], "🅿"),
+        ("SJIS-DoCoMo", &b"\xf9\x87"[..], "1\u{20e3}"),
+        ("SJIS-DoCoMo", &b"\xf9\x85"[..], "#\u{20e3}"),
+        ("SJIS-DoCoMo", &b"\xf8\xcd"[..], "🅿"),
+        ("SJIS-KDDI", &b"\xf6\xa5"[..], "🇯🇵"),
+        ("SJIS-KDDI", &b"\xf6\xfb"[..], "1\u{20e3}"),
+        ("SJIS-KDDI", &b"\xf6\x7e"[..], "🅿"),
+        ("EUC-JIS-2004", &b"\x8f\xa1\xa1"[..], "𠂉"),
+        ("EUC-JISX0213", &b"\x8f\xfe\xf6"[..], "𪚲"),
         ("ISO-2022-JP-KDDI", &b"\x1b$Bv'\x1b(B"[..], "🇯🇵"),
         ("stateless-ISO-2022-JP-KDDI", &b"\x92\xf6\xa7"[..], "🇯🇵"),
         (
@@ -424,6 +438,379 @@ fn kddi_compounds_preserve_prefix_limits_budgets_and_variant_source_identity() {
     assert!(sources.get(SourceId(4)).is_none());
     assert_eq!(sources.get(SourceId(1)).unwrap().text(), "～\r\n");
     assert_eq!(sources.get(SourceId(2)).unwrap().text(), "〜\r\n");
+}
+
+#[test]
+fn jis2004_prefixes_decoded_byte_budgets_and_alias_snapshots_stay_consistent() {
+    for name in ["EUC-JIS-2004", "EUC-JISX0213"] {
+        for selection in ["lines=1", "lines=2", "lines=1;3", "tag=body"] {
+            let (mut resources, mut sources, options) = setup(&format!(
+                "include::part.adoc[encoding={name},{selection},opts=optional]"
+            ));
+            resources
+                .insert_binary("/docs/part.adoc", b"*\x8f\xa1\xa1*\r\n\xa4\xf7\nlast\n")
+                .unwrap();
+            let result = parse_resource(&mut sources, &options, &resources).unwrap();
+            if selection == "lines=1" {
+                assert!(result.diagnostics.is_empty());
+                let source = sources.get(SourceId(1)).unwrap();
+                assert_eq!(source.text(), "*𠂉*\r\n");
+                assert!(!source.is_complete());
+                assert_eq!(
+                    sources.slice(result.document.flat_blocks()[0].span),
+                    Some("*𠂉*")
+                );
+                let mut limited = options.clone();
+                limited.includes.max_bytes = "*𠂉*\r\n".len() - 1;
+                let limited = parse_resource(&mut sources, &limited, &resources).unwrap();
+                assert!(limited
+                    .diagnostics
+                    .iter()
+                    .any(|d| d.message.contains("maximum included byte count")));
+            } else {
+                assert_eq!(result.diagnostics.len(), 1, "{name}/{selection}");
+                assert!(sources.get(SourceId(1)).is_none());
+            }
+        }
+    }
+    let (mut resources, mut sources, options) = setup("include::part.adoc[encoding=EUC-JIS-2004]\n\ninclude::part.adoc[encoding=EUC-JISX0213]\n\ninclude::part.adoc[encoding=EUC-JP]");
+    resources
+        .insert_binary("/docs/part.adoc", b"\xc6\xfc\xcb\xdc\xb8\xec\r\n")
+        .unwrap();
+    let first = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(first.diagnostics.is_empty());
+    assert!(first
+        .document
+        .flat_blocks()
+        .iter()
+        .all(|b| b.span.source_id == SourceId(1)));
+    resources
+        .insert_binary("/docs/part.adoc", b"\x8f\xa1\xa1\r\n")
+        .unwrap();
+    let changed = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(changed.diagnostics.len(), 1);
+    assert_eq!(sources.get(SourceId(2)).unwrap().text(), "𠂉\r\n");
+    assert!(sources.get(SourceId(3)).is_none());
+    resources
+        .insert_binary("/docs/part.adoc", b"\x8f\xa2\xaf\r\n")
+        .unwrap();
+    let legacy = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(legacy.diagnostics.len(), 2);
+    assert_eq!(sources.get(SourceId(3)).unwrap().text(), "˘\r\n");
+    assert_eq!(sources.get(SourceId(1)).unwrap().text(), "日本語\r\n");
+    assert_eq!(sources.get(SourceId(2)).unwrap().text(), "𠂉\r\n");
+    assert!(sources.get(SourceId(4)).is_none());
+}
+
+#[test]
+fn sjis_kddi_prefixes_budgets_and_windows_variants_preserve_decoded_snapshots() {
+    for selection in ["lines=1", "lines=2", "lines=1;3", "tag=body"] {
+        let (mut resources, mut sources, options) = setup(&format!(
+            "include::part.adoc[encoding=SJIS-KDDI,{selection},opts=optional]"
+        ));
+        resources
+            .insert_binary("/docs/part.adoc", b"*\xf6\xa5*\r\n\xf6\x4a\nlast\n")
+            .unwrap();
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        if selection == "lines=1" {
+            assert!(result.diagnostics.is_empty());
+            let source = sources.get(SourceId(1)).unwrap();
+            assert_eq!(source.text(), "*🇯🇵*\r\n");
+            assert!(!source.is_complete());
+            assert_eq!(
+                sources.slice(result.document.flat_blocks()[0].span),
+                Some("*🇯🇵*")
+            );
+            let mut limited = options.clone();
+            limited.includes.max_bytes = "*🇯🇵*\r\n".len() - 1;
+            let limited = parse_resource(&mut sources, &limited, &resources).unwrap();
+            assert!(limited
+                .diagnostics
+                .iter()
+                .any(|d| d.message.contains("maximum included byte count")));
+        } else {
+            assert_eq!(result.diagnostics.len(), 1, "{selection}");
+            assert!(sources.get(SourceId(1)).is_none());
+        }
+    }
+    let (mut resources, mut sources, options) = setup("include::part.adoc[encoding=SJIS-KDDI]\n\ninclude::part.adoc[encoding=sjis-kddi]\n\ninclude::part.adoc[encoding=Windows-31J]");
+    resources
+        .insert_binary("/docs/part.adoc", b"\xf6\xa5\r\n")
+        .unwrap();
+    let first = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(first.diagnostics.is_empty());
+    assert_eq!(
+        first
+            .document
+            .flat_blocks()
+            .iter()
+            .map(|b| b.span.source_id.0)
+            .collect::<Vec<_>>(),
+        [1, 1, 2]
+    );
+    assert_eq!(sources.get(SourceId(1)).unwrap().text(), "🇯🇵\r\n");
+    assert_eq!(sources.get(SourceId(2)).unwrap().text(), "\u{e4cc}\r\n");
+    resources
+        .insert_binary("/docs/part.adoc", b"\xf0\x40\r\n")
+        .unwrap();
+    let changed = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(changed.diagnostics.is_empty());
+    assert!(changed
+        .document
+        .flat_blocks()
+        .iter()
+        .all(|b| b.span.source_id == SourceId(3)));
+    assert_eq!(sources.get(SourceId(3)).unwrap().text(), "\u{e000}\r\n");
+    assert!(sources.get(SourceId(4)).is_none());
+    assert_eq!(sources.get(SourceId(1)).unwrap().text(), "🇯🇵\r\n");
+    assert_eq!(sources.get(SourceId(2)).unwrap().text(), "\u{e4cc}\r\n");
+}
+
+#[test]
+fn sjis_docomo_prefixes_byte_budgets_and_windows_variants_preserve_snapshots() {
+    for selection in ["lines=1", "lines=2", "lines=1;3", "tag=body"] {
+        let (mut resources, mut sources, options) = setup(&format!(
+            "include::part.adoc[encoding=SJIS-DoCoMo,{selection},opts=optional]"
+        ));
+        resources
+            .insert_binary("/docs/part.adoc", b"*\xf9\x87*\r\n\xf9\x96\nlast\n")
+            .unwrap();
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        if selection == "lines=1" {
+            assert!(result.diagnostics.is_empty());
+            let source = sources.get(SourceId(1)).unwrap();
+            assert_eq!(source.text(), "*1\u{20e3}*\r\n");
+            assert!(!source.is_complete());
+            assert_eq!(
+                sources.slice(result.document.flat_blocks()[0].span),
+                Some("*1\u{20e3}*")
+            );
+            let mut limited = options.clone();
+            limited.includes.max_bytes = "*1\u{20e3}*\r\n".len() - 1;
+            let limited = parse_resource(&mut sources, &limited, &resources).unwrap();
+            assert!(limited
+                .diagnostics
+                .iter()
+                .any(|d| d.message.contains("maximum included byte count")));
+        } else {
+            assert_eq!(result.diagnostics.len(), 1, "{selection}");
+            assert!(sources.get(SourceId(1)).is_none());
+        }
+    }
+    let (mut resources, mut sources, options) = setup("include::part.adoc[encoding=SJIS-DoCoMo]\n\ninclude::part.adoc[encoding=sjis-docomo]\n\ninclude::part.adoc[encoding=Windows-31J]");
+    resources
+        .insert_binary("/docs/part.adoc", b"\xf9\x87\r\n")
+        .unwrap();
+    let first = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(first.diagnostics.is_empty());
+    assert_eq!(
+        first
+            .document
+            .flat_blocks()
+            .iter()
+            .map(|b| b.span.source_id.0)
+            .collect::<Vec<_>>(),
+        [1, 1, 2]
+    );
+    assert_eq!(sources.get(SourceId(1)).unwrap().text(), "1\u{20e3}\r\n");
+    assert_eq!(sources.get(SourceId(2)).unwrap().text(), "\u{e6e2}\r\n");
+    resources
+        .insert_binary("/docs/part.adoc", b"\xf0\x40\r\n")
+        .unwrap();
+    let changed = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(changed.diagnostics.is_empty());
+    assert!(changed
+        .document
+        .flat_blocks()
+        .iter()
+        .all(|b| b.span.source_id == SourceId(3)));
+    assert_eq!(sources.get(SourceId(3)).unwrap().text(), "\u{e000}\r\n");
+    assert!(sources.get(SourceId(4)).is_none());
+    assert_eq!(sources.get(SourceId(1)).unwrap().text(), "1\u{20e3}\r\n");
+    assert_eq!(sources.get(SourceId(2)).unwrap().text(), "\u{e6e2}\r\n");
+}
+
+#[test]
+fn softbank_duplicate_bytes_reuse_snapshots_and_prefixes_keep_decoded_budgets() {
+    for selection in ["lines=1", "lines=2", "lines=1;3", "tag=body"] {
+        let (mut resources, mut sources, options) = setup(&format!(
+            "include::part.adoc[encoding=SJIS-SoftBank,{selection},opts=optional]"
+        ));
+        resources
+            .insert_binary("/docs/part.adoc", b"*\xf6\xe4*\r\n\xf9\x9a\nlast\n")
+            .unwrap();
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        if selection == "lines=1" {
+            assert!(result.diagnostics.is_empty());
+            let source = sources.get(SourceId(1)).unwrap();
+            assert_eq!(source.text(), "*🇯🇵*\r\n");
+            assert!(!source.is_complete());
+            assert_eq!(
+                sources.slice(result.document.flat_blocks()[0].span),
+                Some("*🇯🇵*")
+            );
+            let mut limited = options.clone();
+            limited.includes.max_bytes = "*🇯🇵*\r\n".len() - 1;
+            let limited = parse_resource(&mut sources, &limited, &resources).unwrap();
+            assert!(limited
+                .diagnostics
+                .iter()
+                .any(|d| d.message.contains("maximum included byte count")));
+        } else {
+            assert_eq!(result.diagnostics.len(), 1, "{selection}");
+            assert!(sources.get(SourceId(1)).is_none());
+        }
+    }
+    let (mut resources, mut sources, options) = setup("include::part.adoc[encoding=SJIS-SoftBank]\n\ninclude::part.adoc[encoding=sjis-softbank]\n\ninclude::part.adoc[encoding=Windows-31J]");
+    resources
+        .insert_binary("/docs/part.adoc", b"\xf6\xe4\r\n")
+        .unwrap();
+    let first = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(first.diagnostics.is_empty());
+    assert_eq!(
+        first
+            .document
+            .flat_blocks()
+            .iter()
+            .map(|b| b.span.source_id.0)
+            .collect::<Vec<_>>(),
+        [1, 1, 2]
+    );
+    resources
+        .insert_binary("/docs/part.adoc", b"\xfb\xab\r\n")
+        .unwrap();
+    let duplicate = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(duplicate.diagnostics.is_empty());
+    assert_eq!(
+        duplicate
+            .document
+            .flat_blocks()
+            .iter()
+            .map(|b| b.span.source_id.0)
+            .collect::<Vec<_>>(),
+        [1, 1, 3]
+    );
+    assert_eq!(sources.get(SourceId(1)).unwrap().text(), "🇯🇵\r\n");
+    assert_eq!(sources.get(SourceId(2)).unwrap().text(), "\u{e50b}\r\n");
+    assert_eq!(sources.get(SourceId(3)).unwrap().text(), "\u{8b53}\r\n");
+    resources
+        .insert_binary("/docs/part.adoc", b"\xf0\x40\r\n")
+        .unwrap();
+    let common = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(common.diagnostics.is_empty());
+    assert!(common
+        .document
+        .flat_blocks()
+        .iter()
+        .all(|b| b.span.source_id == SourceId(4)));
+    assert_eq!(sources.get(SourceId(4)).unwrap().text(), "\u{e000}\r\n");
+    assert!(sources.get(SourceId(5)).is_none());
+    assert_eq!(sources.get(SourceId(1)).unwrap().text(), "🇯🇵\r\n");
+}
+
+#[test]
+fn utf8_docomo_strict_selection_and_unicode_snapshots_keep_identity_and_budgets() {
+    for (selection, bad, success) in [
+        ("lines=1", "\u{e6f1}".as_bytes(), true),
+        ("lines=1", &b"\xff"[..], true),
+        ("lines=2", "\u{e6f1}".as_bytes(), false),
+        ("lines=1;3", "\u{e6f1}".as_bytes(), false),
+        ("lines=1;3", &b"\xff"[..], false),
+        ("tag=body", "\u{e6f1}".as_bytes(), false),
+        ("tag=body", &b"\xff"[..], false),
+    ] {
+        let (mut resources, mut sources, options) = setup(&format!(
+            "include::part.adoc[encoding=UTF8-DoCoMo,{selection},opts=optional]"
+        ));
+        resources
+            .insert_binary(
+                "/docs/part.adoc",
+                ["*\u{e6e2}*\r\n".as_bytes(), bad, b"\nlast\n"].concat(),
+            )
+            .unwrap();
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        if success {
+            assert!(result.diagnostics.is_empty());
+            let source = sources.get(SourceId(1)).unwrap();
+            assert_eq!(source.text(), "*1\u{20e3}*\r\n");
+            assert!(!source.is_complete());
+            assert!(source.omitted_lines().is_empty());
+            assert_eq!(
+                sources.slice(result.document.flat_blocks()[0].span),
+                Some("*1\u{20e3}*")
+            );
+            let mut limited = options.clone();
+            limited.includes.max_bytes = "*1\u{20e3}*\r\n".len() - 1;
+            let limited = parse_resource(&mut sources, &limited, &resources).unwrap();
+            assert!(limited
+                .diagnostics
+                .iter()
+                .any(|d| d.message.contains("maximum included byte count")));
+        } else {
+            assert_eq!(result.diagnostics.len(), 1, "{selection}/{bad:?}");
+            assert!(sources.get(SourceId(1)).is_none());
+        }
+    }
+    let (mut resources, mut sources, options) =
+        setup("include::part.adoc[encoding=UTF8-DoCoMo,lines=2]");
+    resources
+        .insert_binary(
+            "/docs/part.adoc",
+            "ignored\r\n\u{feff}*\u{e6e2}*\r\n".as_bytes(),
+        )
+        .unwrap();
+    let bom = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(bom.diagnostics.is_empty());
+    assert_eq!(
+        sources.get(SourceId(1)).unwrap().text(),
+        "ignored\r\n\u{feff}*1\u{20e3}*\r\n"
+    );
+    let block = bom.document.flat_blocks()[0];
+    assert_eq!(sources.slice(block.span), Some("*1\u{20e3}*"));
+    assert_eq!(block.span.start, 12);
+    assert_eq!(
+        sources
+            .get(SourceId(1))
+            .unwrap()
+            .position(block.span.start)
+            .unwrap(),
+        adoctra_core::SourcePosition { line: 2, column: 2 }
+    );
+    let (mut resources, mut sources, options) = setup("include::part.adoc[encoding=UTF8-DoCoMo]\n\ninclude::part.adoc[encoding=utf8-docomo]\n\ninclude::part.adoc[encoding=UTF-8]");
+    resources
+        .insert_binary("/docs/part.adoc", "\u{e6e2}\r\n".as_bytes())
+        .unwrap();
+    let first = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(first.diagnostics.is_empty());
+    assert_eq!(
+        first
+            .document
+            .flat_blocks()
+            .iter()
+            .map(|b| b.span.source_id.0)
+            .collect::<Vec<_>>(),
+        [1, 1, 2]
+    );
+    resources
+        .insert_binary("/docs/part.adoc", "1\u{20e3}\r\n".as_bytes())
+        .unwrap();
+    let equivalent = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(equivalent.diagnostics.is_empty());
+    assert!(equivalent
+        .document
+        .flat_blocks()
+        .iter()
+        .all(|b| b.span.source_id == SourceId(1)));
+    assert!(sources.get(SourceId(3)).is_none());
+    assert_eq!(sources.get(SourceId(2)).unwrap().text(), "\u{e6e2}\r\n");
+    resources
+        .insert_binary("/docs/part.adoc", "\u{e66c}\r\n".as_bytes())
+        .unwrap();
+    let changed = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(changed.diagnostics.is_empty());
+    assert_eq!(sources.get(SourceId(3)).unwrap().text(), "🅿\r\n");
+    assert_eq!(sources.get(SourceId(4)).unwrap().text(), "\u{e66c}\r\n");
+    assert_eq!(sources.get(SourceId(1)).unwrap().text(), "1\u{20e3}\r\n");
 }
 
 #[test]

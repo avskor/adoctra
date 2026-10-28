@@ -13,6 +13,7 @@ mod tables;
 
 enum Encoding {
     Utf8,
+    Utf8Mobile(&'static [(u32, Option<&'static str>)]),
     Ascii,
     Binary,
     Utf16(Option<bool>),
@@ -32,6 +33,9 @@ enum Encoding {
 
 enum MultibyteKind {
     ShiftJis,
+    ShiftJisKddi,
+    ShiftJisDocomo,
+    ShiftJisSoftbank,
     EucJp,
     StatelessIso2022Jp,
     StatelessIso2022JpKddi,
@@ -54,16 +58,17 @@ enum Iso2022Kind {
     Kddi,
 }
 
-fn append_mapping(text: &mut String, table: &[u64], key: u64, kddi: bool) -> Option<()> {
-    if kddi {
-        if let Ok(index) =
-            tables::KDDI_OVERRIDES.binary_search_by_key(&key, |&(key, _)| u64::from(key))
-        {
-            // Overrides can contain multiple Unicode scalars, or explicitly
-            // reject a mapping present in the shared CP51932 base table.
-            text.push_str(tables::KDDI_OVERRIDES[index].1?);
-            return Some(());
-        }
+fn append_mapping(
+    text: &mut String,
+    table: &[u64],
+    key: u64,
+    overrides: &[(u16, Option<&str>)],
+) -> Option<()> {
+    if let Ok(index) = overrides.binary_search_by_key(&key, |&(key, _)| u64::from(key)) {
+        // Overrides can contain multiple Unicode scalars, or explicitly
+        // reject a mapping present in the shared scalar table.
+        text.push_str(overrides[index].1?);
+        return Some(());
     }
     let index = table.binary_search_by_key(&key, |entry| entry >> 32).ok()?;
     text.push(char::from_u32(table[index] as u32)?);
@@ -242,6 +247,20 @@ impl BinaryResource {
                     .map(Cow::Borrowed)
                     .map_err(|_| invalid())
             }
+            Encoding::Utf8Mobile(overrides) => {
+                // Mobile UTF8 codecs are strict transcoders, not the default
+                // UTF-8 reader's deferred selection path. Other Unicode scalars
+                // pass through unchanged; explicit undefined PUA values fail.
+                let input = std::str::from_utf8(bytes).map_err(|_| invalid())?;
+                let mut text = String::with_capacity(input.len());
+                for character in input.chars() {
+                    match overrides.binary_search_by_key(&(character as u32), |&(key, _)| key) {
+                        Ok(index) => text.push_str(overrides[index].1.ok_or_else(invalid)?),
+                        Err(_) => text.push(character),
+                    }
+                }
+                text
+            }
             Encoding::Binary => {
                 // Ruby retains ASCII-8BIT until prepare_source_string: a BOM
                 // is recognized there, then only ASCII bytes convert to UTF-8.
@@ -322,7 +341,9 @@ impl BinaryResource {
                         // JIS pairs reuse EUC-JP's table for ISO-2022-JP,
                         // CP51932's for CP50220/CP50221, preserving variants.
                         let key = (u64::from(first + 0x80) << 8) | u64::from(sequence[1] + 0x80);
-                        append_mapping(&mut text, table, key, kddi).ok_or_else(invalid)?;
+                        let overrides: &[(u16, Option<&str>)] =
+                            if kddi { &tables::KDDI_OVERRIDES } else { &[] };
+                        append_mapping(&mut text, table, key, overrides).ok_or_else(invalid)?;
                         remaining = &remaining[2..];
                     } else if (windows && (0xa1..=0xdf).contains(&first))
                         || (matches!(state, Iso2022State::Katakana)
@@ -363,7 +384,10 @@ impl BinaryResource {
                         continue;
                     }
                     let width = match kind {
-                        MultibyteKind::ShiftJis => match first {
+                        MultibyteKind::ShiftJis
+                        | MultibyteKind::ShiftJisKddi
+                        | MultibyteKind::ShiftJisDocomo
+                        | MultibyteKind::ShiftJisSoftbank => match first {
                             0xa1..=0xdf => 1,
                             0x81..=0x9f | 0xe0..=0xfc => 2,
                             _ => return Err(invalid()),
@@ -448,7 +472,14 @@ impl BinaryResource {
                     let key = sequence
                         .iter()
                         .fold(0_u64, |key, byte| (key << 8) | u64::from(*byte));
-                    append_mapping(&mut text, table, key, kddi).ok_or_else(invalid)?;
+                    let overrides: &[(u16, Option<&str>)] = match kind {
+                        MultibyteKind::StatelessIso2022JpKddi => &tables::KDDI_OVERRIDES,
+                        MultibyteKind::ShiftJisKddi => &tables::SJIS_KDDI_OVERRIDES,
+                        MultibyteKind::ShiftJisDocomo => &tables::SJIS_DOCOMO_OVERRIDES,
+                        MultibyteKind::ShiftJisSoftbank => &tables::SJIS_SOFTBANK_OVERRIDES,
+                        _ => &[],
+                    };
+                    append_mapping(&mut text, table, key, overrides).ok_or_else(invalid)?;
                     remaining = &remaining[width..];
                 }
                 text
@@ -936,6 +967,272 @@ mod tests {
     }
 
     #[test]
+    fn jis2004_aliases_supplementary_mappings_and_undefined_combinations_follow_ruby() {
+        for name in ["EUC-JIS-2004", "EUC-JISX0213", "eUc-JiS-2004"] {
+            for (bytes, expected) in [
+                (&b"\xc6\xfc\xcb\xdc\xb8\xec"[..], "日本語"),
+                (&b"\x8f\xa1\xa1"[..], "𠂉"),
+                (&b"\x8f\xfe\xf6"[..], "𪚲"),
+                (&b"\xa2\xaf\xa2\xb2"[..], "＇～"),
+                (&b"\x8e\xb1\x8e\xde"[..], "ｱﾞ"),
+                (&b"\x1b$B\x0e\x0f"[..], "\u{1b}$B\u{e}\u{f}"),
+            ] {
+                assert_eq!(
+                    decode(bytes, Some(name)).unwrap().text,
+                    expected,
+                    "{name}/{bytes:?}"
+                );
+            }
+            // Pinned Ruby rejects these 25 combining mappings. Do not fill
+            // them from other codecs' tables or compose their Unicode output.
+            for pair in [
+                0xa4f7_u16, 0xa4f8, 0xa4f9, 0xa4fa, 0xa4fb, 0xa5f7, 0xa5f8, 0xa5f9, 0xa5fa, 0xa5fb,
+                0xa5fc, 0xa5fd, 0xa5fe, 0xa6f8, 0xabc4, 0xabc8, 0xabc9, 0xabca, 0xabcb, 0xabcc,
+                0xabcd, 0xabce, 0xabcf, 0xabe5, 0xabe6,
+            ] {
+                assert_eq!(
+                    decode(&pair.to_be_bytes(), Some(name)).unwrap_err().kind,
+                    ResourceErrorKind::InvalidEncoding,
+                    "{name}/{pair:x}"
+                );
+            }
+            for bytes in [
+                &b"\xa4"[..],
+                &b"\x8f"[..],
+                &b"\x8f\xa1"[..],
+                &b"\x8e"[..],
+                &b"\x8e\xe0"[..],
+                &b"\xa0\xa1"[..],
+                &b"\xa4 "[..],
+                &b"\x8f\xa1\n"[..],
+                &b"\x8f\xa2\xaf"[..],
+                &b"\xef\xbb\xbf"[..],
+                &b"\xff\xfeA\0"[..],
+            ] {
+                assert_eq!(
+                    decode(bytes, Some(name)).unwrap_err().kind,
+                    ResourceErrorKind::InvalidEncoding,
+                    "{name}/{bytes:?}"
+                );
+            }
+        }
+        assert_eq!(decode(b"\x8f\xa2\xaf", Some("EUC-JP")).unwrap().text, "˘");
+    }
+
+    #[test]
+    fn sjis_kddi_controls_compounds_private_use_and_undefined_emoji_follow_ruby_io() {
+        for name in ["SJIS-KDDI", "sjis-kddi"] {
+            for (bytes, expected) in [
+                (&b"\x93\xfa\x96\x7b\x8c\xea"[..], "日本語"),
+                (&b"\xf6\xa5"[..], "🇯🇵"),
+                (&b"\xf6\xfb"[..], "1\u{20e3}"),
+                (&b"\xf7\xc9"[..], "0\u{20e3}"),
+                (&b"\xf6\x7e"[..], "🅿"),
+                (&b"\xf6\x60"[..], "☀"),
+                (&b"\xf0\x40\xfa\x40\x81\x60"[..], "\u{e000}ⅰ～"),
+                (&b"\xb1\xde"[..], "ｱﾞ"),
+                (&b"\x1b$B\x0e1\x0f"[..], "\u{1b}$B\u{e}1\u{f}"),
+            ] {
+                assert_eq!(
+                    decode(bytes, Some(name)).unwrap().text,
+                    expected,
+                    "{name}/{bytes:?}"
+                );
+            }
+            for bytes in [
+                &b"\x81"[..],
+                &b"\xf6"[..],
+                &b"\xf6 "[..],
+                &b"\xf6\x7f"[..],
+                &b"\xf6\xfd"[..],
+                &b"\x80"[..],
+                &b"\xa0"[..],
+                &b"\xfd"[..],
+                &b"\xfe"[..],
+                &b"\xff"[..],
+                &b"\xf3\xf3"[..],
+                &b"\xf6\x4a"[..],
+                &b"\xef\xbb\xbf"[..],
+                &b"\xff\xfeA\0"[..],
+            ] {
+                assert_eq!(
+                    decode(bytes, Some(name)).unwrap_err().kind,
+                    ResourceErrorKind::InvalidEncoding,
+                    "{name}/{bytes:?}"
+                );
+            }
+        }
+        assert_eq!(
+            decode(b"\xf6\xa5", Some("Windows-31J")).unwrap().text,
+            "\u{e4cc}"
+        );
+        // Reverse encoding of 😀 is not evidence that Ruby can decode F64A.
+        assert!(decode(b"\xf6\x4a", Some("Windows-31J")).is_ok());
+    }
+
+    #[test]
+    fn sjis_docomo_keycaps_supplementary_and_undefined_mappings_follow_ruby_io() {
+        for name in ["SJIS-DoCoMo", "sjis-docomo"] {
+            for (bytes, expected) in [
+                (&b"\x93\xfa\x96\x7b\x8c\xea"[..], "日本語"),
+                (&b"\xf9\x87"[..], "1\u{20e3}"),
+                (&b"\xf9\x85"[..], "#\u{20e3}"),
+                (&b"\xf9\x90"[..], "0\u{20e3}"),
+                (&b"\xf8\xcd"[..], "🅿"),
+                (&b"\xf8\x9f\xf9\x91"[..], "☀❤"),
+                (&b"\xf0\x40\xfa\x40\x81\x60"[..], "\u{e000}ⅰ～"),
+                (&b"\xb1\xde"[..], "ｱﾞ"),
+                (&b"\x1b$B\x0e1\x0f"[..], "\u{1b}$B\u{e}1\u{f}"),
+            ] {
+                assert_eq!(
+                    decode(bytes, Some(name)).unwrap().text,
+                    expected,
+                    "{name}/{bytes:?}"
+                );
+            }
+            for bytes in [
+                &b"\x81"[..],
+                &b"\xf9"[..],
+                &b"\xf9 "[..],
+                &b"\xf9\x7f"[..],
+                &b"\xf9\xfd"[..],
+                &b"\x80"[..],
+                &b"\xa0"[..],
+                &b"\xfd"[..],
+                &b"\xfe"[..],
+                &b"\xff"[..],
+                &b"\xf9\xfc"[..],
+                &b"\xf9\x96"[..],
+                &b"\xef\xbb\xbf"[..],
+                &b"\xff\xfeA\0"[..],
+            ] {
+                assert_eq!(
+                    decode(bytes, Some(name)).unwrap_err().kind,
+                    ResourceErrorKind::InvalidEncoding,
+                    "{name}/{bytes:?}"
+                );
+            }
+        }
+        assert_eq!(
+            decode(b"\xf9\x87", Some("Windows-31J")).unwrap().text,
+            "\u{e6e2}"
+        );
+        assert!(decode(b"\xf9\x96", Some("Windows-31J")).is_ok());
+    }
+
+    #[test]
+    fn softbank_duplicate_forms_and_literal_escape_sequences_follow_ruby_io() {
+        for name in ["SJIS-SoftBank", "sjis-softbank"] {
+            for (bytes, expected) in [
+                (&b"\xf6\xe4\xfb\xab"[..], "🇯🇵🇯🇵"),
+                (&b"\xf2\xe5\xf7\xbc"[..], "1\u{20e3}1\u{20e3}"),
+                (&b"\xf2\xd9\xf7\xb0"[..], "#\u{20e3}#\u{20e3}"),
+                (&b"\xf1\xd4\xf7\x90"[..], "🅿🅿"),
+                (&b"\xf0\x8b\xf9\x8b"[..], "☀☀"),
+                (&b"\xf0\x62\xf9\x62"[..], "❤❤"),
+                (&b"\xf0\x40\x81\x60\xb1\xde"[..], "\u{e000}～ｱﾞ"),
+                (
+                    &b"\x1b$G!\x0f\x1b$P!\x0f"[..],
+                    "\u{1b}$G!\u{f}\u{1b}$P!\u{f}",
+                ),
+                (&b"\x1b$G!"[..], "\u{1b}$G!"),
+                (&b"\x1b$G"[..], "\u{1b}$G"),
+            ] {
+                assert_eq!(
+                    decode(bytes, Some(name)).unwrap().text,
+                    expected,
+                    "{name}/{bytes:?}"
+                );
+            }
+            for bytes in [
+                &b"\x81"[..],
+                &b"\xf6"[..],
+                &b"\xf6 "[..],
+                &b"\xf6\x7f"[..],
+                &b"\xf6\xfd"[..],
+                &b"\x80"[..],
+                &b"\xa0"[..],
+                &b"\xfd"[..],
+                &b"\xfe"[..],
+                &b"\xff"[..],
+                &b"\xf9\x9a"[..],
+                &b"\xef\xbb\xbf"[..],
+                &b"\xff\xfeA\0"[..],
+            ] {
+                assert_eq!(
+                    decode(bytes, Some(name)).unwrap_err().kind,
+                    ResourceErrorKind::InvalidEncoding,
+                    "{name}/{bytes:?}"
+                );
+            }
+        }
+        assert_eq!(
+            decode(b"\xf6\xe4", Some("Windows-31J")).unwrap().text,
+            "\u{e50b}"
+        );
+        assert_eq!(
+            decode(b"\xfb\xab", Some("Windows-31J")).unwrap().text,
+            "\u{8b53}"
+        );
+        assert!(decode(b"\xf9\x9a", Some("Windows-31J")).is_ok());
+    }
+
+    #[test]
+    fn utf8_docomo_maps_private_use_and_keeps_other_unicode_with_strict_validation() {
+        for name in ["UTF8-DoCoMo", "utf8-docomo"] {
+            for (input, expected) in [
+                ("\u{e63e}\u{e6e2}\u{e66c}", "☀1\u{20e3}🅿"),
+                (
+                    "日本語 😀 🇯🇵 1\u{fe0f}\u{20e3}❤\u{fe0f}",
+                    "日本語 😀 🇯🇵 1\u{fe0f}\u{20e3}❤\u{fe0f}",
+                ),
+                (
+                    "\u{e000}\u{fffe}\u{ffff}\u{10ffff}",
+                    "\u{e000}\u{fffe}\u{ffff}\u{10ffff}",
+                ),
+                ("\u{feff}\u{e63e}", "\u{feff}☀"),
+                ("\u{1b}$G!\u{e}\u{f}", "\u{1b}$G!\u{e}\u{f}"),
+            ] {
+                assert_eq!(
+                    decode(input.as_bytes(), Some(name)).unwrap().text,
+                    expected,
+                    "{name}/{input:?}"
+                );
+            }
+            for input in ["\u{e643}", "\u{e6f1}", "\u{e757}"] {
+                assert_eq!(
+                    decode(input.as_bytes(), Some(name)).unwrap_err().kind,
+                    ResourceErrorKind::InvalidEncoding
+                );
+            }
+            for bytes in [
+                &b"\xff"[..],
+                &b"\x80"[..],
+                &b"\xee\x9b"[..],
+                &b"\xf0\x9f\x98"[..],
+                &b"\xc0\xaf"[..],
+                &b"\xe0\x80\x80"[..],
+                &b"\xed\xa0\x80"[..],
+                &b"\xf4\x90\x80\x80"[..],
+                &b"\xf8\x88\x80\x80\x80"[..],
+                &b"\xfc\x84\x80\x80\x80\x80"[..],
+                &b"\xff\xfeA\0"[..],
+            ] {
+                assert_eq!(
+                    decode(bytes, Some(name)).unwrap_err().kind,
+                    ResourceErrorKind::InvalidEncoding,
+                    "{name}/{bytes:?}"
+                );
+            }
+        }
+        assert_eq!(
+            decode("\u{e6e2}".as_bytes(), Some("UTF-8")).unwrap().text,
+            "\u{e6e2}"
+        );
+        assert!(decode(b"\xff\xfeA\0", Some("UTF-8")).is_ok());
+    }
+
+    #[test]
     fn multibyte_decoding_matches_exhaustive_ruby_fingerprints() {
         // Ruby 3.3.8, pinned Asciidoctor environment. Regenerate independently:
         // ruby scripts/generate_encodings.rb --fingerprints
@@ -956,6 +1253,11 @@ mod tests {
             ("GBK", 0x461fd7b2edc98ce2, false),
             ("GB18030", 0xc15d224b9301efc0, false),
             ("EUC-KR", 0xfda2bfb2de08cf1d, false),
+            ("UTF8-DoCoMo", 0x4118e5f8e2a4ea5a, false),
+            ("SJIS-SoftBank", 0x2f3af6a0c46dc354, false),
+            ("SJIS-DoCoMo", 0x9e10ca6ad6283a3f, false),
+            ("SJIS-KDDI", 0x6f033b26c39879f5, false),
+            ("EUC-JIS-2004", 0xcce2b1a75dcf5e2a, true),
             ("CP949", 0x620f7b1e5bb833c1, false),
             ("stateless-ISO-2022-JP", 0x91fbafd49916f8e1, false),
             ("stateless-ISO-2022-JP-KDDI", 0x5aa46317606ed4c0, false),
@@ -1001,6 +1303,51 @@ mod tests {
                         check(&[prefix, a, b]);
                     }
                 }
+            }
+            if name == "SJIS-SoftBank" {
+                // All legacy-looking selector/payload pairs are still ordinary
+                // SJIS input, with and without SI and at truncated EOFs.
+                for a in 0..=255 {
+                    check(&[27, 36, a]);
+                }
+                for a in 0..=255 {
+                    for b in 0..=255 {
+                        check(&[27, 36, a, b]);
+                        check(&[27, 36, a, b, 15]);
+                    }
+                }
+            }
+            if name == "UTF8-DoCoMo" {
+                // 1,183,513 independent IO probes: every Unicode scalar,
+                // short byte inputs, UTF-8 boundary mutations and truncations.
+                for scalar in 0..=0x10ffff {
+                    if let Some(character) = char::from_u32(scalar) {
+                        let mut buffer = [0; 4];
+                        check(character.encode_utf8(&mut buffer).as_bytes());
+                    }
+                }
+                for base in [
+                    &b"\xc2\xa2"[..],
+                    &b"\xe0\xa0\x80"[..],
+                    &b"\xed\x9f\xbf"[..],
+                    &b"\xee\x98\xbe"[..],
+                    &b"\xee\x9b\xb1"[..],
+                    &b"\xf0\x90\x80\x80"[..],
+                    &b"\xf4\x8f\xbf\xbf"[..],
+                ] {
+                    for length in 0..base.len() {
+                        check(&base[..length]);
+                    }
+                    for index in 0..base.len() {
+                        for byte in 0..=255 {
+                            let mut input = base.to_vec();
+                            input[index] = byte;
+                            check(&input);
+                        }
+                    }
+                }
+                check(b"\xf8\x88\x80\x80\x80");
+                check(b"\xfc\x84\x80\x80\x80\x80");
             }
             assert_eq!(hash, expected, "{name}");
         }

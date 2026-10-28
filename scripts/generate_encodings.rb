@@ -11,21 +11,24 @@ JAPANESE = %w[Shift_JIS Windows-31J EUC-JP eucJP-ms CP51932].freeze
 BIG5 = %w[Big5 Big5-HKSCS Big5-UAO CP950 CP951].freeze
 GB = %w[GB2312 GB12345 GBK GB18030].freeze
 KOREAN = %w[EUC-KR CP949].freeze
-MULTIBYTE = (JAPANESE + BIG5 + GB + KOREAN).freeze
+JIS2004 = %w[EUC-JIS-2004].freeze
+SJIS_MOBILE = %w[SJIS-KDDI SJIS-DoCoMo SJIS-SoftBank].freeze
+UTF8_MOBILE = %w[UTF8-DoCoMo].freeze
+MULTIBYTE = (JAPANESE + BIG5 + GB + KOREAN + JIS2004).freeze
 
 # Independent exhaustive reference for the Rust decoder regression test,
 # including invalid input and sequences containing multiple ASCII characters.
 # This enumerates all byte pairs, rather than the table generator's lead/trail
 # ranges. EUC also tests every pair following the three-byte prefix 0x8f.
 if ARGV == ['--fingerprints']
-  (MULTIBYTE + ['GB18030-four', 'ISO-2022-JP', 'CP50220', 'CP50221', 'stateless-ISO-2022-JP', 'ISO-2022-JP-KDDI', 'stateless-ISO-2022-JP-KDDI']).each do |label|
+  (MULTIBYTE + ['GB18030-four', 'ISO-2022-JP', 'CP50220', 'CP50221', 'stateless-ISO-2022-JP', 'ISO-2022-JP-KDDI', 'stateless-ISO-2022-JP-KDDI'] + SJIS_MOBILE + UTF8_MOBILE).each do |label|
     name = label == 'GB18030-four' ? 'GB18030' : label
     hash = 0xcbf29ce484222325
     feed = lambda { |byte| hash = ((hash ^ byte) * 0x100000001b3) & 0xffffffffffffffff }
     check = lambda do |bytes|
       begin
         input = bytes.pack('C*').force_encoding(name)
-        result = if name == 'stateless-ISO-2022-JP' || name.end_with?('-KDDI')
+        result = if name == 'stateless-ISO-2022-JP' || name.end_with?('-KDDI') || JIS2004.include?(name) || SJIS_MOBILE.include?(name) || UTF8_MOBILE.include?(name)
                    # Like Ruby IO, always run the transcoder. String#encode
                    # bypasses it on ASCII-only strings, hiding ESC/SO/SI errors.
                    converter = Encoding::Converter.new name, 'UTF-8'
@@ -72,9 +75,26 @@ if ARGV == ['--fingerprints']
       check.call []
       256.times { |a| check.call [a] }
       256.times { |a| 256.times { |b| check.call [a, b] } }
-      256.times { |a| 256.times { |b| check.call [0x8f, a, b] } } if JAPANESE.drop(2).include? name
+      256.times { |a| 256.times { |b| check.call [0x8f, a, b] } } if (JAPANESE.drop(2) + JIS2004).include? name
       if name.start_with? 'stateless-ISO-2022-JP'
         [0x90, 0x92].each { |prefix| 256.times { |a| 256.times { |b| check.call [prefix, a, b] } } }
+      end
+      if name == 'SJIS-SoftBank'
+        # IO preserves legacy-looking ESC $ selectors as literal text. Include
+        # every selector/payload pair with and without SI, and truncated forms.
+        256.times { |a| check.call [27, 36, a] }
+        256.times { |a| 256.times { |b| check.call [27, 36, a, b]; check.call [27, 36, a, b, 15] } }
+      end
+      if UTF8_MOBILE.include? name
+        # Exhaust every Unicode scalar, independently of the PUA table generator.
+        (0..0x10ffff).each { |point| check.call([point].pack('U').bytes) unless point.between?(0xd800, 0xdfff) }
+        [[0xc2, 0xa2], [0xe0, 0xa0, 0x80], [0xed, 0x9f, 0xbf], [0xee, 0x98, 0xbe],
+         [0xee, 0x9b, 0xb1], [0xf0, 0x90, 0x80, 0x80], [0xf4, 0x8f, 0xbf, 0xbf]].each do |base|
+          base.size.times { |length| check.call base.take(length) }
+          base.size.times { |index| 256.times { |byte| input = base.dup; input[index] = byte; check.call input } }
+        end
+        check.call [0xf8, 0x88, 0x80, 0x80, 0x80]
+        check.call [0xfc, 0x84, 0x80, 0x80, 0x80, 0x80]
       end
     end
     puts format('%s: 0x%016x', label, hash)
@@ -117,13 +137,17 @@ Encoding.list.sort_by(&:name).each do |enc|
          when 'ISO-2022-JP-KDDI' then "Encoding::Iso2022Jp { table: &MULTI_#{MULTIBYTE.index('CP51932')}, kind: Iso2022Kind::Kddi }"
          when 'stateless-ISO-2022-JP' then "Encoding::Multibyte { table: &MULTI_#{MULTIBYTE.index('EUC-JP')}, kind: MultibyteKind::StatelessIso2022Jp }"
          when 'stateless-ISO-2022-JP-KDDI' then "Encoding::Multibyte { table: &MULTI_#{MULTIBYTE.index('CP51932')}, kind: MultibyteKind::StatelessIso2022JpKddi }"
+         when 'SJIS-KDDI' then "Encoding::Multibyte { table: &MULTI_#{MULTIBYTE.index('Windows-31J')}, kind: MultibyteKind::ShiftJisKddi }"
+         when 'SJIS-DoCoMo' then "Encoding::Multibyte { table: &MULTI_#{MULTIBYTE.index('Windows-31J')}, kind: MultibyteKind::ShiftJisDocomo }"
+         when 'SJIS-SoftBank' then "Encoding::Multibyte { table: &MULTI_#{MULTIBYTE.index('Windows-31J')}, kind: MultibyteKind::ShiftJisSoftbank }"
+         when 'UTF8-DoCoMo' then 'Encoding::Utf8Mobile(&UTF8_DOCOMO_OVERRIDES)'
          else
            if (index = single_byte.index(enc))
              "Encoding::Single(&TABLE_#{index})"
            elsif (index = multibyte.index(enc))
              family = if index < 2
                         'ShiftJis'
-                      elsif index < JAPANESE.size
+                      elsif index < JAPANESE.size || JIS2004.include?(enc.name)
                         'EucJp'
                       elsif BIG5.include? enc.name
                         'Big5'
@@ -145,6 +169,7 @@ puts '        _ => return None,'
 puts '    })'
 puts '}'
 cp51932 = {}
+windows31j = {}
 multibyte.each_with_index do |enc, index|
   # Enumerate byte sequences, not encoded Unicode: the reverse mapping loses
   # duplicate characters and vendor-specific differences. Only one-character
@@ -154,7 +179,7 @@ multibyte.each_with_index do |enc, index|
     leads = (0x81..0x9f).to_a + (0xe0..0xfc).to_a
     trails = (0x40..0x7e).to_a + (0x80..0xfc).to_a
     candidates.concat leads.product(trails)
-  elsif index < JAPANESE.size
+  elsif index < JAPANESE.size || JIS2004.include?(enc.name)
     candidates.concat [0x8e].product((0xa1..0xdf).to_a)
     candidates.concat (0xa1..0xfe).to_a.product((0xa1..0xfe).to_a)
     candidates.concat [0x8f].product((0xa1..0xfe).to_a, (0xa1..0xfe).to_a)
@@ -178,6 +203,7 @@ multibyte.each_with_index do |enc, index|
     end
   end.sort
   cp51932 = values.to_h { |value| [value >> 32, [value & 0xffffffff].pack('U')] } if enc.name == 'CP51932'
+  windows31j = values.to_h { |value| [value >> 32, [value & 0xffffffff].pack('U')] } if enc.name == 'Windows-31J'
   puts "// #{enc.name}: sorted (encoded bytes << 32) | Unicode scalar."
   puts '#[rustfmt::skip]'
   puts "static MULTI_#{index}: [u64; #{values.size}] = ["
@@ -211,6 +237,56 @@ overrides.each do |key, value|
   puts format('    (0x%04x, %s),', key, literal)
 end
 puts '];'
+
+# Mobile SJIS variants share Windows-31J's grammar, with their own mappings.
+# Enumerate external characters, not reverse UTF-8 encoding: undefined emoji
+# and retained private-use characters must stay exactly as the IO converter.
+sjis_candidates = (128..255).map { |byte| [byte] }
+((0x81..0x9f).to_a + (0xe0..0xfc).to_a).each do |lead|
+  256.times { |trail| sjis_candidates << [lead, trail] }
+end
+SJIS_MOBILE.each do |name|
+  sjis_overrides = sjis_candidates.filter_map do |bytes|
+    value = begin
+      converter = Encoding::Converter.new name, 'UTF-8'
+      converter.convert(bytes.pack('C*')) + converter.finish
+    rescue EncodingError
+      nil
+    end
+    key = bytes.reduce(0) { |result, byte| (result << 8) | byte }
+    [key, value] if value != windows31j[key]
+  end.sort_by(&:first)
+  puts "// #{name}: sorted byte keys overriding Windows-31J; None rejects a base mapping."
+  puts '#[rustfmt::skip]'
+  puts "pub(super) static #{name.upcase.tr('-', '_')}_OVERRIDES: [(u16, Option<&str>); #{sjis_overrides.size}] = ["
+  sjis_overrides.each do |key, value|
+    literal = value ? 'Some("' + value.codepoints.map { |point| "\\u{#{point.to_s(16)}}" }.join + '")' : 'None'
+    puts format('    (0x%04x, %s),', key, literal)
+  end
+  puts '];'
+end
+
+# UTF8 mobile variants use Unicode scalar keys, separate from encoded SJIS keys.
+UTF8_MOBILE.each do |name|
+  overrides = (0xe000..0xf8ff).filter_map do |point|
+    input = [point].pack('U')
+    value = begin
+      converter = Encoding::Converter.new name, 'UTF-8'
+      converter.convert(input) + converter.finish
+    rescue EncodingError
+      nil
+    end
+    [point, value] if value != input
+  end
+  puts "// #{name}: Unicode scalar overrides; None rejects a private-use value."
+  puts '#[rustfmt::skip]'
+  puts "pub(super) static #{name.upcase.tr('-', '_')}_OVERRIDES: [(u32, Option<&str>); #{overrides.size}] = ["
+  overrides.each do |key, value|
+    literal = value ? 'Some("' + value.codepoints.map { |point| "\\u{#{point.to_s(16)}}" }.join + '")' : 'None'
+    puts format('    (0x%04x, %s),', key, literal)
+  end
+  puts '];'
+end
 
 # Compact only consecutive, verified mappings. Gaps stay explicit, including
 # pointers outside Unicode and the unused interval before supplementary planes.

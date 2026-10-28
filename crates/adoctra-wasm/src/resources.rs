@@ -173,6 +173,234 @@ mod tests {
     use super::*;
 
     #[test]
+    fn utf8_docomo_exported_snapshots_share_equivalent_unicode_and_validate_prefixes() {
+        let mut workspace = ResourceWorkspace::new();
+        workspace.set("/main.adoc", "include::part.adoc[encoding=UTF8-DoCoMo,lines=2]\n\ninclude::part.adoc[encoding=utf8-docomo,lines=2]").unwrap();
+        workspace
+            .set_binary("/part.adoc", "ignored\r\n*\u{e6e2}*\r\n".as_bytes())
+            .unwrap();
+        let main = workspace.load("/main.adoc", None).unwrap();
+        let json = workspace.parse_json(main).unwrap();
+        assert!(
+            json.contains(r#""diagnostics":[]"#) && json.contains("1\u{20e3}"),
+            "{json}"
+        );
+        assert_eq!(
+            workspace.source(1).unwrap().text(),
+            "ignored\r\n*1\u{20e3}*\r\n"
+        );
+        assert_eq!(
+            workspace.source(1).unwrap().position(14).unwrap(),
+            adoctra_core::SourcePosition { line: 2, column: 4 }
+        );
+        assert!(workspace.source(2).is_err());
+        let tokens = workspace.tokens_json(main).unwrap();
+        assert!(
+            tokens.contains(r#""source_id":1,"start":9,"end":15"#),
+            "{tokens}"
+        );
+        workspace
+            .set_binary("/part.adoc", "ignored\r\n*1\u{20e3}*\r\n".as_bytes())
+            .unwrap();
+        let equivalent = workspace.parse_json(main).unwrap();
+        assert!(equivalent.contains(r#""diagnostics":[]"#), "{equivalent}");
+        assert!(workspace.source(2).is_err());
+        workspace
+            .set_binary("/part.adoc", "ignored\r\n*\u{e66c}*\r\n\u{e6f1}".as_bytes())
+            .unwrap();
+        let changed = workspace.parse_json(main).unwrap();
+        assert!(
+            changed.contains(r#""diagnostics":[]"#) && changed.contains("🅿"),
+            "{changed}"
+        );
+        assert_eq!(workspace.source(2).unwrap().text(), "ignored\r\n*🅿*\r\n");
+        assert_eq!(
+            workspace.source(2).unwrap().position(14).unwrap(),
+            adoctra_core::SourcePosition { line: 2, column: 3 }
+        );
+        assert!(!workspace.source(2).unwrap().is_complete());
+        assert_eq!(
+            workspace.source(1).unwrap().text(),
+            "ignored\r\n*1\u{20e3}*\r\n"
+        );
+        assert!(workspace.source(3).is_err());
+    }
+
+    #[test]
+    fn softbank_duplicate_encodings_share_exported_immutable_snapshots() {
+        let mut workspace = ResourceWorkspace::new();
+        workspace.set("/main.adoc", "include::part.adoc[encoding=SJIS-SoftBank,lines=2]\n\ninclude::part.adoc[encoding=sjis-softbank,lines=2]").unwrap();
+        workspace
+            .set_binary("/part.adoc", b"ignored\r\n*\xf6\xe4*\r\n")
+            .unwrap();
+        let main = workspace.load("/main.adoc", None).unwrap();
+        let json = workspace.parse_json(main).unwrap();
+        assert!(
+            json.contains(r#""diagnostics":[]"#) && json.contains("🇯🇵"),
+            "{json}"
+        );
+        assert_eq!(workspace.source(1).unwrap().text(), "ignored\r\n*🇯🇵*\r\n");
+        assert_eq!(
+            workspace.source(1).unwrap().position(18).unwrap(),
+            adoctra_core::SourcePosition { line: 2, column: 4 }
+        );
+        assert!(workspace.source(2).is_err());
+        let tokens = workspace.tokens_json(main).unwrap();
+        assert!(
+            tokens.contains(r#""source_id":1,"start":9,"end":19"#),
+            "{tokens}"
+        );
+        workspace
+            .set_binary("/part.adoc", b"ignored\r\n*\xfb\xab*\r\n")
+            .unwrap();
+        let duplicate = workspace.parse_json(main).unwrap();
+        assert!(
+            duplicate.contains(r#""diagnostics":[]"#) && duplicate.contains("🇯🇵"),
+            "{duplicate}"
+        );
+        assert!(workspace.source(2).is_err());
+        workspace
+            .set_binary("/part.adoc", b"ignored\r\n*\xf2\xe5*\r\n\xf9\x9a")
+            .unwrap();
+        let changed = workspace.parse_json(main).unwrap();
+        assert!(
+            changed.contains(r#""diagnostics":[]"#) && changed.contains("1\u{20e3}"),
+            "{changed}"
+        );
+        assert_eq!(
+            workspace.source(2).unwrap().text(),
+            "ignored\r\n*1\u{20e3}*\r\n"
+        );
+        assert!(!workspace.source(2).unwrap().is_complete());
+        assert_eq!(workspace.source(1).unwrap().text(), "ignored\r\n*🇯🇵*\r\n");
+        assert!(workspace.source(3).is_err());
+    }
+
+    #[test]
+    fn docomo_keycaps_export_scalar_positions_and_immutable_snapshots() {
+        let mut workspace = ResourceWorkspace::new();
+        workspace.set("/main.adoc", "include::part.adoc[encoding=SJIS-DoCoMo,lines=2]\n\ninclude::part.adoc[encoding=sjis-docomo,lines=2]").unwrap();
+        workspace
+            .set_binary("/part.adoc", b"ignored\r\n*\xf9\x87*\r\n")
+            .unwrap();
+        let main = workspace.load("/main.adoc", None).unwrap();
+        let json = workspace.parse_json(main).unwrap();
+        assert!(
+            json.contains(r#""diagnostics":[]"#) && json.contains("1\u{20e3}"),
+            "{json}"
+        );
+        assert_eq!(
+            workspace.source(1).unwrap().text(),
+            "ignored\r\n*1\u{20e3}*\r\n"
+        );
+        assert_eq!(
+            workspace.source(1).unwrap().position(14).unwrap(),
+            adoctra_core::SourcePosition { line: 2, column: 4 }
+        );
+        assert!(workspace.source(2).is_err());
+        let tokens = workspace.tokens_json(main).unwrap();
+        assert!(
+            tokens.contains(r#""source_id":1,"start":9,"end":15"#),
+            "{tokens}"
+        );
+        workspace
+            .set_binary("/part.adoc", b"ignored\r\n*\xf8\xcd*\r\n\xf9\x96")
+            .unwrap();
+        let changed = workspace.parse_json(main).unwrap();
+        assert!(
+            changed.contains(r#""diagnostics":[]"#) && changed.contains("🅿"),
+            "{changed}"
+        );
+        assert_eq!(workspace.source(2).unwrap().text(), "ignored\r\n*🅿*\r\n");
+        assert_eq!(
+            workspace.source(2).unwrap().position(14).unwrap(),
+            adoctra_core::SourcePosition { line: 2, column: 3 }
+        );
+        assert!(!workspace.source(2).unwrap().is_complete());
+        assert_eq!(
+            workspace.source(1).unwrap().text(),
+            "ignored\r\n*1\u{20e3}*\r\n"
+        );
+        assert!(workspace.source(3).is_err());
+    }
+
+    #[test]
+    fn sjis_kddi_compounds_export_scalar_positions_and_immutable_snapshots() {
+        let mut workspace = ResourceWorkspace::new();
+        workspace.set("/main.adoc", "include::part.adoc[encoding=SJIS-KDDI,lines=2]\n\ninclude::part.adoc[encoding=sjis-kddi,lines=2]").unwrap();
+        workspace
+            .set_binary("/part.adoc", b"ignored\r\n*\xf6\xa5*\r\n")
+            .unwrap();
+        let main = workspace.load("/main.adoc", None).unwrap();
+        let json = workspace.parse_json(main).unwrap();
+        assert!(
+            json.contains(r#""diagnostics":[]"#) && json.contains("🇯🇵"),
+            "{json}"
+        );
+        assert_eq!(workspace.source(1).unwrap().text(), "ignored\r\n*🇯🇵*\r\n");
+        assert_eq!(
+            workspace.source(1).unwrap().position(18).unwrap(),
+            adoctra_core::SourcePosition { line: 2, column: 4 }
+        );
+        assert!(workspace.source(2).is_err());
+        let tokens = workspace.tokens_json(main).unwrap();
+        assert!(
+            tokens.contains(r#""source_id":1,"start":9,"end":19"#),
+            "{tokens}"
+        );
+        workspace
+            .set_binary("/part.adoc", b"ignored\r\n*\xf6\x7e*\r\n\xf6\x4a")
+            .unwrap();
+        let changed = workspace.parse_json(main).unwrap();
+        assert!(
+            changed.contains(r#""diagnostics":[]"#) && changed.contains("🅿"),
+            "{changed}"
+        );
+        assert_eq!(workspace.source(2).unwrap().text(), "ignored\r\n*🅿*\r\n");
+        assert!(!workspace.source(2).unwrap().is_complete());
+        assert_eq!(workspace.source(1).unwrap().text(), "ignored\r\n*🇯🇵*\r\n");
+        assert!(workspace.source(3).is_err());
+    }
+
+    #[test]
+    fn jis2004_aliases_export_supplementary_spans_and_immutable_prefix_snapshots() {
+        let mut workspace = ResourceWorkspace::new();
+        workspace.set("/main.adoc", "include::part.adoc[encoding=EUC-JIS-2004,lines=2]\n\ninclude::part.adoc[encoding=EUC-JISX0213,lines=2]").unwrap();
+        workspace
+            .set_binary("/part.adoc", b"ignored\r\n*\x8f\xa1\xa1*\r\n")
+            .unwrap();
+        let main = workspace.load("/main.adoc", None).unwrap();
+        let json = workspace.parse_json(main).unwrap();
+        assert!(
+            json.contains(r#""diagnostics":[]"#) && json.contains("𠂉"),
+            "{json}"
+        );
+        assert_eq!(workspace.source(1).unwrap().text(), "ignored\r\n*𠂉*\r\n");
+        assert!(workspace.source(2).is_err());
+        assert_eq!(
+            workspace.source(1).unwrap().position(14).unwrap(),
+            adoctra_core::SourcePosition { line: 2, column: 3 }
+        );
+        let tokens = workspace.tokens_json(main).unwrap();
+        assert!(
+            tokens.contains(r#""source_id":1,"start":9,"end":15"#),
+            "{tokens}"
+        );
+        workspace
+            .set_binary("/part.adoc", b"ignored\r\n*\x8f\xfe\xf6*\r\n\xa4\xf7")
+            .unwrap();
+        let changed = workspace.parse_json(main).unwrap();
+        assert!(
+            changed.contains(r#""diagnostics":[]"#) && changed.contains("𪚲"),
+            "{changed}"
+        );
+        assert_eq!(workspace.source(2).unwrap().text(), "ignored\r\n*𪚲*\r\n");
+        assert!(!workspace.source(2).unwrap().is_complete());
+        assert_eq!(workspace.source(1).unwrap().text(), "ignored\r\n*𠂉*\r\n");
+        assert!(workspace.source(3).is_err());
+    }
+
+    #[test]
     fn kddi_compounds_export_scalar_positions_tokens_and_immutable_snapshots() {
         for (name, flag, supplementary, bad) in [
             (

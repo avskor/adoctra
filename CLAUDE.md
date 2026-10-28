@@ -144,7 +144,8 @@ micro-optimizations as the next task. Include encoding now supports Unicode and
 53 single-byte codecs, plus Shift_JIS, Windows-31J, EUC-JP, eucJP-ms, CP51932,
 Big5, Big5-HKSCS, Big5-UAO, CP950, CP951, GB2312, GB12345, GBK, GB18030, EUC-KR, CP949
 and ISO-2022-JP (ISO2022-JP), CP50220, CP50221, stateless-ISO-2022-JP,
-ISO-2022-JP-KDDI and stateless-ISO-2022-JP-KDDI.
+ISO-2022-JP-KDDI, stateless-ISO-2022-JP-KDDI, EUC-JIS-2004 (EUC-JISX0213)
+and SJIS-KDDI/SJIS-DoCoMo/SJIS-SoftBank, plus UTF8-DoCoMo.
 Finite positive `lines` selections recover an intact decoded prefix when only
 the unread tail is malformed; `SourceFile::is_complete` exposes this explicitly.
 Skipped malformed UTF-8/BINARY lines now have explicit omission records with
@@ -1145,7 +1146,7 @@ and raw bytes (hex in JSON). `SourceFile::position` accounts for gaps; omitted
 bytes count toward the include budget. Sparse snapshots cannot be reparsed as
 implicitly valid primary sources. `is_complete`/WASM `source_is_complete`
 distinguish these views and prefixes from full files. BOM/CRLF remain intact.
-Unicode, 53 single-byte codecs and 22 Japanese/Big5/GB/Korean multibyte codecs use std-only decoding with mappings generated
+Unicode, 53 single-byte codecs and 27 Japanese/Big5/GB/Korean/mobile codecs use std-only decoding with mappings generated
 by `scripts/generate_encodings.rb` from the pinned Ruby environment. Unknown
 names fall back to UTF-8 like Ruby; known unsupported multibyte names fail
 explicitly, and codecs unavailable in the reference fail as unreadable.
@@ -1205,8 +1206,51 @@ literal ESC/SO/SI. Both use strict Ruby IO fingerprints (853510 inputs).
 Never generate mappings by reverse UTF-8 encoding: Ruby can encode 😀 to u+
 but cannot decode it. Compound output keeps UTF-8 spans, Unicode scalar columns
 and decoded-byte budget accounting. Public APIs and schemas stay unchanged.
-ISO-2022-JP-2 has no Ruby converter. EUC-JIS-2004, SJIS/UTF8 mobile variants,
-CESU-8 and UTF8-MAC still require host decoding.
+EUC-JIS-2004/EUC-JISX0213 reuses the EUC-JP byte grammar with its own 11271
+scalar mappings (8772 plane 1, 2436 plane 2, 63 kana), including 303 outside BMP.
+Pinned Ruby rejects 25 combining mappings (a4f7, etc.); keep these undefined,
+never import other codecs' decompositions or silently compose Unicode output.
+Plane 2 differs from legacy JIS X 0212: 8fa1a1 -> 𠂉 is new; 8fa2af -> ˘
+only works in EUC-JP. The independent strict IO fingerprint covers 131329
+inputs. Appending its table preserves all previous table indices and contents.
+SJIS-KDDI shares Windows-31J's byte grammar/base table with 647 overrides:
+120 defined replacements (21 compounds), 527 explicitly undefined mappings.
+Ruby decodes 9140 non-ASCII characters; 13 mappings contain supplementary
+scalars. ASCII controls, kana, vendor extensions and unmodified private-use
+characters retain Ruby IO behavior. F6A5 -> 🇯🇵 differs from Windows-31J's
+U+E4CC, while F040 -> U+E000 is retained; F64A is undefined despite Ruby's
+reverse UTF-8 encoding of 😀. Its strict IO fingerprint covers 65793 inputs.
+Mapping overrides are now explicit slices, with separate JIS/SJIS KDDI key
+domains; never apply one domain's overrides to the other.
+SJIS-DoCoMo shares the same Windows-31J grammar/base with 282 overrides:
+70 replacements, 212 explicitly undefined. Ruby decodes 9455 non-ASCII
+characters, including 11 keycap combinations and one supplementary mapping
+(F8CD -> 🅿). F987 -> 1 + U+20E3 differs from Windows-31J U+E6E2; F040 keeps
+U+E000. F996 is undefined despite reverse UTF-8 encoding of 😀. Literal ASCII
+controls and kana stay unchanged; its strict IO fingerprint covers 65793 inputs.
+The generator emits each mobile SJIS override table from the same grammar;
+keep their entries independent. ISO-2022-JP-2 has no Ruby converter.
+SJIS-SoftBank uses the same Windows-31J grammar/base with 944 overrides:
+171 replacements, 773 explicitly undefined. Ruby decodes 8894 non-ASCII
+characters (42 compound mappings, 28 containing supplementary scalars).
+Duplicate forms F6E4/FBAB -> 🇯🇵 and F2E5/F7BC -> 1 + U+20E3 share decoded
+snapshots, while Windows-31J can produce different snapshots for those bytes.
+Literal ESC $ G/P, SI and truncated escape-looking strings are preserved by
+Ruby IO, with no escape state machine. Its strict fingerprint covers 197121
+inputs including every selector/payload pair with and without SI. F99A is
+undefined despite reverse UTF-8 encoding of 😀; F040 keeps U+E000.
+UTF8-DoCoMo validates UTF-8 strictly and applies 282 Unicode-scalar PUA
+u32 overrides (70 replacements, 212 undefined); these keys are independent
+of SJIS byte keys. U+E63E -> ☀, U+E6E2 -> 1 + U+20E3, U+E66C -> 🅿;
+11 replacements are compound and one supplementary. All other Unicode
+scalars pass unchanged, including literal 😀; U+E6F1 is undefined despite
+Ruby reverse encoding of that emoji. Unlike ordinary UTF-8, malformed bytes
+on skipped lines or outside tags still fail. Finite lines may recover only
+an intact prefix. UTF-8 BOM remains in the source snapshot; explicit UTF-16
+BOM is invalid. Equivalent PUA/literal decoded text shares snapshots.
+Its strict fingerprint covers 1183513 inputs, including every Unicode scalar,
+short byte strings, truncated and mutated UTF-8 (9501193 probes overall).
+UTF8-KDDI/UTF8-SoftBank, CESU-8 and UTF8-MAC still require host decoding.
 The decoder's exhaustive short-input fingerprints can be reproduced with
 `ruby scripts/generate_encodings.rb --fingerprints`. Other legacy multibyte
 codecs remain open; never claim that the

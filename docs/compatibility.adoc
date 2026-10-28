@@ -36,8 +36,9 @@ API, DOCX и расширение API плагинов уступают этом
 |Unicode, 53 однобайтовые кодировки и японские Shift_JIS, Windows-31J,
 EUC-JP, eucJP-ms, CP51932, Big5, Big5-HKSCS, Big5-UAO, CP950, CP951,
 GB2312, GB12345, GBK, GB18030, EUC-KR, CP949, ISO-2022-JP, CP50220/CP50221
-stateless-ISO-2022-JP, ISO-2022-JP-KDDI и stateless-ISO-2022-JP-KDDI
-реализованы; остальные legacy-кодировки требуют
+stateless-ISO-2022-JP, ISO-2022-JP-KDDI, stateless-ISO-2022-JP-KDDI
+EUC-JIS-2004 (EUC-JISX0213), SJIS-KDDI/SJIS-DoCoMo/SJIS-SoftBank
+и UTF8-DoCoMo реализованы; остальные legacy-кодировки требуют
 host decoder. Конечный `lines` восстанавливает исправный префикс; пропущенные
 повреждённые UTF-8/BINARY-строки сохраняются отдельными записями пропусков.
 Маркеры тегов BINARY распознаются в исходных байтах пропущенных строк.
@@ -1974,8 +1975,97 @@ UTF-8 spans, immutable snapshots, source reuse и бюджет декодиро�
 Независимые fingerprints из строгого `Encoding::Converter` добавляют
 853510 проверок состояний/байтов/пар/троек; общий набор — 7857644 проверки.
 
+EUC-JIS-2004 (алиас EUC-JISX0213, без учёта регистра) подключён к существующему
+EUC-JP-декодеру с отдельной таблицей: 8772 отображения первой плоскости,
+2436 второй, 63 halfwidth kana — всего 11271, включая 303 символа вне BMP.
+Грамматика сохраняет ASCII/ESC/SO/SI, `8e` для kana и `8f` для второй плоскости;
+неполные/неопределённые последовательности и ошибки прочитанных пропущенных
+строк отклоняются. `8f a1 a1` даёт `𠂉`; legacy `8f a2 af` (EUC-JP `˘`)
+не определён в EUC-JIS-2004. В совпадающих отображениях кодировки могут
+использовать один UTF-8-снимок, если совпадают и остальные свойства источника.
+25 составных отображений (включая `a4 f7`) эталонный Ruby отклоняет:
+они сохранены как ошибки, без заимствования decompositions из других codecs
+или Unicode-композиции. Публичный API/provider/схемы и грамматика ядра прежние;
+добавлены таблица и имена без зависимостей. Индексы и данные прежних таблиц сохранены.
+65 новых Ruby-эталонов покрывают все отображения, все 25 составных ошибок,
+алиас/регистр, supplementary/CRLF/indent, selection, nested/repeated include
+и ordered diagnostics. Rust/WASM проверяют UTF-8 spans, Unicode-колонки,
+immutable snapshots, reuse и бюджет декодированных байтов. Независимый
+fingerprint из строгого `Encoding::Converter` добавляет 131329 проверок
+одиночных байтов/пар/8f-троек; общий набор — 7988973 проверки.
+
+SJIS-KDDI поддержан с грамматикой и базовой таблицей Windows-31J, дополненной
+647 отличиями: 120 определённых замен (21 составная), 527 явно неопределённых.
+Ruby декодирует 9140 не-ASCII символов, включая 13 отображений с Unicode scalars
+вне BMP. ASCII/ESC/SO/SI, halfwidth kana, vendor extensions и неизменённые
+private-use значения сохраняют поведение Ruby IO. Например, `f6 a5` даёт `🇯🇵`
+в SJIS-KDDI и U+E4CC в Windows-31J, а `f0 40` сохраняет U+E000 в обоих.
+Обратное UTF-8-кодирование Ruby для `😀` даёт `f6 4a`, которое его же
+декодер отклоняет; эти пробелы не заполняются. JIS/SJIS KDDI используют
+разные таблицы отличий с явной передачей в общий lookup. Новых зависимостей,
+изменений provider/API/схем нет; предыдущие данные и fingerprints сохранены.
+46 новых Ruby-эталонов покрывают все отображения и составные значения,
+неопределённые/private-use, ASCII, malformed/BOM, finite `lines`, теги,
+nested/repeated include и ordered diagnostics. Rust/WASM проверяют UTF-8 spans,
+Unicode scalar columns, source identity/reuse, immutable snapshots и бюджет
+декодированных байтов. Строгий IO fingerprint добавляет 65793 проверки
+одиночных байтов и всех пар; общий набор — 8054766 проверок.
+
+SJIS-DoCoMo подключён к той же грамматике и базовой таблице Windows-31J
+с 282 отличиями: 70 определённых замен, 212 явно неопределённых.
+Ruby декодирует 9455 не-ASCII символов, включая 11 keycap-комбинаций и один
+supplementary mapping (`f8cd` → `🅿`). `f987` даёт `1` + U+20E3 вместо
+Windows-31J U+E6E2; `f040` сохраняет U+E000. `f996` отклоняется, хотя Ruby
+кодирует туда `😀`. ASCII/ESC/SO/SI, kana, vendor extensions и остальные
+private-use значения сохраняют поведение Ruby IO. Публичный API/provider/схемы
+и прежние таблицы не менялись; новых зависимостей нет. Генератор мобильных
+SJIS-таблиц общий, но значения DoCoMo и KDDI не смешиваются.
+46 новых Ruby-эталонов покрывают все отображения и составные значения,
+неопределённые/private-use, ASCII, malformed/BOM, finite `lines`, теги,
+nested/repeated include и ordered diagnostics. Rust/WASM проверяют позиции
+Unicode scalars (включая отличие keycap от supplementary при одинаковой
+UTF-8-длине), spans/tokens, source identity/reuse, immutable snapshots и бюджет.
+Строгий IO fingerprint добавляет 65793 проверки одиночных байтов и всех пар;
+общий набор — 8120559 проверок.
+
+SJIS-SoftBank использует ту же грамматику и базовую таблицу Windows-31J
+с 944 отличиями: 171 определённая замена, 773 явно неопределённых.
+Ruby декодирует 8894 не-ASCII символа; 42 отображения составные, 28 содержат
+supplementary scalars. Формы `f6e4`/`fbab` дают `🇯🇵`, `f2e5`/`f7bc` —
+keycap `1` + U+20E3. Разные байты одного текста используют общий UTF-8-снимок,
+а Windows-31J может создавать отдельные снимки при смене этих байтов.
+Ruby IO сохраняет буквальные `ESC $ G`/`ESC $ P`, SI и незавершённые
+escape-подобные строки; они не включают режим emoji. `f99a` отклоняется,
+несмотря на обратное UTF-8-кодирование Ruby для `😀`; `f040` сохраняет U+E000.
+Новых зависимостей и изменений API/provider/схем нет; прежние таблицы сохранены.
+55 Ruby-эталонов покрывают все отображения и составные значения, дубликаты,
+escape/EOF, private-use, ASCII, malformed/BOM, finite `lines`, теги,
+nested/repeated include и ordered diagnostics. Rust/WASM проверяют spans/tokens,
+Unicode-колонки, reuse/immutable snapshots и бюджет декодированных байтов.
+Строгий IO fingerprint добавляет 197121 проверку: все байты/пары и все
+selector/payload-комбинации после `ESC $` с SI/без SI/на EOF. Общий набор —
+8317680 проверок.
+
+UTF8-DoCoMo строго проверяет UTF-8 и применяет 282 отличия по Unicode scalar
+в private-use: 70 замен и 212 явно неопределённых значений. Ключи `u32`
+отделены от SJIS-байтов. U+E63E даёт `☀`, U+E6E2 — `1` + U+20E3,
+U+E66C — `🅿`; 11 замен составные, одна supplementary. Остальные Unicode scalars
+сохраняются, включая буквальный `😀`, тогда как U+E6F1 отклоняется вопреки
+обратному кодированию Ruby этого emoji. UTF-8 BOM остаётся в снимке и снимается
+reader с первой выбранной строки; явный UTF-16 BOM вызывает InvalidEncoding.
+В отличие от обычного UTF-8, повреждения на пропущенных строках или вне тегов
+не откладываются до selection. Конечный `lines` может восстановить только
+исправный префикс до повреждённого хвоста. Одинаковый декодированный текст
+из PUA и буквального keycap использует общий immutable snapshot; обычный
+UTF-8 сохраняет PUA и может давать отдельный снимок. Позиции и бюджет относятся
+к декодированному тексту. 47 Ruby-эталонов проверяют все определённые замены,
+составные значения, Unicode identity, malformed UTF-8/undefined PUA, BOM,
+selection, nested/repeated include и ordered diagnostics. Строгий fingerprint
+добавляет 1183513 проверок: каждый Unicode scalar, короткие байтовые строки,
+усечения и побайтовые мутации UTF-8; всего 9501193 проверки.
+
 *Открытые границы:* встроенные decoder ещё не поддерживают остальные legacy-
-кодировки (EUC-JIS-2004/EUC-JISX0213, мобильные SJIS/UTF8, CESU-8, UTF8-MAC и другие);
+кодировки (UTF8-KDDI/UTF8-SoftBank, CESU-8, UTF8-MAC и другие);
 ISO-2022-JP-2 остаётся unreadable, поскольку Ruby не имеет UTF-8 converter.
 host может переопределить
 `load_with_encoding`, `load_include` либо `prepare_include`.
