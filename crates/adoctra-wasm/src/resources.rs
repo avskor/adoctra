@@ -173,6 +173,36 @@ mod tests {
     use super::*;
 
     #[test]
+    fn korean_includes_export_utf8_and_preserve_alias_identity() {
+        let mut workspace = ResourceWorkspace::new();
+        workspace.set("/main.adoc", "include::part.adoc[encoding=EUC-KR,lines=2]\n\ninclude::part.adoc[encoding=eucKR,lines=2]\n\ninclude::part.adoc[encoding=CP949,lines=2]").unwrap();
+        workspace
+            .set_binary("/part.adoc", b"ignored\r\n*\xb0\xa1*\r\n")
+            .unwrap();
+        let main = workspace.load("/main.adoc", None).unwrap();
+        let json = workspace.parse_json(main).unwrap();
+        assert!(json.contains(r#""diagnostics":[]"#), "{json}");
+        assert!(json.contains("가"));
+        assert_eq!(workspace.source(1).unwrap().text(), "ignored\r\n*가*\r\n");
+        assert!(workspace.source(2).is_err());
+        let tokens = workspace.tokens_json(main).unwrap();
+        assert!(
+            tokens.contains(r#""source_id":1,"start":9,"end":14"#),
+            "{tokens}"
+        );
+        workspace
+            .set_binary("/part.adoc", b"ignored\r\n*\x81\x41*\r\n")
+            .unwrap();
+        let changed = workspace.parse_json(main).unwrap();
+        assert!(
+            changed.contains("갂") && changed.contains("InvalidEncoding"),
+            "{changed}"
+        );
+        assert_eq!(workspace.source(1).unwrap().text(), "ignored\r\n*가*\r\n");
+        assert_eq!(workspace.source(2).unwrap().text(), "ignored\r\n*갂*\r\n");
+    }
+
+    #[test]
     fn gb18030_includes_export_four_byte_characters_as_utf8_snapshots() {
         let mut workspace = ResourceWorkspace::new();
         workspace.set("/main.adoc", "include::part.adoc[encoding=GB18030,lines=2]\n\ninclude::part.adoc[encoding=gb18030,lines=2]").unwrap();

@@ -10,7 +10,8 @@ require 'asciidoctor'
 JAPANESE = %w[Shift_JIS Windows-31J EUC-JP eucJP-ms CP51932].freeze
 BIG5 = %w[Big5 Big5-HKSCS Big5-UAO CP950 CP951].freeze
 GB = %w[GB2312 GB12345 GBK GB18030].freeze
-MULTIBYTE = (JAPANESE + BIG5 + GB).freeze
+KOREAN = %w[EUC-KR CP949].freeze
+MULTIBYTE = (JAPANESE + BIG5 + GB + KOREAN).freeze
 
 # Independent exhaustive reference for the Rust decoder regression test,
 # including invalid input and sequences containing multiple ASCII characters.
@@ -96,6 +97,8 @@ Encoding.list.sort_by(&:name).each do |enc|
                         'EucJp'
                       elsif BIG5.include? enc.name
                         'Big5'
+                      elsif KOREAN.include? enc.name
+                        'Korean'
                       else
                         { 'GB2312' => 'Gb2312', 'GB12345' => 'Gb2312', 'GBK' => 'Gbk', 'GB18030' => 'Gb18030' }.fetch(enc.name)
                       end
@@ -128,6 +131,8 @@ multibyte.each_with_index do |enc, index|
     candidates.concat (0x81..0xfe).to_a.product((0x40..0x7e).to_a + (0xa1..0xfe).to_a)
   elsif %w[GB2312 GB12345].include? enc.name
     candidates.concat (0xa1..0xfe).to_a.product((0xa1..0xfe).to_a)
+  elsif KOREAN.include? enc.name
+    candidates.concat (0x81..0xfe).to_a.product((0x00..0xff).to_a)
   else
     candidates.concat (0x81..0xfe).to_a.product((0x40..0x7e).to_a + (0x80..0xfe).to_a)
   end

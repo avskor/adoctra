@@ -31,6 +31,7 @@ enum MultibyteKind {
     EucJp,
     Big5,
     Gb2312,
+    Korean,
     Gbk,
     Gb18030,
 }
@@ -264,6 +265,10 @@ impl BinaryResource {
                             0x81..=0xfe => 2,
                             _ => return Err(invalid()),
                         },
+                        MultibyteKind::Korean => match first {
+                            0x81..=0xfe => 2,
+                            _ => return Err(invalid()),
+                        },
                         MultibyteKind::Gb2312 => match first {
                             0xa1..=0xfe => 2,
                             _ => return Err(invalid()),
@@ -454,7 +459,7 @@ mod tests {
         // must not silently fall back to a successful ASCII-prefix decode.
         for (encoding, bytes, kind) in [
             (
-                Some("EUC-KR"),
+                Some("ISO-2022-JP"),
                 &b"good\n\xff"[..],
                 ResourceErrorKind::Unsupported,
             ),
@@ -584,7 +589,7 @@ mod tests {
         );
         // These are recognized names, not misspellings that may fall back to UTF-8.
         assert_eq!(
-            decode(b"ASCII", Some("EUC-KR")).unwrap_err().kind,
+            decode(b"ASCII", Some("ISO-2022-JP")).unwrap_err().kind,
             ResourceErrorKind::Unsupported
         );
         assert_eq!(
@@ -669,6 +674,8 @@ mod tests {
             ("GB12345", 0x7c1b0668bc543322, false),
             ("GBK", 0x461fd7b2edc98ce2, false),
             ("GB18030", 0xc15d224b9301efc0, false),
+            ("EUC-KR", 0xfda2bfb2de08cf1d, false),
+            ("CP949", 0x620f7b1e5bb833c1, false),
         ] {
             let mut hash = 0xcbf29ce484222325_u64;
             let mut feed = |byte| {
@@ -936,5 +943,28 @@ mod tests {
                 assert_eq!(error.target, "/part.adoc");
             }
         }
+    }
+    #[test]
+    fn korean_variants_aliases_and_invalid_sequences_follow_ruby() {
+        for name in ["EUC-KR", "eucKR", "CP949"] {
+            assert_eq!(
+                decode(b"\xb0\xa1\xa2\xe6\r\n", Some(name)).unwrap().text,
+                "가€\r\n"
+            );
+            for bad in [&b"\x80"[..], &b"\xff"[..], &b"\x81"[..], &b"\xb0\x20"[..]] {
+                assert_eq!(
+                    decode(bad, Some(name)).unwrap_err().kind,
+                    ResourceErrorKind::InvalidEncoding
+                );
+            }
+        }
+        assert_eq!(
+            decode(b"\x81\x41\xc6\x52", Some("CP949")).unwrap().text,
+            "갂힣"
+        );
+        assert_eq!(
+            decode(b"\x81\x41", Some("EUC-KR")).unwrap_err().kind,
+            ResourceErrorKind::InvalidEncoding
+        );
     }
 }

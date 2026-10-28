@@ -19,9 +19,50 @@ fn setup(source: &str) -> (MemoryResources, SourceMap, ParseOptions) {
 }
 
 #[test]
+fn korean_prefix_selection_and_variant_errors_preserve_snapshots() {
+    for encoding in ["EUC-KR", "eucKR", "CP949"] {
+        for selection in ["lines=1", "lines=2", "lines=1;3", "tag=body"] {
+            let (mut resources, mut sources, options) = setup(&format!(
+                "include::part.adoc[encoding={encoding},{selection},opts=optional]"
+            ));
+            resources
+                .insert_binary("/docs/part.adoc", b"*\xb0\xa1*\r\n\x81\nlast\n")
+                .unwrap();
+            let result = parse_resource(&mut sources, &options, &resources).unwrap();
+            if selection == "lines=1" {
+                assert!(result.diagnostics.is_empty());
+                let source = sources.get(SourceId(1)).unwrap();
+                assert_eq!(source.text(), "*가*\r\n");
+                assert!(!source.is_complete());
+                assert_eq!(
+                    sources.slice(result.document.flat_blocks()[0].span),
+                    Some("*가*")
+                );
+            } else {
+                assert_eq!(result.diagnostics.len(), 1);
+                assert!(sources.get(SourceId(1)).is_none());
+            }
+        }
+    }
+    let (mut resources, mut sources, options) = setup(
+        "include::part.adoc[encoding=CP949]\n\ninclude::part.adoc[encoding=EUC-KR,opts=optional]",
+    );
+    resources
+        .insert_binary("/docs/part.adoc", b"\x81\x41")
+        .unwrap();
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(result.diagnostics.len(), 1);
+    assert_eq!(sources.get(SourceId(1)).unwrap().text(), "갂");
+    assert!(sources.get(SourceId(2)).is_none());
+}
+
+#[test]
 fn gb_selections_preserve_decoded_spans_and_unicode_columns() {
     for (encoding, glyph, decoded) in [
         ("GB2312", &b"\xd6\xd0"[..], "中"),
+        ("EUC-KR", &b"\xb0\xa1"[..], "가"),
+        ("eucKR", &b"\xb0\xa1"[..], "가"),
+        ("CP949", &b"\x81\x41"[..], "갂"),
         ("EUC-CN", &b"\xd6\xd0"[..], "中"),
         ("GB12345", &b"\xb9\xfa"[..], "國"),
         ("GBK", &b"\x80"[..], "€"),

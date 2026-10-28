@@ -142,7 +142,7 @@ existing document-processing contract; do not describe that scoped contract
 as unrestricted replacement of Asciidoctor. Do not resume allocation
 micro-optimizations as the next task. Include encoding now supports Unicode and
 53 single-byte codecs, plus Shift_JIS, Windows-31J, EUC-JP, eucJP-ms, CP51932,
-Big5, Big5-HKSCS, Big5-UAO, CP950, CP951, GB2312, GB12345, GBK and GB18030.
+Big5, Big5-HKSCS, Big5-UAO, CP950, CP951, GB2312, GB12345, GBK, GB18030, EUC-KR and CP949.
 Finite positive `lines` selections recover an intact decoded prefix when only
 the unread tail is malformed; `SourceFile::is_complete` exposes this explicitly.
 Skipped malformed UTF-8/BINARY lines now have explicit omission records with
@@ -1143,7 +1143,7 @@ and raw bytes (hex in JSON). `SourceFile::position` accounts for gaps; omitted
 bytes count toward the include budget. Sparse snapshots cannot be reparsed as
 implicitly valid primary sources. `is_complete`/WASM `source_is_complete`
 distinguish these views and prefixes from full files. BOM/CRLF remain intact.
-Unicode, 53 single-byte codecs and fourteen Japanese/Big5/GB multibyte codecs use std-only decoding with mappings generated
+Unicode, 53 single-byte codecs and sixteen Japanese/Big5/GB/Korean multibyte codecs use std-only decoding with mappings generated
 by `scripts/generate_encodings.rb` from the pinned Ruby environment. Unknown
 names fall back to UTF-8 like Ruby; known unsupported multibyte names fail
 explicitly, and codecs unavailable in the reference fail as unreadable.
@@ -1165,6 +1165,9 @@ do not substitute another GB18030 revision. The independent fingerprint covers
 all 1587600 syntactic quadruples, 158760 truncated prefixes and 3072 mutations,
 in addition to the exhaustive single-byte/pair checks. GB1988 remains unavailable
 because pinned Ruby has no UTF-8 converter for it.
+EUC-KR/eucKR and CP949 have separate tables (8226 and 17048 mappings). CP949
+accepts extension Hangul such as 8141 -> 갂; EUC-KR rejects those bytes.
+Both retain strict transcoding and the existing finite-prefix/source contracts.
 The decoder's exhaustive short-input fingerprints can be reproduced with
 `ruby scripts/generate_encodings.rb --fingerprints`. Other legacy multibyte
 codecs remain open; never claim that the
