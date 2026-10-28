@@ -173,6 +173,49 @@ mod tests {
     use super::*;
 
     #[test]
+    fn big5_includes_export_variant_snapshots_and_non_bmp_utf8_offsets() {
+        let mut workspace = ResourceWorkspace::new();
+        workspace.set("/main.adoc", "include::part.adoc[encoding=CP950,lines=2]\n\ninclude::part.adoc[encoding=Big5-HKSCS,lines=2]\n\ninclude::part.adoc[encoding=Big5-HKSCS:2008,lines=2]").unwrap();
+        workspace
+            .set_binary("/part.adoc", b"ignored\r\n*\x8e\x40\xa1\x45*\r\n")
+            .unwrap();
+        let main = workspace.load("/main.adoc", None).unwrap();
+        let json = workspace.parse_json(main).unwrap();
+        assert!(json.contains(r#""diagnostics":[]"#), "{json}");
+        assert!(json.contains("\u{e311}‧") && json.contains("𣻗•"), "{json}");
+        assert_eq!(
+            workspace.source(1).unwrap().text(),
+            "ignored\r\n*\u{e311}‧*\r\n"
+        );
+        assert_eq!(workspace.source(2).unwrap().text(), "ignored\r\n*𣻗•*\r\n");
+        let tokens = workspace.tokens_json(main).unwrap();
+        assert!(
+            tokens.contains(r#""source_id":1,"start":9,"end":17"#),
+            "{tokens}"
+        );
+        assert!(
+            tokens.contains(r#""source_id":2,"start":9,"end":18"#),
+            "{tokens}"
+        );
+        assert!(workspace.source(3).is_err());
+        assert_eq!(
+            workspace.source(2).unwrap().position(14).unwrap(),
+            adoctra_core::SourcePosition { line: 2, column: 3 }
+        );
+        workspace
+            .set_binary("/part.adoc", b"ignored\r\n*\xa4\xa4*\r\n\x81")
+            .unwrap();
+        let updated = workspace.parse_json(main).unwrap();
+        assert!(
+            updated.contains("中") && updated.contains(r#""diagnostics":[]"#),
+            "{updated}"
+        );
+        assert_eq!(workspace.source(3).unwrap().text(), "ignored\r\n*中*\r\n");
+        assert!(!workspace.source(3).unwrap().is_complete());
+        assert_eq!(workspace.source(2).unwrap().text(), "ignored\r\n*𣻗•*\r\n");
+    }
+
+    #[test]
     fn binary_marker_diagnostics_export_raw_spans_and_immutable_omissions() {
         let mut workspace = ResourceWorkspace::new();
         workspace

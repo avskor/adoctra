@@ -141,7 +141,8 @@ completed requirements. Ruby API/extension execution remains outside the
 existing document-processing contract; do not describe that scoped contract
 as unrestricted replacement of Asciidoctor. Do not resume allocation
 micro-optimizations as the next task. Include encoding now supports Unicode and
-53 single-byte codecs, plus Shift_JIS, Windows-31J, EUC-JP, eucJP-ms and CP51932.
+53 single-byte codecs, plus Shift_JIS, Windows-31J, EUC-JP, eucJP-ms, CP51932,
+Big5, Big5-HKSCS, Big5-UAO, CP950 and CP951.
 Finite positive `lines` selections recover an intact decoded prefix when only
 the unread tail is malformed; `SourceFile::is_complete` exposes this explicitly.
 Skipped malformed UTF-8/BINARY lines now have explicit omission records with
@@ -1142,12 +1143,19 @@ and raw bytes (hex in JSON). `SourceFile::position` accounts for gaps; omitted
 bytes count toward the include budget. Sparse snapshots cannot be reparsed as
 implicitly valid primary sources. `is_complete`/WASM `source_is_complete`
 distinguish these views and prefixes from full files. BOM/CRLF remain intact.
-Unicode, 53 single-byte codecs and five Japanese multibyte codecs use std-only decoding with mappings generated
+Unicode, 53 single-byte codecs and ten Japanese/Big5 multibyte codecs use std-only decoding with mappings generated
 by `scripts/generate_encodings.rb` from the pinned Ruby environment. Unknown
 names fall back to UTF-8 like Ruby; known unsupported multibyte names fail
 explicitly, and codecs unavailable in the reference fail as unreadable.
 Japanese variants retain Ruby's distinct mappings (notably SJIS aliases
 Windows-31J, not Shift_JIS); malformed and unmapped sequences are unreadable.
+The five Big5 variants preserve 91516 separate mappings, including private-use
+and supplementary-plane characters. Big5-HKSCS:2008 aliases Big5-HKSCS; csBig5
+is unknown in pinned Ruby and falls back to UTF-8. Do not import web Big5
+semantics: HKSCS 8862/8864/88a3/88a5 are undefined, not decomposed characters.
+Finite line selection may recover a prefix, but transcoding validates skipped
+bytes within the consumed portion and tag reads. Big5 uses the same snapshot,
+source identity, diagnostic and provider contracts as the other codecs.
 The decoder's exhaustive short-input fingerprints can be reproduced with
 `ruby scripts/generate_encodings.rb --fingerprints`. Other legacy multibyte
 codecs remain open; never claim that the

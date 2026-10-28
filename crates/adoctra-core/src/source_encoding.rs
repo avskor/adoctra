@@ -18,9 +18,18 @@ enum Encoding {
     Utf16(Option<bool>),
     Utf32(Option<bool>),
     Single(&'static [u32]),
-    Japanese { table: &'static [u64], sjis: bool },
+    Multibyte {
+        table: &'static [u64],
+        kind: MultibyteKind,
+    },
     Unavailable,
     Unsupported,
+}
+
+enum MultibyteKind {
+    ShiftJis,
+    EucJp,
+    Big5,
 }
 
 impl BinaryResource {
@@ -51,7 +60,7 @@ impl BinaryResource {
     /// as in Ruby. UTF-16 BOM detection applies to default/UTF-8 and BINARY;
     /// explicit other encodings take precedence. BOM and CR/LF are retained in
     /// the UTF-8 snapshot for the parser's existing normalization and spans.
-    /// Japanese Shift_JIS/EUC-JP families use the reference's byte mappings.
+    /// Shift_JIS/EUC-JP and Big5 families use the reference's byte mappings.
     /// Other known legacy encodings unsupported here return `Unsupported`;
     /// a host may implement them in `ResourceProvider::load_with_encoding`.
     pub fn decode(self, encoding: Option<&str>) -> ResourceResult<Resource> {
@@ -228,7 +237,7 @@ impl BinaryResource {
                 }
                 text
             }
-            Encoding::Japanese { table, sjis } => {
+            Encoding::Multibyte { table, kind } => {
                 let mut text = String::with_capacity(bytes.len());
                 let mut remaining = bytes.as_slice();
                 while let Some(&first) = remaining.first() {
@@ -237,18 +246,21 @@ impl BinaryResource {
                         remaining = &remaining[1..];
                         continue;
                     }
-                    let width = if sjis {
-                        match first {
+                    let width = match kind {
+                        MultibyteKind::ShiftJis => match first {
                             0xa1..=0xdf => 1,
                             0x81..=0x9f | 0xe0..=0xfc => 2,
                             _ => return Err(invalid()),
-                        }
-                    } else {
-                        match first {
+                        },
+                        MultibyteKind::EucJp => match first {
                             0x8e | 0xa1..=0xfe => 2,
                             0x8f => 3,
                             _ => return Err(invalid()),
-                        }
+                        },
+                        MultibyteKind::Big5 => match first {
+                            0x81..=0xfe => 2,
+                            _ => return Err(invalid()),
+                        },
                     };
                     let sequence = remaining.get(..width).ok_or_else(invalid)?;
                     let key = sequence
@@ -599,7 +611,7 @@ mod tests {
     }
 
     #[test]
-    fn japanese_decoding_matches_exhaustive_ruby_fingerprints() {
+    fn multibyte_decoding_matches_exhaustive_ruby_fingerprints() {
         // Ruby 3.3.8, pinned Asciidoctor environment. Regenerate independently:
         // ruby scripts/generate_encodings.rb --fingerprints
         // All single bytes and pairs, plus every 8f-prefixed triple for EUC.
@@ -609,6 +621,11 @@ mod tests {
             ("EUC-JP", 0x588386992351e229, true),
             ("eucJP-ms", 0x2d57700417373809, true),
             ("CP51932", 0x8a0af9cc4847e1c0, true),
+            ("Big5", 0xc6c57394d274964c, false),
+            ("Big5-HKSCS", 0x797a7cd7b15ceea4, false),
+            ("Big5-UAO", 0x600344743be98c71, false),
+            ("CP950", 0x03e1eff48f477005, false),
+            ("CP951", 0x0d4e04e04e4ace29, false),
         ] {
             let mut hash = 0xcbf29ce484222325_u64;
             let mut feed = |byte| {
@@ -644,6 +661,93 @@ mod tests {
                 }
             }
             assert_eq!(hash, expected, "{name}");
+        }
+    }
+
+    #[test]
+    fn big5_families_keep_ruby_mappings_and_aliases_distinct() {
+        for (name, bytes, expected) in [
+            (
+                "Big5",
+                &b"\xa1\x45\xa1\xe3\xa3\xe1\xc6\xa1"[..],
+                "‧～€\u{f6b1}",
+            ),
+            (
+                "bIg5-HkScS:2008",
+                &b"\xa1\x45\xa1\xe3\x8e\x40\xc6\xa1"[..],
+                "•∼𣻗①",
+            ),
+            ("Big5-UAO", &b"\x81\x40\x88\x62\xfe\x40"[..], "丗论氹"),
+            (
+                "CP950",
+                &b"\x81\x40\xfe\x40\xc6\xa1"[..],
+                "\u{eeb8}\u{e274}\u{f6b1}",
+            ),
+            ("cp951", &b"\x81\x40\xfe\x40\xc6\xa1"[..], "\u{eeb8}鑂①"),
+        ] {
+            assert_eq!(decode(bytes, Some(name)).unwrap().text, expected, "{name}");
+        }
+        for name in [
+            "Big5",
+            "Big5-HKSCS",
+            "Big5-HKSCS:2008",
+            "Big5-UAO",
+            "CP950",
+            "CP951",
+        ] {
+            assert_eq!(
+                decode(b"ASCII \\~\r\n\xa4\xa4\xa4\xe5\xa4\x5c", Some(name))
+                    .unwrap()
+                    .text,
+                "ASCII \\~\r\n中文么",
+                "{name}"
+            );
+        }
+        // Unlike web Big5 decoders, Ruby has no decomposed mapping for these.
+        for bad in [
+            b"\x88\x62",
+            b"\x88\x64",
+            b"\x88\xa3",
+            b"\x88\xa5",
+            b"\xa3\xe1",
+        ] {
+            assert_eq!(
+                decode(bad, Some("Big5-HKSCS")).unwrap_err().kind,
+                ResourceErrorKind::InvalidEncoding
+            );
+        }
+        // Ruby does not recognize this spelling; unknown names remain UTF-8.
+        assert_eq!(
+            decode("中文".as_bytes(), Some("csBig5")).unwrap().text,
+            "中文"
+        );
+    }
+
+    #[test]
+    fn big5_codecs_reject_incomplete_invalid_and_unmapped_bytes() {
+        for name in ["Big5", "Big5-HKSCS", "Big5-UAO", "CP950", "CP951"] {
+            for bad in [
+                &b"\x81"[..],
+                &b"\x80"[..],
+                &b"\xff"[..],
+                &b"\xa4\x7f"[..],
+                &b"\xa4\x80"[..],
+                &b"\xa4\x20"[..],
+                &b"\xa4\xa4\xa4"[..],
+            ] {
+                let error = decode(bad, Some(name)).unwrap_err();
+                assert_eq!(
+                    error.kind,
+                    ResourceErrorKind::InvalidEncoding,
+                    "{name}/{bad:?}"
+                );
+            }
+        }
+        for (name, bytes) in [("Big5", b"\x81\x40"), ("Big5-HKSCS", b"\x81\x40")] {
+            assert_eq!(
+                decode(bytes, Some(name)).unwrap_err().kind,
+                ResourceErrorKind::InvalidEncoding
+            );
         }
     }
 

@@ -157,6 +157,11 @@ fn cli_decodes_include_files_and_reports_read_errors_at_the_directive() {
         ("EUC-JP", &b"*\x8f\xa2\xaf\xa1\xc1*\r\n"[..], "˘〜"),
         ("eucJP-ms", &b"*\x8f\xf3\xf3\xa1\xc1*\r\n"[..], "ⅰ～"),
         ("CP51932", &b"*\xc6\xfc\xcb\xdc\xb8\xec*\r\n"[..], "日本語"),
+        ("Big5", &b"*\xa4\xa4\xa4\xe5\xa4\x5c*\r\n"[..], "中文么"),
+        ("Big5-HKSCS:2008", &b"*\x8e\x40\xa1\x45*\r\n"[..], "𣻗•"),
+        ("Big5-UAO", &b"*\x81\x40\x88\x62*\r\n"[..], "丗论"),
+        ("CP950", &b"*\xfe\x40\xc6\xa1*\r\n"[..], "\u{e274}\u{f6b1}"),
+        ("CP951", &b"*\xfe\x40\xc6\xa1*\r\n"[..], "鑂①"),
     ] {
         std::fs::write(
             &source,
@@ -182,6 +187,11 @@ fn cli_decodes_include_files_and_reports_read_errors_at_the_directive() {
         ("EUC-JP", &b"\x8f\xa2"[..]),
         ("eucJP-ms", &b"\x8e\xe0"[..]),
         ("CP51932", &b"\x8f\xa2\xaf"[..]),
+        ("Big5", &b"\x81\x40"[..]),
+        ("Big5-HKSCS", &b"\x88\x62"[..]),
+        ("Big5-UAO", &b"\xa4\x7f"[..]),
+        ("CP950", &b"\xa4"[..]),
+        ("CP951", &b"\xff"[..]),
     ] {
         std::fs::write(
             &source,
