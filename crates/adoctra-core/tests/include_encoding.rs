@@ -61,6 +61,30 @@ fn gb_selections_preserve_decoded_spans_and_unicode_columns() {
     for (encoding, glyph, decoded) in [
         ("GB2312", &b"\xd6\xd0"[..], "中"),
         ("ISO-2022-JP", &b"\x1b$BF|\x1b(B"[..], "日"),
+        ("UTF8-KDDI", "\u{e4cc}".as_bytes(), "🇯🇵"),
+        ("utf8-kddi", "\u{efa5}".as_bytes(), "🇯🇵"),
+        ("UTF8-KDDI", "\u{e522}".as_bytes(), "1\u{20e3}"),
+        ("UTF8-KDDI", "\u{effb}".as_bytes(), "1\u{20e3}"),
+        ("UTF8-KDDI", "\u{e4a6}".as_bytes(), "🅿"),
+        ("UTF8-KDDI", "\u{ef7e}".as_bytes(), "🅿"),
+        ("UTF8-MAC", "e\u{301}".as_bytes(), "é"),
+        (
+            "UTF-8-HFS",
+            "\u{3b1}\u{313}\u{300}\u{345}".as_bytes(),
+            "\u{1f82}",
+        ),
+        ("utf-8-mac", "\u{1100}\u{1161}\u{11a8}".as_bytes(), "각"),
+        ("UTF8-MAC", "a\u{315}\u{300}".as_bytes(), "a\u{315}\u{300}"),
+        ("CESU-8", &b"\xed\xa0\xbd\xed\xb8\x80"[..], "😀"),
+        ("cesu-8", &b"\xed\xaf\xbf\xed\xbf\xbf"[..], "\u{10ffff}"),
+        (
+            "CESU-8",
+            &b"\xed\xa0\xbc\xed\xb7\xaf\xed\xa0\xbc\xed\xb7\xb5"[..],
+            "🇯🇵",
+        ),
+        ("UTF8-SoftBank", "\u{e50b}".as_bytes(), "🇯🇵"),
+        ("utf8-softbank", "\u{e21c}".as_bytes(), "1\u{20e3}"),
+        ("UTF8-SoftBank", "\u{e14f}".as_bytes(), "🅿"),
         ("UTF8-DoCoMo", "\u{e6e2}".as_bytes(), "1\u{20e3}"),
         ("utf8-docomo", "\u{e66c}".as_bytes(), "🅿"),
         ("SJIS-SoftBank", &b"\xf6\xe4"[..], "🇯🇵"),
@@ -709,23 +733,321 @@ fn softbank_duplicate_bytes_reuse_snapshots_and_prefixes_keep_decoded_budgets() 
 }
 
 #[test]
-fn utf8_docomo_strict_selection_and_unicode_snapshots_keep_identity_and_budgets() {
+fn utf8_mac_selection_snapshots_and_budgets_use_composed_utf8() {
     for (selection, bad, success) in [
-        ("lines=1", "\u{e6f1}".as_bytes(), true),
-        ("lines=1", &b"\xff"[..], true),
-        ("lines=2", "\u{e6f1}".as_bytes(), false),
-        ("lines=1;3", "\u{e6f1}".as_bytes(), false),
+        ("lines=1", &b"A\xff"[..], true),
+        ("lines=1", &b"\xff"[..], false),
         ("lines=1;3", &b"\xff"[..], false),
-        ("tag=body", "\u{e6f1}".as_bytes(), false),
         ("tag=body", &b"\xff"[..], false),
     ] {
         let (mut resources, mut sources, options) = setup(&format!(
-            "include::part.adoc[encoding=UTF8-DoCoMo,{selection},opts=optional]"
+            "include::part.adoc[encoding=UTF8-MAC,{selection},opts=optional]"
         ));
         resources
             .insert_binary(
                 "/docs/part.adoc",
-                ["*\u{e6e2}*\r\n".as_bytes(), bad, b"\nlast\n"].concat(),
+                ["*e\u{301}*\r\n".as_bytes(), bad, b"\nlast\n"].concat(),
+            )
+            .unwrap();
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        if success {
+            assert!(result.diagnostics.is_empty());
+            let source = sources.get(SourceId(1)).unwrap();
+            assert_eq!(source.text(), "*é*\r\n");
+            assert!(!source.is_complete());
+            assert!(source.omitted_lines().is_empty());
+            let mut limited = options.clone();
+            limited.includes.max_bytes = source.text().len() - 1;
+            assert!(parse_resource(&mut sources, &limited, &resources)
+                .unwrap()
+                .diagnostics
+                .iter()
+                .any(|d| d.message.contains("maximum included byte count")));
+        } else {
+            assert_eq!(result.diagnostics.len(), 1);
+            assert!(sources.get(SourceId(1)).is_none());
+        }
+    }
+    let (mut resources,mut sources,options)=setup("include::part.adoc[encoding=UTF8-MAC,lines=2]\n\ninclude::part.adoc[encoding=utf-8-mac,lines=2]\n\ninclude::part.adoc[encoding=UTF-8-HFS,lines=2]");
+    resources
+        .insert_binary(
+            "/docs/part.adoc",
+            "ignored\r\n\u{feff}*e\u{301}*\r\n".as_bytes(),
+        )
+        .unwrap();
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty());
+    let source = sources.get(SourceId(1)).unwrap();
+    assert_eq!(source.text(), "ignored\r\n\u{feff}*é*\r\n");
+    for block in result.document.flat_blocks() {
+        assert_eq!(block.span.source_id, SourceId(1));
+        assert_eq!((block.span.start, block.span.end), (12, 16));
+        assert_eq!(sources.slice(block.span), Some("*é*"));
+    }
+    assert_eq!(
+        source.position(15).unwrap(),
+        adoctra_core::SourcePosition { line: 2, column: 4 }
+    );
+    assert!(sources.get(SourceId(2)).is_none());
+    assert_eq!(
+        sources
+            .load_with_encoding("/docs/part.adoc", None, &resources, Some("UTF-8"))
+            .unwrap(),
+        SourceId(2)
+    );
+    assert_eq!(
+        sources.get(SourceId(2)).unwrap().text(),
+        "ignored\r\n\u{feff}*e\u{301}*\r\n"
+    );
+    resources
+        .insert_binary("/docs/part.adoc", "ignored\r\n\u{feff}*é*\r\n".as_bytes())
+        .unwrap();
+    assert!(parse_resource(&mut sources, &options, &resources)
+        .unwrap()
+        .diagnostics
+        .is_empty());
+    assert!(sources.get(SourceId(3)).is_none());
+    resources
+        .insert_binary(
+            "/docs/part.adoc",
+            "ignored\r\n\u{feff}*\u{3b1}\u{313}\u{300}\u{345}*\r\n".as_bytes(),
+        )
+        .unwrap();
+    let changed = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(changed.diagnostics.is_empty());
+    assert!(changed
+        .document
+        .flat_blocks()
+        .iter()
+        .all(|b| b.span.source_id == SourceId(3)));
+    assert_eq!(
+        sources.get(SourceId(3)).unwrap().text(),
+        "ignored\r\n\u{feff}*\u{1f82}*\r\n"
+    );
+    assert_eq!(
+        sources.get(SourceId(1)).unwrap().text(),
+        "ignored\r\n\u{feff}*é*\r\n"
+    );
+}
+
+#[test]
+fn cesu8_selection_budgets_and_snapshots_use_decoded_supplementary_scalars() {
+    for (selection, bad, success) in [
+        ("lines=1", &b"\xed\xa0\x80"[..], true),
+        ("lines=1", &b"\xf0\x9f\x98\x80"[..], true),
+        ("lines=1;3", &b"\xed\xa0\x80"[..], false),
+        ("lines=1;3", &b"\xff"[..], false),
+        ("tag=body", &b"\xed\xb0\x80"[..], false),
+    ] {
+        let (mut resources, mut sources, options) = setup(&format!(
+            "include::part.adoc[encoding=CESU-8,{selection},opts=optional]"
+        ));
+        resources
+            .insert_binary(
+                "/docs/part.adoc",
+                [&b"*\xed\xa0\xbd\xed\xb8\x80*\r\n"[..], bad, b"\nlast\n"].concat(),
+            )
+            .unwrap();
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        if success {
+            assert!(result.diagnostics.is_empty());
+            let source = sources.get(SourceId(1)).unwrap();
+            assert_eq!(source.text(), "*😀*\r\n");
+            assert!(!source.is_complete());
+            assert!(source.omitted_lines().is_empty());
+            let mut limited = options.clone();
+            limited.includes.max_bytes = source.text().len() - 1;
+            assert!(parse_resource(&mut sources, &limited, &resources)
+                .unwrap()
+                .diagnostics
+                .iter()
+                .any(|d| d.message.contains("maximum included byte count")));
+        } else {
+            assert_eq!(result.diagnostics.len(), 1);
+            assert!(sources.get(SourceId(1)).is_none());
+        }
+    }
+    let (mut resources, mut sources, options) = setup("include::part.adoc[encoding=CESU-8,lines=2]\n\ninclude::part.adoc[encoding=cesu-8,lines=2]");
+    resources
+        .insert_binary(
+            "/docs/part.adoc",
+            b"ignored\r\n\xef\xbb\xbf*\xed\xa0\xbd\xed\xb8\x80*\r\n",
+        )
+        .unwrap();
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty());
+    assert_eq!(
+        sources.get(SourceId(1)).unwrap().text(),
+        "ignored\r\n\u{feff}*😀*\r\n"
+    );
+    for block in result.document.flat_blocks() {
+        assert_eq!(block.span.source_id, SourceId(1));
+        assert_eq!((block.span.start, block.span.end), (12, 18));
+        assert_eq!(sources.slice(block.span), Some("*😀*"));
+    }
+    assert_eq!(
+        sources.get(SourceId(1)).unwrap().position(17).unwrap(),
+        adoctra_core::SourcePosition { line: 2, column: 4 }
+    );
+    assert!(sources.get(SourceId(2)).is_none());
+    // Equivalent UTF-8 can reuse the canonical decoded snapshot through the provider API.
+    resources
+        .insert_binary("/docs/part.adoc", "ignored\r\n\u{feff}*😀*\r\n".as_bytes())
+        .unwrap();
+    assert_eq!(
+        sources
+            .load_with_encoding("/docs/part.adoc", None, &resources, Some("UTF-8"))
+            .unwrap(),
+        SourceId(1)
+    );
+    let invalid = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(invalid.diagnostics.len(), 2);
+    assert!(sources.get(SourceId(2)).is_none());
+    resources
+        .insert_binary(
+            "/docs/part.adoc",
+            b"ignored\r\n*\xed\xa0\x80\xed\xb0\x80*\r\n",
+        )
+        .unwrap();
+    let changed = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(changed.diagnostics.is_empty());
+    assert_eq!(
+        sources.get(SourceId(2)).unwrap().text(),
+        "ignored\r\n*\u{10000}*\r\n"
+    );
+    assert_eq!(
+        sources.get(SourceId(1)).unwrap().text(),
+        "ignored\r\n\u{feff}*😀*\r\n"
+    );
+}
+
+#[test]
+fn utf8_kddi_duplicate_banks_reuse_snapshots_and_count_decoded_flag_bytes() {
+    let (mut resources, mut sources, options) = setup("include::part.adoc[encoding=UTF8-KDDI,lines=2]\n\ninclude::part.adoc[encoding=utf8-kddi,lines=2]");
+    for input in ["\u{e4cc}", "\u{efa5}", "🇯🇵"] {
+        resources
+            .insert_binary(
+                "/docs/part.adoc",
+                format!("ignored\r\n\u{feff}*{input}*\r\n").as_bytes(),
+            )
+            .unwrap();
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        assert!(result.diagnostics.is_empty(), "{input:?}");
+        let source = sources.get(SourceId(1)).unwrap();
+        assert_eq!(source.text(), "ignored\r\n\u{feff}*🇯🇵*\r\n");
+        assert!(source.is_complete());
+        for block in result.document.flat_blocks() {
+            assert_eq!(block.span.source_id, SourceId(1));
+            assert_eq!(sources.slice(block.span), Some("*🇯🇵*"));
+            assert_eq!(block.span.start, 12);
+            assert_eq!(
+                source.position(21).unwrap(),
+                adoctra_core::SourcePosition { line: 2, column: 5 }
+            );
+        }
+        assert!(sources.get(SourceId(2)).is_none());
+        let mut limited = options.clone();
+        limited.includes.max_bytes = source.text().len() - 1;
+        let result = parse_resource(&mut sources, &limited, &resources).unwrap();
+        assert!(result
+            .diagnostics
+            .iter()
+            .any(|d| d.message.contains("maximum included byte count")));
+    }
+    resources
+        .insert_binary(
+            "/docs/part.adoc",
+            "ignored\r\n*\u{effb}*\r\n\u{e472}".as_bytes(),
+        )
+        .unwrap();
+    let mut prefix_options = options.clone();
+    let prefix = parse_resource(&mut sources, &prefix_options, &resources).unwrap();
+    assert!(prefix.diagnostics.is_empty());
+    let source = sources.get(SourceId(2)).unwrap();
+    assert_eq!(source.text(), "ignored\r\n*1\u{20e3}*\r\n");
+    assert!(!source.is_complete());
+    assert!(source.omitted_lines().is_empty());
+    prefix_options.includes.max_bytes = source.text().len() - 1;
+    let limited = parse_resource(&mut sources, &prefix_options, &resources).unwrap();
+    assert!(limited
+        .diagnostics
+        .iter()
+        .any(|d| d.message.contains("maximum included byte count")));
+    // Undefined PUA and malformed UTF-8 on skipped lines are still consumed.
+    for bad in ["\u{e472}".as_bytes(), &b"\xff"[..]] {
+        for selection in ["lines=1;5", "tag=body"] {
+            let (mut resource, mut map, opts) = setup(&format!(
+                "include::part.adoc[encoding=UTF8-KDDI,{selection},opts=optional]"
+            ));
+            resource
+                .insert_binary(
+                    "/docs/part.adoc",
+                    [
+                        b"// tag::body[]\n",
+                        "\u{e4cc}\n".as_bytes(),
+                        b"// end::body[]\n",
+                        bad,
+                        b"\nlast\n",
+                    ]
+                    .concat(),
+                )
+                .unwrap();
+            let result = parse_resource(&mut map, &opts, &resource).unwrap();
+            assert_eq!(result.diagnostics.len(), 1);
+            assert!(map.get(SourceId(1)).is_none());
+        }
+    }
+    assert_eq!(
+        sources.get(SourceId(1)).unwrap().text(),
+        "ignored\r\n\u{feff}*🇯🇵*\r\n"
+    );
+}
+
+#[test]
+fn utf8_docomo_strict_selection_and_unicode_snapshots_keep_identity_and_budgets() {
+    utf8_mobile_selection_and_identity(
+        "UTF8-DoCoMo",
+        "utf8-docomo",
+        "\u{e6e2}",
+        "\u{e66c}",
+        "\u{e6f1}",
+    );
+}
+
+#[test]
+fn utf8_softbank_strict_selection_and_unicode_snapshots_keep_identity_and_budgets() {
+    utf8_mobile_selection_and_identity(
+        "UTF8-SoftBank",
+        "utf8-softbank",
+        "\u{e21c}",
+        "\u{e14f}",
+        "\u{e059}",
+    );
+}
+
+fn utf8_mobile_selection_and_identity(
+    name: &str,
+    lower: &str,
+    keycap: &str,
+    supplementary: &str,
+    undefined: &str,
+) {
+    for (selection, bad, success) in [
+        ("lines=1", undefined.as_bytes(), true),
+        ("lines=1", &b"\xff"[..], true),
+        ("lines=2", undefined.as_bytes(), false),
+        ("lines=1;3", undefined.as_bytes(), false),
+        ("lines=1;3", &b"\xff"[..], false),
+        ("tag=body", undefined.as_bytes(), false),
+        ("tag=body", &b"\xff"[..], false),
+    ] {
+        let (mut resources, mut sources, options) = setup(&format!(
+            "include::part.adoc[encoding={name},{selection},opts=optional]"
+        ));
+        resources
+            .insert_binary(
+                "/docs/part.adoc",
+                [format!("*{keycap}*\r\n").as_bytes(), bad, b"\nlast\n"].concat(),
             )
             .unwrap();
         let result = parse_resource(&mut sources, &options, &resources).unwrap();
@@ -752,11 +1074,11 @@ fn utf8_docomo_strict_selection_and_unicode_snapshots_keep_identity_and_budgets(
         }
     }
     let (mut resources, mut sources, options) =
-        setup("include::part.adoc[encoding=UTF8-DoCoMo,lines=2]");
+        setup(&format!("include::part.adoc[encoding={name},lines=2]"));
     resources
         .insert_binary(
             "/docs/part.adoc",
-            "ignored\r\n\u{feff}*\u{e6e2}*\r\n".as_bytes(),
+            format!("ignored\r\n\u{feff}*{keycap}*\r\n").as_bytes(),
         )
         .unwrap();
     let bom = parse_resource(&mut sources, &options, &resources).unwrap();
@@ -776,9 +1098,9 @@ fn utf8_docomo_strict_selection_and_unicode_snapshots_keep_identity_and_budgets(
             .unwrap(),
         adoctra_core::SourcePosition { line: 2, column: 2 }
     );
-    let (mut resources, mut sources, options) = setup("include::part.adoc[encoding=UTF8-DoCoMo]\n\ninclude::part.adoc[encoding=utf8-docomo]\n\ninclude::part.adoc[encoding=UTF-8]");
+    let (mut resources, mut sources, options) = setup(&format!("include::part.adoc[encoding={name}]\n\ninclude::part.adoc[encoding={lower}]\n\ninclude::part.adoc[encoding=UTF-8]"));
     resources
-        .insert_binary("/docs/part.adoc", "\u{e6e2}\r\n".as_bytes())
+        .insert_binary("/docs/part.adoc", format!("{keycap}\r\n").as_bytes())
         .unwrap();
     let first = parse_resource(&mut sources, &options, &resources).unwrap();
     assert!(first.diagnostics.is_empty());
@@ -802,14 +1124,20 @@ fn utf8_docomo_strict_selection_and_unicode_snapshots_keep_identity_and_budgets(
         .iter()
         .all(|b| b.span.source_id == SourceId(1)));
     assert!(sources.get(SourceId(3)).is_none());
-    assert_eq!(sources.get(SourceId(2)).unwrap().text(), "\u{e6e2}\r\n");
+    assert_eq!(
+        sources.get(SourceId(2)).unwrap().text(),
+        format!("{keycap}\r\n")
+    );
     resources
-        .insert_binary("/docs/part.adoc", "\u{e66c}\r\n".as_bytes())
+        .insert_binary("/docs/part.adoc", format!("{supplementary}\r\n").as_bytes())
         .unwrap();
     let changed = parse_resource(&mut sources, &options, &resources).unwrap();
     assert!(changed.diagnostics.is_empty());
     assert_eq!(sources.get(SourceId(3)).unwrap().text(), "🅿\r\n");
-    assert_eq!(sources.get(SourceId(4)).unwrap().text(), "\u{e66c}\r\n");
+    assert_eq!(
+        sources.get(SourceId(4)).unwrap().text(),
+        format!("{supplementary}\r\n")
+    );
     assert_eq!(sources.get(SourceId(1)).unwrap().text(), "1\u{20e3}\r\n");
 }
 

@@ -145,7 +145,7 @@ micro-optimizations as the next task. Include encoding now supports Unicode and
 Big5, Big5-HKSCS, Big5-UAO, CP950, CP951, GB2312, GB12345, GBK, GB18030, EUC-KR, CP949
 and ISO-2022-JP (ISO2022-JP), CP50220, CP50221, stateless-ISO-2022-JP,
 ISO-2022-JP-KDDI, stateless-ISO-2022-JP-KDDI, EUC-JIS-2004 (EUC-JISX0213)
-and SJIS-KDDI/SJIS-DoCoMo/SJIS-SoftBank, plus UTF8-DoCoMo.
+and SJIS-KDDI/SJIS-DoCoMo/SJIS-SoftBank, plus UTF8-DoCoMo/UTF8-KDDI/UTF8-SoftBank and CESU-8/UTF8-MAC.
 Finite positive `lines` selections recover an intact decoded prefix when only
 the unread tail is malformed; `SourceFile::is_complete` exposes this explicitly.
 Skipped malformed UTF-8/BINARY lines now have explicit omission records with
@@ -1146,10 +1146,10 @@ and raw bytes (hex in JSON). `SourceFile::position` accounts for gaps; omitted
 bytes count toward the include budget. Sparse snapshots cannot be reparsed as
 implicitly valid primary sources. `is_complete`/WASM `source_is_complete`
 distinguish these views and prefixes from full files. BOM/CRLF remain intact.
-Unicode, 53 single-byte codecs and 27 Japanese/Big5/GB/Korean/mobile codecs use std-only decoding with mappings generated
+Unicode (including CESU-8/UTF8-MAC), 53 single-byte codecs and 29 Japanese/Big5/GB/Korean/mobile codecs use std-only decoding with mappings generated
 by `scripts/generate_encodings.rb` from the pinned Ruby environment. Unknown
-names fall back to UTF-8 like Ruby; known unsupported multibyte names fail
-explicitly, and codecs unavailable in the reference fail as unreadable.
+names fall back to UTF-8 like Ruby; codecs unavailable in the reference fail
+as unreadable. All names in the pinned registry are classified explicitly.
 Japanese variants retain Ruby's distinct mappings (notably SJIS aliases
 Windows-31J, not Shift_JIS); malformed and unmapped sequences are unreadable.
 The five Big5 variants preserve 91516 separate mappings, including private-use
@@ -1250,11 +1250,61 @@ an intact prefix. UTF-8 BOM remains in the source snapshot; explicit UTF-16
 BOM is invalid. Equivalent PUA/literal decoded text shares snapshots.
 Its strict fingerprint covers 1183513 inputs, including every Unicode scalar,
 short byte strings, truncated and mutated UTF-8 (9501193 probes overall).
-UTF8-KDDI/UTF8-SoftBank, CESU-8 and UTF8-MAC still require host decoding.
+UTF8-KDDI uses the same strict UTF8-mobile path with an independent 1294-entry
+Unicode-scalar PUA table: 240 replacements, 1054 undefined. All differences
+were checked across every Unicode scalar and lie in BMP PUA. Two banks each
+provide the same 120 replacements (42 compound/26 supplementary mappings total):
+U+E4CC/U+EFA5 -> 🇯🇵, U+E522/U+EFFB -> 1 + U+20E3, U+E4A6/U+EF7E -> 🅿.
+Both banks and equivalent literal text share snapshots; UTF-8/DoCoMo can
+preserve those PUA scalars in separate snapshots. Literal 😀 passes, while
+U+E472 is undefined despite Ruby reverse encoding. Its independent strict
+fingerprint adds 1183513 probes (10684706 overall). Keep SJIS byte keys separate.
+UTF8-SoftBank has its own 485-entry PUA scalar table: 86 replacements,
+399 undefined, 21 compound mappings, 14 containing supplementary scalars.
+Do not reuse SJIS-SoftBank's distinct byte table (171 replacements). Every
+Unicode scalar was verified; all differences are in BMP PUA. U+E04A -> ☀,
+U+E50B -> 🇯🇵, U+E21C -> 1 + U+20E3, U+E14F -> 🅿; U+E000/U+E53F pass
+unchanged. Literal 😀 passes, U+E059 fails despite Ruby reverse encoding.
+ASCII/ESC $ G/P/SI stay literal. Strict validation before selection, finite
+prefix recovery, BOM, decoded byte budgets and snapshot reuse follow the
+other UTF8-mobile codecs. Its independent fingerprint adds 1183513 inputs
+(11868219 overall). Keep Unicode-scalar and encoded SJIS-byte keys separate.
+CESU-8 uses a std-only strict decoder for canonical one-to-three-byte UTF-16
+units. Adjacent high/low surrogates combine into one supplementary scalar;
+native four-byte UTF-8, lone/reversed/separated surrogates, overlong forms and
+truncations fail. Raw NUL is valid; C0 80 is not. BMP/private-use/noncharacters
+pass unchanged. UTF-8 BOM stays in the snapshot; explicit UTF-16 BOM fails.
+Strict consumed-prefix validation, finite lines recovery and decoded UTF-8
+budgets follow other strict codecs; skipped malformed lines/tags still fail.
+Source spans address the decoded UTF-8, so a six-byte CESU-8 surrogate pair
+occupies four snapshot bytes and one Unicode column. Equivalent native UTF-8
+loaded with its own encoding can reuse the snapshot; native UTF-8 bytes must
+still fail when interpreted as CESU-8. Its independent strict IO fingerprint
+covers 2495258 inputs (14363477 overall), including every UTF-16 unit, every
+valid surrogate pair and every forbidden native supplementary UTF-8 scalar.
+UTF8-MAC (UTF-8-MAC/UTF-8-HFS) validates UTF-8 strictly, then composes
+adjacent pairs greedily: 871 verified BMP mappings plus 11172 algorithmic
+Hangul joins. Ruby preserves scalar input, historical exclusions and mark
+order; e + U+0301 -> é, while a + U+0315 + U+0300 stays in that order.
+A + U+030A + U+0301 chains to Ǻ; iota + diaeresis + acute gives U+03CA + acute.
+No general NFC decomposition/reordering is performed. ASCII flushes preceding text but may start a new pair; supplementary scalars
+flush and pass through. BOM, strict selection and decoded budgets follow
+other strict UTF-8 codecs, with one IO buffering boundary: LF is held until
+one following scalar or clean EOF. A malformed first scalar after selected LF
+fails; a valid lookahead allows recovery before a later error. The lookahead
+is validated without entering the retained prefix snapshot.
+Composed/decomposed equivalent input shares snapshots;
+ordinary UTF-8 may retain a separate decomposed snapshot. The generator uses
+Ruby stdlib canonical candidates, filtering pairs through the strict converter;
+all 12043 source-table compositions were independently audited (871 + 11172).
+2195 canonical probe strings include excluded/chained forms. Its independent
+fingerprint adds 1218628 inputs (15582105 overall). All names in the pinned
+Ruby registry now have a decoder or an explicit unavailable-converter result;
+the generator aborts if a new usable converter lacks an implementation.
 The decoder's exhaustive short-input fingerprints can be reproduced with
-`ruby scripts/generate_encodings.rb --fingerprints`. Other legacy multibyte
-codecs remain open; never claim that the
-entire encoding surface is covered. Selected malformed UTF-8 and implicit UTF-16 BOM selection
+`ruby scripts/generate_encodings.rb --fingerprints`. Other Ruby versions,
+untested encoding combinations and decoding/selection order remain open;
+never claim that the entire encoding surface is covered. Selected malformed UTF-8 and implicit UTF-16 BOM selection
 can crash Ruby outside its include error handler; adoctra must stay error-tolerant.
 Binary fixtures use `binary_resources` (hex bytes) in the minimal corpus.
 Ordinary/intrinsic attribute substitution runs once

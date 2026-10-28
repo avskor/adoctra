@@ -6,6 +6,7 @@
 version = File.read(File.expand_path('../compatibility/asciidoctor-version', __dir__)).strip
 gem 'asciidoctor', version
 require 'asciidoctor'
+require 'unicode_normalize/normalize'
 
 JAPANESE = %w[Shift_JIS Windows-31J EUC-JP eucJP-ms CP51932].freeze
 BIG5 = %w[Big5 Big5-HKSCS Big5-UAO CP950 CP951].freeze
@@ -13,22 +14,23 @@ GB = %w[GB2312 GB12345 GBK GB18030].freeze
 KOREAN = %w[EUC-KR CP949].freeze
 JIS2004 = %w[EUC-JIS-2004].freeze
 SJIS_MOBILE = %w[SJIS-KDDI SJIS-DoCoMo SJIS-SoftBank].freeze
-UTF8_MOBILE = %w[UTF8-DoCoMo].freeze
+UTF8_MOBILE = %w[UTF8-DoCoMo UTF8-KDDI UTF8-SoftBank].freeze
 MULTIBYTE = (JAPANESE + BIG5 + GB + KOREAN + JIS2004).freeze
+UTF8_MAC_PROBES = (UnicodeNormalize::DECOMPOSITION_TABLE.values + UnicodeNormalize::COMPOSITION_TABLE.keys).uniq.sort.freeze
 
 # Independent exhaustive reference for the Rust decoder regression test,
 # including invalid input and sequences containing multiple ASCII characters.
 # This enumerates all byte pairs, rather than the table generator's lead/trail
 # ranges. EUC also tests every pair following the three-byte prefix 0x8f.
 if ARGV == ['--fingerprints']
-  (MULTIBYTE + ['GB18030-four', 'ISO-2022-JP', 'CP50220', 'CP50221', 'stateless-ISO-2022-JP', 'ISO-2022-JP-KDDI', 'stateless-ISO-2022-JP-KDDI'] + SJIS_MOBILE + UTF8_MOBILE).each do |label|
+  (MULTIBYTE + ['GB18030-four', 'ISO-2022-JP', 'CP50220', 'CP50221', 'stateless-ISO-2022-JP', 'ISO-2022-JP-KDDI', 'stateless-ISO-2022-JP-KDDI'] + SJIS_MOBILE + UTF8_MOBILE + ['CESU-8', 'UTF8-MAC']).each do |label|
     name = label == 'GB18030-four' ? 'GB18030' : label
     hash = 0xcbf29ce484222325
     feed = lambda { |byte| hash = ((hash ^ byte) * 0x100000001b3) & 0xffffffffffffffff }
     check = lambda do |bytes|
       begin
         input = bytes.pack('C*').force_encoding(name)
-        result = if name == 'stateless-ISO-2022-JP' || name.end_with?('-KDDI') || JIS2004.include?(name) || SJIS_MOBILE.include?(name) || UTF8_MOBILE.include?(name)
+        result = if name == 'stateless-ISO-2022-JP' || name.end_with?('-KDDI') || JIS2004.include?(name) || SJIS_MOBILE.include?(name) || UTF8_MOBILE.include?(name) || %w[CESU-8 UTF8-MAC].include?(name)
                    # Like Ruby IO, always run the transcoder. String#encode
                    # bypasses it on ASCII-only strings, hiding ESC/SO/SI errors.
                    converter = Encoding::Converter.new name, 'UTF-8'
@@ -85,7 +87,22 @@ if ARGV == ['--fingerprints']
         256.times { |a| check.call [27, 36, a] }
         256.times { |a| 256.times { |b| check.call [27, 36, a, b]; check.call [27, 36, a, b, 15] } }
       end
-      if UTF8_MOBILE.include? name
+      if name == 'CESU-8'
+        # All UTF-16 units (including lone surrogates), every valid pair, and
+        # every native four-byte UTF-8 scalar. Build bytes independently of Rust.
+        unit = ->(point) { [point].pack('U').bytes }
+        (0..0xffff).each { |point| check.call unit.call(point) }
+        (0xd800..0xdbff).each { |high| (0xdc00..0xdfff).each { |low| check.call unit.call(high) + unit.call(low) } }
+        (0x10000..0x10ffff).each { |point| check.call [point].pack('U').bytes }
+        [0xd800, 0xdbff].each { |high| (0..0xffff).each { |point| check.call unit.call(high) + unit.call(point) } }
+        [0xdc00, 0xdfff].each { |low| (0..0xffff).each { |point| check.call unit.call(point) + unit.call(low) } }
+        [[0xed,0xa0,0x80,0xed,0xb0,0x80], [0xed,0xaf,0xbf,0xed,0xbf,0xbf], [0xed,0xa0,0xbd,0xed,0xb8,0x80]].each do |base|
+          base.size.times { |length| check.call base.take(length) }
+          base.size.times { |index| 256.times { |byte| input = base.dup; input[index] = byte; check.call input } }
+        end
+        %w[f4908080 f888808080 fc8480808080 eda08041edb080 edb080eda080 eda080eda080 edb080edb080].each { |hex| check.call [hex].pack('H*').bytes }
+      end
+      if (UTF8_MOBILE + ['UTF8-MAC']).include? name
         # Exhaust every Unicode scalar, independently of the PUA table generator.
         (0..0x10ffff).each { |point| check.call([point].pack('U').bytes) unless point.between?(0xd800, 0xdfff) }
         [[0xc2, 0xa2], [0xe0, 0xa0, 0x80], [0xed, 0x9f, 0xbf], [0xee, 0x98, 0xbe],
@@ -95,6 +112,24 @@ if ARGV == ['--fingerprints']
         end
         check.call [0xf8, 0x88, 0x80, 0x80, 0x80]
         check.call [0xfc, 0x84, 0x80, 0x80, 0x80, 0x80]
+      end
+    end
+    if name == 'UTF8-MAC'
+      # Independent canonical candidates include Ruby exclusions and chains;
+      # no expected result is inferred from the generated composition table.
+      UTF8_MAC_PROBES.each do |s|
+        [s, 'x' + s, s + 'y', s + "\u0301", s + "\u0323", s.reverse].each { |input| check.call input.bytes }
+      end
+      (0x1100..0x1112).each do |leading|
+        (0x1161..0x1175).each do |vowel|
+          prefix = [leading, vowel].pack('U*')
+          check.call prefix.bytes
+          (0x11a8..0x11c2).each do |trailing|
+            check.call (prefix + [trailing].pack('U')).bytes
+            syllable = 0xac00 + ((leading - 0x1100) * 21 + vowel - 0x1161) * 28
+            check.call [syllable, trailing].pack('U*').bytes
+          end
+        end
       end
     end
     puts format('%s: 0x%016x', label, hash)
@@ -124,6 +159,8 @@ Encoding.list.sort_by(&:name).each do |enc|
   names = enc.names.map(&:downcase).uniq.sort
   kind = case enc.name
          when 'UTF-8' then 'Encoding::Utf8'
+         when 'CESU-8' then 'Encoding::Cesu8'
+         when 'UTF8-MAC' then 'Encoding::Utf8Mac'
          when 'ASCII-8BIT' then 'Encoding::Binary'
          when 'US-ASCII' then 'Encoding::Ascii'
          when 'UTF-16' then 'Encoding::Utf16(None)'
@@ -140,7 +177,7 @@ Encoding.list.sort_by(&:name).each do |enc|
          when 'SJIS-KDDI' then "Encoding::Multibyte { table: &MULTI_#{MULTIBYTE.index('Windows-31J')}, kind: MultibyteKind::ShiftJisKddi }"
          when 'SJIS-DoCoMo' then "Encoding::Multibyte { table: &MULTI_#{MULTIBYTE.index('Windows-31J')}, kind: MultibyteKind::ShiftJisDocomo }"
          when 'SJIS-SoftBank' then "Encoding::Multibyte { table: &MULTI_#{MULTIBYTE.index('Windows-31J')}, kind: MultibyteKind::ShiftJisSoftbank }"
-         when 'UTF8-DoCoMo' then 'Encoding::Utf8Mobile(&UTF8_DOCOMO_OVERRIDES)'
+         when *UTF8_MOBILE then "Encoding::Utf8Mobile(&#{enc.name.upcase.tr('-', '_')}_OVERRIDES)"
          else
            if (index = single_byte.index(enc))
              "Encoding::Single(&TABLE_#{index})"
@@ -158,7 +195,7 @@ Encoding.list.sort_by(&:name).each do |enc|
                       end
              "Encoding::Multibyte { table: &MULTI_#{index}, kind: MultibyteKind::#{family} }"
            elsif converter?(enc)
-             'Encoding::Unsupported'
+             abort "unimplemented converter in pinned Ruby: #{enc.name}"
            else
              'Encoding::Unavailable'
            end
@@ -287,6 +324,30 @@ UTF8_MOBILE.each do |name|
   end
   puts '];'
 end
+
+# Unicode's canonical pairs are candidates only: the installed Ruby IO
+# converter selects its historical MAC subset. Hangul is handled algorithmically.
+mac_pairs = UnicodeNormalize::COMPOSITION_TABLE.keys.filter_map do |input|
+  converter = Encoding::Converter.new 'UTF8-MAC', 'UTF-8'
+  value = converter.convert(input) + converter.finish
+  next if value == input
+  points = input.codepoints
+  raise "unexpected MAC composition: #{input.inspect}" unless points.size == 2 && value.codepoints.size == 1 && value.ord <= 0xffff
+  [(points[0] << 32) | points[1], value.ord]
+end.sort
+puts '// UTF8-MAC: adjacent canonical pair compositions verified by strict Ruby IO.'
+puts '#[rustfmt::skip]'
+puts "pub(super) static UTF8_MAC_COMPOSITIONS: [(u64, u32); #{mac_pairs.size}] = ["
+mac_pairs.each { |key, value| puts format('    (0x%016x, 0x%04x),', key, value) }
+puts '];'
+puts '// Independent canonical inputs, including exclusions; not derived from MAC mappings.'
+puts '#[cfg(test)]'
+puts '#[rustfmt::skip]'
+puts "pub(super) static UTF8_MAC_PROBES: [&str; #{UTF8_MAC_PROBES.size}] = ["
+UTF8_MAC_PROBES.each do |input|
+  puts '    "' + input.codepoints.map { |point| "\\u{#{point.to_s(16)}}" }.join + '",'
+end
+puts '];'
 
 # Compact only consecutive, verified mappings. Gaps stay explicit, including
 # pointers outside Unicode and the unused interval before supplementary planes.

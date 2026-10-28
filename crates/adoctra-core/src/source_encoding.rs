@@ -1,6 +1,6 @@
 //! Decode include bytes before registering their UTF-8 source snapshot.
-//! Names and byte mappings follow the pinned Ruby reference. Unimplemented
-//! legacy encodings require a host decoder; never mistake a known unsupported
+//! Names and byte mappings follow the pinned Ruby reference. Codecs without
+//! a reference converter remain unreadable; never mistake an unavailable
 //! encoding for an unknown name (which Ruby ignores).
 use crate::{
     BinaryResource, IncludeInput, IncludeResource, Resource, ResourceError, ResourceErrorKind,
@@ -13,6 +13,8 @@ mod tables;
 
 enum Encoding {
     Utf8,
+    Cesu8,
+    Utf8Mac,
     Utf8Mobile(&'static [(u32, Option<&'static str>)]),
     Ascii,
     Binary,
@@ -28,7 +30,6 @@ enum Encoding {
         kind: MultibyteKind,
     },
     Unavailable,
-    Unsupported,
 }
 
 enum MultibyteKind {
@@ -56,6 +57,98 @@ enum Iso2022Kind {
     Standard,
     Windows,
     Kddi,
+}
+
+fn decode_utf8_mac(input: &str) -> String {
+    fn compose(first: char, second: char) -> Option<char> {
+        let first = first as u32;
+        let second = second as u32;
+        let scalar = if (0x1100..=0x1112).contains(&first) && (0x1161..=0x1175).contains(&second) {
+            0xac00 + ((first - 0x1100) * 21 + second - 0x1161) * 28
+        } else if (0xac00..=0xd7a3).contains(&first)
+            && (first - 0xac00) % 28 == 0
+            && (0x11a8..=0x11c2).contains(&second)
+        {
+            first + second - 0x11a7
+        } else {
+            let key = (u64::from(first) << 32) | u64::from(second);
+            let index = tables::UTF8_MAC_COMPOSITIONS
+                .binary_search_by_key(&key, |&(key, _)| key)
+                .ok()?;
+            tables::UTF8_MAC_COMPOSITIONS[index].1
+        };
+        char::from_u32(scalar)
+    }
+    // Ruby composes adjacent pairs greedily. It preserves precomposed input,
+    // exclusions and mark order; no decomposition or canonical reordering runs.
+    let mut text = String::with_capacity(input.len());
+    for character in input.chars() {
+        if let Some(composite) = text
+            .chars()
+            .next_back()
+            .and_then(|last| compose(last, character))
+        {
+            text.pop();
+            text.push(composite);
+        } else {
+            text.push(character);
+        }
+    }
+    text
+}
+
+fn decode_cesu8(bytes: &[u8]) -> Option<String> {
+    // CESU-8 encodes UTF-16 units as one to three bytes. Supplementary
+    // characters require adjacent high/low surrogates; native UTF-8's
+    // four-byte form and unpaired surrogates are invalid in Ruby IO.
+    fn unit(bytes: &[u8]) -> Option<(u16, usize)> {
+        let lead = *bytes.first()?;
+        match lead {
+            0..=0x7f => Some((u16::from(lead), 1)),
+            0xc2..=0xdf => {
+                let second = *bytes.get(1)?;
+                if !(0x80..=0xbf).contains(&second) {
+                    return None;
+                }
+                Some(((u16::from(lead & 0x1f) << 6) | u16::from(second & 0x3f), 2))
+            }
+            0xe0..=0xef => {
+                let second = *bytes.get(1)?;
+                let third = *bytes.get(2)?;
+                if !(0x80..=0xbf).contains(&second)
+                    || !(0x80..=0xbf).contains(&third)
+                    || (lead == 0xe0 && second < 0xa0)
+                {
+                    return None;
+                }
+                Some((
+                    (u16::from(lead & 0x0f) << 12)
+                        | (u16::from(second & 0x3f) << 6)
+                        | u16::from(third & 0x3f),
+                    3,
+                ))
+            }
+            _ => None,
+        }
+    }
+    let mut text = String::with_capacity(bytes.len());
+    let mut remaining = bytes;
+    while !remaining.is_empty() {
+        let (first, length) = unit(remaining)?;
+        remaining = &remaining[length..];
+        let scalar = if (0xd800..=0xdbff).contains(&first) {
+            let (second, length) = unit(remaining)?;
+            if !(0xdc00..=0xdfff).contains(&second) {
+                return None;
+            }
+            remaining = &remaining[length..];
+            0x10000 + ((u32::from(first) - 0xd800) << 10) + u32::from(second) - 0xdc00
+        } else {
+            u32::from(first)
+        };
+        text.push(char::from_u32(scalar)?);
+    }
+    Some(text)
 }
 
 fn append_mapping(
@@ -105,8 +198,8 @@ impl BinaryResource {
     /// the UTF-8 snapshot for the parser's existing normalization and spans.
     /// Japanese (including ISO-2022-JP), Big5, GB and Korean families use the
     /// reference's byte mappings and state transitions.
-    /// Other known legacy encodings unsupported here return `Unsupported`;
-    /// a host may implement them in `ResourceProvider::load_with_encoding`.
+    /// Reference codecs without a UTF-8 converter remain unreadable; a host
+    /// may override decoding through `ResourceProvider::load_with_encoding`.
     pub fn decode(self, encoding: Option<&str>) -> ResourceResult<Resource> {
         self.decode_include(encoding, None)
             .map(|decoded| decoded.resource)
@@ -192,7 +285,7 @@ impl BinaryResource {
                 lf[0] = table.iter().position(|&value| value == 10)? as u8;
                 1
             }
-            Encoding::Unsupported | Encoding::Unavailable => return None,
+            Encoding::Unavailable => return None,
             // Ruby reads default/BINARY UTF-16 BOM resources as byte lines
             // before normalization. Its selection can fail outside the include
             // error handler; do not manufacture a successful prefix for it.
@@ -211,7 +304,20 @@ impl BinaryResource {
             if unit == &lf[..width] {
                 lines -= 1;
                 if lines == 0 {
-                    return Some((index + 1) * width);
+                    let end = (index + 1) * width;
+                    if matches!(encoding, Encoding::Utf8Mac) {
+                        // Ruby buffers LF until the next complete scalar (or
+                        // clean EOF). An invalid first scalar after LF prevents
+                        // gets from returning the selected line. Validate this
+                        // lookahead without adding unread text to the snapshot.
+                        let tail = &self.bytes[end..];
+                        let lookahead = &tail[..tail.len().min(4)];
+                        if matches!(std::str::from_utf8(lookahead), Err(error) if error.valid_up_to() == 0)
+                        {
+                            return None;
+                        }
+                    }
+                    return Some(end);
                 }
             }
         }
@@ -246,6 +352,10 @@ impl BinaryResource {
                 return std::str::from_utf8(bytes)
                     .map(Cow::Borrowed)
                     .map_err(|_| invalid())
+            }
+            Encoding::Cesu8 => decode_cesu8(bytes).ok_or_else(invalid)?,
+            Encoding::Utf8Mac => {
+                decode_utf8_mac(std::str::from_utf8(bytes).map_err(|_| invalid())?)
             }
             Encoding::Utf8Mobile(overrides) => {
                 // Mobile UTF8 codecs are strict transcoders, not the default
@@ -532,13 +642,6 @@ impl BinaryResource {
                 text
             }
             Encoding::Unavailable => return Err(invalid()),
-            Encoding::Unsupported => {
-                return Err(ResourceError::new(
-                    ResourceErrorKind::Unsupported,
-                    &self.name,
-                    format!("source encoding requires a host decoder: {name}"),
-                ))
-            }
         };
         Ok(Cow::Owned(text))
     }
@@ -631,13 +734,13 @@ mod tests {
             assert!(full.complete);
             assert_eq!(full.resource.text, expected);
         }
-        // Unsupported codecs and Ruby's implicit UTF-16 BOM selection boundary
+        // Unavailable codecs and Ruby's implicit UTF-16 BOM selection boundary
         // must not silently fall back to a successful ASCII-prefix decode.
         for (encoding, bytes, kind) in [
             (
-                Some("CESU-8"),
+                Some("UTF-7"),
                 &b"good\n\xff"[..],
-                ResourceErrorKind::Unsupported,
+                ResourceErrorKind::InvalidEncoding,
             ),
             (
                 Some("Windows-1258"),
@@ -765,8 +868,8 @@ mod tests {
         );
         // These are recognized names, not misspellings that may fall back to UTF-8.
         assert_eq!(
-            decode(b"ASCII", Some("CESU-8")).unwrap_err().kind,
-            ResourceErrorKind::Unsupported
+            decode(b"ASCII", Some("UTF-7")).unwrap_err().kind,
+            ResourceErrorKind::InvalidEncoding
         );
         assert_eq!(
             decode(b"ASCII", Some("Windows-1258")).unwrap_err().kind,
@@ -1178,6 +1281,277 @@ mod tests {
     }
 
     #[test]
+    fn utf8_mac_prefix_requires_one_valid_scalar_after_buffered_lf() {
+        for tail in [
+            &b"A\xff"[..],
+            &b"\xc2\xa2\xff"[..],
+            &b"\xee\x80\x80\xff"[..],
+            &b"\xf0\x9f\x98\x80\xff"[..],
+            &b"\xef\xbb\xbf\xff"[..],
+        ] {
+            let decoded = BinaryResource {
+                name: "/part.adoc".into(),
+                bytes: ["*e\u{301}*\r\n".as_bytes(), tail].concat(),
+                content_type: None,
+            }
+            .decode_include(Some("UTF-8-HFS"), Some(1))
+            .unwrap();
+            assert_eq!(decoded.resource.text, "*é*\r\n");
+            assert!(!decoded.complete);
+        }
+        for tail in [
+            &b"\xff"[..],
+            &b"\xee\x80\xff"[..],
+            &b"\xed\xa0\x80"[..],
+            &b"\xf4\x90\x80\x80"[..],
+        ] {
+            let error = BinaryResource {
+                name: "/part.adoc".into(),
+                bytes: ["*e\u{301}*\r\n".as_bytes(), tail].concat(),
+                content_type: None,
+            }
+            .decode_include(Some("UTF8-MAC"), Some(1))
+            .unwrap_err();
+            assert_eq!(error.kind, ResourceErrorKind::InvalidEncoding);
+        }
+        let eof = BinaryResource {
+            name: "/part.adoc".into(),
+            bytes: "*e\u{301}*\r\n".as_bytes().to_vec(),
+            content_type: None,
+        }
+        .decode_include(Some("UTF8-MAC"), Some(1))
+        .unwrap();
+        assert_eq!(eof.resource.text, "*é*\r\n");
+        assert!(eof.complete);
+    }
+
+    #[test]
+    fn utf8_mac_composes_adjacent_pairs_and_hangul_with_reference_exclusions() {
+        for name in ["UTF8-MAC", "UTF-8-MAC", "utf-8-hfs", "uTf8-mAc"] {
+            for (input, expected) in [
+                ("e\u{301} A\u{30a}\u{301}", "é Ǻ"),
+                ("a\u{315}\u{300}", "a\u{315}\u{300}"),
+                ("a\u{300}\u{315}", "à\u{315}"),
+                ("e\u{301}\u{323}", "é\u{323}"),
+                ("\u{3b9}\u{308}\u{301}", "\u{3ca}\u{301}"),
+                ("\u{3b1}\u{313}\u{300}\u{345}", "\u{1f82}"),
+                ("\u{1100}\u{1161}\u{11a8} \u{ac00}\u{11a8}", "각 각"),
+                ("\u{1112}\u{1175}\u{11c2}", "\u{d7a3}"),
+                (
+                    "\u{1100}\u{1160} \u{ac01}\u{11a8}",
+                    "\u{1100}\u{1160} 각\u{11a8}",
+                ),
+                (
+                    "é 가 Å K Ω \u{344} \u{f900} \u{2f800}",
+                    "é 가 Å K Ω \u{344} \u{f900} \u{2f800}",
+                ),
+                (
+                    "\u{915}\u{93c} \u{5e9}\u{5c1}",
+                    "\u{915}\u{93c} \u{5e9}\u{5c1}",
+                ),
+                ("e😀\u{301} e\n\u{301}", "e😀\u{301} e\n\u{301}"),
+                (
+                    "\u{feff}e\u{301}\u{e6f1}\u{ffff}\u{10ffff}",
+                    "\u{feff}é\u{e6f1}\u{ffff}\u{10ffff}",
+                ),
+                ("\0\u{1b}$G!\u{e}\u{f}", "\0\u{1b}$G!\u{e}\u{f}"),
+            ] {
+                assert_eq!(
+                    decode(input.as_bytes(), Some(name)).unwrap().text,
+                    expected,
+                    "{name}/{input:?}"
+                );
+            }
+            for input in [
+                &b"\xff"[..],
+                &b"\xed\xa0\x80"[..],
+                &b"\xc0\x80"[..],
+                &b"\xf4\x90\x80\x80"[..],
+                &b"\xff\xfeA\0"[..],
+            ] {
+                assert_eq!(
+                    decode(input, Some(name)).unwrap_err().kind,
+                    ResourceErrorKind::InvalidEncoding
+                );
+            }
+        }
+        assert_eq!(
+            decode("e\u{301}".as_bytes(), Some("UTF-8")).unwrap().text,
+            "e\u{301}"
+        );
+    }
+
+    #[test]
+    fn cesu8_requires_canonical_units_and_adjacent_surrogate_pairs() {
+        for name in ["CESU-8", "cEsU-8"] {
+            for (bytes, expected) in [
+                (&b""[..], ""),
+                (&b"\0\x1b$G!\x0e\x0f"[..], "\0\u{1b}$G!\u{e}\u{f}"),
+                (
+                    &b"\xc2\xa2\xe0\xa0\x80\xed\x9f\xbf\xee\x80\x80\xef\xbf\xbf"[..],
+                    "¢\u{800}\u{d7ff}\u{e000}\u{ffff}",
+                ),
+                (&b"\xed\xa0\x80\xed\xb0\x80"[..], "\u{10000}"),
+                (&b"\xed\xaf\xbf\xed\xbf\xbf"[..], "\u{10ffff}"),
+                (&b"\xef\xbb\xbf\xed\xa0\xbd\xed\xb8\x80"[..], "\u{feff}😀"),
+                (
+                    "日本語 \u{e6f1} 1\u{20e3}".as_bytes(),
+                    "日本語 \u{e6f1} 1\u{20e3}",
+                ),
+            ] {
+                assert_eq!(
+                    decode(bytes, Some(name)).unwrap().text,
+                    expected,
+                    "{name}/{bytes:?}"
+                );
+            }
+            for bytes in [
+                &b"\xff"[..],
+                &b"\x80"[..],
+                &b"\xc0\x80"[..],
+                &b"\xc1\xbf"[..],
+                &b"\xe0\x80\x80"[..],
+                &b"\xe0\x9f\xbf"[..],
+                &b"\xe1\x7f\x80"[..],
+                &b"\xed\xa0\x80"[..],
+                &b"\xed\xb0\x80"[..],
+                &b"\xed\xa0\x80\xed\xa0\x80"[..],
+                &b"\xed\xb0\x80\xed\xb0\x80"[..],
+                &b"\xed\xb0\x80\xed\xa0\x80"[..],
+                &b"\xed\xa0\x80A\xed\xb0\x80"[..],
+                &b"\xed\xa0\x80\n\xed\xb0\x80"[..],
+                &b"\xed\xa0\x80\xef\xbb\xbf\xed\xb0\x80"[..],
+                &b"\xed\xa0\x80\xed\xb0"[..],
+                &b"\xed\xa0"[..],
+                &b"\xc2"[..],
+                &b"\xf0\x90\x80\x80"[..],
+                &b"\xf0\x9f\x98\x80"[..],
+                &b"\xf4\x8f\xbf\xbf"[..],
+                &b"\xf8\x88\x80\x80\x80"[..],
+                &b"\xff\xfeA\0"[..],
+            ] {
+                assert_eq!(
+                    decode(bytes, Some(name)).unwrap_err().kind,
+                    ResourceErrorKind::InvalidEncoding,
+                    "{name}/{bytes:?}"
+                );
+            }
+        }
+        assert!(decode(b"\xed\xa0\xbd\xed\xb8\x80", Some("UTF-8")).is_err());
+        assert_eq!(decode("😀".as_bytes(), Some("UTF-8")).unwrap().text, "😀");
+    }
+
+    #[test]
+    fn utf8_softbank_private_use_is_independent_from_sjis_and_preserves_unicode() {
+        for name in ["UTF8-SoftBank", "utf8-softbank"] {
+            for (input, expected) in [
+                ("\u{e04a}\u{e50b}\u{e21c}\u{e14f}", "☀🇯🇵1\u{20e3}🅿"),
+                (
+                    "日本語 😀 🇯🇵 1\u{fe0f}\u{20e3}❤\u{fe0f}",
+                    "日本語 😀 🇯🇵 1\u{fe0f}\u{20e3}❤\u{fe0f}",
+                ),
+                (
+                    "\u{e000}\u{e53f}\u{fffe}\u{ffff}\u{10ffff}",
+                    "\u{e000}\u{e53f}\u{fffe}\u{ffff}\u{10ffff}",
+                ),
+                ("\u{feff}\u{e04a}", "\u{feff}☀"),
+                ("\u{1b}$G!\u{e}\u{f}", "\u{1b}$G!\u{e}\u{f}"),
+            ] {
+                assert_eq!(
+                    decode(input.as_bytes(), Some(name)).unwrap().text,
+                    expected,
+                    "{name}/{input:?}"
+                );
+            }
+            for input in ["\u{e001}", "\u{e059}", "\u{e53e}"] {
+                assert_eq!(
+                    decode(input.as_bytes(), Some(name)).unwrap_err().kind,
+                    ResourceErrorKind::InvalidEncoding
+                );
+            }
+            for input in [
+                &b"\xff"[..],
+                &b"\xed\xa0\x80"[..],
+                &b"\xf4\x90\x80\x80"[..],
+                &b"\xee\x94"[..],
+                &b"\xff\xfeA\0"[..],
+            ] {
+                assert_eq!(
+                    decode(input, Some(name)).unwrap_err().kind,
+                    ResourceErrorKind::InvalidEncoding
+                );
+            }
+        }
+        for name in ["UTF-8", "UTF8-DoCoMo", "UTF8-KDDI"] {
+            assert_eq!(
+                decode("\u{e21c}".as_bytes(), Some(name)).unwrap().text,
+                "\u{e21c}"
+            );
+        }
+        assert_eq!(
+            decode(b"\xf2\xe5", Some("SJIS-SoftBank")).unwrap().text,
+            "1\u{20e3}"
+        );
+        assert!(decode(b"\xf2\xe5", Some("UTF8-SoftBank")).is_err());
+    }
+
+    #[test]
+    fn utf8_kddi_duplicate_banks_preserve_unicode_and_reject_undefined_values() {
+        for name in ["UTF8-KDDI", "utf8-kddi"] {
+            for (input, expected) in [
+                ("\u{e488}\u{ef60}", "☀☀"),
+                ("\u{e4cc}\u{efa5}", "🇯🇵🇯🇵"),
+                ("\u{e522}\u{effb}", "1\u{20e3}1\u{20e3}"),
+                ("\u{e4a6}\u{ef7e}", "🅿🅿"),
+                (
+                    "日本語 😀 ☀ 🇯🇵 1\u{fe0f}\u{20e3}",
+                    "日本語 😀 ☀ 🇯🇵 1\u{fe0f}\u{20e3}",
+                ),
+                (
+                    "\u{e000}\u{fffe}\u{ffff}\u{10ffff}",
+                    "\u{e000}\u{fffe}\u{ffff}\u{10ffff}",
+                ),
+                ("\u{feff}\u{e488}", "\u{feff}☀"),
+                ("\u{1b}$G!\u{e}\u{f}", "\u{1b}$G!\u{e}\u{f}"),
+            ] {
+                assert_eq!(
+                    decode(input.as_bytes(), Some(name)).unwrap().text,
+                    expected,
+                    "{name}/{input:?}"
+                );
+            }
+            for input in ["\u{e468}", "\u{e472}", "\u{f0fc}"] {
+                assert_eq!(
+                    decode(input.as_bytes(), Some(name)).unwrap_err().kind,
+                    ResourceErrorKind::InvalidEncoding
+                );
+            }
+            for input in [
+                &b"\xff"[..],
+                &b"\xed\xa0\x80"[..],
+                &b"\xf4\x90\x80\x80"[..],
+                &b"\xee\x93"[..],
+                &b"\xff\xfeA\0"[..],
+            ] {
+                assert_eq!(
+                    decode(input, Some(name)).unwrap_err().kind,
+                    ResourceErrorKind::InvalidEncoding
+                );
+            }
+        }
+        assert_eq!(
+            decode("\u{e4cc}".as_bytes(), Some("UTF-8")).unwrap().text,
+            "\u{e4cc}"
+        );
+        assert_eq!(
+            decode("\u{e4cc}".as_bytes(), Some("UTF8-DoCoMo"))
+                .unwrap()
+                .text,
+            "\u{e4cc}"
+        );
+    }
+
+    #[test]
     fn utf8_docomo_maps_private_use_and_keeps_other_unicode_with_strict_validation() {
         for name in ["UTF8-DoCoMo", "utf8-docomo"] {
             for (input, expected) in [
@@ -1254,6 +1628,10 @@ mod tests {
             ("GB18030", 0xc15d224b9301efc0, false),
             ("EUC-KR", 0xfda2bfb2de08cf1d, false),
             ("UTF8-DoCoMo", 0x4118e5f8e2a4ea5a, false),
+            ("UTF8-KDDI", 0x469521cbfc82bb8, false),
+            ("UTF8-SoftBank", 0x3938041392c7609b, false),
+            ("CESU-8", 0x7536daf613d09f75, false),
+            ("UTF8-MAC", 0xa8ccedc2cb405131, false),
             ("SJIS-SoftBank", 0x2f3af6a0c46dc354, false),
             ("SJIS-DoCoMo", 0x9e10ca6ad6283a3f, false),
             ("SJIS-KDDI", 0x6f033b26c39879f5, false),
@@ -1317,7 +1695,79 @@ mod tests {
                     }
                 }
             }
-            if name == "UTF8-DoCoMo" {
+            if name == "CESU-8" {
+                // 2,495,258 independent Ruby IO probes, including every valid
+                // surrogate pair and every forbidden native UTF-8 supplementary scalar.
+                fn unit(value: u16) -> Vec<u8> {
+                    match value {
+                        0..=0x7f => vec![value as u8],
+                        0x80..=0x7ff => vec![0xc0 | (value >> 6) as u8, 0x80 | (value & 63) as u8],
+                        _ => vec![
+                            0xe0 | (value >> 12) as u8,
+                            0x80 | ((value >> 6) & 63) as u8,
+                            0x80 | (value & 63) as u8,
+                        ],
+                    }
+                }
+                for value in 0..=u16::MAX {
+                    check(&unit(value));
+                }
+                for high in 0xd800..=0xdbff {
+                    for low in 0xdc00..=0xdfff {
+                        check(&[unit(high), unit(low)].concat());
+                    }
+                }
+                for value in 0x10000..=0x10ffff {
+                    let mut bytes = [0; 4];
+                    check(
+                        char::from_u32(value)
+                            .unwrap()
+                            .encode_utf8(&mut bytes)
+                            .as_bytes(),
+                    );
+                }
+                for high in [0xd800, 0xdbff] {
+                    for value in 0..=u16::MAX {
+                        check(&[unit(high), unit(value)].concat());
+                    }
+                }
+                for low in [0xdc00, 0xdfff] {
+                    for value in 0..=u16::MAX {
+                        check(&[unit(value), unit(low)].concat());
+                    }
+                }
+                for base in [
+                    b"\xed\xa0\x80\xed\xb0\x80",
+                    b"\xed\xaf\xbf\xed\xbf\xbf",
+                    b"\xed\xa0\xbd\xed\xb8\x80",
+                ] {
+                    for length in 0..base.len() {
+                        check(&base[..length]);
+                    }
+                    for index in 0..base.len() {
+                        for byte in 0..=255 {
+                            let mut input = *base;
+                            input[index] = byte;
+                            check(&input);
+                        }
+                    }
+                }
+                for bytes in [
+                    &b"\xf4\x90\x80\x80"[..],
+                    &b"\xf8\x88\x80\x80\x80"[..],
+                    &b"\xfc\x84\x80\x80\x80\x80"[..],
+                    &b"\xed\xa0\x80A\xed\xb0\x80"[..],
+                    &b"\xed\xb0\x80\xed\xa0\x80"[..],
+                    &b"\xed\xa0\x80\xed\xa0\x80"[..],
+                    &b"\xed\xb0\x80\xed\xb0\x80"[..],
+                ] {
+                    check(bytes);
+                }
+            }
+            if matches!(
+                name,
+                "UTF8-DoCoMo" | "UTF8-KDDI" | "UTF8-SoftBank" | "UTF8-MAC"
+            ) {
                 // 1,183,513 independent IO probes: every Unicode scalar,
                 // short byte inputs, UTF-8 boundary mutations and truncations.
                 for scalar in 0..=0x10ffff {
@@ -1348,6 +1798,44 @@ mod tests {
                 }
                 check(b"\xf8\x88\x80\x80\x80");
                 check(b"\xfc\x84\x80\x80\x80\x80");
+            }
+            if name == "UTF8-MAC" {
+                for &probe in &tables::UTF8_MAC_PROBES {
+                    for input in [
+                        probe.to_owned(),
+                        format!("x{probe}"),
+                        format!("{probe}y"),
+                        format!("{probe}\u{301}"),
+                        format!("{probe}\u{323}"),
+                        probe.chars().rev().collect(),
+                    ] {
+                        check(input.as_bytes());
+                    }
+                }
+                for leading in 0x1100..=0x1112 {
+                    for vowel in 0x1161..=0x1175 {
+                        let prefix = format!(
+                            "{}{}",
+                            char::from_u32(leading).unwrap(),
+                            char::from_u32(vowel).unwrap()
+                        );
+                        check(prefix.as_bytes());
+                        for trailing in 0x11a8..=0x11c2 {
+                            check(
+                                format!("{prefix}{}", char::from_u32(trailing).unwrap()).as_bytes(),
+                            );
+                            let syllable = 0xac00 + ((leading - 0x1100) * 21 + vowel - 0x1161) * 28;
+                            check(
+                                format!(
+                                    "{}{}",
+                                    char::from_u32(syllable).unwrap(),
+                                    char::from_u32(trailing).unwrap()
+                                )
+                                .as_bytes(),
+                            );
+                        }
+                    }
+                }
             }
             assert_eq!(hash, expected, "{name}");
         }
@@ -1402,12 +1890,10 @@ mod tests {
             decode(b"ASCII", Some("ISO2022-JP2")).unwrap_err().kind,
             ResourceErrorKind::InvalidEncoding
         );
-        for name in ["CESU-8", "UTF8-MAC"] {
-            assert_eq!(
-                decode(b"ASCII", Some(name)).unwrap_err().kind,
-                ResourceErrorKind::Unsupported
-            );
-        }
+        assert_eq!(
+            decode(b"ASCII", Some("UTF-7")).unwrap_err().kind,
+            ResourceErrorKind::InvalidEncoding
+        );
     }
 
     #[test]

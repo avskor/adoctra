@@ -173,11 +173,192 @@ mod tests {
     use super::*;
 
     #[test]
-    fn utf8_docomo_exported_snapshots_share_equivalent_unicode_and_validate_prefixes() {
+    fn utf8_mac_exported_snapshots_compose_and_reuse_equivalent_input() {
         let mut workspace = ResourceWorkspace::new();
-        workspace.set("/main.adoc", "include::part.adoc[encoding=UTF8-DoCoMo,lines=2]\n\ninclude::part.adoc[encoding=utf8-docomo,lines=2]").unwrap();
+        workspace.set("/main.adoc","include::part.adoc[encoding=UTF8-MAC,lines=2]\n\ninclude::part.adoc[encoding=UTF-8-HFS,lines=2]").unwrap();
         workspace
-            .set_binary("/part.adoc", "ignored\r\n*\u{e6e2}*\r\n".as_bytes())
+            .set_binary("/part.adoc", "ignored\r\n*e\u{301}*\r\n".as_bytes())
+            .unwrap();
+        let main = workspace.load("/main.adoc", None).unwrap();
+        for input in ["ignored\r\n*e\u{301}*\r\n", "ignored\r\n*é*\r\n"] {
+            workspace
+                .set_binary("/part.adoc", input.as_bytes())
+                .unwrap();
+            let json = workspace.parse_json(main).unwrap();
+            assert!(
+                json.contains(r#""diagnostics":[]"#) && json.contains('é'),
+                "{json}"
+            );
+            assert_eq!(workspace.source(1).unwrap().text(), "ignored\r\n*é*\r\n");
+            assert_eq!(
+                workspace.source(1).unwrap().position(12).unwrap(),
+                adoctra_core::SourcePosition { line: 2, column: 3 }
+            );
+            let tokens = workspace.tokens_json(main).unwrap();
+            assert!(
+                tokens.contains(r#""source_id":1,"start":9,"end":13"#),
+                "{tokens}"
+            );
+            assert!(workspace.source(2).is_err());
+        }
+        workspace
+            .set_binary(
+                "/part.adoc",
+                [
+                    "ignored\r\n*\u{3b1}\u{313}\u{300}\u{345}*\r\n".as_bytes(),
+                    b"A\xff",
+                ]
+                .concat()
+                .as_slice(),
+            )
+            .unwrap();
+        let prefix = workspace.parse_json(main).unwrap();
+        assert!(
+            prefix.contains(r#""diagnostics":[]"#) && prefix.contains('\u{1f82}'),
+            "{prefix}"
+        );
+        assert_eq!(
+            workspace.source(2).unwrap().text(),
+            "ignored\r\n*\u{1f82}*\r\n"
+        );
+        assert!(!workspace.source(2).unwrap().is_complete());
+        assert_eq!(workspace.source(1).unwrap().text(), "ignored\r\n*é*\r\n");
+        assert!(workspace.source(3).is_err());
+    }
+
+    #[test]
+    fn cesu8_exported_tokens_and_immutable_snapshots_address_decoded_utf8() {
+        let mut workspace = ResourceWorkspace::new();
+        workspace.set("/main.adoc","include::part.adoc[encoding=CESU-8,lines=2]\n\ninclude::part.adoc[encoding=cesu-8,lines=2]").unwrap();
+        workspace
+            .set_binary("/part.adoc", b"ignored\r\n*\xed\xa0\xbd\xed\xb8\x80*\r\n")
+            .unwrap();
+        let main = workspace.load("/main.adoc", None).unwrap();
+        let json = workspace.parse_json(main).unwrap();
+        assert!(
+            json.contains(r#""diagnostics":[]"#) && json.contains("😀"),
+            "{json}"
+        );
+        assert_eq!(workspace.source(1).unwrap().text(), "ignored\r\n*😀*\r\n");
+        assert_eq!(
+            workspace.source(1).unwrap().position(14).unwrap(),
+            adoctra_core::SourcePosition { line: 2, column: 3 }
+        );
+        let tokens = workspace.tokens_json(main).unwrap();
+        assert!(
+            tokens.contains(r#""source_id":1,"start":9,"end":15"#),
+            "{tokens}"
+        );
+        assert!(workspace.source(2).is_err());
+        workspace
+            .set_binary("/part.adoc", "ignored\r\n*😀*\r\n".as_bytes())
+            .unwrap();
+        let invalid = workspace.parse_json(main).unwrap();
+        assert!(!invalid.contains(r#""diagnostics":[]"#), "{invalid}");
+        assert!(workspace.source(2).is_err());
+        workspace
+            .set_binary(
+                "/part.adoc",
+                b"ignored\r\n*\xed\xaf\xbf\xed\xbf\xbf*\r\n\xed\xa0\x80",
+            )
+            .unwrap();
+        let prefix = workspace.parse_json(main).unwrap();
+        assert!(
+            prefix.contains(r#""diagnostics":[]"#) && prefix.contains('\u{10ffff}'),
+            "{prefix}"
+        );
+        assert_eq!(
+            workspace.source(2).unwrap().text(),
+            "ignored\r\n*\u{10ffff}*\r\n"
+        );
+        assert!(!workspace.source(2).unwrap().is_complete());
+        assert_eq!(workspace.source(1).unwrap().text(), "ignored\r\n*😀*\r\n");
+        assert!(workspace.source(3).is_err());
+    }
+
+    #[test]
+    fn utf8_kddi_duplicate_banks_share_exported_snapshots_and_unicode_positions() {
+        let mut workspace = ResourceWorkspace::new();
+        workspace.set("/main.adoc", "include::part.adoc[encoding=UTF8-KDDI,lines=2]\n\ninclude::part.adoc[encoding=utf8-kddi,lines=2]").unwrap();
+        let main = workspace.load("/main.adoc", None).unwrap();
+        for flag in ["\u{e4cc}", "\u{efa5}", "🇯🇵"] {
+            workspace
+                .set_binary("/part.adoc", format!("ignored\r\n*{flag}*\r\n").as_bytes())
+                .unwrap();
+            let json = workspace.parse_json(main).unwrap();
+            assert!(
+                json.contains(r#""diagnostics":[]"#) && json.contains("🇯🇵"),
+                "{json}"
+            );
+            assert_eq!(workspace.source(1).unwrap().text(), "ignored\r\n*🇯🇵*\r\n");
+            assert_eq!(
+                workspace.source(1).unwrap().position(18).unwrap(),
+                adoctra_core::SourcePosition { line: 2, column: 4 }
+            );
+            assert!(workspace.source(2).is_err());
+            let tokens = workspace.tokens_json(main).unwrap();
+            assert!(
+                tokens.contains(r#""source_id":1,"start":9,"end":19"#),
+                "{tokens}"
+            );
+        }
+        workspace
+            .set_binary("/part.adoc", "ignored\r\n*\u{effb}*\r\n\u{e472}".as_bytes())
+            .unwrap();
+        let prefix = workspace.parse_json(main).unwrap();
+        assert!(
+            prefix.contains(r#""diagnostics":[]"#) && prefix.contains("1\u{20e3}"),
+            "{prefix}"
+        );
+        assert_eq!(
+            workspace.source(2).unwrap().text(),
+            "ignored\r\n*1\u{20e3}*\r\n"
+        );
+        assert!(!workspace.source(2).unwrap().is_complete());
+        assert_eq!(
+            workspace.source(2).unwrap().position(14).unwrap(),
+            adoctra_core::SourcePosition { line: 2, column: 4 }
+        );
+        assert_eq!(workspace.source(1).unwrap().text(), "ignored\r\n*🇯🇵*\r\n");
+        assert!(workspace.source(3).is_err());
+    }
+
+    #[test]
+    fn utf8_docomo_exported_snapshots_share_equivalent_unicode_and_validate_prefixes() {
+        utf8_mobile_exported_snapshots(
+            "UTF8-DoCoMo",
+            "utf8-docomo",
+            "\u{e6e2}",
+            "\u{e66c}",
+            "\u{e6f1}",
+        );
+    }
+
+    #[test]
+    fn utf8_softbank_exported_snapshots_share_equivalent_unicode_and_validate_prefixes() {
+        utf8_mobile_exported_snapshots(
+            "UTF8-SoftBank",
+            "utf8-softbank",
+            "\u{e21c}",
+            "\u{e14f}",
+            "\u{e059}",
+        );
+    }
+
+    fn utf8_mobile_exported_snapshots(
+        name: &str,
+        lower: &str,
+        keycap: &str,
+        supplementary: &str,
+        undefined: &str,
+    ) {
+        let mut workspace = ResourceWorkspace::new();
+        workspace.set("/main.adoc", &format!("include::part.adoc[encoding={name},lines=2]\n\ninclude::part.adoc[encoding={lower},lines=2]")).unwrap();
+        workspace
+            .set_binary(
+                "/part.adoc",
+                format!("ignored\r\n*{keycap}*\r\n").as_bytes(),
+            )
             .unwrap();
         let main = workspace.load("/main.adoc", None).unwrap();
         let json = workspace.parse_json(main).unwrap();
@@ -206,7 +387,10 @@ mod tests {
         assert!(equivalent.contains(r#""diagnostics":[]"#), "{equivalent}");
         assert!(workspace.source(2).is_err());
         workspace
-            .set_binary("/part.adoc", "ignored\r\n*\u{e66c}*\r\n\u{e6f1}".as_bytes())
+            .set_binary(
+                "/part.adoc",
+                format!("ignored\r\n*{supplementary}*\r\n{undefined}").as_bytes(),
+            )
             .unwrap();
         let changed = workspace.parse_json(main).unwrap();
         assert!(
