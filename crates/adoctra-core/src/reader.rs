@@ -101,7 +101,8 @@ pub(crate) struct Reader<'a> {
     pub include_catalog: crate::xref_target::Includes,
     pub inactive: Vec<Span>,
     pub diagnostics: Vec<Diagnostic>,
-    pub resource_diagnostics: Vec<Diagnostic>,
+    /// Physical diagnostics, paired with their insertion index in `diagnostics`.
+    pub resource_diagnostics: Vec<(usize, Diagnostic)>,
 }
 
 impl<'a> Reader<'a> {
@@ -218,6 +219,13 @@ impl<'a> Reader<'a> {
         self.list_markers.sort_by_key(|span| span.start);
         self.quote_markers.extend(nested.quote_markers);
         self.quote_markers.sort_by_key(|span| span.start);
+        let offset = self.diagnostics.len();
+        self.resource_diagnostics.extend(
+            nested
+                .resource_diagnostics
+                .into_iter()
+                .map(|(index, diagnostic)| (offset + index, diagnostic)),
+        );
         self.diagnostics.extend(nested.diagnostics);
     }
 
@@ -644,6 +652,7 @@ impl<'a> Reader<'a> {
 
     fn error(&mut self, span: Span, message: String) {
         self.diagnostics.push(Diagnostic {
+            omitted_span: None,
             report: Default::default(),
             span,
             severity: Severity::Error,
@@ -716,6 +725,7 @@ impl<'a> Reader<'a> {
                 }
             } else {
                 self.diagnostics.push(Diagnostic {
+                    omitted_span: None,
                     span,
                     severity: Severity::Error,
                     message: "unmatched endif directive".into(),
@@ -957,6 +967,7 @@ impl<'a> Reader<'a> {
             }
             let missing_target = policy == "warn" && missing(context);
             self.diagnostics.push(Diagnostic {
+                omitted_span: None,
                 report: Default::default(),
                 span,
                 severity: Severity::Warning,
@@ -1036,6 +1047,7 @@ impl<'a> Reader<'a> {
                 if error.kind == crate::ResourceErrorKind::InvalidEncoding {
                     let kind = if uri_target.is_some() { "uri" } else { "file" };
                     self.diagnostics.push(Diagnostic {
+                        omitted_span: None,
                         span,
                         severity: Severity::Error,
                         message: format!("include failed ({:?}): {error}", error.kind),
@@ -1094,15 +1106,7 @@ impl<'a> Reader<'a> {
             });
         let full = selection.full();
         let whole = matches!(selection, crate::include_selection::Selection::All);
-        let selected = selection.select(
-            input.lines.iter().map(|line| {
-                (
-                    line.original.expect("physical selection line"),
-                    line.text.as_ref(),
-                )
-            }),
-            id,
-        );
+        let selected = selection.select(&input.lines, file.omitted_lines(), id);
         let mut selection_diagnostics = selected.diagnostics;
         let missing_report = format!(
             "tag{} '{}' not found in include {}: {}",
@@ -1131,9 +1135,14 @@ impl<'a> Reader<'a> {
                 diagnostic.report.location = crate::DiagnosticLocation::Cursor(cursor);
             }
         }
-        self.resource_diagnostics.extend(selection_diagnostics);
+        self.resource_diagnostics.extend(
+            selection_diagnostics
+                .into_iter()
+                .map(|diagnostic| (self.diagnostics.len(), diagnostic)),
+        );
         for (index, tag) in selected.missing.into_iter().enumerate() {
             self.diagnostics.push(Diagnostic {
+                omitted_span: None,
                 report: crate::DiagnosticReport {
                     message: Some(missing_report.clone()),
                     suppressed: index != 0,

@@ -577,6 +577,7 @@ impl Execution<'_> {
         if let Some(id) = crate::resolve::decoded_refid(xref, lexical) {
             if !id.is_empty() && !self.registry.contains_key(&id) {
                 self.references.push(Diagnostic {
+                    omitted_span: None,
                     report: crate::DiagnosticReport {
                         suppressed: true,
                         ..Default::default()

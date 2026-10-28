@@ -433,6 +433,7 @@ fn parse_style(
     let mut buffered = |sigil: Option<char>, value: &str| {
         let mut warn = |message: String| {
             diagnostics.push(Diagnostic {
+                omitted_span: None,
                 report: Default::default(),
                 span,
                 severity: Severity::Warning,

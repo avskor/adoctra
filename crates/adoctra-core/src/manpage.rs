@@ -74,6 +74,7 @@ pub(crate) fn read(
         Span::new(end, end)
     };
     context.inline_diagnostics.push(Diagnostic {
+        omitted_span: None,
         report: Default::default(),
         span,
         severity: Severity::Error,
@@ -122,6 +123,7 @@ fn read_title(lines: &mut Reader<'_>, context: &mut ParseContext) {
                 Span::new(0, 0)
             };
             context.inline_diagnostics.push(Diagnostic {
+                omitted_span: None,
                 report: Default::default(),
                 span,
                 severity: Severity::Error,

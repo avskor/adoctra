@@ -45,6 +45,15 @@ impl SourceFile {
         &self.omissions
     }
 
+    /// Resolve a diagnostic's raw byte range in an omitted physical line.
+    pub fn omitted_slice(&self, span: crate::OmittedSourceSpan) -> Option<&[u8]> {
+        self.omissions
+            .iter()
+            .find(|line| line.line == span.line)?
+            .bytes
+            .get(span.start..span.end)
+    }
+
     pub(crate) fn include_lines(&self) -> Vec<crate::include_indent::Line> {
         crate::resource::snapshot_lines(&self.text, &self.omissions)
     }

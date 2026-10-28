@@ -582,6 +582,7 @@ impl<'a> Parser<'a> {
 
     fn error(&mut self, span: Span, message: &str) {
         self.diagnostics.push(Diagnostic {
+            omitted_span: None,
             report: Default::default(),
             span,
             severity: Severity::Error,
@@ -887,6 +888,7 @@ pub(crate) fn parse(
         "tsv" => (Format::Csv, "tsv"),
         other => {
             diagnostics.push(Diagnostic {
+                omitted_span: None,
                 report: Default::default(),
                 span: start,
                 severity: Severity::Error,
@@ -1163,6 +1165,7 @@ fn assign_widths(
         if !autowidth.is_empty() {
             let width = if base.value() > 100.0 {
                 diagnostics.push(Diagnostic {
+                    omitted_span: None,
                     report: Default::default(),
                     span: start,
                     severity: Severity::Warning,

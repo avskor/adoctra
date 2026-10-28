@@ -293,6 +293,7 @@ impl Passes {
         let span = self.slots[i].span;
         let mut parts = if depth >= pass_subs::MAX_DEPTH {
             self.diagnostics.push(crate::Diagnostic {
+                omitted_span: None,
                 report: Default::default(),
                 span,
                 severity: crate::Severity::Warning,
@@ -449,6 +450,7 @@ impl Passes {
     ) -> Vec<P> {
         if depth >= pass_subs::MAX_DEPTH {
             self.diagnostics.push(crate::Diagnostic {
+                omitted_span: None,
                 report: Default::default(),
                 span,
                 severity: crate::Severity::Warning,

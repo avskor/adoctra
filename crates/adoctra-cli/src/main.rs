@@ -118,6 +118,19 @@ fn run() -> adoctra::Result<()> {
         let file = sources
             .get(d.span.source_id)
             .expect("parser source is registered");
+        if let Some(raw) = d.omitted_span {
+            eprintln!(
+                "adoctra: {}:{}:{}: {} at omitted bytes {}..{}: {}",
+                file.name(),
+                raw.line,
+                raw.start + 1,
+                d.severity.as_str(),
+                raw.start,
+                raw.end,
+                d.message
+            );
+            continue;
+        }
         let position = file.position(d.span.start);
         let location = match position {
             Some(p) => format!("{}:{}:{}", file.name(), p.line, p.column),

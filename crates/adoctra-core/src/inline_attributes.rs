@@ -213,6 +213,7 @@ fn apply_with_policy(
             }
             if missing && matches!(policy, "warn" | "drop-line") {
                 diagnostics.push(Diagnostic {
+                    omitted_span: None,
                     report: crate::DiagnosticReport {
                         location: crate::DiagnosticLocation::Unlocated,
                         ..Default::default()

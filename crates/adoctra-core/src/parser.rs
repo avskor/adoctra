@@ -294,6 +294,7 @@ pub(crate) fn parse_reader<'a>(
         &mut doc,
     );
     lines.finish();
+    let reader_diagnostics_start = diagnostics.len();
     diagnostics.append(&mut lines.diagnostics);
     diagnostics.append(&mut context.comment_diagnostics);
     diagnostics.append(&mut context.inline_diagnostics);
@@ -304,8 +305,20 @@ pub(crate) fn parse_reader<'a>(
     for diagnostic in &mut diagnostics {
         lines.map_diagnostic(diagnostic, &mut provenance);
     }
-    // Selection warnings already refer to physical lines, including omitted tags.
-    diagnostics.append(&mut lines.resource_diagnostics);
+    // Selection warnings already have physical spans. Interleave them with the
+    // reader's mapped diagnostics in emission order (before missing-tag errors).
+    let mapped = diagnostics.split_off(reader_diagnostics_start);
+    let mut physical_diagnostics = lines.resource_diagnostics.drain(..).peekable();
+    for (index, diagnostic) in mapped.into_iter().enumerate() {
+        while physical_diagnostics
+            .peek()
+            .is_some_and(|(at, _)| *at == index)
+        {
+            diagnostics.push(physical_diagnostics.next().unwrap().1);
+        }
+        diagnostics.push(diagnostic);
+    }
+    diagnostics.extend(physical_diagnostics.map(|(_, diagnostic)| diagnostic));
     for mut diagnostic in references {
         lines.map_diagnostic(&mut diagnostic, &mut provenance);
         diagnostics.push(diagnostic);
@@ -634,6 +647,7 @@ fn nest_sections(
             let last = blocks.last().unwrap();
             if book && *level == 0 && !matches!(last.kind, BlockKind::Section { .. }) {
                 diagnostics.push(Diagnostic {
+                    omitted_span: None,
                     report: Default::default(),
                     span: blocks[0].span,
                     severity: Severity::Error,
@@ -726,6 +740,7 @@ fn nest_sections(
         let expected = match parent {
             Some((_, Some(parent))) if !parent.allows_nesting() => {
                 diagnostics.push(Diagnostic {
+                    omitted_span: None,
                     report: Default::default(),
                     span: block.span,
                     severity: Severity::Error,
@@ -741,6 +756,7 @@ fn nest_sections(
             _ if raw == 0 => {
                 if !book {
                     diagnostics.push(Diagnostic {
+                        omitted_span: None,
                         report: Default::default(),
                         span: block.span,
                         severity: Severity::Error,
@@ -758,6 +774,7 @@ fn nest_sections(
                 format!("expected level {expected}")
             };
             diagnostics.push(Diagnostic {
+                omitted_span: None,
                 report: crate::DiagnosticReport {
                     location: lines.section_cursor(block.span.start).map_or(
                         crate::DiagnosticLocation::Source,
@@ -875,6 +892,7 @@ fn part_content(
     } else if blocks.len() == 2 {
         match *intro {
             Intro::None => diagnostics.push(Diagnostic {
+                omitted_span: None,
                 report: Default::default(),
                 span: block.span,
                 severity: Severity::Error,
@@ -947,6 +965,7 @@ fn check_open_styles(
                 };
                 if let Some((severity, message)) = excluded {
                     diagnostics.push(Diagnostic {
+                        omitted_span: None,
                         report: Default::default(),
                         span: block.span,
                         severity,
@@ -1518,6 +1537,7 @@ fn read_container(
         Some(Span::new(loff, loff + lline.len()))
     } else {
         diagnostics.push(Diagnostic {
+            omitted_span: None,
             report: crate::DiagnosticReport::unterminated(block_name),
             span: Span::new(start, start + fence.len()),
             severity: Severity::Error,
@@ -1572,6 +1592,7 @@ fn capture_verbatim_body(
     }
     if !closed {
         diagnostics.push(Diagnostic {
+            omitted_span: None,
             report: crate::DiagnosticReport::unterminated(block_name),
             span: Span::new(opening.start, opening.start + fence.len()),
             severity: Severity::Error,
@@ -1625,6 +1646,7 @@ fn read_table(
         off + line.len()
     } else {
         diagnostics.push(Diagnostic {
+            omitted_span: None,
             report: Default::default(),
             span: opening,
             severity: Severity::Warning,
@@ -2319,6 +2341,7 @@ fn parse_block_content(
         let adjusted = context.section_level(level);
         if adjusted > u8::MAX as i128 {
             diagnostics.push(Diagnostic {
+                omitted_span: None,
                 report: Default::default(),
                 span: Span::new(off, end),
                 severity: Severity::Warning,
@@ -2538,6 +2561,7 @@ fn parse_block_content(
         );
         if !closed {
             diagnostics.push(Diagnostic {
+                omitted_span: None,
                 report: crate::DiagnosticReport::unterminated(name),
                 span: Span::new(start, start + fence.len()),
                 severity: Severity::Error,
@@ -3548,6 +3572,7 @@ fn parse_list(
             {
                 if expected != actual {
                     diagnostics.push(Diagnostic {
+                        omitted_span: None,
                         report: Default::default(),
                         span: Span::new(off, off + line.len()),
                         severity: Severity::Warning,
@@ -3666,6 +3691,7 @@ fn parse_callout_list(
         let expected = (items.len() + 1).to_string();
         if number != expected {
             diagnostics.push(Diagnostic {
+                omitted_span: None,
                 report: Default::default(),
                 span: line_span,
                 severity: Severity::Warning,
@@ -3694,6 +3720,7 @@ fn parse_callout_list(
         let coids = context.callouts.ids(ordinal);
         if coids.is_empty() {
             diagnostics.push(Diagnostic {
+                omitted_span: None,
                 report: Default::default(),
                 span: line_span,
                 severity: Severity::Warning,

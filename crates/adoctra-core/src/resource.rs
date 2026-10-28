@@ -46,6 +46,15 @@ pub struct OmittedSourceLine {
     pub bytes: Vec<u8>,
 }
 
+/// A byte range within an omitted physical line, including neither an invented
+/// UTF-8 decoding nor a Unicode column. The source ID is the diagnostic's.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct OmittedSourceSpan {
+    pub line: usize,
+    pub start: usize,
+    pub end: usize,
+}
+
 pub(crate) struct IncludeSnapshot {
     pub decoded: IncludeResource,
     pub omissions: Vec<OmittedSourceLine>,

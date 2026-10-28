@@ -1564,6 +1564,7 @@ fn apply_footnotes(text: Text, attributes: &mut Evaluation<'_>, report: &mut Rep
         let span = text.match_span(at..m.end);
         if m.legacy && !compat {
             report.passes.diagnostics.push(crate::Diagnostic {
+                omitted_span: None,
                 report: Default::default(),
                 span,
                 severity: crate::Severity::Warning,
@@ -1608,6 +1609,7 @@ fn apply_footnotes(text: Text, attributes: &mut Evaluation<'_>, report: &mut Rep
             }
             (None, None) => {
                 report.passes.diagnostics.push(crate::Diagnostic {
+                    omitted_span: None,
                     report: Default::default(),
                     span,
                     severity: crate::Severity::Warning,

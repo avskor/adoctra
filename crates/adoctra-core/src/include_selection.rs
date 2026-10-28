@@ -57,21 +57,9 @@ impl Selection {
                     && raw.windows(2).any(|s| s == b"::")
                     && raw.windows(2).any(|s| s == b"[]")
                 {
-                    // Ruby's UTF-8 regexp validates the whole candidate line,
-                    // even when it is outside the selected tag. BINARY can scan
-                    // arbitrary bytes; malformed tag-marker lines still require
-                    // a byte-based marker/source-position contract (open gap).
-                    let view: String = raw
-                        .iter()
-                        .map(|&byte| {
-                            if byte.is_ascii() {
-                                char::from(byte)
-                            } else {
-                                '\u{fffd}'
-                            }
-                        })
-                        .collect();
-                    if !binary || tag_directive(&view).is_some() {
+                    // UTF-8 regexp candidates validate the entire line. Binary
+                    // markers are scanned from the original omitted bytes below.
+                    if !binary {
                         return Err(invalid());
                     }
                 }
@@ -83,15 +71,7 @@ impl Selection {
             }
         }
         let lines = crate::resource::snapshot_lines(&text, &omissions);
-        let selected = self.clone().select(
-            lines.iter().map(|line| {
-                (
-                    line.original.expect("physical selection slot"),
-                    line.text.as_ref(),
-                )
-            }),
-            SourceId::default(),
-        );
+        let selected = self.clone().select(&lines, &omissions, SourceId::default());
         if omissions.iter().any(|line| selected.keep[line.line - 1]) {
             return Err(invalid());
         }
@@ -209,11 +189,25 @@ impl Selection {
         }
     }
 
-    pub fn select<'a>(
+    pub fn select(
         self,
-        lines: impl Iterator<Item = (usize, &'a str)>,
+        lines: &[crate::include_indent::Line],
+        omissions: &[crate::OmittedSourceLine],
         source_id: SourceId,
     ) -> Selected {
+        let mut omitted = omissions.iter().peekable();
+        let lines = lines.iter().enumerate().map(|(index, line)| {
+            let raw = if omitted.peek().is_some_and(|raw| raw.line == index + 1) {
+                omitted.next()
+            } else {
+                None
+            };
+            (
+                line.original.expect("physical selection line"),
+                line.text.as_ref(),
+                raw,
+            )
+        });
         let mut result = Selected {
             keep: Vec::new(),
             diagnostics: Vec::new(),
@@ -264,20 +258,38 @@ impl Selection {
                     .collect();
                 let tags: BTreeMap<_, _> = tags.into_iter().collect();
                 let mut found = BTreeSet::new();
-                let mut stack: Vec<(String, bool, Span, usize)> = Vec::new();
+                let mut stack: Vec<(TagName, bool, Span, usize, Option<crate::OmittedSourceSpan>)> =
+                    Vec::new();
                 let mut selected = base;
-                for (index, (off, line)) in lines.enumerate() {
+                for (index, (off, line, raw)) in lines.enumerate() {
                     let span = Span::in_source(source_id, off, off + line.len());
-                    if let Some((end, name)) = tag_directive(line) {
+                    let directive = if let Some(raw) = raw {
+                        binary_tag_directive(&raw.bytes).map(|(end, name, start, end_offset)| {
+                            (
+                                end,
+                                TagName::new(name, true),
+                                Some(crate::OmittedSourceSpan {
+                                    line: raw.line,
+                                    start,
+                                    end: end_offset,
+                                }),
+                            )
+                        })
+                    } else {
+                        tag_directive(line)
+                            .map(|(end, name)| (end, TagName::new(name.as_bytes(), false), None))
+                    };
+                    if let Some((end, name, omitted_span)) = directive {
                         result.keep.push(false);
                         if end {
-                            if stack.last().is_some_and(|(key, _, _, _)| key == name) {
+                            if stack.last().is_some_and(|(key, _, _, _, _)| key == &name) {
                                 stack.pop();
-                                selected =
-                                    stack.last().map_or(base, |(_, selected, _, _)| *selected);
-                            } else if tags.contains_key(name) {
+                                selected = stack
+                                    .last()
+                                    .map_or(base, |(_, selected, _, _, _)| *selected);
+                            } else if name.text().is_some_and(|name| tags.contains_key(name)) {
                                 let (message, report) = if let Some(stack_index) =
-                                    stack.iter().rposition(|(key, _, _, _)| key == name)
+                                    stack.iter().rposition(|(key, _, _, _, _)| key == &name)
                                 {
                                     let expected = stack.last().unwrap().0.clone();
                                     stack.remove(stack_index);
@@ -294,25 +306,27 @@ impl Selection {
                                     )
                                 };
                                 let mut diagnostic = warning(span, message);
+                                diagnostic.omitted_span = omitted_span;
                                 diagnostic.report.message = Some(report);
                                 result.diagnostics.push(diagnostic);
                             }
-                        } else if let Some(value) = tags.get(name) {
+                        } else if let Some(value) = name.text().and_then(|name| tags.get(name)) {
                             selected = *value;
                             if selected {
-                                found.insert(name.to_owned());
+                                found.insert(name.text().expect("matched text tag").to_owned());
                             }
-                            stack.push((name.into(), selected, span, index + 1));
+                            stack.push((name, selected, span, index + 1, omitted_span));
                         } else if let Some(wildcard) = wildcard {
                             selected = (stack.is_empty() || selected) && wildcard;
-                            stack.push((name.into(), selected, span, index + 1));
+                            stack.push((name, selected, span, index + 1, omitted_span));
                         }
                     } else {
                         result.keep.push(selected);
                     }
                 }
-                for (name, _, span, line) in stack {
+                for (name, _, span, line, omitted_span) in stack {
                     let mut diagnostic = warning(span, format!("unclosed tag '{name}'"));
+                    diagnostic.omitted_span = omitted_span;
                     diagnostic.report.message = Some(format!(
                         "detected unclosed tag '{name}' starting at line {line}"
                     ));
@@ -329,11 +343,83 @@ impl Selection {
 
 fn warning(span: Span, message: String) -> Diagnostic {
     Diagnostic {
+        omitted_span: None,
         report: Default::default(),
         span,
         severity: Severity::Warning,
         message,
     }
+}
+
+/// Ruby does not equate a non-ASCII BINARY name with a UTF-8 attribute name.
+/// Keep raw names distinct even if their bytes happen to be valid UTF-8.
+#[derive(Clone, PartialEq, Eq)]
+struct TagName {
+    bytes: Vec<u8>,
+    binary: bool,
+}
+
+impl TagName {
+    fn new(bytes: &[u8], binary: bool) -> Self {
+        Self {
+            bytes: bytes.to_vec(),
+            binary: binary && !bytes.is_ascii(),
+        }
+    }
+
+    fn text(&self) -> Option<&str> {
+        (!self.binary).then(|| std::str::from_utf8(&self.bytes).expect("text tag name"))
+    }
+}
+
+impl std::fmt::Display for TagName {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Ok(text) = std::str::from_utf8(&self.bytes) {
+            return f.write_str(text);
+        }
+        // Ruby may raise when a logger serializes an invalid BINARY name.
+        // Preserve error tolerance with an explicitly labelled lossless form.
+        f.write_str("<binary:")?;
+        for byte in &self.bytes {
+            write!(f, "{byte:02x}")?;
+        }
+        f.write_str(">")
+    }
+}
+
+/// The BINARY regexp uses ASCII word/space classes and matches bytes, not
+/// decoded Unicode. Return the exact marker range within the original line.
+fn binary_tag_directive(raw: &[u8]) -> Option<(bool, &[u8], usize, usize)> {
+    let line = raw.strip_suffix(b"\n").unwrap_or(raw);
+    for (offset, pair) in line.windows(2).enumerate() {
+        if pair != b"::" || offset < 3 {
+            continue;
+        }
+        let start = offset - 3;
+        let end = match &line[start..offset] {
+            b"tag" => false,
+            b"end" => true,
+            _ => continue,
+        };
+        if start > 0 && (line[start - 1].is_ascii_alphanumeric() || line[start - 1] == b'_') {
+            continue;
+        }
+        let name_start = offset + 2;
+        for close in name_start..line.len().saturating_sub(1) {
+            if matches!(line[close], b' ' | b'\t' | b'\r' | b'\n' | 0x0b | 0x0c) {
+                break;
+            }
+            if close > name_start
+                && &line[close..close + 2] == b"[]"
+                && line
+                    .get(close + 2)
+                    .map_or(true, |byte| matches!(byte, b' ' | b'\r'))
+            {
+                return Some((end, &line[name_start..close], start, close + 2));
+            }
+        }
+    }
+    None
 }
 
 // As in the pinned reader, comma wins over semicolon; trailing empty fields

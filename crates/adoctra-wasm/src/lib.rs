@@ -1117,6 +1117,12 @@ fn write_inlines(inlines: &[Inline], s: &mut String) {
 fn write_diagnostic(d: &Diagnostic, s: &mut String) {
     s.push('{');
     write_span_field(&d.span, s);
+    if let Some(raw) = d.omitted_span {
+        s.push_str(&format!(
+            ",\"omitted_span\":{{\"line\":{},\"start\":{},\"end\":{}}}",
+            raw.line, raw.start, raw.end
+        ));
+    }
     s.push_str(&format!(
         ",\"severity\":\"{}\",\"message\":",
         d.severity.as_str()

@@ -139,6 +139,7 @@ pub(crate) fn resolve_block(
     }
     if !invalid.is_empty() {
         diagnostics.push(Diagnostic {
+            omitted_span: None,
             report: Default::default(),
             span,
             severity: Severity::Warning,
@@ -212,6 +213,7 @@ pub(crate) fn resolve(subs: &str, span: Span, diagnostics: &mut Vec<Diagnostic>)
     }
     if !invalid.is_empty() {
         diagnostics.push(Diagnostic {
+            omitted_span: None,
             report: Default::default(),
             span,
             severity: Severity::Warning,

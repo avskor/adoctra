@@ -25,6 +25,9 @@ impl Severity {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Diagnostic {
+    /// For an omitted source line, `span` is an empty insertion-point anchor
+    /// and this range identifies the exact bytes in `SourceFile::omitted_lines`.
+    pub omitted_span: Option<crate::OmittedSourceSpan>,
     pub span: Span,
     pub severity: Severity,
     pub message: String,

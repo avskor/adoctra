@@ -173,6 +173,48 @@ mod tests {
     use super::*;
 
     #[test]
+    fn binary_marker_diagnostics_export_raw_spans_and_immutable_omissions() {
+        let mut workspace = ResourceWorkspace::new();
+        workspace
+            .set("/main.adoc", "include::part.adoc[encoding=BINARY,tag=body]")
+            .unwrap();
+        workspace
+            .set_binary(
+                "/part.adoc",
+                b"\xff// end::body[]\n\xfe// tag::body[]\n*good*\n",
+            )
+            .unwrap();
+        let main = workspace.load("/main.adoc", None).unwrap();
+        let parsed = workspace.parse_json(main).unwrap();
+        for line in [1, 2] {
+            assert!(
+                parsed.contains(&format!(
+                    "\"omitted_span\":{{\"line\":{line},\"start\":4,\"end\":15}}"
+                )),
+                "{parsed}"
+            );
+        }
+        assert!(
+            parsed.contains(r#""span":{"source_id":1,"start":0,"end":0}"#),
+            "{parsed}"
+        );
+        assert!(parsed.contains("good"));
+        let file = workspace.source(1).unwrap();
+        assert_eq!(file.text(), "*good*\n");
+        assert_eq!(file.position(0).unwrap().line, 3);
+        assert_eq!(
+            workspace.source_omitted_lines_json(1).unwrap(),
+            r#"[{"offset":0,"line":1,"bytes":"ff2f2f20656e643a3a626f64795b5d0a"},{"offset":0,"line":2,"bytes":"fe2f2f207461673a3a626f64795b5d0a"}]"#
+        );
+        let tokens = workspace.tokens_json(main).unwrap();
+        assert!(
+            tokens.contains(r#""source_id":1,"start":0,"end":6"#),
+            "{tokens}"
+        );
+        assert!(workspace.source(2).is_err());
+    }
+
+    #[test]
     fn sparse_include_exports_raw_gaps_and_maps_later_tokens_to_original_lines() {
         let mut workspace = ResourceWorkspace::new();
         workspace

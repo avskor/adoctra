@@ -3,6 +3,61 @@
 use adoctra::Backend;
 
 #[test]
+fn binary_marker_reports_keep_conversion_cursors_and_explicit_editor_byte_ranges() {
+    use std::process::Command;
+    let root =
+        std::env::temp_dir().join(format!("adoctra-cli-binary-markers-{}", std::process::id()));
+    std::fs::create_dir_all(&root).unwrap();
+    let source = root.join("main.adoc");
+    std::fs::write(&source, "include::part.adoc[encoding=BINARY,tag=body]").unwrap();
+    std::fs::write(
+        root.join("part.adoc"),
+        b"\xff// end::body[]\n\xfe// tag::body[]\n*good*\n",
+    )
+    .unwrap();
+    for backend in ["html", "json"] {
+        for editor in [false, true] {
+            let mut command = Command::new(env!("CARGO_BIN_EXE_adoctra"));
+            command
+                .arg(&source)
+                .args(["--embedded", "--stdout", "--to", backend]);
+            if editor {
+                command.args(["--diagnostics", "editor"]);
+            }
+            let output = command.output().unwrap();
+            assert!(output.status.success());
+            let text = String::from_utf8(output.stdout).unwrap();
+            let diagnostics = String::from_utf8(output.stderr).unwrap();
+            assert!(
+                text.contains("good") && !text.contains('\u{fffd}'),
+                "{text}"
+            );
+            assert_eq!(diagnostics.lines().count(), 2, "{diagnostics}");
+            if editor {
+                for line in [1, 2] {
+                    assert!(
+                        diagnostics.contains(&format!(
+                            "part.adoc:{line}:5: warning at omitted bytes 4..15:"
+                        )),
+                        "{diagnostics}"
+                    );
+                }
+            } else {
+                assert!(
+                    diagnostics
+                        .lines()
+                        .all(|line| line.contains("main.adoc:1: warning:")),
+                    "{diagnostics}"
+                );
+                assert!(diagnostics.contains("unexpected end tag 'body' at line 1"));
+                assert!(diagnostics.contains("unclosed tag 'body' starting at line 2"));
+            }
+        }
+    }
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn cli_skips_invalid_utf8_and_binary_lines_without_printing_replacement_text() {
     use std::process::Command;
     let root = std::env::temp_dir().join(format!("adoctra-cli-sparse-{}", std::process::id()));

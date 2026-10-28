@@ -145,8 +145,9 @@ micro-optimizations as the next task. Include encoding now supports Unicode and
 Finite positive `lines` selections recover an intact decoded prefix when only
 the unread tail is malformed; `SourceFile::is_complete` exposes this explicitly.
 Skipped malformed UTF-8/BINARY lines now have explicit omission records with
-raw bytes and physical line numbers. Remaining include work is malformed BINARY
-tag-marker lines, other legacy multibyte codecs and the documented URI/jail gaps.
+raw bytes and physical line numbers. BINARY tag markers are scanned from these
+raw lines; diagnostics expose `omitted_span` byte ranges within the omitted line.
+Remaining include work is other legacy multibyte codecs and the documented URI/jail gaps.
 Include normalization strips a BOM on the first selected line, preserving the
 snapshot and byte spans; a BOM on later selected lines is not a leading BOM.
 
@@ -1117,7 +1118,16 @@ transcoding codecs retain the previous decoder; malformed UTF-8/BINARY can be
 deferred to reader selection. Selected invalid lines fail; unselected invalid
 lines are omitted from the UTF-8 view and retained as `OmittedSourceLine` records.
 UTF-8 tag-regexp candidates (both `::` and `[]`) must be valid even outside a
-selected tag. Malformed BINARY tag-marker lines remain an explicit open gap.
+selected tag. BINARY markers use ASCII word/space classes on original bytes;
+raw non-ASCII names do not equal UTF-8 attribute names. Wildcards track raw names
+without lossy decoding. A diagnostic on an omitted marker uses an empty snapshot
+anchor and `omitted_span: OmittedSourceSpan { line, start, end }`, whose offsets
+are bytes within the original line. `SourceFile::omitted_slice` resolves them;
+WASM adds this optional field to diagnostic JSON and CLI editor output labels
+the range as omitted bytes. Conversion cursors remain at the include directive.
+Physical tag warnings are interleaved with reader diagnostics in emission order,
+before missing-tag reports. Invalid UTF-8 names in warnings use `<binary:HEX>`
+instead of crashing like Ruby's JSON logger; this is a documented oracle boundary.
 Only finite positive line selections pass a decoding bound; open ranges,
 invalid first line numbers and tag selections read the whole resource.
 If the full decoding fails but the consumed prefix is valid, `IncludeResource`
@@ -1140,7 +1150,7 @@ Japanese variants retain Ruby's distinct mappings (notably SJIS aliases
 Windows-31J, not Shift_JIS); malformed and unmapped sequences are unreadable.
 The decoder's exhaustive short-input fingerprints can be reproduced with
 `ruby scripts/generate_encodings.rb --fingerprints`. Other legacy multibyte
-codecs and malformed BINARY tag-marker lines remain open; never claim that the
+codecs remain open; never claim that the
 entire encoding surface is covered. Selected malformed UTF-8 and implicit UTF-16 BOM selection
 can crash Ruby outside its include error handler; adoctra must stay error-tolerant.
 Binary fixtures use `binary_resources` (hex bytes) in the minimal corpus.
