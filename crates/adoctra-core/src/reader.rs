@@ -1032,6 +1032,9 @@ impl<'a> Reader<'a> {
             return self.include_link(&uri, span);
         }
         let resources = self.resources.as_mut().expect("explicit resource provider");
+        if uri_target.is_some() && attributes.get("cache-uri").is_some() {
+            resources.provider.enable_uri_cache();
+        }
         let (id, prepared_selection) = match resources.sources.load_selected_include(
             &target,
             Some(current),
@@ -1040,11 +1043,15 @@ impl<'a> Reader<'a> {
             &selection,
         ) {
             Ok(id) => id,
-            Err(error) if optional && error.kind == crate::ResourceErrorKind::NotFound => {
+            Err(error)
+                if optional
+                    && uri_target.is_none()
+                    && error.kind == crate::ResourceErrorKind::NotFound =>
+            {
                 return true;
             }
             Err(error) => {
-                if error.kind == crate::ResourceErrorKind::InvalidEncoding {
+                if uri_target.is_some() || error.kind == crate::ResourceErrorKind::InvalidEncoding {
                     let kind = if uri_target.is_some() { "uri" } else { "file" };
                     self.diagnostics.push(Diagnostic {
                         omitted_span: None,
@@ -1052,7 +1059,10 @@ impl<'a> Reader<'a> {
                         severity: Severity::Error,
                         message: format!("include failed ({:?}): {error}", error.kind),
                         report: crate::DiagnosticReport {
-                            message: Some(format!("include {kind} not readable: {}", error.target)),
+                            message: Some(format!(
+                                "include {kind} not readable: {}",
+                                uri_target.as_deref().unwrap_or(&error.target)
+                            )),
                             ..Default::default()
                         },
                     });

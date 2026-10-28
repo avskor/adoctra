@@ -164,6 +164,13 @@ pub struct BinaryResource {
 }
 
 pub trait ResourceProvider {
+    /// Enable URI caching for this provider's session. Called only for an
+    /// allowed URI read with `cache-uri`; removing the attribute does not
+    /// disable an already enabled cache, like Ruby's OpenURI adapter.
+    /// Providers choose cache storage/lifetime and retain access policy.
+    /// The default leaves existing host providers unchanged.
+    fn enable_uri_cache(&self) {}
+
     /// Load one snapshot. Missing and denied resources must be distinguished,
     /// so optional includes can suppress only the appropriate failures.
     /// Providers own access policy; the parser must not fall back to ambient I/O.

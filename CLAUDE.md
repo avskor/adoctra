@@ -151,7 +151,7 @@ the unread tail is malformed; `SourceFile::is_complete` exposes this explicitly.
 Skipped malformed UTF-8/BINARY lines now have explicit omission records with
 raw bytes and physical line numbers. BINARY tag markers are scanned from these
 raw lines; diagnostics expose `omitted_span` byte ranges within the omitted line.
-Remaining include work is other legacy multibyte codecs and the documented URI/jail gaps.
+Remaining include work is untested encoding/selection combinations and the documented URI/jail gaps.
 Include normalization strips a BOM on the first selected line, preserving the
 snapshot and byte spans; a BOM on later selected lines is not a leading BOM.
 
@@ -1920,8 +1920,23 @@ stylesheet is read through the HTML resources. `SafeMode::of(attributes)`
 reads the level back. The CLI takes `-S`/`--safe-mode`/`--safe` (default
 safe), unjails FileResources in unsafe mode, passes `user-home` below server
 and fetches http/https with `ureq`; the bench runs it with `-S secure`
-(include fixtures `-S safe`). Not modeled: `cache-uri`, Ruby's jail recovery
-(providers deny).
+(include fixtures `-S safe`). URI includes with `cache-uri` now call the optional
+`ResourceProvider::enable_uri_cache` hook after permission/depth checks. The
+default is a no-op for host providers/WASM; native FileResources keeps a sticky
+in-memory cache for its lifetime. Cache full successful responses before
+decoding/selection, retain Content-Type, retry HTTP errors, and never cache local
+files. Hits decode as BINARY, ignoring new encoding, like open-uri-cached 2.0.0;
+Ruby exceptions remain separate from successful comparisons. Byte budgets and
+snapshot identity still apply on every include. URI optional misses are errors;
+their report uses the resolved URI and directive cursor. document_path must
+return None for URLs so unresolved nested includes retain their URL.
+The pinned optional gem version is in compatibility/open-uri-cached-version.
+scripts/audit_uri_cache.py compares HTML projection, positioned diagnostics and
+request traces against local HTTP servers: 32 PASS / 2 RUBY_ERROR. CI verifies
+the complete compatibility/uri-cache/report.json baseline. Cache activation via
+assets, cross-provider/process/disk caching, URI normalization and untested
+encoding/selection combinations remain open, as does Ruby's jail recovery
+(providers deny). Do not replace explicit provider policy with ambient I/O.
 
 When asked to "add a feature," check this list first and say plainly whether it
 is new work or wiring up an existing seam.

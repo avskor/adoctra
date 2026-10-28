@@ -4,12 +4,16 @@ use adoctra::{
     ResourceProvider, ResourceRequest, ResourceResult,
 };
 use std::path::{Path, PathBuf};
+use std::{collections::BTreeMap, sync::Mutex};
 
 pub(crate) struct FileResources {
     root: PathBuf,
     /// Confine paths to the root (safe mode and above); unsafe mode reads
     /// any path, like Ruby without a jail.
     jail: bool,
+    /// OpenURI caching is sticky once enabled. Keep it within the explicitly
+    /// supplied provider; never share HTTP responses across host sessions.
+    uri_cache: Mutex<Option<BTreeMap<String, BinaryResource>>>,
 }
 
 /// Ruby's `uriish?`: a scheme of two or more characters and a colon.
@@ -85,7 +89,11 @@ impl FileResources {
                 "resource root is not a directory",
             ));
         }
-        Ok(Self { root, jail: true })
+        Ok(Self {
+            root,
+            jail: true,
+            uri_cache: Mutex::new(None),
+        })
     }
 
     /// Read paths outside the root too (unsafe mode).
@@ -93,17 +101,72 @@ impl FileResources {
         self.jail = false;
         self
     }
+
+    fn uri(request: ResourceRequest<'_>) -> Option<String> {
+        if uriish(request.target) {
+            Some(request.target.to_owned())
+        } else {
+            request.referrer.filter(|name| uriish(name)).map(|name| {
+                let base = name.rfind('/').map_or(name, |slash| &name[..slash]);
+                format!("{base}/{}", request.target)
+            })
+        }
+    }
+
+    /// Cache the complete successful response before any decoding/selection.
+    /// Errors are retried. Keys retain the requested URI, including query and
+    /// fragment; redirects do not replace the source identity.
+    fn fetch(&self, uri: &str) -> ResourceResult<(BinaryResource, bool)> {
+        if let Some(resource) = self
+            .uri_cache
+            .lock()
+            .unwrap_or_else(|error| error.into_inner())
+            .as_ref()
+            .and_then(|c| c.get(uri))
+        {
+            return Ok((resource.clone(), true));
+        }
+        let resource = fetch(uri)?;
+        if let Some(cache) = self
+            .uri_cache
+            .lock()
+            .unwrap_or_else(|error| error.into_inner())
+            .as_mut()
+        {
+            cache.insert(uri.to_owned(), resource.clone());
+        }
+        Ok((resource, false))
+    }
+
+    fn include_bytes(
+        &self,
+        request: ResourceRequest<'_>,
+    ) -> ResourceResult<(BinaryResource, bool)> {
+        match Self::uri(request) {
+            Some(uri) => self.fetch(&uri),
+            None => self.load_binary(request).map(|resource| (resource, false)),
+        }
+    }
 }
 
 impl ResourceProvider for FileResources {
+    fn enable_uri_cache(&self) {
+        self.uri_cache
+            .lock()
+            .unwrap_or_else(|error| error.into_inner())
+            .get_or_insert_with(BTreeMap::new);
+    }
+
     fn prepare_include(
         &self,
         request: ResourceRequest<'_>,
         encoding: Option<&str>,
         line_limit: Option<usize>,
     ) -> ResourceResult<IncludeInput> {
-        self.load_binary(request)?
-            .prepare_include(encoding, line_limit)
+        let (resource, cached) = self.include_bytes(request)?;
+        // open-uri-cached returns a fresh binary StringIO on hits and ignores
+        // the caller's encoding. Preserve this observable distinction.
+        resource.prepare_include(if cached { Some("BINARY") } else { encoding }, line_limit)
     }
 
     fn load_include(
@@ -112,8 +175,8 @@ impl ResourceProvider for FileResources {
         encoding: Option<&str>,
         line_limit: Option<usize>,
     ) -> ResourceResult<IncludeResource> {
-        self.load_binary(request)?
-            .decode_include(encoding, line_limit)
+        let (resource, cached) = self.include_bytes(request)?;
+        resource.decode_include(if cached { Some("BINARY") } else { encoding }, line_limit)
     }
 
     fn load_with_encoding(
@@ -121,10 +184,14 @@ impl ResourceProvider for FileResources {
         request: ResourceRequest<'_>,
         encoding: Option<&str>,
     ) -> ResourceResult<Resource> {
-        self.load_binary(request)?.decode(encoding)
+        let (resource, cached) = self.include_bytes(request)?;
+        resource.decode(if cached { Some("BINARY") } else { encoding })
     }
 
     fn document_path(&self, name: &str) -> Option<String> {
+        if uriish(name) {
+            return None;
+        }
         Some(if std::path::MAIN_SEPARATOR == '/' {
             name.to_owned()
         } else {
@@ -144,14 +211,8 @@ impl ResourceProvider for FileResources {
     fn load_binary(&self, request: ResourceRequest<'_>) -> ResourceResult<BinaryResource> {
         let target = request.target;
         // A URI, or a relative target inside a URI resource.
-        if uriish(target) {
-            return fetch(target);
-        }
-        if let Some(referrer) = request.referrer.filter(|referrer| uriish(referrer)) {
-            let base = referrer
-                .rfind('/')
-                .map_or(referrer, |slash| &referrer[..slash]);
-            return fetch(&format!("{base}/{target}"));
+        if let Some(uri) = Self::uri(request) {
+            return self.fetch(&uri).map(|(resource, _)| resource);
         }
         if target.is_empty()
             || target.contains('\0')
@@ -216,6 +277,184 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static NEXT: AtomicUsize = AtomicUsize::new(0);
+
+    struct Http {
+        uri: String,
+        count: std::sync::Arc<AtomicUsize>,
+        stop: std::sync::Arc<std::sync::atomic::AtomicBool>,
+        worker: Option<std::thread::JoinHandle<()>>,
+    }
+
+    impl Http {
+        fn new(responses: Vec<(u16, Vec<u8>)>) -> Self {
+            use std::io::{BufRead, BufReader, Write};
+            use std::sync::{atomic::AtomicBool, Arc};
+            let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+            listener.set_nonblocking(true).unwrap();
+            let uri = format!("http://{}", listener.local_addr().unwrap());
+            let count = Arc::new(AtomicUsize::new(0));
+            let stop = Arc::new(AtomicBool::new(false));
+            let (counter, finished) = (count.clone(), stop.clone());
+            let worker = std::thread::spawn(move || {
+                while !finished.load(Ordering::SeqCst) {
+                    let (mut stream, _) = match listener.accept() {
+                        Ok(connection) => connection,
+                        Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                            std::thread::sleep(std::time::Duration::from_millis(1));
+                            continue;
+                        }
+                        Err(error) => panic!("{error}"),
+                    };
+                    stream
+                        .set_read_timeout(Some(std::time::Duration::from_secs(5)))
+                        .unwrap();
+                    let mut line = String::new();
+                    BufReader::new(&stream).read_line(&mut line).unwrap();
+                    assert!(line.starts_with("GET "));
+                    let index = counter.fetch_add(1, Ordering::SeqCst);
+                    let (status, body) = &responses[index.min(responses.len() - 1)];
+                    write!(stream, "HTTP/1.1 {status} Test\r\nContent-Length: {}\r\nContent-Type: text/plain\r\nConnection: close\r\n\r\n", body.len()).unwrap();
+                    stream.write_all(body).unwrap();
+                }
+            });
+            Self {
+                uri,
+                count,
+                stop,
+                worker: Some(worker),
+            }
+        }
+    }
+
+    impl Drop for Http {
+        fn drop(&mut self) {
+            self.stop.store(true, Ordering::SeqCst);
+            self.worker.take().unwrap().join().unwrap();
+        }
+    }
+
+    #[test]
+    fn uri_cache_is_sticky_and_isolated_and_preserves_response_bytes() {
+        let server = Http::new(vec![(200, b"first".to_vec()), (200, b"second".to_vec())]);
+        let tree = Tree::new();
+        let provider = FileResources::new(tree.0.join("docs")).unwrap();
+        let uri = format!("{}/part.adoc", server.uri);
+        let request = ResourceRequest {
+            target: &uri,
+            referrer: None,
+        };
+        assert_eq!(provider.load_binary(request).unwrap().bytes, b"first");
+        provider.enable_uri_cache();
+        let mut loaded = provider.load_binary(request).unwrap();
+        assert_eq!(loaded.bytes, b"second");
+        loaded.bytes.clear();
+        provider.enable_uri_cache();
+        let referrer = format!("{}/outer.adoc", server.uri);
+        let cached = provider
+            .load_binary(ResourceRequest {
+                target: "part.adoc",
+                referrer: Some(&referrer),
+            })
+            .unwrap();
+        assert_eq!(cached.bytes, b"second");
+        assert_eq!(cached.content_type.as_deref(), Some("text/plain"));
+        assert_eq!(cached.name, uri);
+        assert_eq!(provider.document_path(&uri), None);
+        assert_eq!(server.count.load(Ordering::SeqCst), 2);
+        let other = FileResources::new(tree.0.join("docs")).unwrap();
+        other.enable_uri_cache();
+        other.load_binary(request).unwrap();
+        assert_eq!(server.count.load(Ordering::SeqCst), 3);
+        std::fs::write(tree.0.join("docs/local.adoc"), "old").unwrap();
+        let local = ResourceRequest {
+            target: "local.adoc",
+            referrer: None,
+        };
+        assert_eq!(provider.load(local).unwrap().text, "old");
+        std::fs::write(tree.0.join("docs/local.adoc"), "new").unwrap();
+        assert_eq!(provider.load(local).unwrap().text, "new");
+    }
+
+    #[test]
+    fn uri_cache_retries_http_errors_and_retains_success_before_decoding() {
+        let server = Http::new(vec![(404, vec![]), (200, "Привет".as_bytes().to_vec())]);
+        let tree = Tree::new();
+        let provider = FileResources::new(tree.0.join("docs")).unwrap();
+        provider.enable_uri_cache();
+        let uri = format!("{}/part.adoc", server.uri);
+        let request = ResourceRequest {
+            target: &uri,
+            referrer: None,
+        };
+        assert_eq!(
+            provider.load_binary(request).unwrap_err().kind,
+            ResourceErrorKind::NotFound
+        );
+        assert_eq!(
+            provider
+                .load_with_encoding(request, Some("US-ASCII"))
+                .unwrap_err()
+                .kind,
+            ResourceErrorKind::InvalidEncoding
+        );
+        // The failed decoder must not evict a successful HTTP response.
+        assert_eq!(
+            provider.load_binary(request).unwrap().bytes,
+            "Привет".as_bytes()
+        );
+        // A hit ignores the new encoding, as binary StringIO does in Ruby.
+        assert_eq!(
+            provider
+                .load_with_encoding(request, Some("UTF-8"))
+                .unwrap_err()
+                .kind,
+            ResourceErrorKind::InvalidEncoding
+        );
+        assert_eq!(server.count.load(Ordering::SeqCst), 2);
+    }
+
+    #[test]
+    fn cached_includes_keep_snapshots_tokens_and_byte_limits() {
+        let server = Http::new(vec![(200, b"*one*\n\xff\n*three*\n".to_vec())]);
+        let tree = Tree::new();
+        let provider = FileResources::new(tree.0.join("docs")).unwrap();
+        let uri = format!("{}/part.adoc", server.uri);
+        let mut sources = SourceMap::new();
+        let id = sources.add(
+            "/main.adoc",
+            format!(":cache-uri:\n\ninclude::{uri}[lines=1;3]\n\ninclude::{uri}[lines=3]\n"),
+        );
+        let mut options = adoctra::ParseOptions {
+            source_id: id,
+            ..Default::default()
+        };
+        options.attributes.set("allow-uri-read", "");
+        let result = adoctra::parse_resource(&mut sources, &options, &provider).unwrap();
+        assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+        let source = sources.get(adoctra::SourceId(1)).unwrap();
+        assert_eq!(source.text(), "*one*\n*three*\n");
+        assert_eq!(source.omitted_lines()[0].bytes, b"\xff\n");
+        assert_eq!(source.position(6).unwrap().line, 3);
+        assert!(sources.get(adoctra::SourceId(2)).is_none());
+        let tokens = adoctra::tokens_resource(&mut sources, &options, &provider).unwrap();
+        assert!(tokens
+            .iter()
+            .any(|token| token.span.source_id == adoctra::SourceId(1) && token.span.start >= 6));
+        assert_eq!(server.count.load(Ordering::SeqCst), 1);
+        options.includes.max_bytes = 16;
+        let limited = adoctra::parse_resource(&mut sources, &options, &provider).unwrap();
+        assert_eq!(limited.diagnostics.len(), 1);
+        assert_eq!(
+            limited.diagnostics[0].message,
+            "maximum included byte count exceeded"
+        );
+        assert_eq!(
+            sources.get(adoctra::SourceId(1)).unwrap().text(),
+            "*one*\n*three*\n"
+        );
+        assert_eq!(server.count.load(Ordering::SeqCst), 1);
+    }
+
     struct Tree(PathBuf);
     impl Tree {
         fn new() -> Self {

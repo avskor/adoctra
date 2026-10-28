@@ -41,6 +41,10 @@ jobs:
         run: python3 scripts/acceptance.py --manifest compatibility/acceptance/positions.json --json-report target/positions-report.json
       - name: Install pinned Ruby reference
         run: gem install --user-install asciidoctor --version "$(cat compatibility/asciidoctor-version)" --no-document
+      - name: Install pinned URI cache reference
+        run: gem install --user-install open-uri-cached --version "$(cat compatibility/open-uri-cached-version)" --no-document
+      - name: Verify URI cache requests and diagnostics
+        run: python3 scripts/audit_uri_cache.py --baseline compatibility/uri-cache/report.json --report target/uri-cache-report.json
       - name: Test semantic reference converter
         run: ruby scripts/test_asciidoctor_semantics.rb
       - name: Test diagnostic position reference
