@@ -21,6 +21,7 @@ pub struct SourceFile {
     line_starts: Vec<usize>,
     complete: bool,
     omissions: Vec<crate::OmittedSourceLine>,
+    frames: Option<crate::resource::SourceLineFrames>,
 }
 
 impl SourceFile {
@@ -55,7 +56,11 @@ impl SourceFile {
     }
 
     pub(crate) fn include_lines(&self) -> Vec<crate::include_indent::Line> {
-        crate::resource::snapshot_lines(&self.text, &self.omissions)
+        crate::resource::framed_snapshot_lines(&self.text, &self.omissions, self.frames.as_ref())
+    }
+
+    pub(crate) fn has_line_frames(&self) -> bool {
+        self.frames.is_some()
     }
 
     pub(crate) fn stored_bytes(&self) -> usize {
@@ -92,7 +97,7 @@ impl SourceMap {
 
     /// IDs are stable within this map; two files may have the same display name.
     pub fn add(&mut self, name: impl Into<String>, text: impl Into<String>) -> SourceId {
-        self.add_snapshot(name.into(), text.into(), true, Vec::new())
+        self.add_snapshot(name.into(), text.into(), true, Vec::new(), None)
     }
 
     fn add_snapshot(
@@ -101,9 +106,22 @@ impl SourceMap {
         text: String,
         complete: bool,
         omissions: Vec<crate::OmittedSourceLine>,
+        frames: Option<crate::resource::SourceLineFrames>,
     ) -> SourceId {
-        let mut line_starts = vec![0];
-        line_starts.extend(text.match_indices('\n').map(|(index, _)| index + 1));
+        let line_starts = if let Some(frames) = &frames {
+            let mut starts: Vec<_> = frames.ranges.iter().map(|&(start, _)| start).collect();
+            if starts.is_empty() {
+                starts.push(0);
+            }
+            if frames.trailing_lf && starts.last() != Some(&text.len()) {
+                starts.push(text.len());
+            }
+            starts
+        } else {
+            let mut starts = vec![0];
+            starts.extend(text.match_indices('\n').map(|(index, _)| index + 1));
+            starts
+        };
         let id = SourceId(self.files.len());
         self.files.push(SourceFile {
             name,
@@ -111,6 +129,7 @@ impl SourceMap {
             line_starts,
             complete,
             omissions,
+            frames,
         });
         id
     }
@@ -177,15 +196,25 @@ impl SourceMap {
         provider: &dyn crate::ResourceProvider,
         encoding: Option<&str>,
         selection: &crate::include_selection::Selection,
-    ) -> crate::ResourceResult<SourceId> {
-        self.load_using(target, relative_to, |request| {
+    ) -> crate::ResourceResult<(SourceId, Option<crate::include_selection::Selected>)> {
+        let mut prepared = None;
+        let id = self.load_using(target, relative_to, |request| {
             match provider.prepare_include(request, encoding, selection.line_limit())? {
                 crate::IncludeInput::Decoded(resource) => Ok(resource.into()),
-                crate::IncludeInput::Deferred { resource, binary } => {
-                    selection.recover_bytes(resource, binary)
-                }
+                crate::IncludeInput::Deferred { resource, binary } => selection
+                    .recover_bytes(resource, binary)
+                    .map(|(snapshot, selected)| {
+                        prepared = selected;
+                        snapshot
+                    }),
             }
-        })
+        })?;
+        if let Some(selected) = &mut prepared {
+            for diagnostic in &mut selected.diagnostics {
+                diagnostic.span.source_id = id;
+            }
+        }
+        Ok((id, prepared))
     }
 
     fn load_using(
@@ -210,16 +239,18 @@ impl SourceMap {
         let crate::resource::IncludeSnapshot {
             decoded: crate::IncludeResource { resource, complete },
             omissions,
+            frames,
         } = load(crate::ResourceRequest { target, referrer })?;
         if let Some(index) = self.files.iter().position(|file| {
             file.name == resource.name
                 && file.text == resource.text
                 && file.complete == complete
                 && file.omissions == omissions
+                && file.frames == frames
         }) {
             return Ok(SourceId(index));
         }
-        Ok(self.add_snapshot(resource.name, resource.text, complete, omissions))
+        Ok(self.add_snapshot(resource.name, resource.text, complete, omissions, frames))
     }
 
     /// Invalid ids, reversed ranges and non-UTF-8 boundaries return None.
@@ -231,6 +262,76 @@ impl SourceMap {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn physical_reader_frames_participate_in_identity_without_inserting_text() {
+        fn snapshot(
+            ranges: Vec<(usize, usize)>,
+            trailing_lf: bool,
+        ) -> crate::resource::IncludeSnapshot {
+            crate::resource::IncludeSnapshot {
+                decoded: crate::IncludeResource {
+                    resource: crate::Resource {
+                        name: "/frames.adoc".into(),
+                        text: "a上b".into(),
+                    },
+                    complete: false,
+                },
+                omissions: Vec::new(),
+                frames: Some(crate::resource::SourceLineFrames {
+                    ranges,
+                    trailing_lf,
+                }),
+            }
+        }
+        let mut sources = SourceMap::new();
+        let first = sources
+            .load_using("/frames.adoc", None, |_| {
+                Ok(snapshot(vec![(0, 4), (4, 5)], false))
+            })
+            .unwrap();
+        assert_eq!(
+            sources
+                .load_using("/frames.adoc", None, |_| Ok(snapshot(
+                    vec![(0, 4), (4, 5)],
+                    false
+                )))
+                .unwrap(),
+            first
+        );
+        let second = sources
+            .load_using("/frames.adoc", None, |_| {
+                Ok(snapshot(vec![(0, 1), (1, 5)], false))
+            })
+            .unwrap();
+        assert_ne!(first, second);
+        assert_eq!(sources.get(first).unwrap().text(), "a上b");
+        assert_eq!(sources.get(second).unwrap().text(), "a上b");
+        assert_eq!(
+            sources.get(first).unwrap().position(4),
+            Some(SourcePosition { line: 2, column: 1 })
+        );
+        assert_eq!(
+            sources.get(second).unwrap().position(4),
+            Some(SourcePosition { line: 2, column: 2 })
+        );
+        assert_eq!(sources.get(first).unwrap().position(2), None);
+        let lines = sources.get(first).unwrap().include_lines();
+        assert_eq!(lines.len(), 2);
+        assert_eq!(lines[0].text.as_ref(), "a上");
+        assert_eq!(lines[1].text.as_ref(), "b");
+        assert_eq!(sources.slice(Span::in_source(first, 0, 4)), Some("a上"));
+        let eof = sources
+            .load_using("/frames.adoc", None, |_| {
+                Ok(snapshot(vec![(0, 4), (4, 5)], true))
+            })
+            .unwrap();
+        assert_ne!(eof, first);
+        assert_eq!(
+            sources.get(eof).unwrap().position(5),
+            Some(SourcePosition { line: 3, column: 1 })
+        );
+    }
 
     #[test]
     fn unicode_crlf_and_end_of_file_positions_are_checked() {

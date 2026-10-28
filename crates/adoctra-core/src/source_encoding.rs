@@ -179,9 +179,9 @@ impl BinaryResource {
         let name = encoding.unwrap_or_default().to_ascii_lowercase();
         let kind = tables::lookup(&name).unwrap_or(Encoding::Utf8);
         if matches!(kind, Encoding::Utf8 | Encoding::Binary)
-            && !self.bytes.starts_with(&[0xff, 0xfe])
-            && !self.bytes.starts_with(&[0xfe, 0xff])
-            && self.decode_text(encoding).is_err()
+            && (self.bytes.starts_with(&[0xff, 0xfe])
+                || self.bytes.starts_with(&[0xfe, 0xff])
+                || self.decode_text(encoding).is_err())
         {
             return Ok(IncludeInput::Deferred {
                 resource: self,

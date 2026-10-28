@@ -1032,7 +1032,7 @@ impl<'a> Reader<'a> {
             return self.include_link(&uri, span);
         }
         let resources = self.resources.as_mut().expect("explicit resource provider");
-        let id = match resources.sources.load_selected_include(
+        let (id, prepared_selection) = match resources.sources.load_selected_include(
             &target,
             Some(current),
             resources.provider,
@@ -1084,7 +1084,7 @@ impl<'a> Reader<'a> {
             .iter()
             .any(|ext| file.name().ends_with(ext));
         let mut input = Input::new(file.text(), id, preprocess, self.next_occurrence);
-        if !file.omitted_lines().is_empty() {
+        if !file.omitted_lines().is_empty() || file.has_line_frames() {
             input.lines = file.include_lines();
         }
         // Like Ruby's push_include: a positive relative depth beyond the
@@ -1106,7 +1106,8 @@ impl<'a> Reader<'a> {
             });
         let full = selection.full();
         let whole = matches!(selection, crate::include_selection::Selection::All);
-        let selected = selection.select(&input.lines, file.omitted_lines(), id);
+        let selected = prepared_selection
+            .unwrap_or_else(|| selection.select(&input.lines, file.omitted_lines(), id));
         let mut selection_diagnostics = selected.diagnostics;
         let missing_report = format!(
             "tag{} '{}' not found in include {}: {}",

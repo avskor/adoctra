@@ -58,6 +58,15 @@ pub struct OmittedSourceSpan {
 pub(crate) struct IncludeSnapshot {
     pub decoded: IncludeResource,
     pub omissions: Vec<OmittedSourceLine>,
+    pub frames: Option<SourceLineFrames>,
+}
+
+/// Reader IO can split an encoded character's LF byte without a Unicode LF.
+/// Keep those physical boundaries separately; never invent snapshot text.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct SourceLineFrames {
+    pub ranges: Vec<(usize, usize)>,
+    pub trailing_lf: bool,
 }
 
 impl From<IncludeResource> for IncludeSnapshot {
@@ -65,6 +74,7 @@ impl From<IncludeResource> for IncludeSnapshot {
         Self {
             decoded,
             omissions: Vec::new(),
+            frames: None,
         }
     }
 }
@@ -82,9 +92,28 @@ pub(crate) fn snapshot_lines(
     text: &str,
     omissions: &[OmittedSourceLine],
 ) -> Vec<crate::include_indent::Line> {
+    framed_snapshot_lines(text, omissions, None)
+}
+
+pub(crate) fn framed_snapshot_lines(
+    text: &str,
+    omissions: &[OmittedSourceLine],
+    frames: Option<&SourceLineFrames>,
+) -> Vec<crate::include_indent::Line> {
     use crate::include_indent::Line;
     let strip_bom = omissions.first().map_or(true, |line| line.line != 1);
-    let lines = Line::from_source_with_bom(text, strip_bom);
+    let lines = if let Some(frames) = frames {
+        frames
+            .ranges
+            .iter()
+            .enumerate()
+            .map(|(index, &(start, end))| {
+                Line::from_bounds(text, start, end, strip_bom && index == 0)
+            })
+            .collect()
+    } else {
+        Line::from_source_with_bom(text, strip_bom)
+    };
     if omissions.is_empty() {
         return lines;
     }

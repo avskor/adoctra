@@ -20,6 +20,33 @@ pub(crate) struct Line {
 }
 
 impl Line {
+    pub(crate) fn from_bounds(source: &str, start: usize, end: usize, strip_bom: bool) -> Self {
+        let start =
+            start + usize::from(strip_bom && source[start..end].starts_with('\u{feff}')) * 3;
+        let suffix = if source[start..end].ends_with("\r\n") {
+            2
+        } else if source[start..end].ends_with('\n') {
+            1
+        } else {
+            0
+        };
+        let body_end = end - suffix;
+        let eol = if suffix == 2 { "\r\n" } else { "\n" };
+        Self {
+            original: Some(start),
+            text: Arc::from(&source[start..body_end]),
+            eol: eol.into(),
+            fragments: vec![Fragment {
+                start: 0,
+                end: body_end - start + eol.len(),
+                original_start: start,
+                original_end: end,
+                exact: true,
+                generated: false,
+            }],
+        }
+    }
+
     pub fn from_source(source: &str) -> Vec<Self> {
         Self::from_source_with_bom(source, true)
     }

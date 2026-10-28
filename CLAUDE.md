@@ -1306,6 +1306,25 @@ The decoder's exhaustive short-input fingerprints can be reproduced with
 untested encoding combinations and decoding/selection order remain open;
 never claim that the entire encoding surface is covered. Selected malformed UTF-8 and implicit UTF-16 BOM selection
 can crash Ruby outside its include error handler; adoctra must stay error-tolerant.
+Default UTF-8/BINARY selection runs on original byte-LF slots before BOM
+recognition. If the first kept line has a UTF-16 BOM, decode kept array lines
+using that BOM, including a later hint with different endianness. Preserve raw
+unselected lines or explicit omissions. Carry the raw tag mask through decoding;
+never reapply tag filters to decoded marker-like text. Without a kept BOM, retain
+selected UTF-8/ASCII bytes including NUL. Whole-resource/explicit codec loading
+keeps its usual behavior; custom host decoders remain unchanged.
+Private physical-line frames preserve IO boundaries when LF is a byte inside
+an encoded character (e.g. UTF-16BE 上). Snapshot text contains no invented LF;
+`SourceFile::position`, reader views and snapshot identity include the frames.
+Contextual views are incomplete and cannot be reparsed as primary sources.
+Reuse a complete Unicode snapshot only when all bytes and Unicode LF boundaries
+agree. Raw tag diagnostics are remapped after conversion; omitted diagnostics
+retain their original byte marker range. Public provider APIs/JSON schemas stay
+unchanged. Reproduce the focused audit with
+`python3 scripts/audit_include_order.py --report /tmp/include-order.json`;
+inputs and the recorded report live in `compatibility/encoding-order/`.
+It compares normalized HTML plus ordered diagnostics and reports uncaught Ruby
+exceptions as RUBY_ERROR, never PASS. CLI failure cannot be quarantined.
 Binary fixtures use `binary_resources` (hex bytes) in the minimal corpus.
 Ordinary/intrinsic attribute substitution runs once
 before parsing the list, with both reference escapes and attribute-missing policies.

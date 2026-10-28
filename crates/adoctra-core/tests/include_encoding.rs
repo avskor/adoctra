@@ -18,6 +18,277 @@ fn setup(source: &str) -> (MemoryResources, SourceMap, ParseOptions) {
     )
 }
 
+fn bom_bytes(text: &str, little: bool) -> Vec<u8> {
+    let mut bytes = if little {
+        vec![0xff, 0xfe]
+    } else {
+        vec![0xfe, 0xff]
+    };
+    for unit in text.encode_utf16() {
+        bytes.extend(if little {
+            unit.to_le_bytes()
+        } else {
+            unit.to_be_bytes()
+        });
+    }
+    bytes
+}
+
+#[test]
+fn implicit_bom_tag_filters_run_before_conversion_and_keep_raw_diagnostic_spans() {
+    for (selector, visible, missing) in [
+        ("tag=body", false, true),
+        ("tags=*", false, false),
+        ("tag=!body", true, false),
+        ("tags=**;!body", true, false),
+        ("tags=**", true, false),
+    ] {
+        let (mut resources, mut sources, options) =
+            setup(&format!("include::part.adoc[{selector}]"));
+        resources
+            .insert_binary(
+                "/docs/part.adoc",
+                bom_bytes(
+                    "// tag::body[]\n*shown*\n// end::body[]\n*outside*\n",
+                    false,
+                ),
+            )
+            .unwrap();
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        assert_eq!(
+            !result.document.flat_blocks().is_empty(),
+            visible,
+            "{selector}"
+        );
+        assert_eq!(result.diagnostics.len(), usize::from(missing), "{selector}");
+        if visible {
+            let file = sources.get(SourceId(1)).unwrap();
+            assert!(file.is_complete());
+            assert_eq!(
+                result.document.flat_blocks()[0].span.start,
+                file.text().find("*shown*").unwrap()
+            );
+            assert!(file.text().contains("*outside*"));
+        } else if missing {
+            assert!(result.diagnostics[0]
+                .message
+                .contains("tag 'body' not found"));
+        }
+    }
+    let (mut resources, mut sources, options) = setup("include::part.adoc[tag=body]");
+    let mut bytes = b"// tag::body[]\n".to_vec();
+    bytes.extend(bom_bytes("*shown*\n*second*\n", false));
+    bytes.extend(b"// end::body[]\n// end::body[]\n// tag::body[]\n");
+    resources.insert_binary("/docs/part.adoc", bytes).unwrap();
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    let file = sources.get(SourceId(1)).unwrap();
+    assert_eq!(
+        file.text(),
+        "// tag::body[]\n\u{feff}*shown*\n*second*\n// end::body[]\n// end::body[]\n// tag::body[]\n"
+    );
+    assert!(file.omitted_lines().is_empty());
+    assert_eq!(result.diagnostics.len(), 2);
+    for diagnostic in &result.diagnostics {
+        assert_eq!(diagnostic.span.source_id, SourceId(1));
+        let text = sources.slice(diagnostic.span).unwrap();
+        let position = file.position(diagnostic.span.start).unwrap();
+        assert!(matches!(position.line, 5 | 6), "{position:?}/{text:?}");
+    }
+    assert_eq!(result.document.flat_blocks()[0].span.start, 18);
+    assert!(parse_resource(&mut sources, &options, &resources)
+        .unwrap()
+        .document
+        .flat_blocks()
+        .iter()
+        .all(|b| b.span.source_id == SourceId(1)));
+    assert!(sources.get(SourceId(2)).is_none());
+    let (mut resources, mut sources, options) =
+        setup("include::part.adoc[encoding=BINARY,tag=body]");
+    let mut raw = b"\xef\xbb\xbf\xff// tag::body[]\n".to_vec();
+    raw.extend(bom_bytes("*shown*\n", false));
+    raw.extend(b"// end::other[]\n");
+    resources.insert_binary("/docs/part.adoc", raw).unwrap();
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(result.diagnostics.len(), 1);
+    let diagnostic = &result.diagnostics[0];
+    assert_eq!(diagnostic.span.source_id, SourceId(1));
+    assert_eq!(diagnostic.span.start, 0);
+    let omitted = diagnostic.omitted_span.unwrap();
+    assert_eq!(omitted.line, 1);
+    assert_eq!(
+        sources.get(SourceId(1)).unwrap().omitted_slice(omitted),
+        Some(b"tag::body[]".as_slice())
+    );
+}
+
+#[test]
+fn first_kept_bom_and_embedded_lf_frames_preserve_unicode_positions_and_budget() {
+    for (little, glyph) in [(false, '上'), (true, '\u{a41}')] {
+        let (mut resources, mut sources, mut options) = setup("include::part.adoc[lines=1;2]");
+        resources
+            .insert_binary(
+                "/docs/part.adoc",
+                bom_bytes(&format!("first{glyph}second"), little),
+            )
+            .unwrap();
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        assert!(result.diagnostics.is_empty());
+        let file = sources.get(SourceId(1)).unwrap();
+        assert_eq!(file.text(), format!("\u{feff}first{glyph}second"));
+        assert!(!file.text().contains('\n'));
+        assert!(!file.is_complete());
+        let boundary = "\u{feff}first".len() + glyph.len_utf8();
+        assert_eq!(
+            file.position(boundary).unwrap(),
+            adoctra_core::SourcePosition { line: 2, column: 1 }
+        );
+        assert_eq!(
+            file.position(file.text().len()).unwrap(),
+            adoctra_core::SourcePosition { line: 2, column: 7 }
+        );
+        assert_eq!(
+            sources.slice(result.document.flat_blocks()[0].span),
+            Some(format!("first{glyph}second").as_str())
+        );
+        options.includes.max_bytes = file.text().len();
+        assert!(parse_resource(&mut sources, &options, &resources)
+            .unwrap()
+            .diagnostics
+            .is_empty());
+        options.includes.max_bytes -= 1;
+        assert!(parse_resource(&mut sources, &options, &resources)
+            .unwrap()
+            .diagnostics
+            .iter()
+            .any(|d| d.message.contains("maximum included byte count")));
+    }
+    let (mut resources, mut sources, options) = setup("include::part.adoc[lines=2]");
+    let mut bytes = bom_bytes("ignored\n", false);
+    bytes.extend(bom_bytes("*shown*", true));
+    resources
+        .insert_binary("/docs/part.adoc", bytes.clone())
+        .unwrap();
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty());
+    let file = sources.get(SourceId(1)).unwrap();
+    assert_eq!(file.text(), "\u{feff}*shown*");
+    assert_eq!(file.omitted_lines().len(), 1);
+    assert_eq!(
+        file.position(3).unwrap(),
+        adoctra_core::SourcePosition { line: 2, column: 2 }
+    );
+    let old = file.text().to_owned();
+    resources
+        .insert_binary("/docs/part.adoc", b"ignored\n\xff\xfeA\0\n")
+        .unwrap();
+    assert_eq!(
+        parse_resource(&mut sources, &options, &resources)
+            .unwrap()
+            .diagnostics
+            .len(),
+        1
+    );
+    assert_eq!(sources.get(SourceId(1)).unwrap().text(), old);
+    assert!(sources.get(SourceId(2)).is_none());
+}
+
+#[test]
+fn skipped_implicit_utf16_bom_keeps_raw_selected_bytes_and_distinct_snapshots() {
+    for (little, explicit) in [(true, "UTF-16LE"), (false, "UTF-16BE")] {
+        for name in ["UTF-8", "ASCII-8BIT", "BINARY", "unknown-bom-audit"] {
+            let (mut resources,mut sources,options)=setup(&format!("include::part.adoc[encoding={name},lines=2]\n\ninclude::part.adoc[encoding={explicit},lines=2]"));
+            let mut bytes = if little {
+                vec![0xff, 0xfe]
+            } else {
+                vec![0xfe, 0xff]
+            };
+            for unit in "*one*\n*two*\n*three*\n".encode_utf16() {
+                bytes.extend(if little {
+                    unit.to_le_bytes()
+                } else {
+                    unit.to_be_bytes()
+                });
+            }
+            resources
+                .insert_binary("/docs/part.adoc", bytes.clone())
+                .unwrap();
+            let result = parse_resource(&mut sources, &options, &resources).unwrap();
+            assert!(result.diagnostics.is_empty(), "{name}/{explicit}");
+            let raw = sources.get(SourceId(1)).unwrap();
+            assert_eq!(raw.text(), "\0*\0t\0w\0o\0*\0\n");
+            assert!(!raw.is_complete());
+            assert_eq!(raw.omitted_lines().len(), 1);
+            assert_eq!(raw.omitted_lines()[0].line, 1);
+            assert_eq!(raw.omitted_lines()[0].offset, 0);
+            assert_eq!(
+                raw.omitted_lines()[0].bytes,
+                bytes[..if little { 13 } else { 14 }]
+            );
+            assert_eq!(
+                raw.position(0).unwrap(),
+                adoctra_core::SourcePosition { line: 2, column: 1 }
+            );
+            assert_eq!(
+                raw.position(4).unwrap(),
+                adoctra_core::SourcePosition { line: 2, column: 5 }
+            );
+            let blocks = result.document.flat_blocks();
+            assert_eq!(blocks.len(), 2);
+            assert_eq!(blocks[0].span.source_id, SourceId(1));
+            assert_eq!(sources.slice(blocks[0].span), Some("\0*\0t\0w\0o\0*"));
+            assert_eq!(blocks[1].span.source_id, SourceId(2));
+            assert_eq!(sources.slice(blocks[1].span), Some("*two*"));
+            assert_eq!(
+                sources.get(SourceId(2)).unwrap().text(),
+                "\u{feff}*one*\n*two*\n*three*\n"
+            );
+            assert!(sources.get(SourceId(2)).unwrap().is_complete());
+            let again = parse_resource(&mut sources, &options, &resources).unwrap();
+            assert!(again.diagnostics.is_empty());
+            assert!(sources.get(SourceId(3)).is_none());
+            resources
+                .insert_binary("/docs/part.adoc", bytes[2..].to_vec())
+                .unwrap();
+            let updated = parse_resource(&mut sources, &options, &resources).unwrap();
+            assert!(updated.diagnostics.is_empty());
+            assert_eq!(
+                updated.document.flat_blocks()[0].span.source_id,
+                SourceId(3)
+            );
+            assert_eq!(
+                sources.get(SourceId(1)).unwrap().text(),
+                "\0*\0t\0w\0o\0*\0\n"
+            );
+        }
+        let (mut resources, mut sources, mut options) = setup("include::part.adoc[lines=2]");
+        let mut bytes = if little {
+            vec![0xff, 0xfe]
+        } else {
+            vec![0xfe, 0xff]
+        };
+        for unit in "*one*\n*two*\n*three*\n".encode_utf16() {
+            bytes.extend(if little {
+                unit.to_le_bytes()
+            } else {
+                unit.to_be_bytes()
+            });
+        }
+        resources.insert_binary("/docs/part.adoc", bytes).unwrap();
+        let budget = 12 + if little { 13 } else { 14 };
+        options.includes.max_bytes = budget;
+        assert!(parse_resource(&mut sources, &options, &resources)
+            .unwrap()
+            .diagnostics
+            .is_empty());
+        options.includes.max_bytes = budget - 1;
+        assert!(parse_resource(&mut sources, &options, &resources)
+            .unwrap()
+            .diagnostics
+            .iter()
+            .any(|d| d.message.contains("maximum included byte count")));
+    }
+}
+
 #[test]
 fn korean_prefix_selection_and_variant_errors_preserve_snapshots() {
     for encoding in ["EUC-KR", "eucKR", "CP949"] {

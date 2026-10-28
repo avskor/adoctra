@@ -27,7 +27,15 @@ impl Selection {
         &self,
         resource: crate::BinaryResource,
         binary: bool,
-    ) -> crate::ResourceResult<crate::resource::IncludeSnapshot> {
+    ) -> crate::ResourceResult<(crate::resource::IncludeSnapshot, Option<Selected>)> {
+        if matches!(self, Self::All)
+            && (resource.bytes.starts_with(&[0xff, 0xfe])
+                || resource.bytes.starts_with(&[0xfe, 0xff]))
+        {
+            return resource
+                .decode_include(binary.then_some("ASCII-8BIT"), None)
+                .map(|decoded| (decoded.into(), None));
+        }
         let invalid = || {
             crate::ResourceError::new(
                 crate::ResourceErrorKind::InvalidEncoding,
@@ -38,12 +46,12 @@ impl Selection {
         let mut text = String::new();
         let mut omissions = Vec::new();
         let limit = self.line_limit().unwrap_or(usize::MAX);
-        for (index, raw) in resource
+        let raw_lines: Vec<_> = resource
             .bytes
             .split_inclusive(|&byte| byte == b'\n')
             .take(limit)
-            .enumerate()
-        {
+            .collect();
+        for (index, &raw) in raw_lines.iter().enumerate() {
             // Ruby recognizes a BOM on the first *selected* line. Keep these
             // UTF-8 candidates until selection tells us which line is first.
             let ascii = raw.strip_prefix(&[0xef, 0xbb, 0xbf]).unwrap_or(raw);
@@ -72,6 +80,24 @@ impl Selection {
         }
         let lines = crate::resource::snapshot_lines(&text, &omissions);
         let selected = self.clone().select(&lines, &omissions, SourceId::default());
+        let first = selected
+            .keep
+            .iter()
+            .position(|&keep| keep)
+            .and_then(|index| raw_lines.get(index));
+        let endian = first.and_then(|line| {
+            if line.starts_with(&[0xff, 0xfe]) {
+                Some(true)
+            } else if line.starts_with(&[0xfe, 0xff]) {
+                Some(false)
+            } else {
+                None
+            }
+        });
+        if let Some(little) = endian {
+            return self
+                .recover_utf16_array(&resource, &raw_lines, &lines, &omissions, selected, little);
+        }
         if omissions.iter().any(|line| selected.keep[line.line - 1]) {
             return Err(invalid());
         }
@@ -82,16 +108,116 @@ impl Selection {
                 return Err(invalid());
             }
         }
-        Ok(crate::resource::IncludeSnapshot {
-            decoded: crate::IncludeResource {
-                resource: crate::Resource {
-                    name: resource.name,
-                    text,
+        Ok((
+            crate::resource::IncludeSnapshot {
+                decoded: crate::IncludeResource {
+                    resource: crate::Resource {
+                        name: resource.name,
+                        text,
+                    },
+                    complete: false,
                 },
-                complete: false,
+                omissions,
+                frames: None,
             },
-            omissions,
-        })
+            None,
+        ))
+    }
+
+    /// The reader's array normalization uses the BOM of its first kept raw
+    /// line. Tags have already been filtered; decoded marker-like text must
+    /// never run through that filter a second time.
+    fn recover_utf16_array(
+        &self,
+        resource: &crate::BinaryResource,
+        raw_lines: &[&[u8]],
+        raw_views: &[crate::include_indent::Line],
+        raw_omissions: &[crate::OmittedSourceLine],
+        selected: Selected,
+        little: bool,
+    ) -> crate::ResourceResult<(crate::resource::IncludeSnapshot, Option<Selected>)> {
+        let mut text = String::new();
+        let mut omissions = Vec::new();
+        let mut ranges = Vec::new();
+        let mut offsets = Vec::new();
+        let mut trailing_lf = false;
+        let mut raw_omitted = raw_omissions.iter().peekable();
+        for (index, &raw) in raw_lines.iter().enumerate() {
+            let start = text.len();
+            offsets.push(start);
+            let omitted = raw_omitted
+                .peek()
+                .is_some_and(|line| line.line == index + 1);
+            if omitted {
+                raw_omitted.next();
+            }
+            if selected.keep[index] {
+                let decoded = crate::BinaryResource {
+                    name: resource.name.clone(),
+                    bytes: raw.to_vec(),
+                    content_type: None,
+                }
+                .decode(Some(if little { "UTF-16LE" } else { "UTF-16BE" }))?;
+                text.push_str(&decoded.text);
+            } else if omitted {
+                omissions.push(crate::OmittedSourceLine {
+                    offset: start,
+                    line: index + 1,
+                    bytes: raw.to_vec(),
+                });
+                continue;
+            } else {
+                text.push_str(std::str::from_utf8(raw).expect("validated raw line"));
+            }
+            ranges.push((start, text.len()));
+            trailing_lf = raw.ends_with(b"\n");
+        }
+        // Remap raw tag diagnostics into the registered layout. Marker lines
+        // stay raw (or omitted); only kept body lines were transcoded.
+        let mut views = raw_views.to_vec();
+        let strip_bom = resource.bytes.starts_with(&[0xef, 0xbb, 0xbf])
+            && raw_omissions.first().map_or(true, |line| line.line != 1);
+        for (index, line) in views.iter_mut().enumerate() {
+            let bom = usize::from(index == 0 && strip_bom) * 3;
+            line.original = Some(offsets[index] + bom);
+        }
+        let diagnostic_omissions: Vec<_> = raw_omissions
+            .iter()
+            .map(|line| crate::OmittedSourceLine {
+                offset: offsets[line.line - 1],
+                line: line.line,
+                bytes: line.bytes.clone(),
+            })
+            .collect();
+        let selected = self
+            .clone()
+            .select(&views, &diagnostic_omissions, SourceId::default());
+        // Reuse a whole Unicode snapshot only when no bytes were skipped and
+        // physical IO boundaries agree with its actual Unicode LF characters.
+        let complete = selected.keep.iter().all(|&keep| keep)
+            && raw_lines.iter().map(|line| line.len()).sum::<usize>() == resource.bytes.len()
+            && trailing_lf == text.ends_with('\n')
+            && ranges
+                .iter()
+                .all(|&(_, end)| end == text.len() || text[..end].ends_with('\n'));
+        let frames = (!complete).then_some(crate::resource::SourceLineFrames {
+            ranges,
+            trailing_lf,
+        });
+        Ok((
+            crate::resource::IncludeSnapshot {
+                decoded: crate::IncludeResource {
+                    resource: crate::Resource {
+                        name: resource.name.clone(),
+                        text,
+                    },
+                    complete,
+                },
+                omissions,
+                frames,
+            },
+            Some(selected),
+        ))
     }
 
     /// Ruby stops reading only after consuming its entire sorted line queue.

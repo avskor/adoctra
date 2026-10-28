@@ -173,6 +173,97 @@ mod tests {
     use super::*;
 
     #[test]
+    fn bom_reader_frames_export_positions_without_fabricating_snapshot_newlines() {
+        let mut workspace = ResourceWorkspace::new();
+        workspace
+            .set("/main.adoc", "include::part.adoc[lines=1;2]")
+            .unwrap();
+        let mut bytes = vec![0xfe, 0xff];
+        for unit in "*first* 上second".encode_utf16() {
+            bytes.extend(unit.to_be_bytes());
+        }
+        workspace.set_binary("/part.adoc", &bytes).unwrap();
+        let main = workspace.load("/main.adoc", None).unwrap();
+        let json = workspace.parse_json(main).unwrap();
+        assert!(json.contains(r#""diagnostics":[]"#), "{json}");
+        assert_eq!(
+            workspace.source(1).unwrap().text(),
+            "\u{feff}*first* 上second"
+        );
+        assert!(!workspace.source(1).unwrap().is_complete());
+        assert_eq!(
+            workspace.source(1).unwrap().position(14).unwrap(),
+            adoctra_core::SourcePosition { line: 2, column: 1 }
+        );
+        let tokens = workspace.tokens_json(main).unwrap();
+        assert!(tokens.contains(r#""source_id":1"#), "{tokens}");
+        assert!(workspace
+            .parse_json(main)
+            .unwrap()
+            .contains(r#""diagnostics":[]"#));
+        assert!(workspace.source(2).is_err());
+        workspace
+            .set_binary("/part.adoc", &bytes[..bytes.len() - 12])
+            .unwrap();
+        assert!(workspace
+            .parse_json(main)
+            .unwrap()
+            .contains(r#""diagnostics":[]"#));
+        assert!(workspace.source(2).is_ok());
+        assert_eq!(
+            workspace.source(1).unwrap().text(),
+            "\u{feff}*first* 上second"
+        );
+    }
+
+    #[test]
+    fn skipped_implicit_bom_exports_raw_nuls_omissions_and_immutable_spans() {
+        let mut workspace = ResourceWorkspace::new();
+        workspace
+            .set(
+                "/main.adoc",
+                "include::part.adoc[lines=2]\n\ninclude::part.adoc[encoding=UTF-16LE,lines=2]",
+            )
+            .unwrap();
+        let mut bytes = vec![0xff, 0xfe];
+        for unit in "*one*\n*two*\n*three*\n".encode_utf16() {
+            bytes.extend(unit.to_le_bytes());
+        }
+        workspace.set_binary("/part.adoc", &bytes).unwrap();
+        let main = workspace.load("/main.adoc", None).unwrap();
+        let json = workspace.parse_json(main).unwrap();
+        assert!(json.contains(r#""diagnostics":[]"#), "{json}");
+        assert!(json.contains(r"\u0000"), "{json}");
+        assert_eq!(workspace.source(1).unwrap().text(), "\0*\0t\0w\0o\0*\0\n");
+        assert_eq!(
+            workspace.source(1).unwrap().omitted_lines()[0].bytes,
+            bytes[..13]
+        );
+        assert_eq!(
+            workspace.source(1).unwrap().position(4).unwrap(),
+            adoctra_core::SourcePosition { line: 2, column: 5 }
+        );
+        assert_eq!(
+            workspace.source(2).unwrap().text(),
+            "\u{feff}*one*\n*two*\n*three*\n"
+        );
+        let tokens = workspace.tokens_json(main).unwrap();
+        assert!(tokens.contains(r#""source_id":1"#), "{tokens}");
+        assert!(workspace
+            .parse_json(main)
+            .unwrap()
+            .contains(r#""diagnostics":[]"#));
+        assert!(workspace.source(3).is_err());
+        workspace.set_binary("/part.adoc", &bytes[2..]).unwrap();
+        assert!(workspace
+            .parse_json(main)
+            .unwrap()
+            .contains(r#""diagnostics":[]"#));
+        assert!(workspace.source(3).is_ok());
+        assert_eq!(workspace.source(1).unwrap().text(), "\0*\0t\0w\0o\0*\0\n");
+    }
+
+    #[test]
     fn utf8_mac_exported_snapshots_compose_and_reuse_equivalent_input() {
         let mut workspace = ResourceWorkspace::new();
         workspace.set("/main.adoc","include::part.adoc[encoding=UTF8-MAC,lines=2]\n\ninclude::part.adoc[encoding=UTF-8-HFS,lines=2]").unwrap();

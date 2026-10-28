@@ -95,6 +95,92 @@ fn cli_skips_invalid_utf8_and_binary_lines_without_printing_replacement_text() {
 }
 
 #[test]
+fn cli_bom_tags_and_encoded_lf_follow_raw_reader_lines() {
+    use std::process::Command;
+    let root = std::env::temp_dir().join(format!("adoctra-cli-bom-tags-{}", std::process::id()));
+    std::fs::create_dir_all(&root).unwrap();
+    let source = root.join("main.adoc");
+    for (text, selector, expected) in [
+        (
+            "// tag::body[]\n*shown*\n// end::body[]\n*outside*\n",
+            "tag=!body",
+            "<strong>shown</strong> <strong>outside</strong>",
+        ),
+        ("first上second", "lines=1;2", "first上 second"),
+        (
+            "----\nfirst上second\n----\n",
+            "lines=1;2;3;4",
+            "first上\nsecond",
+        ),
+    ] {
+        let mut bytes = vec![0xfe, 0xff];
+        for unit in text.encode_utf16() {
+            bytes.extend(unit.to_be_bytes());
+        }
+        std::fs::write(root.join("part.adoc"), bytes).unwrap();
+        std::fs::write(&source, format!("include::part.adoc[{selector}]")).unwrap();
+        let out = Command::new(env!("CARGO_BIN_EXE_adoctra"))
+            .arg(&source)
+            .args(["--embedded", "--stdout"])
+            .output()
+            .unwrap();
+        assert!(out.status.success());
+        assert!(out.stderr.is_empty(), "{:?}", out.stderr);
+        let html = String::from_utf8(out.stdout).unwrap();
+        assert!(html.contains(expected), "{html:?}");
+    }
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn cli_skipping_implicit_utf16_bom_preserves_nuls_in_html_and_json() {
+    use std::process::Command;
+    let root = std::env::temp_dir().join(format!("adoctra-cli-bom-order-{}", std::process::id()));
+    std::fs::create_dir_all(&root).unwrap();
+    let source = root.join("main.adoc");
+    let included = root.join("part.adoc");
+    for little in [true, false] {
+        let mut bytes = if little {
+            vec![0xff, 0xfe]
+        } else {
+            vec![0xfe, 0xff]
+        };
+        for unit in "*one*\n*two*\n*three*\n".encode_utf16() {
+            bytes.extend(if little {
+                unit.to_le_bytes()
+            } else {
+                unit.to_be_bytes()
+            });
+        }
+        std::fs::write(&included, bytes).unwrap();
+        for encoding in ["UTF-8", "BINARY"] {
+            std::fs::write(
+                &source,
+                format!("include::part.adoc[encoding={encoding},lines=2]"),
+            )
+            .unwrap();
+            for backend in ["html", "json"] {
+                let output = Command::new(env!("CARGO_BIN_EXE_adoctra"))
+                    .arg(&source)
+                    .args(["--embedded", "--stdout", "--to", backend])
+                    .output()
+                    .unwrap();
+                assert!(output.status.success());
+                assert!(output.stderr.is_empty());
+                let text = String::from_utf8(output.stdout).unwrap();
+                if backend == "html" {
+                    assert!(text.contains("\0<strong>\0t\0w\0o\0</strong>"), "{text:?}");
+                } else {
+                    assert!(text.contains(r"\u0000"), "{text}");
+                }
+                assert!(!text.contains('\u{fffd}'));
+            }
+        }
+    }
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn cli_finite_include_selection_ignores_only_the_unconsumed_invalid_tail() {
     use std::process::Command;
     let root =
