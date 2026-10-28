@@ -143,7 +143,7 @@ as unrestricted replacement of Asciidoctor. Do not resume allocation
 micro-optimizations as the next task. Include encoding now supports Unicode and
 53 single-byte codecs, plus Shift_JIS, Windows-31J, EUC-JP, eucJP-ms, CP51932,
 Big5, Big5-HKSCS, Big5-UAO, CP950, CP951, GB2312, GB12345, GBK, GB18030, EUC-KR, CP949
-and ISO-2022-JP (ISO2022-JP).
+and ISO-2022-JP (ISO2022-JP), CP50220 and CP50221.
 Finite positive `lines` selections recover an intact decoded prefix when only
 the unread tail is malformed; `SourceFile::is_complete` exposes this explicitly.
 Skipped malformed UTF-8/BINARY lines now have explicit omission records with
@@ -1144,7 +1144,7 @@ and raw bytes (hex in JSON). `SourceFile::position` accounts for gaps; omitted
 bytes count toward the include budget. Sparse snapshots cannot be reparsed as
 implicitly valid primary sources. `is_complete`/WASM `source_is_complete`
 distinguish these views and prefixes from full files. BOM/CRLF remain intact.
-Unicode, 53 single-byte codecs and seventeen Japanese/Big5/GB/Korean multibyte codecs use std-only decoding with mappings generated
+Unicode, 53 single-byte codecs and nineteen Japanese/Big5/GB/Korean multibyte codecs use std-only decoding with mappings generated
 by `scripts/generate_encodings.rb` from the pinned Ruby environment. Unknown
 names fall back to UTF-8 like Ruby; known unsupported multibyte names fail
 explicitly, and codecs unavailable in the reference fail as unreadable.
@@ -1174,8 +1174,18 @@ X 0208, ESC ( B/J selects ASCII (Roman preserves backslash/tilde like Ruby).
 Its 6879 JIS mappings reuse EUC-JP's table. LF/CR/control bytes in JIS mode,
 SO/SI, katakana/revision/JIS X 0212 escapes and malformed sequences fail;
 a final reset to ASCII is optional. The independent state fingerprint checks
-656645 inputs across all five starting designations. CP50220/CP50221, KDDI
-and stateless variants remain unsupported; ISO-2022-JP-2 has no Ruby converter.
+656645 inputs across all five starting designations. CP50220/CP50221 share
+the state machine with CP51932's table (7336 JIS pairs, including vendor
+extensions and wave dash -> U+FF5E).
+ESC $ @ rejects the NEC/IBM extension rows (2d, 79-7c) but retains Windows
+Unicode mappings for the base characters; only ESC $ B enables those rows.
+Both decode halfwidth katakana via ESC ( I or SO, and accept raw A1-DF bytes
+outside JIS mode. SI selects ASCII without restoring the state preceding SO.
+Controls/newlines in katakana and shifts inside a JIS
+pair are invalid. Each variant's independent fingerprint covers 1575948 inputs
+in twelve initial designations/shift combinations. This implements decoding
+only, not the variants' different encoding rules. KDDI and stateless variants
+remain unsupported; ISO-2022-JP-2 has no Ruby converter.
 The decoder's exhaustive short-input fingerprints can be reproduced with
 `ruby scripts/generate_encodings.rb --fingerprints`. Other legacy multibyte
 codecs remain open; never claim that the

@@ -62,6 +62,8 @@ fn gb_selections_preserve_decoded_spans_and_unicode_columns() {
         ("GB2312", &b"\xd6\xd0"[..], "中"),
         ("ISO-2022-JP", &b"\x1b$BF|\x1b(B"[..], "日"),
         ("ISO2022-JP", &b"\x1b$@F|\x1b(J"[..], "日"),
+        ("CP50220", &b"\x1b(I1\x0f"[..], "ｱ"),
+        ("cp50221", &b"\x0e1\x1b(B"[..], "ｱ"),
         ("EUC-KR", &b"\xb0\xa1"[..], "가"),
         ("eucKR", &b"\xb0\xa1"[..], "가"),
         ("CP949", &b"\x81\x41"[..], "갂"),
@@ -124,7 +126,13 @@ fn gb_selections_preserve_decoded_spans_and_unicode_columns() {
 
 #[test]
 fn iso2022_prefix_reads_validate_states_and_keep_immutable_alias_snapshots() {
-    for name in ["ISO-2022-JP", "ISO2022-JP", "iSo-2022-jP"] {
+    for name in [
+        "ISO-2022-JP",
+        "ISO2022-JP",
+        "iSo-2022-jP",
+        "CP50220",
+        "CP50221",
+    ] {
         for (selection, bytes, success) in [
             ("lines=1", &b"*\x1b$B$\"\x1b(B*\r\n\x1b$"[..], true),
             ("lines=2", &b"*\x1b$B$\"\x1b(B*\r\n\x1b$"[..], false),
@@ -189,6 +197,73 @@ fn iso2022_prefix_reads_validate_states_and_keep_immutable_alias_snapshots() {
         .all(|block| block.span.source_id == SourceId(2)));
     assert_eq!(sources.get(SourceId(1)).unwrap().text(), "あ\r\n");
     assert_eq!(sources.get(SourceId(2)).unwrap().text(), "日\r\n");
+}
+
+#[test]
+fn cp5022_states_and_variants_preserve_selection_and_source_identity() {
+    for name in ["CP50220", "CP50221"] {
+        for (selection, bytes, success) in [
+            ("lines=1", &b"*\x0e1\x0f*\r\n\x1b$"[..], true),
+            ("lines=2", &b"*\x0e1\x0f*\r\n\x1b$"[..], false),
+            ("lines=1", &b"\x0e1\r\n\x0f"[..], false),
+            ("lines=1;3", &b"good\n\x0e \x0f\nlast\n"[..], false),
+            (
+                "tag=body",
+                &b"// tag::body[]\nOK\n// end::body[]\n\x0e "[..],
+                false,
+            ),
+        ] {
+            let (mut resources, mut sources, options) = setup(&format!(
+                "include::part.adoc[encoding={name},{selection},opts=optional]"
+            ));
+            resources.insert_binary("/docs/part.adoc", bytes).unwrap();
+            let result = parse_resource(&mut sources, &options, &resources).unwrap();
+            if success {
+                assert!(result.diagnostics.is_empty());
+                let source = sources.get(SourceId(1)).unwrap();
+                assert_eq!(source.text(), "*ｱ*\r\n");
+                assert!(!source.is_complete());
+                assert_eq!(
+                    sources.slice(result.document.flat_blocks()[0].span),
+                    Some("*ｱ*")
+                );
+            } else {
+                assert_eq!(result.diagnostics.len(), 1, "{name}/{selection}");
+                assert!(sources.get(SourceId(1)).is_none());
+            }
+        }
+    }
+    let (mut resources, mut sources, options) = setup("include::part.adoc[encoding=CP50220]\n\ninclude::part.adoc[encoding=cp50221]\n\ninclude::part.adoc[encoding=ISO-2022-JP,opts=optional]");
+    resources
+        .insert_binary("/docs/part.adoc", b"\x1b$B!A\x1b(B\r\n")
+        .unwrap();
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty());
+    assert_eq!(
+        result
+            .document
+            .flat_blocks()
+            .iter()
+            .map(|block| block.span.source_id.0)
+            .collect::<Vec<_>>(),
+        [1, 1, 2]
+    );
+    assert_eq!(sources.get(SourceId(1)).unwrap().text(), "～\r\n");
+    assert_eq!(sources.get(SourceId(2)).unwrap().text(), "〜\r\n");
+    resources
+        .insert_binary("/docs/part.adoc", b"\x0e1\x0f\r\n")
+        .unwrap();
+    let changed = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(changed.diagnostics.len(), 1);
+    assert_eq!(sources.get(SourceId(3)).unwrap().text(), "ｱ\r\n");
+    resources
+        .insert_binary("/docs/part.adoc", b"\x1b(I1\x1b(B\r\n")
+        .unwrap();
+    let same = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(same.diagnostics.len(), 1);
+    assert!(sources.get(SourceId(4)).is_none());
+    assert_eq!(sources.get(SourceId(1)).unwrap().text(), "～\r\n");
+    assert_eq!(sources.get(SourceId(2)).unwrap().text(), "〜\r\n");
 }
 
 #[test]

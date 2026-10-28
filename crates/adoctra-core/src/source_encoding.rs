@@ -18,7 +18,10 @@ enum Encoding {
     Utf16(Option<bool>),
     Utf32(Option<bool>),
     Single(&'static [u32]),
-    Iso2022Jp(&'static [u64]),
+    Iso2022Jp {
+        table: &'static [u64],
+        windows: bool,
+    },
     Multibyte {
         table: &'static [u64],
         kind: MultibyteKind,
@@ -35,6 +38,12 @@ enum MultibyteKind {
     Korean,
     Gbk,
     Gb18030,
+}
+
+enum Iso2022State {
+    Ascii,
+    Jis0208 { vendor: bool },
+    Katakana,
 }
 
 impl BinaryResource {
@@ -243,35 +252,68 @@ impl BinaryResource {
                 }
                 text
             }
-            Encoding::Iso2022Jp(table) => {
+            Encoding::Iso2022Jp { table, windows } => {
                 let mut text = String::with_capacity(bytes.len());
                 let mut remaining = bytes.as_slice();
-                let mut jis = false;
+                let mut state = Iso2022State::Ascii;
                 while let Some(&first) = remaining.first() {
                     if first == 0x1b {
                         // Ruby accepts JIS X 0208-1978/1983 and treats Roman
                         // like ASCII (including backslash and tilde). It does
-                        // not accept katakana, JIS X 0212 or revision escapes.
-                        jis = match remaining.get(..3) {
-                            Some([0x1b, b'$', b'@' | b'B']) => true,
-                            Some([0x1b, b'(', b'B' | b'J']) => false,
+                        // not accept JIS X 0212 or revision escapes. Windows
+                        // variants additionally designate halfwidth katakana.
+                        state = match remaining.get(..3) {
+                            Some([0x1b, b'$', b'@']) => Iso2022State::Jis0208 { vendor: false },
+                            Some([0x1b, b'$', b'B']) => Iso2022State::Jis0208 { vendor: true },
+                            Some([0x1b, b'(', b'B' | b'J']) => Iso2022State::Ascii,
+                            Some([0x1b, b'(', b'I']) if windows => Iso2022State::Katakana,
                             _ => return Err(invalid()),
                         };
                         remaining = &remaining[3..];
-                    } else if jis {
+                    } else if windows && matches!(first, 0x0e | 0x0f) {
+                        // SI always selects ASCII, rather than restoring the
+                        // designation preceding SO. Shifts inside a JIS pair
+                        // are rejected by the pair grammar below.
+                        state = if first == 0x0e {
+                            Iso2022State::Katakana
+                        } else {
+                            Iso2022State::Ascii
+                        };
+                        remaining = &remaining[1..];
+                    } else if matches!(state, Iso2022State::Jis0208 { .. }) {
                         let sequence = remaining.get(..2).ok_or_else(invalid)?;
                         if !sequence.iter().all(|byte| (0x21..=0x7e).contains(byte)) {
                             return Err(invalid());
                         }
-                        // All 6,879 mappings equal the corresponding EUC-JP
-                        // pair. Reuse its table without vendor substitutions.
+                        // CP50220/21 only enable NEC/IBM extension rows with
+                        // ESC $ B. ESC $ @ retains the Windows Unicode mappings
+                        // of base JIS characters, but rejects these extra rows.
+                        if windows
+                            && matches!(state, Iso2022State::Jis0208 { vendor: false })
+                            && matches!(first, 0x2d | 0x79..=0x7c)
+                        {
+                            return Err(invalid());
+                        }
+                        // JIS pairs reuse EUC-JP's table for ISO-2022-JP,
+                        // CP51932's for CP50220/CP50221, preserving variants.
                         let key = (u64::from(first + 0x80) << 8) | u64::from(sequence[1] + 0x80);
                         let index = table
                             .binary_search_by_key(&key, |entry| entry >> 32)
                             .map_err(|_| invalid())?;
                         text.push(char::from_u32(table[index] as u32).ok_or_else(invalid)?);
                         remaining = &remaining[2..];
+                    } else if (windows && (0xa1..=0xdf).contains(&first))
+                        || (matches!(state, Iso2022State::Katakana)
+                            && (0x21..=0x5f).contains(&first))
+                    {
+                        text.push(
+                            char::from_u32(0xff61 + u32::from((first & 0x7f) - 0x21)).unwrap(),
+                        );
+                        remaining = &remaining[1..];
                     } else {
+                        if matches!(state, Iso2022State::Katakana) {
+                            return Err(invalid());
+                        }
                         if first >= 128 || matches!(first, 0x0e | 0x0f) {
                             return Err(invalid());
                         }
@@ -504,7 +546,7 @@ mod tests {
         // must not silently fall back to a successful ASCII-prefix decode.
         for (encoding, bytes, kind) in [
             (
-                Some("CP50220"),
+                Some("stateless-ISO-2022-JP"),
                 &b"good\n\xff"[..],
                 ResourceErrorKind::Unsupported,
             ),
@@ -634,7 +676,9 @@ mod tests {
         );
         // These are recognized names, not misspellings that may fall back to UTF-8.
         assert_eq!(
-            decode(b"ASCII", Some("CP50220")).unwrap_err().kind,
+            decode(b"ASCII", Some("stateless-ISO-2022-JP"))
+                .unwrap_err()
+                .kind,
             ResourceErrorKind::Unsupported
         );
         assert_eq!(
@@ -808,12 +852,7 @@ mod tests {
             decode(b"ASCII", Some("ISO2022-JP2")).unwrap_err().kind,
             ResourceErrorKind::InvalidEncoding
         );
-        for name in [
-            "CP50220",
-            "CP50221",
-            "ISO-2022-JP-KDDI",
-            "stateless-ISO-2022-JP",
-        ] {
+        for name in ["ISO-2022-JP-KDDI", "stateless-ISO-2022-JP"] {
             assert_eq!(
                 decode(b"ASCII", Some(name)).unwrap_err().kind,
                 ResourceErrorKind::Unsupported
@@ -822,49 +861,128 @@ mod tests {
     }
 
     #[test]
-    fn iso2022_jp_matches_exhaustive_ruby_state_fingerprint() {
-        // Ruby 3.3.8, generate_encodings.rb --fingerprints. 656,645 inputs:
-        // all bytes/pairs and all escape candidates in each of five states.
-        let mut hash = 0xcbf29ce484222325_u64;
-        let mut feed = |byte| {
-            hash = (hash ^ u64::from(byte)).wrapping_mul(0x100000001b3);
-        };
-        let mut check = |bytes: &[u8]| match decode(bytes, Some("ISO-2022-JP")) {
-            Ok(resource) => {
-                feed(1_u8);
-                for byte in resource.text.bytes() {
-                    feed(byte);
-                }
-                feed(255);
+    fn cp5022_variants_decode_katakana_shifts_and_vendor_mappings() {
+        for name in ["CP50220", "CP50221", "cp50220", "cP50221"] {
+            for (bytes, expected) in [
+                (&b"\x1b$B!@!A-!y!|~\x1b(B"[..], "＼～①纊＂"),
+                (&b"\x1b$@!A\x1b$B-!\x1b(B"[..], "～①"),
+                (&b"\x1b$B-!\x1b$@!A\x1b(B"[..], "①～"),
+                (&b"\x1b(I1^\x1b(B"[..], "ｱﾞ"),
+                (&b"\x0e1^\x0f"[..], "ｱﾞ"),
+                (&b"\xb1\xde"[..], "ｱﾞ"),
+                (&b"\x1b(I\xb1\xde"[..], "ｱﾞ"),
+                (&b"\x1b$B$\"\x0e!\x0f$\""[..], "あ｡$\""),
+                (&b"\x1b$B\x0e!_\x0f"[..], "｡ﾟ"),
+                (&b"\x0e!\x1b$B$\"\x1b(J\\~"[..], "｡あ\\~"),
+                (&b"\x0e!\x0e!\x0f\x0fA"[..], "｡｡A"),
+                (&b"\xb1A\x1b(I\xb1!\x0fZ"[..], "ｱAｱ｡Z"),
+                (&b"\x1b(I!_"[..], "｡ﾟ"),
+                (&b"\x1b$B\x0e\x0f\x1b(I\x1b(B"[..], ""),
+            ] {
+                assert_eq!(
+                    decode(bytes, Some(name)).unwrap().text,
+                    expected,
+                    "{name}/{bytes:?}"
+                );
             }
-            Err(error) => {
-                assert_eq!(error.kind, ResourceErrorKind::InvalidEncoding);
-                feed(0);
-            }
-        };
-        for prefix in [
-            &b""[..],
-            &b"\x1b$B"[..],
-            &b"\x1b$@"[..],
-            &b"\x1b(B"[..],
-            &b"\x1b(J"[..],
-        ] {
-            check(prefix);
-            for a in 0..=255 {
-                check(&[prefix, &[a]].concat());
-            }
-            for a in 0..=255 {
-                for b in 0..=255 {
-                    check(&[prefix, &[a, b]].concat());
-                }
-            }
-            for a in 0..=255 {
-                for b in 0..=255 {
-                    check(&[prefix, &[0x1b, a, b, b'$', b'"']].concat());
-                }
+            for bytes in [
+                &b"\x1b"[..],
+                &b"\x1b$"[..],
+                &b"\x1b("[..],
+                &b"\x1b$B$"[..],
+                &b"\x1b$B$\x0e"[..],
+                &b"\x1b$B$\x0f"[..],
+                &b"\x1b$B$\x1b(B"[..],
+                &b"\x1b$(D"[..],
+                &b"\x1b&@\x1b$B"[..],
+                &b"\x1b$B~~"[..],
+                &b"\x1b$@-!"[..],
+                &b"\x1b$@y!"[..],
+                &b"\x1b$B-!\x1b$@-!"[..],
+                &b"\x80"[..],
+                &b"\xa0"[..],
+                &b"\xe0"[..],
+                &b"\xe0\xe0"[..],
+                &b"\x8e\xb1"[..],
+                &b"\x1b$B\xb1\xb1"[..],
+                &b"\x1b$B$\"\n"[..],
+                &b"\x1b(I1\n"[..],
+                &b"\x1b(I "[..],
+                &b"\x1b(I\x7f"[..],
+                &b"\x1b(I`"[..],
+            ] {
+                assert_eq!(
+                    decode(bytes, Some(name)).unwrap_err().kind,
+                    ResourceErrorKind::InvalidEncoding,
+                    "{name}/{bytes:?}"
+                );
             }
         }
-        assert_eq!(hash, 0xfdd8ceaeaea5a195);
+    }
+
+    #[test]
+    fn iso2022_jp_matches_exhaustive_ruby_state_fingerprint() {
+        // Ruby 3.3.8, generate_encodings.rb --fingerprints. ISO: 656,645 inputs
+        // in five designations; each CP variant: 1,575,948 inputs in twelve
+        // designation/shift combinations. All bytes/pairs/escape candidates.
+        for (name, expected) in [
+            ("ISO-2022-JP", 0xfdd8ceaeaea5a195_u64),
+            ("CP50220", 0x3b6e1f9768937b18),
+            ("CP50221", 0x3b6e1f9768937b18),
+        ] {
+            let mut hash = 0xcbf29ce484222325_u64;
+            let mut feed = |byte| {
+                hash = (hash ^ u64::from(byte)).wrapping_mul(0x100000001b3);
+            };
+            let mut check = |bytes: &[u8]| match decode(bytes, Some(name)) {
+                Ok(resource) => {
+                    feed(1_u8);
+                    for byte in resource.text.bytes() {
+                        feed(byte);
+                    }
+                    feed(255);
+                }
+                Err(error) => {
+                    assert_eq!(error.kind, ResourceErrorKind::InvalidEncoding);
+                    feed(0);
+                }
+            };
+            let mut prefixes = vec![
+                &b""[..],
+                &b"\x1b$B"[..],
+                &b"\x1b$@"[..],
+                &b"\x1b(B"[..],
+                &b"\x1b(J"[..],
+            ];
+            if name.starts_with("CP5022") {
+                prefixes.extend([
+                    &b"\x1b(I"[..],
+                    &b"\x0e"[..],
+                    &b"\x0f"[..],
+                    &b"\x1b$B\x0e"[..],
+                    &b"\x1b$B\x0f"[..],
+                    &b"\x1b(I\x0f"[..],
+                    &b"\x1b(J\x0e"[..],
+                ]);
+            }
+            for prefix in prefixes {
+                check(prefix);
+                for a in 0..=255 {
+                    check(&[prefix, &[a]].concat());
+                }
+                for a in 0..=255 {
+                    for b in 0..=255 {
+                        check(&[prefix, &[a, b]].concat());
+                    }
+                }
+                for a in 0..=255 {
+                    for b in 0..=255 {
+                        check(&[prefix, &[0x1b, a, b, b'$', b'"']].concat());
+                    }
+                }
+            }
+            assert_eq!(hash, expected, "{name}");
+        }
     }
 
     #[test]

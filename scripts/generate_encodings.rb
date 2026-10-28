@@ -18,7 +18,7 @@ MULTIBYTE = (JAPANESE + BIG5 + GB + KOREAN).freeze
 # This enumerates all byte pairs, rather than the table generator's lead/trail
 # ranges. EUC also tests every pair following the three-byte prefix 0x8f.
 if ARGV == ['--fingerprints']
-  (MULTIBYTE + ['GB18030-four', 'ISO-2022-JP']).each do |label|
+  (MULTIBYTE + ['GB18030-four', 'ISO-2022-JP', 'CP50220', 'CP50221']).each do |label|
     name = label == 'GB18030-four' ? 'GB18030' : label
     hash = 0xcbf29ce484222325
     feed = lambda { |byte| hash = ((hash ^ byte) * 0x100000001b3) & 0xffffffffffffffff }
@@ -32,11 +32,15 @@ if ARGV == ['--fingerprints']
         feed.call 0
       end
     end
-    if label == 'ISO-2022-JP'
+    if %w[ISO-2022-JP CP50220 CP50221].include? label
       # Every single byte/pair in every designation, including errors. Every
       # escape candidate is followed by text valid in both ASCII and JIS, so
       # the digest also distinguishes the resulting state after a transition.
-      [[], [27, 36, 66], [27, 36, 64], [27, 40, 66], [27, 40, 74]].each do |prefix|
+      prefixes = [[], [27, 36, 66], [27, 36, 64], [27, 40, 66], [27, 40, 74]]
+      if label.start_with? 'CP5022'
+        prefixes.concat [[27, 40, 73], [14], [15], [27, 36, 66, 14], [27, 36, 66, 15], [27, 40, 73, 15], [27, 40, 74, 14]]
+      end
+      prefixes.each do |prefix|
         check.call prefix
         256.times { |a| check.call prefix + [a] }
         256.times { |a| 256.times { |b| check.call prefix + [a, b] } }
@@ -97,7 +101,8 @@ Encoding.list.sort_by(&:name).each do |enc|
          when 'UTF-32' then 'Encoding::Utf32(None)'
          when 'UTF-32LE' then 'Encoding::Utf32(Some(true))'
          when 'UTF-32BE' then 'Encoding::Utf32(Some(false))'
-         when 'ISO-2022-JP' then "Encoding::Iso2022Jp(&MULTI_#{MULTIBYTE.index('EUC-JP')})"
+         when 'ISO-2022-JP' then "Encoding::Iso2022Jp { table: &MULTI_#{MULTIBYTE.index('EUC-JP')}, windows: false }"
+         when 'CP50220', 'CP50221' then "Encoding::Iso2022Jp { table: &MULTI_#{MULTIBYTE.index('CP51932')}, windows: true }"
          else
            if (index = single_byte.index(enc))
              "Encoding::Single(&TABLE_#{index})"

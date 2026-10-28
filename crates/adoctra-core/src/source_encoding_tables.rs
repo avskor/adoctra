@@ -18,8 +18,14 @@ pub(super) fn lookup(name: &str) -> Option<Encoding> {
             kind: MultibyteKind::Big5,
         },
         "cesu-8" => Encoding::Unsupported,
-        "cp50220" => Encoding::Unsupported,
-        "cp50221" => Encoding::Unsupported,
+        "cp50220" => Encoding::Iso2022Jp {
+            table: &MULTI_4,
+            windows: true,
+        },
+        "cp50221" => Encoding::Iso2022Jp {
+            table: &MULTI_4,
+            windows: true,
+        },
         "cp51932" => Encoding::Multibyte {
             table: &MULTI_4,
             kind: MultibyteKind::EucJp,
@@ -83,7 +89,10 @@ pub(super) fn lookup(name: &str) -> Option<Encoding> {
         "cp865" | "ibm865" => Encoding::Single(&TABLE_15),
         "cp866" | "ibm866" => Encoding::Single(&TABLE_16),
         "cp869" | "ibm869" => Encoding::Single(&TABLE_17),
-        "iso-2022-jp" | "iso2022-jp" => Encoding::Iso2022Jp(&MULTI_2),
+        "iso-2022-jp" | "iso2022-jp" => Encoding::Iso2022Jp {
+            table: &MULTI_2,
+            windows: false,
+        },
         "iso-2022-jp-2" | "iso2022-jp2" => Encoding::Unavailable,
         "iso-2022-jp-kddi" => Encoding::Unsupported,
         "iso-8859-1" | "iso8859-1" => Encoding::Single(&TABLE_18),

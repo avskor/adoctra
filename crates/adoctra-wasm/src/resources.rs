@@ -173,6 +173,43 @@ mod tests {
     use super::*;
 
     #[test]
+    fn cp5022_includes_share_variants_and_export_decoded_snapshots() {
+        let mut workspace = ResourceWorkspace::new();
+        workspace.set("/main.adoc", "include::part.adoc[encoding=CP50220,lines=2]\n\ninclude::part.adoc[encoding=CP50221,lines=2]\n\ninclude::part.adoc[encoding=ISO-2022-JP,lines=2,opts=optional]").unwrap();
+        workspace
+            .set_binary("/part.adoc", b"ignored\r\n*\x1b$B!A\x1b(B*\r\n")
+            .unwrap();
+        let main = workspace.load("/main.adoc", None).unwrap();
+        let json = workspace.parse_json(main).unwrap();
+        assert!(json.contains(r#""diagnostics":[]"#), "{json}");
+        assert!(json.contains("～") && json.contains("〜"), "{json}");
+        assert_eq!(workspace.source(1).unwrap().text(), "ignored\r\n*～*\r\n");
+        assert_eq!(workspace.source(2).unwrap().text(), "ignored\r\n*〜*\r\n");
+        assert!(workspace.source(3).is_err());
+        let tokens = workspace.tokens_json(main).unwrap();
+        assert!(
+            tokens.contains(r#""source_id":1,"start":9,"end":14"#),
+            "{tokens}"
+        );
+        assert_eq!(
+            workspace.source(1).unwrap().position(13).unwrap(),
+            adoctra_core::SourcePosition { line: 2, column: 3 }
+        );
+        workspace
+            .set_binary("/part.adoc", b"ignored\r\n*\x0e1\x0f*\r\n\x1b$")
+            .unwrap();
+        let changed = workspace.parse_json(main).unwrap();
+        assert!(
+            changed.contains("ｱ") && changed.contains("InvalidEncoding"),
+            "{changed}"
+        );
+        assert_eq!(workspace.source(3).unwrap().text(), "ignored\r\n*ｱ*\r\n");
+        assert!(!workspace.source(3).unwrap().is_complete());
+        assert_eq!(workspace.source(1).unwrap().text(), "ignored\r\n*～*\r\n");
+        assert_eq!(workspace.source(2).unwrap().text(), "ignored\r\n*〜*\r\n");
+    }
+
+    #[test]
     fn iso2022_includes_export_decoded_spans_and_immutable_alias_snapshots() {
         let mut workspace = ResourceWorkspace::new();
         workspace.set("/main.adoc", "include::part.adoc[encoding=ISO-2022-JP,lines=2]\n\ninclude::part.adoc[encoding=ISO2022-JP,lines=2]").unwrap();
