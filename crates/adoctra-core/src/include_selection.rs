@@ -4,6 +4,7 @@
 use crate::{Diagnostic, Severity, SourceId, Span};
 use std::collections::{BTreeMap, BTreeSet};
 
+#[derive(Clone)]
 pub(crate) enum Selection {
     All,
     Lines {
@@ -20,6 +21,99 @@ pub(crate) struct Selected {
 }
 
 impl Selection {
+    /// Validate only selected UTF-8/BINARY lines. Retained UTF-8 text is never
+    /// repaired; skipped undecodable lines are explicit immutable omissions.
+    pub(crate) fn recover_bytes(
+        &self,
+        resource: crate::BinaryResource,
+        binary: bool,
+    ) -> crate::ResourceResult<crate::resource::IncludeSnapshot> {
+        let invalid = || {
+            crate::ResourceError::new(
+                crate::ResourceErrorKind::InvalidEncoding,
+                &resource.name,
+                "invalid source encoding in consumed include content",
+            )
+        };
+        let mut text = String::new();
+        let mut omissions = Vec::new();
+        let limit = self.line_limit().unwrap_or(usize::MAX);
+        for (index, raw) in resource
+            .bytes
+            .split_inclusive(|&byte| byte == b'\n')
+            .take(limit)
+            .enumerate()
+        {
+            // Ruby recognizes a BOM on the first *selected* line. Keep these
+            // UTF-8 candidates until selection tells us which line is first.
+            let ascii = raw.strip_prefix(&[0xef, 0xbb, 0xbf]).unwrap_or(raw);
+            let decoded = std::str::from_utf8(raw)
+                .ok()
+                .filter(|_| !binary || ascii.is_ascii());
+            if let Some(line) = decoded {
+                text.push_str(line);
+            } else {
+                if matches!(self, Self::Tags(_))
+                    && raw.windows(2).any(|s| s == b"::")
+                    && raw.windows(2).any(|s| s == b"[]")
+                {
+                    // Ruby's UTF-8 regexp validates the whole candidate line,
+                    // even when it is outside the selected tag. BINARY can scan
+                    // arbitrary bytes; malformed tag-marker lines still require
+                    // a byte-based marker/source-position contract (open gap).
+                    let view: String = raw
+                        .iter()
+                        .map(|&byte| {
+                            if byte.is_ascii() {
+                                char::from(byte)
+                            } else {
+                                '\u{fffd}'
+                            }
+                        })
+                        .collect();
+                    if !binary || tag_directive(&view).is_some() {
+                        return Err(invalid());
+                    }
+                }
+                omissions.push(crate::OmittedSourceLine {
+                    offset: text.len(),
+                    line: index + 1,
+                    bytes: raw.to_vec(),
+                });
+            }
+        }
+        let lines = crate::resource::snapshot_lines(&text, &omissions);
+        let selected = self.clone().select(
+            lines.iter().map(|line| {
+                (
+                    line.original.expect("physical selection slot"),
+                    line.text.as_ref(),
+                )
+            }),
+            SourceId::default(),
+        );
+        if omissions.iter().any(|line| selected.keep[line.line - 1]) {
+            return Err(invalid());
+        }
+        if binary {
+            let mut kept = lines.iter().zip(&selected.keep).filter(|(_, keep)| **keep);
+            kept.next(); // Its leading BOM is consumed by reader normalization.
+            if kept.any(|(line, _)| !line.text.is_ascii()) {
+                return Err(invalid());
+            }
+        }
+        Ok(crate::resource::IncludeSnapshot {
+            decoded: crate::IncludeResource {
+                resource: crate::Resource {
+                    name: resource.name,
+                    text,
+                },
+                complete: false,
+            },
+            omissions,
+        })
+    }
+
     /// Ruby stops reading only after consuming its entire sorted line queue.
     /// Invalid first numbers block that queue, and open ranges read to EOF.
     pub fn line_limit(&self) -> Option<usize> {
@@ -163,6 +257,11 @@ impl Selection {
                 } else {
                     (!tags.iter().any(|(_, v)| *v), None)
                 };
+                let required: Vec<_> = tags
+                    .iter()
+                    .filter(|(_, selected)| *selected)
+                    .map(|(name, _)| name.clone())
+                    .collect();
                 let tags: BTreeMap<_, _> = tags.into_iter().collect();
                 let mut found = BTreeSet::new();
                 let mut stack: Vec<(String, bool, Span, usize)> = Vec::new();
@@ -177,18 +276,26 @@ impl Selection {
                                 selected =
                                     stack.last().map_or(base, |(_, selected, _, _)| *selected);
                             } else if tags.contains_key(name) {
-                                let message = if let Some(index) =
+                                let (message, report) = if let Some(stack_index) =
                                     stack.iter().rposition(|(key, _, _, _)| key == name)
                                 {
                                     let expected = stack.last().unwrap().0.clone();
-                                    stack.remove(index);
-                                    format!(
+                                    stack.remove(stack_index);
+                                    (format!(
                                         "mismatched end tag: expected '{expected}', found '{name}'"
-                                    )
+                                    ), format!("mismatched end tag (expected '{expected}' but found '{name}') at line {}", index + 1))
                                 } else {
-                                    format!("unexpected end tag '{name}'")
+                                    (
+                                        format!("unexpected end tag '{name}'"),
+                                        format!(
+                                            "unexpected end tag '{name}' at line {}",
+                                            index + 1
+                                        ),
+                                    )
                                 };
-                                result.diagnostics.push(warning(span, message));
+                                let mut diagnostic = warning(span, message);
+                                diagnostic.report.message = Some(report);
+                                result.diagnostics.push(diagnostic);
                             }
                         } else if let Some(value) = tags.get(name) {
                             selected = *value;
@@ -213,9 +320,7 @@ impl Selection {
                 }
                 result
                     .missing
-                    .extend(tags.into_iter().filter_map(|(name, selected)| {
-                        (selected && !found.contains(&name)).then_some(name)
-                    }));
+                    .extend(required.into_iter().filter(|name| !found.contains(name)));
             }
         }
         result

@@ -21,7 +21,11 @@ pub(crate) struct Line {
 
 impl Line {
     pub fn from_source(source: &str) -> Vec<Self> {
-        let bom = usize::from(source.starts_with('\u{feff}')) * 3;
+        Self::from_source_with_bom(source, true)
+    }
+
+    pub(crate) fn from_source_with_bom(source: &str, strip_bom: bool) -> Vec<Self> {
+        let bom = usize::from(strip_bom && source.starts_with('\u{feff}')) * 3;
         crate::scanner::lines_with_offsets(&source[bom..])
             .into_iter()
             .map(|(off, text)| {
@@ -54,6 +58,20 @@ impl Line {
             text: text.into(),
             eol: "\n".into(),
             fragments: Vec::new(),
+        }
+    }
+
+    /// Include normalization recognizes a BOM after line/tag selection too.
+    /// Called before other normalization, while the physical line has one
+    /// contiguous fragment. Keep the snapshot and shift only the line's view.
+    pub(crate) fn strip_bom(&mut self) {
+        if let Some(text) = self.text.strip_prefix('\u{feff}') {
+            self.text = Arc::from(text);
+            self.original = self.original.map(|offset| offset + 3);
+            debug_assert_eq!(self.fragments.len(), 1);
+            let fragment = &mut self.fragments[0];
+            fragment.end -= 3;
+            fragment.original_start += 3;
         }
     }
 

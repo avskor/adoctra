@@ -3,7 +3,8 @@
 //! legacy encodings require a host decoder; never mistake a known unsupported
 //! encoding for an unknown name (which Ruby ignores).
 use crate::{
-    BinaryResource, IncludeResource, Resource, ResourceError, ResourceErrorKind, ResourceResult,
+    BinaryResource, IncludeInput, IncludeResource, Resource, ResourceError, ResourceErrorKind,
+    ResourceResult,
 };
 use std::borrow::Cow;
 
@@ -23,6 +24,29 @@ enum Encoding {
 }
 
 impl BinaryResource {
+    /// Defer malformed UTF-8/BINARY to reader selection, without decoding or
+    /// replacing its bytes. Other codecs retain strict consumed-prefix checks.
+    pub fn prepare_include(
+        self,
+        encoding: Option<&str>,
+        line_limit: Option<usize>,
+    ) -> ResourceResult<IncludeInput> {
+        let name = encoding.unwrap_or_default().to_ascii_lowercase();
+        let kind = tables::lookup(&name).unwrap_or(Encoding::Utf8);
+        if matches!(kind, Encoding::Utf8 | Encoding::Binary)
+            && !self.bytes.starts_with(&[0xff, 0xfe])
+            && !self.bytes.starts_with(&[0xfe, 0xff])
+            && self.decode_text(encoding).is_err()
+        {
+            return Ok(IncludeInput::Deferred {
+                resource: self,
+                binary: matches!(kind, Encoding::Binary),
+            });
+        }
+        self.decode_include(encoding, line_limit)
+            .map(IncludeInput::Decoded)
+    }
+
     /// Decode an include resource. Unknown encoding names fall back to UTF-8,
     /// as in Ruby. UTF-16 BOM detection applies to default/UTF-8 and BINARY;
     /// explicit other encodings take precedence. BOM and CR/LF are retained in

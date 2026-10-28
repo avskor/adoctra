@@ -19,6 +19,399 @@ fn setup(source: &str) -> (MemoryResources, SourceMap, ParseOptions) {
 }
 
 #[test]
+fn selected_bom_is_removed_without_shifting_snapshot_or_physical_positions() {
+    for encoding in ["UTF-8", "BINARY"] {
+        for (selection, bytes, line) in [
+            ("lines=2", &b"\xff\r\n\xef\xbb\xbf*good*\r\n"[..], 2),
+            (
+                "tag=body",
+                &b"\xff\n// tag::body[]\n\xef\xbb\xbf*good*\n// end::body[]\n"[..],
+                3,
+            ),
+            ("lines=2", &b"skip\n\xef\xbb\xbf*good*\n"[..], 2),
+        ] {
+            let (mut resources, mut sources, options) = setup(&format!(
+                "include::part.adoc[encoding={encoding},{selection},indent=0]"
+            ));
+            resources.insert_binary("/docs/part.adoc", bytes).unwrap();
+            let result = parse_resource(&mut sources, &options, &resources).unwrap();
+            assert!(
+                result.diagnostics.is_empty(),
+                "{encoding}/{selection}: {:?}",
+                result.diagnostics
+            );
+            let block = result.document.flat_blocks()[0];
+            assert!(matches!(&block.kind, BlockKind::Paragraph { .. }));
+            assert_eq!(sources.slice(block.span), Some("*good*"));
+            let file = sources.get(block.span.source_id).unwrap();
+            assert!(file.text().contains("\u{feff}*good*"));
+            let position = file.position(block.span.start).unwrap();
+            assert_eq!((position.line, position.column), (line, 2));
+            assert!(result
+                .tokens
+                .iter()
+                .all(|token| sources.slice(token.span).is_some()));
+        }
+    }
+}
+
+#[test]
+fn bom_on_a_later_selected_line_is_not_normalized_as_a_leading_bom() {
+    for encoding in ["UTF-8", "BINARY"] {
+        let (mut resources, mut sources, options) = setup(&format!(
+            "include::part.adoc[encoding={encoding},lines=1;3]"
+        ));
+        resources
+            .insert_binary("/docs/part.adoc", b"first\n\xff\n\xef\xbb\xbflast\n")
+            .unwrap();
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        if encoding == "UTF-8" {
+            assert!(result.diagnostics.is_empty());
+            assert_eq!(
+                sources.slice(result.document.flat_blocks()[0].span),
+                Some("first\n\u{feff}last")
+            );
+        } else {
+            assert_eq!(result.diagnostics.len(), 1);
+            assert_eq!(
+                result.diagnostics[0].report.message.as_deref(),
+                Some("include file not readable: /docs/part.adoc")
+            );
+            assert!(sources.get(SourceId(1)).is_none());
+        }
+    }
+}
+
+#[test]
+fn skipped_invalid_utf8_lines_have_explicit_bytes_and_physical_positions() {
+    let root = ":attribute-missing: warn\n\ninclude::part.adoc[lines=2;4;6,indent=0]";
+    let (mut resources, mut sources, options) = setup(root);
+    let first = "  Ж {missing}\r\n";
+    let second = "  🙂 {missing}\r\n";
+    let last = "  last\r\n";
+    resources
+        .insert_binary(
+            "/docs/part.adoc",
+            [
+                &b"\xff\r\n"[..],
+                first.as_bytes(),
+                &b"\xc0\xaf\n"[..],
+                second.as_bytes(),
+                &b"\xed\xa0\x80\r\n"[..],
+                last.as_bytes(),
+                &b"\xff"[..],
+            ]
+            .concat(),
+        )
+        .unwrap();
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(result.diagnostics.len(), 2, "{:?}", result.diagnostics);
+    let file = sources.get(SourceId(1)).unwrap();
+    assert!(!file.is_complete());
+    assert_eq!(file.text(), format!("{first}{second}{last}"));
+    let omitted = file.omitted_lines();
+    assert_eq!(omitted.len(), 3);
+    for (actual, line, offset, bytes) in [
+        (&omitted[0], 1, 0, &b"\xff\r\n"[..]),
+        (&omitted[1], 3, first.len(), &b"\xc0\xaf\n"[..]),
+        (
+            &omitted[2],
+            5,
+            first.len() + second.len(),
+            &b"\xed\xa0\x80\r\n"[..],
+        ),
+    ] {
+        assert_eq!(
+            (actual.line, actual.offset, actual.bytes.as_slice()),
+            (line, offset, bytes)
+        );
+    }
+    for (diagnostic, line) in result.diagnostics.iter().zip([2, 4]) {
+        assert_eq!(sources.slice(diagnostic.span), Some("{missing}"));
+        let position = file.position(diagnostic.span.start).unwrap();
+        assert_eq!((position.line, position.column), (line, 5));
+    }
+    let block = result.document.flat_blocks()[0];
+    assert_eq!(block.span.source_id, SourceId(1));
+    assert!(matches!(&block.kind, BlockKind::Paragraph { .. }));
+    assert!(result
+        .tokens
+        .iter()
+        .all(|token| sources.slice(token.span).is_some()));
+    // A sparse source cannot be parsed as an implicitly valid whole document.
+    assert_eq!(
+        parse_resource(
+            &mut sources,
+            &ParseOptions {
+                source_id: SourceId(1),
+                ..Default::default()
+            },
+            &resources
+        )
+        .unwrap_err()
+        .kind,
+        ResourceErrorKind::InvalidEncoding
+    );
+}
+
+#[test]
+fn tag_selection_skips_invalid_plain_lines_but_validates_selected_or_scanned_bytes() {
+    for encoding in ["UTF-8", "BINARY", "unknown-codec"] {
+        let root = format!("include::part.adoc[encoding={encoding},tag=body]");
+        let (mut resources, mut sources, options) = setup(&root);
+        resources
+            .insert_binary(
+                "/docs/part.adoc",
+                b"\xff\n// tag::body[]\n*good*\n// end::body[]\n\xff",
+            )
+            .unwrap();
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        assert!(
+            result.diagnostics.is_empty(),
+            "{encoding}: {:?}",
+            result.diagnostics
+        );
+        let source = sources.get(SourceId(1)).unwrap();
+        assert_eq!(source.text(), "// tag::body[]\n*good*\n// end::body[]\n");
+        assert_eq!(
+            source
+                .omitted_lines()
+                .iter()
+                .map(|line| line.line)
+                .collect::<Vec<_>>(),
+            [1, 5]
+        );
+        let block = result.document.flat_blocks()[0];
+        assert_eq!(sources.slice(block.span), Some("*good*"));
+        assert_eq!(source.position(block.span.start).unwrap().line, 3);
+    }
+    for (encoding, selection, bytes) in [
+        ("UTF-8", "lines=2", &b"good\n\xff\nlast\n"[..]),
+        ("BINARY", "lines=2", &b"good\n\xff\nlast\n"[..]),
+        ("Shift_JIS", "lines=1;3", &b"good\n\xff\nlast\n"[..]),
+        (
+            "UTF-8",
+            "tag=body",
+            &b"// tag::body[]\n\xff\n// end::body[]\n"[..],
+        ),
+        (
+            "UTF-8",
+            "tag=body",
+            &b"// tag::body[]\ngood\n// end::body[]\n\xff :: []"[..],
+        ),
+    ] {
+        let (mut resources, mut sources, options) = setup(&format!(
+            "include::part.adoc[encoding={encoding},{selection},opts=optional]"
+        ));
+        resources.insert_binary("/docs/part.adoc", bytes).unwrap();
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        assert_eq!(result.diagnostics.len(), 1, "{encoding}/{selection}");
+        assert_eq!(
+            result.diagnostics[0].report.message.as_deref(),
+            Some("include file not readable: /docs/part.adoc")
+        );
+        assert!(sources.get(SourceId(1)).is_none());
+    }
+}
+
+#[test]
+fn omitted_bytes_are_part_of_immutable_snapshot_identity_and_resource_budget() {
+    let (mut resources, mut sources, options) = setup("include::part.adoc[lines=1;3]");
+    resources
+        .insert_binary("/docs/part.adoc", b"first\n\xff\nlast\n")
+        .unwrap();
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty());
+    let again = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(again.document.flat_blocks()[0].span.source_id, SourceId(1));
+    resources
+        .insert_binary("/docs/part.adoc", b"first\n\xfe\nlast\n")
+        .unwrap();
+    let changed = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(
+        changed.document.flat_blocks()[0].span.source_id,
+        SourceId(2)
+    );
+    assert_eq!(
+        sources.get(SourceId(1)).unwrap().omitted_lines()[0].bytes,
+        b"\xff\n"
+    );
+    assert_eq!(
+        sources.get(SourceId(2)).unwrap().omitted_lines()[0].bytes,
+        b"\xfe\n"
+    );
+    assert_eq!(
+        sources.get(SourceId(1)).unwrap().text(),
+        sources.get(SourceId(2)).unwrap().text()
+    );
+    assert_eq!(
+        sources
+            .load_with_encoding("part.adoc", Some(options.source_id), &resources, None)
+            .unwrap_err()
+            .kind,
+        ResourceErrorKind::InvalidEncoding
+    );
+    let mut limited = options.clone();
+    limited.includes.max_bytes = "first\nlast\n".len();
+    let result = parse_resource(&mut sources, &limited, &resources).unwrap();
+    assert!(result
+        .diagnostics
+        .iter()
+        .any(|d| d.message.contains("maximum included byte count")));
+}
+
+#[test]
+fn sparse_nested_includes_and_tag_warnings_keep_physical_locations() {
+    let (mut resources, mut sources, options) = setup("include::sub/outer.adoc[lines=1;3;4]");
+    resources
+        .insert_binary(
+            "/docs/sub/outer.adoc",
+            b"outer\n\xff\n\ninclude::inner.adoc[lines=1;3]\n",
+        )
+        .unwrap();
+    resources
+        .insert_binary("/docs/sub/inner.adoc", b"first\n\xff\nlast\n")
+        .unwrap();
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+    let blocks = result.document.flat_blocks();
+    assert_eq!(blocks.len(), 2);
+    assert_eq!(blocks[1].span.source_id, SourceId(2));
+    assert_eq!(
+        sources.get(SourceId(2)).unwrap().name(),
+        "/docs/sub/inner.adoc"
+    );
+    assert_eq!(
+        sources
+            .get(SourceId(1))
+            .unwrap()
+            .position("outer\n\n".len())
+            .unwrap()
+            .line,
+        4
+    );
+    assert_eq!(
+        sources
+            .get(SourceId(2))
+            .unwrap()
+            .position("first\n".len())
+            .unwrap()
+            .line,
+        3
+    );
+
+    let (mut resources, mut sources, options) = setup("include::part.adoc[tag=body]");
+    resources
+        .insert_binary(
+            "/docs/part.adoc",
+            b"\xff\n// end::body[]\n\xfe\n// tag::body[]\ngood\n",
+        )
+        .unwrap();
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(result.diagnostics.len(), 2, "{:?}", result.diagnostics);
+    let source = sources.get(SourceId(1)).unwrap();
+    for (diagnostic, line, marker) in [
+        (&result.diagnostics[0], 2, "// end::body[]"),
+        (&result.diagnostics[1], 4, "// tag::body[]"),
+    ] {
+        assert_eq!(sources.slice(diagnostic.span), Some(marker));
+        assert_eq!(source.position(diagnostic.span.start).unwrap().line, line);
+    }
+    assert!(result.diagnostics[1]
+        .report
+        .message
+        .as_deref()
+        .unwrap()
+        .contains("starting at line 4"));
+}
+
+#[test]
+fn skipped_non_ascii_bytes_and_empty_selections_remain_explicit() {
+    for encoding in ["UTF-8", "BINARY"] {
+        let mut bytes = b"first\n".to_vec();
+        for byte in 128..=255 {
+            bytes.extend_from_slice(&[byte, b'\n']);
+        }
+        bytes.extend_from_slice(b"last\n");
+        let (mut resources, mut sources, options) = setup(&format!(
+            "include::part.adoc[encoding={encoding},lines=1;130]"
+        ));
+        resources.insert_binary("/docs/part.adoc", bytes).unwrap();
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        assert!(result.diagnostics.is_empty());
+        let source = sources.get(SourceId(1)).unwrap();
+        assert_eq!(source.text(), "first\nlast\n");
+        assert_eq!(source.omitted_lines().len(), 128);
+        assert_eq!(source.position(6).unwrap().line, 130);
+    }
+    for selection in ["lines=0", "lines=9", "tag=absent"] {
+        let (mut resources, mut sources, options) =
+            setup(&format!("include::part.adoc[{selection}]"));
+        resources
+            .insert_binary("/docs/part.adoc", b"\xff\n\xfe")
+            .unwrap();
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        assert!(result.document.flat_blocks().is_empty());
+        assert_eq!(
+            result.diagnostics.len(),
+            usize::from(selection == "tag=absent")
+        );
+        let source = sources.get(SourceId(1)).unwrap();
+        assert_eq!(source.text(), "");
+        assert_eq!(source.omitted_lines().len(), 2);
+        assert_eq!(source.omitted_lines()[1].bytes, b"\xfe");
+    }
+}
+
+#[test]
+fn sparse_tag_reports_keep_ruby_names_order_and_physical_line_numbers() {
+    let (mut resources, mut sources, options) = setup("include::part.adoc[tags=z;a;b]");
+    resources
+        .insert_binary("/docs/part.adoc", b"\xff\n")
+        .unwrap();
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(result.diagnostics.len(), 3);
+    assert_eq!(
+        result
+            .diagnostics
+            .iter()
+            .filter(|d| !d.report.suppressed)
+            .count(),
+        1
+    );
+    assert_eq!(
+        result.diagnostics[0].report.message.as_deref(),
+        Some("tags 'z, a, b' not found in include file: /docs/part.adoc")
+    );
+    for (diagnostic, name) in result.diagnostics.iter().zip(["z", "a", "b"]) {
+        assert!(diagnostic.message.starts_with(&format!("tag '{name}'")));
+        assert_eq!(
+            sources.slice(diagnostic.span),
+            Some("include::part.adoc[tags=z;a;b]")
+        );
+    }
+    let (mut resources, mut sources, options) = setup("include::part.adoc[tags=a;b]");
+    resources
+        .insert_binary(
+            "/docs/part.adoc",
+            b"\xff\n// tag::a[]\n// tag::b[]\ngood\n// end::a[]\n// end::b[]\n",
+        )
+        .unwrap();
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(result.diagnostics.len(), 1, "{:?}", result.diagnostics);
+    assert_eq!(result.diagnostics[0].report.message.as_deref(), Some("mismatched end tag (expected 'b' but found 'a') at line 5 of include file: /docs/part.adoc"));
+    assert_eq!(
+        sources
+            .get(SourceId(1))
+            .unwrap()
+            .position(result.diagnostics[0].span.start)
+            .unwrap()
+            .line,
+        5
+    );
+}
+
+#[test]
 fn finite_line_selection_preserves_positions_in_an_explicitly_incomplete_prefix() {
     for (encoding, glyph, bad) in [
         ("Shift_JIS", &b"\x95\x5c"[..], &b"\x81"[..]),

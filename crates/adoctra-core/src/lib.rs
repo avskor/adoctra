@@ -80,8 +80,8 @@ pub use error::{Error, Result};
 pub use extension::{Registry, TreeProcessor};
 pub use image::{inline_svg, normalize_web_path};
 pub use resource::{
-    BinaryResource, IncludeResource, MemoryResources, Resource, ResourceError, ResourceErrorKind,
-    ResourceProvider, ResourceRequest, ResourceResult,
+    BinaryResource, IncludeInput, IncludeResource, MemoryResources, OmittedSourceLine, Resource,
+    ResourceError, ResourceErrorKind, ResourceProvider, ResourceRequest, ResourceResult,
 };
 pub use source::{SourceFile, SourceId, SourceMap, SourcePosition};
 pub use tokenizer::{Token, TokenKind};

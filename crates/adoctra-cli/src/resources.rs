@@ -1,7 +1,7 @@
 //! Native filesystem adapter; the parser and WASM never import this module.
 use adoctra::{
-    BinaryResource, IncludeResource, Resource, ResourceError, ResourceErrorKind, ResourceProvider,
-    ResourceRequest, ResourceResult,
+    BinaryResource, IncludeInput, IncludeResource, Resource, ResourceError, ResourceErrorKind,
+    ResourceProvider, ResourceRequest, ResourceResult,
 };
 use std::path::{Path, PathBuf};
 
@@ -96,6 +96,16 @@ impl FileResources {
 }
 
 impl ResourceProvider for FileResources {
+    fn prepare_include(
+        &self,
+        request: ResourceRequest<'_>,
+        encoding: Option<&str>,
+        line_limit: Option<usize>,
+    ) -> ResourceResult<IncludeInput> {
+        self.load_binary(request)?
+            .prepare_include(encoding, line_limit)
+    }
+
     fn load_include(
         &self,
         request: ResourceRequest<'_>,
@@ -327,10 +337,26 @@ mod tests {
             .unwrap_err();
         assert_eq!(error.kind, ResourceErrorKind::AccessDenied);
 
+        let error = provider
+            .prepare_include(
+                ResourceRequest {
+                    target: "../outside.adoc",
+                    referrer: None,
+                },
+                Some("UTF-8"),
+                None,
+            )
+            .unwrap_err();
+        assert_eq!(error.kind, ResourceErrorKind::AccessDenied);
+
         let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
         let target = format!("http://{}/part.adoc", listener.local_addr().unwrap());
         let server = std::thread::spawn(move || {
-            for bytes in [&b"\xcf\xf0\xe8\xe2\xe5\xf2"[..], &b"\x95\x5c\r\n\x81"[..]] {
+            for bytes in [
+                &b"\xcf\xf0\xe8\xe2\xe5\xf2"[..],
+                &b"\x95\x5c\r\n\x81"[..],
+                &b"first\n\xff\nlast\n"[..],
+            ] {
                 let (mut stream, _) = listener.accept().unwrap();
                 let mut line = String::new();
                 BufReader::new(&stream).read_line(&mut line).unwrap();
@@ -368,6 +394,19 @@ mod tests {
         assert_eq!(prefix.resource.name, target);
         assert_eq!(prefix.resource.text, "表\r\n");
         assert!(!prefix.complete);
+        let mut sources = SourceMap::new();
+        let id = sources.add("/main.adoc", format!("include::{target}[lines=1;3]"));
+        let mut options = adoctra::ParseOptions {
+            source_id: id,
+            ..Default::default()
+        };
+        options.attributes.set("allow-uri-read", "");
+        let result = adoctra::parse_resource(&mut sources, &options, &provider).unwrap();
+        assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+        let source = sources.get(adoctra::SourceId(1)).unwrap();
+        assert_eq!(source.name(), target);
+        assert_eq!(source.text(), "first\nlast\n");
+        assert_eq!(source.omitted_lines()[0].bytes, b"\xff\n");
         server.join().unwrap();
     }
 

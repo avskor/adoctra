@@ -52,6 +52,30 @@ impl ResourceWorkspace {
         })
     }
 
+    /// Physical gaps in an incomplete snapshot. Bytes are hexadecimal; offsets
+    /// address retained UTF-8 text, while line numbers refer to the original.
+    pub fn source_omitted_lines_json(&self, source_id: usize) -> ResourceResult<String> {
+        use std::fmt::Write;
+        let mut json = String::from("[");
+        for (index, line) in self.source(source_id)?.omitted_lines().iter().enumerate() {
+            if index != 0 {
+                json.push(',');
+            }
+            write!(
+                json,
+                "{{\"offset\":{},\"line\":{},\"bytes\":\"",
+                line.offset, line.line
+            )
+            .unwrap();
+            for byte in &line.bytes {
+                write!(json, "{byte:02x}").unwrap();
+            }
+            json.push_str("\"}");
+        }
+        json.push(']');
+        Ok(json)
+    }
+
     pub fn parse_json(&mut self, source_id: usize) -> ResourceResult<String> {
         self.source(source_id)?;
         let options = adoctra_core::ParseOptions {
@@ -124,6 +148,12 @@ mod wasm {
                 .map_err(js_error)
         }
 
+        pub fn source_omitted_lines_json(&self, source_id: usize) -> Result<String, JsValue> {
+            self.0
+                .source_omitted_lines_json(source_id)
+                .map_err(js_error)
+        }
+
         pub fn parse_json(&mut self, source_id: usize) -> Result<String, JsValue> {
             self.0.parse_json(source_id).map_err(js_error)
         }
@@ -141,6 +171,47 @@ mod wasm {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn sparse_include_exports_raw_gaps_and_maps_later_tokens_to_original_lines() {
+        let mut workspace = ResourceWorkspace::new();
+        workspace
+            .set("/main.adoc", "include::part.adoc[lines=1;3]")
+            .unwrap();
+        workspace
+            .set_binary("/part.adoc", b"first\r\n\xff\r\n*last*\r\n")
+            .unwrap();
+        let main = workspace.load("/main.adoc", None).unwrap();
+        let json = workspace.parse_json(main).unwrap();
+        assert!(json.contains(r#""diagnostics":[]"#), "{json}");
+        assert!(json.contains("last"));
+        assert_eq!(workspace.source(1).unwrap().text(), "first\r\n*last*\r\n");
+        assert!(!workspace.source(1).unwrap().is_complete());
+        assert_eq!(
+            workspace.source_omitted_lines_json(1).unwrap(),
+            r#"[{"offset":7,"line":2,"bytes":"ff0d0a"}]"#
+        );
+        let position = workspace.source(1).unwrap().position(8).unwrap();
+        assert_eq!((position.line, position.column), (3, 2));
+        let tokens = workspace.tokens_json(main).unwrap();
+        assert!(tokens.contains(r#""start":7,"end":13"#), "{tokens}");
+        assert!(tokens.contains(r#""source_id":1"#), "{tokens}");
+        assert!(workspace.source(2).is_err());
+        workspace
+            .set_binary("/part.adoc", b"first\r\n\xfe\r\n*last*\r\n")
+            .unwrap();
+        workspace.parse_json(main).unwrap();
+        assert_eq!(
+            workspace.source_omitted_lines_json(2).unwrap(),
+            r#"[{"offset":7,"line":2,"bytes":"fe0d0a"}]"#
+        );
+        assert_eq!(
+            workspace.source_omitted_lines_json(1).unwrap(),
+            r#"[{"offset":7,"line":2,"bytes":"ff0d0a"}]"#
+        );
+        assert_eq!(workspace.source_omitted_lines_json(main).unwrap(), "[]");
+        assert!(workspace.source_omitted_lines_json(99).is_err());
+    }
 
     #[test]
     fn finite_includes_export_prefix_completeness_without_replacing_bad_bytes() {

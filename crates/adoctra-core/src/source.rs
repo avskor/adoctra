@@ -20,6 +20,7 @@ pub struct SourceFile {
     text: String,
     line_starts: Vec<usize>,
     complete: bool,
+    omissions: Vec<crate::OmittedSourceLine>,
 }
 
 impl SourceFile {
@@ -30,18 +31,41 @@ impl SourceFile {
         &self.text
     }
 
-    /// Whether this snapshot covers the entire decoded resource. A finite
-    /// include line selection may retain an intact prefix of a resource with
-    /// an undecodable tail. Its ranges still address the text returned here.
+    /// Whether this snapshot covers the entire decoded resource. An include
+    /// may retain an intact prefix or omit skipped undecodable lines. Ranges
+    /// address `text`; `omitted_lines` describes gaps and `position` maps them
+    /// to original physical line numbers.
     pub fn is_complete(&self) -> bool {
         self.complete
+    }
+
+    /// Undecodable physical lines omitted from `text`, retaining their exact
+    /// bytes and insertion points. Spans address retained UTF-8 snapshot text.
+    pub fn omitted_lines(&self) -> &[crate::OmittedSourceLine] {
+        &self.omissions
+    }
+
+    pub(crate) fn include_lines(&self) -> Vec<crate::include_indent::Line> {
+        crate::resource::snapshot_lines(&self.text, &self.omissions)
+    }
+
+    pub(crate) fn stored_bytes(&self) -> usize {
+        self.omissions.iter().fold(self.text.len(), |size, line| {
+            size.saturating_add(line.bytes.len())
+        })
     }
 
     pub fn position(&self, offset: usize) -> Option<SourcePosition> {
         self.text.get(..offset)?;
         let line = self.line_starts.partition_point(|&start| start <= offset) - 1;
         Some(SourcePosition {
-            line: line + 1,
+            line: line
+                + 1
+                + self
+                    .omissions
+                    .iter()
+                    .filter(|omitted| omitted.offset <= offset && omitted.bytes.ends_with(b"\n"))
+                    .count(),
             column: self.text[self.line_starts[line]..offset].chars().count() + 1,
         })
     }
@@ -59,10 +83,16 @@ impl SourceMap {
 
     /// IDs are stable within this map; two files may have the same display name.
     pub fn add(&mut self, name: impl Into<String>, text: impl Into<String>) -> SourceId {
-        self.add_snapshot(name.into(), text.into(), true)
+        self.add_snapshot(name.into(), text.into(), true, Vec::new())
     }
 
-    fn add_snapshot(&mut self, name: String, text: String, complete: bool) -> SourceId {
+    fn add_snapshot(
+        &mut self,
+        name: String,
+        text: String,
+        complete: bool,
+        omissions: Vec<crate::OmittedSourceLine>,
+    ) -> SourceId {
         let mut line_starts = vec![0];
         line_starts.extend(text.match_indices('\n').map(|(index, _)| index + 1));
         let id = SourceId(self.files.len());
@@ -71,6 +101,7 @@ impl SourceMap {
             text,
             line_starts,
             complete,
+            omissions,
         });
         id
     }
@@ -124,7 +155,27 @@ impl SourceMap {
         line_limit: Option<usize>,
     ) -> crate::ResourceResult<SourceId> {
         self.load_using(target, relative_to, |request| {
-            provider.load_include(request, encoding, line_limit)
+            provider
+                .load_include(request, encoding, line_limit)
+                .map(Into::into)
+        })
+    }
+
+    pub(crate) fn load_selected_include(
+        &mut self,
+        target: &str,
+        relative_to: Option<SourceId>,
+        provider: &dyn crate::ResourceProvider,
+        encoding: Option<&str>,
+        selection: &crate::include_selection::Selection,
+    ) -> crate::ResourceResult<SourceId> {
+        self.load_using(target, relative_to, |request| {
+            match provider.prepare_include(request, encoding, selection.line_limit())? {
+                crate::IncludeInput::Decoded(resource) => Ok(resource.into()),
+                crate::IncludeInput::Deferred { resource, binary } => {
+                    selection.recover_bytes(resource, binary)
+                }
+            }
         })
     }
 
@@ -132,7 +183,9 @@ impl SourceMap {
         &mut self,
         target: &str,
         relative_to: Option<SourceId>,
-        load: impl FnOnce(crate::ResourceRequest<'_>) -> crate::ResourceResult<crate::IncludeResource>,
+        load: impl FnOnce(
+            crate::ResourceRequest<'_>,
+        ) -> crate::ResourceResult<crate::resource::IncludeSnapshot>,
     ) -> crate::ResourceResult<SourceId> {
         let referrer = relative_to
             .map(|id| {
@@ -145,14 +198,19 @@ impl SourceMap {
                 })
             })
             .transpose()?;
-        let crate::IncludeResource { resource, complete } =
-            load(crate::ResourceRequest { target, referrer })?;
+        let crate::resource::IncludeSnapshot {
+            decoded: crate::IncludeResource { resource, complete },
+            omissions,
+        } = load(crate::ResourceRequest { target, referrer })?;
         if let Some(index) = self.files.iter().position(|file| {
-            file.name == resource.name && file.text == resource.text && file.complete == complete
+            file.name == resource.name
+                && file.text == resource.text
+                && file.complete == complete
+                && file.omissions == omissions
         }) {
             return Ok(SourceId(index));
         }
-        Ok(self.add_snapshot(resource.name, resource.text, complete))
+        Ok(self.add_snapshot(resource.name, resource.text, complete, omissions))
     }
 
     /// Invalid ids, reversed ranges and non-UTF-8 boundaries return None.

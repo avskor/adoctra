@@ -3,6 +3,43 @@
 use adoctra::Backend;
 
 #[test]
+fn cli_skips_invalid_utf8_and_binary_lines_without_printing_replacement_text() {
+    use std::process::Command;
+    let root = std::env::temp_dir().join(format!("adoctra-cli-sparse-{}", std::process::id()));
+    std::fs::create_dir_all(&root).unwrap();
+    let source = root.join("main.adoc");
+    for (selector, bytes) in [
+        ("lines=1;3", &b"*first*\r\n\xff\r\n*last*\r\n"[..]),
+        (
+            "tag=body",
+            &b"\xff\n// tag::body[]\n*first*\n*last*\n// end::body[]\n\xff"[..],
+        ),
+    ] {
+        std::fs::write(root.join("part.adoc"), bytes).unwrap();
+        for encoding in ["UTF-8", "BINARY"] {
+            std::fs::write(
+                &source,
+                format!("include::part.adoc[encoding={encoding},{selector}]"),
+            )
+            .unwrap();
+            for backend in ["html", "json"] {
+                let output = Command::new(env!("CARGO_BIN_EXE_adoctra"))
+                    .arg(&source)
+                    .args(["--embedded", "--stdout", "--to", backend])
+                    .output()
+                    .unwrap();
+                assert!(output.status.success());
+                assert!(output.stderr.is_empty(), "{:?}", output.stderr);
+                let text = String::from_utf8(output.stdout).unwrap();
+                assert!(text.contains("first") && text.contains("last"), "{text}");
+                assert!(!text.contains('\u{fffd}'), "{text}");
+            }
+        }
+    }
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn cli_finite_include_selection_ignores_only_the_unconsumed_invalid_tail() {
     use std::process::Command;
     let root =

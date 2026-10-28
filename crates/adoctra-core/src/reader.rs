@@ -233,6 +233,13 @@ impl<'a> Reader<'a> {
                 "unknown source id",
             )
         })?;
+        if !source.omitted_lines().is_empty() {
+            return Err(crate::ResourceError::new(
+                crate::ResourceErrorKind::InvalidEncoding,
+                source.name(),
+                "primary source contains omitted undecodable lines",
+            ));
+        }
         let mut reader = Self::new(source.text());
         reader.inputs[0].source_id = options.source_id;
         // Ruby reads the attribute once, when it creates the reader, so
@@ -1014,12 +1021,12 @@ impl<'a> Reader<'a> {
             return self.include_link(&uri, span);
         }
         let resources = self.resources.as_mut().expect("explicit resource provider");
-        let id = match resources.sources.load_include(
+        let id = match resources.sources.load_selected_include(
             &target,
             Some(current),
             resources.provider,
             attrs.get("encoding").map(String::as_str),
-            selection.line_limit(),
+            &selection,
         ) {
             Ok(id) => id,
             Err(error) if optional && error.kind == crate::ResourceErrorKind::NotFound => {
@@ -1055,16 +1062,19 @@ impl<'a> Reader<'a> {
             self.error(span, format!("cyclic include: {target}"));
             return false;
         }
-        if file.text().len() > resources.limits.max_bytes.saturating_sub(resources.bytes) {
+        if file.stored_bytes() > resources.limits.max_bytes.saturating_sub(resources.bytes) {
             self.error(span, "maximum included byte count exceeded".into());
             return false;
         }
-        resources.bytes += file.text().len();
+        resources.bytes += file.stored_bytes();
         // The reference preprocesses directives only in AsciiDoc resources.
         let preprocess = [".adoc", ".asciidoc", ".asc", ".ad", ".txt"]
             .iter()
             .any(|ext| file.name().ends_with(ext));
         let mut input = Input::new(file.text(), id, preprocess, self.next_occurrence);
+        if !file.omitted_lines().is_empty() {
+            input.lines = file.include_lines();
+        }
         // Like Ruby's push_include: a positive relative depth beyond the
         // absolute maximum is replaced by it, otherwise nothing nests.
         (input.max_depth, input.depth_label) =
@@ -1094,6 +1104,17 @@ impl<'a> Reader<'a> {
             id,
         );
         let mut selection_diagnostics = selected.diagnostics;
+        let missing_report = format!(
+            "tag{} '{}' not found in include {}: {}",
+            if selected.missing.len() > 1 { "s" } else { "" },
+            selected.missing.join(", "),
+            if file.name().contains("://") {
+                "uri"
+            } else {
+                "file"
+            },
+            file.name()
+        );
         for diagnostic in &mut selection_diagnostics {
             if let Some(message) = &mut diagnostic.report.message {
                 let kind = if file.name().contains("://") {
@@ -1111,9 +1132,13 @@ impl<'a> Reader<'a> {
             }
         }
         self.resource_diagnostics.extend(selection_diagnostics);
-        for tag in selected.missing {
+        for (index, tag) in selected.missing.into_iter().enumerate() {
             self.diagnostics.push(Diagnostic {
-                report: Default::default(),
+                report: crate::DiagnosticReport {
+                    message: Some(missing_report.clone()),
+                    suppressed: index != 0,
+                    ..Default::default()
+                },
                 span,
                 severity: Severity::Warning,
                 message: format!("tag '{tag}' not found in include: {target}"),
@@ -1140,6 +1165,9 @@ impl<'a> Reader<'a> {
         input.start_line = selected.keep.iter().position(|keep| *keep).unwrap_or(0) as isize + 1;
         let mut keep = selected.keep.into_iter();
         input.lines.retain(|_| keep.next().unwrap_or(false));
+        if let Some(first) = input.lines.first_mut() {
+            first.strip_bom();
+        }
         if let Some(indent) = attrs.get("indent") {
             let indent = crate::include_selection::integer_prefix(indent);
             let tabsize = attributes

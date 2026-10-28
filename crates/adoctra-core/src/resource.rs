@@ -31,9 +31,80 @@ pub struct Resource {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IncludeResource {
     pub resource: Resource,
-    /// False only when `resource.text` omits an undecodable tail. No replacement
-    /// characters or fabricated lines are inserted into a partial snapshot.
+    /// False when this resource is an incomplete decoded view. No replacement
+    /// characters or fabricated lines enter the snapshot text.
     pub complete: bool,
+}
+
+/// A whole undecodable line excluded from an include snapshot. `offset` is
+/// the insertion point in its retained UTF-8 text; `line` is the original
+/// one-based physical line. Bytes include the original line ending, if any.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OmittedSourceLine {
+    pub offset: usize,
+    pub line: usize,
+    pub bytes: Vec<u8>,
+}
+
+pub(crate) struct IncludeSnapshot {
+    pub decoded: IncludeResource,
+    pub omissions: Vec<OmittedSourceLine>,
+}
+
+impl From<IncludeResource> for IncludeSnapshot {
+    fn from(decoded: IncludeResource) -> Self {
+        Self {
+            decoded,
+            omissions: Vec::new(),
+        }
+    }
+}
+
+impl From<Resource> for IncludeSnapshot {
+    fn from(resource: Resource) -> Self {
+        IncludeResource::from(resource).into()
+    }
+}
+
+/// Selection sees physical line slots; undecodable slots are empty internal
+/// sentinels and must be discarded before normalization or parsing. They are
+/// never inserted into the exported source text.
+pub(crate) fn snapshot_lines(
+    text: &str,
+    omissions: &[OmittedSourceLine],
+) -> Vec<crate::include_indent::Line> {
+    use crate::include_indent::Line;
+    let strip_bom = omissions.first().map_or(true, |line| line.line != 1);
+    let lines = Line::from_source_with_bom(text, strip_bom);
+    if omissions.is_empty() {
+        return lines;
+    }
+    let count = lines.len() + omissions.len();
+    let mut lines = lines.into_iter();
+    let mut omitted = omissions.iter().peekable();
+    (1..=count)
+        .map(|number| {
+            if omitted.peek().is_some_and(|line| line.line == number) {
+                let omission = omitted.next().expect("omitted line");
+                let mut line = Line::generated(String::new());
+                line.original = Some(omission.offset);
+                line
+            } else {
+                lines.next().expect("retained physical line")
+            }
+        })
+        .collect()
+}
+
+/// Provider input awaiting the reader's line/tag selection. Only UTF-8 and
+/// ASCII-8BIT defer validation; transcoding codecs validate consumed bytes.
+#[derive(Debug, Clone)]
+pub enum IncludeInput {
+    Decoded(IncludeResource),
+    Deferred {
+        resource: BinaryResource,
+        binary: bool,
+    },
 }
 
 impl From<Resource> for IncludeResource {
@@ -99,6 +170,20 @@ pub trait ResourceProvider {
     ) -> ResourceResult<IncludeResource> {
         let _ = line_limit;
         self.load_with_encoding(request, encoding).map(Into::into)
+    }
+
+    /// Prepare input for reader-owned selection. The default preserves existing
+    /// custom decoders. Original-byte providers may defer UTF-8/BINARY checks
+    /// using [`BinaryResource::prepare_include`]; the reader validates selected
+    /// lines before registering a snapshot. Access policy remains the provider's.
+    fn prepare_include(
+        &self,
+        request: ResourceRequest<'_>,
+        encoding: Option<&str>,
+        line_limit: Option<usize>,
+    ) -> ResourceResult<IncludeInput> {
+        self.load_include(request, encoding, line_limit)
+            .map(IncludeInput::Decoded)
     }
 
     /// Opt into document path attributes for a registered canonical name.
@@ -225,6 +310,16 @@ impl MemoryResources {
 }
 
 impl ResourceProvider for MemoryResources {
+    fn prepare_include(
+        &self,
+        request: ResourceRequest<'_>,
+        encoding: Option<&str>,
+        line_limit: Option<usize>,
+    ) -> ResourceResult<IncludeInput> {
+        self.load_binary(request)?
+            .prepare_include(encoding, line_limit)
+    }
+
     fn load_include(
         &self,
         request: ResourceRequest<'_>,
