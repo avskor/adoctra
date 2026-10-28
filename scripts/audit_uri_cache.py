@@ -104,6 +104,81 @@ def cases():
     return result
 
 
+def asset_cases():
+    image = 'image::{uri}/a.png[Pic]\n'
+    svg = 'image::{uri}/a.svg[Pic,opts=inline]\n'
+    png = {'/a.png': [{'hex': '89504e4700ff', 'content_type': 'image/png'},
+                     {'body': 'changed', 'content_type': 'image/jpeg'}]}
+    vector = {'/a.svg': [{'body': '<svg xmlns="http://www.w3.org/2000/svg"><text>one</text></svg>\n',
+                          'content_type': 'image/svg+xml'}, {'body': '<svg>changed</svg>'}]}
+    result = []
+
+    def add(identifier, source, responses, requests, **kwargs):
+        result.append(dict(id=identifier, source=source, responses=responses,
+                           requests=requests, **kwargs))
+
+    for cached in [False, True]:
+        header = (':cache-uri:\n' if cached else '') + ':data-uri:\n\n'
+        suffix = 'cached' if cached else 'uncached'
+        add('image-' + suffix, header + image + '\n' + image, png, ['/a.png'] * (1 if cached else 2))
+        add('svg-' + suffix, header + svg + '\n' + svg, vector, ['/a.svg'] * (1 if cached else 2))
+    add('image-inline-block-share', ':cache-uri:\n:data-uri:\n\n' + image + '\nimage:{uri}/a.png[Pic]\n', png, ['/a.png'])
+    add('image-sticky-after-unset', ':cache-uri:\n:data-uri:\n\n' + image + '\n:cache-uri!:\n\n' + image, png, ['/a.png'])
+    add('image-late-activation', ':data-uri:\n\n' + image + '\n:cache-uri:\n\n' + image + '\n' + image,
+        png, ['/a.png'] * 2)
+    add('image-false-enables', ':cache-uri: false\n:data-uri:\n\n' + image + '\n' + image, png, ['/a.png'])
+    add('image-imagesdir', ':cache-uri:\n:data-uri:\n:imagesdir: {uri}\n\nimage::a.png[Pic]\n\n' + image, png, ['/a.png'])
+    add('image-no-data-uri', ':cache-uri:\n\n' + image + '\n' + image, png, [])
+    add('image-denied', ':cache-uri:\n:data-uri:\n\n' + image, png, [], allow=False)
+    add('image-secure', ':cache-uri:\n:data-uri:\n\n' + image, png, [], safe='secure')
+    add('image-server', ':cache-uri:\n:data-uri:\n\n' + image + '\n' + image, png, ['/a.png'], safe='server')
+    add('image-retry', ':cache-uri:\n:data-uri:\n\n' + image + '\n' + image,
+        {'/a.png': [{'status': 404}, png['/a.png'][0]]}, ['/a.png'] * 2)
+    add('image-error-activates', ':cache-uri:\n:data-uri:\n\nimage::{uri}/missing.png[Missing]\n\n'
+        ':cache-uri!:\n\n' + image + '\n' + image, png, ['/missing.png', '/a.png'])
+    add('image-empty', ':cache-uri:\n:data-uri:\n\n' + image + '\n' + image,
+        {'/a.png': [{'body': '', 'content_type': 'image/png'}]}, ['/a.png'])
+    add('image-utf8-bytes', ':cache-uri:\n:data-uri:\n\n' + image + '\n' + image,
+        {'/a.png': [{'body': 'Привет', 'content_type': 'application/x-test'}]}, ['/a.png'])
+    add('include-before-image-share', ':cache-uri:\n:data-uri:\n\nimage::{uri}/shared.adoc[Pic]\n\n'
+        'include::{uri}/shared.adoc[]\n', {'/shared.adoc': [{'body': 'first\n', 'content_type': 'text/plain'}, {'body': 'changed\n'}]}, ['/shared.adoc'])
+    add('include-before-image-activation', ':data-uri:\n\n:cache-uri:\n\nimage::{uri}/shared.adoc[Pic]\n\n'
+        ':cache-uri!:\n\ninclude::{uri}/shared.adoc[]\n',
+        {'/shared.adoc': [{'body': 'first\n'}, {'body': 'changed\n'}]}, ['/shared.adoc'] * 2)
+    add('svg-imagesdir', ':cache-uri:\n:imagesdir: {uri}\n\nimage::a.svg[Pic,opts=inline]\n\n' + svg, vector, ['/a.svg'])
+    add('svg-denied', ':cache-uri:\n\n' + svg, vector, [], allow=False)
+    add('svg-secure', ':cache-uri:\n\n' + svg, vector, [], safe='secure')
+    add('svg-retry', ':cache-uri:\n\n' + svg + '\n' + svg,
+        {'/a.svg': [{'status': 403}, vector['/a.svg'][0]]}, ['/a.svg'] * 2)
+    add('svg-empty', ':cache-uri:\n\n' + svg + '\n' + svg, {'/a.svg': [{'body': ''}]}, ['/a.svg'])
+    add('svg-unicode-hit-warning', ':cache-uri:\n\n' + svg + '\n' + svg,
+        {'/a.svg': [{'body': '<svg><text>Привет</text></svg>\n'}]}, ['/a.svg'])
+    add('svg-utf16-bom', ':cache-uri:\n\n' + svg + '\n' + svg,
+        {'/a.svg': [{'hex': (b'\xff\xfe' + '<svg><text>Привет</text></svg>\r\n'.encode('utf-16le')).hex()}]}, ['/a.svg'])
+    add('svg-bad-utf8-warning', ':cache-uri:\n\n' + svg + '\n' + svg,
+        {'/a.svg': [{'hex': b'<svg>\xff</svg>\n'.hex()}]}, ['/a.svg'])
+    add('svg-data-uri-share', ':cache-uri:\n:data-uri:\n\n' + svg + '\nimage::{uri}/a.svg[Pic]\n', vector, ['/a.svg'])
+    add('interactive-svg-fallback', ':cache-uri:\n:data-uri:\n\n'
+        'image::{uri}/a.svg[Pic,opts=interactive,fallback={uri}/a.png]\n\n' + image, png, ['/a.png', '/a.svg'])
+    css = {'/a.css': [{'body': 'body { color: red; }\n', 'content_type': 'text/css'}, {'body': 'changed\n'}]}
+    sheet = ':stylesheet: {uri}/a.css\n:cache-uri:\n'
+    add('stylesheet-cache', sheet + '\nx\n', css, ['/a.css'], standalone=True)
+    add('stylesheet-denied', sheet + '\nx\n', css, [], standalone=True, allow=False)
+    add('stylesheet-secure', sheet + '\nx\n', css, [], standalone=True, safe='secure')
+    add('stylesheet-linked', sheet + ':linkcss:\n\nx\n', css, [], standalone=True)
+    add('stylesheet-error', sheet + '\nx\n', {'/a.css': [{'status': 500}]}, ['/a.css'], standalone=True)
+    add('stylesheet-include-share', sheet + '\ninclude::{uri}/a.css[]\n', css, ['/a.css'], standalone=True)
+    add('stylesheet-image-share', sheet + ':data-uri:\n\nimage::{uri}/a.css[Pic]\n', css, ['/a.css'], standalone=True)
+    order_gap = 'core resolves body assets before the standalone HTML stylesheet'
+    add('stylesheet-before-image', sheet + ':data-uri:\n\n' + image, {**css, **png}, ['/a.css', '/a.png'], standalone=True, known_difference=order_gap)
+    add('stylesheet-enables-body-cache', sheet + ':data-uri:\n\n:cache-uri!:\n\n' + image + '\n' + image,
+        {**css, **png}, ['/a.css', '/a.png'], standalone=True, known_difference=order_gap)
+    add('stylesheet-warning-order', sheet + ':data-uri:\n\n' + image,
+        {'/a.css': [{'status': 500}], '/a.png': [{'status': 404}]},
+        ['/a.css', '/a.png'], standalone=True, known_difference=order_gap)
+    return result
+
+
 @contextmanager
 def server(responses):
     trace = []
@@ -121,7 +196,7 @@ def server(responses):
                           'sha256': hashlib.sha256(body).hexdigest()})
             self.send_response(status)
             self.send_header('Content-Length', str(len(body)))
-            self.send_header('Content-Type', 'text/plain; charset=utf-8')
+            self.send_header('Content-Type', response.get('content_type', 'text/plain; charset=utf-8'))
             self.send_header('Connection', 'close')
             if 'location' in response:
                 self.send_header('Location', response['location'])
@@ -159,7 +234,11 @@ def cli_diagnostics(stderr):
     for line in stderr.splitlines():
         match = re.fullmatch(r'adoctra: (.+):([1-9]\d*): (warning|error): (.*)', line)
         if not match:
-            raise ValueError(f'unrecognized diagnostic: {line!r}')
+            match = re.fullmatch(r'adoctra: (warning|error): (.*)', line)
+            if not match:
+                raise ValueError(f'unrecognized diagnostic: {line!r}')
+            diagnostics.append(dict(severity=match[1], message=match[2], location=None))
+            continue
         name, number, severity, message = match.groups()
         diagnostics.append(dict(severity=severity, message=message,
                                 location=dict(file=name, line=int(number))))
@@ -177,12 +256,18 @@ def run_side(case, cli, reference):
         if case.get('allow', True):
             attributes['allow-uri-read'] = ''
         attributes.update(case.get('attributes', {}))
+        standalone = case.get('standalone', False)
+        if standalone:
+            attributes['reproducible'] = ''
+            attributes['webfonts!'] = ''
         safe = case.get('safe', 'safe')
-        config = dict(file=str(root / 'main.adoc'), safe=safe, attributes=attributes)
+        config = dict(file=str(root / 'main.adoc'), safe=safe, attributes=attributes, standalone=standalone)
         if reference:
             command = ['ruby', str(ROOT / 'scripts/asciidoctor-uri-reference.rb')]
         else:
-            command = [str(cli), config['file'], '--embedded', '--stdout', '-S', safe]
+            command = [str(cli), config['file'], '--stdout', '-S', safe]
+            if not standalone:
+                command.append('--embedded')
             for name, value in attributes.items():
                 command += ['-a', name + '=' + value]
         # Keep local requests independent of the user's proxy configuration.
@@ -199,10 +284,26 @@ def run_side(case, cli, reference):
         else:
             output = dict(html=completed.stdout, diagnostics=cli_diagnostics(completed.stderr))
         output['requests'] = list(trace)
+        if standalone and 'html' in output:
+            output['styles'] = re.findall(r'<style[^>]*>(.*?)</style>', output['html'], re.S)
+            output['stylesheet_links'] = re.findall(r'<link\b[^>]*\brel="stylesheet"[^>]*>', output['html'])
         return canonical(output, root, uri)
 
 
-def compare(case, expected, actual):
+def html_projection(case, html):
+    result = projection(html)
+    if case.get('standalone'):
+        # Only the three known document shell tags differ. Keep their ids,
+        # contents and every other attribute/node; do not erase body content.
+        for node in result:
+            if isinstance(node, dict) and (node['tag'], node['attrs']) in [
+                    ('header', {'id': 'header'}), ('main', {'id': 'content'}),
+                    ('footer', {'id': 'footer'})]:
+                node['tag'] = 'div'
+    return result
+
+
+def compare_observations(case, expected, actual):
     # HTTP failures/extra loads must remain visible even for a Ruby exception.
     expected_paths = [item['path'] for item in expected['requests']]
     actual_paths = [item['path'] for item in actual['requests']]
@@ -215,21 +316,33 @@ def compare(case, expected, actual):
                 else 'UNEXPECTED_RUBY_ERROR')
     if case.get('ruby_error'):
         return 'UNEXPECTED_RUBY_SUCCESS'
-    if (projection(expected['html']) != projection(actual['html'])
-            or expected['diagnostics'] != actual['diagnostics']):
+    if (html_projection(case, expected['html']) != html_projection(case, actual['html'])
+            or expected['diagnostics'] != actual['diagnostics']
+            or expected.get('styles') != actual.get('styles')
+            or expected.get('stylesheet_links') != actual.get('stylesheet_links')):
         return 'DIFF'
     return 'PASS'
+
+
+def compare(case, expected, actual):
+    status = compare_observations(case, expected, actual)
+    if case.get('known_difference') and 'error' not in expected:
+        return {'DIFF': 'XFAIL', 'PASS': 'XPASS'}.get(status, status)
+    return status
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--cli', type=Path, default=ROOT / 'target/debug/adoctra')
     parser.add_argument('--report', type=Path)
+    parser.add_argument('--assets', action='store_true', help='run the separate asset cache probes')
     parser.add_argument('--baseline', type=Path,
                         help='also require the complete recorded observations to remain unchanged')
     args = parser.parse_args()
+    if args.assets and not (args.baseline or args.report):
+        parser.error('asset XFAILs require --baseline verification or explicit --report recording')
     reports = []
-    for case in cases():
+    for case in asset_cases() if args.assets else cases():
         expected = run_side(case, args.cli.resolve(), True)
         actual = run_side(case, args.cli.resolve(), False)
         status = compare(case, expected, actual)
@@ -237,7 +350,8 @@ def main():
                             reference=expected, actual=actual))
         print(f'{status} {case["id"]}', flush=True)
     counts = dict(sorted(Counter(item['status'] for item in reports).items()))
-    report = dict(profile='uri-cache-body-dom-diagnostics-requests-v1',
+    report = dict(profile=('uri-asset-cache-body-dom-styles-diagnostics-requests-v1' if args.assets
+                           else 'uri-cache-body-dom-diagnostics-requests-v1'),
                   asciidoctor=(ROOT / 'compatibility/asciidoctor-version').read_text().strip(),
                   open_uri_cached=(ROOT / 'compatibility/open-uri-cached-version').read_text().strip(),
                   counts=counts, cases=reports)
@@ -248,7 +362,7 @@ def main():
     if args.baseline and json.loads(args.baseline.read_text(encoding='utf-8')) != report:
         print('DIFF recorded URI cache observations')
         return 1
-    return int(any(status not in {'PASS', 'RUBY_ERROR'} for status in counts))
+    return int(any(status not in {'PASS', 'RUBY_ERROR', 'XFAIL'} for status in counts))
 
 
 if __name__ == '__main__':

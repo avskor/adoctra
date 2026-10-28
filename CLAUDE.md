@@ -1933,8 +1933,18 @@ return None for URLs so unresolved nested includes retain their URL.
 The pinned optional gem version is in compatibility/open-uri-cached-version.
 scripts/audit_uri_cache.py compares HTML projection, positioned diagnostics and
 request traces against local HTTP servers: 32 PASS / 2 RUBY_ERROR. CI verifies
-the complete compatibility/uri-cache/report.json baseline. Cache activation via
-assets, cross-provider/process/disk caching, URI normalization and untested
+the complete compatibility/uri-cache/report.json baseline. Images with data-uri,
+inline SVG and embedded stylesheets now activate the same cache after permission
+checks. SVG uses ResourceProvider::load_asset_text (default strict binary decode
+with BOM detection); native cache hits preserve BINARY decoding. Do not replace
+bad SVG bytes with U+FFFD. Asset warnings keep editor spans but have Unlocated
+conversion reports. The separate --assets audit compares exact styles/links as
+well as body DOM, diagnostics and requests: 36 PASS / 3 XFAIL in assets.json.
+Only the three known standalone shell tags are mapped to their Ruby divs.
+XFAILs freeze body-before-stylesheet reads, changed image responses and warning
+order. Fix conversion lifecycle next; do not normalize request order away or
+claim these XFAILs as compatible. CI fails on baseline drift and XPASS.
+Cross-provider/process/disk caching, URI normalization and untested
 encoding/selection combinations remain open, as does Ruby's jail recovery
 (providers deny). Do not replace explicit provider policy with ambient I/O.
 

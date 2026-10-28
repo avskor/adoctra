@@ -170,6 +170,37 @@ mod wasm {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn normalized_svg_bytes_preserve_unicode_and_report_invalid_input() {
+        let mut workspace = super::ResourceWorkspace::new();
+        workspace
+            .set(
+                "/main.adoc",
+                ":cache-uri:\n\nimage::a.svg[Pic,opts=inline]\n",
+            )
+            .unwrap();
+        let bytes: Vec<u8> = std::iter::once(0xfeffu16)
+            .chain("<svg>Привет</svg>\r\n".encode_utf16())
+            .flat_map(u16::to_le_bytes)
+            .collect();
+        workspace.set_binary("/a.svg", &bytes).unwrap();
+        let id = workspace.load("/main.adoc", None).unwrap();
+        let good = workspace.parse_json(id).unwrap();
+        assert!(
+            good.contains(r#""svg":{"mode":"inline","content":"<svg>Привет</svg>"}"#),
+            "{good}"
+        );
+        workspace.set_binary("/a.svg", b"<svg>\xff</svg>").unwrap();
+        let bad = workspace.parse_json(id).unwrap();
+        assert!(
+            bad.contains(r#""svg":{"mode":"inline","content":null}"#),
+            "{bad}"
+        );
+        assert!(bad.contains("SVG does not exist or cannot be read: /a.svg"));
+        assert!(!bad.contains('\u{fffd}'));
+        assert!(workspace.source(id + 1).is_err());
+    }
+
     use super::*;
 
     #[test]

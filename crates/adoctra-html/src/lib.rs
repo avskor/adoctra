@@ -349,8 +349,8 @@ fn stylesheet(
 pub const DEFAULT_STYLESHEET_NAME: &str = "adoctra.css";
 
 /// Ruby's `read_contents` of a custom stylesheet under `stylesdir`: URIs are
-/// not read (`allow-uri-read` is not modeled), paths go through the
-/// resources; failures warn like Ruby.
+/// read only with `allow-uri-read`; paths go through the resources.
+/// Enable the provider's URI cache before a permitted read when requested.
 fn read_stylesheet(
     sheet: &str,
     stylesdir: Option<&str>,
@@ -377,6 +377,9 @@ fn read_stylesheet(
         }
         // The host's provider reads URIs (the CLI fetches them).
         let loaded = resources.and_then(|resources| {
+            if attributes.get("cache-uri").is_some() {
+                resources.provider.enable_uri_cache();
+            }
             resources
                 .provider
                 .load(ResourceRequest {
@@ -3590,6 +3593,89 @@ mod tests {
             html.contains("</style>\n</head>\n<body class=\"article\">\n<header"),
             "{html}"
         );
+    }
+
+    /// Cache activation belongs to permitted URI reads, not local/link-only assets.
+    #[test]
+    fn stylesheet_activates_cache_only_for_permitted_embedded_uri_content() {
+        #[derive(Default)]
+        struct Host(std::sync::Mutex<Vec<String>>);
+        impl ResourceProvider for Host {
+            fn enable_uri_cache(&self) {
+                self.0.lock().unwrap().push("enable".into());
+            }
+            fn load(
+                &self,
+                request: ResourceRequest<'_>,
+            ) -> adoctra_core::ResourceResult<adoctra_core::Resource> {
+                self.0.lock().unwrap().push(request.target.into());
+                Ok(adoctra_core::Resource {
+                    name: request.target.into(),
+                    text: "p { color: red; }\n".into(),
+                })
+            }
+        }
+        for (source, allow, safe, expected) in [
+            (
+                ":cache-uri:\n:stylesheet: https://host/a.css\n\nx",
+                true,
+                adoctra_core::SafeMode::Safe,
+                vec!["enable", "https://host/a.css"],
+            ),
+            (
+                ":cache-uri:\n:stylesheet: a.css\n:stylesdir: https://host\n\nx",
+                true,
+                adoctra_core::SafeMode::Safe,
+                vec!["enable", "https://host/a.css"],
+            ),
+            (
+                ":cache-uri:\n:stylesheet: https://host/a.css\n\nx",
+                false,
+                adoctra_core::SafeMode::Safe,
+                vec![],
+            ),
+            (
+                ":cache-uri:\n:stylesheet: https://host/a.css\n\nx",
+                true,
+                adoctra_core::SafeMode::Secure,
+                vec![],
+            ),
+            (
+                ":cache-uri:\n:stylesheet: https://host/a.css\n:linkcss:\n\nx",
+                true,
+                adoctra_core::SafeMode::Safe,
+                vec![],
+            ),
+            (
+                ":stylesheet: https://host/a.css\n\nx",
+                true,
+                adoctra_core::SafeMode::Safe,
+                vec!["https://host/a.css"],
+            ),
+            (
+                ":cache-uri:\n:stylesheet: local.css\n\nx",
+                true,
+                adoctra_core::SafeMode::Safe,
+                vec!["./local.css"],
+            ),
+        ] {
+            let host = Arc::new(Host::default());
+            let mut options = adoctra_core::ParseOptions {
+                safe,
+                ..Default::default()
+            };
+            if allow {
+                options.attributes.set("allow-uri-read", "");
+            }
+            let doc = adoctra_core::parse_with_options(source, &options).document;
+            let backend = HtmlBackend::new().with_resources(host.clone(), None);
+            let output = backend.render(&doc);
+            assert_eq!(*host.0.lock().unwrap(), expected, "{source}");
+            if !expected.is_empty() {
+                assert!(output.html.contains("p { color: red; }\n"));
+            }
+            assert_eq!(output.warnings.len(), usize::from(!allow));
+        }
     }
 
     /// A provider serving one remote stylesheet besides local files.

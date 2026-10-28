@@ -150,6 +150,10 @@ impl FileResources {
 }
 
 impl ResourceProvider for FileResources {
+    fn load_asset_text(&self, request: ResourceRequest<'_>) -> ResourceResult<Resource> {
+        self.load_with_encoding(request, None)
+    }
+
     fn enable_uri_cache(&self) {
         self.uri_cache
             .lock()
@@ -411,6 +415,82 @@ mod tests {
             ResourceErrorKind::InvalidEncoding
         );
         assert_eq!(server.count.load(Ordering::SeqCst), 2);
+    }
+
+    #[test]
+    fn images_and_svg_activate_the_provider_cache_at_conversion() {
+        for svg in [false, true] {
+            let bytes = if svg {
+                "<svg>Привет</svg>".as_bytes()
+            } else {
+                b"\x89PNG\xff"
+            };
+            let server = Http::new(vec![(200, bytes.to_vec()), (200, b"changed".to_vec())]);
+            let tree = Tree::new();
+            let provider = FileResources::new(tree.0.join("docs")).unwrap();
+            let target = format!("{}/a.svg", server.uri);
+            let directive = format!(
+                "image::{target}[Pic{}]",
+                if svg { ",opts=inline" } else { "" }
+            );
+            let source = format!(":cache-uri:\n:data-uri:\n\n{directive}\n\n{directive}\n");
+            let mut map = SourceMap::new();
+            let id = map.add("/main.adoc", source);
+            let mut options = adoctra::ParseOptions {
+                source_id: id,
+                ..Default::default()
+            };
+            options.attributes.set("allow-uri-read", "");
+            let result = adoctra::parse_resource(&mut map, &options, &provider).unwrap();
+            assert_eq!(server.count.load(Ordering::SeqCst), 1);
+            let fields: Vec<_> = result
+                .document
+                .blocks
+                .iter()
+                .map(|block| {
+                    let adoctra::BlockKind::Image { src, svg, .. } = &block.kind else {
+                        panic!("image")
+                    };
+                    (src, svg)
+                })
+                .collect();
+            if svg {
+                use adoctra::Backend;
+                let json = String::from_utf8(
+                    adoctra::json::JsonBackend::new()
+                        .convert(&result.document)
+                        .unwrap(),
+                )
+                .unwrap();
+                assert!(
+                    json.contains(r#""svg":{"mode":"inline","content":"<svg>Привет</svg>"}"#),
+                    "{json}"
+                );
+                assert!(
+                    json.contains(r#""svg":{"mode":"inline","content":null}"#),
+                    "{json}"
+                );
+                assert_eq!(result.diagnostics.len(), 1);
+                let diagnostic = &result.diagnostics[0];
+                assert_eq!(
+                    diagnostic.report.location,
+                    adoctra::DiagnosticLocation::Unlocated
+                );
+                assert_eq!(
+                    map.get(id)
+                        .unwrap()
+                        .position(diagnostic.span.start)
+                        .unwrap()
+                        .line,
+                    6
+                );
+                assert_eq!(map.slice(diagnostic.span), Some(directive.as_str()));
+            } else {
+                assert_eq!(fields[0].0, "data:text/plain;base64,iVBOR/8=");
+                assert_eq!(fields[0].0, fields[1].0);
+                assert!(result.diagnostics.is_empty());
+            }
+        }
     }
 
     #[test]

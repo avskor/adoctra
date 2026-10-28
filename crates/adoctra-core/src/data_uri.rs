@@ -38,6 +38,7 @@ impl<'a> Images<'a> {
         };
         match uri {
             Some(uri) if attrs.get("allow-uri-read").is_some() => {
+                self.enable_cache(attrs);
                 self.embed_uri(&uri, span, diagnostics)
             }
             Some(uri) => uri,
@@ -153,7 +154,7 @@ impl<'a> Images<'a> {
             dir.filter(|dir| uriish(dir))
                 .map(|dir| crate::image::normalize_web_path(target, Some(dir), false))
         };
-        let (name, bytes) = match uri {
+        let (name, text) = match uri {
             Some(uri) if attrs.get("allow-uri-read").is_none() => {
                 warn(
                     diagnostics,
@@ -162,17 +163,20 @@ impl<'a> Images<'a> {
                 );
                 return None;
             }
-            Some(uri) => match self.load_named(&uri) {
-                Ok(loaded) => loaded,
-                Err(_) => {
-                    warn(
-                        diagnostics,
-                        span,
-                        format!("could not retrieve contents of SVG at URI: {uri}"),
-                    );
-                    return None;
+            Some(uri) => {
+                self.enable_cache(attrs);
+                match self.load_named(&uri) {
+                    Ok(loaded) => loaded,
+                    Err(_) => {
+                        warn(
+                            diagnostics,
+                            span,
+                            format!("could not retrieve contents of SVG at URI: {uri}"),
+                        );
+                        return None;
+                    }
                 }
-            },
+            }
             None => {
                 let path = match dir.filter(|dir| !dir.is_empty() && !target.starts_with('/')) {
                     Some(dir) => format!("{}/{target}", dir.trim_end_matches('/')),
@@ -191,7 +195,6 @@ impl<'a> Images<'a> {
                 }
             }
         };
-        let text = String::from_utf8_lossy(&bytes);
         let text = text.strip_prefix('\u{feff}').unwrap_or(&text);
         let contents = text
             .split_inclusive('\n')
@@ -209,16 +212,24 @@ impl<'a> Images<'a> {
         Some(contents)
     }
 
-    fn load_named(&self, target: &str) -> Result<(String, Vec<u8>), String> {
+    fn enable_cache(&self, attrs: &Attributes) {
+        if attrs.get("cache-uri").is_some() {
+            if let Some((provider, _)) = &self.source {
+                provider.enable_uri_cache();
+            }
+        }
+    }
+
+    fn load_named(&self, target: &str) -> Result<(String, String), String> {
         let Some((provider, referrer)) = &self.source else {
             return Err(target.to_owned());
         };
         provider
-            .load_binary(ResourceRequest {
+            .load_asset_text(ResourceRequest {
                 target,
                 referrer: Some(referrer),
             })
-            .map(|resource| (resource.name, resource.bytes))
+            .map(|resource| (resource.name, resource.text))
             .map_err(|error| error.target)
     }
 
@@ -239,7 +250,10 @@ impl<'a> Images<'a> {
 fn warn(diagnostics: &mut Vec<Diagnostic>, span: Span, message: String) {
     diagnostics.push(Diagnostic {
         omitted_span: None,
-        report: Default::default(),
+        report: crate::DiagnosticReport {
+            location: crate::DiagnosticLocation::Unlocated,
+            ..Default::default()
+        },
         span,
         severity: Severity::Warning,
         message,

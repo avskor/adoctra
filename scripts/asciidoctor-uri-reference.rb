@@ -13,6 +13,7 @@ Asciidoctor::LoggerManager.logger = logger
 result = {}
 begin
   document = Asciidoctor.load_file(config.fetch('file'), safe: config.fetch('safe').to_sym,
+                                 header_footer: config.fetch('standalone', false),
                                  attributes: config.fetch('attributes'))
   result[:html] = document.convert
 rescue StandardError => e

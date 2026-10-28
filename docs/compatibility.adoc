@@ -47,8 +47,9 @@ UTF8-DoCoMo/UTF8-KDDI/UTF8-SoftBank, CESU-8 и UTF8-MAC реализованы.
 BOM, ошибок, диагностик и позиций. Кодировка не должна молча игнорироваться.
 |URI и файловые пути
 |`cache-uri` для включений реализован в пределах нативного provider и проверен
-с open-uri-cached 2.0.0. Активация через assets, общее состояние нескольких
-providers и непроверенные URI/encoding-сочетания остаются открытыми.
+с open-uri-cached 2.0.0. Изображения, SVG и stylesheet активируют тот же кэш;
+порядок stylesheet/изображений в standalone отличается (3 XFAIL).
+Общее состояние нескольких providers и непроверенные URI/encoding-сочетания остаются открытыми.
 Выход за корень запрещается, восстановления пути внутри jail как в Ruby нет.
 |Сравнить загрузку, повторные обращения, ошибки и предупреждения во всех safe modes.
 Политика доступа host должна сохраняться и быть явно отражена в контракте.
@@ -1437,8 +1438,8 @@ URI-включения) без `allow-uri-read` становится той же
 выход за каталог запрещается provider, тогда как Ruby восстанавливает путь
 внутри jail с предупреждением; adoctra в этом случае, как для ненайденного
 файла, выводит строку `Unresolved directive` Ruby. Data URI изображений читаются через
-`load_binary` provider, как и встраиваемые SVG. Активация `cache-uri` через
-URI-включения описана ниже; самостоятельная активация через assets пока отсутствует.
+`load_binary` provider; встраиваемые SVG — через `load_asset_text` с default
+binary decoder. Активация `cache-uri` через URI-включения и assets описана ниже.
 7 PASS проверяют атрибуты и блокировки secure mode, ссылки include, усечение
 значений, а также бывший XFAIL `icons-secure-mode-lock`; уровни unsafe/safe/
 server, include и stylesheet по URI сверены с Ruby вручную и закреплены
@@ -1486,10 +1487,46 @@ python3 scripts/audit_uri_cache.py --baseline compatibility/uri-cache/report.jso
 ----
 
 Кэш живёт в памяти одного FileResources; нет общего состояния разных
-providers, дискового хранилища и Ruby API invalidation. Активация через
-изображения, SVG и stylesheet, нормализация всех форм URI и непроверенные
+providers, дискового хранилища и Ruby API invalidation. Порядок чтения
+standalone assets, нормализация всех форм URI и непроверенные
 сочетания external encoding/selection остаются открытыми. Эти 34 случая
 не доказывают полную совместимость URI-loading или точного HTML.
+
+=== Кэш изображений, SVG и stylesheet
+
+Разрешённое чтение URI для data-uri, inline SVG и встроенного stylesheet
+активирует тот же provider cache с текущим `cache-uri`. Проверены header/body
+присваивания, снятие атрибута, URI в imagesdir, block/inline images, interactive
+SVG fallback, общие ответы с include, пустые ответы, HTTP-ошибки и сохранение
+MIME/сырых байтов для base64. Локальные ресурсы, secure mode, URI без разрешения,
+обычные изображения без data-uri и linkcss не активируют кэш.
+
+Inline SVG читается строго через `load_asset_text`: начальный UTF-16 BOM
+декодируется, UTF-8 BOM и пробелы строк нормализуются. Повреждённые байты не
+заменяются U+FFFD. Unicode-SVG при BINARY-попадании, как в Ruby, даёт warning
+и alt fallback; UTF-16 BOM остаётся распознаваемым и в кэше. Предупреждения
+assets не имеют conversion cursor; физические spans сохранены для редактора.
+
+Отдельный профиль `uri-asset-cache-body-dom-styles-diagnostics-requests-v1`
+добавляет точное сравнение текстов style и ссылок stylesheet. У standalone
+согласуются только три оболочки с точными id: header/header, main/content,
+footer/footer с соответствующими div Ruby. Содержимое и остальные атрибуты
+сохраняются. Точный HTML страницы и другие элементы head не входят в профиль.
+link:../compatibility/uri-cache/assets.json[Отчёт с входами и обеими реакциями]:
+39 случаев, 36 PASS / 3 XFAIL. Прежний include baseline сохранён без изменений.
+
+Три XFAIL фиксируют реальное расхождение порядка: core разрешает изображения
+при завершении parse, а HTML-backend читает stylesheet позже; Ruby делает это
+в обратном порядке. Кроме HTTP trace различаются ответы изображений, если
+stylesheet должен первым активировать кэш, и порядок предупреждений при двух
+ошибках. XFAIL не считается совместимостью: CI сверяет весь сохранённый отчёт,
+поэтому drift и неожиданное совпадение XPASS останавливают проверку.
+Перенос порядка преобразования — следующий шаг, а не исключение из контракта.
+
+[source,shell]
+----
+python3 scripts/audit_uri_cache.py --assets --baseline compatibility/uri-cache/assets.json
+----
 
 == Подсветка исходного кода
 

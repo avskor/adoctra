@@ -11,6 +11,40 @@ const SVG: &[u8] =
     b"\xef\xbb\xbf<?xml version=\"1.0\"?>\r\n<svg width=\"10\" style='a'>  \r\n <g/>\t\n</svg>\n";
 const CONTENTS: &str = "<?xml version=\"1.0\"?>\n<svg width=\"10\" style='a'>\n <g/>\n</svg>";
 
+#[test]
+fn svg_assets_decode_bom_strictly_without_creating_source_snapshots() {
+    let source = "image::encoded.svg[Pic,opts=inline]\n";
+    let mut resources = MemoryResources::new();
+    let mut map = SourceMap::new();
+    let id = map.add("/main.adoc", source);
+    let options = ParseOptions {
+        source_id: id,
+        ..Default::default()
+    };
+    let bytes: Vec<u8> = std::iter::once(0xfeffu16)
+        .chain("<svg>Привет</svg>\r\n".encode_utf16())
+        .flat_map(u16::to_le_bytes)
+        .collect();
+    resources.insert_binary("/encoded.svg", bytes).unwrap();
+    let good = parse_resource(&mut map, &options, &resources).unwrap();
+    assert_eq!(
+        images(&good)[0].1,
+        Some(Svg::Inline(Some("<svg>Привет</svg>".into())))
+    );
+    assert!(good.diagnostics.is_empty());
+    resources
+        .insert_binary("/encoded.svg", b"<svg>\xff</svg>".to_vec())
+        .unwrap();
+    let bad = parse_resource(&mut map, &options, &resources).unwrap();
+    assert_eq!(images(&bad)[0].1, Some(Svg::Inline(None)));
+    assert_eq!(
+        bad.diagnostics[0].message,
+        "SVG does not exist or cannot be read: /encoded.svg"
+    );
+    assert_eq!(map.slice(bad.diagnostics[0].span), Some(source.trim_end()));
+    assert!(map.get(adoctra_core::SourceId(1)).is_none());
+}
+
 fn convert(root: &str, options: ParseOptions) -> ParseResult {
     let mut resources = MemoryResources::new();
     resources.insert("/docs/main.adoc", root).unwrap();

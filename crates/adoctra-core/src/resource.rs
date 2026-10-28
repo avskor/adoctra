@@ -165,11 +165,20 @@ pub struct BinaryResource {
 
 pub trait ResourceProvider {
     /// Enable URI caching for this provider's session. Called only for an
-    /// allowed URI read with `cache-uri`; removing the attribute does not
+    /// allowed URI include or asset read with `cache-uri`; removing the attribute does not
     /// disable an already enabled cache, like Ruby's OpenURI adapter.
     /// Providers choose cache storage/lifetime and retain access policy.
     /// The default leaves existing host providers unchanged.
     fn enable_uri_cache(&self) {}
+
+    /// Load an asset whose text will be normalized by the consumer (e.g. inline
+    /// SVG). Decode original bytes strictly, with include-style BOM detection,
+    /// retaining BOM/line endings for the caller. Existing binary providers
+    /// work through this default; URI providers may preserve cache-hit encoding
+    /// semantics. This does not select lines or register a source snapshot.
+    fn load_asset_text(&self, request: ResourceRequest<'_>) -> ResourceResult<Resource> {
+        self.load_binary(request)?.decode(None)
+    }
 
     /// Load one snapshot. Missing and denied resources must be distinguished,
     /// so optional includes can suppress only the appropriate failures.

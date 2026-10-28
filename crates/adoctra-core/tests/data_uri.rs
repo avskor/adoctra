@@ -57,6 +57,88 @@ fn sources(result: &ParseResult) -> Vec<String> {
 const PNG: &[u8] = b"\x89PNG\r\n\x1a\nxyz";
 const PNG_DATA: &str = "data:image/png;base64,iVBORw0KGgp4eXo=";
 
+#[test]
+fn cache_activation_precedes_permitted_asset_reads_and_preserves_spans() {
+    #[derive(Default)]
+    struct Host(std::cell::RefCell<Vec<String>>);
+    impl ResourceProvider for Host {
+        fn enable_uri_cache(&self) {
+            self.0.borrow_mut().push("enable".into());
+        }
+        fn load(&self, request: ResourceRequest<'_>) -> ResourceResult<Resource> {
+            Err(ResourceError::new(
+                ResourceErrorKind::NotFound,
+                request.target,
+                "missing",
+            ))
+        }
+        fn load_binary(&self, request: ResourceRequest<'_>) -> ResourceResult<BinaryResource> {
+            self.0.borrow_mut().push(request.target.into());
+            Ok(BinaryResource {
+                name: request.target.into(),
+                bytes: b"<svg/>".to_vec(),
+                content_type: Some("image/svg+xml".into()),
+            })
+        }
+    }
+    for svg in [false, true] {
+        for (safe, allow, data_uri, target, expected) in [
+            (
+                SafeMode::Safe,
+                true,
+                true,
+                "https://host/a.svg",
+                vec!["enable", "https://host/a.svg"],
+            ),
+            (SafeMode::Safe, false, true, "https://host/a.svg", vec![]),
+            (SafeMode::Secure, true, true, "https://host/a.svg", vec![]),
+            (
+                SafeMode::Safe,
+                true,
+                false,
+                "https://host/a.svg",
+                if svg {
+                    vec!["enable", "https://host/a.svg"]
+                } else {
+                    vec![]
+                },
+            ),
+            (SafeMode::Safe, true, true, "local.svg", vec!["local.svg"]),
+        ] {
+            let source = format!(
+                ":cache-uri:\n{}\nimage::{target}[Pic{}]\n",
+                if data_uri { ":data-uri:\n" } else { "" },
+                if svg { ",opts=inline" } else { "" }
+            );
+            let mut map = SourceMap::new();
+            let source_id = map.add("main.adoc", source.clone());
+            let host = Host::default();
+            let mut options = ParseOptions {
+                source_id,
+                safe,
+                ..Default::default()
+            };
+            if allow {
+                options.attributes.set("allow-uri-read", "");
+            }
+            let result = parse_resource(&mut map, &options, &host).unwrap();
+            assert_eq!(*host.0.borrow(), expected, "{source} {safe:?} {allow}");
+            let block = &result.document.blocks[0];
+            assert_eq!(map.slice(block.span), Some(source.lines().last().unwrap()));
+            if svg && !allow && safe != SafeMode::Secure {
+                let diagnostic = &result.diagnostics[0];
+                assert_eq!(diagnostic.span, block.span);
+                assert_eq!(
+                    diagnostic.report.location,
+                    adoctra_core::DiagnosticLocation::Unlocated
+                );
+            } else {
+                assert!(result.diagnostics.is_empty());
+            }
+        }
+    }
+}
+
 fn resources(root: &str) -> (SourceMap, MemoryResources, ParseOptions) {
     let mut resources = MemoryResources::new();
     resources.insert("/docs/main.adoc", root).unwrap();

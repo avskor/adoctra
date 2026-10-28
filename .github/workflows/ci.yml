@@ -45,6 +45,8 @@ jobs:
         run: gem install --user-install open-uri-cached --version "$(cat compatibility/open-uri-cached-version)" --no-document
       - name: Verify URI cache requests and diagnostics
         run: python3 scripts/audit_uri_cache.py --baseline compatibility/uri-cache/report.json --report target/uri-cache-report.json
+      - name: Verify URI asset cache and known conversion order gaps
+        run: python3 scripts/audit_uri_cache.py --assets --baseline compatibility/uri-cache/assets.json --report target/uri-assets-report.json
       - name: Test semantic reference converter
         run: ruby scripts/test_asciidoctor_semantics.rb
       - name: Test diagnostic position reference

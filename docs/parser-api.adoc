@@ -149,9 +149,11 @@ admonition из `caption=` ещё не поддержана.
 Сам parser не выполняет I/O и не ищет ресурс через неявный fallback.
 
 `ResourceProvider::enable_uri_cache()` — необязательный сигнал provider перед
-разрешённым URI-включением с текущим `cache-uri`. Secure mode, отсутствие
-`allow-uri-read`, отключённая глубина, неактивная ветка и локальный include не
-вызывают этот метод. Default ничего не делает: существующие host providers,
+разрешённым URI-включением или чтением asset с текущим `cache-uri`.
+Secure mode и отсутствие `allow-uri-read` не позволяют активировать кэш;
+для include дополнительно действуют depth и условия, для изображений —
+`data-uri` либо inline SVG, для stylesheet — встраивание вместо linkcss.
+Локальные ресурсы не активируют кэш. Default ничего не делает: существующие host providers,
 MemoryResources и WASM сохраняют свою политику загрузки. Provider самостоятельно
 выбирает хранилище и срок жизни; parser не кэширует ответы вместо него.
 Сигнал может повторяться; снятие атрибута не означает сброс кэша.
@@ -164,7 +166,19 @@ open-uri-cached 2.0.0. Повторная загрузка проходит об
 позиций, циклов и byte budget; кэш не даёт обходить лимиты. Изменение возвращённой
 копии не меняет ответ в кэше. Разные providers не разделяют ответы; общего
 Ruby process cache, файлового хранилища и API его invalidation здесь нет.
-Активация через изображения/stylesheet пока не реализована.
+Изображения, inline SVG и stylesheet активируют тот же кэш. Порядок чтений
+standalone пока отличается: тело разрешает изображения до чтения stylesheet
+HTML-backend, тогда как Ruby читает stylesheet первым. Это отражено отдельными
+XFAIL в asset-аудите и может менять содержимое и порядок предупреждений.
+
+`ResourceProvider::load_asset_text(request)` читает текст для последующей
+нормализации, сейчас inline SVG. Default вызывает `load_binary` и строгий
+decoder с BOM detection; byte-only providers продолжают работать. Native
+provider учитывает BINARY-кодировку попаданий в URI-кэш. Consumer удаляет
+начальный BOM и хвостовые пробелы строк; повреждённый текст даёт предупреждение
+и alt fallback без U+FFFD. Снимок source не создаётся. Предупреждения assets
+сохраняют физический span для редактора, но report.location — Unlocated, как
+у Ruby logger при преобразовании.
 
 `ResourceProvider::prepare_include(request, encoding, line_limit)` вызывается для
 include до выбора строк/тегов. Метод получает `encoding` после подстановок и

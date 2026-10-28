@@ -59,6 +59,26 @@ class UriCacheAuditTests(unittest.TestCase):
         self.assertTrue(all(isinstance(case['requests'], list) for case in cases))
         self.assertIn('unicode-hit-ruby-error', {case['id'] for case in cases if case.get('ruby_error')})
 
+    def test_styles_and_links_compare_exactly_and_shell_mapping_is_narrow(self):
+        self.case['standalone'] = True
+        reference = dict(self.report, html='<div id="content"><p>one</p></div>', styles=['a\nb'], stylesheet_links=['<link rel="stylesheet" href="a.css">'])
+        actual = dict(reference, html='<main id="content"><p>one</p></main>')
+        self.assertEqual(audit.compare(self.case, reference, actual), 'PASS')
+        self.assertEqual(audit.compare(self.case, reference, dict(actual, styles=['a b'])), 'DIFF')
+        self.assertEqual(audit.compare(self.case, reference, dict(actual, stylesheet_links=[])), 'DIFF')
+        self.assertEqual(audit.compare(self.case, reference, dict(actual, html='<main id="content" role="extra"><p>one</p></main>')), 'DIFF')
+
+    def test_known_order_gap_is_not_pass_and_unexpected_success_fails(self):
+        case = dict(self.case, known_difference='order')
+        self.assertEqual(audit.compare(case, self.report, self.report), 'XPASS')
+        self.assertEqual(audit.compare(case, self.report, dict(self.report, requests=[])), 'XFAIL')
+        self.assertEqual(len(audit.asset_cases()), len({c['id'] for c in audit.asset_cases()}))
+
+    def test_asset_warnings_retain_absent_cursors(self):
+        result = audit.cli_diagnostics('adoctra: warning: could not retrieve image data from URI: http://fixture.test/a.png\n')
+        self.assertEqual(result[0]['location'], None)
+        self.assertEqual(result[0]['severity'], 'warning')
+
 
 if __name__ == '__main__':
     unittest.main()
