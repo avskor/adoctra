@@ -162,7 +162,10 @@ pub(super) fn lookup(name: &str) -> Option<Encoding> {
         "macthai" => Encoding::Unavailable,
         "macturkish" => Encoding::Single(&TABLE_51),
         "macukraine" => Encoding::Single(&TABLE_52),
-        "stateless-iso-2022-jp" => Encoding::Unsupported,
+        "stateless-iso-2022-jp" => Encoding::Multibyte {
+            table: &MULTI_2,
+            kind: MultibyteKind::StatelessIso2022Jp,
+        },
         "stateless-iso-2022-jp-kddi" => Encoding::Unsupported,
         _ => return None,
     })

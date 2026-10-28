@@ -33,6 +33,7 @@ enum Encoding {
 enum MultibyteKind {
     ShiftJis,
     EucJp,
+    StatelessIso2022Jp,
     Big5,
     Gb2312,
     Korean,
@@ -328,6 +329,14 @@ impl BinaryResource {
                 let mut remaining = bytes.as_slice();
                 while let Some(&first) = remaining.first() {
                     if first < 128 {
+                        // Ruby IO invokes this transcoder even for ASCII-only
+                        // strings; String#encode's ASCII fast path would let
+                        // these forbidden stateless controls pass incorrectly.
+                        if matches!(kind, MultibyteKind::StatelessIso2022Jp)
+                            && matches!(first, 0x0e | 0x0f | 0x1b)
+                        {
+                            return Err(invalid());
+                        }
                         text.push(char::from(first));
                         remaining = &remaining[1..];
                         continue;
@@ -341,6 +350,10 @@ impl BinaryResource {
                         MultibyteKind::EucJp => match first {
                             0x8e | 0xa1..=0xfe => 2,
                             0x8f => 3,
+                            _ => return Err(invalid()),
+                        },
+                        MultibyteKind::StatelessIso2022Jp => match first {
+                            0x90 | 0x92 => 3,
                             _ => return Err(invalid()),
                         },
                         MultibyteKind::Big5 => match first {
@@ -389,6 +402,21 @@ impl BinaryResource {
                         remaining = &remaining[4..];
                         continue;
                     }
+                    let sequence = if matches!(kind, MultibyteKind::StatelessIso2022Jp) {
+                        // Ruby's stateless representation prefixes each JIS
+                        // pair with 90 (1978) or 92 (1983). Both reuse EUC-JP's
+                        // mappings. EUC kana/0212 prefixes are invalid inside
+                        // a triple; the ASCII branch rejects ESC/SO/SI.
+                        if !sequence[1..]
+                            .iter()
+                            .all(|byte| (0xa1..=0xfe).contains(byte))
+                        {
+                            return Err(invalid());
+                        }
+                        &sequence[1..]
+                    } else {
+                        sequence
+                    };
                     let key = sequence
                         .iter()
                         .fold(0_u64, |key, byte| (key << 8) | u64::from(*byte));
@@ -484,6 +512,11 @@ mod tests {
             (Some("Shift_JIS"), &b"\x95\x5c\r\n"[..], &b"\x81"[..]),
             (Some("EUC-JP"), &b"\x8f\xa2\xaf\r\n"[..], &b"\x8f\xa2"[..]),
             (
+                Some("stateless-ISO-2022-JP"),
+                &b"\x90\xa4\xa2\r\n"[..],
+                &b"\x92\xa4"[..],
+            ),
+            (
                 Some("ISO-2022-JP"),
                 &b"\x1b$B$\"\x1b(B\r\n"[..],
                 &b"\x1b$"[..],
@@ -546,7 +579,7 @@ mod tests {
         // must not silently fall back to a successful ASCII-prefix decode.
         for (encoding, bytes, kind) in [
             (
-                Some("stateless-ISO-2022-JP"),
+                Some("ISO-2022-JP-KDDI"),
                 &b"good\n\xff"[..],
                 ResourceErrorKind::Unsupported,
             ),
@@ -676,9 +709,7 @@ mod tests {
         );
         // These are recognized names, not misspellings that may fall back to UTF-8.
         assert_eq!(
-            decode(b"ASCII", Some("stateless-ISO-2022-JP"))
-                .unwrap_err()
-                .kind,
+            decode(b"ASCII", Some("ISO-2022-JP-KDDI")).unwrap_err().kind,
             ResourceErrorKind::Unsupported
         );
         assert_eq!(
@@ -744,6 +775,54 @@ mod tests {
     }
 
     #[test]
+    fn stateless_jp_triples_reuse_jis_mappings_without_escape_states() {
+        for name in ["stateless-ISO-2022-JP", "STATELESS-ISO-2022-JP"] {
+            for (bytes, expected) in [
+                (&b"\x92\xc6\xfc\x90\xcb\xdc\x92\xb8\xec"[..], "日本語"),
+                (&b"\x90\xa1\xc1\x92\xa1\xc1"[..], "〜〜"),
+                (&b"\0\t\r\n\x7f"[..], "\0\t\r\n\u{7f}"),
+                (&b""[..], ""),
+            ] {
+                assert_eq!(
+                    decode(bytes, Some(name)).unwrap().text,
+                    expected,
+                    "{name}/{bytes:?}"
+                );
+            }
+            for bytes in [
+                &b"\x1b$B$\"\x1b(B\x0e1\x0f"[..],
+                &b"\x92\xa4\xa2\x1b\x90\xa4\xa4\n"[..],
+                &b"\x1b"[..],
+                &b"\x0e"[..],
+                &b"\x0f"[..],
+                &b"\x90"[..],
+                &b"\x92"[..],
+                &b"\x90\xa4"[..],
+                &b"\x92\xa4"[..],
+                &b"\x90$\xa2"[..],
+                &b"\x92\xa4\""[..],
+                &b"\x90\xa4\n"[..],
+                &b"\x91\xa4\xa2"[..],
+                &b"\x90\xfe\xfe"[..],
+                &b"\x92\xad\xa1"[..],
+                &b"\xa4\xa2"[..],
+                &b"\x8e\xb1"[..],
+                &b"\x8f\xa2\xaf"[..],
+                &b"\x90\x8e\xb1"[..],
+                &b"\x92\x8f\xa2\xaf"[..],
+                &b"\xef\xbb\xbf"[..],
+                &b"\xff\xfeA\0"[..],
+            ] {
+                assert_eq!(
+                    decode(bytes, Some(name)).unwrap_err().kind,
+                    ResourceErrorKind::InvalidEncoding,
+                    "{name}/{bytes:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn multibyte_decoding_matches_exhaustive_ruby_fingerprints() {
         // Ruby 3.3.8, pinned Asciidoctor environment. Regenerate independently:
         // ruby scripts/generate_encodings.rb --fingerprints
@@ -765,6 +844,7 @@ mod tests {
             ("GB18030", 0xc15d224b9301efc0, false),
             ("EUC-KR", 0xfda2bfb2de08cf1d, false),
             ("CP949", 0x620f7b1e5bb833c1, false),
+            ("stateless-ISO-2022-JP", 0x91fbafd49916f8e1, false),
         ] {
             let mut hash = 0xcbf29ce484222325_u64;
             let mut feed = |byte| {
@@ -792,10 +872,19 @@ mod tests {
                     check(&[a, b]);
                 }
             }
-            if euc {
+            let prefixes: &[u8] = if euc {
+                &[0x8f]
+            } else if name == "stateless-ISO-2022-JP" {
+                // An independent Ruby oracle checks 196,865 inputs, including
+                // all invalid triples for both 1978/1983 prefixes.
+                &[0x90, 0x92]
+            } else {
+                &[]
+            };
+            for &prefix in prefixes {
                 for a in 0..=255 {
                     for b in 0..=255 {
-                        check(&[0x8f, a, b]);
+                        check(&[prefix, a, b]);
                     }
                 }
             }
@@ -852,7 +941,7 @@ mod tests {
             decode(b"ASCII", Some("ISO2022-JP2")).unwrap_err().kind,
             ResourceErrorKind::InvalidEncoding
         );
-        for name in ["ISO-2022-JP-KDDI", "stateless-ISO-2022-JP"] {
+        for name in ["ISO-2022-JP-KDDI", "stateless-ISO-2022-JP-KDDI"] {
             assert_eq!(
                 decode(b"ASCII", Some(name)).unwrap_err().kind,
                 ResourceErrorKind::Unsupported

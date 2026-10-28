@@ -62,6 +62,8 @@ fn gb_selections_preserve_decoded_spans_and_unicode_columns() {
         ("GB2312", &b"\xd6\xd0"[..], "中"),
         ("ISO-2022-JP", &b"\x1b$BF|\x1b(B"[..], "日"),
         ("ISO2022-JP", &b"\x1b$@F|\x1b(J"[..], "日"),
+        ("stateless-ISO-2022-JP", &b"\x92\xc6\xfc"[..], "日"),
+        ("STATELESS-ISO-2022-JP", &b"\x90\xc6\xfc"[..], "日"),
         ("CP50220", &b"\x1b(I1\x0f"[..], "ｱ"),
         ("cp50221", &b"\x0e1\x1b(B"[..], "ｱ"),
         ("EUC-KR", &b"\xb0\xa1"[..], "가"),
@@ -264,6 +266,81 @@ fn cp5022_states_and_variants_preserve_selection_and_source_identity() {
     assert!(sources.get(SourceId(4)).is_none());
     assert_eq!(sources.get(SourceId(1)).unwrap().text(), "～\r\n");
     assert_eq!(sources.get(SourceId(2)).unwrap().text(), "〜\r\n");
+}
+
+#[test]
+fn stateless_jp_prefixes_and_immutable_snapshots_follow_decoded_text() {
+    let name = "stateless-ISO-2022-JP";
+    for (selection, bytes, success) in [
+        ("lines=1", &b"*\x92\xa4\xa2*\r\n\x90\xa4"[..], true),
+        ("lines=1", &b"*\x92\xa4\xa2*\r\n\x1b"[..], true),
+        ("lines=2", &b"*\x92\xa4\xa2*\r\n\x90\xa4"[..], false),
+        ("lines=1;3", &b"good\n\x90\nlast\n"[..], false),
+        ("lines=1;3", &b"good\n\x1b\nlast\n"[..], false),
+        ("lines=2", &b"good\n\x0f\n"[..], false),
+        ("lines=1", &b"\x92\xa4\nlast\n"[..], false),
+        (
+            "tag=body",
+            &b"// tag::body[]\nOK\n// end::body[]\n\x92"[..],
+            false,
+        ),
+        (
+            "tag=body",
+            &b"// tag::body[]\nOK\n// end::body[]\n\x0e"[..],
+            false,
+        ),
+    ] {
+        let (mut resources, mut sources, options) = setup(&format!(
+            "include::part.adoc[encoding={name},{selection},opts=optional]"
+        ));
+        resources.insert_binary("/docs/part.adoc", bytes).unwrap();
+        let result = parse_resource(&mut sources, &options, &resources).unwrap();
+        if success {
+            assert!(result.diagnostics.is_empty());
+            let source = sources.get(SourceId(1)).unwrap();
+            assert_eq!(source.text(), "*あ*\r\n");
+            assert!(!source.is_complete());
+            assert_eq!(
+                sources.slice(result.document.flat_blocks()[0].span),
+                Some("*あ*")
+            );
+        } else {
+            assert_eq!(result.diagnostics.len(), 1, "{selection}");
+            assert!(sources.get(SourceId(1)).is_none());
+        }
+    }
+    let (mut resources, mut sources, options) = setup(&format!(
+        "include::part.adoc[encoding={name}]\n\ninclude::part.adoc[encoding={}]",
+        name.to_uppercase()
+    ));
+    resources
+        .insert_binary("/docs/part.adoc", b"\x92\xa4\xa2\r\n")
+        .unwrap();
+    let first = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(first.diagnostics.is_empty());
+    assert!(first
+        .document
+        .flat_blocks()
+        .iter()
+        .all(|b| b.span.source_id == SourceId(1)));
+    resources
+        .insert_binary("/docs/part.adoc", b"\x90\xa4\xa2\r\n")
+        .unwrap();
+    let same = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(same.diagnostics.is_empty());
+    assert!(sources.get(SourceId(2)).is_none());
+    resources
+        .insert_binary("/docs/part.adoc", b"\x90\xa4\xa4\r\n")
+        .unwrap();
+    let changed = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(changed.diagnostics.is_empty());
+    assert_eq!(sources.get(SourceId(1)).unwrap().text(), "あ\r\n");
+    assert_eq!(sources.get(SourceId(2)).unwrap().text(), "い\r\n");
+    assert!(changed
+        .document
+        .flat_blocks()
+        .iter()
+        .all(|b| b.span.source_id == SourceId(2)));
 }
 
 #[test]

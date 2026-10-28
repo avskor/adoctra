@@ -173,6 +173,49 @@ mod tests {
     use super::*;
 
     #[test]
+    fn stateless_jp_includes_export_utf8_spans_and_share_prefix_variants() {
+        let mut workspace = ResourceWorkspace::new();
+        workspace.set("/main.adoc", "include::part.adoc[encoding=stateless-ISO-2022-JP,lines=2]\n\ninclude::part.adoc[encoding=STATELESS-ISO-2022-JP,lines=2]").unwrap();
+        workspace
+            .set_binary("/part.adoc", b"ignored\r\n*\x92\xa4\xa2*\r\n")
+            .unwrap();
+        let main = workspace.load("/main.adoc", None).unwrap();
+        let json = workspace.parse_json(main).unwrap();
+        assert!(
+            json.contains(r#""diagnostics":[]"#) && json.contains("あ"),
+            "{json}"
+        );
+        assert_eq!(workspace.source(1).unwrap().text(), "ignored\r\n*あ*\r\n");
+        assert!(workspace.source(2).is_err());
+        let tokens = workspace.tokens_json(main).unwrap();
+        assert!(
+            tokens.contains(r#""source_id":1,"start":9,"end":14"#),
+            "{tokens}"
+        );
+        assert_eq!(
+            workspace.source(1).unwrap().position(13).unwrap(),
+            adoctra_core::SourcePosition { line: 2, column: 3 }
+        );
+        workspace
+            .set_binary("/part.adoc", b"ignored\r\n*\x90\xa4\xa2*\r\n")
+            .unwrap();
+        let same = workspace.parse_json(main).unwrap();
+        assert!(same.contains(r#""diagnostics":[]"#), "{same}");
+        assert!(workspace.source(2).is_err());
+        workspace
+            .set_binary("/part.adoc", b"ignored\r\n*\x90\xa4\xa4*\r\n\x0f")
+            .unwrap();
+        let changed = workspace.parse_json(main).unwrap();
+        assert!(
+            changed.contains(r#""diagnostics":[]"#) && changed.contains("い"),
+            "{changed}"
+        );
+        assert_eq!(workspace.source(2).unwrap().text(), "ignored\r\n*い*\r\n");
+        assert!(!workspace.source(2).unwrap().is_complete());
+        assert_eq!(workspace.source(1).unwrap().text(), "ignored\r\n*あ*\r\n");
+    }
+
+    #[test]
     fn cp5022_includes_share_variants_and_export_decoded_snapshots() {
         let mut workspace = ResourceWorkspace::new();
         workspace.set("/main.adoc", "include::part.adoc[encoding=CP50220,lines=2]\n\ninclude::part.adoc[encoding=CP50221,lines=2]\n\ninclude::part.adoc[encoding=ISO-2022-JP,lines=2,opts=optional]").unwrap();

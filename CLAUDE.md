@@ -143,7 +143,7 @@ as unrestricted replacement of Asciidoctor. Do not resume allocation
 micro-optimizations as the next task. Include encoding now supports Unicode and
 53 single-byte codecs, plus Shift_JIS, Windows-31J, EUC-JP, eucJP-ms, CP51932,
 Big5, Big5-HKSCS, Big5-UAO, CP950, CP951, GB2312, GB12345, GBK, GB18030, EUC-KR, CP949
-and ISO-2022-JP (ISO2022-JP), CP50220 and CP50221.
+and ISO-2022-JP (ISO2022-JP), CP50220, CP50221 and stateless-ISO-2022-JP.
 Finite positive `lines` selections recover an intact decoded prefix when only
 the unread tail is malformed; `SourceFile::is_complete` exposes this explicitly.
 Skipped malformed UTF-8/BINARY lines now have explicit omission records with
@@ -1144,7 +1144,7 @@ and raw bytes (hex in JSON). `SourceFile::position` accounts for gaps; omitted
 bytes count toward the include budget. Sparse snapshots cannot be reparsed as
 implicitly valid primary sources. `is_complete`/WASM `source_is_complete`
 distinguish these views and prefixes from full files. BOM/CRLF remain intact.
-Unicode, 53 single-byte codecs and nineteen Japanese/Big5/GB/Korean multibyte codecs use std-only decoding with mappings generated
+Unicode, 53 single-byte codecs and twenty Japanese/Big5/GB/Korean multibyte codecs use std-only decoding with mappings generated
 by `scripts/generate_encodings.rb` from the pinned Ruby environment. Unknown
 names fall back to UTF-8 like Ruby; known unsupported multibyte names fail
 explicitly, and codecs unavailable in the reference fail as unreadable.
@@ -1184,8 +1184,17 @@ outside JIS mode. SI selects ASCII without restoring the state preceding SO.
 Controls/newlines in katakana and shifts inside a JIS
 pair are invalid. Each variant's independent fingerprint covers 1575948 inputs
 in twelve initial designations/shift combinations. This implements decoding
-only, not the variants' different encoding rules. KDDI and stateless variants
-remain unsupported; ISO-2022-JP-2 has no Ruby converter.
+only, not the variants' different encoding rules.
+stateless-ISO-2022-JP decodes each 90/92 + A1-FE + A1-FE triple with EUC-JP's
+6879 JIS mappings (1978/1983 produce the same Unicode). Its Ruby IO transcoder
+rejects ESC/SO/SI, preserves other ASCII and has no escape state changes.
+String#encode bypasses the transcoder on ASCII-only inputs and can incorrectly
+accept those controls; its oracle must use Encoding::Converter like Ruby IO.
+Bare EUC pairs, halfwidth kana and JIS X 0212 prefixes are invalid, including
+inside triples.
+Its independent fingerprint covers 196865 inputs: all single bytes, pairs and
+90/92-prefixed triples. Both prefixes producing the same UTF-8 share a snapshot.
+KDDI variants remain unsupported; ISO-2022-JP-2 has no Ruby converter.
 The decoder's exhaustive short-input fingerprints can be reproduced with
 `ruby scripts/generate_encodings.rb --fingerprints`. Other legacy multibyte
 codecs remain open; never claim that the

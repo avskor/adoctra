@@ -18,13 +18,21 @@ MULTIBYTE = (JAPANESE + BIG5 + GB + KOREAN).freeze
 # This enumerates all byte pairs, rather than the table generator's lead/trail
 # ranges. EUC also tests every pair following the three-byte prefix 0x8f.
 if ARGV == ['--fingerprints']
-  (MULTIBYTE + ['GB18030-four', 'ISO-2022-JP', 'CP50220', 'CP50221']).each do |label|
+  (MULTIBYTE + ['GB18030-four', 'ISO-2022-JP', 'CP50220', 'CP50221', 'stateless-ISO-2022-JP']).each do |label|
     name = label == 'GB18030-four' ? 'GB18030' : label
     hash = 0xcbf29ce484222325
     feed = lambda { |byte| hash = ((hash ^ byte) * 0x100000001b3) & 0xffffffffffffffff }
     check = lambda do |bytes|
       begin
-        result = bytes.pack('C*').force_encoding(name).encode('UTF-8')
+        input = bytes.pack('C*').force_encoding(name)
+        result = if name == 'stateless-ISO-2022-JP'
+                   # Like Ruby IO, always run the transcoder. String#encode
+                   # bypasses it on ASCII-only strings, hiding ESC/SO/SI errors.
+                   converter = Encoding::Converter.new name, 'UTF-8'
+                   converter.convert(input) + converter.finish
+                 else
+                   input.encode('UTF-8')
+                 end
         feed.call 1
         result.bytes.each { |byte| feed.call byte }
         feed.call 255
@@ -65,6 +73,9 @@ if ARGV == ['--fingerprints']
       256.times { |a| check.call [a] }
       256.times { |a| 256.times { |b| check.call [a, b] } }
       256.times { |a| 256.times { |b| check.call [0x8f, a, b] } } if JAPANESE.drop(2).include? name
+      if name == 'stateless-ISO-2022-JP'
+        [0x90, 0x92].each { |prefix| 256.times { |a| 256.times { |b| check.call [prefix, a, b] } } }
+      end
     end
     puts format('%s: 0x%016x', label, hash)
   end
@@ -103,6 +114,7 @@ Encoding.list.sort_by(&:name).each do |enc|
          when 'UTF-32BE' then 'Encoding::Utf32(Some(false))'
          when 'ISO-2022-JP' then "Encoding::Iso2022Jp { table: &MULTI_#{MULTIBYTE.index('EUC-JP')}, windows: false }"
          when 'CP50220', 'CP50221' then "Encoding::Iso2022Jp { table: &MULTI_#{MULTIBYTE.index('CP51932')}, windows: true }"
+         when 'stateless-ISO-2022-JP' then "Encoding::Multibyte { table: &MULTI_#{MULTIBYTE.index('EUC-JP')}, kind: MultibyteKind::StatelessIso2022Jp }"
          else
            if (index = single_byte.index(enc))
              "Encoding::Single(&TABLE_#{index})"
