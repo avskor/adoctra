@@ -18,7 +18,7 @@ MULTIBYTE = (JAPANESE + BIG5 + GB + KOREAN).freeze
 # This enumerates all byte pairs, rather than the table generator's lead/trail
 # ranges. EUC also tests every pair following the three-byte prefix 0x8f.
 if ARGV == ['--fingerprints']
-  (MULTIBYTE + ['GB18030-four']).each do |label|
+  (MULTIBYTE + ['GB18030-four', 'ISO-2022-JP']).each do |label|
     name = label == 'GB18030-four' ? 'GB18030' : label
     hash = 0xcbf29ce484222325
     feed = lambda { |byte| hash = ((hash ^ byte) * 0x100000001b3) & 0xffffffffffffffff }
@@ -32,7 +32,17 @@ if ARGV == ['--fingerprints']
         feed.call 0
       end
     end
-    if label == 'GB18030-four'
+    if label == 'ISO-2022-JP'
+      # Every single byte/pair in every designation, including errors. Every
+      # escape candidate is followed by text valid in both ASCII and JIS, so
+      # the digest also distinguishes the resulting state after a transition.
+      [[], [27, 36, 66], [27, 36, 64], [27, 40, 66], [27, 40, 74]].each do |prefix|
+        check.call prefix
+        256.times { |a| check.call prefix + [a] }
+        256.times { |a| 256.times { |b| check.call prefix + [a, b] } }
+        256.times { |a| 256.times { |b| check.call prefix + [27, a, b, 36, 34] } }
+      end
+    elsif label == 'GB18030-four'
       # Independent of the range generator's linear pointer enumeration:
       # every syntactic four-byte sequence and every truncated three-byte prefix.
       (0x81..0xfe).each do |a|
@@ -87,6 +97,7 @@ Encoding.list.sort_by(&:name).each do |enc|
          when 'UTF-32' then 'Encoding::Utf32(None)'
          when 'UTF-32LE' then 'Encoding::Utf32(Some(true))'
          when 'UTF-32BE' then 'Encoding::Utf32(Some(false))'
+         when 'ISO-2022-JP' then "Encoding::Iso2022Jp(&MULTI_#{MULTIBYTE.index('EUC-JP')})"
          else
            if (index = single_byte.index(enc))
              "Encoding::Single(&TABLE_#{index})"

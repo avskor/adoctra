@@ -173,6 +173,41 @@ mod tests {
     use super::*;
 
     #[test]
+    fn iso2022_includes_export_decoded_spans_and_immutable_alias_snapshots() {
+        let mut workspace = ResourceWorkspace::new();
+        workspace.set("/main.adoc", "include::part.adoc[encoding=ISO-2022-JP,lines=2]\n\ninclude::part.adoc[encoding=ISO2022-JP,lines=2]").unwrap();
+        workspace
+            .set_binary("/part.adoc", b"ignored\r\n*\x1b$B$\"\x1b(B*\r\n")
+            .unwrap();
+        let main = workspace.load("/main.adoc", None).unwrap();
+        let json = workspace.parse_json(main).unwrap();
+        assert!(json.contains(r#""diagnostics":[]"#), "{json}");
+        assert!(json.contains("あ"), "{json}");
+        assert_eq!(workspace.source(1).unwrap().text(), "ignored\r\n*あ*\r\n");
+        assert!(workspace.source(2).is_err());
+        let tokens = workspace.tokens_json(main).unwrap();
+        assert!(
+            tokens.contains(r#""source_id":1,"start":9,"end":14"#),
+            "{tokens}"
+        );
+        assert_eq!(
+            workspace.source(1).unwrap().position(13).unwrap(),
+            adoctra_core::SourcePosition { line: 2, column: 3 }
+        );
+        workspace
+            .set_binary("/part.adoc", b"ignored\r\n*\x1b$BF|\x1b(B*\r\n\x1b$")
+            .unwrap();
+        let updated = workspace.parse_json(main).unwrap();
+        assert!(
+            updated.contains("日") && updated.contains(r#""diagnostics":[]"#),
+            "{updated}"
+        );
+        assert_eq!(workspace.source(1).unwrap().text(), "ignored\r\n*あ*\r\n");
+        assert_eq!(workspace.source(2).unwrap().text(), "ignored\r\n*日*\r\n");
+        assert!(!workspace.source(2).unwrap().is_complete());
+    }
+
+    #[test]
     fn korean_includes_export_utf8_and_preserve_alias_identity() {
         let mut workspace = ResourceWorkspace::new();
         workspace.set("/main.adoc", "include::part.adoc[encoding=EUC-KR,lines=2]\n\ninclude::part.adoc[encoding=eucKR,lines=2]\n\ninclude::part.adoc[encoding=CP949,lines=2]").unwrap();

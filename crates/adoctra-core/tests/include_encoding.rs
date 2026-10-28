@@ -60,6 +60,8 @@ fn korean_prefix_selection_and_variant_errors_preserve_snapshots() {
 fn gb_selections_preserve_decoded_spans_and_unicode_columns() {
     for (encoding, glyph, decoded) in [
         ("GB2312", &b"\xd6\xd0"[..], "中"),
+        ("ISO-2022-JP", &b"\x1b$BF|\x1b(B"[..], "日"),
+        ("ISO2022-JP", &b"\x1b$@F|\x1b(J"[..], "日"),
         ("EUC-KR", &b"\xb0\xa1"[..], "가"),
         ("eucKR", &b"\xb0\xa1"[..], "가"),
         ("CP949", &b"\x81\x41"[..], "갂"),
@@ -118,6 +120,75 @@ fn gb_selections_preserve_decoded_spans_and_unicode_columns() {
                 .all(|token| sources.slice(token.span).is_some()));
         }
     }
+}
+
+#[test]
+fn iso2022_prefix_reads_validate_states_and_keep_immutable_alias_snapshots() {
+    for name in ["ISO-2022-JP", "ISO2022-JP", "iSo-2022-jP"] {
+        for (selection, bytes, success) in [
+            ("lines=1", &b"*\x1b$B$\"\x1b(B*\r\n\x1b$"[..], true),
+            ("lines=2", &b"*\x1b$B$\"\x1b(B*\r\n\x1b$"[..], false),
+            ("lines=1;3", &b"good\n\x1b$\nlast\n"[..], false),
+            ("lines=1", &b"\x1b$B$\"\r\n"[..], false),
+            ("lines=1", &b"\x1b$B$\n"[..], false),
+            (
+                "tag=body",
+                &b"// tag::body[]\nOK\n// end::body[]\n\x1b"[..],
+                false,
+            ),
+        ] {
+            let (mut resources, mut sources, options) = setup(&format!(
+                "include::part.adoc[encoding={name},{selection},opts=optional]"
+            ));
+            resources.insert_binary("/docs/part.adoc", bytes).unwrap();
+            let result = parse_resource(&mut sources, &options, &resources).unwrap();
+            if success {
+                assert!(result.diagnostics.is_empty());
+                let source = sources.get(SourceId(1)).unwrap();
+                assert_eq!(source.text(), "*あ*\r\n");
+                assert!(!source.is_complete());
+                assert_eq!(
+                    sources.slice(result.document.flat_blocks()[0].span),
+                    Some("*あ*")
+                );
+            } else {
+                assert_eq!(result.diagnostics.len(), 1, "{name}/{selection}: {bytes:?}");
+                assert!(sources.get(SourceId(1)).is_none());
+            }
+        }
+    }
+    let (mut resources, mut sources, options) = setup(
+        "include::part.adoc[encoding=ISO-2022-JP]\n\ninclude::part.adoc[encoding=ISO2022-JP]",
+    );
+    resources
+        .insert_binary("/docs/part.adoc", b"\x1b$B$\"\x1b(B\r\n")
+        .unwrap();
+    let first = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(first.diagnostics.is_empty());
+    assert!(first
+        .document
+        .flat_blocks()
+        .iter()
+        .all(|block| block.span.source_id == SourceId(1)));
+    // A different external designation producing the same text reuses the snapshot.
+    resources
+        .insert_binary("/docs/part.adoc", b"\x1b$@$\"\x1b(J\r\n")
+        .unwrap();
+    let same = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(same.diagnostics.is_empty());
+    assert!(sources.get(SourceId(2)).is_none());
+    resources
+        .insert_binary("/docs/part.adoc", b"\x1b$BF|\x1b(B\r\n")
+        .unwrap();
+    let changed = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(changed.diagnostics.is_empty());
+    assert!(changed
+        .document
+        .flat_blocks()
+        .iter()
+        .all(|block| block.span.source_id == SourceId(2)));
+    assert_eq!(sources.get(SourceId(1)).unwrap().text(), "あ\r\n");
+    assert_eq!(sources.get(SourceId(2)).unwrap().text(), "日\r\n");
 }
 
 #[test]

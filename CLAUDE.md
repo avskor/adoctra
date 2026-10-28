@@ -142,7 +142,8 @@ existing document-processing contract; do not describe that scoped contract
 as unrestricted replacement of Asciidoctor. Do not resume allocation
 micro-optimizations as the next task. Include encoding now supports Unicode and
 53 single-byte codecs, plus Shift_JIS, Windows-31J, EUC-JP, eucJP-ms, CP51932,
-Big5, Big5-HKSCS, Big5-UAO, CP950, CP951, GB2312, GB12345, GBK, GB18030, EUC-KR and CP949.
+Big5, Big5-HKSCS, Big5-UAO, CP950, CP951, GB2312, GB12345, GBK, GB18030, EUC-KR, CP949
+and ISO-2022-JP (ISO2022-JP).
 Finite positive `lines` selections recover an intact decoded prefix when only
 the unread tail is malformed; `SourceFile::is_complete` exposes this explicitly.
 Skipped malformed UTF-8/BINARY lines now have explicit omission records with
@@ -1143,7 +1144,7 @@ and raw bytes (hex in JSON). `SourceFile::position` accounts for gaps; omitted
 bytes count toward the include budget. Sparse snapshots cannot be reparsed as
 implicitly valid primary sources. `is_complete`/WASM `source_is_complete`
 distinguish these views and prefixes from full files. BOM/CRLF remain intact.
-Unicode, 53 single-byte codecs and sixteen Japanese/Big5/GB/Korean multibyte codecs use std-only decoding with mappings generated
+Unicode, 53 single-byte codecs and seventeen Japanese/Big5/GB/Korean multibyte codecs use std-only decoding with mappings generated
 by `scripts/generate_encodings.rb` from the pinned Ruby environment. Unknown
 names fall back to UTF-8 like Ruby; known unsupported multibyte names fail
 explicitly, and codecs unavailable in the reference fail as unreadable.
@@ -1168,6 +1169,13 @@ because pinned Ruby has no UTF-8 converter for it.
 EUC-KR/eucKR and CP949 have separate tables (8226 and 17048 mappings). CP949
 accepts extension Hangul such as 8141 -> 갂; EUC-KR rejects those bytes.
 Both retain strict transcoding and the existing finite-prefix/source contracts.
+ISO-2022-JP/ISO2022-JP uses an explicit state machine: ESC $ B/@ selects JIS
+X 0208, ESC ( B/J selects ASCII (Roman preserves backslash/tilde like Ruby).
+Its 6879 JIS mappings reuse EUC-JP's table. LF/CR/control bytes in JIS mode,
+SO/SI, katakana/revision/JIS X 0212 escapes and malformed sequences fail;
+a final reset to ASCII is optional. The independent state fingerprint checks
+656645 inputs across all five starting designations. CP50220/CP50221, KDDI
+and stateless variants remain unsupported; ISO-2022-JP-2 has no Ruby converter.
 The decoder's exhaustive short-input fingerprints can be reproduced with
 `ruby scripts/generate_encodings.rb --fingerprints`. Other legacy multibyte
 codecs remain open; never claim that the
