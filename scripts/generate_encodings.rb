@@ -9,14 +9,16 @@ require 'asciidoctor'
 
 JAPANESE = %w[Shift_JIS Windows-31J EUC-JP eucJP-ms CP51932].freeze
 BIG5 = %w[Big5 Big5-HKSCS Big5-UAO CP950 CP951].freeze
-MULTIBYTE = (JAPANESE + BIG5).freeze
+GB = %w[GB2312 GB12345 GBK GB18030].freeze
+MULTIBYTE = (JAPANESE + BIG5 + GB).freeze
 
 # Independent exhaustive reference for the Rust decoder regression test,
 # including invalid input and sequences containing multiple ASCII characters.
 # This enumerates all byte pairs, rather than the table generator's lead/trail
 # ranges. EUC also tests every pair following the three-byte prefix 0x8f.
 if ARGV == ['--fingerprints']
-  MULTIBYTE.each do |name|
+  (MULTIBYTE + ['GB18030-four']).each do |label|
+    name = label == 'GB18030-four' ? 'GB18030' : label
     hash = 0xcbf29ce484222325
     feed = lambda { |byte| hash = ((hash ^ byte) * 0x100000001b3) & 0xffffffffffffffff }
     check = lambda do |bytes|
@@ -29,11 +31,27 @@ if ARGV == ['--fingerprints']
         feed.call 0
       end
     end
-    check.call []
-    256.times { |a| check.call [a] }
-    256.times { |a| 256.times { |b| check.call [a, b] } }
-    256.times { |a| 256.times { |b| check.call [0x8f, a, b] } } if JAPANESE.drop(2).include? name
-    puts format('%s: 0x%016x', name, hash)
+    if label == 'GB18030-four'
+      # Independent of the range generator's linear pointer enumeration:
+      # every syntactic four-byte sequence and every truncated three-byte prefix.
+      (0x81..0xfe).each do |a|
+        (0x30..0x39).each do |b|
+          (0x81..0xfe).each do |c|
+            check.call [a, b, c]
+            (0x30..0x39).each { |d| check.call [a, b, c, d] }
+          end
+        end
+      end
+      [[0x81, 0x30, 0x81, 0x30], [0x90, 0x30, 0x81, 0x30], [0xe3, 0x32, 0x9a, 0x35]].each do |base|
+        4.times { |index| 256.times { |byte| input = base.dup; input[index] = byte; check.call input } }
+      end
+    else
+      check.call []
+      256.times { |a| check.call [a] }
+      256.times { |a| 256.times { |b| check.call [a, b] } }
+      256.times { |a| 256.times { |b| check.call [0x8f, a, b] } } if JAPANESE.drop(2).include? name
+    end
+    puts format('%s: 0x%016x', label, hash)
   end
   exit
 end
@@ -72,7 +90,15 @@ Encoding.list.sort_by(&:name).each do |enc|
            if (index = single_byte.index(enc))
              "Encoding::Single(&TABLE_#{index})"
            elsif (index = multibyte.index(enc))
-             family = index < 2 ? 'ShiftJis' : (index < JAPANESE.size ? 'EucJp' : 'Big5')
+             family = if index < 2
+                        'ShiftJis'
+                      elsif index < JAPANESE.size
+                        'EucJp'
+                      elsif BIG5.include? enc.name
+                        'Big5'
+                      else
+                        { 'GB2312' => 'Gb2312', 'GB12345' => 'Gb2312', 'GBK' => 'Gbk', 'GB18030' => 'Gb18030' }.fetch(enc.name)
+                      end
              "Encoding::Multibyte { table: &MULTI_#{index}, kind: MultibyteKind::#{family} }"
            elsif converter?(enc)
              'Encoding::Unsupported'
@@ -98,8 +124,12 @@ multibyte.each_with_index do |enc, index|
     candidates.concat [0x8e].product((0xa1..0xdf).to_a)
     candidates.concat (0xa1..0xfe).to_a.product((0xa1..0xfe).to_a)
     candidates.concat [0x8f].product((0xa1..0xfe).to_a, (0xa1..0xfe).to_a)
-  else
+  elsif BIG5.include? enc.name
     candidates.concat (0x81..0xfe).to_a.product((0x40..0x7e).to_a + (0xa1..0xfe).to_a)
+  elsif %w[GB2312 GB12345].include? enc.name
+    candidates.concat (0xa1..0xfe).to_a.product((0xa1..0xfe).to_a)
+  else
+    candidates.concat (0x81..0xfe).to_a.product((0x40..0x7e).to_a + (0x80..0xfe).to_a)
   end
   values = candidates.filter_map do |bytes|
     begin
@@ -119,6 +149,34 @@ multibyte.each_with_index do |enc, index|
   end
   puts '];'
 end
+
+# Compact only consecutive, verified mappings. Gaps stay explicit, including
+# pointers outside Unicode and the unused interval before supplementary planes.
+ranges = []
+(126 * 10 * 126 * 10).times do |pointer|
+  rest, d = pointer.divmod(10)
+  rest, c = rest.divmod(126)
+  a, b = rest.divmod(10)
+  begin
+    points = [a + 0x81, b + 0x30, c + 0x81, d + 0x30].pack('C*').force_encoding('GB18030').encode('UTF-8').codepoints
+    raise "multi-character GB18030 mapping: #{pointer}" unless points.size == 1
+    scalar = points.first
+    last = ranges[-1]
+    if last && pointer == last[1] + 1 && scalar == last[2] + pointer - last[0]
+      last[1] = pointer
+    else
+      ranges << [pointer, pointer, scalar]
+    end
+  rescue EncodingError
+    nil
+  end
+end
+puts '// GB18030: inclusive pointer start/end and first Unicode scalar.'
+puts '#[rustfmt::skip]'
+puts "pub(super) static GB18030_RANGES: [(u32, u32, u32); #{ranges.size}] = ["
+ranges.each { |first, last, scalar| puts format('    (%d, %d, 0x%x),', first, last, scalar) }
+puts '];'
+
 single_byte.each_with_index do |enc, index|
   values = (0..255).map do |byte|
     begin

@@ -30,6 +30,9 @@ enum MultibyteKind {
     ShiftJis,
     EucJp,
     Big5,
+    Gb2312,
+    Gbk,
+    Gb18030,
 }
 
 impl BinaryResource {
@@ -60,7 +63,7 @@ impl BinaryResource {
     /// as in Ruby. UTF-16 BOM detection applies to default/UTF-8 and BINARY;
     /// explicit other encodings take precedence. BOM and CR/LF are retained in
     /// the UTF-8 snapshot for the parser's existing normalization and spans.
-    /// Shift_JIS/EUC-JP and Big5 families use the reference's byte mappings.
+    /// Shift_JIS/EUC-JP, Big5 and GB families use the reference's byte mappings.
     /// Other known legacy encodings unsupported here return `Unsupported`;
     /// a host may implement them in `ResourceProvider::load_with_encoding`.
     pub fn decode(self, encoding: Option<&str>) -> ResourceResult<Resource> {
@@ -261,8 +264,44 @@ impl BinaryResource {
                             0x81..=0xfe => 2,
                             _ => return Err(invalid()),
                         },
+                        MultibyteKind::Gb2312 => match first {
+                            0xa1..=0xfe => 2,
+                            _ => return Err(invalid()),
+                        },
+                        MultibyteKind::Gbk => match first {
+                            0x80 => 1,
+                            0x81..=0xfe => 2,
+                            _ => return Err(invalid()),
+                        },
+                        MultibyteKind::Gb18030 => match first {
+                            0x81..=0xfe if remaining.get(1).is_some_and(u8::is_ascii_digit) => 4,
+                            0x81..=0xfe => 2,
+                            _ => return Err(invalid()),
+                        },
                     };
                     let sequence = remaining.get(..width).ok_or_else(invalid)?;
+                    if width == 4 {
+                        if !(0x81..=0xfe).contains(&sequence[2]) || !sequence[3].is_ascii_digit() {
+                            return Err(invalid());
+                        }
+                        let pointer = (((u32::from(first - 0x81) * 10
+                            + u32::from(sequence[1] - b'0'))
+                            * 126
+                            + u32::from(sequence[2] - 0x81))
+                            * 10)
+                            + u32::from(sequence[3] - b'0');
+                        let index = tables::GB18030_RANGES
+                            .partition_point(|&(start, _, _)| start <= pointer);
+                        let &(start, end, scalar) = index
+                            .checked_sub(1)
+                            .and_then(|index| tables::GB18030_RANGES.get(index))
+                            .filter(|&&(_, end, _)| pointer <= end)
+                            .ok_or_else(invalid)?;
+                        debug_assert!(pointer <= end);
+                        text.push(char::from_u32(scalar + pointer - start).ok_or_else(invalid)?);
+                        remaining = &remaining[4..];
+                        continue;
+                    }
                     let key = sequence
                         .iter()
                         .fold(0_u64, |key, byte| (key << 8) | u64::from(*byte));
@@ -415,7 +454,7 @@ mod tests {
         // must not silently fall back to a successful ASCII-prefix decode.
         for (encoding, bytes, kind) in [
             (
-                Some("GB18030"),
+                Some("EUC-KR"),
                 &b"good\n\xff"[..],
                 ResourceErrorKind::Unsupported,
             ),
@@ -545,7 +584,7 @@ mod tests {
         );
         // These are recognized names, not misspellings that may fall back to UTF-8.
         assert_eq!(
-            decode(b"ASCII", Some("GB18030")).unwrap_err().kind,
+            decode(b"ASCII", Some("EUC-KR")).unwrap_err().kind,
             ResourceErrorKind::Unsupported
         );
         assert_eq!(
@@ -626,6 +665,10 @@ mod tests {
             ("Big5-UAO", 0x600344743be98c71, false),
             ("CP950", 0x03e1eff48f477005, false),
             ("CP951", 0x0d4e04e04e4ace29, false),
+            ("GB2312", 0x39f3704f52914d93, false),
+            ("GB12345", 0x7c1b0668bc543322, false),
+            ("GBK", 0x461fd7b2edc98ce2, false),
+            ("GB18030", 0xc15d224b9301efc0, false),
         ] {
             let mut hash = 0xcbf29ce484222325_u64;
             let mut feed = |byte| {
@@ -661,6 +704,122 @@ mod tests {
                 }
             }
             assert_eq!(hash, expected, "{name}");
+        }
+    }
+
+    #[test]
+    fn gb18030_four_byte_space_matches_exhaustive_ruby_fingerprint() {
+        // Independently recorded by generate_encodings.rb --fingerprints:
+        // 1,587,600 syntactic quadruples, 158,760 truncated prefixes and
+        // 3,072 mutations which also exercise invalid grammar and mixed input.
+        let mut hash = 0xcbf29ce484222325_u64;
+        let mut feed = |byte| {
+            hash = (hash ^ u64::from(byte)).wrapping_mul(0x100000001b3);
+        };
+        let mut check = |bytes: &[u8]| match decode(bytes, Some("GB18030")) {
+            Ok(resource) => {
+                feed(1_u8);
+                for byte in resource.text.bytes() {
+                    feed(byte);
+                }
+                feed(255);
+            }
+            Err(error) => {
+                assert_eq!(error.kind, ResourceErrorKind::InvalidEncoding);
+                feed(0);
+            }
+        };
+        for a in 0x81..=0xfe {
+            for b in b'0'..=b'9' {
+                for c in 0x81..=0xfe {
+                    check(&[a, b, c]);
+                    for d in b'0'..=b'9' {
+                        check(&[a, b, c, d]);
+                    }
+                }
+            }
+        }
+        for base in [
+            [0x81, 0x30, 0x81, 0x30],
+            [0x90, 0x30, 0x81, 0x30],
+            [0xe3, 0x32, 0x9a, 0x35],
+        ] {
+            for index in 0..4 {
+                for byte in 0..=255 {
+                    let mut input = base;
+                    input[index] = byte;
+                    check(&input);
+                }
+            }
+        }
+        assert_eq!(hash, 0x8fda35a10e1c6317);
+    }
+
+    #[test]
+    fn gb_families_preserve_reference_variants_aliases_and_four_byte_boundaries() {
+        for (name, bytes, expected) in [
+            ("GB2312", &b"\xd6\xd0\xb9\xfa"[..], "中国"),
+            ("eUc-Cn", &b"\xd6\xd0\xb9\xfa"[..], "中国"),
+            ("eucCN", &b"\xd6\xd0\xb9\xfa"[..], "中国"),
+            ("GB12345", &b"\xd6\xd0\xb9\xfa"[..], "中國"),
+            ("GBK", &b"\x80\x81\x40"[..], "€丂"),
+            ("cP936", &b"\x80\x81\x40"[..], "€丂"),
+            (
+                "GB18030",
+                &b"\xa2\xe3\xa8\xbc\x81\x35\xf4\x37"[..],
+                "€\u{e7c7}ḿ",
+            ),
+            (
+                "gB18030",
+                &b"\x81\x30\x81\x30\x84\x31\xa4\x39\x90\x30\x81\x30\xe3\x32\x9a\x35"[..],
+                "\u{80}\u{ffff}\u{10000}\u{10ffff}",
+            ),
+        ] {
+            assert_eq!(decode(bytes, Some(name)).unwrap().text, expected, "{name}");
+        }
+        for name in ["GB2312", "GB12345", "GBK", "GB18030"] {
+            assert_eq!(
+                decode(b"ASCII \\~\r\n", Some(name)).unwrap().text,
+                "ASCII \\~\r\n"
+            );
+        }
+    }
+
+    #[test]
+    fn gb_codecs_reject_incomplete_invalid_and_unmapped_sequences() {
+        for name in ["GB2312", "GB12345", "GBK", "GB18030"] {
+            for bad in [
+                &b"\xff"[..],
+                &b"\xa1"[..],
+                &b"\xa1\x7f"[..],
+                &b"\xa1\x20"[..],
+            ] {
+                assert_eq!(
+                    decode(bad, Some(name)).unwrap_err().kind,
+                    ResourceErrorKind::InvalidEncoding,
+                    "{name}: {bad:?}"
+                );
+            }
+        }
+        for (name, bad) in [
+            ("GB2312", &b"\x81\x40"[..]),
+            ("GB12345", &b"\xa8\xbc"[..]),
+            ("GBK", &b"\xa8\xbc"[..]),
+            ("GB18030", &b"\x80"[..]),
+            ("GB18030", &b"\x81\x30"[..]),
+            ("GB18030", &b"\x81\x30\x81"[..]),
+            ("GB18030", &b"\x81\x30\x80\x30"[..]),
+            ("GB18030", &b"\x81\x30\x81\x0a"[..]),
+            ("GB18030", &b"\x84\x31\xa5\x30"[..]),
+            ("GB18030", &b"\x8f\x39\xfe\x39"[..]),
+            ("GB18030", &b"\xe3\x32\x9a\x36"[..]),
+            ("GB18030", &b"\xfe\x39\xfe\x39"[..]),
+        ] {
+            assert_eq!(
+                decode(bad, Some(name)).unwrap_err().kind,
+                ResourceErrorKind::InvalidEncoding,
+                "{name}: {bad:?}"
+            );
         }
     }
 

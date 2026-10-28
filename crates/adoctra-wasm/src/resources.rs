@@ -173,6 +173,48 @@ mod tests {
     use super::*;
 
     #[test]
+    fn gb18030_includes_export_four_byte_characters_as_utf8_snapshots() {
+        let mut workspace = ResourceWorkspace::new();
+        workspace.set("/main.adoc", "include::part.adoc[encoding=GB18030,lines=2]\n\ninclude::part.adoc[encoding=gb18030,lines=2]").unwrap();
+        workspace
+            .set_binary("/part.adoc", b"ignored\r\n*\x95\x30\x85\x32\xa8\xbc*\r\n")
+            .unwrap();
+        let main = workspace.load("/main.adoc", None).unwrap();
+        let json = workspace.parse_json(main).unwrap();
+        assert!(json.contains(r#""diagnostics":[]"#), "{json}");
+        assert!(json.contains("🙂\u{e7c7}"), "{json}");
+        assert_eq!(
+            workspace.source(1).unwrap().text(),
+            "ignored\r\n*🙂\u{e7c7}*\r\n"
+        );
+        let tokens = workspace.tokens_json(main).unwrap();
+        assert!(
+            tokens.contains(r#""source_id":1,"start":9,"end":18"#),
+            "{tokens}"
+        );
+        assert!(workspace.source(2).is_err());
+        assert_eq!(
+            workspace.source(1).unwrap().position(14).unwrap(),
+            adoctra_core::SourcePosition { line: 2, column: 3 }
+        );
+        workspace
+            .set_binary("/part.adoc", b"ignored\r\n*\xd6\xd0*\r\n\x81\x30")
+            .unwrap();
+        let updated = workspace.parse_json(main).unwrap();
+        assert!(
+            updated.contains("中") && updated.contains(r#""diagnostics":[]"#),
+            "{updated}"
+        );
+        assert_eq!(workspace.source(2).unwrap().text(), "ignored\r\n*中*\r\n");
+        assert!(!workspace.source(2).unwrap().is_complete());
+        assert!(workspace.source(2).unwrap().omitted_lines().is_empty());
+        assert_eq!(
+            workspace.source(1).unwrap().text(),
+            "ignored\r\n*🙂\u{e7c7}*\r\n"
+        );
+    }
+
+    #[test]
     fn big5_includes_export_variant_snapshots_and_non_bmp_utf8_offsets() {
         let mut workspace = ResourceWorkspace::new();
         workspace.set("/main.adoc", "include::part.adoc[encoding=CP950,lines=2]\n\ninclude::part.adoc[encoding=Big5-HKSCS,lines=2]\n\ninclude::part.adoc[encoding=Big5-HKSCS:2008,lines=2]").unwrap();

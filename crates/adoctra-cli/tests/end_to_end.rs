@@ -162,6 +162,14 @@ fn cli_decodes_include_files_and_reports_read_errors_at_the_directive() {
         ("Big5-UAO", &b"*\x81\x40\x88\x62*\r\n"[..], "丗论"),
         ("CP950", &b"*\xfe\x40\xc6\xa1*\r\n"[..], "\u{e274}\u{f6b1}"),
         ("CP951", &b"*\xfe\x40\xc6\xa1*\r\n"[..], "鑂①"),
+        ("GB2312", &b"*\xd6\xd0\xb9\xfa*\r\n"[..], "中国"),
+        ("GB12345", &b"*\xd6\xd0\xb9\xfa*\r\n"[..], "中國"),
+        ("CP936", &b"*\x80\x81\x40*\r\n"[..], "€丂"),
+        (
+            "GB18030",
+            &b"*\x95\x30\x85\x32\xa8\xbc\x81\x35\xf4\x37*\r\n"[..],
+            "🙂\u{e7c7}ḿ",
+        ),
     ] {
         std::fs::write(
             &source,
@@ -192,6 +200,10 @@ fn cli_decodes_include_files_and_reports_read_errors_at_the_directive() {
         ("Big5-UAO", &b"\xa4\x7f"[..]),
         ("CP950", &b"\xa4"[..]),
         ("CP951", &b"\xff"[..]),
+        ("GB2312", &b"\x80"[..]),
+        ("GB12345", &b"\xa8\xbc"[..]),
+        ("GBK", &b"\xa8\xbc"[..]),
+        ("GB18030", &b"\x84\x31\xa5\x30"[..]),
     ] {
         std::fs::write(
             &source,

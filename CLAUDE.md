@@ -142,7 +142,7 @@ existing document-processing contract; do not describe that scoped contract
 as unrestricted replacement of Asciidoctor. Do not resume allocation
 micro-optimizations as the next task. Include encoding now supports Unicode and
 53 single-byte codecs, plus Shift_JIS, Windows-31J, EUC-JP, eucJP-ms, CP51932,
-Big5, Big5-HKSCS, Big5-UAO, CP950 and CP951.
+Big5, Big5-HKSCS, Big5-UAO, CP950, CP951, GB2312, GB12345, GBK and GB18030.
 Finite positive `lines` selections recover an intact decoded prefix when only
 the unread tail is malformed; `SourceFile::is_complete` exposes this explicitly.
 Skipped malformed UTF-8/BINARY lines now have explicit omission records with
@@ -1143,7 +1143,7 @@ and raw bytes (hex in JSON). `SourceFile::position` accounts for gaps; omitted
 bytes count toward the include budget. Sparse snapshots cannot be reparsed as
 implicitly valid primary sources. `is_complete`/WASM `source_is_complete`
 distinguish these views and prefixes from full files. BOM/CRLF remain intact.
-Unicode, 53 single-byte codecs and ten Japanese/Big5 multibyte codecs use std-only decoding with mappings generated
+Unicode, 53 single-byte codecs and fourteen Japanese/Big5/GB multibyte codecs use std-only decoding with mappings generated
 by `scripts/generate_encodings.rb` from the pinned Ruby environment. Unknown
 names fall back to UTF-8 like Ruby; known unsupported multibyte names fail
 explicitly, and codecs unavailable in the reference fail as unreadable.
@@ -1156,6 +1156,15 @@ semantics: HKSCS 8862/8864/88a3/88a5 are undefined, not decomposed characters.
 Finite line selection may recover a prefix, but transcoding validates skipped
 bytes within the consumed portion and tag reads. Big5 uses the same snapshot,
 source identity, diagnostic and provider contracts as the other codecs.
+GB2312/EUC-CN/eucCN and GB12345 retain simplified/traditional differences.
+GBK/CP936 accepts byte 80 as euro; GB18030 rejects it and uses a2e3 instead.
+The GB family adds 60725 short mappings. GB18030's 1087996 four-byte mappings
+are compacted into 207 verified contiguous ranges, with holes and Unicode limits
+checked explicitly. Preserve pinned Ruby's a8bc -> U+E7C7 and 8135f437 -> U+1E3F;
+do not substitute another GB18030 revision. The independent fingerprint covers
+all 1587600 syntactic quadruples, 158760 truncated prefixes and 3072 mutations,
+in addition to the exhaustive single-byte/pair checks. GB1988 remains unavailable
+because pinned Ruby has no UTF-8 converter for it.
 The decoder's exhaustive short-input fingerprints can be reproduced with
 `ruby scripts/generate_encodings.rb --fingerprints`. Other legacy multibyte
 codecs remain open; never claim that the

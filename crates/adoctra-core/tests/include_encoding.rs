@@ -19,6 +19,161 @@ fn setup(source: &str) -> (MemoryResources, SourceMap, ParseOptions) {
 }
 
 #[test]
+fn gb_selections_preserve_decoded_spans_and_unicode_columns() {
+    for (encoding, glyph, decoded) in [
+        ("GB2312", &b"\xd6\xd0"[..], "中"),
+        ("EUC-CN", &b"\xd6\xd0"[..], "中"),
+        ("GB12345", &b"\xb9\xfa"[..], "國"),
+        ("GBK", &b"\x80"[..], "€"),
+        ("CP936", &b"\x80"[..], "€"),
+        ("GB18030", &b"\x90\x30\x81\x30"[..], "\u{10000}"),
+    ] {
+        for selection in ["lines=3", "tag=body"] {
+            let directive = format!("include::part.adoc[encoding={encoding},{selection},indent=0]");
+            let (mut resources, mut sources, options) =
+                setup(&format!(":attribute-missing: warn\n\n{directive}"));
+            resources
+                .insert_binary(
+                    "/docs/part.adoc",
+                    [
+                        &b"ignored\r\n// tag::body[]\r\n  "[..],
+                        glyph,
+                        b" {missing}\r\n// end::body[]\r\n",
+                    ]
+                    .concat(),
+                )
+                .unwrap();
+            let result = parse_resource(&mut sources, &options, &resources).unwrap();
+            assert_eq!(
+                result.diagnostics.len(),
+                1,
+                "{encoding}: {:?}",
+                result.diagnostics
+            );
+            let source = sources.get(SourceId(1)).unwrap();
+            assert_eq!(
+                source.text(),
+                format!(
+                    "ignored\r\n// tag::body[]\r\n  {decoded} {{missing}}\r\n// end::body[]\r\n"
+                )
+            );
+            assert!(source.is_complete());
+            assert!(source.omitted_lines().is_empty());
+            let diagnostic = &result.diagnostics[0];
+            assert_eq!(sources.slice(diagnostic.span), Some("{missing}"));
+            assert_eq!(
+                source.position(diagnostic.span.start).unwrap(),
+                adoctra_core::SourcePosition { line: 3, column: 5 }
+            );
+            let block = result.document.flat_blocks()[0];
+            assert!(matches!(block.kind, BlockKind::Paragraph { .. }));
+            assert_eq!(
+                sources.slice(block.span),
+                Some(format!("{decoded} {{missing}}").as_str())
+            );
+            assert!(result
+                .tokens
+                .iter()
+                .all(|token| sources.slice(token.span).is_some()));
+        }
+    }
+}
+
+#[test]
+fn gb_variants_and_aliases_keep_immutable_decoded_source_identity() {
+    let names = ["GB2312", "GB12345", "GBK", "GB18030", "CP936", "eucCN"];
+    let root = names
+        .map(|name| format!("include::part.adoc[encoding={name}]"))
+        .join("\n\n");
+    let (mut resources, mut sources, options) = setup(&root);
+    resources
+        .insert_binary("/docs/part.adoc", b"\xb9\xfa\r\n")
+        .unwrap();
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty());
+    assert_eq!(sources.get(SourceId(1)).unwrap().text(), "国\r\n");
+    assert_eq!(sources.get(SourceId(2)).unwrap().text(), "國\r\n");
+    assert_eq!(
+        result
+            .document
+            .flat_blocks()
+            .iter()
+            .map(|block| block.span.source_id.0)
+            .collect::<Vec<_>>(),
+        [1, 2, 1, 1, 1, 1]
+    );
+    resources
+        .insert_binary("/docs/part.adoc", b"\xd6\xd0\r\n")
+        .unwrap();
+    let changed = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(changed.diagnostics.is_empty());
+    assert!(changed
+        .document
+        .flat_blocks()
+        .iter()
+        .all(|block| block.span.source_id == SourceId(3)));
+    assert_eq!(sources.get(SourceId(1)).unwrap().text(), "国\r\n");
+    assert_eq!(sources.get(SourceId(2)).unwrap().text(), "國\r\n");
+}
+
+#[test]
+fn gb_prefix_reads_validate_skipped_bytes_and_incomplete_four_byte_sequences() {
+    for name in ["GB2312", "GB12345", "GBK", "GB18030"] {
+        for (selection, bytes, success) in [
+            ("lines=1", &b"*\xd6\xd0*\r\n\x81"[..], true),
+            ("lines=2", &b"*\xd6\xd0*\r\n\x81"[..], false),
+            ("lines=1;3", &b"first\n\x81\nlast\n"[..], false),
+            (
+                "tag=body",
+                &b"// tag::body[]\n\xd6\xd0\n// end::body[]\n\x81"[..],
+                false,
+            ),
+            ("lines=2", &b"*\xd6\xd0*\r\n\x81\x30\x81\n"[..], false),
+        ] {
+            let directive =
+                format!("include::part.adoc[encoding={name},{selection},opts=optional]");
+            let (mut resources, mut sources, options) = setup(&directive);
+            resources.insert_binary("/docs/part.adoc", bytes).unwrap();
+            let result = parse_resource(&mut sources, &options, &resources).unwrap();
+            if success {
+                assert!(result.diagnostics.is_empty());
+                let source = sources.get(SourceId(1)).unwrap();
+                assert_eq!(source.text(), "*中*\r\n");
+                assert!(!source.is_complete());
+                assert!(source.omitted_lines().is_empty());
+                assert_eq!(
+                    sources.slice(result.document.flat_blocks()[0].span),
+                    Some("*中*")
+                );
+                assert_eq!(
+                    sources
+                        .load_with_encoding(
+                            "part.adoc",
+                            Some(options.source_id),
+                            &resources,
+                            Some(name)
+                        )
+                        .unwrap_err()
+                        .kind,
+                    ResourceErrorKind::InvalidEncoding
+                );
+            } else {
+                assert_eq!(result.diagnostics.len(), 1);
+                assert_eq!(
+                    sources.slice(result.diagnostics[0].span),
+                    Some(directive.as_str())
+                );
+                assert_eq!(
+                    result.diagnostics[0].report.message.as_deref(),
+                    Some("include file not readable: /docs/part.adoc")
+                );
+                assert!(sources.get(SourceId(1)).is_none());
+            }
+        }
+    }
+}
+
+#[test]
 fn big5_selections_keep_decoded_utf8_spans_and_physical_columns() {
     for (encoding, glyph, decoded) in [
         ("Big5", b"\xa4\xa4", "中"),
