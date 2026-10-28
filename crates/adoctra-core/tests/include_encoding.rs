@@ -61,6 +61,14 @@ fn gb_selections_preserve_decoded_spans_and_unicode_columns() {
     for (encoding, glyph, decoded) in [
         ("GB2312", &b"\xd6\xd0"[..], "中"),
         ("ISO-2022-JP", &b"\x1b$BF|\x1b(B"[..], "日"),
+        ("ISO-2022-JP-KDDI", &b"\x1b$Bv'\x1b(B"[..], "🇯🇵"),
+        ("stateless-ISO-2022-JP-KDDI", &b"\x92\xf6\xa7"[..], "🇯🇵"),
+        (
+            "stateless-ISO-2022-JP-KDDI",
+            &b"\x92\xf6\xfd"[..],
+            "1\u{20e3}",
+        ),
+        ("stateless-ISO-2022-JP-KDDI", &b"\x92\x93\xa1"[..], "ⅰ"),
         ("ISO2022-JP", &b"\x1b$@F|\x1b(J"[..], "日"),
         ("stateless-ISO-2022-JP", &b"\x92\xc6\xfc"[..], "日"),
         ("STATELESS-ISO-2022-JP", &b"\x90\xc6\xfc"[..], "日"),
@@ -110,7 +118,10 @@ fn gb_selections_preserve_decoded_spans_and_unicode_columns() {
             assert_eq!(sources.slice(diagnostic.span), Some("{missing}"));
             assert_eq!(
                 source.position(diagnostic.span.start).unwrap(),
-                adoctra_core::SourcePosition { line: 3, column: 5 }
+                adoctra_core::SourcePosition {
+                    line: 3,
+                    column: 4 + decoded.chars().count()
+                }
             );
             let block = result.document.flat_blocks()[0];
             assert!(matches!(block.kind, BlockKind::Paragraph { .. }));
@@ -341,6 +352,78 @@ fn stateless_jp_prefixes_and_immutable_snapshots_follow_decoded_text() {
         .flat_blocks()
         .iter()
         .all(|b| b.span.source_id == SourceId(2)));
+}
+
+#[test]
+fn kddi_compounds_preserve_prefix_limits_budgets_and_variant_source_identity() {
+    for (name, good, bad) in [
+        (
+            "ISO-2022-JP-KDDI",
+            &b"*\x1b$Bv'\x1b(B*\r\n"[..],
+            &b"\x1b$"[..],
+        ),
+        (
+            "stateless-ISO-2022-JP-KDDI",
+            &b"*\x92\xf6\xa7*\r\n"[..],
+            &b"\x92\xf6"[..],
+        ),
+    ] {
+        for selection in ["lines=1", "lines=2", "lines=1;3", "tag=body"] {
+            let (mut resources, mut sources, options) = setup(&format!(
+                "include::part.adoc[encoding={name},{selection},opts=optional]"
+            ));
+            resources
+                .insert_binary("/docs/part.adoc", [good, bad, b"\nlast\n"].concat())
+                .unwrap();
+            let result = parse_resource(&mut sources, &options, &resources).unwrap();
+            if selection == "lines=1" {
+                assert!(result.diagnostics.is_empty());
+                let source = sources.get(SourceId(1)).unwrap();
+                assert_eq!(source.text(), "*🇯🇵*\r\n");
+                assert!(!source.is_complete());
+                assert_eq!(
+                    sources.slice(result.document.flat_blocks()[0].span),
+                    Some("*🇯🇵*")
+                );
+                let mut limited = options.clone();
+                limited.includes.max_bytes = "*🇯🇵*\r\n".len() - 1;
+                let limited = parse_resource(&mut sources, &limited, &resources).unwrap();
+                assert!(limited
+                    .diagnostics
+                    .iter()
+                    .any(|d| d.message.contains("maximum included byte count")));
+            } else {
+                assert_eq!(result.diagnostics.len(), 1, "{name}/{selection}");
+                assert!(sources.get(SourceId(1)).is_none());
+            }
+        }
+    }
+    let (mut resources, mut sources, options) = setup("include::part.adoc[encoding=ISO-2022-JP-KDDI]\n\ninclude::part.adoc[encoding=ISO-2022-JP]\n\ninclude::part.adoc[encoding=CP50220]");
+    resources
+        .insert_binary("/docs/part.adoc", b"\x1b$B!A\x1b(B\r\n")
+        .unwrap();
+    let first = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(first.diagnostics.is_empty());
+    assert_eq!(
+        first
+            .document
+            .flat_blocks()
+            .iter()
+            .map(|b| b.span.source_id.0)
+            .collect::<Vec<_>>(),
+        [1, 2, 1]
+    );
+    assert_eq!(sources.get(SourceId(1)).unwrap().text(), "～\r\n");
+    assert_eq!(sources.get(SourceId(2)).unwrap().text(), "〜\r\n");
+    resources
+        .insert_binary("/docs/part.adoc", b"\x1b$Bv'\x1b(B\r\n")
+        .unwrap();
+    let changed = parse_resource(&mut sources, &options, &resources).unwrap();
+    assert_eq!(changed.diagnostics.len(), 2);
+    assert_eq!(sources.get(SourceId(3)).unwrap().text(), "🇯🇵\r\n");
+    assert!(sources.get(SourceId(4)).is_none());
+    assert_eq!(sources.get(SourceId(1)).unwrap().text(), "～\r\n");
+    assert_eq!(sources.get(SourceId(2)).unwrap().text(), "〜\r\n");
 }
 
 #[test]

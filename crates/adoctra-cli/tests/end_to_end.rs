@@ -166,6 +166,16 @@ fn cli_decodes_include_files_and_reports_read_errors_at_the_directive() {
         ("CP949", &b"*\x81\x41\xc6\x52*\r\n"[..], "갂힣"),
         ("CP50220", &b"*\x1b$B!A-!\x1b(B\x0e1\x0f*\r\n"[..], "～①ｱ"),
         (
+            "ISO-2022-JP-KDDI",
+            &b"*\x1b$Bv'v}u_\x1b(B*\r\n"[..],
+            "🇯🇵1\u{20e3}🅿",
+        ),
+        (
+            "stateless-ISO-2022-JP-KDDI",
+            &b"*\x92\xf6\xa7\x92\xf6\xfd\x92\xf5\xdf*\r\n"[..],
+            "🇯🇵1\u{20e3}🅿",
+        ),
+        (
             "stateless-ISO-2022-JP",
             &b"*\x92\xc6\xfc\x90\xcb\xdc\x92\xb8\xec*\r\n"[..],
             "日本語",
@@ -213,6 +223,10 @@ fn cli_decodes_include_files_and_reports_read_errors_at_the_directive() {
         ("EUC-KR", &b"\x81\x41"[..]),
         ("CP949", &b"\x81"[..]),
         ("CP50220", &b"\x1b(I1\n"[..]),
+        ("ISO-2022-JP-KDDI", &b"\x1b$@$\""[..]),
+        ("ISO-2022-JP-KDDI", &b"\x1b$Bu+\x1b(B"[..]),
+        ("stateless-ISO-2022-JP-KDDI", &b"\x90\xa4\xa2"[..]),
+        ("stateless-ISO-2022-JP-KDDI", &b"\x92\xf5\xab"[..]),
         ("stateless-ISO-2022-JP", &b"\x92\xa4"[..]),
         ("stateless-ISO-2022-JP", &b"\x1b$B$\"\x1b(B"[..]),
         ("CP50221", &b"\x1b$B$\x0e"[..]),

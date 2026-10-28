@@ -143,7 +143,8 @@ as unrestricted replacement of Asciidoctor. Do not resume allocation
 micro-optimizations as the next task. Include encoding now supports Unicode and
 53 single-byte codecs, plus Shift_JIS, Windows-31J, EUC-JP, eucJP-ms, CP51932,
 Big5, Big5-HKSCS, Big5-UAO, CP950, CP951, GB2312, GB12345, GBK, GB18030, EUC-KR, CP949
-and ISO-2022-JP (ISO2022-JP), CP50220, CP50221 and stateless-ISO-2022-JP.
+and ISO-2022-JP (ISO2022-JP), CP50220, CP50221, stateless-ISO-2022-JP,
+ISO-2022-JP-KDDI and stateless-ISO-2022-JP-KDDI.
 Finite positive `lines` selections recover an intact decoded prefix when only
 the unread tail is malformed; `SourceFile::is_complete` exposes this explicitly.
 Skipped malformed UTF-8/BINARY lines now have explicit omission records with
@@ -1144,7 +1145,7 @@ and raw bytes (hex in JSON). `SourceFile::position` accounts for gaps; omitted
 bytes count toward the include budget. Sparse snapshots cannot be reparsed as
 implicitly valid primary sources. `is_complete`/WASM `source_is_complete`
 distinguish these views and prefixes from full files. BOM/CRLF remain intact.
-Unicode, 53 single-byte codecs and twenty Japanese/Big5/GB/Korean multibyte codecs use std-only decoding with mappings generated
+Unicode, 53 single-byte codecs and 22 Japanese/Big5/GB/Korean multibyte codecs use std-only decoding with mappings generated
 by `scripts/generate_encodings.rb` from the pinned Ruby environment. Unknown
 names fall back to UTF-8 like Ruby; known unsupported multibyte names fail
 explicitly, and codecs unavailable in the reference fail as unreadable.
@@ -1194,7 +1195,18 @@ Bare EUC pairs, halfwidth kana and JIS X 0212 prefixes are invalid, including
 inside triples.
 Its independent fingerprint covers 196865 inputs: all single bytes, pairs and
 90/92-prefixed triples. Both prefixes producing the same UTF-8 share a snapshot.
-KDDI variants remain unsupported; ISO-2022-JP-2 has no Ruby converter.
+KDDI variants reuse CP51932 with 819 generated overrides (508 defined, 311
+explicitly undefined). 21 mappings expand to two Unicode scalars, including
+regional-indicator flags and keycaps without VS16. ISO-2022-JP-KDDI has 7185
+mappings under ESC $ B; ESC $ @ can be entered/exited empty but its characters
+are invalid. Stateless KDDI has 7573 mappings under prefix 92 only, including
+IBM rows 93-97; unlike ordinary stateless JP, its IO converter preserves
+literal ESC/SO/SI. Both use strict Ruby IO fingerprints (853510 inputs).
+Never generate mappings by reverse UTF-8 encoding: Ruby can encode 😀 to u+
+but cannot decode it. Compound output keeps UTF-8 spans, Unicode scalar columns
+and decoded-byte budget accounting. Public APIs and schemas stay unchanged.
+ISO-2022-JP-2 has no Ruby converter. EUC-JIS-2004, SJIS/UTF8 mobile variants,
+CESU-8 and UTF8-MAC still require host decoding.
 The decoder's exhaustive short-input fingerprints can be reproduced with
 `ruby scripts/generate_encodings.rb --fingerprints`. Other legacy multibyte
 codecs remain open; never claim that the

@@ -173,6 +173,64 @@ mod tests {
     use super::*;
 
     #[test]
+    fn kddi_compounds_export_scalar_positions_tokens_and_immutable_snapshots() {
+        for (name, flag, supplementary, bad) in [
+            (
+                "ISO-2022-JP-KDDI",
+                &b"\x1b$Bv'\x1b(B"[..],
+                &b"\x1b$Bu_\x1b(B"[..],
+                &b"\x1b$"[..],
+            ),
+            (
+                "stateless-ISO-2022-JP-KDDI",
+                &b"\x92\xf6\xa7"[..],
+                &b"\x92\xf5\xdf"[..],
+                &b"\x92\xf6"[..],
+            ),
+        ] {
+            let mut workspace = ResourceWorkspace::new();
+            workspace.set("/main.adoc", &format!("include::part.adoc[encoding={name},lines=2]\n\ninclude::part.adoc[encoding={},lines=2]", name.to_uppercase())).unwrap();
+            workspace
+                .set_binary(
+                    "/part.adoc",
+                    &[&b"ignored\r\n*"[..], flag, b"*\r\n"].concat(),
+                )
+                .unwrap();
+            let main = workspace.load("/main.adoc", None).unwrap();
+            let json = workspace.parse_json(main).unwrap();
+            assert!(
+                json.contains(r#""diagnostics":[]"#) && json.contains("🇯🇵"),
+                "{json}"
+            );
+            assert_eq!(workspace.source(1).unwrap().text(), "ignored\r\n*🇯🇵*\r\n");
+            assert!(workspace.source(2).is_err());
+            assert_eq!(
+                workspace.source(1).unwrap().position(18).unwrap(),
+                adoctra_core::SourcePosition { line: 2, column: 4 }
+            );
+            let tokens = workspace.tokens_json(main).unwrap();
+            assert!(
+                tokens.contains(r#""source_id":1,"start":9,"end":19"#),
+                "{tokens}"
+            );
+            workspace
+                .set_binary(
+                    "/part.adoc",
+                    &[&b"ignored\r\n*"[..], supplementary, b"*\r\n", bad].concat(),
+                )
+                .unwrap();
+            let changed = workspace.parse_json(main).unwrap();
+            assert!(
+                changed.contains(r#""diagnostics":[]"#) && changed.contains("🅿"),
+                "{changed}"
+            );
+            assert_eq!(workspace.source(2).unwrap().text(), "ignored\r\n*🅿*\r\n");
+            assert!(!workspace.source(2).unwrap().is_complete());
+            assert_eq!(workspace.source(1).unwrap().text(), "ignored\r\n*🇯🇵*\r\n");
+        }
+    }
+
+    #[test]
     fn stateless_jp_includes_export_utf8_spans_and_share_prefix_variants() {
         let mut workspace = ResourceWorkspace::new();
         workspace.set("/main.adoc", "include::part.adoc[encoding=stateless-ISO-2022-JP,lines=2]\n\ninclude::part.adoc[encoding=STATELESS-ISO-2022-JP,lines=2]").unwrap();

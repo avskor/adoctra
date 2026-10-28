@@ -20,7 +20,7 @@ enum Encoding {
     Single(&'static [u32]),
     Iso2022Jp {
         table: &'static [u64],
-        windows: bool,
+        kind: Iso2022Kind,
     },
     Multibyte {
         table: &'static [u64],
@@ -34,6 +34,7 @@ enum MultibyteKind {
     ShiftJis,
     EucJp,
     StatelessIso2022Jp,
+    StatelessIso2022JpKddi,
     Big5,
     Gb2312,
     Korean,
@@ -43,8 +44,30 @@ enum MultibyteKind {
 
 enum Iso2022State {
     Ascii,
-    Jis0208 { vendor: bool },
+    Jis0208 { modern: bool },
     Katakana,
+}
+
+enum Iso2022Kind {
+    Standard,
+    Windows,
+    Kddi,
+}
+
+fn append_mapping(text: &mut String, table: &[u64], key: u64, kddi: bool) -> Option<()> {
+    if kddi {
+        if let Ok(index) =
+            tables::KDDI_OVERRIDES.binary_search_by_key(&key, |&(key, _)| u64::from(key))
+        {
+            // Overrides can contain multiple Unicode scalars, or explicitly
+            // reject a mapping present in the shared CP51932 base table.
+            text.push_str(tables::KDDI_OVERRIDES[index].1?);
+            return Some(());
+        }
+    }
+    let index = table.binary_search_by_key(&key, |entry| entry >> 32).ok()?;
+    text.push(char::from_u32(table[index] as u32)?);
+    Some(())
 }
 
 impl BinaryResource {
@@ -253,7 +276,9 @@ impl BinaryResource {
                 }
                 text
             }
-            Encoding::Iso2022Jp { table, windows } => {
+            Encoding::Iso2022Jp { table, kind } => {
+                let windows = matches!(kind, Iso2022Kind::Windows);
+                let kddi = matches!(kind, Iso2022Kind::Kddi);
                 let mut text = String::with_capacity(bytes.len());
                 let mut remaining = bytes.as_slice();
                 let mut state = Iso2022State::Ascii;
@@ -264,8 +289,8 @@ impl BinaryResource {
                         // not accept JIS X 0212 or revision escapes. Windows
                         // variants additionally designate halfwidth katakana.
                         state = match remaining.get(..3) {
-                            Some([0x1b, b'$', b'@']) => Iso2022State::Jis0208 { vendor: false },
-                            Some([0x1b, b'$', b'B']) => Iso2022State::Jis0208 { vendor: true },
+                            Some([0x1b, b'$', b'@']) => Iso2022State::Jis0208 { modern: false },
+                            Some([0x1b, b'$', b'B']) => Iso2022State::Jis0208 { modern: true },
                             Some([0x1b, b'(', b'B' | b'J']) => Iso2022State::Ascii,
                             Some([0x1b, b'(', b'I']) if windows => Iso2022State::Katakana,
                             _ => return Err(invalid()),
@@ -286,22 +311,18 @@ impl BinaryResource {
                         if !sequence.iter().all(|byte| (0x21..=0x7e).contains(byte)) {
                             return Err(invalid());
                         }
-                        // CP50220/21 only enable NEC/IBM extension rows with
-                        // ESC $ B. ESC $ @ retains the Windows Unicode mappings
-                        // of base JIS characters, but rejects these extra rows.
-                        if windows
-                            && matches!(state, Iso2022State::Jis0208 { vendor: false })
-                            && matches!(first, 0x2d | 0x79..=0x7c)
+                        // The 1978 designation itself is valid, even for KDDI.
+                        // KDDI rejects its characters; Windows only rejects
+                        // NEC/IBM extension rows, retaining base Unicode remaps.
+                        if matches!(state, Iso2022State::Jis0208 { modern: false })
+                            && (kddi || (windows && matches!(first, 0x2d | 0x79..=0x7c)))
                         {
                             return Err(invalid());
                         }
                         // JIS pairs reuse EUC-JP's table for ISO-2022-JP,
                         // CP51932's for CP50220/CP50221, preserving variants.
                         let key = (u64::from(first + 0x80) << 8) | u64::from(sequence[1] + 0x80);
-                        let index = table
-                            .binary_search_by_key(&key, |entry| entry >> 32)
-                            .map_err(|_| invalid())?;
-                        text.push(char::from_u32(table[index] as u32).ok_or_else(invalid)?);
+                        append_mapping(&mut text, table, key, kddi).ok_or_else(invalid)?;
                         remaining = &remaining[2..];
                     } else if (windows && (0xa1..=0xdf).contains(&first))
                         || (matches!(state, Iso2022State::Katakana)
@@ -356,6 +377,10 @@ impl BinaryResource {
                             0x90 | 0x92 => 3,
                             _ => return Err(invalid()),
                         },
+                        MultibyteKind::StatelessIso2022JpKddi => match first {
+                            0x92 => 3,
+                            _ => return Err(invalid()),
+                        },
                         MultibyteKind::Big5 => match first {
                             0x81..=0xfe => 2,
                             _ => return Err(invalid()),
@@ -402,14 +427,17 @@ impl BinaryResource {
                         remaining = &remaining[4..];
                         continue;
                     }
-                    let sequence = if matches!(kind, MultibyteKind::StatelessIso2022Jp) {
-                        // Ruby's stateless representation prefixes each JIS
-                        // pair with 90 (1978) or 92 (1983). Both reuse EUC-JP's
-                        // mappings. EUC kana/0212 prefixes are invalid inside
-                        // a triple; the ASCII branch rejects ESC/SO/SI.
-                        if !sequence[1..]
-                            .iter()
-                            .all(|byte| (0xa1..=0xfe).contains(byte))
+                    let kddi = matches!(kind, MultibyteKind::StatelessIso2022JpKddi);
+                    let sequence = if matches!(kind, MultibyteKind::StatelessIso2022Jp) || kddi {
+                        // Ordinary stateless JP uses 90/92, EUC-JP mappings,
+                        // and rejects ESC/SO/SI in the ASCII branch. KDDI uses
+                        // only 92, preserves ASCII controls, and also defines
+                        // IBM rows 93-97. Its overrides validate these and reject
+                        // kana/undefined entries in the shared CP51932 table.
+                        if !kddi
+                            && !sequence[1..]
+                                .iter()
+                                .all(|byte| (0xa1..=0xfe).contains(byte))
                         {
                             return Err(invalid());
                         }
@@ -420,10 +448,7 @@ impl BinaryResource {
                     let key = sequence
                         .iter()
                         .fold(0_u64, |key, byte| (key << 8) | u64::from(*byte));
-                    let index = table
-                        .binary_search_by_key(&key, |entry| entry >> 32)
-                        .map_err(|_| invalid())?;
-                    text.push(char::from_u32(table[index] as u32).ok_or_else(invalid)?);
+                    append_mapping(&mut text, table, key, kddi).ok_or_else(invalid)?;
                     remaining = &remaining[width..];
                 }
                 text
@@ -579,7 +604,7 @@ mod tests {
         // must not silently fall back to a successful ASCII-prefix decode.
         for (encoding, bytes, kind) in [
             (
-                Some("ISO-2022-JP-KDDI"),
+                Some("CESU-8"),
                 &b"good\n\xff"[..],
                 ResourceErrorKind::Unsupported,
             ),
@@ -709,7 +734,7 @@ mod tests {
         );
         // These are recognized names, not misspellings that may fall back to UTF-8.
         assert_eq!(
-            decode(b"ASCII", Some("ISO-2022-JP-KDDI")).unwrap_err().kind,
+            decode(b"ASCII", Some("CESU-8")).unwrap_err().kind,
             ResourceErrorKind::Unsupported
         );
         assert_eq!(
@@ -823,6 +848,94 @@ mod tests {
     }
 
     #[test]
+    fn kddi_variants_decode_compounds_and_keep_distinct_byte_grammars() {
+        for (name, flag, keycap, supplementary) in [
+            (
+                "ISO-2022-JP-KDDI",
+                &b"\x1b$Bv'\x1b(B"[..],
+                &b"\x1b$Bv}\x1b(B"[..],
+                &b"\x1b$Bu_\x1b(B"[..],
+            ),
+            (
+                "stateless-ISO-2022-JP-KDDI",
+                &b"\x92\xf6\xa7"[..],
+                &b"\x92\xf6\xfd"[..],
+                &b"\x92\xf5\xdf"[..],
+            ),
+        ] {
+            assert_eq!(decode(flag, Some(name)).unwrap().text, "🇯🇵");
+            assert_eq!(
+                decode(keycap, Some(&name.to_uppercase())).unwrap().text,
+                "1\u{20e3}"
+            );
+            assert_eq!(decode(supplementary, Some(name)).unwrap().text, "🅿");
+        }
+        assert_eq!(
+            decode(
+                b"\x92\x93\xa1\x92\xa1\xc1\x92\xad\xa1",
+                Some("stateless-ISO-2022-JP-KDDI")
+            )
+            .unwrap()
+            .text,
+            "ⅰ～①"
+        );
+        // Unlike the non-KDDI stateless transcoder, KDDI preserves controls.
+        let literal = b"\x1b$B$\"\x1b(B\x0e1\x0f";
+        assert_eq!(
+            decode(literal, Some("stateless-ISO-2022-JP-KDDI"))
+                .unwrap()
+                .text
+                .as_bytes(),
+            literal
+        );
+        for (bytes, expected) in [
+            (&b"\x1b$@"[..], ""),
+            (&b"\x1b$@\x1b(BA"[..], "A"),
+            (&b"\x1b$@\x1b$Bv'\x1b(B"[..], "🇯🇵"),
+            (&b"\x1b$Bv'\x1b$@"[..], "🇯🇵"),
+        ] {
+            assert_eq!(
+                decode(bytes, Some("ISO-2022-JP-KDDI")).unwrap().text,
+                expected
+            );
+        }
+        for bytes in [
+            &b"\x1b$@$\""[..],
+            &b"\x1b(I1"[..],
+            &b"\x0e"[..],
+            &b"\x0f"[..],
+            &b"\x1b$Bu+\x1b(B"[..], // Reverse UTF-8 encoding of 😀 is not a valid decode mapping.
+            &b"\x1b$Bv'\n"[..],
+            &b"\x1b$Bv\x1b(B"[..],
+            &b"\x92\xf6\xa7"[..],
+        ] {
+            assert_eq!(
+                decode(bytes, Some("ISO-2022-JP-KDDI")).unwrap_err().kind,
+                ResourceErrorKind::InvalidEncoding,
+                "{bytes:?}"
+            );
+        }
+        for bytes in [
+            &b"\x90\xa4\xa2"[..],
+            &b"\x90\xf6\xa7"[..],
+            &b"\x92"[..],
+            &b"\x92\xf6"[..],
+            &b"\x92\x8e\xb1"[..],
+            &b"\x92\xf5\xab"[..],
+            &b"\x92\xfe\xfe"[..],
+            &b"\x8e\xb1"[..],
+        ] {
+            assert_eq!(
+                decode(bytes, Some("stateless-ISO-2022-JP-KDDI"))
+                    .unwrap_err()
+                    .kind,
+                ResourceErrorKind::InvalidEncoding,
+                "{bytes:?}"
+            );
+        }
+    }
+
+    #[test]
     fn multibyte_decoding_matches_exhaustive_ruby_fingerprints() {
         // Ruby 3.3.8, pinned Asciidoctor environment. Regenerate independently:
         // ruby scripts/generate_encodings.rb --fingerprints
@@ -845,6 +958,7 @@ mod tests {
             ("EUC-KR", 0xfda2bfb2de08cf1d, false),
             ("CP949", 0x620f7b1e5bb833c1, false),
             ("stateless-ISO-2022-JP", 0x91fbafd49916f8e1, false),
+            ("stateless-ISO-2022-JP-KDDI", 0x5aa46317606ed4c0, false),
         ] {
             let mut hash = 0xcbf29ce484222325_u64;
             let mut feed = |byte| {
@@ -874,7 +988,7 @@ mod tests {
             }
             let prefixes: &[u8] = if euc {
                 &[0x8f]
-            } else if name == "stateless-ISO-2022-JP" {
+            } else if name.starts_with("stateless-ISO-2022-JP") {
                 // An independent Ruby oracle checks 196,865 inputs, including
                 // all invalid triples for both 1978/1983 prefixes.
                 &[0x90, 0x92]
@@ -941,7 +1055,7 @@ mod tests {
             decode(b"ASCII", Some("ISO2022-JP2")).unwrap_err().kind,
             ResourceErrorKind::InvalidEncoding
         );
-        for name in ["ISO-2022-JP-KDDI", "stateless-ISO-2022-JP-KDDI"] {
+        for name in ["CESU-8", "UTF8-MAC"] {
             assert_eq!(
                 decode(b"ASCII", Some(name)).unwrap_err().kind,
                 ResourceErrorKind::Unsupported
@@ -1018,6 +1132,7 @@ mod tests {
             ("ISO-2022-JP", 0xfdd8ceaeaea5a195_u64),
             ("CP50220", 0x3b6e1f9768937b18),
             ("CP50221", 0x3b6e1f9768937b18),
+            ("ISO-2022-JP-KDDI", 0x2c1e45c319c2b453),
         ] {
             let mut hash = 0xcbf29ce484222325_u64;
             let mut feed = |byte| {
