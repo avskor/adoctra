@@ -3461,10 +3461,32 @@ backtracking в несовпадение (мемоизирующий матче�
 использование в Rouge, сверено корпусом). CI проверяет воспроизводимость
 таблиц и корпуса генератором.
 
-*Следующее изменение:* Rouge — типы токенов, runtime `RegexLexer` (стек
-состояний, mixin, delegate, `null_steps`), HTML-форматтер и темы, затем
-экспорт декларативных лексеров генератором. Upstream-аудит переключается
-на настоящий Rouge 4.7.0 в эталоне вместе с адаптером Asciidoctor.
+Второй набор Rouge: токены (`token`), 25 тем (`theme`: stylesheet адаптера
+`pre.rouge`, базовый стиль `<pre>` и inline-правила токенов — сгенерированы
+через сам RougeAdapter), форматтеры HTML/HTMLInline и обёртки Asciidoctor
+HTMLLineHighlighter/HTMLTable (`format`), runtime `RegexLexer` (`lexer`):
+ленивый `[:root]`, `step` с mixin и пятью пустыми шагами, `Error` на
+несопоставленный символ, `Next::Many` с игнорированием `pop!` пустого стека,
+ошибки Rouge (`empty stack!`, неизвестное состояние при срабатывании) как
+`LexError`, `delegate`/`recurse`, склейка соседних токенов `continue_lex`.
+Команда `lexers` генератора выгружает все 228 классов (состояния с учётом
+наследования и prepend/append, реестр тегов и псевдонимов) и транслирует
+Ruby-блоки по AST в Rust для подмножества token/groups/push/pop!/goto/
+reset_stack/delegate/recurse, `m[i]`, `downcase`/`upcase`, условий
+`include?` по коллекциям строк, вычисленным для конкретного класса,
+regexp (`=~`, `===`), `state?`/`in_state?`, сравнений и `case`. Рукописные
+`rule_<строка>`/`start_<строка>`/`init`/`reset`/`stream` в
+`src/lexers/<файл>.rs` имеют приоритет; остальное попадает в `missing`, и
+такой лексер не используется. Сейчас автоматически портированы 86 из 228
+лексеров; корпус `lexer_corpus.txt` (полные демо Rouge) сверяет их потоки
+токенов с Ruby — все 86 совпадают.
+
+*Следующее изменение:* адаптер Asciidoctor в HTML-backend (`rouge highlight`,
+`rouge-css` class/inline, `rouge-style`, docinfo со stylesheet, linenums,
+`highlight`, callouts, `?`-опции и php `start_inline`, fallback plaintext);
+upstream-аудит переключается на настоящий Rouge 4.7.0 в эталоне, лексеры без
+полного порта дают явные DIFF. Затем ручной перенос оставшихся 142 лексеров
+и расширение транслятора.
 Каждое исправление переводит записи в PASS с перезаписью baseline.
 Непроверенные сочетания encoding/BOM/selection и исключения Ruby остаются явно
 ограниченной областью; эта матрица не является доказательством полной совместимости.

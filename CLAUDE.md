@@ -1976,8 +1976,19 @@ property/POSIX/fold tables (`regex/unicode_tables.rs`) and the conformance
 corpus (`tests/data/regex_corpus.txt`: all 5913 rule regexps at every demo
 position, FNV fingerprints) are generated (`generate_rouge.rb unicode|
 regex-corpus`, verified in CI); every new pattern feature needs a Ruby probe.
-Next: tokens, RegexLexer runtime, HTML formatter/themes, lexer export, the
-Asciidoctor adapter, then switch the upstream audit reference to real Rouge.
+`token`/`theme`/`format` (HTML, HTMLInline, Asciidoctor's line highlighter
+and line table) and `lexer` (RegexLexer runtime: lazy `[:root]`, mixins, 5
+null steps, Error per unmatched char, `LexError` where Rouge raises, merged
+`continue_lex`) are done; tokens/themes (via the RougeAdapter itself) and
+`generated/lexers.rs` come from `generate_rouge.rb tokens|themes|lexers`.
+The lexer export translates Ruby block ASTs (token/groups/push/pop!/goto/
+reset_stack/delegate/recurse, `m[i]`, `include?` on per-class String
+collections, regexps, state tests, `case`); hand-written `rule_<line>`/
+`start_<line>`/`init`/`reset`/`stream` in `src/lexers/<rouge file>.rs` win;
+anything else lands in `LexerDef.missing` and the lexer is unused (86 of
+228 ported, all matching Rouge's token streams on the demos in
+`tests/data/lexer_corpus.txt`). Next: the Asciidoctor adapter in
+adoctra-html, the upstream audit on real Rouge, then the other lexers.
 highlight.js/prettify are available today. adoctra.css
 carries Ruby's `pre.highlightjs`/`pre.prettyprint` rules (checked with
 screenshots). `golden/highlight/` runs the reference `--standalone --safe`.

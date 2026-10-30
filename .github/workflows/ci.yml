@@ -45,10 +45,14 @@ jobs:
         run: gem install --user-install open-uri-cached --version "$(cat compatibility/open-uri-cached-version)" --no-document
       - name: Install pinned Rouge reference
         run: gem install --user-install rouge --version "$(cat compatibility/rouge-version)" --no-document
-      - name: Verify generated Rouge regexp tables and conformance corpus
+      - name: Verify generated Rouge tables, lexers and conformance corpora
         run: |
           ruby scripts/generate_rouge.rb unicode | diff - crates/adoctra-highlight/src/regex/unicode_tables.rs
           ruby scripts/generate_rouge.rb regex-corpus | diff -q - crates/adoctra-highlight/tests/data/regex_corpus.txt
+          ruby scripts/generate_rouge.rb tokens | diff - crates/adoctra-highlight/src/generated/tokens.rs
+          ruby scripts/generate_rouge.rb themes | diff -q - crates/adoctra-highlight/src/generated/themes.rs
+          ruby scripts/generate_rouge.rb lexers | diff -q - crates/adoctra-highlight/src/generated/lexers.rs
+          ruby scripts/generate_rouge.rb lexer-corpus | diff -q - crates/adoctra-highlight/tests/data/lexer_corpus.txt
       - name: Differential audit of the upstream test suite inputs
         run: python3 scripts/upstream_audit.py --baseline compatibility/upstream/audit/report.json
       - name: Verify URI cache requests and diagnostics
