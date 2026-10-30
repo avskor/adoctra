@@ -286,7 +286,11 @@ fn render_document(
                     out.push_str("</h1>\n");
                 }
             }
-            render_details(doc, out);
+            // Like Ruby (`if node.header?`), the details need a document
+            // title; host or body author/revision attributes alone show none.
+            if doc.has_title {
+                render_details(doc, out);
+            }
             toc(out);
         }
         out.push_str("</header>\n");
@@ -1881,46 +1885,56 @@ fn render_table(block: &Block, table: &adoctra_core::ast::Table, cx: &Cx, out: &
                         attributes,
                     } => {
                         out.push_str("<div class=\"content\">");
-                        let inner = Cx {
-                            doc: cx.doc,
-                            outline: blocks,
-                            header: attributes,
-                            book: cx.book,
-                            highlighter: cx.highlighter,
-                            source_listing: std::cell::Cell::new(cx.source_listing.get()),
-                        };
-                        // Ruby's `convert_embedded` of the inner document:
-                        // its title unless `notitle`, then an automatic TOC.
-                        let auto_toc = inner.has_sections()
-                            && attributes.get("toc").is_some()
-                            && !matches!(
-                                attributes.get("toc-placement"),
-                                Some("macro" | "preamble")
-                            );
-                        let title = usize::from(*has_title);
-                        for (i, child) in blocks.iter().enumerate() {
-                            if i == title && auto_toc {
-                                render_toc(&inner, attributes, "toc", None, None, out);
-                            }
-                            match &child.kind {
-                                BlockKind::Heading { level, inlines } if i == 0 && *has_title => {
-                                    if child.conversion_attributes().get("notitle").is_none() {
-                                        render_heading(
-                                            child,
-                                            *level,
-                                            inlines,
-                                            false,
-                                            &child.roles,
-                                            out,
-                                        );
-                                    }
+                        // Ruby converts the inner document with its own
+                        // doctype: `inline` gives the first block's content
+                        // (its warning has no channel here).
+                        if attributes.get("doctype") == Some("inline") {
+                            render_inline_blocks(blocks, *has_title, &mut Vec::new(), out);
+                            out.push_str("</div>");
+                        } else {
+                            let inner = Cx {
+                                doc: cx.doc,
+                                outline: blocks,
+                                header: attributes,
+                                book: cx.book,
+                                highlighter: cx.highlighter,
+                                source_listing: std::cell::Cell::new(cx.source_listing.get()),
+                            };
+                            // Ruby's `convert_embedded` of the inner document:
+                            // its title unless `notitle`, then an automatic TOC.
+                            let auto_toc = inner.has_sections()
+                                && attributes.get("toc").is_some()
+                                && !matches!(
+                                    attributes.get("toc-placement"),
+                                    Some("macro" | "preamble")
+                                );
+                            let title = usize::from(*has_title);
+                            for (i, child) in blocks.iter().enumerate() {
+                                if i == title && auto_toc {
+                                    render_toc(&inner, attributes, "toc", None, None, out);
                                 }
-                                _ => render_block(child, &inner, out),
+                                match &child.kind {
+                                    BlockKind::Heading { level, inlines }
+                                        if i == 0 && *has_title =>
+                                    {
+                                        if child.conversion_attributes().get("notitle").is_none() {
+                                            render_heading(
+                                                child,
+                                                *level,
+                                                inlines,
+                                                false,
+                                                &child.roles,
+                                                out,
+                                            );
+                                        }
+                                    }
+                                    _ => render_block(child, &inner, out),
+                                }
                             }
+                            cx.source_listing.set(inner.source_listing.get());
+                            render_footnotes(footnotes, &cx.doc.attributes, "", out);
+                            out.push_str("</div>");
                         }
-                        cx.source_listing.set(inner.source_listing.get());
-                        render_footnotes(footnotes, &cx.doc.attributes, "", out);
-                        out.push_str("</div>");
                     }
                     CellContent::Literal(text) => {
                         out.push_str("<div class=\"literal\"><pre>");
@@ -2023,9 +2037,19 @@ fn render_open(block: &Block, blocks: &[Block], cx: &Cx, out: &mut String) {
 /// preamble, a list, a table, an image, a break, …) is no candidate: Ruby
 /// warns and converts nothing. A document without blocks is empty.
 fn render_inline_doctype(cx: &Cx, warnings: &mut Vec<String>, out: &mut String) {
-    let doc = cx.doc;
-    let Some(block) = doc.blocks.get(usize::from(doc.has_title)) else {
-        if doc.has_title {
+    render_inline_blocks(&cx.doc.blocks, cx.doc.has_title, warnings, out);
+}
+
+/// The inline doctype's output for a document's (or an AsciiDoc cell's)
+/// blocks, the first being its title when `has_title`.
+fn render_inline_blocks(
+    blocks: &[Block],
+    has_title: bool,
+    warnings: &mut Vec<String>,
+    out: &mut String,
+) {
+    let Some(block) = blocks.get(usize::from(has_title)) else {
+        if has_title {
             warnings.push(NO_INLINE_CANDIDATE.to_owned());
         }
         return;
@@ -5780,6 +5804,31 @@ mod tests {
                 "{source}"
             );
         }
+    }
+
+    #[test]
+    fn header_details_need_a_document_title_like_ruby() {
+        // attributes_test.rb: author attributes from the API without a title.
+        let mut options = adoctra_core::ParseOptions::default();
+        options.attributes.set("author", "Linus Torvalds");
+        options.attributes.set("revnumber", "1.0");
+        let doc = adoctra_core::parse_with_options("x", &options).document;
+        let html = HtmlBackend::new().render(&doc).html;
+        assert!(html.contains("<header id=\"header\">\n</header>"), "{html}");
+        let doc = adoctra_core::parse_with_options("= T\n\nx", &options).document;
+        let html = HtmlBackend::new().render(&doc).html;
+        assert!(html.contains("<span id=\"author\" class=\"author\">Linus Torvalds</span>"));
+    }
+
+    #[test]
+    fn an_asciidoc_cell_with_the_inline_doctype_renders_inline() {
+        // tables_test.rb: the inner document converts like Ruby's inline doctype.
+        let doc = adoctra_core::parse("|===\na|\n:doctype: inline\n\ncontent\n|===").document;
+        let html = HtmlBackend::embedded().render(&doc).html;
+        assert!(
+            html.contains("<div class=\"content\">content</div></td>"),
+            "{html}"
+        );
     }
 
     #[test]

@@ -31,6 +31,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import tempfile
@@ -67,8 +68,12 @@ def attribute_args(attributes):
         return None
     spelled = []
     for name, value in attributes.items():
-        if value is None or value is False:
+        # Ruby's API: nil unsets a key hard, false softly (a document entry
+        # may set it again), spelled `name!@` like Ruby's string form.
+        if value is None:
             spelled.append(name if name.endswith("!") else f"{name}!")
+        elif value is False:
+            spelled.append(f"{name.removesuffix('!')}!@")
         elif value is True:
             spelled.append(name)
         elif isinstance(value, (str, int, float)) and not str(value).startswith("#<"):
@@ -100,6 +105,12 @@ def classify(source, options):
     if attributes is None:
         return None, "attributes:non-string"
     backends = [a.split("=", 1)[1] for a in attributes if a.startswith("backend=")]
+    # Below server mode the document itself may switch to another backend,
+    # unless the host set one (an override wins).
+    if not backends and backend is None and safe in ("unsafe", "safe"):
+        for value in re.findall(r"^:backend:[ \t]*(\S*)", source, re.MULTILINE):
+            if value not in ("html5", "html"):
+                return None, f"backend:document:{value}"
     if any(b not in ("html5", "html") for b in backends):
         return None, f"backend:{backends[-1]}"
     args = ["-S", safe]
@@ -164,13 +175,30 @@ def record(upstream, recording=None):
 def body(html, standalone):
     result = projection(html)
     if standalone:
-        # Only the three document shell tags differ (as in the asset audit).
+        # Only the three document shell tags differ (as in the asset audit);
+        # their other attributes (a `max-width` style) are compared.
         for node in result:
-            if isinstance(node, dict) and (node["tag"], node["attrs"]) in [
-                    ("header", {"id": "header"}), ("main", {"id": "content"}),
-                    ("footer", {"id": "footer"})]:
+            if isinstance(node, dict) and (node["tag"], node["attrs"].get("id")) in [
+                    ("header", "header"), ("main", "content"), ("footer", "footer")]:
                 node["tag"] = "div"
     return result
+
+
+HTML_TAGS = set("""a abbr address area article aside audio b base bdi bdo blockquote body br button
+canvas caption cite code col colgroup data datalist dd del details dfn dialog div dl dt em embed
+fieldset figcaption figure footer form h1 h2 h3 h4 h5 h6 head header hr html i iframe img input ins
+kbd label legend li link main map mark meta meter nav noscript object ol optgroup option output p
+param picture pre progress q rp rt ruby s samp script section select small source span strong
+style sub summary sup svg table tbody td template textarea tfoot th thead time title tr track u ul
+var video wbr math""".split())
+TAG = re.compile(r"</?([A-Za-z][\w:-]*)[^<>]*>")
+
+
+def neutralize(html):
+    """Raw passthrough markup that is no HTML element (`<html5>`) as text,
+    the same on both sides, so the projection can compare the rest."""
+    return TAG.sub(lambda m: m[0] if m[1].lower() in HTML_TAGS
+                   else m[0].replace("<", "&lt;").replace(">", "&gt;"), html)
 
 
 def raw_body(html):
@@ -207,6 +235,11 @@ def compare(entry, expected, actual):
             projected.append(body(side["html"], standalone))
         except ValueError as error:
             projected.append(error)
+    if any(isinstance(p, ValueError) for p in projected):
+        try:
+            projected = [body(neutralize(side["html"]), standalone) for side in (expected, actual)]
+        except ValueError:
+            pass
     if any(isinstance(p, ValueError) for p in projected):
         # Malformed HTML (raw passthrough markup): the projection is
         # undefined, so the documents must be byte-identical bodies instead.

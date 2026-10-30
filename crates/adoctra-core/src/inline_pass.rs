@@ -821,8 +821,15 @@ impl Index {
             });
         }
         let legacy = metadata.is_some_and(|s| s == "x-" || s.ends_with(" x-"));
-        // Escaping legacy backtick attributes leaves ordinary quote handling.
-        if constrained && !compat && legacy && escaped_metadata && src[open..].starts_with('`') {
+        // Escaping legacy backtick attributes, or the backtick after them
+        // (InlinePassRx's `x-` branch allows no backslash there), leaves
+        // ordinary quote handling.
+        if constrained
+            && !compat
+            && legacy
+            && (escaped_metadata || escaped > 0)
+            && src[open..].starts_with('`')
+        {
             return None;
         }
         let (marker, positions) = if constrained {

@@ -40,11 +40,18 @@ pub(crate) struct AttrValue {
 pub(crate) struct BlockList {
     pub positional: BTreeMap<usize, Option<AttrValue>>,
     named: BTreeMap<String, String>,
+    /// The named `attribution` and `citetitle` with their rendered value
+    /// (normal substitutions when single-quoted), for a quote attribution.
+    named_values: BTreeMap<String, AttrValue>,
 }
 
 impl BlockList {
     pub fn value(&self, key: usize) -> Option<&AttrValue> {
         self.positional.get(&key).and_then(Option::as_ref)
+    }
+
+    pub fn named_value(&self, name: &str) -> Option<&AttrValue> {
+        self.named_values.get(name)
     }
 }
 
@@ -174,6 +181,12 @@ fn merge_fields(
                 .as_ref()
                 .filter(|_| substitute)
                 .map(|value| crate::resolve::label_parts(&value.inlines));
+        }
+        if let (Some(value), "attribution" | "citetitle") = (&value, name.as_str()) {
+            pending
+                .list
+                .named_values
+                .insert(name.clone(), value.clone());
         }
         let text = value.map(|v| v.text).unwrap_or_default();
         match name.as_str() {

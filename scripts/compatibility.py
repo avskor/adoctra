@@ -350,8 +350,13 @@ def normalize(node, verbatim=False, block_kind=None):
                 else:
                     target["attrs"][key] = value
         return children
-    if tag == "ol" and attrs.get("class") == "arabic":
+    if tag == "ol" and "arabic" in classes:
+        # The default style is presentation metadata, beside roles too
+        # (adoctra puts a list's roles on the <ol>, Ruby on its wrapper).
+        rest = [c for c in classes if c != "arabic"]
         attrs.pop("class")
+        if rest:
+            attrs["class"] = " ".join(rest)
     return [element(tag, attrs, children)]
 
 

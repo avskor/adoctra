@@ -155,6 +155,13 @@ class ProjectionTests(unittest.TestCase):
         self.assertEqual(projection(ruby), projection(ours))
         self.assertNotEqual(projection(ours), projection(ours.replace(' r"', '"')))
 
+    def test_ordered_list_roles_beside_the_default_style(self):
+        ruby = '<div class="olist arabic dry"><ol class="arabic"><li><p>a</p></li></ol></div>'
+        ours = '<ol class="arabic dry"><li>a</li></ol>'
+        self.assertEqual(projection(ruby), projection(ours))
+        self.assertNotEqual(projection(ours), projection('<ol class="arabic"><li>a</li></ol>'))
+        self.assertNotEqual(projection(ours), projection('<ol class="loweralpha dry"><li>a</li></ol>'))
+
     def test_callout_list_with_icons_is_ruby_layout_table(self):
         ruby = ('<div id="c" class="colist arabic r"><table><tr><td><i class="conum" data-value="1"></i>'
                 '<b>1</b></td><td>Describe <strong>it</strong></td></tr><tr><td><img src="2.png" alt="2">'

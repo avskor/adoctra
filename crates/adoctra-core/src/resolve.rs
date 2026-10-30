@@ -1170,6 +1170,13 @@ fn push_text(inlines: &[Inline], s: &mut String) {
                 push_text(children, s);
                 s.push_str("<>");
             }
+            // A text-mode icon (no `icons`) is Ruby's `[alt&#93;` markup:
+            // its alt text remains once the tags (and the entity) go.
+            Inline::Image { image, .. } if image.icon && image.icons.is_none() => {
+                s.push_str("<>[");
+                s.push_str(&crate::attributes::reference_text(&image.alt));
+                s.push_str("&#93;<>");
+            }
             // An anchor or image has no visible text (Ruby removes the
             // generated tags) but still separates lexical runs.
             Inline::Anchor { .. } | Inline::Image { .. } => s.push_str("<>"),

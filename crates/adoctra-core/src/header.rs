@@ -35,6 +35,10 @@ pub(crate) struct Header {
     /// Metadata read before a manual page's NAME section after the document
     /// title took `pending`: it belongs to the first body block.
     pub body_pending: Option<crate::parser::PendingMeta>,
+    /// Ruby's `invalid-header`: a block title above the implicit document
+    /// title cancels the header (`finalize_header block_attrs, false`), so the
+    /// title line is a body section checked against the document level.
+    pub invalid: bool,
 }
 
 pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext) -> Header {
@@ -59,6 +63,7 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
         title_anchor: None,
         manpage: None,
         body_pending: None,
+        invalid: false,
         pending,
         // Ruby converts the stored value of a replacing `doctitle` as the
         // title's source: its markup (`<strong>`) is text again.
@@ -94,6 +99,8 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
     } else {
         None
     };
+    result.invalid = result.pending.title.is_some()
+        && title.is_some_and(|(level, _)| context.section_level(level) == 0);
     if let Some((_, setext)) = title
         .filter(|(level, _)| context.section_level(*level) == 0 && result.pending.title.is_none())
     {
@@ -332,6 +339,7 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
     save_doctitle(Arc::make_mut(&mut context.attributes));
     save_toc(Arc::make_mut(&mut context.attributes));
     save_icons(Arc::make_mut(&mut context.attributes));
+    context.release_flexible_attributes();
     context.quote_compat = context.attributes.get("compat-mode").is_some();
     for (index, kind) in [
         (result.title_line, crate::TokenKind::Heading),
@@ -573,20 +581,21 @@ fn parse_revision(line: (usize, &str)) -> Option<Revision> {
     if text.starts_with(':') {
         return None;
     }
-    let (number, rest) = if let Some((prefix, rest)) = text.split_once(',') {
-        let start = prefix
-            .find(|c: char| c.is_ascii_digit() || c == '{')
-            .unwrap_or(prefix.len());
-        (
-            Some(prefix[start..].trim_end().to_owned()),
-            rest.trim_start_matches(' '),
-        )
-    } else {
-        (None, text)
+    let (number, rest) = match text.split_once(',') {
+        // RevisionInfoLineRx's `(?!:)` rejects a component starting with a
+        // colon after the comma; the regex then backtracks to the branch
+        // without a number, so `v1.0.0,:remark` is a version and a remark.
+        Some((prefix, rest)) if !rest.trim_start_matches(' ').starts_with(':') => {
+            let start = prefix
+                .find(|c: char| c.is_ascii_digit() || c == '{')
+                .unwrap_or(prefix.len());
+            (
+                Some(prefix[start..].trim_end().to_owned()),
+                rest.trim_start_matches(' '),
+            )
+        }
+        _ => (None, text),
     };
-    if rest.starts_with(':') {
-        return None;
-    }
     let (date, remark) = rest.split_once(':').map_or((rest, None), |(date, remark)| {
         (
             date.trim_end().trim_end_matches(','),

@@ -10,7 +10,7 @@ from upstream_audit import attribute_args, classify, compare, entry_id, load_inv
 class ClassifyTests(unittest.TestCase):
     def test_ruby_attribute_forms_become_cli_spellings(self):
         self.assertEqual(attribute_args({"a": "1", "b": None, "c": False, "d": True, "e!": None}),
-                         ["a=1", "b!", "c!", "d", "e!"])
+                         ["a=1", "b!", "c!@", "d", "e!"])
         self.assertEqual(attribute_args("a=1 b"), ["a=1", "b"])
         self.assertEqual(attribute_args(["a=1"]), ["a=1"])
         self.assertIsNone(attribute_args({"a": "#<Object>"}))
@@ -32,6 +32,14 @@ class ClassifyTests(unittest.TestCase):
                 ({"base_dir": "/x", "to_file": False}, "option:base_dir,to_file"),
                 ({"safe": "foo"}, "safe:foo"),
                 ({"attributes": {"docdir": "<UPSTREAM>/test"}}, "path:upstream-checkout")]:
+            self.assertEqual(classify("x", options), (None, reason))
+        self.assertEqual(classify("= T\n:backend: docbook\n", {"safe": "safe"}),
+                         (None, "backend:document:docbook"))
+        # Not when the host sets the backend or the mode locks it.
+        for options in [{"safe": "safe", "backend": "html5"}, {}, {"safe": "server"}]:
+            self.assertIsNone(classify("= T\n:backend: docbook\n", options)[1], options)
+        self.assertIsNone(classify(":backend: html5\n", {"safe": "safe"})[1])
+        for options, reason in []:
             self.assertEqual(classify("x", options), (None, reason))
         self.assertEqual(classify("include::http://localhost:9876/a[]", {})[1], "network:test-server")
         self.assertEqual(classify("#<IO>", {})[1], "source:non-string")
@@ -59,8 +67,15 @@ class CompareTests(unittest.TestCase):
         self.assertEqual(compare(self.entry, {"html": "", "diagnostics": []}, {"error": "x"})[0],
                          "ADOCTRA_ERROR")
 
+    def test_unknown_raw_tags_are_text_for_the_projection(self):
+        ruby = {"html": '<div class="paragraph"><p><strong><html5></strong></p></div>', "diagnostics": []}
+        ours = {"html": "<p><strong><html5></strong></p>", "diagnostics": []}
+        self.assertEqual(compare(self.entry, ruby, ours), ("PASS", []))
+        other = {"html": "<p><strong><html4></strong></p>", "diagnostics": []}
+        self.assertEqual(compare(self.entry, ruby, other), ("DIFF", ["body"]))
+
     def test_unprojectable_html_compares_raw_bodies(self):
-        broken = "<p><strong><x></strong></p>"
+        broken = "<p><strong><em></strong></p>"
         same = {"html": broken, "diagnostics": []}
         self.assertEqual(compare(self.entry, same, dict(same)), ("PASS", []))
         self.assertEqual(compare(self.entry, same, {"html": broken + "y", "diagnostics": []}),
@@ -75,6 +90,12 @@ class CompareTests(unittest.TestCase):
         ruby = {"html": "<html><body><div id=\"content\"><p>a</p></div></body></html>", "diagnostics": []}
         ours = {"html": "<html><body><main id=\"content\"><p>a</p></main></body></html>", "diagnostics": []}
         self.assertEqual(compare(entry, ruby, ours), ("PASS", []))
+        styled = {k: v.replace('id="content"', 'id="content" style="max-width: 9em;"') for k, v in ruby.items()
+                  if k == "html"} | {"diagnostics": []}
+        ours_styled = {"html": ours["html"].replace('id="content"', 'id="content" style="max-width: 9em;"'),
+                       "diagnostics": []}
+        self.assertEqual(compare(entry, styled, ours_styled), ("PASS", []))
+        self.assertEqual(compare(entry, styled, ours)[0], "DIFF")
 
 
 class InventoryTests(unittest.TestCase):

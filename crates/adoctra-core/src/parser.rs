@@ -245,6 +245,7 @@ pub(crate) fn parse_reader<'a>(
     }
     context.start_body();
     let book = context.book;
+    let invalid_header = header.invalid;
     let mut i = header.body_start;
     let body = collect_blocks(
         &mut lines,
@@ -257,7 +258,11 @@ pub(crate) fn parse_reader<'a>(
     context.close_sections(0, usize::MAX);
     let body = nest_sections(
         body,
-        doc.has_title,
+        TopLevel {
+            has_header: doc.has_title,
+            invalid_header,
+            fragment: doc.attributes.get("fragment").is_some(),
+        },
         book,
         doc.attributes.get("preface-title").filter(|_| book),
         &mut context.sections,
@@ -562,14 +567,10 @@ fn collect_blocks_in(
                 block.kind,
                 BlockKind::Paragraph { .. } | BlockKind::Admonition { .. }
             );
-            apply_style_fixup(
-                &mut block,
-                lines,
-                &attributes,
-                &pending.list,
-                !restyled,
-                context,
-            );
+            apply_style_fixup(&mut block, lines, &attributes, context);
+            if !restyled {
+                rekey_attribution(&mut block, &pending.list);
+            }
             source_defaults(&mut block, &pending.list, fenced, &context.attributes);
             adjust_verbatim(&mut block, context);
             if let BlockKind::Stem { style, .. } = &mut block.kind {
@@ -640,9 +641,18 @@ fn collect_blocks_in(
 /// outside a book is an error but still nests under the document. Blocks before
 /// the first section form a preamble when the document has a title, unless there
 /// are no sections at all (except for a book, as in Ruby).
+/// What the document header decided for the top-level section checks.
+struct TopLevel {
+    has_header: bool,
+    /// Ruby's `invalid-header`: a block title above the doctitle.
+    invalid_header: bool,
+    /// Ruby's `fragment`: any top-level section level is expected.
+    fragment: bool,
+}
+
 fn nest_sections(
     blocks: Vec<Block>,
-    has_header: bool,
+    top_level: TopLevel,
     book: bool,
     preface_title: Option<&str>,
     sections: &mut BTreeMap<(usize, usize), crate::section_numbers::Section>,
@@ -650,6 +660,11 @@ fn nest_sections(
     lines: &Reader<'_>,
 ) -> Vec<Block> {
     use crate::section_numbers::Ordinals;
+    let TopLevel {
+        has_header,
+        invalid_header,
+        fragment,
+    } = top_level;
     // Close the innermost open section into its parent (or the top level).
     // Like Ruby, a book part must end with a nested section.
     fn close(
@@ -693,8 +708,10 @@ fn nest_sections(
         }
     }
     // Without a header, a body that starts with a section title makes Ruby
-    // create every top-level section directly, without checking its level.
-    let unchecked = !has_header && blocks.first().and_then(section_level).is_some();
+    // create every top-level section directly, without checking its level,
+    // unless a block title cancelled the header (Ruby's `invalid-header`).
+    let unchecked =
+        !has_header && !invalid_header && blocks.first().and_then(section_level).is_some();
     // Ruby also opens a preamble for a book without a header, unless its first
     // block is an abstract.
     let preamble_open = has_header
@@ -781,6 +798,7 @@ fn nest_sections(
                 }
                 None
             }
+            _ if fragment => None,
             _ => Some(1),
         };
         if let Some(expected) = expected.filter(|expected| *expected != raw) {
@@ -1085,9 +1103,6 @@ fn apply_style_fixup(
     block: &mut Block,
     lines: &Reader<'_>,
     attrs: &Attributes,
-    list: &crate::block_attributes::BlockList,
-    // Whether positional fields rekey into a quote attribution.
-    rekey: bool,
     context: &mut ParseContext,
 ) {
     let child_attributes = Arc::clone(&block.attribute_context);
@@ -1286,26 +1301,34 @@ fn apply_style_fixup(
             _ => {}
         }
     }
-    // Rekey the positional attributes (`[quote, author, work]`) into the quote /
-    // verse attribution — both the `____` fence form and the paragraph form land
-    // here. Consumed from `attrs.positional` so they are not also surfaced raw.
-    if rekey
-        && matches!(
-            block.kind,
-            BlockKind::Quote { .. } | BlockKind::Verse { .. }
-        )
+}
+
+/// Rekey the positional attributes (`[quote, author, work]`) into the quote /
+/// verse attribution — the `____` fence form (with or without a style, like
+/// `[, author, work]`) and the paragraph form. Like Ruby's
+/// `AttributeList.rekey`, a positional value wins over a named `attribution`
+/// or `citetitle`. Consumed from `attrs.positional` so they are not also
+/// surfaced raw.
+fn rekey_attribution(block: &mut Block, list: &crate::block_attributes::BlockList) {
+    if !matches!(
+        block.kind,
+        BlockKind::Quote { .. } | BlockKind::Verse { .. }
+    ) {
+        return;
+    }
+    block.attrs.positional.clear();
+    let attribution = build_attribution(
+        list.value(2).or_else(|| list.named_value("attribution")),
+        list.value(3).or_else(|| list.named_value("citetitle")),
+    );
+    if let BlockKind::Quote {
+        attribution: slot, ..
+    }
+    | BlockKind::Verse {
+        attribution: slot, ..
+    } = &mut block.kind
     {
-        block.attrs.positional.clear();
-        let attribution = build_attribution(list.value(2), list.value(3));
-        if let BlockKind::Quote {
-            attribution: slot, ..
-        }
-        | BlockKind::Verse {
-            attribution: slot, ..
-        } = &mut block.kind
-        {
-            *slot = attribution;
-        }
+        *slot = attribution;
     }
 }
 
@@ -1540,6 +1563,9 @@ fn read_container(
     let (start, opening_line) = lines.line(*i);
     let opening = Span::new(start, start + opening_line.len());
     *i += 1;
+    // Ruby reads the body up to the closing fence before parsing it, so an
+    // unterminated container warns before its children do.
+    let before_children = diagnostics.len();
     let blocks = collect_blocks(
         lines,
         i,
@@ -1553,13 +1579,16 @@ fn read_container(
         *i += 1;
         Some(Span::new(loff, loff + lline.len()))
     } else {
-        diagnostics.push(Diagnostic {
-            omitted_span: None,
-            report: crate::DiagnosticReport::unterminated(block_name),
-            span: Span::new(start, start + fence.len()),
-            severity: Severity::Error,
-            message: format!("unterminated {block_name} block (missing closing `{fence}`)"),
-        });
+        diagnostics.insert(
+            before_children,
+            Diagnostic {
+                omitted_span: None,
+                report: crate::DiagnosticReport::unterminated(block_name),
+                span: Span::new(start, start + fence.len()),
+                severity: Severity::Error,
+                message: format!("unterminated {block_name} block (missing closing `{fence}`)"),
+            },
+        );
         None
     };
     lines.record_fences(opening, closing, kind);
@@ -2224,9 +2253,14 @@ fn read_nested_document(
     );
     context.close_sections(0, usize::MAX);
     let has_title = title.is_some();
+    let top_level = TopLevel {
+        has_header: has_title,
+        invalid_header: header.invalid,
+        fragment: context.attributes.get("fragment").is_some(),
+    };
     let blocks = nest_sections(
         blocks,
-        has_title,
+        top_level,
         context.book,
         None,
         &mut context.sections,
@@ -3212,10 +3246,10 @@ fn read_item_line(
     let eol = lines.eol(*i);
     *i += 1;
     Some(ItemLine {
+        marker: text.is_empty() && lines.placeholders.contains(&off),
         off,
         text,
         eol,
-        marker: false,
     })
 }
 
@@ -3469,10 +3503,16 @@ fn parse_item_blocks(
     if adjacent && list_type != crate::lists::ListType::Description {
         has_text = false;
     }
+    let placeholders = buffer
+        .iter()
+        .filter(|l| l.marker && l.text.is_empty())
+        .map(|l| l.off)
+        .collect();
     let mut item_reader = Reader::nested(
         buffer.into_iter().map(|l| (l.off, l.text, l.eol)).collect(),
         lines.include_catalog.clone(),
     );
+    item_reader.placeholders = placeholders;
     let mut j = 0;
     let mut blocks = collect_blocks_in(
         &mut item_reader,
@@ -3515,7 +3555,53 @@ fn item_text(
         (None, None) => return Vec::new(),
     };
     let attrs = context.render_attributes();
-    lines.scan_content(start, end, &attrs, context)
+    let mut content = lines.content(start, end);
+    if let Some(folded) = folded {
+        content = fold_indentation(content, folded, lines);
+    }
+    lines.scan_filtered(content, &attrs, context)
+}
+
+/// Ruby's `adjust_indentation!` on a folded paragraph's lines: their common
+/// indentation goes (the first line's is already outside the folded span),
+/// keeping the map to physical bytes.
+fn fold_indentation(
+    content: crate::scanner::FilteredSource,
+    folded: Span,
+    lines: &Reader<'_>,
+) -> crate::scanner::FilteredSource {
+    use crate::scanner::Piece;
+    let blank = |c: char| c == ' ' || c == '\t';
+    let first = folded.start - lines.line_start(folded.start);
+    let text = content.text.as_str();
+    // Lines of the folded paragraph after its first: (start, leading blanks).
+    let mut continued = Vec::new();
+    let mut at = 0;
+    for line in text.split_inclusive('\n') {
+        let original = content.original_span(Span::new(at, at)).start;
+        let body = line.trim_end_matches(['\n', '\r']);
+        if at > 0 && original > folded.start && !body.trim_matches(blank).is_empty() {
+            continued.push((at, body.len() - body.trim_start_matches(blank).len()));
+        }
+        at += line.len();
+    }
+    let common = continued
+        .iter()
+        .map(|(_, n)| *n)
+        .chain([first])
+        .min()
+        .unwrap_or(0);
+    if common == 0 || continued.is_empty() {
+        return content;
+    }
+    let mut pieces = Vec::new();
+    let mut copied = 0;
+    for (start, _) in continued {
+        pieces.push(Piece::Copy(copied..start));
+        copied = start + common;
+    }
+    pieces.push(Piece::Copy(copied..text.len()));
+    content.remap(&pieces)
 }
 
 /// Ruby's `parse_list` for unordered and ordered lists, and

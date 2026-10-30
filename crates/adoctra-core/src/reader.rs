@@ -86,6 +86,10 @@ pub(crate) struct Reader<'a> {
     report_cursors: Vec<(usize, crate::DiagnosticCursor)>,
     primary_eof: crate::DiagnosticCursor,
     inputs: Vec<Input>,
+    /// Offsets of Ruby's list continuation placeholders in a list item's
+    /// lines: empty lines that still count as a `+` marker when a nested
+    /// list reads them (Ruby keeps the marker object).
+    pub placeholders: std::collections::BTreeSet<usize>,
     resources: Option<Resources<'a>>,
     /// Ruby's `@maxdepth` is set (a positive host `max-include-depth`) for a
     /// reader without a provider: nothing is read, but a URI target Ruby may
@@ -153,6 +157,7 @@ impl<'a> Reader<'a> {
                 line: 1,
             },
             inputs: vec![Input::new(source, crate::SourceId::default(), false, 0)],
+            placeholders: Default::default(),
             resources: None,
             unread_includes: false,
             origins: Vec::new(),
@@ -1416,7 +1421,24 @@ impl<'a> Reader<'a> {
         attrs: &Attributes,
         context: &mut ParseContext,
     ) -> Vec<Inline> {
-        let content = self.content(start, end);
+        self.scan_filtered(self.content(start, end), attrs, context)
+    }
+
+    /// The processed offset where the loaded line containing `pos` starts.
+    pub fn line_start(&self, pos: usize) -> usize {
+        let index = self.loaded.partition_point(|(off, _)| *off <= pos);
+        index
+            .checked_sub(1)
+            .map_or(pos, |index| self.loaded[index].0)
+    }
+
+    /// [`Reader::scan_content`] over an already prepared content.
+    pub fn scan_filtered(
+        &self,
+        content: crate::scanner::FilteredSource,
+        attrs: &Attributes,
+        context: &mut ParseContext,
+    ) -> Vec<Inline> {
         let filtered = crate::comments::filtered_text(&content.text, 0);
         context
             .comments

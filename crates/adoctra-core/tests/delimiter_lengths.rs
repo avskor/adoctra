@@ -135,6 +135,7 @@ fn indented_and_short_fences_are_not_delimiters() {
 
 #[test]
 fn unterminated_long_fences_report_the_missing_fence() {
+    // Like Ruby, the outer block is read (and warned) before its children.
     let result = parse("======\nbody\n====\nnested");
     let messages: Vec<_> = result
         .diagnostics
@@ -146,13 +147,13 @@ fn unterminated_long_fences_report_the_missing_fence() {
         [
             (
                 Severity::Error,
-                Span::new(12, 16),
-                "unterminated example block (missing closing `====`)"
+                Span::new(0, 6),
+                "unterminated example block (missing closing `======`)"
             ),
             (
                 Severity::Error,
-                Span::new(0, 6),
-                "unterminated example block (missing closing `======`)"
+                Span::new(12, 16),
+                "unterminated example block (missing closing `====`)"
             ),
         ]
     );

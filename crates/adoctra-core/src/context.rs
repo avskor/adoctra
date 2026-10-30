@@ -485,6 +485,15 @@ impl ParseContext<'_> {
                 .into_iter()
                 .chain([format!("safe-mode-{}", safe.name())]),
         );
+        // Ruby's `max-include-depth ||= 64`: only the API sets it, and it
+        // is visible (and locked) in the document.
+        host_or(
+            &mut attributes,
+            &mut locked,
+            &mut soft,
+            "max-include-depth",
+            Some("64"),
+        );
         // `allow-uri-read` is only ever set by the host.
         host_or(
             &mut attributes,
@@ -750,6 +759,15 @@ impl ParseContext<'_> {
     /// even if the attribute was unset since.
     pub fn doctype(&self) -> Option<&str> {
         self.profile.doctype.as_deref()
+    }
+
+    /// Ruby's `FLEXIBLE_ATTRIBUTES` at header completion: an API override
+    /// that set `sectnums` (also spelled `numbered`) is released, so the
+    /// document may toggle numbering; an API unset stays locked.
+    pub fn release_flexible_attributes(&mut self) {
+        if self.attributes.get("sectnums").is_some() {
+            self.locked.remove("sectnums");
+        }
     }
 
     pub fn start_body(&mut self) {
