@@ -132,8 +132,9 @@ module RougeLexers
         begin
           state = lexer.get_state(name)
         rescue StandardError, NotImplementedError => e
-          # Object addresses (`#<Class:0x…>`) would make the output vary.
-          missing << "#{lexer.tag}: state #{name}: #{e.message.gsub(/:0x\h+/, '')}"
+          # Only the exception class: messages vary across Ruby versions
+          # and carry object addresses.
+          missing << "#{lexer.tag}: state #{name}: #{e.class}"
           next %(StateDef { name: #{rust_str name.to_s}, rules: &[] })
         end
         rules = state.rules.map do |rule|

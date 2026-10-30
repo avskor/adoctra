@@ -12238,7 +12238,7 @@ static LEXER_CEYLON: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["ceylon: state comment: undefined method `Multiline' for class #<Class>"],
+    missing: &["ceylon: state comment: NoMethodError"],
 };
 
 static LEXER_CFSCRIPT: LexerDef = LexerDef {
@@ -23096,7 +23096,7 @@ static LEXER_SAS: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["sas.rs:478 (IASGN@479)", "sas: state datalines4: regex /;{,3}/ matches empty string, but has no predicate!", "sas.rs:546 (condition has_key?)"],
+    missing: &["sas.rs:478 (IASGN@479)", "sas: state datalines4: Rouge::RegexLexer::InvalidRegex", "sas.rs:546 (condition has_key?)"],
 };
 
 static LEXER_SASS: LexerDef = LexerDef {
