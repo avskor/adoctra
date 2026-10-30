@@ -218,11 +218,14 @@ Supported entries (recorded options mapped to `-S`/`-s`/`-a`) are compared in
 body-dom-v1 plus warnings against pinned Ruby without optional highlighter
 gems; others are UNSUPPORTED with a reason. The reference mimics one Ruby CLI
 run per document (output chomped + LF, highlighter library status reset).
-2082 PASS / 27 DIFF / 512 UNSUPPORTED of 2621; CI freezes every status.
+2243 PASS / 27 DIFF / 1 RUBY_ERROR / 350 UNSUPPORTED of 2621; CI freezes
+every status. All upstream test/fixtures are vendored (SHA-256 in the
+inventory); the harness materializes them in a temp root replacing
+`<UPSTREAM>` on both sides and maps `base_dir` to the CLI's `-B`.
 The body-dom-v1 projection maps Ruby's icon colist table and adoctra's
 `ol.colist.icons` (span.colist-icon + div) to ol > li > colist-icon/-text.
-Rouge (26) is the queue; the last DIFF is an SVG path Ruby builds from its
-process cwd (environment, documented). Single-case regressions live in
+Rouge (26) is the queue; the last DIFF is an incomplete inline SVG neither
+side can project (raw bodies differ by the intended wrapper). Single-case regressions live in
 crates/adoctra-core/tests/upstream_single_cases.rs (FLEXIBLE_ATTRIBUTES
 sectnums, `max-include-depth` 64 default attribute, invalid-header, fragment,
 AttributeList rekey attribution, folded dlist indentation, placeholders);
@@ -1104,7 +1107,17 @@ for ranges spanning source occurrences; ordinary coordinates identify the first
 physical fragment. Preserve this table with the AST for editor positions. WASM
 exports provenance/include_directives; tokens use individual physical spans.
 Includes have depth/byte limits and cycle diagnostics. CLI file input expands
-includes within its existing root; stdin and string APIs have no provider.
+includes within its existing root (or `-B/--base-dir`); stdin reads from
+`-B`, else a `docdir` attribute, else the cwd (which becomes docdir), like
+Ruby's base_dir; string APIs have no provider. With an absolute `docdir`
+(Ruby's base_dir) system_path.rs ports `normalize_system_path`: include and
+image targets resolve from the current include's directory (the base dir in
+the primary), jailed from safe mode up with Ruby's recovery and verbatim
+unlocated warnings; the provider gets that path relative to the referrer
+(document_path stays metadata) and messages name the absolute path
+(`include file not found: …`, `<docfile>: SVG does not exist …`). A
+single-line ifdef reprocesses `include::` content; stdin registers includes
+relative to the base dir.
 Includes support lines/tag/tags selection before preprocessing, including ordered
 wildcards/exclusions and physical warnings for malformed tag nesting. Preserve
 separate provenance fragments for disjoint retained lines, even within one source
@@ -1991,8 +2004,8 @@ Unlocated conversion diagnostics there; `parse_resource_with_start`/
 The CLI passes it for standalone HTML. Plain `render` still reads at render.
 Do not normalize request order away. CI fails on baseline drift and XPASS.
 Cross-provider/process/disk caching, URI normalization and untested
-encoding/selection combinations remain open, as does Ruby's jail recovery
-(providers deny). Do not replace explicit provider policy with ambient I/O.
+encoding/selection combinations remain open; jail recovery needs an
+absolute docdir (otherwise providers deny). Do not replace explicit provider policy with ambient I/O.
 
 **Include edges**: reader.rs `directive` follows Ruby's IncludeDirectiveRx
 (no empty target, none starting/ending with whitespace: such lines are text).

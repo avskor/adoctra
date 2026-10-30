@@ -1,10 +1,13 @@
 import json
 from pathlib import Path
+import shutil
 import tempfile
 import unittest
 
 import upstream_audit
-from upstream_audit import attribute_args, classify, compare, entry_id, load_inventory, raw_body
+from acceptance import cli_diagnostics
+from upstream_audit import (attribute_args, classify, compare, entry_id, load_inventory, localize,
+                            materialize, raw_body)
 
 
 class ClassifyTests(unittest.TestCase):
@@ -29,9 +32,9 @@ class ClassifyTests(unittest.TestCase):
         for options, reason in [
                 ({"backend": "docbook"}, "backend:docbook"),
                 ({"attributes": {"backend": "docbook5"}}, "backend:docbook5"),
-                ({"base_dir": "/x", "to_file": False}, "option:base_dir,to_file"),
+                ({"base_dir": "/x", "to_file": False}, "option:to_file"),
                 ({"safe": "foo"}, "safe:foo"),
-                ({"attributes": {"docdir": "<UPSTREAM>/test"}}, "path:upstream-checkout")]:
+                ({"to_dir": "<UPSTREAM>/test/test_output"}, "option:to_dir")]:
             self.assertEqual(classify("x", options), (None, reason))
         self.assertEqual(classify("= T\n:backend: docbook\n", {"safe": "safe"}),
                          (None, "backend:document:docbook"))
@@ -43,6 +46,29 @@ class ClassifyTests(unittest.TestCase):
             self.assertEqual(classify("x", options), (None, reason))
         self.assertEqual(classify("include::http://localhost:9876/a[]", {})[1], "network:test-server")
         self.assertEqual(classify("#<IO>", {})[1], "source:non-string")
+
+    def test_checkout_paths_run_against_the_vendored_fixtures(self):
+        options = {"safe": "safe", "base_dir": "<UPSTREAM>/test",
+                   "attributes": {"docdir": "<UPSTREAM>/test/fixtures"}}
+        args, reason = classify("include::<UPSTREAM>/test/fixtures/basic.adoc[]", options)
+        self.assertIsNone(reason)
+        self.assertEqual(args[:4], ["-S", "safe", "-B", "<UPSTREAM>/test"])
+        with tempfile.TemporaryDirectory() as scratch:
+            root = materialize(scratch)
+            self.assertTrue((root / "test/fixtures/basic.adoc").is_file())
+            self.assertEqual(localize(args, root)[3], f"{root}/test")
+            entry = localize({"source": "<UPSTREAM>/a", "options": options}, root)
+            self.assertEqual(entry["source"], f"{root}/a")
+            self.assertEqual(entry["options"]["attributes"]["docdir"], f"{root}/test/fixtures")
+
+    def test_multiline_messages_only_when_requested(self):
+        stderr = "adoctra: -:1: error: include file not found: a +\nhttp://b\nadoctra: warning: w\n"
+        self.assertEqual(cli_diagnostics(stderr, multiline=True),
+                         [{"severity": "error", "message": "include file not found: a +\nhttp://b"},
+                          {"severity": "warning", "message": "w"}])
+        with self.assertRaises(ValueError):
+            cli_diagnostics(stderr)
+        self.assertEqual(cli_diagnostics("", multiline=True), [])
 
     def test_entry_ids_are_stable_and_option_order_independent(self):
         self.assertEqual(entry_id("x", {"a": 1, "b": 2}), entry_id("x", {"b": 2, "a": 1}))
@@ -114,6 +140,7 @@ class InventoryTests(unittest.TestCase):
             sources = Path(scratch)
             for name in inventory["tests"]:
                 (sources / name).write_bytes((upstream_audit.SOURCES / name).read_bytes())
+            shutil.copytree(upstream_audit.FIXTURES, sources / "fixtures")
             path = sources / "inventory.json"
             first = inventory["entries"][0]["occurrences"][0]
             first["test"] = first["test"] + " (changed)"
@@ -123,6 +150,12 @@ class InventoryTests(unittest.TestCase):
             first["test"] = first["test"].removesuffix(" (changed)")
             path.write_text(json.dumps(inventory))
             load_inventory(path, sources)
+            fixture = sources / "fixtures" / "basic.adoc"
+            original = fixture.read_bytes()
+            fixture.write_bytes(original + b"\n")
+            with self.assertRaises(ValueError):
+                load_inventory(path, sources)
+            fixture.write_bytes(original)
             changed = sources / first["file"]
             changed.write_bytes(changed.read_bytes() + b"\n")
             with self.assertRaises(ValueError):

@@ -134,17 +134,29 @@ def diagnostic_text(message, root):
     return message.replace(str(root), "<fixture>") if root is not None else message
 
 
-def cli_diagnostics(stderr, root=None):
+def cli_diagnostics(stderr, root=None, multiline=False):
+    """Diagnostics from the CLI's stderr. With `multiline`, a line without
+    the prefix continues the previous message (a message with a line feed,
+    which Ruby keeps too); otherwise it is unrecognized output."""
     diagnostics = []
-    for line in stderr.splitlines():
+    lines = []
+    raw = (stderr.removesuffix("\n").split("\n") if stderr else []) if multiline else stderr.splitlines()
+    for line in raw:
+        if multiline and lines and not line.startswith("adoctra: "):
+            lines[-1] += "\n" + line
+        else:
+            lines.append(line)
+    for line in lines:
         # Default conversion diagnostics have file/line or no cursor. Editor
         # mode adds columns/byte offsets. Reject any unrecognized output.
-        match = re.fullmatch(r"adoctra: (warning|error|info): (.*)", line)
+        match = re.fullmatch(r"adoctra: (warning|error|info): (.*)", line, re.DOTALL)
         if match is None:
-            match = re.fullmatch(r"adoctra: .+?:[1-9]\d*: (warning|error|info): (.*)", line)
+            match = re.fullmatch(r"adoctra: [^\n]+?:[1-9]\d*: (warning|error|info): (.*)", line,
+                                 re.DOTALL)
         if match is None:
             match = re.fullmatch(
-                r"adoctra: .+?:\d+:\d+: (warning|error|info) at \d+\.\.\d+: (.*)", line,
+                r"adoctra: [^\n]+?:\d+:\d+: (warning|error|info) at \d+\.\.\d+: (.*)", line,
+                re.DOTALL,
             )
         if not match:
             raise ValueError(f"unrecognized adoctra diagnostic: {line!r}")

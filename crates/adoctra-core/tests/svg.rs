@@ -39,7 +39,8 @@ fn svg_assets_decode_bom_strictly_without_creating_source_snapshots() {
     assert_eq!(images(&bad)[0].1, Some(Svg::Inline(None)));
     assert_eq!(
         bad.diagnostics[0].message,
-        "SVG does not exist or cannot be read: /encoded.svg"
+        // Ruby's read_asset names the document (`docfile`, else `<stdin>`).
+        "/main.adoc: SVG does not exist or cannot be read: /encoded.svg"
     );
     assert_eq!(map.slice(bad.diagnostics[0].span), Some(source.trim_end()));
     assert!(map.get(adoctra_core::SourceId(1)).is_none());
@@ -127,7 +128,7 @@ fn unreadable_inline_svgs_show_their_alt_and_warn() {
         messages(&result),
         [
             "contents of SVG is empty: /docs/empty.svg",
-            "SVG does not exist or cannot be read: /docs/gone.svg",
+            "/docs/main.adoc: SVG does not exist or cannot be read: /docs/gone.svg",
             "cannot retrieve contents of SVG at URI: http://e/a.svg (allow-uri-read attribute not enabled)",
         ]
     );

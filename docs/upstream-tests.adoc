@@ -9,7 +9,8 @@ commit `2c03d22eb9fe83d04ee452939581d1b842f6d8b4`.
 == Происхождение и адаптация
 
 В `sources/test/` сохранены полные неизменённые `attributes_test.rb`,
-`substitutions_test.rb`, `reader_test.rb` и четыре include-fixture.
+`substitutions_test.rb`, `reader_test.rb` и весь каталог `test/fixtures`
+(73 файла без изменений; аудит сверяет их SHA-256 в инвентаре).
 `sources/LICENSE` содержит лицензию MIT Asciidoctor.
 Все восемь upstream-файлов сверены с Git blob-хешами закреплённого commit;
 манифест фиксирует SHA-256, исходные пути и лицензию.
@@ -116,7 +117,13 @@ python3 scripts/upstream_audit.py --record <copy> --recording rec.jsonl
 (`scripts/upstream-audit-reference.rb`, один процесс Ruby) строит документ
 с записанными опциями теста, а CLI получает `-S` (без опции —
 `secure`, как у `Document.new`), `-s` для embedded, `-a` для атрибутов и
-`doctype`. Обе стороны получают одинаковые `SOURCE_DATE_EPOCH` и `TZ`.
+`doctype`, `-B` для `base_dir`. Пути копии upstream (`<UPSTREAM>` в
+исходнике, атрибутах и опциях) обе стороны получают как один временный
+каталог, в котором развёрнуты завендоренные фикстуры (`test/fixtures`).
+Обе стороны получают одинаковые `SOURCE_DATE_EPOCH` и `TZ`; документ без
+`base_dir` и `docdir` разрешает пути от текущего каталога процесса (корень
+репозитория), как Ruby. Сообщение с переводом строки (Ruby сохраняет его)
+читается из stderr CLI целиком.
 Сравниваются проекция `body-dom-v1` (оболочки standalone header/main/footer
 сопоставлены, как в asset-аудите) и упорядоченные warning/error.
 Некорректный HTML (сырые несбалансированные теги passthrough) проекция не
@@ -126,8 +133,8 @@ python3 scripts/upstream_audit.py --record <copy> --recording rec.jsonl
 
 UNSUPPORTED — записи, которые контракт CLI не выражает, с причиной:
 бэкенды docbook/manpage/xhtml (в том числе через атрибут `backend`),
-опции `base_dir`, `to_dir`/`to_file`, реестры расширений, `sourcemap`,
-`parse_header_only`, `logger`, путь копии upstream и входы, обращающиеся
+опции `to_dir`/`to_file`, реестры расширений, `sourcemap`,
+`parse_header_only`, `logger` и входы, обращающиеся
 к временному HTTP-серверу тестов. Это не PASS и не исключение из
 контракта; часть из них можно перевести в поддерживаемые отдельными
 адаптерами.
@@ -147,35 +154,51 @@ UNSUPPORTED — записи, которые контракт CLI не выра�
 
 [cols="2,1,1,1",options="header"]
 |===
-|Файл |PASS |DIFF |UNSUPPORTED
-|substitutions_test.rb |366 |0 |28
+|Файл |PASS |DIFF/ERROR |UNSUPPORTED
+|substitutions_test.rb |368 |0 |26
 |lists_test.rb |290 |0 |19
-|blocks_test.rb |247 |1 |54
+|blocks_test.rb |264 |1 |37
 |sections_test.rb |206 |0 |12
-|attributes_test.rb |192 |0 |9
-|links_test.rb |175 |0 |15
-|tables_test.rb |117 |0 |20
-|document_test.rb |102 |0 |80
+|attributes_test.rb |194 |0 |7
+|links_test.rb |180 |0 |10
+|document_test.rb |131 |0 |51
+|reader_test.rb |149 |1 |6
+|tables_test.rb |120 |0 |17
+|api_test.rb |73 |0 |37
 |text_test.rb |84 |0 |2
-|api_test.rb |62 |0 |48
-|reader_test.rb |75 |0 |81
+|manpage_test.rb |0 |0 |77
 |extensions_test.rb |57 |0 |13
-|paragraphs_test.rb |50 |0 |4
 |syntax_highlighter_test.rb |37 |26 |2
-|invoker_test.rb |9 |0 |37
+|paragraphs_test.rb |50 |0 |4
+|invoker_test.rb |26 |0 |20
 |preamble_test.rb |7 |0 |6
-|parser_test.rb, attribute_list_test.rb, logger_test.rb |6 |0 |4
-|manpage_test.rb, paths_test.rb |0 |0 |78
-|Итого |2082 |27 |512
+|logger_test.rb |1 |0 |4
+|parser_test.rb |3 |0 |0
+|attribute_list_test.rb |2 |0 |0
+|paths_test.rb |1 |0 |0
+|Итого |2243 |28 |350
 |===
 
-2082 из 2109 сравнимых записей (98.7%) совпадают в этом профиле. Это доля
+2243 из 2271 сравнимой записи (98.8%) совпадают в этом профиле. Это доля
 наблюдаемых входов тестового набора, а не процент совместимости языка.
 
 Оставшиеся расхождения: 26 записей syntax_highlighter_test.rb (Rouge без
-gem, решение не принято) и одна запись blocks_test.rb:2518 — путь к SVG,
-который Ruby строит от текущего каталога процесса (`--safe` без `base_dir`),
-то есть зависит от окружения запуска, а не от языка.
+gem, решение не принято); blocks_test.rb:2457 — неполный встраиваемый SVG
+(`<svg` без закрытия): HTML не проецируется ни на одной стороне, а побайтовое
+сравнение тела упирается в намеренно другую обёртку (`figure`); и
+RUBY_ERROR reader_test.rb:845 — Ruby падает на выбранной строке с ошибочным
+UTF-8 (adoctra остаётся устойчивым, граница описана в «Кодировках include»).
+
+Фикстуры upstream (161 запись, ранее UNSUPPORTED «path:upstream-checkout»)
+потребовали порта `PathResolver#system_path` Ruby: include и изображения
+разрешаются от базового каталога (`docdir`) с jail и его «восстановлением»
+с safe mode (предупреждения «… has illegal reference to ancestor of jail /
+is outside of jail; recovering automatically»), сообщения называют
+разрешённый путь («include file not found: …», «image to embed not found or
+not readable: …», «<docfile>: SVG does not exist or cannot be read: …»);
+однострочный `ifdef` повторно обрабатывает `include::`; каталог включений
+для stdin строится от базового каталога. CLI получил `-B/--base-dir`, а stdin
+читает ресурсы от `-B`, иначе `docdir`, иначе текущего каталога, как Ruby.
 
 Единичные расхождения исправлены (каждое — регрессионным тестом в
 `crates/adoctra-core/tests/upstream_single_cases.rs`):

@@ -37,7 +37,7 @@ def options_of recorded
   recorded.each_with_object({}) do |(key, value), options|
     case key
     when 'safe' then options[:safe] = (SAFE[value] || value)
-    when 'standalone', 'header_footer', 'parse', 'attributes', 'doctype'
+    when 'standalone', 'header_footer', 'parse', 'attributes', 'doctype', 'base_dir'
       options[key.to_sym] = value
     end
   end

@@ -497,8 +497,13 @@ NUL, backslash и colon не принимаются; URL/OS-пути не инт
 имя, а путь за пределами корня отклоняется (в unsafe mode корень снимается).
 Основной файл загружается как UTF-8; include из файлов и http/https (`ureq`,
 при `allow-uri-read`) поддерживают декодирование, описанное выше.
-Восстановления пути внутри jail, как в Ruby, нет:
-отказ provider даёт строку `Unresolved directive`.
+При абсолютном `docdir` (Ruby `base_dir`) ядро разрешает цель include и
+изображения как `normalize_system_path` Ruby (`system_path.rs`): от каталога
+текущего include (в основном документе — от базового каталога), с jail и его
+восстановлением с safe mode и дословными предупреждениями без позиции.
+Provider получает этот путь относительно ссылающегося ресурса (`document_path`
+остаётся метаданными); сообщения называют абсолютный путь. Без базового
+каталога отказ provider даёт строку `Unresolved directive`.
 
 `ResourceError` содержит `kind`, `target` и `message`. Виды: `NotFound`,
 `AccessDenied`, `InvalidTarget`, `InvalidEncoding`, `Unsupported` и `Io`. Ошибки явной загрузки
@@ -1476,7 +1481,8 @@ WASM добавляет `provenance` в диапазон только для с�
 построчного inline-highlighting, включая многострочное форматирование, сохраняется.
 
 CLI раскрывает включения файлового ввода через существующий rooted adapter;
-stdin использует строковый API без provider. `encoding` выбирает декодирование
+stdin получает rooted adapter с корнем `-B`/`--base-dir`, иначе `docdir`,
+иначе текущим каталогом (он же становится `docdir`, как в Ruby). `encoding` выбирает декодирование
 ресурса; неизвестные имена параметров игнорируются. Safe mode, URI-включения
 (с `allow-uri-read`) и строка `Unresolved directive` для ошибок загрузки и пустого
 target реализованы (см. выше и «Атрибуты»). Это базовый профиль включений,

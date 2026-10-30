@@ -811,7 +811,14 @@ fn cli_expands_nested_includes_and_reports_child_locations_and_denied_paths() {
         stderr.contains(&format!("{}:1:11: warning", child.display())),
         "{stderr}"
     );
-    assert!(stderr.contains("AccessDenied"), "{stderr}");
+    // Like Ruby, the jail recovers the path inside the root, where the file
+    // does not exist.
+    assert!(
+        stderr.contains(
+            "warning at 27..69: include file has illegal reference to ancestor of jail; recovering automatically"
+        ) && stderr.contains("error at 27..69: include failed (NotFound)"),
+        "{stderr}"
+    );
     let html = String::from_utf8(output.stdout).unwrap();
     assert!(
         html.contains("<strong>текст</strong>") && html.contains("<p>after</p>"),
@@ -1200,4 +1207,53 @@ fn cli_inline_doctype_writes_a_newline_and_embedded_warnings() {
         assert_eq!(String::from_utf8(output.stdout).unwrap(), stdout, "{source}");
         assert_eq!(String::from_utf8(output.stderr).unwrap(), stderr, "{source}");
     }
+}
+
+#[test]
+fn stdin_reads_relative_to_the_base_directory_like_ruby() {
+    use std::io::Write;
+    use std::process::{Command, Stdio};
+    let root = std::env::temp_dir().join(format!("adoctra-cli-base-{}", std::process::id()));
+    std::fs::create_dir_all(root.join("sub")).unwrap();
+    std::fs::write(root.join("sub/part.adoc"), "from the base").unwrap();
+    let run = |args: &[&str], cwd: &std::path::Path| {
+        let mut child = Command::new(env!("CARGO_BIN_EXE_adoctra"))
+            .args(["-", "-s", "--stdout"])
+            .args(args)
+            .current_dir(cwd)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap();
+        child
+            .stdin
+            .take()
+            .unwrap()
+            .write_all(b"include::sub/part.adoc[]\n\n{docdir}\n\ninclude::sub/none.adoc[]")
+            .unwrap();
+        let output = child.wait_with_output().unwrap();
+        assert!(output.status.success());
+        (
+            String::from_utf8(output.stdout).unwrap(),
+            String::from_utf8(output.stderr).unwrap(),
+        )
+    };
+    let base = root.to_str().unwrap();
+    let elsewhere = std::env::temp_dir();
+    // `-B` is the root and the docdir (Ruby's base_dir option).
+    let (html, stderr) = run(&["-B", base, "-a", "docdir=/ignored"], &elsewhere);
+    assert!(html.contains("<p>from the base</p>"), "{html}");
+    assert!(html.contains(&format!("<p>{base}</p>")), "{html}");
+    assert_eq!(
+        stderr,
+        format!("adoctra: -:5: error: include file not found: {base}/sub/none.adoc\n")
+    );
+    // Without it, a docdir attribute is the base directory, else the
+    // current directory (which becomes docdir).
+    let (html, _) = run(&["-a", &format!("docdir={base}")], &elsewhere);
+    assert!(html.contains("<p>from the base</p>"), "{html}");
+    let (html, _) = run(&[], &root.canonicalize().unwrap());
+    assert!(html.contains("<p>from the base</p>"), "{html}");
+    std::fs::remove_dir_all(&root).unwrap();
 }

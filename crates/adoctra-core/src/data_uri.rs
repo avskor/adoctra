@@ -3,14 +3,61 @@
 //! (relative to the primary document, Ruby's `base_dir`) at conversion.
 use crate::{Attributes, Diagnostic, ResourceProvider, ResourceRequest, Severity, Span};
 
-/// The provider and the primary document's canonical name for image reads.
+/// Where images are read: the provider, the primary document's canonical
+/// name and, when known, Ruby's base directory (with the safe mode that
+/// decides its jail).
+pub(crate) struct ImageSource<'a> {
+    pub provider: &'a dyn ResourceProvider,
+    pub referrer: String,
+    pub base_dir: Option<String>,
+    pub safe: crate::SafeMode,
+}
+
+/// The image source for reads, if any.
 pub(crate) struct Images<'a> {
-    source: Option<(&'a dyn ResourceProvider, String)>,
+    source: Option<ImageSource<'a>>,
 }
 
 impl<'a> Images<'a> {
-    pub fn new(source: Option<(&'a dyn ResourceProvider, String)>) -> Self {
+    pub fn new(source: Option<ImageSource<'a>>) -> Self {
         Self { source }
+    }
+
+    /// The path Ruby reads and reports for `target` under `start` (its
+    /// `normalize_system_path` with the base directory, warning about jail
+    /// recovery like Ruby, without a location) and the same path relative
+    /// to the primary document for the provider; without a base directory,
+    /// `target` joined to a relative start for both.
+    fn system_path(
+        &self,
+        target: &str,
+        start: Option<&str>,
+        label: &str,
+        span: Span,
+        diagnostics: &mut Vec<Diagnostic>,
+    ) -> (String, String) {
+        if let Some(ImageSource {
+            base_dir: Some(base_dir),
+            safe,
+            ..
+        }) = &self.source
+        {
+            let resolved =
+                crate::system_path::normalize_system_path(target, start, base_dir, *safe, label);
+            for warning in resolved.warnings {
+                warn(diagnostics, span, warning);
+            }
+            let request = crate::xref_target::relative_path(
+                &format!("{}/_", base_dir.trim_end_matches('/')),
+                &resolved.path,
+            );
+            return (resolved.path, request);
+        }
+        let path = match start.filter(|dir| !dir.is_empty() && !target.starts_with('/')) {
+            Some(dir) => format!("{}/{target}", dir.trim_end_matches('/')),
+            None => target.to_owned(),
+        };
+        (path.clone(), path)
     }
 
     /// Ruby's `image_uri target, asset_dir_key` with the document attributes
@@ -60,13 +107,11 @@ impl<'a> Images<'a> {
             Some(ext) => format!("image/{}", &ext[1..]),
             None => "application/octet-stream".to_owned(),
         };
-        let path = match dir.filter(|dir| !dir.is_empty() && !target.starts_with('/')) {
-            Some(dir) => format!("{}/{target}", dir.trim_end_matches('/')),
-            None => target.to_owned(),
-        };
-        match self.load(&path) {
+        let (path, request) = self.system_path(target, dir, "image", span, diagnostics);
+        match self.load(&request) {
             Ok((_, bytes)) => format!("data:{mimetype};base64,{}", base64(&bytes)),
             Err(name) => {
+                let name = if self.resolves() { path } else { name };
                 warn(
                     diagnostics,
                     span,
@@ -178,17 +223,18 @@ impl<'a> Images<'a> {
                 }
             }
             None => {
-                let path = match dir.filter(|dir| !dir.is_empty() && !target.starts_with('/')) {
-                    Some(dir) => format!("{}/{target}", dir.trim_end_matches('/')),
-                    None => target.to_owned(),
-                };
-                match self.load_named(&path) {
-                    Ok(loaded) => loaded,
+                let (path, request) = self.system_path(target, dir, "SVG", span, diagnostics);
+                match self.load_named(&request) {
+                    // Ruby reports (and reads) the resolved path.
+                    Ok((name, text)) if !self.resolves() => (name, text),
+                    Ok((_, text)) => (path, text),
                     Err(name) => {
+                        let name = if self.resolves() { path } else { name };
+                        let docfile = attrs.get("docfile").unwrap_or("<stdin>");
                         warn(
                             diagnostics,
                             span,
-                            format!("SVG does not exist or cannot be read: {name}"),
+                            format!("{docfile}: SVG does not exist or cannot be read: {name}"),
                         );
                         return None;
                     }
@@ -212,35 +258,48 @@ impl<'a> Images<'a> {
         Some(contents)
     }
 
+    /// Whether paths resolve like Ruby's (a base directory is known).
+    fn resolves(&self) -> bool {
+        self.source
+            .as_ref()
+            .is_some_and(|source| source.base_dir.is_some())
+    }
+
     fn enable_cache(&self, attrs: &Attributes) {
         if attrs.get("cache-uri").is_some() {
-            if let Some((provider, _)) = &self.source {
-                provider.enable_uri_cache();
+            if let Some(source) = &self.source {
+                source.provider.enable_uri_cache();
             }
         }
     }
 
     fn load_named(&self, target: &str) -> Result<(String, String), String> {
-        let Some((provider, referrer)) = &self.source else {
+        let Some(ImageSource {
+            provider, referrer, ..
+        }) = &self.source
+        else {
             return Err(target.to_owned());
         };
         provider
             .load_asset_text(ResourceRequest {
                 target,
-                referrer: Some(referrer),
+                referrer: Some(referrer.as_str()),
             })
             .map(|resource| (resource.name, resource.text))
             .map_err(|error| error.target)
     }
 
     fn load(&self, target: &str) -> Result<(Option<String>, Vec<u8>), String> {
-        let Some((provider, referrer)) = &self.source else {
+        let Some(ImageSource {
+            provider, referrer, ..
+        }) = &self.source
+        else {
             return Err(target.to_owned());
         };
         provider
             .load_binary(ResourceRequest {
                 target,
-                referrer: Some(referrer),
+                referrer: Some(referrer.as_str()),
             })
             .map(|resource| (resource.content_type, resource.bytes))
             .map_err(|error| error.target)

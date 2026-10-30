@@ -70,6 +70,11 @@ struct Resources<'a> {
     /// positive) disables includes.
     max_depth: Option<usize>,
     bytes: usize,
+    /// Ruby's `@base_dir`: an absolute `docdir` given to the parser (the
+    /// primary file's directory, or the host's for standard input). With
+    /// it, include targets resolve like Ruby's `normalize_system_path`.
+    base_dir: Option<String>,
+    safe: crate::SafeMode,
 }
 
 struct Origin {
@@ -288,16 +293,27 @@ impl<'a> Reader<'a> {
             limits: options.includes,
             max_depth,
             bytes: 0,
+            base_dir: options
+                .attributes
+                .get("docdir")
+                .filter(|dir| dir.starts_with('/'))
+                .map(str::to_owned),
+            safe: options.safe,
         });
         Ok(reader)
     }
 
     /// The provider and the primary document's canonical name, for image
     /// reads while converting (`data-uri`).
-    pub fn image_source(&self) -> Option<(&'a dyn crate::ResourceProvider, String)> {
+    pub fn image_source(&self) -> Option<crate::data_uri::ImageSource<'a>> {
         let resources = self.resources.as_ref()?;
         let primary = resources.sources.get(self.inputs[0].source_id)?;
-        Some((resources.provider, primary.name().to_owned()))
+        Some(crate::data_uri::ImageSource {
+            provider: resources.provider,
+            referrer: primary.name().to_owned(),
+            base_dir: resources.base_dir.clone(),
+            safe: resources.safe,
+        })
     }
 
     /// Record the opening and (when present) closing fence of a delimited block.
@@ -856,6 +872,11 @@ impl<'a> Reader<'a> {
             self.directives.push(Span::new(off, start));
             self.directives
                 .push(Span::new(start + text.len(), span.end));
+            // Ruby reprocesses the line only when it looks like an include
+            // directive (`@look_ahead -= 1 if text.start_with? 'include::'`).
+            if text.starts_with("include::") {
+                return self.process(start, Arc::from(text), context);
+            }
             Some((start, Arc::from(text)))
         } else {
             self.directives.push(span);
@@ -1082,8 +1103,60 @@ impl<'a> Reader<'a> {
         if uri_target.is_some() && attributes.get("cache-uri").is_some() {
             resources.provider.enable_uri_cache();
         }
+        // Ruby's resolve_include_path: relative to the current include's
+        // directory (the base directory within the primary document),
+        // confined to the base directory from safe mode up.
+        let system_path = match (&resources.base_dir, &uri_target) {
+            (Some(base_dir), None) => {
+                let dir = if current == self.inputs[0].source_id {
+                    Some(base_dir.clone())
+                } else {
+                    resources
+                        .sources
+                        .get(current)
+                        .and_then(|source| resources.provider.document_path(source.name()))
+                        .and_then(|path| path.rsplit_once('/').map(|(dir, _)| dir.to_owned()))
+                };
+                dir.map(|dir| {
+                    let dir = if dir.is_empty() { "/".to_owned() } else { dir };
+                    let resolved = crate::system_path::normalize_system_path(
+                        &target,
+                        Some(&dir),
+                        base_dir,
+                        resources.safe,
+                        "include file",
+                    );
+                    (resolved, dir)
+                })
+            }
+            _ => None,
+        };
+        // Ruby reads (and reports) the resolved path; the provider takes it
+        // relative to the current resource, its referrer.
+        let path = system_path
+            .as_ref()
+            .map(|(resolved, _)| resolved.path.clone());
+        let request = system_path.as_ref().map(|(resolved, dir)| {
+            crate::xref_target::relative_path(&format!("{dir}/_"), &resolved.path)
+        });
+        for warning in system_path
+            .map(|(resolved, _)| resolved.warnings)
+            .unwrap_or_default()
+        {
+            self.diagnostics.push(Diagnostic {
+                omitted_span: None,
+                span,
+                severity: Severity::Warning,
+                message: warning,
+                report: crate::DiagnosticReport {
+                    location: crate::DiagnosticLocation::Unlocated,
+                    ..Default::default()
+                },
+            });
+        }
+        let resources = self.resources.as_mut().expect("explicit resource provider");
         let (id, prepared_selection) = match resources.sources.load_selected_include(
-            &target,
+            request.as_deref().unwrap_or(&target),
             Some(current),
             resources.provider,
             attrs.get("encoding").map(String::as_str),
@@ -1093,7 +1166,9 @@ impl<'a> Reader<'a> {
             Err(error)
                 if optional
                     && uri_target.is_none()
-                    && error.kind == crate::ResourceErrorKind::NotFound =>
+                    && (error.kind == crate::ResourceErrorKind::NotFound
+                        || (path.is_some()
+                            && error.kind == crate::ResourceErrorKind::InvalidTarget)) =>
             {
                 return true;
             }
@@ -1115,7 +1190,21 @@ impl<'a> Reader<'a> {
                     });
                     return self.unresolved_include(&target, attrlist, span);
                 }
-                self.error(span, format!("include failed ({:?}): {error}", error.kind));
+                let message = format!("include failed ({:?}): {error}", error.kind);
+                match (&path, error.kind) {
+                    // Ruby's `File.file?` check: a missing path or a
+                    // directory is not found.
+                    (
+                        Some(path),
+                        crate::ResourceErrorKind::NotFound
+                        | crate::ResourceErrorKind::InvalidTarget,
+                    ) => self.error_reported(
+                        span,
+                        message,
+                        format!("include file not found: {path}"),
+                    ),
+                    _ => self.error(span, message),
+                }
                 // Ruby cannot tell a denied target (its jail resolves it to
                 // another path) from a missing or unreadable one.
                 return self.unresolved_include(&target, attrlist, span);
@@ -1221,7 +1310,15 @@ impl<'a> Reader<'a> {
                     .get(id)
                     .and_then(|source| resources.provider.document_path(source.name()))
             };
-            if let (Some(document), Some(include)) = (path(primary), path(id)) {
+            // Ruby's relpath is relative to the base directory, also for
+            // standard input (a document path inside it stands in).
+            let document = path(primary).or_else(|| {
+                resources
+                    .base_dir
+                    .as_ref()
+                    .map(|dir| format!("{}/<stdin>", dir.trim_end_matches('/')))
+            });
+            if let (Some(document), Some(include)) = (document, path(id)) {
                 crate::xref_target::register_include(
                     &mut self.include_catalog,
                     crate::xref_target::include_key(&document, &include),

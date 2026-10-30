@@ -45,7 +45,9 @@ INVENTORY = AUDIT / "inventory.json"
 SOURCES = ROOT / "compatibility" / "upstream" / "sources" / "test"
 COMMIT = "2c03d22eb9fe83d04ee452939581d1b842f6d8b4"
 SUPPORTED_OPTIONS = {"standalone", "header_footer", "parse", "attributes", "safe", "doctype",
-                     "input_mtime", "warnings", "failure_level", "linkcss_default"}
+                     "input_mtime", "warnings", "failure_level", "linkcss_default", "base_dir"}
+FIXTURES = SOURCES / "fixtures"
+PLACEHOLDER = "<UPSTREAM>"
 SAFE = {"unsafe": "unsafe", "safe": "safe", "server": "server", "secure": "secure",
         0: "unsafe", 1: "safe", 10: "server", 20: "secure"}
 ENVIRONMENT = {"SOURCE_DATE_EPOCH": "1700000000", "TZ": "UTC"}
@@ -87,8 +89,6 @@ def classify(source, options):
     """(cli arguments, None) for a supported entry, else (None, reason)."""
     if source.startswith("#<"):
         return None, "source:non-string"
-    if "<UPSTREAM>" in json.dumps([source, options]):
-        return None, "path:upstream-checkout"
     if "localhost" in source or "127.0.0.1" in source:
         # The tests' temporary HTTP server is gone after recording.
         return None, "network:test-server"
@@ -114,6 +114,8 @@ def classify(source, options):
     if any(b not in ("html5", "html") for b in backends):
         return None, f"backend:{backends[-1]}"
     args = ["-S", safe]
+    if options.get("base_dir"):
+        args += ["-B", str(options["base_dir"])]
     if not (options.get("standalone") or options.get("header_footer")):
         args.append("-s")
     if options.get("doctype"):
@@ -121,6 +123,28 @@ def classify(source, options):
     for attribute in attributes:
         args += ["-a", attribute]
     return args, None
+
+
+def materialize(scratch):
+    """A checkout stand-in for both sides: the vendored, unchanged upstream
+    fixtures at test/fixtures under a temporary root, which replaces the
+    recorded checkout path (the tests' paths, docdir and base_dir)."""
+    import shutil
+    root = Path(scratch) / "upstream"
+    shutil.copytree(FIXTURES, root / "test" / "fixtures")
+    return root
+
+
+def localize(value, root):
+    """`value` (an entry or CLI arguments) with the checkout placeholder
+    replaced by the materialized root."""
+    escaped = json.dumps(str(root))[1:-1]
+    return json.loads(json.dumps(value, ensure_ascii=False).replace(PLACEHOLDER, escaped))
+
+
+def fixture_digests(fixtures):
+    return {str(f.relative_to(fixtures)): hashlib.sha256(f.read_bytes()).hexdigest()
+            for f in sorted(fixtures.rglob("*")) if f.is_file()}
 
 
 def read_recording(path):
@@ -164,6 +188,7 @@ def record(upstream, recording=None):
         "asciidoctor": (ROOT / "compatibility/asciidoctor-version").read_text().strip(),
         "commit": COMMIT,
         "tests": {f.name: hashlib.sha256(f.read_bytes()).hexdigest() for f in files},
+        "fixtures": fixture_digests(tests / "fixtures"),
         "entries": sorted(entries.values(), key=lambda e: (e["occurrences"][0]["file"],
                                                            e["occurrences"][0]["call_line"], e["id"])),
     }
@@ -217,7 +242,7 @@ def adoctra(binary, entry, args):
     if run.returncode:
         return {"error": f"exit {run.returncode}: {run.stderr.strip()[-300:]}"}
     try:
-        return {"html": run.stdout, "diagnostics": cli_diagnostics(run.stderr)}
+        return {"html": run.stdout, "diagnostics": cli_diagnostics(run.stderr, multiline=True)}
     except ValueError as error:
         return {"error": str(error)}
 
@@ -268,6 +293,8 @@ def load_inventory(path=INVENTORY, sources=SOURCES):
         if hashlib.sha256(data).hexdigest() != digest:
             raise ValueError(f"upstream test checksum mismatch: {name}")
         lines[name] = data.decode("utf-8").split("\n")
+    if fixture_digests(sources / "fixtures") != inventory["fixtures"]:
+        raise ValueError("upstream fixture checksum mismatch")
     ids = set()
     for entry in inventory["entries"]:
         if entry["id"] in ids or entry["id"] != entry_id(entry["source"], entry["options"]):
@@ -292,18 +319,20 @@ def audit(binary, only, jobs):
     entries = [e for e in inventory["entries"] if not only or e["id"] in only]
     supported = [e for e in entries if not e["unsupported"]]
     with tempfile.TemporaryDirectory() as scratch:
+        root = materialize(scratch)
+        local = [localize({k: e[k] for k in ("id", "source", "options")}, root) for e in supported]
         batch = Path(scratch) / "entries.json"
-        batch.write_text(json.dumps([{k: e[k] for k in ("id", "source", "options")} for e in supported]))
+        batch.write_text(json.dumps(local))
         run = subprocess.run(["ruby", str(ROOT / "scripts/upstream-audit-reference.rb"), str(batch)],
                              capture_output=True, text=True, encoding="utf-8", errors="replace",
                              env={**os.environ, **ENVIRONMENT}, timeout=3600)
         if run.returncode:
             sys.exit(f"reference runner failed: {run.stderr.strip()[-2000:]}")
         references = {r["id"]: r for r in map(json.loads, filter(None, run.stdout.split("\n")))}
-    with ThreadPoolExecutor(jobs) as pool:
-        actuals = dict(zip((e["id"] for e in supported),
-                           pool.map(lambda e: adoctra(binary, e, classify(e["source"], e["options"])[0]),
-                                    supported)))
+        with ThreadPoolExecutor(jobs) as pool:
+            actuals = dict(zip((e["id"] for e in local), pool.map(
+                lambda e: adoctra(binary, e, localize(classify(e["source"], e["options"])[0], root)),
+                local)))
     results = {}
     for entry in entries:
         if entry["unsupported"]:
@@ -318,14 +347,16 @@ def audit(binary, only, jobs):
 def show(entry, binary):
     """Print both sides of one entry: diagnostics and a projection diff."""
     import difflib
-    args = classify(entry["source"], entry["options"])[0]
     with tempfile.TemporaryDirectory() as scratch:
+        root = materialize(scratch)
+        local = localize({k: entry[k] for k in ("id", "source", "options")}, root)
+        args = localize(classify(entry["source"], entry["options"])[0], root)
         batch = Path(scratch) / "entries.json"
-        batch.write_text(json.dumps([{k: entry[k] for k in ("id", "source", "options")}]))
+        batch.write_text(json.dumps([local]))
         run = subprocess.run(["ruby", str(ROOT / "scripts/upstream-audit-reference.rb"), str(batch)],
                              capture_output=True, text=True, env={**os.environ, **ENVIRONMENT})
-    expected = json.loads(run.stdout.split("\n")[0])
-    actual = adoctra(binary, entry, args)
+        expected = json.loads(run.stdout.split("\n")[0])
+        actual = adoctra(binary, local, args)
     for occurrence in entry["occurrences"]:
         print(f"{occurrence['file']}:{occurrence['test_line']} {occurrence['test']}")
     print("options:", json.dumps(entry["options"]), "cli:", " ".join(args))

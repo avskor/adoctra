@@ -40,6 +40,7 @@ struct Args {
     safe: adoctra::SafeMode,
     json_attributes: bool,
     editor_diagnostics: bool,
+    base_dir: Option<PathBuf>,
 }
 
 fn run() -> adoctra::Result<()> {
@@ -52,9 +53,9 @@ fn run() -> adoctra::Result<()> {
     };
 
     let mut sources = adoctra::SourceMap::new();
-    let (source_id, provider) = load_source(&args.input, &mut sources, args.safe)?;
-    // Like Ruby below server mode, the document sees the user's home.
     let mut attributes = args.attributes.clone();
+    let (source_id, provider, base) = load_source(&args, &mut sources, &mut attributes)?;
+    // Like Ruby below server mode, the document sees the user's home.
     if args.safe < adoctra::SafeMode::Server
         && !attributes
             .iter()
@@ -192,13 +193,6 @@ fn run() -> adoctra::Result<()> {
     std::fs::write(&out_path, &bytes)?;
     eprintln!("wrote {}", out_path.display());
     if args.backend == "html" && args.safe < adoctra::SafeMode::Secure {
-        let base = match &args.input[..] {
-            "-" => std::env::current_dir()?,
-            input => std::fs::canonicalize(input)?
-                .parent()
-                .map(Path::to_path_buf)
-                .unwrap_or_default(),
-        };
         copy_stylesheet(&result.document.final_attributes, &base, &out_path)?;
     }
     Ok(())
@@ -321,6 +315,7 @@ fn parse_args() -> Option<Args> {
     // adoctra's CLI defaults to safe mode (Ruby's to unsafe): paths stay in
     // the input's directory.
     let mut safe = adoctra::SafeMode::Safe;
+    let mut base_dir = None;
 
     let mut it = std::env::args().skip(1);
     while let Some(arg) = it.next() {
@@ -340,6 +335,7 @@ fn parse_args() -> Option<Args> {
             "-s" | "--embedded" | "--no-header-footer" => embedded = true,
             "-S" | "--safe-mode" => safe = adoctra::SafeMode::from_name(&it.next()?)?,
             "--safe" => safe = adoctra::SafeMode::Safe,
+            "-B" | "--base-dir" => base_dir = Some(PathBuf::from(it.next()?)),
             // Keep Ruby's soft/default and unset markers for ParseOptions.
             "-a" | "--attribute" => {
                 let entry = it.next()?;
@@ -378,6 +374,7 @@ fn parse_args() -> Option<Args> {
         safe,
         json_attributes,
         editor_diagnostics,
+        base_dir,
     })
 }
 
@@ -389,41 +386,99 @@ fn override_name(name: &str) -> String {
         .to_lowercase()
 }
 
+/// Ruby's `base_dir` for standard input (Document#initialize): `-B`
+/// (which also replaces `docdir`), else a `docdir` attribute, else the
+/// current directory (which becomes `docdir`). Ruby's File.expand_path
+/// keeps symlinks, so `docdir` is the absolute, lexically normalized path.
+fn stdin_base_dir(
+    base_dir: Option<&Path>,
+    attributes: &mut adoctra::Attributes,
+) -> adoctra::Result<PathBuf> {
+    let docdir = attributes
+        .iter()
+        .filter(|(name, _)| override_name(name) == "docdir")
+        .map(|(name, value)| (name.to_owned(), value.to_owned()))
+        .last();
+    let dir = match (base_dir, &docdir) {
+        (Some(dir), _) => expand_path(dir)?,
+        (None, Some((name, value))) if !name.ends_with('!') && !name.starts_with('!') => {
+            return Ok(expand_path(Path::new(value))?);
+        }
+        (None, _) => std::env::current_dir()?,
+    };
+    if let Some((name, _)) = docdir {
+        attributes.remove(&name);
+    }
+    attributes.set("docdir", dir.to_string_lossy().replace('\\', "/"));
+    Ok(dir)
+}
+
+/// Ruby's `File.expand_path`: absolute, `.`/`..` resolved lexically.
+fn expand_path(path: &Path) -> std::io::Result<PathBuf> {
+    use std::path::Component;
+    let mut expanded = PathBuf::new();
+    for component in std::env::current_dir()?.join(path).components() {
+        match component {
+            Component::CurDir => {}
+            Component::ParentDir => {
+                expanded.pop();
+            }
+            other => expanded.push(other),
+        }
+    }
+    Ok(expanded)
+}
+
 fn load_source(
-    input: &str,
+    args: &Args,
     sources: &mut adoctra::SourceMap,
-    safe: adoctra::SafeMode,
-) -> adoctra::Result<(adoctra::SourceId, Option<Arc<resources::FileResources>>)> {
-    if input == "-" {
+    attributes: &mut adoctra::Attributes,
+) -> adoctra::Result<(
+    adoctra::SourceId,
+    Option<Arc<resources::FileResources>>,
+    PathBuf,
+)> {
+    let jail = |provider: resources::FileResources| match args.safe {
+        adoctra::SafeMode::Unsafe => provider.unjailed(),
+        _ => provider,
+    };
+    if args.input == "-" {
         let mut s = String::new();
         std::io::stdin().read_to_string(&mut s)?;
-        Ok((sources.add(input, s), None))
+        let base_dir = stdin_base_dir(args.base_dir.as_deref(), attributes)?;
+        // Like Ruby, relative paths resolve against the base directory; a
+        // missing one simply finds nothing.
+        let provider = resources::FileResources::new(&base_dir).ok().map(jail);
+        Ok((sources.add("-", s), provider.map(Arc::new), base_dir))
     } else {
-        // The explicitly requested primary file establishes the resource root.
-        let path = std::fs::canonicalize(input)?;
+        // The explicitly requested primary file establishes the resource
+        // root, or `-B` does when it contains the file.
+        let path = std::fs::canonicalize(&args.input)?;
         let parent = path.parent().ok_or_else(|| {
             std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
                 "input has no parent directory",
             )
         })?;
+        let root = match &args.base_dir {
+            Some(dir) => std::fs::canonicalize(dir)?,
+            None => parent.to_path_buf(),
+        };
         let name = path
-            .file_name()
+            .strip_prefix(&root)
+            .ok()
             .and_then(|name| name.to_str())
             .ok_or_else(|| {
                 std::io::Error::new(
                     std::io::ErrorKind::InvalidInput,
-                    "input file name is not UTF-8",
+                    "input is outside the base directory or its name is not UTF-8",
                 )
             })?;
-        let provider = resources::FileResources::new(parent)?;
-        let provider = match safe {
-            adoctra::SafeMode::Unsafe => provider.unjailed(),
-            _ => provider,
-        };
+        let provider = jail(resources::FileResources::new(&root)?);
         Ok((
             sources.load(name, None, &provider)?,
             Some(Arc::new(provider)),
+            parent.to_path_buf(),
         ))
     }
 }
@@ -502,6 +557,8 @@ fn print_usage() {
          -s, --embedded       HTML body content only (no document shell, header or footer)\n  \
          -a, --attribute <NAME[=VALUE]>  set a document attribute\n  \
          -S, --safe-mode <MODE>  unsafe, safe (default), server or secure\n  \
+         -B, --base-dir <DIR>  root for relative paths (default: the input's directory,\n                       \
+         for stdin the docdir attribute or the current directory)\n  \
          -o, --out <FILE>     output path\n      --stdout         write to stdout\n  \
          --json-attributes   include header/final attributes with --to json\n  \
          --diagnostics <MODE> compat (default) or editor with physical byte spans\n  \

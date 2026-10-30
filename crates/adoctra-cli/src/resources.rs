@@ -193,7 +193,8 @@ impl ResourceProvider for FileResources {
     }
 
     fn document_path(&self, name: &str) -> Option<String> {
-        if uriish(name) {
+        // Files load under their absolute path; standard input has none.
+        if uriish(name) || !Path::new(name).is_absolute() {
             return None;
         }
         Some(if std::path::MAIN_SEPARATOR == '/' {
