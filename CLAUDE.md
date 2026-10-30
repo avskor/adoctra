@@ -1985,9 +1985,14 @@ null steps, Error per unmatched char, `LexError` where Rouge raises, merged
 `generated/lexers.rs` come from `generate_rouge.rb tokens|themes|lexers`.
 The lexer export translates Ruby block ASTs (token/groups/push/pop!/goto/
 reset_stack/delegate/recurse, `m[i]`, `include?` on per-class String
-collections, regexps, state tests, `case`); hand-written `rule_<line>`/
-`start_<line>`/`init`/`reset`/`stream` in `src/lexers/<rouge file>.rs` win;
-anything else lands in `LexerDef.missing` and the lexer is unused (87 of
+collections or closed-over locals, regexps, state tests, `case`, String/
+Token locals declared up front, `if` token expressions); `start` blocks and
+`initialize` become hooks (push, `@x = K.new(options)`, `x.reset!`);
+delegation to ivars or memo methods (`@x ||= K.new(options)`) uses
+persistent `Lexer.subs` (`TemplateLexer#parent` hand-written). Hand-written
+`rule_<line>`/`start_<line>`/`init`/`reset`/`stream` in
+`src/lexers/<rouge file>.rs` win; anything else lands in `LexerDef.missing`
+and the lexer is unused, as is one delegating to an unused lexer (137 of
 228 ported incl. hand-written plaintext, all matching Rouge's token streams
 on the demos in `tests/data/lexer_corpus.txt`). adoctra-html `rouge.rs` is
 the RougeAdapter: `<pre class="rouge highlight">`, `rouge-css` class (head

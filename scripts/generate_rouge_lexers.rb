@@ -70,7 +70,12 @@ module RougeLexers
   class Generator
     attr_reader :regexes, :sets, :callbacks
 
+    # Lexer tags each exported lexer delegates to, by lexer tag.
+    attr_reader :deps
+
     def initialize tokens
+      @deps = Hash.new { |hash, key| hash[key] = Set.new }
+      @current = nil
       @tokens = tokens
       @regex_index = {}
       @regexes = []
@@ -123,7 +128,12 @@ module RougeLexers
     end
 
     # Exports one lexer class: [rust item source, missing hooks].
+    def depend tag
+      @deps[@current] << tag if @current
+    end
+
     def lexer lexer
+      @current = lexer.tag
       missing = []
       ident = "LEXER_#{RougeLexers.rust_ident(lexer.tag).upcase}"
       states = []
@@ -164,7 +174,7 @@ module RougeLexers
       source << "    init: #{init},\n"
       source << "    reset: #{reset},\n"
       source << "    stream: #{stream},\n"
-      source << "    missing: &[#{missing.map { |m| rust_str m }.join(', ')}],\n"
+      source << "    missing: __MISSING__,\n"
       source << "};\n"
       [ident, source, missing]
     end
@@ -188,7 +198,7 @@ module RougeLexers
       name = "cb_#{RougeLexers.rust_ident lexer.tag}_#{RougeLexers.rust_ident RougeLexers.module_name(path)}_#{line}"
       unless @callback_names.key?(name)
         @callback_names[name] = begin
-          body = Translator.new(self, lexer, blk, states).translate
+          body = Translator.of_block(self, lexer, blk, states, :rule).translate
           @callbacks << "fn #{name}(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {\n#{body}    Ok(())\n}\n"
           true
         rescue Unsupported => e
@@ -209,13 +219,31 @@ module RougeLexers
 
       lexer.start_procs.to_a.map do |blk|
         where, path, line = location(blk)
-        if RougeLexers.hand?(path, "start_#{line}")
-          "crate::lexers::#{RougeLexers.module_name path}::start_#{line}"
-        else
-          missing << "#{where} (start)"
-          'crate::lexer::unported_hook'
+        next "crate::lexers::#{RougeLexers.module_name path}::start_#{line}" if RougeLexers.hand?(path, "start_#{line}")
+
+        name = "st_#{RougeLexers.rust_ident lexer.tag}_#{RougeLexers.rust_ident RougeLexers.module_name(path)}_#{line}"
+        hook(name, missing, "#{where} (start)") do
+          Translator.of_block(self, lexer, blk, lexer.state_definitions.keys, :hook).translate
         end
       end
+    end
+
+    # A translated hook function, or the unported placeholder.
+    def hook name, missing, where
+      unless @callback_names.key?(name)
+        @callback_names[name] = begin
+          body = yield
+          @callbacks << "fn #{name}(l: &mut Lexer) -> Result<(), LexError> {\n#{body}    Ok(())\n}\n"
+          true
+        rescue Unsupported => e
+          missing << "#{where} (#{e.message})"
+          false
+        end
+      end
+      return name if @callback_names[name]
+
+      missing << where unless missing.any? { |m| m.start_with?(where) }
+      'crate::lexer::unported_hook'
     end
 
     def owner_file lexer, meth
@@ -229,8 +257,14 @@ module RougeLexers
       path = owner_file(lexer, :initialize)
       return "Some(crate::lexers::#{RougeLexers.module_name path}::init)" if RougeLexers.hand?(path, 'init')
 
-      missing << "#{RougeLexers.module_name path}.rs (initialize)"
-      'None'
+      # `initialize` creating delegate lexers after `super`.
+      name = "init_#{RougeLexers.rust_ident lexer.tag}"
+      fn = hook(name, missing, "#{RougeLexers.module_name path}.rs (initialize)") do
+        ast = RubyVM::AbstractSyntaxTree.of(lexer.instance_method(:initialize))
+        states = lexer < Rouge::RegexLexer ? lexer.state_definitions.keys : []
+        Translator.new(self, owner, ast, states, owner, :hook).translate
+      end
+      fn == 'crate::lexer::unported_hook' ? 'None' : "Some(#{fn})"
     end
 
     # An overridden instance method ported as the hand-written `name`.
@@ -257,23 +291,42 @@ module RougeLexers
     end
   end
 
-  # Translates the AST of a rule block into the body of a Rust callback.
+  # Translates the AST of a rule block (mode :rule, a Rust callback on a
+  # `Scan` and the match `m`) or of a `start` block / `initialize` method
+  # (mode :hook, on the `Lexer` `l`) into a Rust function body.
   class Translator
-    def initialize generator, lexer, blk, states
+    def initialize generator, lexer, ast, states, binding_source, mode
       @g = generator
       @lexer = lexer
-      @blk = blk
+      @binding = binding_source
       @states = states
-      @ast = RubyVM::AbstractSyntaxTree.of(blk)
+      @mode = mode
+      @ast = ast
       raise Unsupported, 'no AST' unless @ast
 
-      @param = @ast.children[0].first
+      @param = @ast.children[0].first if mode == :rule
       args = @ast.children[1]
-      raise Unsupported, 'block arity' if args && args.children[0] > 1
+      raise Unsupported, 'block arity' if mode == :rule && args && args.children[0] > 1
+
+      # Ruby locals by name: :string or :token, declared up front because
+      # an assignment in a branch is visible after it.
+      @locals = {}
+    end
+
+    def self.of_block generator, lexer, blk, states, mode
+      new(generator, lexer, RubyVM::AbstractSyntaxTree.of(blk), states, blk, mode)
     end
 
     def translate
-      stmts(@ast.children[2], '    ')
+      body = stmts(@ast.children[2], '    ')
+      decls = @locals.map do |name, kind|
+        kind == :token ? "    let mut #{local name}: T::Token = T::TEXT;\n" : "    let mut #{local name} = String::new();\n"
+      end
+      decls.join + body
+    end
+
+    def local name
+      "v_#{name}"
     end
 
     def unsupported node, what = nil
@@ -295,12 +348,16 @@ module RougeLexers
       node.children.compact
     end
 
+    def rule?
+      @mode == :rule
+    end
+
     def stmt node, indent
       case node.type
       when :FCALL, :VCALL
         name = node.children[0]
         args = node.type == :FCALL ? call_args(node.children[1]) : []
-        ops(name, args, node, indent)
+        rule? ? ops(name, args, node, indent) : hook_ops(name, args, node, indent)
       when :IF, :UNLESS
         cond, yes, no = node.children
         test = condition(cond)
@@ -328,9 +385,102 @@ module RougeLexers
           out << stmts(body, indent + '    ') << "#{indent}}"
         end
         "#{out}\n"
+      when :DASGN, :LASGN
+        unsupported(node, 'assignment in a hook') unless rule?
+        name, rhs = node.children
+        kind = token_expression?(rhs) ? :token : :string
+        if (known = @locals[name]) && known != kind
+          unsupported(node, "local #{name} changes type")
+        end
+        @locals[name] = kind
+        expr = kind == :token ? token_expr(rhs) : "(#{value rhs}).to_string()"
+        "#{indent}#{local name} = #{expr};\n"
+      when :IASGN
+        unsupported(node, 'IASGN') if rule?
+        "#{indent}l.set_sub(#{rust_str ivar_key(node.children[0])}, #{sub_maker node.children[1]})?;\n"
+      when :CALL
+        rule? ? rule_call(node, indent) : hook_call(node, indent)
+      when :ZSUPER, :SUPER
+        # `super` in `initialize`: the options are already stored.
+        unsupported(node) if rule?
+        ''
       when :NIL then ''
       else unsupported(node)
       end
+    end
+
+    def ivar_key name
+      name.to_s.delete_prefix('@')
+    end
+
+    # `Klass.new(options)` (also `@options`, `opts` or no argument): a Rust
+    # closure creating that lexer with this lexer's options.
+    def sub_maker node
+      unsupported(node, 'sub lexer') unless node.type == :CALL && node.children[1] == :new
+      args = call_args(node.children[2])
+      unsupported(node, 'sub lexer options') unless args.size <= 1 && args.all? { |a| options_node?(a) }
+      klass = evaluate(node.children[0])
+      unsupported(node, 'sub lexer class') unless klass.is_a?(Class) && klass < Rouge::Lexer
+      # Untagged helper classes (sed's) are not in the registry.
+      unsupported(node, 'untagged sub lexer') unless klass.tag && Rouge::Lexer.find(klass.tag) == klass
+      @g.depend(klass.tag)
+      "|l: &Lexer| l.sub_for(#{rust_str klass.tag})"
+    end
+
+    def options_node? node
+      (node.type == :VCALL && node.children[0] == :options) || (node.type == :IVAR && node.children[0] == :@options) ||
+        (node.type == :LVAR && node.children[0] == :opts)
+    end
+
+    # A memoized delegate `def name; @name ||= Klass.new(options); end`:
+    # [ivar key, maker].
+    def memo name
+      meth = @lexer.instance_method(name)
+      ast = RubyVM::AbstractSyntaxTree.of(meth)
+      body = ast&.children&.[](2)
+      body = body.children.last if body&.type == :BLOCK && body.children.size == 1
+      if meth.owner == Rouge::TemplateLexer && name == :parent
+        @g.depend('html')
+        return ['parent', 'crate::lexers::template_lexer::parent']
+      end
+      unless body&.type == :OP_ASGN_OR && body.children[0].type == :IVAR && body.children[2].type == :IASGN
+        unsupported(body || ast, "memo #{name}")
+      end
+      [ivar_key(body.children[0].children[0]), sub_maker(body.children[2].children[1])]
+    rescue NameError
+      unsupported(nil, "call #{name}")
+    end
+
+    # A lexer expression for `delegate`/`reset!`: [key, maker or nil].
+    def sub_target node
+      case node.type
+      when :IVAR then [ivar_key(node.children[0]), nil]
+      when :VCALL then memo(node.children[0])
+      else unsupported(node, 'delegate to an instance')
+      end
+    end
+
+    def hook_ops name, args, node, indent
+      case name
+      when :push then "#{indent}l.push_named(#{state_name args[0]})?;\n"
+      when :reset_stack then "#{indent}l.reset()?;\n"
+      else unsupported(node, "hook call #{name}")
+      end
+    end
+
+    def hook_call node, indent
+      recv, meth, args = node.children
+      unsupported(node, "hook call #{meth}") unless meth == :reset! && args.nil?
+      key, maker = sub_target(recv)
+      "#{indent}l.reset_sub(#{rust_str key}, #{maker ? "Some(#{maker})" : 'None'})?;\n"
+    end
+
+    # `@sub.reset!` inside a rule.
+    def rule_call node, indent
+      recv, meth, args = node.children
+      unsupported(node, "call #{meth}") unless meth == :reset! && args.nil? && %i[IVAR VCALL].include?(recv.type)
+      key, maker = sub_target(recv)
+      "#{indent}s.lexer.reset_sub(#{rust_str key}, #{maker ? "Some(#{maker})" : 'None'})?;\n"
     end
 
     def ops name, args, node, indent
@@ -354,11 +504,18 @@ module RougeLexers
         val = args[0] ? value(args[0]) : 'm.text()'
         "#{indent}s.recurse(#{val})?;\n"
       when :delegate
+        val = args[1] ? value(args[1]) : 'm.text()'
+        if %i[IVAR VCALL].include?(args[0].type)
+          key, maker = sub_target(args[0])
+          return "#{indent}s.delegate_existing(#{rust_str key}, #{val})?;\n" unless maker
+
+          return "#{indent}s.delegate_sub(#{rust_str key}, #{maker}, #{val})?;\n"
+        end
         target = evaluate(args[0])
         unless target.is_a?(Class) && target < Rouge::Lexer
           unsupported(node, 'delegate to an instance')
         end
-        val = args[1] ? value(args[1]) : 'm.text()'
+        @g.depend(target.tag)
         "#{indent}s.delegate_class(#{rust_str target.tag}, #{val})?;\n"
       else unsupported(node, "call #{name}")
       end
@@ -391,14 +548,49 @@ module RougeLexers
     end
 
     def token node
+      return local(node.children[0]) if node.type == :DVAR && @locals[node.children[0]] == :token
+
       @g.token_const(evaluate(node))
+    end
+
+    # Whether an assigned expression is a token type (a constant, or a
+    # conditional choosing between token expressions).
+    def token_expression? node
+      case node.type
+      when :CONST, :COLON2, :COLON3
+        value = evaluate(node)
+        value.is_a?(Class) && value <= Rouge::Token
+      when :IF, :UNLESS then [node.children[1], node.children[2]].compact.all? { |n| token_expression?(n) }
+      when :DVAR then @locals[node.children[0]] == :token
+      else false
+      end
+    rescue Unsupported
+      false
+    end
+
+    def token_expr node
+      case node.type
+      when :IF, :UNLESS
+        cond, yes, no = node.children
+        unsupported(node, 'token conditional without else') unless no
+        test = condition(cond)
+        test = "!(#{test})" if node.type == :UNLESS
+        "if #{test} { #{token_expr yes} } else { #{token_expr no} }"
+      else token(node)
+      end
     end
 
     # A constant expression evaluated where the block runs: lexical
     # constants through the block's binding, `self.class…` on this lexer.
     def evaluate node
       case node.type
-      when :CONST, :COLON2, :COLON3 then @blk.binding.eval(const_path(node))
+      when :CONST, :COLON2, :COLON3
+        @binding.respond_to?(:binding) ? @binding.binding.eval(const_path(node)) : @lexer.module_eval(const_path(node))
+      when :DVAR, :LVAR
+        # A local the block closes over (e.g. a `reserved = %w(…)` list).
+        name = node.children[0]
+        unsupported(node, 'evaluate DVAR') if @locals.key?(name) || name == @param || !@binding.respond_to?(:binding)
+        @binding.binding.local_variable_get(name)
       when :CALL
         recv, meth, args = node.children
         if self_class?(recv) && args.nil?
@@ -413,7 +605,7 @@ module RougeLexers
     rescue Unsupported
       raise
     rescue StandardError, ScriptError => e
-      raise Unsupported, "evaluate: #{e.message}"
+      raise Unsupported, "evaluate: #{e.message.gsub(/:0x\h+/, '')}"
     end
 
     def self_class? node
@@ -426,12 +618,17 @@ module RougeLexers
       when :COLON2
         recv, name = node.children
         recv ? "#{const_path recv}::#{name}" : name.to_s
+      when :DVAR, :LVAR
+        # `base::Name::Label` on a closed-over module.
+        unsupported(node, 'constant path') if @locals.key?(node.children[0]) || node.children[0] == @param
+        node.children[0].to_s
       when :COLON3 then "::#{node.children[0]}"
       else unsupported(node, 'constant path')
       end
     end
 
-    # A String-valued expression (`m[i]`, `m[i].downcase`, a literal).
+    # A String-valued expression (`m[i]`, `m[i].downcase`, a local, a
+    # literal).
     def value node
       case node.type
       when :CALL
@@ -444,6 +641,9 @@ module RougeLexers
         else
           unsupported(node, "value #{meth}")
         end
+      when :DVAR
+        unsupported(node, 'value variable') unless @locals[node.children[0]] == :string
+        "#{local node.children[0]}.as_str()"
       when :STR then rust_str node.children[0]
       else unsupported(node, "value #{node.type}")
       end
@@ -451,6 +651,10 @@ module RougeLexers
 
     def present? node
       node.type == :CALL && node.children[1] == :[] && node.children[0].type == :DVAR
+    end
+
+    def compare recv, meth, arg
+      "#{value recv} #{meth} #{value arg}"
     end
 
     def condition node
@@ -463,6 +667,8 @@ module RougeLexers
           "!(#{condition recv})"
         elsif meth == :=== && recv.type == :LIT && recv.children[0].is_a?(Regexp)
           search(recv.children[0], call_args(args)[0])
+        elsif %i[== !=].include?(meth)
+          compare(recv, meth, call_args(args)[0])
         else
           unsupported(node, "operator #{meth}")
         end
@@ -491,8 +697,7 @@ module RougeLexers
           unsupported(node, 'collection') unless values.all? { |v| v.is_a?(String) }
           "contains(#{@g.set_const values}, #{value call_args(args)[0]})"
         when :==, :!=
-          test = "#{value recv} #{meth} #{value call_args(args)[0]}"
-          test
+          compare(recv, meth, call_args(args)[0])
         when :start_with?, :end_with?
           prefix = literal_string(call_args(args)[0])
           "#{value recv}.#{meth == :start_with? ? 'starts_with' : 'ends_with'}(#{prefix})"
@@ -519,10 +724,30 @@ module RougeLexers
     generator = Generator.new(tokens)
     lexers = Rouge::Lexer.all.sort_by(&:tag)
     items = lexers.map { |lexer| generator.lexer(lexer) }
+    # A lexer delegating to an incomplete lexer is incomplete too.
+    missing_by_tag = items.each_with_index.to_h { |(_, _, missing), i| [lexers[i].tag, missing] }
+    loop do
+      changed = false
+      generator.deps.each do |tag, deps|
+        deps.each do |dep|
+          next if dep == tag || missing_by_tag.fetch(dep, []).empty?
+
+          note = "delegates to unported #{dep}"
+          next if missing_by_tag[tag].include?(note)
+
+          missing_by_tag[tag] << note
+          changed = true
+        end
+      end
+      break unless changed
+    end
+    items = items.map do |ident, source, missing|
+      [ident, source.sub('__MISSING__', "&[#{missing.map { |m| rust_str m }.join(', ')}]"), missing]
+    end
     registry = Rouge::Lexer.send(:registry).sort_by { |name, _| name.b }
     out = +"// Generated by scripts/generate_rouge.rb from Rouge #{ROUGE_VERSION}. Do not edit by hand.\n\n"
-    out << "#![allow(clippy::all, dead_code, unused_parens, unused_variables)]\n\n"
-    out << "use crate::lexer::{contains, search, Action, LexError, LexerDef, Match, Next, Rule, Scan, StateDef, Tables};\n"
+    out << "#![allow(clippy::all, dead_code, non_snake_case, unused_assignments, unused_mut, unused_parens, unused_variables)]\n\n"
+    out << "use crate::lexer::{contains, search, Action, LexError, Lexer, LexerDef, Match, Next, Rule, Scan, StateDef, Tables};\n"
     out << "use crate::regex::Regex;\n"
     out << "use crate::token as T;\n"
     out << "use std::sync::OnceLock;\n\n"

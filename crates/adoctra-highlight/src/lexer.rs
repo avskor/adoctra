@@ -23,6 +23,8 @@ const MAX_NULL_SCANS: usize = 5;
 
 /// A Ruby block run when its rule matches.
 pub type Callback = fn(&mut Scan<'_, '_>, &Match<'_>) -> Result<(), LexError>;
+/// Creates a delegate lexer for its parent (`Klass.new(options)`).
+pub type MakeSub = fn(&Lexer) -> Result<Lexer, LexError>;
 /// A `start` block, an `initialize` override or a dynamic hook.
 pub type Hook = fn(&mut Lexer) -> Result<(), LexError>;
 /// A lexer whose `stream_tokens` is not `RegexLexer`'s.
@@ -275,6 +277,40 @@ impl Lexer {
     /// `get_state(name)`.
     pub fn state_named(&self, name: &str) -> Option<&'static StateDef> {
         self.def.states.iter().find(|state| state.name == name)
+    }
+
+    /// `push :name` from a hook (`start { push :bol }`).
+    pub fn push_named(&mut self, name: &str) -> Result<(), LexError> {
+        let state = self
+            .state_named(name)
+            .ok_or_else(|| LexError(format!("unknown state: :{name}")))?;
+        self.stack().push(state);
+        Ok(())
+    }
+
+    /// A delegate lexer `tag` with this lexer's options (`Klass.new(options)`).
+    pub fn sub_for(&self, tag: &str) -> Result<Lexer, LexError> {
+        let def = find_def(tag).ok_or_else(|| LexError(format!("unknown lexer {tag}")))?;
+        Lexer::new(def, self.options.clone())
+    }
+
+    /// `@key = make(self)`.
+    pub fn set_sub(&mut self, key: &'static str, make: MakeSub) -> Result<(), LexError> {
+        let sub = make(self)?;
+        self.subs.insert(key, sub);
+        Ok(())
+    }
+
+    /// `@key.reset!`, creating a memoized delegate first (`key.reset!` of
+    /// `def key; @key ||= …; end`); without `make` an unset `@key` is nil.
+    pub fn reset_sub(&mut self, key: &'static str, make: Option<MakeSub>) -> Result<(), LexError> {
+        if !self.subs.contains_key(key) {
+            let make = make
+                .ok_or_else(|| LexError(format!("undefined method `reset!' for nil (@{key})")))?;
+            let sub = make(self)?;
+            self.subs.insert(key, sub);
+        }
+        self.subs.get_mut(key).expect("delegate lexer").reset()
     }
 
     /// The lexer-specific variables of type `T`, created on first use.
@@ -554,7 +590,7 @@ impl<'l, 't> Scan<'l, 't> {
     pub fn delegate_sub(
         &mut self,
         key: &'static str,
-        make: fn(&Lexer) -> Result<Lexer, LexError>,
+        make: MakeSub,
         text: &str,
     ) -> Result<(), LexError> {
         if !self.lexer.subs.contains_key(key) {
@@ -562,6 +598,18 @@ impl<'l, 't> Scan<'l, 't> {
             self.lexer.subs.insert(key, sub);
         }
         let sub = self.lexer.subs.get_mut(key).expect("delegate lexer");
+        let mut tokens = Vec::new();
+        sub.continue_lex(text, &mut tokens)?;
+        self.out.extend(tokens);
+        Ok(())
+    }
+
+    /// `delegate @key, text` for a delegate set by a hook; nil fails.
+    pub fn delegate_existing(&mut self, key: &'static str, text: &str) -> Result<(), LexError> {
+        let sub =
+            self.lexer.subs.get_mut(key).ok_or_else(|| {
+                LexError(format!("undefined method `continue_lex' for nil (@{key})"))
+            })?;
         let mut tokens = Vec::new();
         sub.continue_lex(text, &mut tokens)?;
         self.out.extend(tokens);
@@ -717,6 +765,33 @@ mod tests {
             rules,
         }]);
         assert_eq!(lex(def, "ab").unwrap(), vec![(KEYWORD, "ab".to_string())]);
+    }
+
+    #[test]
+    fn delegate_lexers_persist_and_unset_ones_fail_like_nil() {
+        use crate::token::LITERAL_NUMBER_INTEGER;
+        fn json(l: &Lexer) -> Result<Lexer, LexError> {
+            l.sub_for("json")
+        }
+        let mut lexer = Lexer::find("java").unwrap();
+        // `@json.reset!` of an unset ivar is nil's NoMethodError; a memo
+        // method creates the delegate first.
+        assert!(lexer.reset_sub("json", None).is_err());
+        lexer.reset_sub("json", Some(json)).unwrap();
+        assert!(lexer.subs.contains_key("json"));
+        lexer.set_sub("other", json).unwrap();
+        let mut out = Vec::new();
+        let text = "1";
+        let mut scan = Scan {
+            lexer: &mut lexer,
+            text,
+            pos: 0,
+            null_steps: 0,
+            out: &mut out,
+        };
+        scan.delegate_existing("other", "12").unwrap();
+        assert!(scan.delegate_existing("missing", "x").is_err());
+        assert_eq!(out, vec![(LITERAL_NUMBER_INTEGER, "12".to_string())]);
     }
 
     #[test]
