@@ -1165,3 +1165,39 @@ fn cli_json_attributes_are_opt_in_and_rejected_for_html() {
         }
     }
 }
+
+#[test]
+fn cli_inline_doctype_writes_a_newline_and_embedded_warnings() {
+    use std::io::Write;
+    use std::process::{Command, Stdio};
+    // Like Ruby's CLI: the content and a LF, nothing (and a warning) without
+    // an inline candidate, also in embedded mode.
+    for (source, embedded, stdout, stderr) in [
+        ("a *b*\n\nignored", false, "a <strong>b</strong>\n", ""),
+        ("a *b*", true, "a <strong>b</strong>\n", ""),
+        (
+            "* bullet",
+            true,
+            "",
+            "adoctra: warning: no inline candidate; use the inline doctype to convert a single paragragh, verbatim, or raw block\n",
+        ),
+        ("// comment", false, "", ""),
+    ] {
+        let mut command = Command::new(env!("CARGO_BIN_EXE_adoctra"));
+        command.args(["-", "-a", "doctype=inline", "--stdout"]);
+        if embedded {
+            command.arg("-s");
+        }
+        let mut child = command
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap();
+        child.stdin.take().unwrap().write_all(source.as_bytes()).unwrap();
+        let output = child.wait_with_output().unwrap();
+        assert!(output.status.success());
+        assert_eq!(String::from_utf8(output.stdout).unwrap(), stdout, "{source}");
+        assert_eq!(String::from_utf8(output.stderr).unwrap(), stderr, "{source}");
+    }
+}

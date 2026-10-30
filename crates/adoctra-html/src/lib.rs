@@ -114,7 +114,9 @@ impl HtmlBackend {
         };
         let mut out = String::new();
         let mut warnings = Vec::new();
-        if self.embedded {
+        if doc.attributes.get("doctype") == Some("inline") {
+            render_inline_doctype(&cx, &mut warnings, &mut out);
+        } else if self.embedded {
             render_content(&cx, true, &mut out);
             render_footnotes(&doc.footnotes, &doc.attributes, "", &mut out);
         } else {
@@ -2013,6 +2015,69 @@ fn render_open(block: &Block, blocks: &[Block], cx: &Cx, out: &mut String) {
 /// A container's content: Ruby's simple content (a styled paragraph form)
 /// writes the paragraph's inlines without a paragraph element, like Ruby's
 /// `content` of a simple block; otherwise the child blocks render in order.
+/// Ruby's `Document#convert` with the `inline` doctype (standalone or not):
+/// only the content of the first block (the document title's section when
+/// the body has none), without any wrapper or newline. A paragraph, a
+/// verbatim, raw or STEM block, a verse or a styled paragraph's simple
+/// content qualify; a block with compound or empty content (a section, the
+/// preamble, a list, a table, an image, a break, …) is no candidate: Ruby
+/// warns and converts nothing. A document without blocks is empty.
+fn render_inline_doctype(cx: &Cx, warnings: &mut Vec<String>, out: &mut String) {
+    let doc = cx.doc;
+    let Some(block) = doc.blocks.get(usize::from(doc.has_title)) else {
+        if doc.has_title {
+            warnings.push(NO_INLINE_CANDIDATE.to_owned());
+        }
+        return;
+    };
+    match &block.kind {
+        BlockKind::Paragraph { inlines }
+        | BlockKind::Stem { inlines, .. }
+        | BlockKind::Verse { inlines, .. } => render_inlines(inlines, out),
+        BlockKind::Listing {
+            text,
+            callouts,
+            inlines,
+        }
+        | BlockKind::Literal {
+            text,
+            callouts,
+            inlines,
+        } => render_verbatim(text, callouts, inlines, out),
+        BlockKind::Passthrough { text, inlines } => match inlines {
+            Some(inlines) => render_inlines(inlines, out),
+            None => out.push_str(text),
+        },
+        kind => match (block.simple, simple_paragraph(kind)) {
+            (true, Some(inlines)) => render_inlines(inlines, out),
+            _ => warnings.push(NO_INLINE_CANDIDATE.to_owned()),
+        },
+    }
+}
+
+/// Ruby's warning, typo included.
+const NO_INLINE_CANDIDATE: &str =
+    "no inline candidate; use the inline doctype to convert a single paragragh, verbatim, or raw block";
+
+/// The paragraph of a styled paragraph form (Ruby's simple content).
+fn simple_paragraph(kind: &BlockKind) -> Option<&[Inline]> {
+    let blocks = match kind {
+        BlockKind::Admonition { blocks, .. }
+        | BlockKind::Example { blocks }
+        | BlockKind::Sidebar { blocks }
+        | BlockKind::Open { blocks }
+        | BlockKind::Quote { blocks, .. } => blocks,
+        _ => return None,
+    };
+    match blocks.as_slice() {
+        [Block {
+            kind: BlockKind::Paragraph { inlines },
+            ..
+        }] => Some(inlines),
+        _ => None,
+    }
+}
+
 fn render_body(block: &Block, blocks: &[Block], cx: &Cx, out: &mut String) {
     if block.simple {
         if let [Block {
@@ -5658,6 +5723,63 @@ mod tests {
         // A `max-width` inline style narrows the footer band, centred.
         let html = render_standalone(":max-width: 60em\n\nx");
         assert!(html.contains(r#"<footer id="footer" style="max-width: 60em;">"#));
+    }
+
+    #[test]
+    fn inline_doctype_outputs_the_first_blocks_content_like_ruby() {
+        // Ruby's `Document#convert` with `doctype=inline`: the first block's
+        // content only, standalone or embedded alike, no newline.
+        let inline = |source: &str| {
+            let mut options = adoctra_core::ParseOptions::default();
+            options.attributes.set("doctype", "inline");
+            let doc = adoctra_core::parse_with_options(source, &options).document;
+            let standalone = HtmlBackend::new().render(&doc);
+            assert_eq!(standalone, HtmlBackend::embedded().render(&doc), "{source}");
+            standalone
+        };
+        // paragraphs_test.rb: only the first paragraph, formatted.
+        let output = inline(
+            "http://asciidoc.org[AsciiDoc] is a _lightweight_ markup language...\n\nignored",
+        );
+        assert_eq!(
+            output.html,
+            "<a href=\"http://asciidoc.org\">AsciiDoc</a> is a <em>lightweight</em> markup language&#8230;&#8203;"
+        );
+        assert!(output.warnings.is_empty());
+        for (source, html) in [
+            ("----\nx < y\n----", "x &lt; y"),
+            ("....\nlit\n....", "lit"),
+            ("++++\n<b>raw</b>\n++++", "<b>raw</b>"),
+            ("[stem]\n++++\nx^2\n++++", "x^2"),
+            ("[verse]\na *b*\nc", "a <strong>b</strong>\nc"),
+            ("NOTE: a *note*", "a <strong>note</strong>"),
+            ("[example]\nex", "ex"),
+            ("[quote, Author]\nq", "q"),
+            ("= Title\n\npara", "para"),
+            ("// only a comment", ""),
+        ] {
+            let output = inline(source);
+            assert_eq!(output.html, html, "{source}");
+            assert!(output.warnings.is_empty(), "{source}");
+        }
+        // Compound or empty content is no candidate: a warning, no output.
+        for source in [
+            "* bullet",
+            "== Section",
+            "image::tiger.png[]",
+            "= Title",
+            "|===\n|a\n|===",
+            "====\ncompound\n====",
+            "<<<",
+        ] {
+            let output = inline(source);
+            assert_eq!(output.html, "", "{source}");
+            assert_eq!(
+                output.warnings,
+                ["no inline candidate; use the inline doctype to convert a single paragragh, verbatim, or raw block"],
+                "{source}"
+            );
+        }
     }
 
     #[test]

@@ -436,7 +436,8 @@ fn select_backend(
     start: Option<adoctra::html::HtmlStart>,
 ) -> adoctra::Result<Box<dyn Backend>> {
     match name {
-        "html" if embedded => Ok(Box::new(adoctra::html::HtmlBackend::embedded())),
+        // Embedded output prints its warnings too (Html, without a start).
+        "html" if embedded => Ok(Box::new(Html(adoctra::html::HtmlBackend::embedded(), None))),
         "html" => Ok(Box::new(Html(html_backend(provider, referrer), start))),
         "docx" => Ok(Box::new(adoctra::docx::DocxBackend::new())),
         "json" => Ok(Box::new(adoctra::json::JsonBackend::new())),
@@ -470,10 +471,15 @@ impl Backend for Html {
     }
 
     fn convert(&self, doc: &adoctra::Document) -> adoctra::Result<Vec<u8>> {
-        let output = match &self.1 {
+        let mut output = match &self.1 {
             Some(start) => self.0.render_with_start(doc, start),
             None => self.0.render(doc),
         };
+        // Like Ruby's CLI (`output.chomp` and a LF), end non-empty output
+        // with a newline: the inline doctype's content has none.
+        if !output.html.is_empty() && !output.html.ends_with('\n') {
+            output.html.push('\n');
+        }
         for warning in &output.warnings {
             eprintln!("adoctra: warning: {warning}");
         }

@@ -216,10 +216,17 @@ compatibility/upstream/sources/test; inventory recorded by
 scripts/upstream_record.rb, which runs the upstream suite — a manual step).
 Supported entries (recorded options mapped to `-S`/`-s`/`-a`) are compared in
 body-dom-v1 plus warnings against pinned Ruby without optional highlighter
-gems; others are UNSUPPORTED with a reason. 1965 PASS / 145 DIFF / 511
-UNSUPPORTED of 2621; CI freezes every status. Clusters (doctype=inline, Rouge,
-ATX titles, passthrough whitespace, warnings, include edges) are the queue;
-`--show ID` prints both sides.
+gems; others are UNSUPPORTED with a reason. The reference mimics one Ruby CLI
+run per document (output chomped + LF, highlighter library status reset).
+2024 PASS / 86 DIFF / 511 UNSUPPORTED of 2621; CI freezes every status.
+Clusters (Rouge, warnings, include edges, title anchors, ATX titles) are the
+queue; `--show ID` prints both sides.
+**Inline doctype**: HtmlBackend renders `doctype=inline` like Ruby's
+`Document#convert` (render_inline_doctype): only the first block's content
+(paragraph, verbatim/raw/STEM, verse or a styled paragraph's simple content),
+else Ruby's "no inline candidate; …" warning (typo kept) and empty output;
+standalone and embedded alike. The CLI ends non-empty HTML with a LF like
+Ruby's CLI and prints backend warnings in embedded mode too.
 `compatibility/upstream/semantics.json` uses `inline-semantics-v1`: 129 PASS
 cover 20 attribute and four include scenarios from the upstream selection plus
 105 original semantic probes (14 tables; 27 xref/indexterm/stem/typographic quote
