@@ -311,6 +311,8 @@ module RougeLexers
       # Ruby locals by name: :string or :token, declared up front because
       # an assignment in a branch is visible after it.
       @locals = {}
+      # Locals bound to constant collections, by name.
+      @consts = {}
     end
 
     def self.of_block generator, lexer, blk, states, mode
@@ -319,7 +321,7 @@ module RougeLexers
 
     def translate
       body = stmts(@ast.children[2], '    ')
-      decls = @locals.map do |name, kind|
+      decls = @locals.reject { |_, kind| kind == :param }.map do |name, kind|
         kind == :token ? "    let mut #{local name}: T::Token = T::TEXT;\n" : "    let mut #{local name} = String::new();\n"
       end
       decls.join + body
@@ -388,6 +390,11 @@ module RougeLexers
       when :DASGN, :LASGN
         unsupported(node, 'assignment in a hook') unless rule?
         name, rhs = node.children
+        if !@locals.key?(name) && (constant = constant_value(rhs))
+          # `keywords = self.class.keywords`: a constant collection.
+          @consts[name] = constant
+          return ''
+        end
         kind = token_expression?(rhs) ? :token : :string
         if (known = @locals[name]) && known != kind
           unsupported(node, "local #{name} changes type")
@@ -396,8 +403,14 @@ module RougeLexers
         expr = kind == :token ? token_expr(rhs) : "(#{value rhs}).to_string()"
         "#{indent}#{local name} = #{expr};\n"
       when :IASGN
+        name, rhs = node.children
+        if rhs.type == :IVAR
+          # `@lang = @css`: one delegate lexer under two names.
+          receiver = rule? ? 's.lexer' : 'l'
+          return "#{indent}#{receiver}.alias_sub(#{rust_str ivar_key(name)}, #{rust_str ivar_key(rhs.children[0])});\n"
+        end
         unsupported(node, 'IASGN') if rule?
-        "#{indent}l.set_sub(#{rust_str ivar_key(node.children[0])}, #{sub_maker node.children[1]})?;\n"
+        "#{indent}l.set_sub(#{rust_str ivar_key(name)}, #{sub_maker rhs})?;\n"
       when :CALL
         rule? ? rule_call(node, indent) : hook_call(node, indent)
       when :ZSUPER, :SUPER
@@ -405,8 +418,23 @@ module RougeLexers
         unsupported(node) if rule?
         ''
       when :NIL then ''
+      # A literal as a statement (`rule(//) { :pop! }`) has no effect.
+      when :LIT, :STR then ''
       else unsupported(node)
       end
+    end
+
+    # The value of an expression the generator can evaluate that is not a
+    # String or token (collections), else nil.
+    def constant_value node
+      return nil unless %i[CONST COLON2 CALL VCALL].include?(node.type)
+
+      value = evaluate(node)
+      return nil if value.is_a?(String) || (value.is_a?(Class) && value <= Rouge::Token)
+
+      value.is_a?(Enumerable) ? value : nil
+    rescue Unsupported
+      nil
     end
 
     def ivar_key name
@@ -562,6 +590,8 @@ module RougeLexers
         value.is_a?(Class) && value <= Rouge::Token
       when :IF, :UNLESS then [node.children[1], node.children[2]].compact.all? { |n| token_expression?(n) }
       when :DVAR then @locals[node.children[0]] == :token
+      # `push :state; Keyword`: statements, then the token.
+      when :BLOCK then token_expression?(node.children.last)
       else false
       end
     rescue Unsupported
@@ -576,6 +606,9 @@ module RougeLexers
         test = condition(cond)
         test = "!(#{test})" if node.type == :UNLESS
         "if #{test} { #{token_expr yes} } else { #{token_expr no} }"
+      when :BLOCK
+        effects = node.children[0..-2].map { |n| stmt(n, '') }.join(' ').tr("\n", ' ')
+        "{ #{effects}#{token_expr node.children.last} }"
       else token(node)
       end
     end
@@ -585,16 +618,21 @@ module RougeLexers
     def evaluate node
       case node.type
       when :CONST, :COLON2, :COLON3
-        @binding.respond_to?(:binding) ? @binding.binding.eval(const_path(node)) : @lexer.module_eval(const_path(node))
+        @binding.respond_to?(:binding) ? @binding.binding.eval(const_path(node)) : lexical_const(const_path(node))
       when :DVAR, :LVAR
         # A local the block closes over (e.g. a `reserved = %w(…)` list).
         name = node.children[0]
+        return @consts[name] if @consts.key?(name)
+
         unsupported(node, 'evaluate DVAR') if @locals.key?(name) || name == @param || !@binding.respond_to?(:binding)
         @binding.binding.local_variable_get(name)
       when :CALL
         recv, meth, args = node.children
         if self_class?(recv) && args.nil?
           @lexer.public_send(meth)
+        elsif meth == :[] && (key = call_args(args)).size == 1 && %i[LIT STR].include?(key[0].type)
+          # `self.class.keywords[:command]`.
+          evaluate(recv)[literal(key[0])]
         else
           unsupported(node, "evaluate #{meth}")
         end
@@ -606,6 +644,22 @@ module RougeLexers
       raise
     rescue StandardError, ScriptError => e
       raise Unsupported, "evaluate: #{e.message.gsub(/:0x\h+/, '')}"
+    end
+
+    # A constant from a method of `@binding` (a class): looked up like its
+    # lexical scope, the class and then each enclosing module by name.
+    def lexical_const path
+      scopes = []
+      name = @binding.name
+      while name
+        scopes << Object.const_get(name)
+        name = name.include?('::') ? name.sub(/::[^:]+\z/, '') : nil
+      end
+      scopes << Object
+      scope = scopes.find { |mod| mod.const_defined?(path.split('::').first) }
+      raise NameError, "uninitialized constant #{path}" unless scope
+
+      scope.const_get(path)
     end
 
     def self_class? node
@@ -630,6 +684,8 @@ module RougeLexers
     # A String-valued expression (`m[i]`, `m[i].downcase`, a local, a
     # literal).
     def value node
+      return local(node.children[0]) if node.type == :DVAR && @locals[node.children[0]] == :param
+
       case node.type
       when :CALL
         recv, meth, args = node.children
@@ -653,8 +709,36 @@ module RougeLexers
       node.type == :CALL && node.children[1] == :[] && node.children[0].type == :DVAR
     end
 
+    # `m[i]` itself (nil when the group did not participate).
+    def group_node? node
+      node.type == :CALL && node.children[1] == :[] && node.children[0].type == :DVAR &&
+        node.children[0].children[0] == @param
+    end
+
+    def optional node
+      group_node?(node) ? "m.get(#{integer call_args(node.children[2])[0]})" : "Some(#{value node})"
+    end
+
+    # `==`/`!=`: Ruby's nil equals no String, so a match group compares as
+    # an Option; stack sizes and integers compare as numbers.
     def compare recv, meth, arg
+      if integer_expr?(recv) || integer_expr?(arg)
+        return "#{integer_expr recv} #{meth} #{integer_expr arg}"
+      end
+      return "#{optional recv} #{meth} #{optional arg}" if group_node?(recv) || group_node?(arg)
+
       "#{value recv} #{meth} #{value arg}"
+    end
+
+    def integer_expr? node
+      (node.type == :LIT && node.children[0].is_a?(Integer)) ||
+        (node.type == :CALL && %i[size length].include?(node.children[1]) && node.children[2].nil? &&
+          %i[VCALL FCALL].include?(node.children[0].type) && node.children[0].children[0] == :stack)
+    end
+
+    def integer_expr node
+      unsupported(node, 'integer expression') unless integer_expr?(node)
+      node.type == :LIT ? node.children[0].to_s : 's.lexer.stack.len()'
     end
 
     def condition node
@@ -669,6 +753,9 @@ module RougeLexers
           search(recv.children[0], call_args(args)[0])
         elsif %i[== !=].include?(meth)
           compare(recv, meth, call_args(args)[0])
+        elsif %i[> < >= <=].include?(meth)
+          arg = call_args(args)[0]
+          "#{integer_expr recv} #{meth} #{integer_expr arg}"
         else
           unsupported(node, "operator #{meth}")
         end
@@ -699,8 +786,11 @@ module RougeLexers
         when :==, :!=
           compare(recv, meth, call_args(args)[0])
         when :start_with?, :end_with?
-          prefix = literal_string(call_args(args)[0])
+          prefix = value(call_args(args)[0])
           "#{value recv}.#{meth == :start_with? ? 'starts_with' : 'ends_with'}(#{prefix})"
+        when :nil?
+          unsupported(node, 'condition nil?') unless group_node?(recv)
+          "#{optional recv}.is_none()"
         when :empty?
           "#{value recv}.is_empty()"
         when :[]
@@ -708,6 +798,19 @@ module RougeLexers
           "m.get(#{integer call_args(args)[0]}).is_some()"
         else unsupported(node, "condition #{meth}")
         end
+      when :ITER
+        # `collection.any? { |x| condition }` over a constant collection.
+        call, scope = node.children
+        unsupported(node, 'condition ITER') unless call.type == :CALL && call.children[1] == :any? && call.children[2].nil?
+        collection = evaluate(call.children[0])
+        values = collection.is_a?(Hash) ? collection.keys : collection.to_a
+        unsupported(node, 'collection') unless values.all? { |v| v.is_a?(String) }
+        param = scope.children[0].first
+        unsupported(node, 'iterator variable') if @locals.key?(param)
+        @locals[param] = :param
+        test = condition(scope.children[2])
+        @locals.delete(param)
+        "#{@g.set_const values}.iter().any(|#{local param}| { let #{local param}: &str = #{local param}; #{test} })"
       when :DVAR
         unsupported(node, 'condition variable')
       else unsupported(node, "condition #{node.type}")

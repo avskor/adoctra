@@ -163,6 +163,8 @@ pub struct Lexer {
     pub vars: Option<Box<dyn Any>>,
     /// Persistent delegate lexers (`@ruby ||= Ruby.new(options)`).
     pub subs: BTreeMap<&'static str, Lexer>,
+    /// Instance variables naming another one's delegate (`@lang = @css`).
+    pub aliases: BTreeMap<&'static str, &'static str>,
 }
 
 /// The ported lexers.
@@ -205,6 +207,7 @@ impl Lexer {
             options,
             vars: None,
             subs: BTreeMap::new(),
+            aliases: BTreeMap::new(),
         };
         if let Some(init) = def.init {
             init(&mut lexer)?;
@@ -297,13 +300,26 @@ impl Lexer {
     /// `@key = make(self)`.
     pub fn set_sub(&mut self, key: &'static str, make: MakeSub) -> Result<(), LexError> {
         let sub = make(self)?;
+        self.aliases.remove(key);
         self.subs.insert(key, sub);
         Ok(())
+    }
+
+    /// `@key = @other`: both name one delegate lexer.
+    pub fn alias_sub(&mut self, key: &'static str, other: &'static str) {
+        let target = self.resolve_sub(other);
+        self.subs.remove(key);
+        self.aliases.insert(key, target);
+    }
+
+    fn resolve_sub(&self, key: &'static str) -> &'static str {
+        self.aliases.get(key).copied().unwrap_or(key)
     }
 
     /// `@key.reset!`, creating a memoized delegate first (`key.reset!` of
     /// `def key; @key ||= …; end`); without `make` an unset `@key` is nil.
     pub fn reset_sub(&mut self, key: &'static str, make: Option<MakeSub>) -> Result<(), LexError> {
+        let key = self.resolve_sub(key);
         if !self.subs.contains_key(key) {
             let make = make
                 .ok_or_else(|| LexError(format!("undefined method `reset!' for nil (@{key})")))?;
@@ -606,6 +622,7 @@ impl<'l, 't> Scan<'l, 't> {
 
     /// `delegate @key, text` for a delegate set by a hook; nil fails.
     pub fn delegate_existing(&mut self, key: &'static str, text: &str) -> Result<(), LexError> {
+        let key = self.lexer.resolve_sub(key);
         let sub =
             self.lexer.subs.get_mut(key).ok_or_else(|| {
                 LexError(format!("undefined method `continue_lex' for nil (@{key})"))
