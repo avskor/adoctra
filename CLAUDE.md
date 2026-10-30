@@ -218,8 +218,8 @@ Supported entries (recorded options mapped to `-S`/`-s`/`-a`) are compared in
 body-dom-v1 plus warnings against pinned Ruby without optional highlighter
 gems; others are UNSUPPORTED with a reason. The reference mimics one Ruby CLI
 run per document (output chomped + LF, highlighter library status reset).
-2042 PASS / 68 DIFF / 511 UNSUPPORTED of 2621; CI freezes every status.
-Clusters (Rouge, title anchors, ATX titles) are the queue;
+2055 PASS / 55 DIFF / 511 UNSUPPORTED of 2621; CI freezes every status.
+Rouge (26) and single cases are the queue;
 `--show ID` prints both sides. Malformed/mismatched conditional directives
 and an unterminated comment block keep short editor messages and put Ruby's
 reader message verbatim in `report.message` (Reader::error_reported).
@@ -1994,6 +1994,12 @@ unread_includes); file targets stay literal. `skip-front-matter` skips a
 leading `---`…`---` block of the primary input (before the header) and of
 each include (Input::skip_front_matter, by the input cursor, physical spans
 kept) and sets `front-matter` (a reading effect inside the body).
+
+**Titles and block anchors**: parser.rs parse_heading is Ruby's
+ExtAtxSectionTitleRx (`=` or Markdown `#` markers, 1-6, spaces/tabs, an
+optional closing marker of the same length after a blank: `== T ==`).
+parse_block_anchor is BlockAnchorRx: ids `[\p{Alpha}_:][\p{Word}\-:.]*` (no
+leading digit), and an empty `[[]]` is an anchor that clears the pending id.
 
 When asked to "add a feature," check this list first and say plainly whether it
 is new work or wiring up an existing seam.

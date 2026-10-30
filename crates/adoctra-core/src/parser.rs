@@ -1034,7 +1034,8 @@ pub(crate) fn consume_block_metadata(
             None,
             TokenKind::Anchor,
         );
-        pending.id = Some(id.to_string());
+        // Ruby assigns the id even when it is nil (`[[]]`).
+        pending.id = id.map(str::to_string);
         if let Some(rt) = reftext {
             let value = context.block_reftext(rt, lines[*i].0 + abs_offset(line, rt));
             lines
@@ -3840,15 +3841,32 @@ fn abs_offset(source: &str, sub: &str) -> usize {
     sub.as_ptr() as usize - source.as_ptr() as usize
 }
 
+/// Ruby's `ExtAtxSectionTitleRx` (Markdown syntax is on by default): one to
+/// six `=` or `#`, spaces or tabs, the title, and optionally the same marker
+/// again after spaces or tabs (`== Title ==`), which is not part of the title.
 pub(crate) fn parse_heading(line: &str) -> Option<(u8, &str)> {
     let line = line.trim_start();
-    let eqs = line.chars().take_while(|&c| c == '=').count();
-    if eqs == 0 || eqs > 6 {
+    let marker_char = line.chars().next().filter(|c| matches!(c, '=' | '#'))?;
+    let count = line.chars().take_while(|&c| c == marker_char).count();
+    if count > 6 {
         return None;
     }
-    let rest = &line[eqs..];
-    let title = rest.strip_prefix(' ')?;
-    Some(((eqs - 1) as u8, title.trim()))
+    let (marker, rest) = line.split_at(count);
+    let blank = |c: char| c == ' ' || c == '\t';
+    if !rest.starts_with(blank) {
+        return None;
+    }
+    let mut title = rest.trim_matches(blank);
+    if title.is_empty() {
+        return None;
+    }
+    if let Some(before) = title.strip_suffix(marker) {
+        let trimmed = before.trim_end_matches(blank);
+        if trimmed.len() < before.len() && !trimmed.is_empty() {
+            title = trimmed;
+        }
+    }
+    Some(((count - 1) as u8, title))
 }
 
 /// A trailing section-title anchor, split off its title.
@@ -3913,16 +3931,19 @@ pub(crate) fn section_anchor(title: &str) -> Option<SectionAnchor<'_>> {
 }
 
 /// Recognise a *block anchor* line — `[[id]]` or `[[id,reftext]]` occupying the
-/// whole (trimmed) line — and return `(id, reftext?)` as slices of `line`. The
-/// reftext is the trimmed, non-empty remainder after the first comma. An empty
-/// `[[]]` or an id that is not well-formed (see [`is_valid_anchor_id`]) returns
-/// `None`, so the line falls through to be parsed as ordinary text — matching
-/// asciidoctor, which treats only a well-formed anchor specially.
+/// whole (trimmed) line — and return `(id?, reftext?)` as slices of `line`. The
+/// reftext is the trimmed, non-empty remainder after the first comma. Like
+/// Ruby's `BlockAnchorRx`, an empty `[[]]` is an anchor without an id (it
+/// clears a pending id); an id that is not well-formed (see
+/// [`is_valid_anchor_id`]) returns `None`, so the line is ordinary text.
 ///
 /// An *inline* `[[id]]` embedded mid-line is a different construct (an empty
 /// `<a id>`); this matches only a line that is wholly an anchor.
-pub(crate) fn parse_block_anchor(line: &str) -> Option<(&str, Option<&str>)> {
+pub(crate) fn parse_block_anchor(line: &str) -> Option<(Option<&str>, Option<&str>)> {
     let inner = line.trim().strip_prefix("[[")?.strip_suffix("]]")?;
+    if inner.is_empty() {
+        return Some((None, None));
+    }
     let (id, reftext) = match inner.find(',') {
         Some(c) => {
             let rt = inner[c + 1..].trim();
@@ -3930,7 +3951,7 @@ pub(crate) fn parse_block_anchor(line: &str) -> Option<(&str, Option<&str>)> {
         }
         None => (inner, None),
     };
-    is_valid_anchor_id(id).then_some((id, reftext))
+    is_valid_anchor_id(id).then_some((Some(id), reftext))
 }
 
 /// Recognise a *block title* line — a single leading `.` immediately followed by
@@ -3961,13 +3982,14 @@ pub(crate) fn parse_block_title(line: &str) -> Option<&str> {
 /// Whether `id` is a well-formed anchor id (asciidoctor's `[\p{Word}:][\p{Word}:.-]*`):
 /// a leading alphanumeric / `_` / `:`, then those plus `.` and `-`, no whitespace.
 /// Shared with the inline scanner, which validates *inline* `[[id]]` anchors.
+/// Ruby's anchor id: `[\p{Alpha}_:][\p{Word}\-:.]*` (no leading digit).
 pub(crate) fn is_valid_anchor_id(id: &str) -> bool {
     let mut chars = id.chars();
     match chars.next() {
-        Some(c) if c.is_alphanumeric() || c == '_' || c == ':' => {}
+        Some(c) if c.is_alphabetic() || c == '_' || c == ':' => {}
         _ => return false,
     }
-    chars.all(|c| c.is_alphanumeric() || matches!(c, '_' | ':' | '.' | '-'))
+    chars.all(|c| crate::unicode_word::is_word(c) || matches!(c, ':' | '.' | '-'))
 }
 
 #[cfg(test)]
@@ -4467,20 +4489,69 @@ mod tests {
 
     #[test]
     fn parse_block_anchor_recognises_well_formed_lines() {
-        assert_eq!(parse_block_anchor("[[id]]"), Some(("id", None)));
+        assert_eq!(parse_block_anchor("[[id]]"), Some((Some("id"), None)));
         assert_eq!(
             parse_block_anchor("[[id,ref text]]"),
-            Some(("id", Some("ref text")))
+            Some((Some("id"), Some("ref text")))
         );
         // Surrounding whitespace and a trimmed-empty reftext are tolerated.
-        assert_eq!(parse_block_anchor("  [[id]]  "), Some(("id", None)));
-        assert_eq!(parse_block_anchor("[[id, ]]"), Some(("id", None)));
-        // Not anchors: empty id, a space in the id, embedded (inline) anchor,
-        // and a single-bracket `[id]`.
-        assert_eq!(parse_block_anchor("[[]]"), None);
+        assert_eq!(parse_block_anchor("  [[id]]  "), Some((Some("id"), None)));
+        assert_eq!(parse_block_anchor("[[id, ]]"), Some((Some("id"), None)));
+        // Ruby's BlockAnchorRx: an empty `[[]]` is an anchor without an id;
+        // ids are `[\p{Alpha}_:][\p{Word}\-:.]*` (Unicode, no leading digit).
+        assert_eq!(parse_block_anchor("[[]]"), Some((None, None)));
+        assert_eq!(
+            parse_block_anchor("[[_x:y.z-1]]"),
+            Some((Some("_x:y.z-1"), None))
+        );
+        assert_eq!(parse_block_anchor("[[ид]]"), Some((Some("ид"), None)));
+        // Not anchors: a leading digit, a space in the id, an embedded
+        // (inline) anchor and a single-bracket `[id]`.
+        assert_eq!(parse_block_anchor("[[3-blind-mice]]"), None);
         assert_eq!(parse_block_anchor("[[a b]]"), None);
         assert_eq!(parse_block_anchor("text [[id]]"), None);
         assert_eq!(parse_block_anchor("[id]"), None);
+    }
+
+    #[test]
+    fn empty_block_anchor_clears_the_pending_id_and_is_not_output() {
+        let r = parse("[[a]]\n[[]]\n--\nBlock content\n--");
+        assert_eq!(r.document.blocks.len(), 1);
+        assert_eq!(r.document.blocks[0].id, None);
+        let r = parse("[[3-blind-mice]]\n--\nsee\n--");
+        assert!(matches!(
+            r.document.blocks[0].kind,
+            BlockKind::Paragraph { .. }
+        ));
+        assert_eq!(r.document.blocks[1].id, None);
+    }
+
+    #[test]
+    fn atx_titles_follow_rubys_extended_syntax() {
+        // ExtAtxSectionTitleRx: `=` or Markdown `#` markers, spaces or tabs,
+        // and an optional closing marker of the same length.
+        for (line, expected) in [
+            ("== Title", Some((1, "Title"))),
+            ("== Title ==", Some((1, "Title"))),
+            ("==\tTitle\t==", Some((1, "Title"))),
+            ("# Title", Some((0, "Title"))),
+            ("## Title ##", Some((1, "Title"))),
+            ("###### Six", Some((5, "Six"))),
+            // A different closing length, or a marker without space, stays.
+            ("== Title ===", Some((1, "Title ==="))),
+            ("== Title==", Some((1, "Title=="))),
+            ("== ==", Some((1, "=="))),
+            (
+                "== Section One [[one]] ==",
+                Some((1, "Section One [[one]]")),
+            ),
+            ("####### Seven", None),
+            ("#hash", None),
+            ("==", None),
+            ("== ", None),
+        ] {
+            assert_eq!(parse_heading(line), expected, "{line:?}");
+        }
     }
 
     #[test]
