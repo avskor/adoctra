@@ -5414,6 +5414,33 @@ mod tests {
     }
 
     #[test]
+    fn base_typography_and_column_follow_asciidoctor_stylesheet() {
+        // Ruby's fonts, colours, sizes and column; the visual-v1 profile
+        // (scripts/visual.py) checks the rendered result.
+        for rule in [
+            r#"--adoctra-font: "Noto Serif", "DejaVu Serif", serif;"#,
+            r#"--adoctra-heading-font: "Open Sans", "DejaVu Sans", sans-serif;"#,
+            r#"--adoctra-mono: "Droid Sans Mono", "DejaVu Sans Mono", monospace;"#,
+            "--adoctra-fg: rgb(0 0 0 / 0.8);",
+            "--adoctra-heading-fg: #ba3925;",
+            "--adoctra-title-fg: #7a2518;",
+            "--adoctra-link: #2156a5;",
+            "--adoctra-code-bg: #f7f7f8;",
+            "  margin: 0 0 1.25rem;\n  font-size: 1.0625rem;",
+            "  max-width: 62.5em;\n  margin-inline: auto;\n  padding-inline: 0.9375em;",
+            "h1 { font-size: 2.125em; }",
+            "  h1 { font-size: 2.75em; }",
+            "section.sect1 + section.sect1 { border-block-start: 1px solid var(--adoctra-section-rule); }",
+        ] {
+            assert!(STYLESHEET.contains(rule), "{rule}");
+        }
+        assert!(!STYLESHEET.contains("system-ui"));
+        // A `max-width` inline style narrows the footer band, centred.
+        let html = render_standalone(":max-width: 60em\n\nx");
+        assert!(html.contains(r#"<footer id="footer" style="max-width: 60em;">"#));
+    }
+
+    #[test]
     fn built_in_roles_follow_asciidoctor_stylesheet() {
         // Ruby's text roles with its colours, defined after the components.
         let roles = STYLESHEET

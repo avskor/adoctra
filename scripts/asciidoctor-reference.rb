@@ -34,6 +34,17 @@ while (index = ARGV.index('--attribute'))
   name, value = ARGV.slice!(index, 2)[1].split('=', 2)
   options[:attributes] = (options[:attributes] || {}).merge(name => value || '')
 end
+# visual-v1 (scripts/visual.py): the complete standalone page of a fixture
+# file, keeping Ruby's own embedded stylesheet, in safe mode from the file's
+# directory; offline (no web fonts) and without the date-dependent footer.
+if ARGV.delete('--visual')
+  abort 'usage: ruby scripts/asciidoctor-reference.rb --visual [--attribute NAME=VALUE]... FILE' unless ARGV.length == 1
+  path = File.realpath(ARGV[0])
+  attributes = { 'reproducible' => '', 'webfonts!' => '' }.merge(options[:attributes] || {})
+  puts Asciidoctor.convert_file(path, safe: :safe, base_dir: File.dirname(path), to_file: false,
+                                      header_footer: true, attributes: attributes)
+  exit
+end
 if semantics
   require_relative 'asciidoctor-semantics'
   converter = SemanticConverter.new 'html5'

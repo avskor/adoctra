@@ -11,24 +11,69 @@
  * <aside> per admonition and lays it out like Ruby's label/content table.
  */
 
+/* Fonts, colours and sizes are those of Asciidoctor's default stylesheet
+   (checked with the visual-v1 profile, docs/visual.adoc). */
 :root {
-  --adoctra-font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --adoctra-mono: ui-monospace, "SFMono-Regular", "Cascadia Code", Menlo, Consolas, monospace;
-  --adoctra-fg: #1f2328;
+  --adoctra-font: "Noto Serif", "DejaVu Serif", serif;
+  --adoctra-heading-font: "Open Sans", "DejaVu Sans", sans-serif;
+  --adoctra-mono: "Droid Sans Mono", "DejaVu Sans Mono", monospace;
+  --adoctra-fg: rgb(0 0 0 / 0.8);
+  --adoctra-heading-fg: #ba3925;
+  --adoctra-title-fg: #7a2518;
+  --adoctra-code-fg: rgb(0 0 0 / 0.9);
+  --adoctra-link: #2156a5;
+  --adoctra-link-hover: #1d4b8f;
   --adoctra-bg: #ffffff;
-  --adoctra-code-bg: #f6f8fa;
+  --adoctra-code-bg: #f7f7f8;
   --adoctra-rule: #dddddf;
+  --adoctra-section-rule: #e7e7e9;
   --adoctra-sidebar-bg: #f8f8f7;
-  color-scheme: light dark;
+  color-scheme: light;
 }
 
+*, ::before, ::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
 body {
   font-family: var(--adoctra-font);
+  font-size: 100%;
   line-height: 1.6;
   color: var(--adoctra-fg);
   background: var(--adoctra-bg);
   margin: 0;
+  tab-size: 4;
+  overflow-wrap: anywhere;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+/* Ruby's rhythm: blocks carry only a bottom margin. */
+p {
+  margin: 0 0 1.25rem;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  letter-spacing: -0.01em;
+  text-rendering: optimizeLegibility;
+}
+dt, summary { font-size: 1.0625rem; text-rendering: optimizeLegibility; }
+summary { letter-spacing: -0.01em; }
+p strong, .admonition-content strong { letter-spacing: -0.005em; }
+.sidebarblock :is(p, dt), p.tableblock { font-size: 1em; }
+p.lead,
+#preamble > p:not([class]):first-child {
+  font-size: 1.21875em;
+  color: rgb(0 0 0 / 0.85);
+}
+a { color: var(--adoctra-link); text-decoration: underline; }
+a:hover, a:focus { color: var(--adoctra-link-hover); }
+hr {
+  block-size: 0;
+  border: solid var(--adoctra-rule);
+  border-width: 1px 0 0;
+  clear: both;
+  margin: 1.25em 0 1.1875em;
+}
+em em { font-style: normal; }
+strong strong { font-weight: 400; }
 
 /* --- Document header and footer -------------------------------------------
 
@@ -37,19 +82,24 @@ body {
    above a line of author/revision details, and the footer is a full-width
    dark band. */
 body > :is(#header, #content, #footnotes) {
-  box-sizing: border-box;
-  max-width: 46rem;
+  position: relative;
+  max-width: 62.5em;
   margin-inline: auto;
-  padding-inline: 1.25rem;
+  padding-inline: 0.9375em;
 }
-body > #header { padding-block-start: 2rem; }
-body > #content { padding-block: 1rem 2rem; }
-body > #footnotes { padding-block-end: 0.75em; margin-block-end: 0.625em; }
-#header > h1:first-child { margin-block: 0; }
+body > :is(#header, #content, #footnotes)::after { content: ""; display: table; clear: both; }
+body > #content { margin-block: 1.25em 0.625em; }
+@media screen and (min-width: 768px) {
+  body > #content { margin-block-end: 1.25em; }
+}
+#header > h1:first-child {
+  color: rgb(0 0 0 / 0.85);
+  margin-block: 2.25rem 0;
+}
 #header > h1:only-child,
 body.toc2 #header > h1:nth-last-child(2) {
   border-block-end: 1px solid var(--adoctra-rule);
-  padding-block-end: 0.5rem;
+  padding-block-end: 8px;
 }
 #header .details {
   display: flex;
@@ -57,21 +107,24 @@ body.toc2 #header > h1:nth-last-child(2) {
   padding: 0.25em 0 0.25em 0.25em;
   border-block-end: 1px solid var(--adoctra-rule);
   line-height: 1.45;
-  color: color-mix(in srgb, var(--adoctra-fg) 60%, transparent);
+  color: rgb(0 0 0 / 0.6);
 }
 #header .details span:first-child { margin-inline-start: -0.125em; }
-#header .details span.email a { color: color-mix(in srgb, var(--adoctra-fg) 85%, transparent); }
+#header .details span.email a { color: rgb(0 0 0 / 0.85); }
 #header .details br { display: none; }
 #header .details br + span::before { content: "\00a0\2013\00a0"; }
 #header .details br + span.author::before {
   content: "\00a0\22c5\00a0";
-  color: color-mix(in srgb, var(--adoctra-fg) 85%, transparent);
+  color: rgb(0 0 0 / 0.85);
 }
 #header .details br + span#revremark::before { content: "\00a0|\00a0"; }
 #header #revnumber { text-transform: capitalize; }
 #header #revnumber::after { content: "\00a0"; }
-#header > h1:first-child + #toc { margin-block-start: 0.5rem; }
+#header > h1:first-child + #toc { margin-block-start: 8px; }
+/* Full width unless `max-width` (an inline style) narrows it: then it is
+   centred like the column, as in Ruby. */
 body > #footer {
+  margin-inline: auto;
   padding: 1.25em;
   background: rgb(0 0 0 / 0.8);
 }
@@ -92,14 +145,17 @@ body > #footer {
     padding: 1.25em 1em;
     overflow: auto;
     border: 0;
-    border-inline-end: 1px solid var(--adoctra-rule);
+    border-inline-end: 1px solid var(--adoctra-section-rule);
     background: var(--adoctra-sidebar-bg);
   }
-  nav#toc.toc2 > ul { font-size: 0.9em; }
+  nav#toc.toc2 #toctitle { margin-block: 0 0.8rem; font-size: 1.2em; }
+  nav#toc.toc2 > ul { font-size: 0.9em; margin-block-end: 0; }
+  nav#toc.toc2 ul ul { margin-inline-start: 0; padding-inline-start: 1em; }
+  nav#toc.toc2 ul.sectlevel0 ul.sectlevel1 { padding-inline-start: 0; margin-block: 0.5em; }
   body.toc2.toc-right nav#toc.toc2 {
     inset-inline: auto 0;
     border-inline-end: 0;
-    border-inline-start: 1px solid var(--adoctra-rule);
+    border-inline-start: 1px solid var(--adoctra-section-rule);
   }
 }
 @media screen and (min-width: 1280px) {
@@ -109,10 +165,35 @@ body > #footer {
 }
 
 h1, h2, h3, h4, h5, h6 {
-  line-height: 1.25;
-  font-weight: 600;
-  margin-block: 1.5em 0.5em;
+  font-family: var(--adoctra-heading-font);
+  font-weight: 300;
+  font-style: normal;
+  line-height: 1.2;
+  word-spacing: -0.05em;
+  margin-block: 1em 0.5em;
+  text-rendering: optimizeLegibility;
 }
+h1, h2 { letter-spacing: -0.01em; }
+h1 { font-size: 2.125em; }
+h2 { font-size: 1.6875em; }
+h3 { font-size: 1.375em; }
+h4, h5 { font-size: 1.125em; }
+h6 { font-size: 1em; }
+@media screen and (min-width: 768px) {
+  h1 { font-size: 2.75em; }
+  h2 { font-size: 2.3125em; }
+  h3 { font-size: 1.6875em; }
+  h4 { font-size: 1.4375em; }
+}
+:is(h1, h2, h3, h4, h5, h6) strong { font-weight: 400; }
+
+/* Sections: Ruby's spacing and the rule between top-level sections. */
+section.sect1 { padding-block-end: 0.625em; }
+@media screen and (min-width: 768px) {
+  section.sect1 { padding-block-end: 1.25em; }
+}
+section.sect1:last-child { padding-block-end: 0; }
+section.sect1 + section.sect1 { border-block-start: 1px solid var(--adoctra-section-rule); }
 
 /* Like Ruby's stylesheet, a `sectanchors` anchor hangs before the title
    (a section sign shown on hover) and a `sectlinks` link keeps the title's
@@ -139,28 +220,54 @@ h1, h2, h3, h4, h5, h6 {
 :is(h1, h2, h3, h4, h5, h6) > a.link { color: inherit; text-decoration: none; }
 :is(h1, h2, h3, h4, h5, h6) > a.link:hover { color: color-mix(in srgb, currentColor 80%, transparent); }
 
-code { font-family: var(--adoctra-mono); font-size: 0.9em; }
+code { font-family: var(--adoctra-mono); font-weight: 400; }
+:not(pre):not([class^="L"]) > code {
+  font-size: 0.9375em;
+  font-style: normal !important;
+  letter-spacing: 0;
+  word-spacing: -0.15em;
+  padding: 0.1em 0.5ex;
+  border-radius: 4px;
+  background: var(--adoctra-code-bg);
+  line-height: 1.45;
+  text-rendering: optimizeSpeed;
+}
 
 /* Like Ruby's stylesheet, verbatim text wraps unless `nowrap` (`%nowrap` or
-   `:prewrap!:`) keeps its lines. */
+   `:prewrap!:`) keeps its lines. Listing and literal blocks get Ruby's box
+   and its viewport-dependent size; a highlighter theme paints its own
+   background. */
 pre {
+  margin: 0;
   font-family: var(--adoctra-mono);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  overflow-x: auto;
-  padding: 1rem;
-  border-radius: 8px;
-  background: var(--adoctra-code-bg);
   line-height: 1.45;
+  text-rendering: optimizeSpeed;
 }
-pre code { font-size: inherit; }
+pre code { color: inherit; font-size: inherit; line-height: inherit; }
+pre > code { display: block; }
+/* Ruby's margin is on the 16px wrapper, not the smaller `pre`. */
+pre:is(.listing, .literalblock, .highlight) {
+  margin-block-end: 1.25rem;
+  overflow-x: auto;
+  padding: 1em;
+  border-radius: 4px;
+  font-size: 0.8125rem;
+}
+@media screen and (min-width: 768px) {
+  pre:is(.listing, .literalblock, .highlight) { font-size: 0.90625rem; }
+}
+@media screen and (min-width: 1280px) {
+  pre:is(.listing, .literalblock, .highlight) { font-size: 1rem; }
+}
 pre.nowrap { white-space: pre; overflow-wrap: normal; }
 /* Client-side highlighters, like Ruby's stylesheet: a highlight.js theme
    paints the `code` (the padding moves there), prettify's theme border and
    narrow padding give way to the listing's. */
 pre.highlightjs { padding: 0; }
-pre.highlightjs > code { display: block; padding: 1rem; border-radius: 8px; }
-pre.prettyprint.highlight { padding: 1rem; border-width: 0; }
+pre.highlightjs > code { display: block; padding: 1em; border-radius: 4px; }
+pre.prettyprint.highlight { padding: 1em; border-width: 0; }
 pre.prettyprint .linenums { line-height: 1.45; margin: 0 0 1.25em 2em; padding: 0; }
 pre.prettyprint li { background: none; list-style-type: inherit; padding-inline-start: 0; }
 
@@ -168,37 +275,42 @@ pre.prettyprint li { background: none; list-style-type: inherit; padding-inline-
 
 /* --- Admonitions ---------------------------------------------------------- */
 
-/* Ruby's admonitionblock table: a centred label (or icon) column at least 80px
-   wide, as a table cell grows with its content, and a
-   content column behind a rule, both vertically centred in the row. The label
-   stretches to the row, so its rule spans the taller of the two. */
+/* Ruby's admonitionblock is a full-width table: an 80px label (or icon)
+   cell, which grows only to its longest word or icon, and the content cell
+   behind a rule, both vertically centred. The semantic <aside> keeps that
+   table layout through CSS, so the columns are sized exactly the same way. */
 aside.admonition {
-  display: flex;
-  align-items: center;
+  display: table;
+  inline-size: 100%;
+  border-collapse: separate;
+  overflow-wrap: normal;
   margin-block: 0 1.25em;
 }
+.admonition-title,
+.admonition-content {
+  display: table-cell;
+  vertical-align: middle;
+  line-height: 1.6;
+}
 .admonition-title {
-  box-sizing: border-box;
-  display: flex;
-  flex: none;
-  align-self: stretch;
-  align-items: center;
-  justify-content: center;
-  min-inline-size: 80px;
+  inline-size: 80px;
   margin: 0;
   padding: 0.5625em 0.625em;
-  border-inline-end: 1px solid var(--adoctra-rule);
+  font-family: var(--adoctra-heading-font);
+  font-size: 1rem;
+  letter-spacing: normal;
   font-weight: bold;
   text-align: center;
   text-transform: uppercase;
-  line-height: 1.6;
 }
 .admonition-title img { max-width: none; }
+/* Ruby's td.content: its text size and spacing reach the children too. */
 .admonition-content {
-  flex: auto;
-  min-inline-size: 0;
   padding: 0.5625em 1.25em 0.5625em 1.125em;
-  line-height: 1.6;
+  border-inline-start: 1px solid var(--adoctra-rule);
+  font-size: 1.0625rem;
+  letter-spacing: -0.01em;
+  text-rendering: optimizeLegibility;
   overflow-wrap: anywhere;
 }
 .admonition-content > :last-child,
@@ -284,8 +396,18 @@ details > :last-child { margin-block-end: 0; }
 .sidebarblock > :first-child { margin-block-start: 0; }
 .sidebarblock > :last-child { margin-block-end: 0; }
 .sidebarblock > .title {
-  font-size: 1.05em;
+  font-family: var(--adoctra-heading-font);
+  font-weight: 300;
+  font-style: normal;
+  font-size: 1.375em;
+  line-height: 1.2;
+  word-spacing: -0.05em;
+  margin-block: 0 0.5em;
+  color: var(--adoctra-title-fg);
   text-align: center;
+}
+@media screen and (min-width: 768px) {
+  .sidebarblock > .title { font-size: 1.6875em; }
 }
 
 /* --- Open blocks --------------------------------------------------------- */
@@ -343,23 +465,45 @@ details > :last-child { margin-block-end: 0; }
 
 /* --- Table of contents ---------------------------------------------------- */
 
-/* A `<nav>` of nested `sectlevelN` lists (automatic, preamble or `toc::[]`). */
-nav.toc,
-nav.toc2 {
-  margin-block: 1.25rem;
-  padding: 0.75rem 1rem;
-  border-inline-start: 3px solid var(--adoctra-border, #d0d7de);
-  background: color-mix(in srgb, var(--adoctra-fg) 3%, transparent);
+/* The `#toc` nav of nested `sectlevelN` lists, styled like Ruby's
+   `#toc`: a plain list under the header title, a box inside the content
+   (preamble or `toc::[]`), a sidebar with `toc2` (above). */
+#toc { border-block-end: 1px solid var(--adoctra-section-rule); padding-block-end: 0.5em; }
+#header > h1:first-child + #toc { border-block-start: 1px solid var(--adoctra-rule); }
+#toc > ul { margin-inline-start: 0.125em; }
+#toc ul {
+  font-family: var(--adoctra-heading-font);
+  list-style-type: none;
+  margin-block-end: 1.25em;
 }
-nav > #toctitle,
-nav > .title { margin-block: 0 0.5rem; font-weight: 600; }
-nav ul[class^="sectlevel"] {
-  margin: 0;
-  padding-inline-start: 1.25rem;
-  list-style: none;
+#toc ul ul { margin-inline-start: 1.25em; margin-block-end: 0; }
+#toc li { line-height: 1.3334; margin-block-start: 0.3334em; }
+#toc ul.sectlevel0 > li > a { font-style: italic; }
+#toc ul.sectlevel0 ul.sectlevel1 { margin: 0.5em 0; }
+#toc a { text-decoration: none; }
+#toc a:active { text-decoration: underline; }
+#toctitle {
+  font-family: var(--adoctra-heading-font);
+  font-weight: 300;
+  font-style: normal;
+  font-size: 1.2em;
+  line-height: 1.2;
+  word-spacing: -0.05em;
+  margin-block: 1em 0.5em;
+  color: var(--adoctra-title-fg);
 }
-nav > ul[class^="sectlevel"] { padding-inline-start: 0; }
-nav ul[class^="sectlevel"] a { text-decoration: none; }
+@media screen and (min-width: 768px) {
+  #toctitle { font-size: 1.375em; }
+}
+#content #toc {
+  border: 1px solid #e0e0dc;
+  margin-block-end: 1.25em;
+  padding: 1.25em;
+  background: var(--adoctra-sidebar-bg);
+  border-radius: 4px;
+}
+#content #toc > :first-child { margin-block-start: 0; }
+#content #toc > :last-child { margin-block-end: 0; }
 
 /* --- Images (`image::target[]`) ------------------------------------------ */
 
@@ -387,11 +531,17 @@ figure.videoblock.right { float: inline-end; margin-inline-start: 1.25rem; }
 
 /* --- Block titles (`.Title`) --------------------------------------------- */
 
+/* Ruby's block title: an italic serif line in its title colour. */
 .title {
-  margin-block: 0 0.4rem;
-  font-weight: 600;
-  font-size: 0.95em;
-  color: color-mix(in srgb, var(--adoctra-fg) 72%, transparent);
+  margin-block: 0 0.25em;
+  font-family: var(--adoctra-font);
+  font-size: 1rem;
+  font-style: italic;
+  font-weight: 400;
+  line-height: 1.45;
+  text-align: start;
+  color: var(--adoctra-title-fg);
+  text-rendering: optimizeLegibility;
 }
 
 /* --- Tables (`|===`) ----------------------------------------------------- */
@@ -435,20 +585,73 @@ table.stripes-hover tr:hover { background: color-mix(in srgb, var(--adoctra-fg) 
 
 /* --- Footnotes ----------------------------------------------------------- */
 
-sup.footnote, sup.footnoteref { font-size: 0.75em; line-height: 0; }
-sup:is(.footnote, .footnoteref) > a { text-decoration: none; }
-#footnotes { margin-block-start: 2rem; font-size: 0.9em; }
-#footnotes > hr {
+/* Ruby's footnote markers and list (also inside AsciiDoc table cells). */
+sup, sub { font-size: 75%; line-height: 0; position: relative; vertical-align: baseline; }
+sup { inset-block-start: -0.5em; }
+sub { inset-block-end: -0.25em; }
+sup.footnote, sup.footnoteref { font-size: 0.875em; position: static; vertical-align: super; }
+sup:is(.footnote, .footnoteref) a { text-decoration: none; }
+sup:is(.footnote, .footnoteref) a:active,
+#footnotes .footnote a:first-of-type:active { text-decoration: underline; }
+#footnotes { padding-block: 0.75em; margin-block-end: 0.625em; }
+#content #footnotes { margin-block: -0.625em 0; padding: 0.75em 0; }
+#footnotes hr {
   inline-size: 20%;
-  margin-inline: 0;
-  border: 0;
-  border-block-start: 1px solid color-mix(in srgb, var(--adoctra-fg) 25%, transparent);
+  min-inline-size: 6.25em;
+  margin: -0.25em 0 0.75em;
+  border-width: 1px 0 0;
 }
-#footnotes > .footnote { margin-block: 0.4rem; }
-#footnotes > .footnote > a:first-child { text-decoration: none; }
+#footnotes .footnote {
+  padding: 0 0.375em 0 0.225em;
+  line-height: 1.3334;
+  font-size: 0.875em;
+  margin-inline-start: 1.2em;
+  margin-block-end: 0.2em;
+  text-rendering: optimizeLegibility;
+}
+#footnotes .footnote strong { letter-spacing: -0.005em; }
+#footnotes .footnote a:first-of-type {
+  font-weight: bold;
+  text-decoration: none;
+  margin-inline-start: -1.05em;
+}
+#footnotes .footnote:last-of-type { margin-block-end: 0; }
 
 /* --- Lists ----------------------------------------------------------------- */
 
+/* Ruby's lists indent with a margin (no padding). Its item text is a <p>
+   (17px, a 0.625em gap); adoctra's is the item's own text, so the item gets
+   that size and its block children return to the 16px base. */
+ul, ol, dl {
+  margin: 0 0 1.25em;
+  padding: 0;
+  line-height: 1.6;
+  list-style-position: outside;
+}
+ul, ol { margin-inline-start: 1.5em; }
+ol { margin-inline-start: 1.75em; }
+li :is(ul, ol) { margin-inline-start: 1.25em; margin-block-end: 0.625em; }
+ul li ol { margin-inline-start: 1.5em; }
+:is(ul, ol):not([class^="sectlevel"]) > li {
+  font-size: 1.0625rem;
+  letter-spacing: -0.01em;
+  margin-block-end: 0.625em;
+}
+:is(ul, ol):not([class^="sectlevel"]) > li::marker { font-size: 1rem; letter-spacing: normal; }
+:is(ul, ol):not([class^="sectlevel"]) > li > :not(p) { font-size: 1rem; letter-spacing: normal; }
+:is(ul, ol):not([class^="sectlevel"]) > li > :first-child { margin-block-start: 0.6640625rem; }
+:is(ul, ol):not([class^="sectlevel"]) > li > :last-child { margin-block-end: 0; }
+li p { margin-block-end: 0.625em; }
+ul.circle { list-style-type: circle; }
+ul.disc { list-style-type: disc; }
+ul.square { list-style-type: square; }
+ol.arabic { list-style-type: decimal; }
+ol.decimal { list-style-type: decimal-leading-zero; }
+ol.loweralpha { list-style-type: lower-alpha; }
+ol.upperalpha { list-style-type: upper-alpha; }
+ol.lowerroman { list-style-type: lower-roman; }
+ol.upperroman { list-style-type: upper-roman; }
+ol.lowergreek { list-style-type: lower-greek; }
 ul.checklist { list-style: none; padding-inline-start: 1.25rem; }
 dl { margin-block: 1rem; }
 dl > dt { font-weight: 600; }
@@ -542,10 +745,12 @@ b.button::after { content: "]"; padding-inline: 3px 2px; }
    text; a role on the inner element itself still applies. adoctra puts block
    roles on the element, so these keep the content colour (and the verbatim
    background) with a higher specificity than a role. */
-h1, h2, h3, h4, h5, h6, code { color: var(--adoctra-fg); }
+h1, h2, h3, h4, h5, h6 { color: var(--adoctra-heading-fg); }
+#header > h1:first-child { color: rgb(0 0 0 / 0.85); }
+code, pre { color: var(--adoctra-code-fg); }
 pre code { color: inherit; }
-pre:is(.listing, .literalblock, .highlight) {
-  color: var(--adoctra-fg);
+pre:is(.listing, .literalblock, .highlight) { color: var(--adoctra-code-fg); }
+pre:is(.listing, .literalblock, .highlight:is([class="highlight"], [class^="highlight "])) {
   background: var(--adoctra-code-bg);
 }
 aside.admonition > .admonition-title { color: var(--adoctra-fg); }

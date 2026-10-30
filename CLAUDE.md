@@ -134,8 +134,17 @@ later".
 DOCX or new extension APIs.** Follow the compatibility-first queue in
 `docs/implementation-plan.adoc` and the open-gap register at the start of
 `docs/compatibility.adoc`. Passing the existing normalized corpus is not proof
-of full compatibility. Exact HTML, CLI behavior, diagnostics, resource loading
-and untested language combinations must remain visible in the audit. Historical
+of full compatibility. HTML keeps modern semantic markup by design; byte-exact
+Ruby HTML is not a goal, maximal visual parity with Ruby's rendering is. The
+`visual-v1` profile (`scripts/visual.py`, docs/visual.adoc) measures it: words
+with computed style/geometry plus pixels, Chrome via pinned playwright-core,
+local environment-bound baseline `compatibility/visual/report.json`. adoctra.css
+now carries Ruby's base typography and column (fonts, colours, sizes, lists,
+TOC, admonition as a CSS table): 355 of 498 observations match; block styles
+(example, sidebar, quote/verse, dl, tables, images) are the next step.
+Re-record only after reviewing an IMPROVED diff; never loosen tolerances. Visual parity, CLI behavior,
+diagnostics, resource loading and untested language combinations must remain
+visible in the audit. Historical
 exceptions (including Rouge) are limitations of any compatibility claim, not
 completed requirements. Ruby API/extension execution remains outside the
 existing document-processing contract; do not describe that scoped contract
