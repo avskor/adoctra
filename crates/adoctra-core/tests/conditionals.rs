@@ -509,3 +509,61 @@ fn ifeval_incomplete_and_deep_input_is_safe_for_the_editor() {
         "yes"
     );
 }
+
+#[test]
+fn malformed_directive_reports_spell_rubys_messages() {
+    // Editor messages stay short; the conversion report (the CLI's default
+    // output) is Ruby's reader message verbatim, with the lowercased target
+    // and the bracket text.
+    for (source, ruby) in [
+        (
+            "ifdef::On[]\nx\nendif::[complete!]\nendif::[]",
+            "malformed preprocessor directive - text not permitted: endif::[complete!]",
+        ),
+        (
+            "ifdef::on-quest[]\nx\nendif::On-Journey[]\nendif::[]",
+            "mismatched preprocessor directive: endif::on-journey[], expected endif::on-quest[]",
+        ),
+        (
+            "ifeval::Target[1 == 1]",
+            "malformed preprocessor directive - target not permitted: ifeval::target[1 == 1]",
+        ),
+        (
+            "ifeval::[]",
+            "malformed preprocessor directive - missing expression: ifeval::[]",
+        ),
+        (
+            "ifeval::[1 | 2]",
+            "malformed preprocessor directive - invalid expression: ifeval::[1 | 2]",
+        ),
+        (
+            "ifdef::[]",
+            "malformed preprocessor directive - missing target: ifdef::[]",
+        ),
+        (
+            "ifndef::[text]",
+            "malformed preprocessor directive - missing target: ifndef::[text]",
+        ),
+    ] {
+        let result = parse_with_options(source, &ParseOptions::default());
+        let reports: Vec<_> = result
+            .diagnostics
+            .iter()
+            .filter_map(|d| d.report.message.as_deref())
+            .collect();
+        assert_eq!(reports, [ruby], "{source}: {:?}", result.diagnostics);
+    }
+    // An unterminated comment block warns with Ruby's message.
+    let result = parse_with_options("a\n\n////\nhidden", &ParseOptions::default());
+    let [diagnostic] = result.diagnostics.as_slice() else {
+        panic!("{:?}", result.diagnostics);
+    };
+    assert_eq!(
+        diagnostic.report.message.as_deref(),
+        Some("unterminated comment block")
+    );
+    assert_eq!(
+        diagnostic.report.severity,
+        Some(adoctra_core::Severity::Warning)
+    );
+}

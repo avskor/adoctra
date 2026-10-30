@@ -150,15 +150,15 @@ UNSUPPORTED — записи, которые контракт CLI не выра�
 |Файл |PASS |DIFF |UNSUPPORTED
 |substitutions_test.rb |364 |2 |28
 |lists_test.rb |279 |11 |19
-|blocks_test.rb |242 |6 |54
+|blocks_test.rb |244 |4 |54
 |sections_test.rb |190 |16 |12
-|attributes_test.rb |185 |8 |8
+|attributes_test.rb |186 |7 |8
 |links_test.rb |175 |0 |15
 |tables_test.rb |116 |1 |20
 |document_test.rb |99 |3 |80
 |text_test.rb |84 |0 |2
 |api_test.rb |62 |0 |48
-|reader_test.rb |62 |13 |81
+|reader_test.rb |68 |7 |81
 |extensions_test.rb |57 |0 |13
 |paragraphs_test.rb |50 |0 |4
 |syntax_highlighter_test.rb |37 |26 |2
@@ -166,10 +166,10 @@ UNSUPPORTED — записи, которые контракт CLI не выра�
 |preamble_test.rb |7 |0 |6
 |parser_test.rb, attribute_list_test.rb, logger_test.rb |6 |0 |4
 |manpage_test.rb, paths_test.rb |0 |0 |78
-|Итого |2024 |86 |511
+|Итого |2033 |77 |511
 |===
 
-2024 из 2110 сравнимых записей (95.9%) совпадают в этом профиле. Это доля
+2033 из 2110 сравнимых записей (96.4%) совпадают в этом профиле. Это доля
 наблюдаемых входов тестового набора, а не процент совместимости языка.
 
 `doctype=inline` реализован (HTML-бэкенд, как `Document#convert` Ruby):
@@ -183,14 +183,20 @@ verse или простого содержимого стилизованног�
 Из 41 записи с `doctype=inline` расходится одна (переименование `language`
 в compat-mode — другая функция).
 
-Оставшиеся 86 расхождений по причинам:
+Предупреждения условных директив и незакрытого блока комментария теперь
+выдаются в отчёте конвертации (вывод CLI по умолчанию) дословно как у Ruby:
+«malformed preprocessor directive - text not permitted / missing target /
+target not permitted / missing expression / invalid expression: <директива>»,
+«mismatched preprocessor directive: endif::<цель>[], expected endif::<цель>[]»
+(цель в нижнем регистре, текст в скобках как есть) и «unterminated comment
+block». Короткие сообщения для редактора (`Diagnostic.message`) не изменились.
+
+Оставшиеся 77 расхождений по причинам:
 
 * *Серверная подсветка* (26): эталон без gem `rouge` предупреждает
   «optional gem 'rouge' is not available» и выводит `<pre class="rouge
   highlight">`; adoctra так поступает для CodeRay/Pygments, но не для Rouge.
   Способ работы с Rouge — отдельное решение (см. реестр расхождений).
-* *Предупреждения* (9): незакрытые комментарии, несогласованный `endif`,
-  ошибочные `ifeval`/`ifdef` без цели.
 * *Пограничные случаи include* (9): цели с пробелами, `skip-front-matter`,
   ссылки вместо удалённого include в secure mode.
 * *Якоря* (7): якоря внутри заголовков разделов, пустой reftext.

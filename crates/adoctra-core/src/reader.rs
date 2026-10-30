@@ -660,6 +660,20 @@ impl<'a> Reader<'a> {
         });
     }
 
+    /// An error whose conversion report spells Ruby's message verbatim.
+    fn error_reported(&mut self, span: Span, message: String, ruby: String) {
+        self.diagnostics.push(Diagnostic {
+            omitted_span: None,
+            report: crate::DiagnosticReport {
+                message: Some(ruby),
+                ..Default::default()
+            },
+            span,
+            severity: Severity::Error,
+            message,
+        });
+    }
+
     fn process(
         &mut self,
         off: usize,
@@ -707,19 +721,23 @@ impl<'a> Reader<'a> {
         if keyword == "endif" {
             self.directives.push(span);
             if !text.is_empty() {
-                self.error(
+                self.error_reported(
                     span,
                     "malformed endif directive: text is not permitted".into(),
+                    format!(
+                        "malformed preprocessor directive - text not permitted: endif::{target}[{text}]"
+                    ),
                 );
             } else if let Some(open) = self.stack.last() {
                 if target.is_empty() || target == open.target {
                     self.stack.pop();
                 } else {
-                    self.error(
+                    let expected = open.target.clone();
+                    self.error_reported(
                         span,
+                        format!("mismatched endif::{target}[]; expected endif::{expected}[]"),
                         format!(
-                            "mismatched endif::{target}[]; expected endif::{}[]",
-                            open.target
+                            "mismatched preprocessor directive: endif::{target}[], expected endif::{expected}[]"
                         ),
                     );
                 }
@@ -745,9 +763,12 @@ impl<'a> Reader<'a> {
                 // Skipped branches still balance every ifeval, even malformed ones.
                 false
             } else if !target.is_empty() {
-                self.error(
+                self.error_reported(
                     span,
                     "malformed ifeval directive: target is not permitted".into(),
+                    format!(
+                        "malformed preprocessor directive - target not permitted: ifeval::{target}[{text}]"
+                    ),
                 );
                 return None;
             } else if let Some(include) = {
@@ -762,15 +783,16 @@ impl<'a> Reader<'a> {
             } {
                 include
             } else {
-                self.error(
+                let problem = if text.is_empty() {
+                    "missing"
+                } else {
+                    "invalid"
+                };
+                self.error_reported(
                     span,
+                    format!("malformed ifeval directive: {problem} expression"),
                     format!(
-                        "malformed ifeval directive: {} expression",
-                        if text.is_empty() {
-                            "missing"
-                        } else {
-                            "invalid"
-                        }
+                        "malformed preprocessor directive - {problem} expression: ifeval::[{text}]"
                     ),
                 );
                 return None;
@@ -784,9 +806,10 @@ impl<'a> Reader<'a> {
         }
         if target.is_empty() && active {
             self.directives.push(span);
-            self.error(
+            self.error_reported(
                 span,
                 format!("malformed {keyword} directive: missing target"),
+                format!("malformed preprocessor directive - missing target: {keyword}::[{text}]"),
             );
             return None;
         }

@@ -64,7 +64,7 @@ pub(crate) fn consume_delimited_comment(
     if !closed {
         context.comment_diagnostics.push(Diagnostic {
             omitted_span: None,
-            report: Default::default(),
+            report: crate::DiagnosticReport::unterminated("comment"),
             span: Span::new(start, start + fence.len()),
             severity: Severity::Warning,
             message: format!("unterminated comment block (missing closing `{fence}`)"),

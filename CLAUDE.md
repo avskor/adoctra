@@ -218,9 +218,11 @@ Supported entries (recorded options mapped to `-S`/`-s`/`-a`) are compared in
 body-dom-v1 plus warnings against pinned Ruby without optional highlighter
 gems; others are UNSUPPORTED with a reason. The reference mimics one Ruby CLI
 run per document (output chomped + LF, highlighter library status reset).
-2024 PASS / 86 DIFF / 511 UNSUPPORTED of 2621; CI freezes every status.
-Clusters (Rouge, warnings, include edges, title anchors, ATX titles) are the
-queue; `--show ID` prints both sides.
+2033 PASS / 77 DIFF / 511 UNSUPPORTED of 2621; CI freezes every status.
+Clusters (Rouge, include edges, title anchors, ATX titles) are the queue;
+`--show ID` prints both sides. Malformed/mismatched conditional directives
+and an unterminated comment block keep short editor messages and put Ruby's
+reader message verbatim in `report.message` (Reader::error_reported).
 **Inline doctype**: HtmlBackend renders `doctype=inline` like Ruby's
 `Document#convert` (render_inline_doctype): only the first block's content
 (paragraph, verbatim/raw/STEM, verse or a styled paragraph's simple content),
