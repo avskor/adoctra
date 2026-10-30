@@ -218,7 +218,9 @@ Supported entries (recorded options mapped to `-S`/`-s`/`-a`) are compared in
 body-dom-v1 plus warnings against pinned Ruby without optional highlighter
 gems; others are UNSUPPORTED with a reason. The reference mimics one Ruby CLI
 run per document (output chomped + LF, highlighter library status reset).
-2055 PASS / 55 DIFF / 511 UNSUPPORTED of 2621; CI freezes every status.
+2060 PASS / 50 DIFF / 511 UNSUPPORTED of 2621; CI freezes every status.
+The body-dom-v1 projection maps Ruby's icon colist table and adoctra's
+`ol.colist.icons` (span.colist-icon + div) to ol > li > colist-icon/-text.
 Rouge (26) and single cases are the queue;
 `--show ID` prints both sides. Malformed/mismatched conditional directives
 and an unterminated comment block keep short editor messages and put Ruby's

@@ -155,6 +155,23 @@ class ProjectionTests(unittest.TestCase):
         self.assertEqual(projection(ruby), projection(ours))
         self.assertNotEqual(projection(ours), projection(ours.replace(' r"', '"')))
 
+    def test_callout_list_with_icons_is_ruby_layout_table(self):
+        ruby = ('<div id="c" class="colist arabic r"><table><tr><td><i class="conum" data-value="1"></i>'
+                '<b>1</b></td><td>Describe <strong>it</strong></td></tr><tr><td><img src="2.png" alt="2">'
+                '</td><td>Two</td></tr></table></div>')
+        ours = ('<ol id="c" class="colist arabic icons r"><li><span class="colist-icon"><i class="conum" '
+                'data-value="1"></i><b>1</b></span><div>Describe <strong>it</strong></div></li><li>'
+                '<span class="colist-icon"><img src="2.png" alt="2"></span><div>Two</div></li></ol>')
+        self.assertEqual(projection(ruby), projection(ours))
+        # Icons, text, item count and roles stay significant.
+        for changed in [ours.replace('alt="2"', 'alt="3"'), ours.replace('>Two<', '>Too<'),
+                        ours.replace(' r"', '"'), ours.split('<li><span class="colist-icon"><img')[0] + '</ol>']:
+            self.assertNotEqual(projection(changed), projection(ruby))
+        # An icon is not text: the parts keep their roles.
+        swapped = ours.replace('<span class="colist-icon"><img src="2.png" alt="2"></span><div>Two</div>',
+                               '<span class="colist-icon">Two</span><div><img src="2.png" alt="2"></div>')
+        self.assertNotEqual(projection(swapped), projection(ruby))
+
     def test_horizontal_description_list_is_ruby_layout_table(self):
         ruby = ('<div class="hdlist r"><table><colgroup><col style="width: 20%;"></colgroup><tr>'
                 '<td class="hdlist1 strong">A<br>B</td><td class="hdlist2"><p>x</p></td></tr></table></div>')

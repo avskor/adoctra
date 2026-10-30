@@ -117,6 +117,44 @@ def hdlist(node):
     return Element("dl", attrs, items)
 
 
+def colist_table(node):
+    """Ruby's callout list with icons is a layout table in div.colist: each
+    row is an item, its first cell the icon, the second the text. Project it
+    to the shared ol > li > (colist-icon, colist-text) form."""
+    items = []
+    for table in (c for c in node.children if isinstance(c, Element) and c.tag == "table"):
+        rows = [r for c in table.children if isinstance(c, Element)
+                for r in ([c] if c.tag == "tr" else c.children) if isinstance(r, Element) and r.tag == "tr"]
+        for row in rows:
+            cells = [c for c in row.children if isinstance(c, Element) and c.tag == "td"]
+            if len(cells) != 2:
+                return node
+            items.append(Element("li", {}, [Element("colist-icon", {}, cells[0].children),
+                                            Element("colist-text", {}, cells[1].children)]))
+    return Element("ol", node.attrs, items)
+
+
+def colist_icons(node):
+    """adoctra's callout list with icons: each item's icon <span> and text
+    <div> (laid out like Ruby's table by the stylesheet) in the shared form."""
+    attrs = dict(node.attrs)
+    attrs["class"] = " ".join(c for c in attrs["class"].split() if c != "icons")
+    items = []
+    for item in node.children:
+        if isinstance(item, Element) and item.tag == "li":
+            parts = []
+            for child in item.children:
+                if isinstance(child, Element) and child.tag == "span" and child.attrs == {"class": "colist-icon"}:
+                    parts.append(Element("colist-icon", {}, child.children))
+                elif isinstance(child, Element) and child.tag == "div" and not child.attrs:
+                    parts.append(Element("colist-text", {}, child.children))
+                else:
+                    parts.append(child)
+            item = Element("li", item.attrs, parts)
+        items.append(item)
+    return Element("ol", attrs, items)
+
+
 def admonition(node):
     """Ruby's admonitionblock table and adoctra's <aside class="admonition">
     project to one admonition node: type, id, roles, label, then the body."""
@@ -200,6 +238,11 @@ def normalize(node, verbatim=False, block_kind=None):
     if node.tag == "iframe" and node.attrs.get("frameborder") == "0":
         # Ruby's obsolete frameborder="0" is adoctra's stylesheet border.
         node = Element("iframe", {k: v for k, v in node.attrs.items() if k != "frameborder"}, node.children)
+    if node.tag == "div" and "colist" in node.attrs.get("class", "").split() \
+            and any(isinstance(c, Element) and c.tag == "table" for c in node.children):
+        node = colist_table(node)
+    if node.tag == "ol" and {"colist", "icons"} <= set(node.attrs.get("class", "").split()):
+        node = colist_icons(node)
     if node.tag == "ol" and "colist" in node.attrs.get("class", "").split():
         # adoctra's callout list is Ruby's ordered list inside div.colist.
         attrs = dict(node.attrs)
