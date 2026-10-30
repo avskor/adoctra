@@ -4,6 +4,8 @@
 version = File.read(File.expand_path('../compatibility/asciidoctor-version', __dir__)).strip
 gem 'asciidoctor', version
 require 'asciidoctor'
+# The rouge source highlighter loads the pinned Rouge (adoctra ports it).
+gem 'rouge', File.read(File.expand_path('../compatibility/rouge-version', __dir__)).strip
 
 report = ARGV.delete('--report')
 structure = ARGV.delete('--structure')

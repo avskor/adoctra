@@ -12238,7 +12238,7 @@ static LEXER_CEYLON: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["ceylon: state comment: undefined method `Multiline' for class #<Class:0x000073b094ca10f8>"],
+    missing: &["ceylon: state comment: undefined method `Multiline' for class #<Class:0x00007e1525171048>"],
 };
 
 static LEXER_CFSCRIPT: LexerDef = LexerDef {
@@ -21326,10 +21326,10 @@ static LEXER_PLAINTEXT: LexerDef = LexerDef {
     states: &[
     ],
     start: &[],
-    init: None,
+    init: Some(crate::lexers::plain_text::init),
     reset: None,
-    stream: None,
-    missing: &["plain_text.rs (initialize)", "plain_text.rs (stream_tokens)"],
+    stream: Some(crate::lexers::plain_text::stream),
+    missing: &[],
 };
 
 static LEXER_PLIST: LexerDef = LexerDef {

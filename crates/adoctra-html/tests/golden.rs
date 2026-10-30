@@ -1682,3 +1682,89 @@ fn html_svg_images_match_asciidoctor() {
         "HTML SVG images diverge from asciidoctor"
     );
 }
+
+/// The rouge theme in the head: a `<style>` or `<link>` naming `pre.rouge`
+/// or `rouge-*.css` (the shell comparison drops the first `<style>`).
+fn rouge_head(html: &str) -> Vec<String> {
+    let head = &html[..html.find("</head>").unwrap_or(html.len())];
+    let mut found = Vec::new();
+    let mut rest = head;
+    while let Some(start) = rest.find("<style>\n") {
+        let end = rest[start..].find("</style>\n").unwrap() + start + "</style>\n".len();
+        if rest[start..end].contains("pre.rouge") {
+            found.push(rest[start..end].to_owned());
+        }
+        rest = &rest[end..];
+    }
+    found.extend(
+        head.lines()
+            .filter(|line| line.starts_with("<link") && line.contains("rouge-"))
+            .map(str::to_owned),
+    );
+    found
+}
+
+/// Every rouge listing, from its `<pre>` to the end of its `<code>`.
+fn rouge_listings(html: &str) -> Vec<String> {
+    let mut listings = Vec::new();
+    let mut rest = html;
+    while let Some(start) = rest.find("<pre class=\"rouge") {
+        rest = &rest[start..];
+        let end = rest.find("</code></pre>").unwrap() + "</code></pre>".len();
+        listings.push(rest[..end].to_owned());
+        rest = &rest[end..];
+    }
+    listings
+}
+
+/// Ruby's rouge adapter with the pinned Rouge: highlighted listings (CSS
+/// classes or inline styles, line numbers, emphasized lines, callouts) and
+/// the theme stylesheet in the head, standalone in safe mode.
+#[test]
+fn html_rouge_listings_match_asciidoctor() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/rouge");
+    let mut checked = 0usize;
+    for entry in fs::read_dir(&dir).expect("golden/rouge dir is missing") {
+        let path = entry.unwrap().path();
+        if path.extension().and_then(|e| e.to_str()) != Some("adoc") {
+            continue;
+        }
+        let name = path.file_stem().unwrap().to_string_lossy().into_owned();
+        let source = fs::read_to_string(&path).unwrap();
+        let expected = fs::read_to_string(path.with_extension("expected.html")).unwrap();
+        let ours = String::from_utf8(
+            HtmlBackend::new()
+                .convert(&adoctra_core::parse(&source).document)
+                .unwrap(),
+        )
+        .unwrap();
+        // The reference drops Ruby's own stylesheet link like this one.
+        let without_theme = |html: &str| {
+            rouge_head(html)
+                .iter()
+                .fold(html.to_owned(), |html, theme| {
+                    html.replacen(theme.as_str(), "", 1)
+                })
+                .replace("<link rel=\"stylesheet\" href=\"css/adoctra.css\">\n", "")
+        };
+        assert_eq!(
+            document_shell(&without_theme(&ours)),
+            document_shell(&without_theme(&expected)),
+            "document shell diverges from asciidoctor for `{name}`"
+        );
+        assert_eq!(
+            rouge_head(&ours),
+            rouge_head(&expected),
+            "rouge theme diverges from asciidoctor for `{name}`"
+        );
+        let listings = rouge_listings(&expected);
+        assert!(!listings.is_empty(), "`{name}` has no rouge listing");
+        assert_eq!(
+            rouge_listings(&ours),
+            listings,
+            "rouge listings diverge from asciidoctor for `{name}`"
+        );
+        checked += 1;
+    }
+    assert!(checked > 0, "no golden fixtures found in {dir:?}");
+}

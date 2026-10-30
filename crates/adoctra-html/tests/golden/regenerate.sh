@@ -39,6 +39,12 @@ for adoc in highlight/*.adoc; do
   ruby "$reference" --standalone --safe <"$adoc" >"${adoc%.adoc}.expected.html"
   echo "  ${adoc%.adoc}.expected.html"
 done
+# Server-side rouge listings under rouge/, standalone in safe mode with the
+# pinned Rouge (compatibility/rouge-version).
+for adoc in rouge/*.adoc; do
+  ruby "$reference" --standalone --safe <"$adoc" >"${adoc%.adoc}.expected.html"
+  echo "  ${adoc%.adoc}.expected.html"
+done
 # Admonition icons under admonition_icons/, in safe mode (secure mode locks
 # icons).
 for adoc in admonition_icons/*.adoc; do

@@ -7,12 +7,15 @@
 # Usage: ruby scripts/upstream-audit-reference.rb ENTRIES.json
 require 'json'
 
-# The reference environment has no optional server-side highlighter gems
+# The reference environment has the pinned Rouge (compatibility/rouge-version,
+# which adoctra ports) but no other optional server-side highlighter gems
 # (like the golden references and CI), whatever this machine has installed:
 # Asciidoctor then logs that the gem is unavailable, as it would there (a
 # missing gem's LoadError names its path, so the message has no reason).
+gem 'rouge', File.read(File.expand_path('../compatibility/rouge-version', __dir__)).strip
+
 module UnavailableHighlighters
-  NAMES = %w(rouge coderay pygments pygments.rb).freeze
+  NAMES = %w(coderay pygments pygments.rb).freeze
 
   def require name
     if NAMES.include?(feature = name.to_s.split('/').first)

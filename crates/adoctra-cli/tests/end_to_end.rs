@@ -1257,3 +1257,53 @@ fn stdin_reads_relative_to_the_base_directory_like_ruby() {
     assert!(html.contains("<p>from the base</p>"), "{html}");
     std::fs::remove_dir_all(&root).unwrap();
 }
+
+/// Like Ruby's `copycss` step, the rouge theme of class-mode listings is
+/// written into `stylesdir` next to the output, beside adoctra's stylesheet.
+#[test]
+fn cli_copies_the_rouge_stylesheet_with_linkcss_and_copycss() {
+    use std::process::Command;
+    let root = std::env::temp_dir().join(format!("adoctra-cli-rouge-{}", std::process::id()));
+    std::fs::create_dir_all(&root).unwrap();
+    let source = root.join("doc.adoc");
+    std::fs::write(
+        &source,
+        "= Doc\n:source-highlighter: rouge\n:rouge-style: monokai\n\n[source,java]\n----\nclass A {}\n----\n",
+    )
+    .unwrap();
+    let out = root.join("out/doc.html");
+    let run = |extra: &[&str]| {
+        let _ = std::fs::remove_dir_all(root.join("out"));
+        let output = Command::new(env!("CARGO_BIN_EXE_adoctra"))
+            .arg(&source)
+            .args([
+                "-a",
+                "linkcss",
+                "-a",
+                "stylesdir=css",
+                "-o",
+                out.to_str().unwrap(),
+            ])
+            .args(extra)
+            .output()
+            .unwrap();
+        assert!(output.status.success());
+        std::fs::read_to_string(&out).unwrap()
+    };
+    let html = run(&[]);
+    assert!(
+        html.contains("<link rel=\"stylesheet\" href=\"css/rouge-monokai.css\">"),
+        "{html}"
+    );
+    assert!(html.contains("<span class=\"kd\">class</span>"), "{html}");
+    let css = std::fs::read_to_string(root.join("out/css/rouge-monokai.css")).unwrap();
+    assert!(
+        css.starts_with("pre.rouge table td { padding: 5px; }"),
+        "{css}"
+    );
+    // Inline styles need no stylesheet.
+    run(&["-a", "rouge-css=style"]);
+    assert!(!root.join("out/css/rouge-monokai.css").exists());
+    assert!(root.join("out/css/adoctra.css").exists());
+    std::fs::remove_dir_all(root).unwrap();
+}

@@ -3481,12 +3481,16 @@ regexp (`=~`, `===`), `state?`/`in_state?`, сравнений и `case`. Рук
 лексеров; корпус `lexer_corpus.txt` (полные демо Rouge) сверяет их потоки
 токенов с Ruby — все 86 совпадают.
 
-*Следующее изменение:* адаптер Asciidoctor в HTML-backend (`rouge highlight`,
-`rouge-css` class/inline, `rouge-style`, docinfo со stylesheet, linenums,
-`highlight`, callouts, `?`-опции и php `start_inline`, fallback plaintext);
-upstream-аудит переключается на настоящий Rouge 4.7.0 в эталоне, лексеры без
-полного порта дают явные DIFF. Затем ручной перенос оставшихся 142 лексеров
-и расширение транслятора.
+Третий набор Rouge: адаптер Asciidoctor (`adoctra-html/src/rouge.rs`, см.
+«Подсветка исходного кода» в контракте), ручной порт plaintext (fallback
+адаптера), запись темы CLI при `linkcss`+`copycss`, golden `golden/rouge/`.
+Эталон upstream-аудита загружает закреплённый Rouge 4.7.0 (CI ставит gem):
+2258 PASS / 25 DIFF / 1 RUBY_ERROR / 337 UNSUPPORTED; 23 DIFF — лексеры ruby,
+php, html, console.
+
+*Следующее изменение:* ручной перенос оставшихся 141 лексера (сначала ruby,
+console/shell, html, php, yaml, python, c/cpp) и расширение транслятора;
+стадия `highlight` внутри конвейера подстановок ядра для собственных `subs`.
 Каждое исправление переводит записи в PASS с перезаписью baseline.
 Непроверенные сочетания encoding/BOM/selection и исключения Ruby остаются явно
 ограниченной областью; эта матрица не является доказательством полной совместимости.

@@ -78,18 +78,21 @@ stderr, порядка/текста/места сообщений, exit status �
 |Серверная подсветка
 |Rouge 4.7.0 переносится целиком в `adoctra-highlight` (решение от
 2026-10-31); готовы regex-движок Onigmo (все 5913 regex правил Rouge
-совпадают с Ruby), runtime лексеров, темы, форматтеры и 86 из 228 лексеров
-(потоки токенов на демо совпадают с Ruby). Адаптер в HTML ещё не подключён.
+совпадают с Ruby), runtime лексеров, темы, форматтеры, адаптер в HTML и 87 из
+228 лексеров (потоки токенов на демо совпадают с Ruby); непортированный
+лексер даёт plaintext. Собственные `subs` со `specialcharacters` Ruby
+подсвечивает внутри конвейера подстановок — не перенесено.
 coderay/pygments проверены как отсутствующие в эталонном окружении.
 |Закрепить конфигурации зависимостей и определить способ воспроизведения
 результата. Пока различия остаются, совместимость таких конфигураций не заявляется.
 |Язык, атрибуты и структура
 |Дифференциальный аудит всех входов тестового набора Asciidoctor
-(link:upstream-tests.adoc[]): 2256 PASS, 27 DIFF, 1 RUBY_ERROR, 337 UNSUPPORTED
+(link:upstream-tests.adoc[]): 2258 PASS, 25 DIFF, 1 RUBY_ERROR, 337 UNSUPPORTED
 из 2621; фикстуры upstream завендорены, `base_dir` поддержан.
 `doctype=inline`, тексты предупреждений условий/комментариев, грамматика
 include, `skip-front-matter`, заголовки ATX/Markdown и блочные якоря как у
-Ruby, единичные расхождения исправлены. Остаются Rouge без gem (26) и
+Ruby, единичные расхождения исправлены. Остаются непортированные лексеры
+Rouge (23), `source-language` при compat-mode (1) и
 неполный встраиваемый SVG, не проецируемый ни на одной стороне (1).
 Семантический профиль не сравнивает ряд полей, опций и видов содержимого.
 |Сопоставить категории upstream-тестов с проверками, расширять независимые
@@ -1580,14 +1583,23 @@ python3 scripts/audit_uri_cache.py --assets --baseline compatibility/uri-cache/a
 окружении эталона, где их gem нет: предупреждение Ruby (`optional gem … is not
 available…`, один раз при первом листинге source) и `<pre class="CodeRay
 highlight">`/`<pre class="pygments highlight">` без подсветки и docinfo.
-rouge (в эталоне 4.7.0) раскрашивает код при конвертации; adoctra пока
-выдаёт обычный листинг `highlight` (известное расхождение, без XFAIL в
-корпусе). Перенос идёт в std-only крейт `adoctra-highlight`: собственный
-regex-движок Onigmo (корпус соответствия — все 5913 regex правил Rouge на
-демо их лексеров, отпечатки совпадают с Ruby), затем runtime лексеров,
-сгенерированные из Rouge правила и вручную перенесённые блоки, HTML-форматтер,
-темы и адаптер Asciidoctor. До переноса всех 228 лексеров это открытое
-ограничение конфигураций с Rouge.
+rouge (в эталоне 4.7.0) раскрашивает код при конвертации; adoctra переносит
+его в std-only крейт `adoctra-highlight` (regex-движок Onigmo, runtime
+лексеров, сгенерированные и вручную перенесённые правила, темы, форматтеры).
+Адаптер Asciidoctor (`rouge.rs` в HTML-backend) воспроизводит `<pre
+class="rouge highlight">`, режимы `rouge-css` (`class` — тема в `<style>` head
+или `<link>` `rouge-<стиль>.css` с `linkcss`, CLI копирует её с `copycss`;
+иначе inline-стили и базовый стиль `<pre>`), `rouge-style` с откатом на
+`github` и фиксацией стиля первым листингом в режиме class, linenums-таблицу
+со `start`, `highlight` (`resolve_lines_to_highlight`), callouts
+(`extract_callouts`/`restore_callouts`, в том числе с таблицей), выбор
+лексера `lang?опции` (`find_fancy`), php `start_inline`/`%mixed`, fallback
+plaintext и обрезку пустых краевых строк `Block#content`. Golden
+`golden/rouge/` сверяет четыре standalone-документа. Ограничения: лексеры без
+полного порта (сейчас 141 из 228) и сбой лексера (где Ruby падает) дают
+plaintext; `lang?guess` не угадывает; собственные `subs` со
+`specialcharacters` Ruby подсвечивает внутри конвейера подстановок (затем
+остальные стадии работают по HTML), adoctra — нет.
 Подсветка без отличий от Ruby доступна через `highlight.js` или `prettify`. Secure mode блокирует атрибут, поэтому 7 PASS стенда
 работают в safe mode (профиль include без ресурсов), ещё один проверяет
 блокировку secure. Golden-тест `golden/highlight/` сравнивает шапку, подвал и

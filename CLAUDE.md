@@ -222,7 +222,7 @@ Supported entries (recorded options mapped to `-S`/`-s`/`-a`) are compared in
 body-dom-v1 plus warnings against pinned Ruby without optional highlighter
 gems; others are UNSUPPORTED with a reason. The reference mimics one Ruby CLI
 run per document (output chomped + LF, highlighter library status reset).
-2256 PASS / 27 DIFF / 1 RUBY_ERROR / 337 UNSUPPORTED of 2621; CI freezes
+2258 PASS / 25 DIFF / 1 RUBY_ERROR / 337 UNSUPPORTED of 2621; CI freezes
 every status. All upstream test/fixtures are vendored (SHA-256 in the
 inventory); the harness materializes them in a temp root replacing
 `<UPSTREAM>` on both sides and maps `base_dir` to the CLI's `-B`. It serves
@@ -231,7 +231,9 @@ test_helper.rb's using_test_webserver, confined to test/) during the run;
 the Ruby side gives each entry its own open-uri-cached cache_path.
 The body-dom-v1 projection maps Ruby's icon colist table and adoctra's
 `ol.colist.icons` (span.colist-icon + div) to ol > li > colist-icon/-text.
-Rouge (26, being ported) is the queue; the last DIFF is an incomplete inline SVG neither
+Unported Rouge lexers (23: ruby/php/html/console; the reference loads the
+pinned Rouge, other highlighter gems stay stubbed) are the queue; the last
+DIFF is an incomplete inline SVG neither
 side can project (raw bodies differ by the intended wrapper). Single-case regressions live in
 crates/adoctra-core/tests/upstream_single_cases.rs (FLEXIBLE_ATTRIBUTES
 sectnums, `max-include-depth` 64 default attribute, invalid-header, fragment,
@@ -1958,8 +1960,8 @@ without their gems (the reference environment): `CodeRay`/`pygments` pre
 class and Ruby's `optional gem … not available` warning in Output.warnings,
 once when a source listing converts (Cx.source_listing).
 Head theme and footer scripts (before MathJax) read final attributes with the
-header `asset-uri-scheme`; embedded output has none. Server-side rouge/coderay/
-Rouge (and unknown names) keep the plain `highlight` listing for now.
+header `asset-uri-scheme`; embedded output has none. Unknown names keep the
+plain `highlight` listing; rouge is server-side (below).
 **Rouge port** (user decision 2026-10-31: all 228 lexers before claiming
 support): crate `adoctra-highlight`; `scripts/generate_rouge.rb` generates
 declarative rules from the pinned Rouge classes, Ruby block rules are ported
@@ -1985,10 +1987,20 @@ The lexer export translates Ruby block ASTs (token/groups/push/pop!/goto/
 reset_stack/delegate/recurse, `m[i]`, `include?` on per-class String
 collections, regexps, state tests, `case`); hand-written `rule_<line>`/
 `start_<line>`/`init`/`reset`/`stream` in `src/lexers/<rouge file>.rs` win;
-anything else lands in `LexerDef.missing` and the lexer is unused (86 of
-228 ported, all matching Rouge's token streams on the demos in
-`tests/data/lexer_corpus.txt`). Next: the Asciidoctor adapter in
-adoctra-html, the upstream audit on real Rouge, then the other lexers.
+anything else lands in `LexerDef.missing` and the lexer is unused (87 of
+228 ported incl. hand-written plaintext, all matching Rouge's token streams
+on the demos in `tests/data/lexer_corpus.txt`). adoctra-html `rouge.rs` is
+the RougeAdapter: `<pre class="rouge highlight">`, `rouge-css` class (head
+`<style>` inserted after the body like Ruby's docinfo, `<link>` with
+linkcss; `Output.highlighter_stylesheet` for the CLI's copycss) or inline
+(pre base style), `rouge-style` (class mode: first listing wins), linenums
+table/start, `highlight` lines, callouts extract/restore, `lang?opts`, php
+`start_inline`, plaintext fallback (unported lexer or LexError), and
+`Block#content`'s blank edge-line trim. Only listings with default subs
+highlight: custom subs keeping specialcharacters would highlight inside the
+subs pipeline in Ruby (not ported). `golden/rouge/` compares standalone
+documents. Next: hand-port the remaining lexers (ruby, console, html, php
+first) and extend the translator.
 highlight.js/prettify are available today. adoctra.css
 carries Ruby's `pre.highlightjs`/`pre.prettyprint` rules (checked with
 screenshots). `golden/highlight/` runs the reference `--standalone --safe`.

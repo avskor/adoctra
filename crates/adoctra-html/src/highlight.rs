@@ -1,8 +1,9 @@
 //! Ruby's syntax highlighter adapters: the source listing's `<pre>`/`<code>`
 //! and the markup they add to the document head and the end of the body.
 //! For the client-side ones (`highlight.js`, `prettify`, `html-pipeline`)
-//! the browser highlights. coderay and pygments behave like Ruby without
-//! their libraries (the pinned reference environment): a warning and the
+//! the browser highlights. rouge highlights while converting (see
+//! `rouge.rs`). coderay and pygments behave like Ruby without their
+//! libraries (the pinned reference environment): a warning and the
 //! adapter's plain `<pre>`.
 
 use adoctra_core::ast::Block;
@@ -16,6 +17,8 @@ pub(super) enum Highlighter {
     HighlightJs,
     Prettify,
     HtmlPipeline,
+    /// The rouge adapter over adoctra-highlight.
+    Rouge,
     /// coderay without its gem: `CodeRay` pre class, no highlighting.
     CodeRay,
     /// pygments without pygments.rb.
@@ -37,6 +40,7 @@ impl Highlighter {
             "highlightjs" | "highlight.js" => Some(Self::HighlightJs),
             "prettify" => Some(Self::Prettify),
             "html-pipeline" => Some(Self::HtmlPipeline),
+            "rouge" => Some(Self::Rouge),
             "coderay" => Some(Self::CodeRay),
             "pygments" => Some(Self::Pygments),
             _ => None,
@@ -79,6 +83,7 @@ impl Highlighter {
             }
             Self::HighlightJs => "highlightjs",
             Self::Prettify => "prettyprint",
+            Self::Rouge => unreachable!("rouge listings render in rouge.rs"),
             Self::CodeRay => "CodeRay",
             Self::Pygments => "pygments",
         };
@@ -123,7 +128,7 @@ impl Highlighter {
                     format!("{}/{theme}.min.css", prettify_dir(attrs, header))
                 }
             }
-            Self::HtmlPipeline | Self::CodeRay | Self::Pygments => return,
+            Self::HtmlPipeline | Self::Rouge | Self::CodeRay | Self::Pygments => return,
         };
         out.push_str(&format!(
             "<link rel=\"stylesheet\" href=\"{}\">\n",
@@ -159,7 +164,7 @@ impl Highlighter {
                 "<script src=\"{}/run_prettify.min.js\"></script>\n",
                 super::attr_value(&prettify_dir(attrs, header))
             )),
-            Self::HtmlPipeline | Self::CodeRay | Self::Pygments => {}
+            Self::HtmlPipeline | Self::Rouge | Self::CodeRay | Self::Pygments => {}
         }
     }
 }

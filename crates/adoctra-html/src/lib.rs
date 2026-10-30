@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 mod highlight;
 mod math;
+mod rouge;
 
 /// adoctra's reference stylesheet — a modern, self-contained theme (custom
 /// properties, `color-mix()`, SVG-mask icons). [`HtmlBackend::convert`] inlines
@@ -49,6 +50,10 @@ impl fmt::Debug for HtmlBackend {
 pub struct Output {
     pub html: String,
     pub warnings: Vec<String>,
+    /// The syntax highlighter's stylesheet the CLI writes into `stylesdir`
+    /// with `linkcss` and `copycss` (Ruby's `write_stylesheet`): a file name
+    /// and its contents.
+    pub highlighter_stylesheet: Option<(String, &'static str)>,
 }
 
 impl HtmlBackend {
@@ -104,6 +109,7 @@ impl HtmlBackend {
     }
 
     fn render_prepared(&self, doc: &Document, stylesheet: Option<&Option<String>>) -> Output {
+        let rouge_state = std::cell::RefCell::new(rouge::RougeState::default());
         let cx = Cx {
             doc,
             outline: &doc.blocks,
@@ -111,6 +117,7 @@ impl HtmlBackend {
             book: doc.attributes.get("doctype") == Some("book"),
             highlighter: highlight::Highlighter::of(&doc.attributes),
             source_listing: std::cell::Cell::new(false),
+            rouge: &rouge_state,
         };
         let mut out = String::new();
         let mut warnings = Vec::new();
@@ -132,6 +139,7 @@ impl HtmlBackend {
         Output {
             html: out,
             warnings,
+            highlighter_stylesheet: rouge::stylesheet_file(&rouge_state),
         }
     }
 }
@@ -227,6 +235,8 @@ fn render_document(
     if let Some(highlighter) = cx.highlighter {
         highlighter.head(&doc.final_attributes, attributes, out);
     }
+    // Ruby fills the highlighter's head docinfo in after the body.
+    let highlighter_head_at = out.len();
     docinfo(attributes, DocinfoLocation::Head, resources, out);
     out.push_str("</head>\n");
 
@@ -315,6 +325,10 @@ fn render_document(
         out,
     );
     out.push_str("</body>\n</html>\n");
+    let linkcss = attributes.get("linkcss").is_some();
+    if let Some(head) = rouge::head(cx.rouge, linkcss, &doc.final_attributes) {
+        out.insert_str(highlighter_head_at, &head);
+    }
 }
 
 /// Ruby's stylesheet branch: the default stylesheet (`stylesheet` empty or
@@ -880,6 +894,8 @@ struct Cx<'a> {
     /// Whether a source listing was converted (an unavailable highlighter
     /// library then warns once).
     source_listing: std::cell::Cell<bool>,
+    /// The rouge adapter's state, shared by nested documents.
+    rouge: &'a std::cell::RefCell<rouge::RougeState>,
 }
 
 impl Cx<'_> {
@@ -923,7 +939,21 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             // listing. asciidoctor hangs roles/id on a wrapping `<div>`; adoctra
             // has no wrapper, so they go on the `<pre>` (roles appended to the base
             // class), as elsewhere.
-            if let (Some("source"), Some(highlighter)) =
+            if let (Some("source"), Some(highlight::Highlighter::Rouge)) =
+                (block.attrs.style.as_deref(), cx.highlighter)
+            {
+                // Rouge highlights the source when the listing keeps its
+                // default substitutions (`highlight` replaces
+                // `specialcharacters`). Custom `subs` keep their result: right
+                // without `specialcharacters`; with it Ruby would highlight
+                // first and run the other stages over the HTML (not ported).
+                match inlines {
+                    None => rouge::listing(block, text, callouts, nowrap(block), cx.rouge, out),
+                    Some(_) => rouge::listing_with(block, nowrap(block), cx.rouge, out, |out| {
+                        render_verbatim(text, callouts, inlines, out)
+                    }),
+                }
+            } else if let (Some("source"), Some(highlighter)) =
                 (block.attrs.style.as_deref(), cx.highlighter)
             {
                 cx.source_listing.set(true);
@@ -1899,6 +1929,7 @@ fn render_table(block: &Block, table: &adoctra_core::ast::Table, cx: &Cx, out: &
                                 book: cx.book,
                                 highlighter: cx.highlighter,
                                 source_listing: std::cell::Cell::new(cx.source_listing.get()),
+                                rouge: cx.rouge,
                             };
                             // Ruby's `convert_embedded` of the inner document:
                             // its title unless `notitle`, then an automatic TOC.
@@ -4152,13 +4183,59 @@ mod tests {
     }
 
     #[test]
+    fn rouge_highlights_listings_like_ruby_adapter() {
+        // A ported lexer highlights; the theme is embedded in the head.
+        let source = "= T\n:source-highlighter: rouge\n\n[source,java]\n----\nint x;\n----\n";
+        let html = render_standalone(source);
+        assert!(
+            html.contains("<pre class=\"rouge highlight\"><code data-lang=\"java\"><span class=\"kt\">int</span> <span class=\"n\">x</span><span class=\"o\">;</span></code></pre>"),
+            "{html}"
+        );
+        let head = &html[..html.find("</head>").unwrap()];
+        assert!(
+            head.contains("<style>\npre.rouge table td { padding: 5px; }"),
+            "{head}"
+        );
+        // Embedded output has no head docinfo.
+        let html = render(source);
+        assert!(!html.contains("pre.rouge"), "{html}");
+        // Without `specialcharacters` Ruby does not highlight: the substituted
+        // content inside the adapter's markup, and no stylesheet is needed.
+        // (Custom subs that keep `specialcharacters` highlight first in Ruby;
+        // adoctra does not run highlighting inside the subs pipeline yet.)
+        let html = render_standalone(
+            "= T\n:source-highlighter: rouge\n\n[source,java,subs=quotes]\n----\nint *x*;\n----\n",
+        );
+        assert!(
+            html.contains("<pre class=\"rouge highlight\"><code data-lang=\"java\">int <strong>x</strong>;</code></pre>"),
+            "{html}"
+        );
+        assert!(!html.contains("pre.rouge table"), "{html}");
+        // AsciiDoc cells share the adapter: their listing requires the theme.
+        let html = render_standalone(
+            "= T\n:source-highlighter: rouge\n\n|===\na|\n[source,json]\n----\n1\n----\n|===\n",
+        );
+        assert!(html.contains("<span class=\"mi\">1</span>"), "{html}");
+        assert!(
+            html[..html.find("</head>").unwrap()].contains("pre.rouge"),
+            "{html}"
+        );
+        // An unported language and no language fall back to plain text.
+        let html = render(":source-highlighter: rouge\n\n[source,cobra]\n----\na<b\n----\n");
+        assert!(
+            html.contains("<code data-lang=\"cobra\">a&lt;b</code>"),
+            "{html}"
+        );
+    }
+
+    #[test]
     fn source_highlighter_is_chosen_from_the_header_like_ruby() {
         let plain = "<pre class=\"highlight\"><code class=\"language-ruby\" data-lang=\"ruby\">a</code></pre>";
         let listing = "[source,ruby]\n----\na\n----\n";
-        // Unknown and server-side names, `<name>-unavailable`, a body entry
-        // and a non-html basebackend leave the plain source listing.
+        // Unknown names, `<name>-unavailable`, a body entry and a non-html
+        // basebackend leave the plain source listing.
         for header in [
-            ":source-highlighter: rouge\n",
+            ":source-highlighter: rouge\n:rouge-unavailable:\n",
             ":source-highlighter: nope\n",
             ":source-highlighter: highlightjs\n:highlightjs-unavailable:\n",
             ":source-highlighter: prettify\n:basebackend: docbook\n",

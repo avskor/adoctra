@@ -193,7 +193,13 @@ fn run() -> adoctra::Result<()> {
     std::fs::write(&out_path, &bytes)?;
     eprintln!("wrote {}", out_path.display());
     if args.backend == "html" && args.safe < adoctra::SafeMode::Secure {
-        copy_stylesheet(&result.document.final_attributes, &base, &out_path)?;
+        let highlighter = HIGHLIGHTER_STYLESHEET.with(|cell| cell.borrow_mut().take());
+        copy_stylesheet(
+            &result.document.final_attributes,
+            &base,
+            &out_path,
+            highlighter,
+        )?;
     }
     Ok(())
 }
@@ -247,11 +253,13 @@ fn dates(input: &str) -> adoctra::Result<adoctra::DocumentDates> {
 /// (and a non-URI `stylesdir`), adoctra's stylesheet is written into
 /// `stylesdir` next to the output, or a custom stylesheet (from `copycss`
 /// when it names a file, else the `stylesheet` path, relative to the input's
-/// directory) is copied there.
+/// directory) is copied there. The syntax highlighter's stylesheet (rouge
+/// after a class-mode listing) is written there too.
 fn copy_stylesheet(
     attributes: &adoctra::Attributes,
     base: &Path,
     out_path: &Path,
+    highlighter: Option<(String, &'static str)>,
 ) -> adoctra::Result<()> {
     let uri = |value: &str| value.contains("://");
     let stylesdir = attributes.get("stylesdir").unwrap_or("");
@@ -259,16 +267,30 @@ fn copy_stylesheet(
     {
         return Ok(());
     }
-    let Some(stylesheet) = attributes.get("stylesheet") else {
-        return Ok(());
-    };
     let outdir = out_path
         .parent()
         .filter(|dir| !dir.as_os_str().is_empty())
         .unwrap_or(Path::new("."));
     let stylesoutdir = outdir.join(stylesdir);
-    if matches!(stylesheet, "" | "DEFAULT") {
+    copy_document_stylesheet(attributes, base, &stylesoutdir)?;
+    if let Some((name, css)) = highlighter {
         std::fs::create_dir_all(&stylesoutdir)?;
+        std::fs::write(stylesoutdir.join(name), css)?;
+    }
+    Ok(())
+}
+
+fn copy_document_stylesheet(
+    attributes: &adoctra::Attributes,
+    base: &Path,
+    stylesoutdir: &Path,
+) -> adoctra::Result<()> {
+    let uri = |value: &str| value.contains("://");
+    let Some(stylesheet) = attributes.get("stylesheet") else {
+        return Ok(());
+    };
+    if matches!(stylesheet, "" | "DEFAULT") {
+        std::fs::create_dir_all(stylesoutdir)?;
         std::fs::write(
             stylesoutdir.join(adoctra::html::DEFAULT_STYLESHEET_NAME),
             adoctra::html::STYLESHEET,
@@ -516,6 +538,13 @@ fn html_backend(
 /// with the stylesheet its start hook read during parsing.
 struct Html(adoctra::html::HtmlBackend, Option<adoctra::html::HtmlStart>);
 
+thread_local! {
+    /// The highlighter stylesheet of the last HTML conversion, for the
+    /// `copycss` step (the backend trait only returns bytes).
+    static HIGHLIGHTER_STYLESHEET: std::cell::RefCell<Option<(String, &'static str)>> =
+        const { std::cell::RefCell::new(None) };
+}
+
 impl Backend for Html {
     fn name(&self) -> &'static str {
         self.0.name()
@@ -538,6 +567,8 @@ impl Backend for Html {
         for warning in &output.warnings {
             eprintln!("adoctra: warning: {warning}");
         }
+        HIGHLIGHTER_STYLESHEET
+            .with(|cell| *cell.borrow_mut() = output.highlighter_stylesheet.take());
         Ok(output.html.into_bytes())
     }
 }
