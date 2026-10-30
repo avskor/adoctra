@@ -210,6 +210,16 @@ Host overrides now accept Ruby's string soft-default (`name@` / `value@`) and
 hard/soft unset forms. CLI repeated overrides honor the last spelling of a name;
 API callers should supply one spelling per effective key in the BTreeMap.
 
+`scripts/upstream_audit.py` is a differential audit of every document the
+pinned upstream test suite builds (all 24 test files vendored unchanged in
+compatibility/upstream/sources/test; inventory recorded by
+scripts/upstream_record.rb, which runs the upstream suite — a manual step).
+Supported entries (recorded options mapped to `-S`/`-s`/`-a`) are compared in
+body-dom-v1 plus warnings against pinned Ruby without optional highlighter
+gems; others are UNSUPPORTED with a reason. 1965 PASS / 145 DIFF / 511
+UNSUPPORTED of 2621; CI freezes every status. Clusters (doctype=inline, Rouge,
+ATX titles, passthrough whitespace, warnings, include edges) are the queue;
+`--show ID` prints both sides.
 `compatibility/upstream/semantics.json` uses `inline-semantics-v1`: 129 PASS
 cover 20 attribute and four include scenarios from the upstream selection plus
 105 original semantic probes (14 tables; 27 xref/indexterm/stem/typographic quote

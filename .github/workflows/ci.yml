@@ -43,6 +43,8 @@ jobs:
         run: gem install --user-install asciidoctor --version "$(cat compatibility/asciidoctor-version)" --no-document
       - name: Install pinned URI cache reference
         run: gem install --user-install open-uri-cached --version "$(cat compatibility/open-uri-cached-version)" --no-document
+      - name: Differential audit of the upstream test suite inputs
+        run: python3 scripts/upstream_audit.py --baseline compatibility/upstream/audit/report.json
       - name: Verify URI cache requests and diagnostics
         run: python3 scripts/audit_uri_cache.py --baseline compatibility/uri-cache/report.json --report target/uri-cache-report.json
       - name: Verify URI asset cache and known conversion order gaps

@@ -76,3 +76,117 @@ include-сценария этой выборки и добавляет 14 соб
 link:semantic-profile.adoc[`inline-semantics-v1`]. Это отдельный профиль с
 собственными эталонами и явной выборкой атрибутов; исходная HTML-выборка
 остаётся 43 PASS. Семантические пробы не считаются импортированными upstream-тестами.
+
+== Полный дифференциальный аудит
+
+`scripts/upstream_audit.py` проверяет не выборку, а все документы, которые
+строит тестовый набор закреплённого Asciidoctor. В `sources/test/` теперь
+закреплены все 24 файла `*_test.rb` и `test_helper.rb` commit
+`2c03d22eb9fe83d04ee452939581d1b842f6d8b4` без изменений.
+
+=== Инвентарь
+
+`scripts/upstream_record.rb` оборачивает `Asciidoctor::Document#initialize`.
+Через него проходят хелперы тестов (`convert_string*`, `document_from_string`)
+и прямые `Asciidoctor.load`/`convert`. Каждый документ без родителя
+записывается с исходным текстом, фактическими опциями, файлом, строкой вызова
+и объявлением `test '…' do`. Прогон всего набора дал 2816 документов из
+21 файла (`converter_test.rb` требует `tilt` для пользовательских шаблонов
+и вне контракта). После устранения дублей по (текст, опции) в
+`compatibility/upstream/audit/inventory.json` 2621 запись. Абсолютный путь
+копии upstream заменён меткой `<UPSTREAM>`. Аудит проверяет SHA-256 каждого
+закреплённого тестового файла, устойчивые id и то, что строка объявления
+действительно содержит `test '<имя>' do` (три вызова из вспомогательного
+кода вне блоков `test` записаны без объявления).
+
+Запись выполняет код тестового набора upstream и требует его зависимостей
+(`minitest`, `nokogiri`, `rouge`). Поэтому это отдельная ручная операция
+по копии закреплённого commit:
+
+[source,shell]
+----
+ASCIIDOCTOR_TEST_DIR=<copy>/test RECORD_OUT=rec.jsonl \
+  ruby -r ./scripts/upstream_record.rb <copy>/test/<file>_test.rb   # каждый файл
+python3 scripts/upstream_audit.py --record <copy> --recording rec.jsonl
+----
+
+=== Сравнение
+
+Для каждой поддерживаемой записи эталонная сторона
+(`scripts/upstream-audit-reference.rb`, один процесс Ruby) строит документ
+с записанными опциями теста, а CLI получает `-S` (без опции —
+`secure`, как у `Document.new`), `-s` для embedded, `-a` для атрибутов и
+`doctype`. Обе стороны получают одинаковые `SOURCE_DATE_EPOCH` и `TZ`.
+Сравниваются проекция `body-dom-v1` (оболочки standalone header/main/footer
+сопоставлены, как в asset-аудите) и упорядоченные warning/error.
+Некорректный HTML (сырые несбалансированные теги passthrough) проекция не
+принимает; тогда сравнивается тело страницы целиком (`raw-body`). Эталонное
+окружение не имеет необязательных серверных подсветчиков (`rouge`, `coderay`,
+`pygments`) независимо от установленных на машине gem, как эталоны golden и CI.
+
+UNSUPPORTED — записи, которые контракт CLI не выражает, с причиной:
+бэкенды docbook/manpage/xhtml (в том числе через атрибут `backend`),
+опции `base_dir`, `to_dir`/`to_file`, реестры расширений, `sourcemap`,
+`parse_header_only`, `logger`, путь копии upstream и входы, обращающиеся
+к временному HTTP-серверу тестов. Это не PASS и не исключение из
+контракта; часть из них можно перевести в поддерживаемые отдельными
+адаптерами.
+
+=== Состояние
+
+Аудит выполняется за секунды и входит в CI (`--baseline` замораживает статус
+каждой записи; регрессия, улучшение и новая ошибка останавливают проверку,
+улучшение записывается отдельно).
+
+[cols="2,1,1,1",options="header"]
+|===
+|Файл |PASS |DIFF |UNSUPPORTED
+|substitutions_test.rb |356 |10 |28
+|lists_test.rb |278 |12 |19
+|blocks_test.rb |238 |10 |54
+|sections_test.rb |190 |16 |12
+|attributes_test.rb |171 |22 |8
+|links_test.rb |170 |5 |15
+|tables_test.rb |116 |1 |20
+|document_test.rb |99 |3 |80
+|text_test.rb |77 |7 |2
+|api_test.rb |62 |0 |48
+|reader_test.rb |62 |13 |81
+|extensions_test.rb |50 |7 |13
+|paragraphs_test.rb |48 |2 |4
+|syntax_highlighter_test.rb |30 |33 |2
+|preamble_test.rb |7 |0 |6
+|invoker_test.rb |5 |4 |37
+|parser_test.rb, attribute_list_test.rb, logger_test.rb |6 |0 |4
+|manpage_test.rb, paths_test.rb |0 |0 |78
+|Итого |1965 |145 |511
+|===
+
+1965 из 2110 сравнимых записей (93.1%) совпадают в этом профиле. Это доля
+наблюдаемых входов тестового набора, а не процент совместимости языка.
+
+Разбор 145 расхождений по причинам (по именам тестов и `--show ID`):
+
+* *`doctype=inline`* (около 40): не реализован. Ruby выводит содержимое
+  первого абзаца без обёрток, adoctra — обычный документ. Самый крупный пробел.
+* *Серверная подсветка* (33): эталон без gem `rouge` предупреждает
+  «optional gem 'rouge' is not available» и выводит `<pre class="rouge
+  highlight">`. adoctra так поступает для CodeRay/Pygments, но не для Rouge.
+  Способ работы с Rouge — отдельное решение (см. реестр расхождений).
+* *Пробелы passthrough-блока и счётчиков* (12): например, `++++` с
+  `subs=attributes` у adoctra оставляет завершающий пробел.
+* *Предупреждения* (9): незакрытые комментарии, несогласованный `endif`,
+  ошибочные `ifeval`/`ifdef` без цели.
+* *Пограничные случаи include* (9): цели с пробелами, `skip-front-matter`,
+  ссылки вместо удалённого include в secure mode.
+* *Якоря* (7): якоря внутри заголовков разделов, пустой reftext.
+* *Callouts с иконками и комментарии строк* (6).
+* *Заголовки ATX/Markdown* (6): `# Title` и симметричная форма `== Title ==`
+  не распознаются.
+* *Прочее* (около 25, по одному-два): лимит размера значения атрибута в
+  secure mode, `user-home`, роли списков, `max-width`, пустая дата ревизии,
+  `fragment` для порядка разделов, SVG `%inline` без файла и др.
+
+Полный список со статусами — `compatibility/upstream/audit/report.json`;
+`python3 scripts/upstream_audit.py --show <id>` показывает вход, опции,
+диагностику и разницу проекций обеих сторон.
