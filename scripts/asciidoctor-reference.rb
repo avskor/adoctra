@@ -37,12 +37,19 @@ end
 # visual-v1 (scripts/visual.py): the complete standalone page of a fixture
 # file, keeping Ruby's own embedded stylesheet, in safe mode from the file's
 # directory; offline (no web fonts) and without the date-dependent footer.
+# --embedded converts the body only (the harness adds Ruby's stylesheet);
+# --visual-stylesheet prints that default stylesheet.
+if ARGV.delete('--visual-stylesheet')
+  print Asciidoctor::Stylesheets.instance.primary_stylesheet_data
+  exit
+end
 if ARGV.delete('--visual')
-  abort 'usage: ruby scripts/asciidoctor-reference.rb --visual [--attribute NAME=VALUE]... FILE' unless ARGV.length == 1
+  embedded = ARGV.delete('--embedded')
+  abort 'usage: ruby scripts/asciidoctor-reference.rb --visual [--embedded] [--attribute NAME=VALUE]... FILE' unless ARGV.length == 1
   path = File.realpath(ARGV[0])
   attributes = { 'reproducible' => '', 'webfonts!' => '' }.merge(options[:attributes] || {})
   puts Asciidoctor.convert_file(path, safe: :safe, base_dir: File.dirname(path), to_file: false,
-                                      header_footer: true, attributes: attributes)
+                                      header_footer: !embedded, attributes: attributes)
   exit
 end
 if semantics

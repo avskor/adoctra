@@ -141,8 +141,11 @@ with computed style/geometry plus pixels, Chrome via pinned playwright-core,
 local environment-bound baseline `compatibility/visual/report.json`. adoctra.css
 now carries Ruby's typography, column and block styles (body line-height 1,
 lists, TOC, admonition as a CSS table, example box on its `div.content`,
-sidebar, quote/verse, tables, dl, media): 494 of 498 observations match; the
-two remaining cases (raw unclosed `<i>`, broken icon image) are documented.
+sidebar, quote/verse, tables, dl, media). The corpus also has the 21
+acceptance documents (resources in a temp tree) and 4 embedded cases (fragment
+plus its own stylesheet): 546 of 548 observations match; the remaining case
+(a raw unclosed `<i>`) is documented. Ruby zeroes last-child margins on
+wrappers, so mirror that per element (lists/paragraphs keep theirs).
 Re-record only after reviewing an IMPROVED diff; never loosen tolerances. Visual parity, CLI behavior,
 diagnostics, resource loading and untested language combinations must remain
 visible in the audit. Historical

@@ -269,6 +269,18 @@ pre:is(.listing, .literalblock, .highlight) {
   pre:is(.listing, .literalblock, .highlight) { font-size: 1rem; }
 }
 pre.nowrap { white-space: pre; overflow-wrap: normal; }
+/* In an admonition Ruby's verbatim wrapper inherits the content cell's
+   17px, so the sizes and margin are relative to it again. */
+.admonition-content > pre:is(.listing, .literalblock, .highlight) {
+  margin-block-end: 1.328125rem; /* 1.25em of the 17px wrapper */
+  font-size: 0.8125em;
+}
+@media screen and (min-width: 768px) {
+  .admonition-content > pre:is(.listing, .literalblock, .highlight) { font-size: 0.90625em; }
+}
+@media screen and (min-width: 1280px) {
+  .admonition-content > pre:is(.listing, .literalblock, .highlight) { font-size: 1em; }
+}
 /* Client-side highlighters, like Ruby's stylesheet: a highlight.js theme
    paints the `code` (the padding moves there), prettify's theme border and
    narrow padding give way to the listing's. */
@@ -327,7 +339,10 @@ aside.admonition {
   text-rendering: optimizeLegibility;
   overflow-wrap: anywhere;
 }
-.admonition-content > :last-child,
+/* Ruby zeroes the content cell's `:last-child > :last-child`: the inner
+   element of a wrapped block (a paragraph's <p>, a list), not the wrapper
+   that carries a listing's or image's margin. */
+.admonition-content > :last-child:is(p, ul, ol, dl),
 .admonition-content > :last-child > :last-child { margin-block-end: 0; }
 
 /* `icons=font`: Ruby's Font Awesome glyphs and colours. */
@@ -737,7 +752,11 @@ ul li ol { margin-inline-start: 1.5em; }
 }
 :is(ul, ol):not([class^="sectlevel"]) > li strong { letter-spacing: -0.005em; }
 :is(ul, ol):not([class^="sectlevel"]) > li > pre { letter-spacing: normal; }
-:is(ul, ol):not([class^="sectlevel"]) > li > :first-child { margin-block-start: 0.6640625rem; }
+/* The gap Ruby's item <p> leaves before the item's first block (inline
+   markup in the item text does not count). */
+:is(ul, ol):not([class^="sectlevel"]) > li > :is(p, div, ul, ol, dl, pre, table, figure, aside, details, nav, blockquote, hr):not(:is(p, div, ul, ol, dl, pre, table, figure, aside, details, nav, blockquote, hr) ~ *) {
+  margin-block-start: 0.6640625rem;
+}
 li p { margin-block-end: 0.625em; }
 ul.circle { list-style-type: circle; }
 ul.disc { list-style-type: disc; }
@@ -752,7 +771,10 @@ ol.lowergreek { list-style-type: lower-greek; }
 ul.checklist { list-style: none; padding-inline-start: 1.25rem; }
 dl dt { margin-block-end: 0.3125em; font-weight: bold; }
 dl dd { margin: 0 0 1.25em 1.125em; }
-dl dd:last-child, dl dd:last-child > :last-child { margin-block-end: 0; }
+/* Ruby zeroes the last description's last *wrapper*: a listing's, image's
+   or table's margin, not a paragraph's or a list's (inside their wrapper). */
+dl dd:last-child,
+dl dd:last-child > :last-child:is(pre, figure, table, details, aside) { margin-block-end: 0; }
 :is(ul, ol) dd { margin-block-end: 0.625em; }
 /* A horizontal description list: terms beside their descriptions. */
 dl.hdlist {
@@ -858,6 +880,8 @@ aside.admonition > .admonition-content {
 .quoteblock :is(blockquote, p),
 .verseblock pre { color: rgb(0 0 0 / 0.85); }
 table.tableblock :is(th, td) { color: var(--adoctra-fg); }
+/* Ruby's `[.output]` literal: light text on a dark terminal background. */
+pre.literalblock.output { color: #f7f7f8; background: rgb(0 0 0 / 0.9); }
 
 .big { font-size: larger; }
 .small { font-size: smaller; }

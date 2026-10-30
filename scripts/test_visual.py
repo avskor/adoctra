@@ -142,6 +142,38 @@ class CorpusTests(unittest.TestCase):
         self.assertEqual(set(baseline["cases"]), expected)
         self.assertEqual(baseline["profile"], visual.PROFILE)
 
+    def test_embedded_page_wraps_the_fragment_with_its_stylesheet(self):
+        page = visual.embedded_page("<p>x</p>\n", "p { color: red; }")
+        self.assertIn("<style>\np { color: red; }\n</style>", page)
+        self.assertIn("<body>\n<p>x</p>\n</body>", page)
+        self.assertEqual(with_base(page, Path("/tmp")).count("<base "), 1)
+
+    def test_manifest_validates_resources_and_embedded(self):
+        manifest = json.loads(visual.DEFAULT_MANIFEST.read_text(encoding="utf-8"))
+        source = "examples/sample.adoc"
+        for case, valid in [
+                ({"resources": {"example$a.adoc": source}}, True),
+                ({"resources": {"main.adoc": source}}, False),
+                ({"resources": {"../a.adoc": source}}, False),
+                ({"resources": {"a.adoc": "missing.adoc"}}, False),
+                ({"embedded": True}, True),
+                ({"embedded": "yes"}, False)]:
+            manifest["cases"] = [{"id": "x", "source": source, **case}]
+            with tempfile.TemporaryDirectory() as scratch:
+                path = Path(scratch) / "cases.json"
+                path.write_text(json.dumps(manifest))
+                if valid:
+                    load_manifest(path)
+                else:
+                    with self.assertRaises(ValueError):
+                        load_manifest(path)
+
+    def test_vertical_shifts_name_their_first_words(self):
+        ruby = [word("a", 0, 0, "p"), word("b", 0, 20, "pre")]
+        ours = [word("a", 0, 0, "p"), word("b", 0, 31, "li>pre")]
+        [shift] = compare(ruby, ours)["geometry"]["examples"]["shifted"]
+        self.assertEqual(shift, {"text": "b", "dy": 11, "ruby": "pre", "adoctra": "li>pre"})
+
     def test_manifest_rejects_escaping_sources(self):
         manifest = json.loads(visual.DEFAULT_MANIFEST.read_text(encoding="utf-8"))
         manifest["cases"] = [{"id": "x", "source": "../outside.adoc"}]

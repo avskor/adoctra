@@ -163,7 +163,7 @@ async function render(browser, file, viewport, shot) {
   // The inside of native media players and frames is the browser's, not a
   // stylesheet's, and animates while loading: a solid mask keeps their box.
   await page.screenshot({
-    path: shot, fullPage: true, animations: 'disabled', caret: 'hide',
+    path: shot, fullPage: true, animations: 'disabled', caret: 'hide', timeout: 180000,
     mask: [page.locator('video, audio, iframe')], maskColor: '#ff00ff',
   });
   await context.close();

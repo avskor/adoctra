@@ -76,9 +76,23 @@ def load_manifest(path):
                 isinstance(k, str) and re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_-]*!?", k) and isinstance(v, str)
                 for k, v in attributes.items()):
             raise ValueError(f"invalid visual attributes: {identifier}")
+        resources = case.get("resources", {})
+        if not isinstance(resources, dict) or not all(
+                safe_name(name) and isinstance(path, str) and safe_name(path) and (ROOT / path).is_file()
+                and (ROOT / path).resolve().is_relative_to(ROOT) for name, path in resources.items()) \
+                or "main.adoc" in resources:
+            raise ValueError(f"invalid visual resources: {identifier}")
+        if not isinstance(case.get("embedded", False), bool):
+            raise ValueError(f"invalid visual embedded flag: {identifier}")
     if not ids:
         raise ValueError("empty visual corpus")
     return manifest
+
+
+def safe_name(name):
+    """A relative slash path without empty, `.` or `..` segments."""
+    return (isinstance(name, str) and bool(name) and "\\" not in name and "\0" not in name
+            and all(part not in {"", ".", ".."} for part in name.split("/")))
 
 
 def case_id(path):
@@ -96,11 +110,47 @@ def with_base(html, directory):
     return html[:head.end()] + base + html[head.end():]
 
 
+def embedded_page(fragment, stylesheet):
+    """An embedded fragment in a minimal page with its processor's stylesheet,
+    as a host page embedding the output would include it."""
+    return ('<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="UTF-8">\n'
+            '<meta name="viewport" content="width=device-width, initial-scale=1.0">\n'
+            f"<style>\n{stylesheet}\n</style>\n</head>\n<body>\n{fragment}</body>\n</html>\n")
+
+
+STYLESHEETS = {}
+
+
+def stylesheet(side):
+    """Ruby's default stylesheet (from the pinned gem) or adoctra.css."""
+    if side not in STYLESHEETS:
+        if side == "ruby":
+            STYLESHEETS[side] = subprocess.run(
+                ["ruby", str(ROOT / "scripts/asciidoctor-reference.rb"), "--visual-stylesheet"],
+                capture_output=True, text=True, check=True).stdout
+        else:
+            STYLESHEETS[side] = (ROOT / "crates/adoctra-html/assets/adoctra.css").read_text(encoding="utf-8")
+    return STYLESHEETS[side]
+
+
 def render(case, binary, work):
     source = ROOT / case["source"]
+    if case.get("resources"):
+        # Include resources under their manifest names next to main.adoc, as
+        # in the acceptance corpus.
+        tree = work / f"{case['id']}-tree"
+        for name, path in {"main.adoc": case["source"], **case["resources"]}.items():
+            target = tree / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes((ROOT / path).read_bytes())
+        source = tree / "main.adoc"
+    embedded = case.get("embedded", False)
     attributes = case.get("attributes", {})
     ruby = ["ruby", str(ROOT / "scripts/asciidoctor-reference.rb"), "--visual"]
     ours = [str(binary), str(source), "--to", "html", "--stdout", "-a", "reproducible", "-a", "webfonts!"]
+    if embedded:
+        ruby.append("--embedded")
+        ours.append("-s")
     for name, value in sorted(attributes.items()):
         spelling = name if name.endswith("!") else f"{name}={value}"
         ruby += ["--attribute", spelling]
@@ -111,8 +161,9 @@ def render(case, binary, work):
         run = subprocess.run(command, capture_output=True, text=True, cwd=source.parent)
         if run.returncode != 0:
             raise RuntimeError(f"{case['id']}: {side} failed ({run.returncode}): {run.stderr.strip()[:500]}")
+        html = embedded_page(run.stdout, stylesheet(side)) if embedded else run.stdout
         target = work / f"{case['id']}-{side}.html"
-        target.write_text(with_base(run.stdout, source.parent), encoding="utf-8")
+        target.write_text(with_base(html, source.parent), encoding="utf-8")
         pair[side] = str(target)
     return pair
 
@@ -171,6 +222,7 @@ def compare(ruby, ours, tolerance=GEOMETRY_TOLERANCE):
     examples = {}
     dx = Counter()
     dy = Counter()
+    shifted = []
     previous = None
     for i, j in pairs:
         a, b = ruby[i], ours[j]
@@ -185,6 +237,8 @@ def compare(ruby, ours, tolerance=GEOMETRY_TOLERANCE):
             step = (b[2] - ours[previous[1]][2]) - (a[2] - ruby[previous[0]][2])
             if abs(step) > tolerance:
                 dy[round(step)] += 1
+                if len(shifted) < EXAMPLES:
+                    shifted.append({"text": a[0], "dy": round(step), "ruby": a[4], "adoctra": b[4]})
         previous = (i, j)
     return {
         "words": {"ruby": len(ruby), "adoctra": len(ours), "aligned": len(pairs)},
@@ -193,7 +247,8 @@ def compare(ruby, ours, tolerance=GEOMETRY_TOLERANCE):
         "style": [[*key, count, examples[key]] for key, count in sorted(style.items())],
         "geometry": {"x": sum(dx.values()), "dy": sum(dy.values()),
                      "examples": {"dx": [[d, n] for d, n in dx.most_common(EXAMPLES)],
-                                  "dy": [[d, n] for d, n in dy.most_common(EXAMPLES)]}},
+                                  "dy": [[d, n] for d, n in dy.most_common(EXAMPLES)],
+                                  "shifted": shifted}},
     }
 
 
