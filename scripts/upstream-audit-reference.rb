@@ -29,6 +29,14 @@ Object.prepend UnavailableHighlighters
 version = File.read(File.expand_path('../compatibility/asciidoctor-version', __dir__)).strip
 gem 'asciidoctor', version
 require 'asciidoctor'
+require 'tmpdir'
+# Asciidoctor loads open-uri-cached lazily at the first `cache-uri`; activate
+# the pinned version (CI installs it) when present.
+begin
+  gem 'open-uri-cached', File.read(File.expand_path('../compatibility/open-uri-cached-version', __dir__)).strip
+rescue Gem::LoadError
+  nil
+end
 
 LEVELS = { WARN: 'warning', ERROR: 'error', FATAL: 'fatal', UNKNOWN: 'unknown' }.freeze
 SAFE = { 'unsafe' => :unsafe, 'safe' => :safe, 'server' => :server, 'secure' => :secure }.freeze
@@ -56,6 +64,10 @@ end
 entries = JSON.parse(File.read(ARGV.fetch(0)))
 entries.each do |entry|
   reset_highlighter_status
+  # Like separate processes: once loaded, open-uri-cached stays patched in,
+  # so every entry starts from its own empty cache (the upstream tests use
+  # a temporary cache_path too).
+  OpenURI::Cache.cache_path = Dir.mktmpdir if defined? OpenURI::Cache
   logger = Asciidoctor::MemoryLogger.new
   Asciidoctor::LoggerManager.logger = logger
   begin
@@ -71,5 +83,7 @@ entries.each do |entry|
     puts JSON.generate(id: entry['id'], html: html, diagnostics: diagnostics)
   rescue StandardError, SystemStackError => e
     puts JSON.generate(id: entry['id'], error: "#{e.class}: #{e.message.lines.first&.chomp}")
+  ensure
+    OpenURI::Cache.invalidate_all! if defined? OpenURI::Cache
   end
 end

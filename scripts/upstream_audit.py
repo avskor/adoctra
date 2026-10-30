@@ -32,9 +32,12 @@ import json
 import os
 from pathlib import Path
 import re
+import socketserver
 import subprocess
 import sys
 import tempfile
+import threading
+from contextlib import contextmanager
 
 from acceptance import cli_diagnostics
 from compatibility import projection
@@ -89,9 +92,6 @@ def classify(source, options):
     """(cli arguments, None) for a supported entry, else (None, reason)."""
     if source.startswith("#<"):
         return None, "source:non-string"
-    if "localhost" in source or "127.0.0.1" in source:
-        # The tests' temporary HTTP server is gone after recording.
-        return None, "network:test-server"
     backend = options.get("backend")
     if backend not in (None, "html5", "html"):
         return None, f"backend:{backend}"
@@ -133,6 +133,54 @@ def materialize(scratch):
     root = Path(scratch) / "upstream"
     shutil.copytree(FIXTURES, root / "test" / "fixtures")
     return root
+
+
+TEST_SERVER = ("127.0.0.1", 9876)
+
+
+class TestServerHandler(socketserver.StreamRequestHandler):
+    """Upstream test_helper.rb's `using_test_webserver`, byte for byte: a
+    GET of a file under the test directory (`image/<ext>`, `.adoc` and
+    extensionless as text/plain), `/name/asciidoctor` as JSON, else 404;
+    no Content-Length, the connection closes after each response. Unlike
+    Ruby's helper, paths outside the test directory are not served."""
+
+    def handle(self):
+        request = self.rfile.readline().decode("latin-1").rstrip("\r\n")
+        match = re.fullmatch(r"GET (\S+) HTTP/1\.1", request)
+        if not match:
+            self.wfile.write(b"HTTP/1.1 405 Method Not Allowed\r\nContent-Type: text/plain\r\n\r\n"
+                             b"405 - Method not allowed\n")
+            return
+        resource = match[1]
+        base = self.server.base_dir
+        path = Path(os.path.normpath(f"{base}/{resource}"))
+        if resource == "/name/asciidoctor":
+            self.wfile.write(b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n"
+                             b'{"name": "asciidoctor"}\n')
+        elif path.is_file() and path.is_relative_to(base):
+            ext = path.suffix[1:]
+            mimetype = ("text/plain" if ext == "adoc" else f"image/{ext}") if ext else "text/plain"
+            self.wfile.write(f"HTTP/1.1 200 OK\r\nContent-Type: {mimetype}\r\n\r\n".encode())
+            self.wfile.write(path.read_bytes())
+        else:
+            self.wfile.write(b"HTTP/1.1 404 File Not Found\r\nContent-Type: text/plain\r\n\r\n"
+                             b"404 - Resource not found.\n")
+
+
+@contextmanager
+def test_server(root, address=TEST_SERVER):
+    """The tests' web server at their fixed address (the recorded sources
+    name it), serving `root/test`; yields its URL."""
+    socketserver.ThreadingTCPServer.allow_reuse_address = True
+    with socketserver.ThreadingTCPServer(address, TestServerHandler) as server:
+        server.base_dir = (root / "test").resolve()
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            yield "http://%s:%d" % server.server_address
+        finally:
+            server.shutdown()
 
 
 def localize(value, root):
@@ -323,16 +371,17 @@ def audit(binary, only, jobs):
         local = [localize({k: e[k] for k in ("id", "source", "options")}, root) for e in supported]
         batch = Path(scratch) / "entries.json"
         batch.write_text(json.dumps(local))
-        run = subprocess.run(["ruby", str(ROOT / "scripts/upstream-audit-reference.rb"), str(batch)],
-                             capture_output=True, text=True, encoding="utf-8", errors="replace",
-                             env={**os.environ, **ENVIRONMENT}, timeout=3600)
-        if run.returncode:
-            sys.exit(f"reference runner failed: {run.stderr.strip()[-2000:]}")
-        references = {r["id"]: r for r in map(json.loads, filter(None, run.stdout.split("\n")))}
-        with ThreadPoolExecutor(jobs) as pool:
-            actuals = dict(zip((e["id"] for e in local), pool.map(
-                lambda e: adoctra(binary, e, localize(classify(e["source"], e["options"])[0], root)),
-                local)))
+        with test_server(root):
+            run = subprocess.run(["ruby", str(ROOT / "scripts/upstream-audit-reference.rb"), str(batch)],
+                                 capture_output=True, text=True, encoding="utf-8", errors="replace",
+                                 env={**os.environ, **ENVIRONMENT}, timeout=3600)
+            if run.returncode:
+                sys.exit(f"reference runner failed: {run.stderr.strip()[-2000:]}")
+            references = {r["id"]: r for r in map(json.loads, filter(None, run.stdout.split("\n")))}
+            with ThreadPoolExecutor(jobs) as pool:
+                actuals = dict(zip((e["id"] for e in local), pool.map(
+                    lambda e: adoctra(binary, e, localize(classify(e["source"], e["options"])[0], root)),
+                    local)))
     results = {}
     for entry in entries:
         if entry["unsupported"]:
@@ -353,10 +402,11 @@ def show(entry, binary):
         args = localize(classify(entry["source"], entry["options"])[0], root)
         batch = Path(scratch) / "entries.json"
         batch.write_text(json.dumps([local]))
-        run = subprocess.run(["ruby", str(ROOT / "scripts/upstream-audit-reference.rb"), str(batch)],
-                             capture_output=True, text=True, env={**os.environ, **ENVIRONMENT})
-        expected = json.loads(run.stdout.split("\n")[0])
-        actual = adoctra(binary, local, args)
+        with test_server(root):
+            run = subprocess.run(["ruby", str(ROOT / "scripts/upstream-audit-reference.rb"), str(batch)],
+                                 capture_output=True, text=True, env={**os.environ, **ENVIRONMENT})
+            expected = json.loads(run.stdout.split("\n")[0])
+            actual = adoctra(binary, local, args)
     for occurrence in entry["occurrences"]:
         print(f"{occurrence['file']}:{occurrence['test_line']} {occurrence['test']}")
     print("options:", json.dumps(entry["options"]), "cli:", " ".join(args))

@@ -44,7 +44,8 @@ class ClassifyTests(unittest.TestCase):
         self.assertIsNone(classify(":backend: html5\n", {"safe": "safe"})[1])
         for options, reason in []:
             self.assertEqual(classify("x", options), (None, reason))
-        self.assertEqual(classify("include::http://localhost:9876/a[]", {})[1], "network:test-server")
+        # The audit serves the tests' web server itself.
+        self.assertIsNone(classify("include::http://127.0.0.1:9876/a[]", {})[1])
         self.assertEqual(classify("#<IO>", {})[1], "source:non-string")
 
     def test_checkout_paths_run_against_the_vendored_fixtures(self):
@@ -60,6 +61,29 @@ class ClassifyTests(unittest.TestCase):
             entry = localize({"source": "<UPSTREAM>/a", "options": options}, root)
             self.assertEqual(entry["source"], f"{root}/a")
             self.assertEqual(entry["options"]["attributes"]["docdir"], f"{root}/test/fixtures")
+
+    def test_the_test_web_server_answers_like_upstreams_helper(self):
+        import socket
+        with tempfile.TemporaryDirectory() as scratch:
+            root = materialize(scratch)
+            with upstream_audit.test_server(root, ("127.0.0.1", 0)) as url:
+                host, port = url.removeprefix("http://").split(":")
+
+                def get(line):
+                    with socket.create_connection((host, int(port))) as connection:
+                        connection.sendall(line.encode() + b"\r\n")
+                        return b"".join(iter(lambda: connection.recv(4096), b""))
+
+                head, _, data = get("GET /fixtures/dot.gif HTTP/1.1").partition(b"\r\n\r\n")
+                self.assertEqual(head, b"HTTP/1.1 200 OK\r\nContent-Type: image/gif")
+                self.assertEqual(data, (root / "test/fixtures/dot.gif").read_bytes())
+                self.assertIn(b"Content-Type: text/plain\r\n\r\n= Document Title",
+                              get("GET /fixtures/basic.adoc HTTP/1.1"))
+                self.assertTrue(get("GET /name/asciidoctor HTTP/1.1").endswith(
+                    b'application/json\r\n\r\n{"name": "asciidoctor"}\n'))
+                for missing in ("/no_such_file", "/../../etc/passwd"):
+                    self.assertTrue(get(f"GET {missing} HTTP/1.1").startswith(b"HTTP/1.1 404"))
+                self.assertTrue(get("POST / HTTP/1.1").startswith(b"HTTP/1.1 405"))
 
     def test_multiline_messages_only_when_requested(self):
         stderr = "adoctra: -:1: error: include file not found: a +\nhttp://b\nadoctra: warning: w\n"

@@ -218,10 +218,13 @@ Supported entries (recorded options mapped to `-S`/`-s`/`-a`) are compared in
 body-dom-v1 plus warnings against pinned Ruby without optional highlighter
 gems; others are UNSUPPORTED with a reason. The reference mimics one Ruby CLI
 run per document (output chomped + LF, highlighter library status reset).
-2243 PASS / 27 DIFF / 1 RUBY_ERROR / 350 UNSUPPORTED of 2621; CI freezes
+2256 PASS / 27 DIFF / 1 RUBY_ERROR / 337 UNSUPPORTED of 2621; CI freezes
 every status. All upstream test/fixtures are vendored (SHA-256 in the
 inventory); the harness materializes them in a temp root replacing
-`<UPSTREAM>` on both sides and maps `base_dir` to the CLI's `-B`.
+`<UPSTREAM>` on both sides and maps `base_dir` to the CLI's `-B`. It serves
+the tests' web server at their fixed 127.0.0.1:9876 (a copy of
+test_helper.rb's using_test_webserver, confined to test/) during the run;
+the Ruby side gives each entry its own open-uri-cached cache_path.
 The body-dom-v1 projection maps Ruby's icon colist table and adoctra's
 `ol.colist.icons` (span.colist-icon + div) to ol > li > colist-icon/-text.
 Rouge (26) is the queue; the last DIFF is an incomplete inline SVG neither

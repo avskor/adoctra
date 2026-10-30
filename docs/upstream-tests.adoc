@@ -123,7 +123,13 @@ python3 scripts/upstream_audit.py --record <copy> --recording rec.jsonl
 Обе стороны получают одинаковые `SOURCE_DATE_EPOCH` и `TZ`; документ без
 `base_dir` и `docdir` разрешает пути от текущего каталога процесса (корень
 репозитория), как Ruby. Сообщение с переводом строки (Ruby сохраняет его)
-читается из stderr CLI целиком.
+читается из stderr CLI целиком. На время прогона стенд поднимает веб-сервер
+тестов upstream по их фиксированному адресу `127.0.0.1:9876` (его называют
+записанные исходники): копия `using_test_webserver` из `test_helper.rb`
+(ответ HTTP/1.1 без Content-Length, `image/<ext>`, `.adoc` и файлы без
+расширения как text/plain, `/name/asciidoctor` как JSON, иначе 404), но не
+отдающая файлы вне каталога `test`. Эталон Ruby даёт каждой записи свой
+пустой каталог кэша open-uri-cached, как отдельный процесс.
 Сравниваются проекция `body-dom-v1` (оболочки standalone header/main/footer
 сопоставлены, как в asset-аудите) и упорядоченные warning/error.
 Некорректный HTML (сырые несбалансированные теги passthrough) проекция не
@@ -134,8 +140,7 @@ python3 scripts/upstream_audit.py --record <copy> --recording rec.jsonl
 UNSUPPORTED — записи, которые контракт CLI не выражает, с причиной:
 бэкенды docbook/manpage/xhtml (в том числе через атрибут `backend`),
 опции `to_dir`/`to_file`, реестры расширений, `sourcemap`,
-`parse_header_only`, `logger` и входы, обращающиеся
-к временному HTTP-серверу тестов. Это не PASS и не исключение из
+`parse_header_only`, `logger`. Это не PASS и не исключение из
 контракта; часть из них можно перевести в поддерживаемые отдельными
 адаптерами.
 
@@ -155,14 +160,14 @@ UNSUPPORTED — записи, которые контракт CLI не выра�
 [cols="2,1,1,1",options="header"]
 |===
 |Файл |PASS |DIFF/ERROR |UNSUPPORTED
-|substitutions_test.rb |368 |0 |26
+|substitutions_test.rb |369 |0 |25
 |lists_test.rb |290 |0 |19
-|blocks_test.rb |264 |1 |37
+|blocks_test.rb |271 |1 |30
 |sections_test.rb |206 |0 |12
 |attributes_test.rb |194 |0 |7
 |links_test.rb |180 |0 |10
 |document_test.rb |131 |0 |51
-|reader_test.rb |149 |1 |6
+|reader_test.rb |154 |1 |1
 |tables_test.rb |120 |0 |17
 |api_test.rb |73 |0 |37
 |text_test.rb |84 |0 |2
@@ -176,10 +181,10 @@ UNSUPPORTED — записи, которые контракт CLI не выра�
 |parser_test.rb |3 |0 |0
 |attribute_list_test.rb |2 |0 |0
 |paths_test.rb |1 |0 |0
-|Итого |2243 |28 |350
+|Итого |2256 |28 |337
 |===
 
-2243 из 2271 сравнимой записи (98.8%) совпадают в этом профиле. Это доля
+2256 из 2284 сравнимых записей (98.8%) совпадают в этом профиле. Это доля
 наблюдаемых входов тестового набора, а не процент совместимости языка.
 
 Оставшиеся расхождения: 26 записей syntax_highlighter_test.rb (Rouge без
