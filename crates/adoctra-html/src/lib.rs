@@ -1256,15 +1256,16 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             out.push_str("</details>\n");
         }
         BlockKind::Example { blocks } => {
-            // A parsed container: one `<div class="exampleblock">` wrapping the
-            // rendered children. asciidoctor nests `<div class="content">` inside;
-            // adoctra keeps the no-wrapper convention — a single element carries
-            // the class plus the block's id/roles, children render straight in.
+            // A parsed container: `<div class="exampleblock">` with the block's
+            // id/roles, the title, then the children in `<div class="content">`.
+            // Like Ruby's, the example's box is that content wrapper, so the
+            // title stays above the box.
             let class = class_attr(&["exampleblock"], &block.roles);
             out.push_str(&format!("<div{class}{id}>\n"));
             render_title(&block.title, &caption_html(block), out);
+            out.push_str("<div class=\"content\">\n");
             render_body(block, blocks, cx, out);
-            out.push_str("</div>\n");
+            out.push_str("</div>\n</div>\n");
         }
         BlockKind::Sidebar { blocks } => {
             // A parsed container rendered as the semantic HTML5 `<aside>` — a sidebar
@@ -4228,12 +4229,12 @@ mod tests {
             "{html}"
         );
         assert!(
-            html.contains("<div class=\"exampleblock\">\none<br> two\n</div>"),
+            html.contains("<div class=\"exampleblock\">\n<div class=\"content\">\none<br> two\n</div>\n</div>"),
             "{html}"
         );
         // A delimited example keeps its paragraph.
         assert!(
-            html.contains("<div class=\"exampleblock\">\n<p>delimited</p>\n</div>"),
+            html.contains("<div class=\"exampleblock\">\n<div class=\"content\">\n<p>delimited</p>\n</div>\n</div>"),
             "{html}"
         );
         // Ruby's book partintro: a `[partintro]` paragraph is compound, a lone
@@ -4461,13 +4462,14 @@ mod tests {
     }
 
     #[test]
-    fn example_block_renders_single_wrapper_with_children() {
-        // One `<div class="exampleblock">` wrapping the rendered children (no
-        // nested `.content`), the body parsed normally (`*world*` → `<strong>`).
+    fn example_block_renders_content_wrapper_with_children() {
+        // `<div class="exampleblock">` holds the children in Ruby's
+        // `<div class="content">` (the box below the title), the body parsed
+        // normally (`*world*` → `<strong>`).
         let html = render("====\nHello *world*.\n====");
         assert!(
             html.contains(
-                "<div class=\"exampleblock\">\n<p>Hello <strong>world</strong>.</p>\n</div>"
+                "<div class=\"exampleblock\">\n<div class=\"content\">\n<p>Hello <strong>world</strong>.</p>\n</div>\n</div>"
             ),
             "got: {html}"
         );
@@ -4487,7 +4489,9 @@ mod tests {
     fn example_style_paragraph_renders_as_example() {
         let html = render("[example]\nJust text.");
         assert!(
-            html.contains("<div class=\"exampleblock\">\nJust text.\n</div>"),
+            html.contains(
+                "<div class=\"exampleblock\">\n<div class=\"content\">\nJust text.\n</div>\n</div>"
+            ),
             "got: {html}"
         );
     }
@@ -4595,9 +4599,13 @@ mod tests {
     }
 
     #[test]
-    fn open_stylesheet_rule_is_shipped() {
-        let html = render_standalone("Hello.");
-        assert!(html.contains(".openblock"), "stylesheet missing: {html}");
+    fn open_block_has_no_box_of_its_own_like_ruby() {
+        // Ruby's openblock has no border, background or margin: the children's
+        // margins pass through it, so the stylesheet styles no `.openblock`.
+        let html = render("--\nHello.\n--");
+        assert!(html.contains("<div class=\"openblock\">"), "{html}");
+        assert!(!STYLESHEET.contains(".openblock {"));
+        assert!(!STYLESHEET.contains(".openblock > :last-child"));
     }
 
     #[test]
@@ -4630,14 +4638,14 @@ mod tests {
     }
 
     #[test]
-    fn example_title_renders_inside_the_wrapper() {
-        // The title goes just inside `<div class="exampleblock">`, before the
-        // children (matching asciidoctor's content ordering). A titled example is
-        // numbered, so the title carries the `Example 1. ` caption prefix.
+    fn example_title_renders_above_the_content_box() {
+        // The title goes inside `<div class="exampleblock">` but before the
+        // content box, as in Ruby. A titled example is numbered, so the title
+        // carries the `Example 1. ` caption prefix.
         let html = render(".Demo\n====\nhi\n====");
         assert!(
             html.contains(
-                "<div class=\"exampleblock\">\n<div class=\"title\">Example 1. Demo</div>\n<p>hi</p>\n</div>"
+                "<div class=\"exampleblock\">\n<div class=\"title\">Example 1. Demo</div>\n<div class=\"content\">\n<p>hi</p>\n</div>\n</div>"
             ),
             "got: {html}"
         );
@@ -5284,7 +5292,7 @@ mod tests {
     fn toc_macro_renders_at_its_position_only_with_macro_placement() {
         let html = render("= D\n:toc: macro\n:toc-class: tc\n\n====\n.Contents *x*\ntoc::[levels=1]\n====\n\n[[t2]]\ntoc::[role=side,title=Second]\n\n== A\n\n=== B");
         assert!(
-            html.contains("<div class=\"exampleblock\">\n<nav id=\"toc\" class=\"tc\">\n<div id=\"toctitle\" class=\"title\">Contents <strong>x</strong></div>\n<ul class=\"sectlevel1\">\n<li><a href=\"#_a\">A</a></li>\n</ul>\n</nav>\n</div>"),
+            html.contains("<div class=\"exampleblock\">\n<div class=\"content\">\n<nav id=\"toc\" class=\"tc\">\n<div id=\"toctitle\" class=\"title\">Contents <strong>x</strong></div>\n<ul class=\"sectlevel1\">\n<li><a href=\"#_a\">A</a></li>\n</ul>\n</nav>\n</div>\n</div>"),
             "{html}"
         );
         assert!(
@@ -5435,6 +5443,20 @@ mod tests {
             assert!(STYLESHEET.contains(rule), "{rule}");
         }
         assert!(!STYLESHEET.contains("system-ui"));
+        // Ruby's block boxes and layouts.
+        for rule in [
+            "  line-height: 1;\n  color: var(--adoctra-fg);",
+            "  border: 1px solid #e0e0dc;\n  border-radius: 4px;\n  background: #fffef7;",
+            "  border: 1px solid #dbdbd6;\n  border-radius: 4px;\n  background: #f3f3f2;",
+            "  content: \"\\201c\";",
+            "aside.admonition {\n  display: table;",
+            "table.grid-all > * > tr > * { border-width: 1px; }",
+            "dl dd { margin: 0 0 1.25em 1.125em; }",
+            "figure:is(.imageblock, .videoblock, .audioblock) { margin: 0 0 1.25em; }",
+            "#content #toc {\n  border: 1px solid #e0e0dc;",
+        ] {
+            assert!(STYLESHEET.contains(rule), "{rule}");
+        }
         // A `max-width` inline style narrows the footer band, centred.
         let html = render_standalone(":max-width: 60em\n\nx");
         assert!(html.contains(r#"<footer id="footer" style="max-width: 60em;">"#));

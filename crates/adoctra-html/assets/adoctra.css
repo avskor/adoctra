@@ -36,7 +36,9 @@ html { -webkit-text-size-adjust: 100%; }
 body {
   font-family: var(--adoctra-font);
   font-size: 100%;
-  line-height: 1.6;
+  /* As in Ruby, text elements set their own line height; bare text (a
+     styled paragraph's simple content) keeps 1. */
+  line-height: 1;
   color: var(--adoctra-fg);
   background: var(--adoctra-bg);
   margin: 0;
@@ -54,8 +56,8 @@ p {
   letter-spacing: -0.01em;
   text-rendering: optimizeLegibility;
 }
-dt, summary { font-size: 1.0625rem; text-rendering: optimizeLegibility; }
-summary { letter-spacing: -0.01em; }
+dt, summary, span.alt { font-size: 1.0625rem; text-rendering: optimizeLegibility; }
+summary, span.alt { letter-spacing: -0.01em; }
 p strong, .admonition-content strong { letter-spacing: -0.005em; }
 .sidebarblock :is(p, dt), p.tableblock { font-size: 1em; }
 p.lead,
@@ -72,6 +74,8 @@ hr {
   clear: both;
   margin: 1.25em 0 1.1875em;
 }
+b, strong { font-weight: bold; }
+em, i { font-style: italic; }
 em em { font-style: normal; }
 strong strong { font-weight: 400; }
 
@@ -162,6 +166,9 @@ body > #footer {
   body.toc2 { padding-inline-start: 20em; }
   body.toc2.toc-right { padding-inline: 0 20em; }
   nav#toc.toc2 { width: 20em; }
+  nav#toc.toc2 #toctitle { font-size: 1.375em; }
+  nav#toc.toc2 > ul { font-size: 0.95em; }
+  nav#toc.toc2 ul ul { padding-inline-start: 1.25em; }
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -268,6 +275,7 @@ pre.nowrap { white-space: pre; overflow-wrap: normal; }
 pre.highlightjs { padding: 0; }
 pre.highlightjs > code { display: block; padding: 1em; border-radius: 4px; }
 pre.prettyprint.highlight { padding: 1em; border-width: 0; }
+pre.prettyprint { background: var(--adoctra-code-bg); }
 pre.prettyprint .linenums { line-height: 1.45; margin: 0 0 1.25em 2em; padding: 0; }
 pre.prettyprint li { background: none; list-style-type: inherit; padding-inline-start: 0; }
 
@@ -304,6 +312,12 @@ aside.admonition {
   text-transform: uppercase;
 }
 .admonition-title img { max-width: none; }
+/* Ruby styles only a text label (its div.title); an icon cell does not. */
+.admonition-title:has(> img) {
+  font-family: var(--adoctra-font);
+  font-weight: normal;
+  text-transform: none;
+}
 /* Ruby's td.content: its text size and spacing reach the children too. */
 .admonition-content {
   padding: 0.5625em 1.25em 0.5625em 1.125em;
@@ -334,21 +348,27 @@ aside.admonition {
 
 /* --- Example blocks ------------------------------------------------------- */
 
-.exampleblock {
+/* Ruby's example: the title above a warm, shadowed box (`.content`). */
+.exampleblock > .content {
   display: flow-root;
-  margin-block: 1.25rem;
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--adoctra-border, #d0d7de);
-  border-radius: 8px;
-  background: color-mix(in srgb, currentColor 3%, transparent);
+  margin-block-end: 1.25em;
+  padding: 1.25em;
+  border: 1px solid #e0e0dc;
+  border-radius: 4px;
+  background: #fffef7;
+  box-shadow: 0 1px 4px #e0e0dc;
 }
-.exampleblock > :first-child { margin-block-start: 0; }
-.exampleblock > :last-child { margin-block-end: 0; }
+:is(.exampleblock > .content, .sidebarblock) > :first-child { margin-block-start: 0; }
+:is(.exampleblock > .content, .sidebarblock) > :last-child,
+:is(.exampleblock > .content, .sidebarblock) > :last-child > :last-child,
+:is(.exampleblock > .content, .sidebarblock) :is(ul, ol) > li:last-child > :last-child {
+  margin-block-end: 0;
+}
 
 /* A collapsible example (`%collapsible`) is Ruby's `<details>`: indented,
    with a triangle disclosure marker beside a plain `<summary>`. */
 details {
-  margin-block: 0 1.25rem;
+  margin-block: 0 1.25em;
   margin-inline-start: 1.25rem;
 }
 details > summary {
@@ -361,8 +381,13 @@ details > summary {
   -webkit-tap-highlight-color: transparent;
 }
 details > summary.title {
+  margin-block: 0 0.625rem;
+  line-height: 1.6;
+  font-family: inherit;
+  font-size: 1.0625rem;
+  font-style: normal;
   font-weight: inherit;
-  font-size: inherit;
+  letter-spacing: -0.01em;
   color: inherit;
 }
 details > summary::-webkit-details-marker { display: none; }
@@ -382,19 +407,27 @@ details[open] > summary::before {
   border-width: 0.5em 0.3em 0;
   transform: translateY(15%);
 }
+details > summary::after {
+  content: "";
+  inline-size: 1.25rem;
+  block-size: 1em;
+  position: absolute;
+  top: 0.3em;
+  inset-inline-start: -1.25rem;
+}
 details > :last-child { margin-block-end: 0; }
 
 /* --- Sidebar blocks ------------------------------------------------------- */
 
+/* Ruby's sidebar: a grey box holding its centred heading-style title. */
 .sidebarblock {
   display: flow-root;
-  margin-block: 1.25rem;
-  padding: 0.75rem 1rem;
-  border-radius: 8px;
-  background: color-mix(in srgb, currentColor 6%, transparent);
+  margin-block-end: 1.25em;
+  padding: 1.25em;
+  border: 1px solid #dbdbd6;
+  border-radius: 4px;
+  background: #f3f3f2;
 }
-.sidebarblock > :first-child { margin-block-start: 0; }
-.sidebarblock > :last-child { margin-block-end: 0; }
 .sidebarblock > .title {
   font-family: var(--adoctra-heading-font);
   font-weight: 300;
@@ -412,55 +445,88 @@ details > :last-child { margin-block-end: 0; }
 
 /* --- Open blocks --------------------------------------------------------- */
 
-/* A generic, visually transparent grouping container: it just establishes a
-   block formatting context and owns the children's vertical rhythm — no border
-   or background of its own (matching asciidoctor's default openblock). */
-.openblock {
-  display: flow-root;
-  margin-block: 1.25rem;
-}
-.openblock > :first-child { margin-block-start: 0; }
-.openblock > :last-child { margin-block-end: 0; }
-/* A book part's introduction (`partintro`) reads as a lead-in. */
-.openblock.partintro { font-size: 1.05em; }
+/* A generic, visually transparent grouping container: like Ruby's
+   openblock it has no box or margin of its own, so the children's margins
+   pass through it. */
 
 /* --- Quote & verse blocks ------------------------------------------------ */
 
-.quoteblock,
-.verseblock {
-  margin-block: 1.25rem;
-  margin-inline: 0;
-  padding-inline-start: 1rem;
-  border-inline-start: 3px solid var(--adoctra-border, #d0d7de);
-  color: color-mix(in srgb, var(--adoctra-fg) 88%, transparent);
+/* Ruby's quote: an indented, shrink-wrapped block of large italic text with
+   a hanging opening quotation mark and a right-aligned attribution. */
+.quoteblock {
+  display: table;
+  margin: 0 1em 1.25em 1.5em;
 }
-.quoteblock blockquote { margin: 0; }
-.quoteblock blockquote > :first-child { margin-block-start: 0; }
-.quoteblock blockquote > :last-child { margin-block-end: 0; }
-/* A verse is verbatim: keep the author's line breaks, but use the body font
-   (not monospace) and let long lines wrap. */
+.quoteblock:not(.excerpt) > .title { margin-inline-start: -1.5em; margin-block-end: 0.75em; }
+.quoteblock :is(blockquote, p) {
+  color: rgb(0 0 0 / 0.85);
+  font-size: 1.15rem;
+  line-height: 1.75;
+  word-spacing: 0.1em;
+  letter-spacing: 0;
+  font-style: italic;
+  text-align: justify;
+}
+.quoteblock blockquote { margin: 0; padding: 0; border: 0; }
+.quoteblock blockquote::before {
+  content: "\201c";
+  float: inline-start;
+  font-size: 2.75em;
+  font-weight: bold;
+  line-height: 0.6em;
+  margin-inline-start: -0.6em;
+  color: var(--adoctra-title-fg);
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.1);
+}
+.quoteblock blockquote > p:last-child { margin-block-end: 0; }
+.quoteblock figcaption { margin-block-start: 0.75em; margin-inline-end: 0.5ex; text-align: end; }
+.verseblock { margin: 0 1em 1.25em; }
 .verseblock pre {
-  margin: 0;
-  font-family: inherit;
-  white-space: pre-wrap;
+  font-family: var(--adoctra-heading-font);
+  font-size: 1.15rem;
+  color: rgb(0 0 0 / 0.85);
+  font-weight: 300;
+  text-rendering: optimizeLegibility;
 }
-.quoteblock figcaption,
-.verseblock figcaption {
-  margin-block-start: 0.5rem;
-  font-size: 0.9em;
-  color: color-mix(in srgb, var(--adoctra-fg) 60%, transparent);
+.verseblock pre strong { font-weight: 400; }
+.verseblock figcaption { margin-block-start: 1.25rem; margin-inline-start: 0.5ex; }
+:is(.quoteblock, .verseblock) figcaption {
+  font-size: 0.9375em;
+  line-height: 1.45;
+  font-style: italic;
 }
-/* Like Ruby's stylesheet, the cited work is a line of its own (without the <br>
-   before it), so credit text following a <cite> starts a new line. */
-.quoteblock figcaption cite,
-.verseblock figcaption cite { display: block; font-style: italic; }
-.quoteblock figcaption br,
-.verseblock figcaption br { display: none; }
-/* An abstract is a quote block without the quote rule. */
-.quoteblock.abstract {
-  padding-inline-start: 0;
-  border-inline-start: none;
-  font-size: 1.05em;
+/* The cited work is a line of its own (without the <br> before it). */
+:is(.quoteblock, .verseblock) figcaption br { display: none; }
+:is(.quoteblock, .verseblock) figcaption cite {
+  display: block;
+  letter-spacing: -0.025em;
+  color: rgb(0 0 0 / 0.6);
+}
+/* An abstract (and a quote nested in a quote) drops the quotation mark. */
+:is(.quoteblock.abstract, .quoteblock.excerpt, .quoteblock .quoteblock) blockquote::before { display: none; }
+:is(.quoteblock.abstract, .quoteblock.excerpt, .quoteblock .quoteblock) :is(blockquote, p) {
+  line-height: 1.6;
+  word-spacing: 0;
+}
+.quoteblock.abstract { margin: 0 1em 1.25em; display: block; }
+.quoteblock.abstract > .title { margin: 0 0 0.375em; font-size: 1.15em; text-align: center; }
+:is(.quoteblock.excerpt, .quoteblock .quoteblock) {
+  margin-inline-start: 0;
+}
+.quoteblock.excerpt > blockquote,
+.quoteblock .quoteblock {
+  padding: 0 0 0.25em 1em;
+  border-inline-start: 0.25em solid var(--adoctra-rule);
+}
+:is(.quoteblock.excerpt, .quoteblock .quoteblock) :is(blockquote, p) {
+  color: inherit;
+  font-size: 1.0625rem;
+}
+:is(.quoteblock.excerpt, .quoteblock .quoteblock) figcaption {
+  color: inherit;
+  font-size: 0.85rem;
+  text-align: start;
+  margin-inline-end: 0;
 }
 
 /* --- Table of contents ---------------------------------------------------- */
@@ -505,29 +571,30 @@ details > :last-child { margin-block-end: 0; }
 #content #toc > :first-child { margin-block-start: 0; }
 #content #toc > :last-child { margin-block-end: 0; }
 
-/* --- Images (`image::target[]`) ------------------------------------------ */
+/* --- Images (`image::target[]`), video and audio -------------------------- */
 
-/* An image figure with an optional trailing caption (figcaption.title). */
-figure.imageblock { margin-block: 1.25rem; margin-inline: 0; }
-figure.imageblock img { max-inline-size: 100%; block-size: auto; }
-figure.imageblock > figcaption.title { margin-block: 0.5rem 0; font-style: italic; }
-figure.imageblock.text-left { text-align: start; }
-figure.imageblock.text-center { text-align: center; }
-figure.imageblock.text-right { text-align: end; }
-figure.imageblock.left { float: inline-start; margin-inline-end: 1.25rem; }
-figure.imageblock.right { float: inline-end; margin-inline-start: 1.25rem; }
-figure:is(.videoblock, .audioblock) { margin-block: 1.25rem; margin-inline: 0; }
-figure:is(.videoblock, .audioblock) > figcaption.title { margin-block: 0 0.5rem; font-style: italic; }
-figure.videoblock :is(video, iframe) { max-inline-size: 100%; border: 0; }
-figure.audioblock audio { inline-size: min(100%, 40rem); }
-span:is(.image, .icon) img { max-inline-size: 100%; block-size: auto; vertical-align: middle; }
-span:is(.image, .icon).left { float: inline-start; margin-inline-end: 0.75rem; }
-span:is(.image, .icon).right { float: inline-end; margin-inline-start: 0.75rem; }
-figure.videoblock.text-left { text-align: start; }
-figure.videoblock.text-center { text-align: center; }
-figure.videoblock.text-right { text-align: end; }
-figure.videoblock.left { float: inline-start; margin-inline-end: 1.25rem; }
-figure.videoblock.right { float: inline-end; margin-inline-start: 1.25rem; }
+/* Ruby's imageblock/videoblock/audioblock: the media, a trailing (image)
+   or leading (video, audio) title, a bottom margin. */
+figure:is(.imageblock, .videoblock, .audioblock) { margin: 0 0 1.25em; }
+img, object, svg { display: inline-block; vertical-align: middle; }
+img, object, embed { max-width: 100%; height: auto; }
+figure.imageblock > figcaption.title { margin-block-end: 0; }
+figure:is(.videoblock, .audioblock) > figcaption.title { margin-block: 0 0.25em; }
+figure.videoblock iframe { border: 0; }
+.text-left { text-align: left !important; }
+.text-right { text-align: right !important; }
+.text-center { text-align: center !important; }
+.text-justify { text-align: justify !important; }
+figure.imageblock.left { float: left; margin: 0.25em 0.625em 1.25em 0; }
+figure.imageblock.right { float: right; margin: 0.25em 0 1.25em 0.625em; }
+figure.videoblock.left { float: left; }
+figure.videoblock.right { float: right; }
+span:is(.image, .icon) img { max-inline-size: 100%; block-size: auto; }
+span.image:is(.left, .right) { margin-block: 0.25em; display: inline-block; line-height: 0; }
+span.image.left { float: left; margin-inline-end: 0.625em; }
+span.image.right { float: right; margin-inline-start: 0.625em; }
+a.image { text-decoration: none; display: inline-block; }
+a.image object { pointer-events: none; }
 
 /* --- Block titles (`.Title`) --------------------------------------------- */
 
@@ -545,43 +612,69 @@ figure.videoblock.right { float: inline-end; margin-inline-start: 1.25rem; }
 }
 
 /* --- Tables (`|===`) ----------------------------------------------------- */
-/* Ruby's frame, grid and stripes classes drive the rules; cells carry
- * their own horizontal and vertical alignment classes. */
+/* Ruby's table rules: frame/grid/stripes classes set border widths of one
+ * #dedede rule colour, header/footer rows are tinted, cells carry their
+ * own horizontal and vertical alignment classes. */
 
-table.tableblock {
-  --rule: color-mix(in srgb, var(--adoctra-fg) 22%, transparent);
+table {
   border-collapse: collapse;
   border-spacing: 0;
-  margin-block: 1.25rem;
+  background: #fff;
+  margin-block-end: 1.25em;
+  border: 1px solid #dedede;
+  overflow-wrap: normal;
 }
+table :is(thead, tfoot) { background: #f7f8f7; }
+table :is(thead, tfoot) tr :is(th, td) {
+  padding: 0.5em 0.625em 0.625em;
+  font-size: inherit;
+  color: var(--adoctra-fg);
+  text-align: start;
+}
+table tr :is(th, td) {
+  padding: 0.5625em 0.625em;
+  font-size: inherit;
+  color: var(--adoctra-fg);
+  line-height: 1.6;
+}
+table tr:is(.even, .alt) { background: #f8f8f7; }
 table.tableblock.stretch { inline-size: 100%; }
-table.tableblock.fit-content { inline-size: fit-content; }
-table.tableblock.left { float: inline-start; margin-inline-end: 1.25rem; }
-table.tableblock.right { float: inline-end; margin-inline-start: 1.25rem; }
+table.tableblock.fit-content { inline-size: auto; }
+table.tableblock.fit-content > caption.title { white-space: nowrap; inline-size: 0; }
+table.tableblock.left { float: inline-start; margin-inline-end: 0.625em; }
+table.tableblock.right { float: inline-end; margin-inline-start: 0.625em; }
 table.tableblock > caption.title { caption-side: top; text-align: start; }
-table.tableblock :is(th, td) { padding: 0.4rem 0.6rem; }
-table.tableblock th { font-weight: 600; }
-table.tableblock > thead th { background: color-mix(in srgb, var(--adoctra-fg) 5%, transparent); }
-table.tableblock p.tableblock { margin: 0; }
-table.tableblock p.tableblock + p.tableblock { margin-block-start: 0.6em; }
-table.tableblock div.literal > pre { margin: 0; }
-table.frame-all { border: 1px solid var(--rule); }
-table.frame-ends { border-block: 1px solid var(--rule); }
-table.frame-sides { border-inline: 1px solid var(--rule); }
-table.grid-all :is(th, td) { border: 1px solid var(--rule); }
-table.grid-rows :is(th, td) { border-block: 1px solid var(--rule); }
-table.grid-cols :is(th, td) { border-inline: 1px solid var(--rule); }
-table:is(.stripes-all, .stripes-hover) tr,
-table.stripes-even tr:nth-of-type(even),
-table.stripes-odd tr:nth-of-type(odd) { background: color-mix(in srgb, var(--adoctra-fg) 4%, transparent); }
-table.stripes-hover tr { background: none; }
-table.stripes-hover tr:hover { background: color-mix(in srgb, var(--adoctra-fg) 6%, transparent); }
-.halign-left { text-align: start; }
-.halign-center { text-align: center; }
-.halign-right { text-align: end; }
-.valign-top { vertical-align: top; }
-.valign-middle { vertical-align: middle; }
-.valign-bottom { vertical-align: bottom; }
+p.tableblock { font-size: 1em; }
+p.tableblock:last-child { margin-block-end: 0; }
+p.tableblock > code:only-child { background: none; padding: 0; }
+td.tableblock > .content { margin-block-end: 1.25em; overflow-wrap: anywhere; }
+/* Ruby's -1.25em is on a 16px wrapper; adoctra's last child may be a <p>. */
+td.tableblock > .content > :last-child { margin-block-end: -1.25rem; }
+td.tableblock > div.literal > pre { margin: 0; }
+table.tableblock, th.tableblock, td.tableblock { border: 0 solid #dedede; }
+table.grid-all > * > tr > * { border-width: 1px; }
+table.grid-cols > * > tr > * { border-width: 0 1px; }
+table.grid-rows > * > tr > * { border-width: 1px 0; }
+table.frame-all { border-width: 1px; }
+table.frame-ends { border-width: 1px 0; }
+table.frame-sides { border-width: 0 1px; }
+table:is(.frame-none, .frame-sides) > colgroup + * > :first-child > * { border-block-start-width: 0; }
+table:is(.frame-none, .frame-sides) > :last-child > :last-child > * { border-block-end-width: 0; }
+table:is(.frame-none, .frame-ends) > * > tr > :first-child { border-inline-start-width: 0; }
+table:is(.frame-none, .frame-ends) > * > tr > :last-child { border-inline-end-width: 0; }
+table.stripes-all > * > tr,
+table.stripes-odd > * > tr:nth-of-type(odd),
+table.stripes-even > * > tr:nth-of-type(even),
+table.stripes-hover > * > tr:hover { background: #f8f8f7; }
+:is(th, td).halign-left { text-align: left; }
+:is(th, td).halign-right { text-align: right; }
+:is(th, td).halign-center { text-align: center; }
+:is(th, td).valign-top { vertical-align: top; }
+:is(th, td).valign-bottom { vertical-align: bottom; }
+:is(th, td).valign-middle { vertical-align: middle; }
+table :is(thead, tfoot) th { font-weight: bold; }
+tbody tr th { background: #f7f8f7; }
+:is(tbody, tfoot) tr th, :is(tbody, tfoot) tr th p { color: var(--adoctra-fg); font-weight: bold; }
 
 /* --- Footnotes ----------------------------------------------------------- */
 
@@ -638,9 +731,13 @@ ul li ol { margin-inline-start: 1.5em; }
   margin-block-end: 0.625em;
 }
 :is(ul, ol):not([class^="sectlevel"]) > li::marker { font-size: 1rem; letter-spacing: normal; }
-:is(ul, ol):not([class^="sectlevel"]) > li > :not(p) { font-size: 1rem; letter-spacing: normal; }
+:is(ul, ol):not([class^="sectlevel"]) > li > :is(div, ul, ol, dl, table, figure, aside, details, nav, blockquote, hr) {
+  font-size: 1rem;
+  letter-spacing: normal;
+}
+:is(ul, ol):not([class^="sectlevel"]) > li strong { letter-spacing: -0.005em; }
+:is(ul, ol):not([class^="sectlevel"]) > li > pre { letter-spacing: normal; }
 :is(ul, ol):not([class^="sectlevel"]) > li > :first-child { margin-block-start: 0.6640625rem; }
-:is(ul, ol):not([class^="sectlevel"]) > li > :last-child { margin-block-end: 0; }
 li p { margin-block-end: 0.625em; }
 ul.circle { list-style-type: circle; }
 ul.disc { list-style-type: disc; }
@@ -653,10 +750,10 @@ ol.lowerroman { list-style-type: lower-roman; }
 ol.upperroman { list-style-type: upper-roman; }
 ol.lowergreek { list-style-type: lower-greek; }
 ul.checklist { list-style: none; padding-inline-start: 1.25rem; }
-dl { margin-block: 1rem; }
-dl > dt { font-weight: 600; }
-dl > dd { margin-inline-start: 1.5rem; margin-block-end: 0.5rem; }
-dl > dd > p:first-child { margin-block-start: 0.25rem; }
+dl dt { margin-block-end: 0.3125em; font-weight: bold; }
+dl dd { margin: 0 0 1.25em 1.125em; }
+dl dd:last-child, dl dd:last-child > :last-child { margin-block-end: 0; }
+:is(ul, ol) dd { margin-block-end: 0.625em; }
 /* A horizontal description list: terms beside their descriptions. */
 dl.hdlist {
   display: grid;
@@ -711,11 +808,11 @@ kbd {
   font-family: var(--adoctra-mono);
   font-size: 0.65em;
   line-height: 1.45;
-  color: color-mix(in srgb, currentColor 80%, transparent);
-  background: var(--adoctra-code-bg);
-  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  color: rgb(0 0 0 / 0.8);
+  background: #f7f7f7;
+  border: 1px solid #ccc;
   border-radius: 3px;
-  box-shadow: 0 1px 0 color-mix(in srgb, currentColor 20%, transparent);
+  box-shadow: 0 1px 0 rgb(0 0 0 / 0.2), inset 0 0 0 0.1em #fff;
   margin-inline: 0.15em;
   padding: 0.2em 0.5em;
   vertical-align: middle;
@@ -723,7 +820,8 @@ kbd {
   inset-block-start: -0.1em;
   white-space: nowrap;
 }
-.keyseq { color: color-mix(in srgb, currentColor 80%, transparent); }
+.keyseq { color: rgb(51 51 51 / 0.8); }
+.menuseq, .menuref { color: #000; }
 .keyseq kbd:first-child { margin-inline-start: 0; }
 .keyseq kbd:last-child { margin-inline-end: 0; }
 .menuseq b:not(.caret), .menuref { font-weight: inherit; }
@@ -758,7 +856,7 @@ aside.admonition > .admonition-content {
   color: color-mix(in srgb, var(--adoctra-fg) 75%, transparent);
 }
 .quoteblock :is(blockquote, p),
-.verseblock pre { color: color-mix(in srgb, var(--adoctra-fg) 88%, transparent); }
+.verseblock pre { color: rgb(0 0 0 / 0.85); }
 table.tableblock :is(th, td) { color: var(--adoctra-fg); }
 
 .big { font-size: larger; }

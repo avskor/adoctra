@@ -139,9 +139,10 @@ Ruby HTML is not a goal, maximal visual parity with Ruby's rendering is. The
 `visual-v1` profile (`scripts/visual.py`, docs/visual.adoc) measures it: words
 with computed style/geometry plus pixels, Chrome via pinned playwright-core,
 local environment-bound baseline `compatibility/visual/report.json`. adoctra.css
-now carries Ruby's base typography and column (fonts, colours, sizes, lists,
-TOC, admonition as a CSS table): 355 of 498 observations match; block styles
-(example, sidebar, quote/verse, dl, tables, images) are the next step.
+now carries Ruby's typography, column and block styles (body line-height 1,
+lists, TOC, admonition as a CSS table, example box on its `div.content`,
+sidebar, quote/verse, tables, dl, media): 494 of 498 observations match; the
+two remaining cases (raw unclosed `<i>`, broken icon image) are documented.
 Re-record only after reviewing an IMPROVED diff; never loosen tolerances. Visual parity, CLI behavior,
 diagnostics, resource loading and untested language combinations must remain
 visible in the audit. Historical
@@ -1469,9 +1470,9 @@ fixups (`[literal]`/`[NOTE]`/`[example]`) all work at any depth, and the resolve
 pass recurses into a container so anchors/ids inside register and `<<id>>`
 resolves across the whole document. A paragraph now ends at any block-delimiter
 line (`----`/`....`/`====`) so a container's closing fence is never folded into
-the body. The HTML backend renders a single `<div class="exampleblock">` wrapping
-the rendered children (asciidoctor nests `exampleblock`/`content` divs; adoctra's
-no-wrapper convention emits one element carrying the id/roles), `adoctra.css`
+the body. The HTML backend renders `<div class="exampleblock">` (id/roles) with
+the title, then the children in `<div class="content">` (Ruby's structure: the
+example's box is the content wrapper, below the title), `adoctra.css`
 ships an `.exampleblock` rule, JSON/WASM serialize `name:"example"` with a nested
 `blocks` array, and the tokenizer emits `example-delimiter` (the body, *not*
 verbatim, keeps its normal tokens). Building directly on that container, an
