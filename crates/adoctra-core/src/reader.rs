@@ -27,6 +27,24 @@ struct Input {
 }
 
 impl Input {
+    /// Ruby's `skip_front_matter!` on prepared lines: a first `---` line,
+    /// the lines up to the next `---` and that line are skipped, and their
+    /// text (joined with LF) is returned. Without a closing line nothing is.
+    fn skip_front_matter(&mut self) -> Option<String> {
+        let lines = &self.lines[self.next..];
+        if lines.first().map(|line| &*line.text) != Some("---") {
+            return None;
+        }
+        let close = lines[1..].iter().position(|line| &*line.text == "---")? + 1;
+        let front_matter = lines[1..close]
+            .iter()
+            .map(|line| &*line.text)
+            .collect::<Vec<_>>()
+            .join("\n");
+        self.next += close + 1;
+        Some(front_matter)
+    }
+
     fn new(source: &str, source_id: crate::SourceId, preprocess: bool, occurrence: usize) -> Self {
         let lines = Line::from_source(source);
         Self {
@@ -69,6 +87,10 @@ pub(crate) struct Reader<'a> {
     primary_eof: crate::DiagnosticCursor,
     inputs: Vec<Input>,
     resources: Option<Resources<'a>>,
+    /// Ruby's `@maxdepth` is set (a positive host `max-include-depth`) for a
+    /// reader without a provider: nothing is read, but a URI target Ruby may
+    /// not read still becomes a link (see `expand_include`).
+    unread_includes: bool,
     origins: Vec<Origin>,
     next_offset: usize,
     next_occurrence: usize,
@@ -132,6 +154,7 @@ impl<'a> Reader<'a> {
             },
             inputs: vec![Input::new(source, crate::SourceId::default(), false, 0)],
             resources: None,
+            unread_includes: false,
             origins: Vec::new(),
             next_offset: 0,
             next_occurrence: 1,
@@ -250,22 +273,7 @@ impl<'a> Reader<'a> {
         }
         let mut reader = Self::new(source.text());
         reader.inputs[0].source_id = options.source_id;
-        // Ruby reads the attribute once, when it creates the reader, so
-        // only the API attributes count.
-        let host_depth = options
-            .attributes
-            .iter()
-            .map(|(key, value)| crate::context::host_attribute(key, value))
-            .filter(|(key, _, _)| *key == "max-include-depth")
-            .last()
-            .and_then(|(_, value, _)| value);
-        let max_depth = match host_depth {
-            Some(value) => usize::try_from(crate::include_selection::integer_prefix(value))
-                .ok()
-                .filter(|depth| *depth > 0)
-                .map(|depth| depth.min(options.includes.max_depth)),
-            None => Some(options.includes.max_depth),
-        };
+        let max_depth = host_max_include_depth(options);
         let max = max_depth.unwrap_or(0);
         reader.inputs[0].max_depth = max;
         reader.inputs[0].depth_label = max;
@@ -704,10 +712,12 @@ impl<'a> Reader<'a> {
                 return None;
             }
             // Secure mode turns the directive into a link, even without a
-            // provider; otherwise only a provider expands includes.
+            // provider, and so does a URI target Ruby may not read (no I/O);
+            // otherwise only a provider expands includes.
             if self.resources.is_none()
                 && crate::context::SafeMode::of(&context.attributes)
                     < crate::context::SafeMode::Secure
+                && !(self.unread_includes && crate::image::uri_prefix(target).is_some())
             {
                 return Some((off, line));
             }
@@ -1013,6 +1023,15 @@ impl<'a> Reader<'a> {
         }
         // Without a positive `max-include-depth` Ruby leaves the directive.
         let Some(abs_depth) = self.resources.as_ref().and_then(|r| r.max_depth) else {
+            // Without a provider nothing is read. Ruby links a URI target it
+            // may not read without any I/O (after parsing the parameters).
+            if self.unread_includes
+                && crate::image::uri_prefix(&expanded_target).is_some()
+                && context.attributes.get("allow-uri-read").is_none()
+            {
+                self.include_attributes(attrlist, span, context);
+                return self.include_link(&expanded_target, span);
+            }
             return false;
         };
         // Ruby checks the depth before it parses the parameter list.
@@ -1238,6 +1257,14 @@ impl<'a> Reader<'a> {
                 line.normalize();
             }
         }
+        // Ruby's `prepare_lines` skips front matter in included files too,
+        // with the attributes current at the directive (a reading effect).
+        if attributes.get("skip-front-matter").is_some() {
+            if let Some(front_matter) = input.skip_front_matter() {
+                Arc::make_mut(&mut context.attributes).set("front-matter", front_matter);
+            }
+        }
+        let attributes = &context.attributes;
         if let Some(offset) = attrs.get("leveloffset").filter(|_| !input.lines.is_empty()) {
             input.start_line -= 2;
             // Ruby injects these entries even in raw/verbatim input. They must
@@ -1258,6 +1285,24 @@ impl<'a> Reader<'a> {
         self.inputs.push(input);
         self.next_occurrence += 1;
         true
+    }
+
+    /// Ruby's front matter (`skip-front-matter`) of the primary document,
+    /// before its header is read: the `front-matter` attribute.
+    pub fn skip_primary_front_matter(&mut self, context: &mut ParseContext) {
+        if context.attributes.get("skip-front-matter").is_none() {
+            return;
+        }
+        if let Some(front_matter) = self.inputs[0].skip_front_matter() {
+            Arc::make_mut(&mut context.attributes).set("front-matter", front_matter);
+        }
+    }
+
+    /// For a reader without a provider (string APIs): whether Ruby's
+    /// built-in include handling is enabled by the host attributes.
+    pub fn enable_unread_includes(&mut self, options: &crate::ParseOptions) {
+        self.unread_includes =
+            self.resources.is_none() && host_max_include_depth(options).is_some();
     }
 
     pub fn finish(&mut self) {
@@ -1396,8 +1441,35 @@ fn directive(line: &str) -> Option<(&str, &str, &str)> {
     }
     let rest = rest.strip_suffix(']')?;
     let (target, text) = rest.split_once('[')?;
-    if keyword != "include" && target.chars().any(char::is_whitespace) {
-        return None;
+    // Ruby's ConditionalDirectiveRx (`\S*?` targets) and IncludeDirectiveRx
+    // (a target neither empty nor starting or ending with whitespace).
+    let valid = match keyword {
+        "include" => {
+            !target.is_empty()
+                && !target.starts_with(char::is_whitespace)
+                && !target.ends_with(char::is_whitespace)
+        }
+        _ => !target.chars().any(char::is_whitespace),
+    };
+    valid.then_some((keyword, target, text))
+}
+
+/// Ruby's `@maxdepth[:abs]`, read once when the reader is created, so only
+/// the API attributes count: `max-include-depth` (Ruby `to_i`, default 64)
+/// bounded by the host limit, or None when it disables includes.
+fn host_max_include_depth(options: &crate::ParseOptions) -> Option<usize> {
+    let host_depth = options
+        .attributes
+        .iter()
+        .map(|(key, value)| crate::context::host_attribute(key, value))
+        .filter(|(key, _, _)| *key == "max-include-depth")
+        .last()
+        .and_then(|(_, value, _)| value);
+    match host_depth {
+        Some(value) => usize::try_from(crate::include_selection::integer_prefix(value))
+            .ok()
+            .filter(|depth| *depth > 0)
+            .map(|depth| depth.min(options.includes.max_depth)),
+        None => Some(options.includes.max_depth),
     }
-    Some((keyword, target, text))
 }

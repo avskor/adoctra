@@ -149,7 +149,7 @@ UNSUPPORTED — записи, которые контракт CLI не выра�
 |===
 |Файл |PASS |DIFF |UNSUPPORTED
 |substitutions_test.rb |364 |2 |28
-|lists_test.rb |279 |11 |19
+|lists_test.rb |281 |9 |19
 |blocks_test.rb |244 |4 |54
 |sections_test.rb |190 |16 |12
 |attributes_test.rb |186 |7 |8
@@ -158,7 +158,7 @@ UNSUPPORTED — записи, которые контракт CLI не выра�
 |document_test.rb |99 |3 |80
 |text_test.rb |84 |0 |2
 |api_test.rb |62 |0 |48
-|reader_test.rb |68 |7 |81
+|reader_test.rb |75 |0 |81
 |extensions_test.rb |57 |0 |13
 |paragraphs_test.rb |50 |0 |4
 |syntax_highlighter_test.rb |37 |26 |2
@@ -166,10 +166,10 @@ UNSUPPORTED — записи, которые контракт CLI не выра�
 |preamble_test.rb |7 |0 |6
 |parser_test.rb, attribute_list_test.rb, logger_test.rb |6 |0 |4
 |manpage_test.rb, paths_test.rb |0 |0 |78
-|Итого |2033 |77 |511
+|Итого |2042 |68 |511
 |===
 
-2033 из 2110 сравнимых записей (96.4%) совпадают в этом профиле. Это доля
+2042 из 2110 сравнимых записей (96.8%) совпадают в этом профиле. Это доля
 наблюдаемых входов тестового набора, а не процент совместимости языка.
 
 `doctype=inline` реализован (HTML-бэкенд, как `Document#convert` Ruby):
@@ -191,14 +191,23 @@ target not permitted / missing expression / invalid expression: <директи�
 (цель в нижнем регистре, текст в скобках как есть) и «unterminated comment
 block». Короткие сообщения для редактора (`Diagnostic.message`) не изменились.
 
-Оставшиеся 77 расхождений по причинам:
+Директивы include следуют грамматике Ruby (IncludeDirectiveRx): пустая
+цель или цель с пробелом в начале или конце не директива, а обычный текст
+(например, `include:: []` — список описаний). Без провайдера (строковые API,
+stdin) ничего не читается, но URI-цель без `allow-uri-read` при включённых
+include (положительный host `max-include-depth`) становится ссылкой
+`link:…[role=include]`, как в Ruby, которому для этого не нужен ввод-вывод;
+файловые цели по-прежнему остаются текстом. `skip-front-matter` пропускает
+front matter (`---` … `---` в начале) основного документа до заголовка и
+каждого включённого файла и задаёт атрибут `front-matter` (во включении —
+эффект чтения), физические span остаются прежними.
+
+Оставшиеся 68 расхождений по причинам:
 
 * *Серверная подсветка* (26): эталон без gem `rouge` предупреждает
   «optional gem 'rouge' is not available» и выводит `<pre class="rouge
   highlight">`; adoctra так поступает для CodeRay/Pygments, но не для Rouge.
   Способ работы с Rouge — отдельное решение (см. реестр расхождений).
-* *Пограничные случаи include* (9): цели с пробелами, `skip-front-matter`,
-  ссылки вместо удалённого include в secure mode.
 * *Якоря* (7): якоря внутри заголовков разделов, пустой reftext.
 * *Заголовки ATX/Markdown* (6): `# Title` и симметричная форма `== Title ==`.
 * *Callouts с иконками и комментарии строк* (5).

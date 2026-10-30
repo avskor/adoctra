@@ -218,8 +218,8 @@ Supported entries (recorded options mapped to `-S`/`-s`/`-a`) are compared in
 body-dom-v1 plus warnings against pinned Ruby without optional highlighter
 gems; others are UNSUPPORTED with a reason. The reference mimics one Ruby CLI
 run per document (output chomped + LF, highlighter library status reset).
-2033 PASS / 77 DIFF / 511 UNSUPPORTED of 2621; CI freezes every status.
-Clusters (Rouge, include edges, title anchors, ATX titles) are the queue;
+2042 PASS / 68 DIFF / 511 UNSUPPORTED of 2621; CI freezes every status.
+Clusters (Rouge, title anchors, ATX titles) are the queue;
 `--show ID` prints both sides. Malformed/mismatched conditional directives
 and an unterminated comment block keep short editor messages and put Ruby's
 reader message verbatim in `report.message` (Reader::error_reported).
@@ -1985,6 +1985,15 @@ Do not normalize request order away. CI fails on baseline drift and XPASS.
 Cross-provider/process/disk caching, URI normalization and untested
 encoding/selection combinations remain open, as does Ruby's jail recovery
 (providers deny). Do not replace explicit provider policy with ambient I/O.
+
+**Include edges**: reader.rs `directive` follows Ruby's IncludeDirectiveRx
+(no empty target, none starting/ending with whitespace: such lines are text).
+Without a provider a URI target is still linked when Ruby may not read it
+(no `allow-uri-read`, positive host `max-include-depth`: Reader
+unread_includes); file targets stay literal. `skip-front-matter` skips a
+leading `---`…`---` block of the primary input (before the header) and of
+each include (Input::skip_front_matter, by the input cursor, physical spans
+kept) and sets `front-matter` (a reading effect inside the body).
 
 When asked to "add a feature," check this list first and say plainly whether it
 is new work or wiring up an existing seam.

@@ -205,9 +205,11 @@ pub(crate) fn parse_reader<'a>(
     start: Option<&mut dyn crate::ConversionStart>,
 ) -> (ParseResult, Reader<'a>) {
     lines.set_primary_id(options.source_id);
+    lines.enable_unread_includes(options);
     let images = crate::data_uri::Images::new(lines.image_source());
     let mut context = ParseContext::new(options);
     context.images = Some(&images);
+    lines.skip_primary_front_matter(&mut context);
     let mut header = collect_header(&mut lines, &mut context);
     let mut doc = Document {
         attributes: (*context.attributes).clone(),
