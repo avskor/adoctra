@@ -12238,7 +12238,7 @@ static LEXER_CEYLON: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["ceylon: state comment: undefined method `Multiline' for class #<Class:0x00007e1525171048>"],
+    missing: &["ceylon: state comment: undefined method `Multiline' for class #<Class>"],
 };
 
 static LEXER_CFSCRIPT: LexerDef = LexerDef {

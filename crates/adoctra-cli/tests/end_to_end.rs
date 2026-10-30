@@ -812,11 +812,12 @@ fn cli_expands_nested_includes_and_reports_child_locations_and_denied_paths() {
         "{stderr}"
     );
     // Like Ruby, the jail recovers the path inside the root, where the file
-    // does not exist.
+    // does not exist. The directive's byte range depends on the PID's length.
+    let directive = format!("27..{}", 27 + format!("include::{target}[]").len());
     assert!(
-        stderr.contains(
-            "warning at 27..69: include file has illegal reference to ancestor of jail; recovering automatically"
-        ) && stderr.contains("error at 27..69: include failed (NotFound)"),
+        stderr.contains(&format!(
+            "warning at {directive}: include file has illegal reference to ancestor of jail; recovering automatically"
+        )) && stderr.contains(&format!("error at {directive}: include failed (NotFound)")),
         "{stderr}"
     );
     let html = String::from_utf8(output.stdout).unwrap();
