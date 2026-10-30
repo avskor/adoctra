@@ -1,7 +1,9 @@
 //! HTML5 backend.
 
 use adoctra_core::ast::{Attribution, Block, BlockKind, Inline};
-use adoctra_core::{Backend, DocinfoLocation, Document, ResourceProvider, ResourceRequest, Result};
+use adoctra_core::{
+    Backend, ConversionStart, DocinfoLocation, Document, ResourceProvider, ResourceRequest, Result,
+};
 use std::fmt;
 use std::sync::Arc;
 
@@ -77,8 +79,31 @@ impl HtmlBackend {
         self
     }
 
+    /// The hook to parse with ([`adoctra_core::parse_resource_with_start`]):
+    /// it reads a standalone document's custom stylesheet where Ruby's
+    /// converter builds the head, before the body's images are read. Render
+    /// with [`HtmlBackend::render_with_start`] to use what it read.
+    pub fn start(&self) -> HtmlStart {
+        HtmlStart {
+            embedded: self.embedded,
+            resources: self.resources.clone(),
+            stylesheet: None,
+        }
+    }
+
     /// Convert and report the warnings.
     pub fn render(&self, doc: &Document) -> Output {
+        self.render_prepared(doc, None)
+    }
+
+    /// Convert a document parsed with this backend's [`HtmlBackend::start`]:
+    /// the stylesheet it read is used (not read again) and its warnings are
+    /// already parse diagnostics.
+    pub fn render_with_start(&self, doc: &Document, start: &HtmlStart) -> Output {
+        self.render_prepared(doc, start.stylesheet.as_ref())
+    }
+
+    fn render_prepared(&self, doc: &Document, stylesheet: Option<&Option<String>>) -> Output {
         let cx = Cx {
             doc,
             outline: &doc.blocks,
@@ -93,7 +118,8 @@ impl HtmlBackend {
             render_content(&cx, true, &mut out);
             render_footnotes(&doc.footnotes, &doc.attributes, "", &mut out);
         } else {
-            render_document(&cx, self.resources.as_ref(), &mut warnings, &mut out);
+            let resources = self.resources.as_ref();
+            render_document(&cx, resources, stylesheet, &mut warnings, &mut out);
         }
         if let (true, Some(warning)) = (
             cx.source_listing.get(),
@@ -131,6 +157,7 @@ impl Backend for HtmlBackend {
 fn render_document(
     cx: &Cx,
     resources: Option<&Resources>,
+    prepared: Option<&Option<String>>,
     warnings: &mut Vec<String>,
     out: &mut String,
 ) {
@@ -193,7 +220,7 @@ fn render_document(
         ));
     }
     out.push_str(&format!("<title>{}</title>\n", document_title(doc)));
-    stylesheet(attributes, resources, warnings, out);
+    stylesheet(attributes, resources, prepared, warnings, out);
     icon_font(attributes, out);
     if let Some(highlighter) = cx.highlighter {
         highlighter.head(&doc.final_attributes, attributes, out);
@@ -293,6 +320,7 @@ fn render_document(
 fn stylesheet(
     attributes: &adoctra_core::Attributes,
     resources: Option<&Resources>,
+    prepared: Option<&Option<String>>,
     warnings: &mut Vec<String>,
     out: &mut String,
 ) {
@@ -334,13 +362,62 @@ fn stylesheet(
             ));
         }
         Some(sheet) => {
-            let contents = read_stylesheet(sheet, stylesdir, attributes, resources, warnings);
+            let contents = match prepared {
+                Some(contents) => contents.clone(),
+                None => read_stylesheet(sheet, stylesdir, attributes, resources, warnings),
+            };
             out.push_str(&format!(
                 "<style>\n{}\n</style>\n",
                 contents.unwrap_or_default()
             ));
         }
         None => {}
+    }
+}
+
+/// A custom stylesheet the head reads (not adoctra's own, not linked).
+fn read_sheet(attributes: &adoctra_core::Attributes) -> Option<&str> {
+    match attributes.get("stylesheet") {
+        Some("" | "DEFAULT") | None => None,
+        Some(_) if attributes.get("linkcss").is_some() => None,
+        sheet => sheet,
+    }
+}
+
+/// [`HtmlBackend::start`]'s hook: Ruby's head reads a custom stylesheet
+/// before the body converts, so a URI read (and the URI cache it may enable)
+/// and its warning come before the body's images.
+#[derive(Clone)]
+pub struct HtmlStart {
+    embedded: bool,
+    resources: Option<Resources>,
+    /// The contents read at the start (`Some(None)`: unreadable).
+    stylesheet: Option<Option<String>>,
+}
+
+impl fmt::Debug for HtmlStart {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("HtmlStart")
+            .field("embedded", &self.embedded)
+            .field("stylesheet", &self.stylesheet)
+            .finish()
+    }
+}
+
+impl ConversionStart for HtmlStart {
+    fn start(&mut self, attributes: &adoctra_core::Attributes) -> Vec<String> {
+        let mut warnings = Vec::new();
+        if let Some(sheet) = read_sheet(attributes).filter(|_| !self.embedded) {
+            let stylesdir = attributes.get("stylesdir");
+            self.stylesheet = Some(read_stylesheet(
+                sheet,
+                stylesdir,
+                attributes,
+                self.resources.as_ref(),
+                &mut warnings,
+            ));
+        }
+        warnings
     }
 }
 
@@ -3677,6 +3754,127 @@ mod tests {
             }
             assert_eq!(output.warnings.len(), usize::from(!allow));
         }
+    }
+
+    #[test]
+    fn start_reads_the_stylesheet_before_the_body_images_like_ruby() {
+        // Ruby's head reads the stylesheet (and enables the URI cache) before
+        // the body's data-uri images; core calls the backend's start hook
+        // there and the stylesheet's warning precedes the image's.
+        struct Host {
+            files: adoctra_core::MemoryResources,
+            log: std::sync::Mutex<Vec<String>>,
+        }
+        impl ResourceProvider for Host {
+            fn enable_uri_cache(&self) {
+                self.log.lock().unwrap().push("enable".into());
+            }
+            fn load(
+                &self,
+                request: ResourceRequest<'_>,
+            ) -> adoctra_core::ResourceResult<adoctra_core::Resource> {
+                if !request.target.starts_with("https://") {
+                    return self.files.load(request);
+                }
+                self.log.lock().unwrap().push(request.target.into());
+                match request.target {
+                    "https://host/a.css" => Ok(adoctra_core::Resource {
+                        name: request.target.into(),
+                        text: "p { color: red; }".into(),
+                    }),
+                    target => Err(adoctra_core::ResourceError::new(
+                        adoctra_core::ResourceErrorKind::NotFound,
+                        target,
+                        "missing",
+                    )),
+                }
+            }
+            fn load_binary(
+                &self,
+                request: ResourceRequest<'_>,
+            ) -> adoctra_core::ResourceResult<adoctra_core::BinaryResource> {
+                self.log.lock().unwrap().push(request.target.into());
+                Err(adoctra_core::ResourceError::new(
+                    adoctra_core::ResourceErrorKind::NotFound,
+                    request.target,
+                    "missing",
+                ))
+            }
+        }
+        for (sheet, log, warnings) in [
+            (
+                "https://host/a.css",
+                [
+                    "enable",
+                    "https://host/a.css",
+                    "enable",
+                    "https://host/a.png",
+                ],
+                vec!["could not retrieve image data from URI: https://host/a.png"],
+            ),
+            (
+                "https://host/gone.css",
+                [
+                    "enable",
+                    "https://host/gone.css",
+                    "enable",
+                    "https://host/a.png",
+                ],
+                vec![
+                    "could not retrieve contents of stylesheet at URI: https://host/gone.css",
+                    "could not retrieve image data from URI: https://host/a.png",
+                ],
+            ),
+        ] {
+            let source = format!(
+                "= T\n:stylesheet: {sheet}\n:cache-uri:\n:data-uri:\n\nimage::https://host/a.png[P]\n"
+            );
+            let host = Arc::new(Host {
+                files: memory(&[("/d/guide.adoc", &source)]),
+                log: Default::default(),
+            });
+            let mut sources = adoctra_core::SourceMap::new();
+            let source_id = sources.load("/d/guide.adoc", None, host.as_ref()).unwrap();
+            let mut options = adoctra_core::ParseOptions {
+                source_id,
+                ..Default::default()
+            };
+            options.attributes.set("allow-uri-read", "");
+            let backend =
+                HtmlBackend::new().with_resources(host.clone(), Some("/d/guide.adoc".into()));
+            let mut start = backend.start();
+            let result = adoctra_core::parse_resource_with_start(
+                &mut sources,
+                &options,
+                host.as_ref(),
+                &mut start,
+            )
+            .unwrap();
+            assert_eq!(*host.log.lock().unwrap(), log, "{sheet}");
+            let messages: Vec<_> = result
+                .diagnostics
+                .iter()
+                .map(|d| d.message.as_str())
+                .collect();
+            assert_eq!(messages, warnings, "{sheet}");
+            // Rendering uses what the start read: no second read or warning.
+            let output = backend.render_with_start(&result.document, &start);
+            assert_eq!(host.log.lock().unwrap().len(), 4, "{sheet}");
+            assert!(output.warnings.is_empty(), "{:?}", output.warnings);
+            assert_eq!(
+                output.html.contains("<style>\np { color: red; }\n</style>"),
+                sheet.ends_with("a.css")
+            );
+        }
+        // Embedded output has no head: its start reads nothing.
+        let mut start = HtmlBackend::embedded().start();
+        let doc = adoctra_core::parse_with_start(
+            ":stylesheet: https://host/a.css\n\nx",
+            &Default::default(),
+            &mut start,
+        );
+        assert!(doc.diagnostics.is_empty());
+        assert!(start.stylesheet.is_none());
     }
 
     /// A provider serving one remote stylesheet besides local files.

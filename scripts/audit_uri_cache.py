@@ -169,13 +169,16 @@ def asset_cases():
     add('stylesheet-error', sheet + '\nx\n', {'/a.css': [{'status': 500}]}, ['/a.css'], standalone=True)
     add('stylesheet-include-share', sheet + '\ninclude::{uri}/a.css[]\n', css, ['/a.css'], standalone=True)
     add('stylesheet-image-share', sheet + ':data-uri:\n\nimage::{uri}/a.css[Pic]\n', css, ['/a.css'], standalone=True)
-    order_gap = 'core resolves body assets before the standalone HTML stylesheet'
-    add('stylesheet-before-image', sheet + ':data-uri:\n\n' + image, {**css, **png}, ['/a.css', '/a.png'], standalone=True, known_difference=order_gap)
+    # Ruby's head reads the stylesheet (enabling the cache with a header
+    # `cache-uri`) before the body's images, so it is requested and warns first.
+    add('stylesheet-before-image', sheet + ':data-uri:\n\n' + image, {**css, **png}, ['/a.css', '/a.png'], standalone=True)
+    # Pinned Ruby requests the image again after a body `:cache-uri!:` even
+    # though the stylesheet enabled the cache (observed trace).
     add('stylesheet-enables-body-cache', sheet + ':data-uri:\n\n:cache-uri!:\n\n' + image + '\n' + image,
-        {**css, **png}, ['/a.css', '/a.png'], standalone=True, known_difference=order_gap)
+        {**css, **png}, ['/a.css', '/a.png', '/a.png'], standalone=True)
     add('stylesheet-warning-order', sheet + ':data-uri:\n\n' + image,
         {'/a.css': [{'status': 500}], '/a.png': [{'status': 404}]},
-        ['/a.css', '/a.png'], standalone=True, known_difference=order_gap)
+        ['/a.css', '/a.png'], standalone=True)
     return result
 
 

@@ -74,13 +74,27 @@ fn run() -> adoctra::Result<()> {
         dates: Some(dates(&args.input)?),
         ..Default::default()
     };
-    let result = if let Some(provider) = &provider {
-        adoctra::parse_resource(&mut sources, &options, provider.as_ref())?
-    } else {
-        adoctra::parse_with_options(
-            sources.get(source_id).expect("registered stdin").text(),
-            &options,
-        )
+    // A standalone HTML document reads its stylesheet where Ruby's converter
+    // builds the head: core calls the backend's hook before the body converts.
+    let referrer = sources
+        .get(source_id)
+        .map(|source| source.name().to_owned());
+    let mut html_start = (args.backend == "html" && !args.embedded)
+        .then(|| html_backend(provider.clone(), referrer.clone()).start());
+    let result = match (&provider, html_start.as_mut()) {
+        (Some(provider), Some(start)) => {
+            adoctra::parse_resource_with_start(&mut sources, &options, provider.as_ref(), start)?
+        }
+        (Some(provider), None) => {
+            adoctra::parse_resource(&mut sources, &options, provider.as_ref())?
+        }
+        (None, start) => {
+            let text = sources.get(source_id).expect("registered stdin").text();
+            match start {
+                Some(start) => adoctra::parse_with_start(text, &options, start),
+                None => adoctra::parse_with_options(text, &options),
+            }
+        }
     };
     for d in &result.diagnostics {
         if !args.editor_diagnostics {
@@ -145,10 +159,13 @@ fn run() -> adoctra::Result<()> {
         );
     }
 
-    let referrer = sources
-        .get(source_id)
-        .map(|source| source.name().to_owned());
-    let backend = select_backend(&args.backend, args.embedded, provider.clone(), referrer)?;
+    let backend = select_backend(
+        &args.backend,
+        args.embedded,
+        provider.clone(),
+        referrer,
+        html_start,
+    )?;
     let bytes = if args.json_attributes {
         if args.backend != "json" {
             return Err(adoctra::Error::Unsupported(
@@ -416,24 +433,32 @@ fn select_backend(
     embedded: bool,
     provider: Option<Arc<resources::FileResources>>,
     referrer: Option<String>,
+    start: Option<adoctra::html::HtmlStart>,
 ) -> adoctra::Result<Box<dyn Backend>> {
     match name {
         "html" if embedded => Ok(Box::new(adoctra::html::HtmlBackend::embedded())),
-        "html" => {
-            let backend = adoctra::html::HtmlBackend::new();
-            Ok(Box::new(Html(match provider {
-                Some(provider) => backend.with_resources(provider, referrer),
-                None => backend,
-            })))
-        }
+        "html" => Ok(Box::new(Html(html_backend(provider, referrer), start))),
         "docx" => Ok(Box::new(adoctra::docx::DocxBackend::new())),
         "json" => Ok(Box::new(adoctra::json::JsonBackend::new())),
         other => Err(adoctra::Error::Unsupported(format!("backend `{other}`"))),
     }
 }
 
-/// The HTML backend, printing its warnings like the parser's diagnostics.
-struct Html(adoctra::html::HtmlBackend);
+/// The standalone HTML backend, reading through the CLI's resources.
+fn html_backend(
+    provider: Option<Arc<resources::FileResources>>,
+    referrer: Option<String>,
+) -> adoctra::html::HtmlBackend {
+    let backend = adoctra::html::HtmlBackend::new();
+    match provider {
+        Some(provider) => backend.with_resources(provider, referrer),
+        None => backend,
+    }
+}
+
+/// The HTML backend, printing its warnings like the parser's diagnostics,
+/// with the stylesheet its start hook read during parsing.
+struct Html(adoctra::html::HtmlBackend, Option<adoctra::html::HtmlStart>);
 
 impl Backend for Html {
     fn name(&self) -> &'static str {
@@ -445,7 +470,10 @@ impl Backend for Html {
     }
 
     fn convert(&self, doc: &adoctra::Document) -> adoctra::Result<Vec<u8>> {
-        let output = self.0.render(doc);
+        let output = match &self.1 {
+            Some(start) => self.0.render_with_start(doc, start),
+            None => self.0.render(doc),
+        };
         for warning in &output.warnings {
             eprintln!("adoctra: warning: {warning}");
         }

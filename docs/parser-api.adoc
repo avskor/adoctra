@@ -1310,6 +1310,14 @@ assert!(result.diagnostics.is_empty());
 assert_ne!(result.document.blocks[0].span.source_id, source_id);
 ----
 
+`parse_resource_with_start` (и `parse_with_start` для строки) принимает хук
+конвертера `ConversionStart`. Core вызывает его один раз там, где Ruby строит
+`<head>`: после заголовка документа, до оглавления и тела, с атрибутами
+заголовка. Возвращённые строки становятся предупреждениями без курсора в
+`ParseResult.diagnostics` в порядке выдачи. HTML-backend передаёт
+`HtmlBackend::start()`, чтобы stylesheet читался до изображений тела, и
+отображает результат через `render_with_start`.
+
 Target и параметры получают однократную подстановку обычных атрибутов текущего parser;
 относительные пути разрешает provider от канонического имени включающего файла.
 Включения могут поставлять header, продолжать параграф/список/markup и закрывать

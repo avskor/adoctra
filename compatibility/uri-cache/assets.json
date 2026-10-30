@@ -3,8 +3,7 @@
   "asciidoctor": "2.0.23",
   "open_uri_cached": "2.0.0",
   "counts": {
-    "PASS": 36,
-    "XFAIL": 3
+    "PASS": 39
   },
   "cases": [
     {
@@ -1765,7 +1764,7 @@
     },
     {
       "id": "stylesheet-before-image",
-      "status": "XFAIL",
+      "status": "PASS",
       "input": {
         "id": "stylesheet-before-image",
         "source": ":stylesheet: {uri}/a.css\n:cache-uri:\n:data-uri:\n\nimage::{uri}/a.png[Pic]\n",
@@ -1794,8 +1793,7 @@
           "/a.css",
           "/a.png"
         ],
-        "standalone": true,
-        "known_difference": "core resolves body assets before the standalone HTML stylesheet"
+        "standalone": true
       },
       "reference": {
         "html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\">\n<meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n<meta name=\"generator\" content=\"Asciidoctor 2.0.23\">\n<title>Untitled</title>\n<style>\nbody { color: red; }\n\n</style>\n</head>\n<body class=\"article\">\n<div id=\"header\">\n</div>\n<div id=\"content\">\n<div class=\"imageblock\">\n<div class=\"content\">\n<img src=\"data:image/png;base64,iVBORwD/\" alt=\"Pic\">\n</div>\n</div>\n</div>\n<div id=\"footer\">\n<div id=\"footer-text\">\n</div>\n</div>\n</body>\n</html>",
@@ -1822,14 +1820,14 @@
         "diagnostics": [],
         "requests": [
           {
-            "path": "/a.png",
-            "status": 200,
-            "sha256": "ffdb519b788f33bddc8647611c3a24cc5e1a9ef5780c1f6f828a637c309ad8f1"
-          },
-          {
             "path": "/a.css",
             "status": 200,
             "sha256": "9767e91e9d4b0334e59a1d389e9801bc6a2c5c4a5500a3c2c7915687965b2c16"
+          },
+          {
+            "path": "/a.png",
+            "status": 200,
+            "sha256": "ffdb519b788f33bddc8647611c3a24cc5e1a9ef5780c1f6f828a637c309ad8f1"
           }
         ],
         "styles": [
@@ -1840,7 +1838,7 @@
     },
     {
       "id": "stylesheet-enables-body-cache",
-      "status": "XFAIL",
+      "status": "PASS",
       "input": {
         "id": "stylesheet-enables-body-cache",
         "source": ":stylesheet: {uri}/a.css\n:cache-uri:\n:data-uri:\n\n:cache-uri!:\n\nimage::{uri}/a.png[Pic]\n\nimage::{uri}/a.png[Pic]\n",
@@ -1867,10 +1865,10 @@
         },
         "requests": [
           "/a.css",
+          "/a.png",
           "/a.png"
         ],
-        "standalone": true,
-        "known_difference": "core resolves body assets before the standalone HTML stylesheet"
+        "standalone": true
       },
       "reference": {
         "html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\">\n<meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n<meta name=\"generator\" content=\"Asciidoctor 2.0.23\">\n<title>Untitled</title>\n<style>\nbody { color: red; }\n\n</style>\n</head>\n<body class=\"article\">\n<div id=\"header\">\n</div>\n<div id=\"content\">\n<div class=\"imageblock\">\n<div class=\"content\">\n<img src=\"data:image/png;base64,iVBORwD/\" alt=\"Pic\">\n</div>\n</div>\n<div class=\"imageblock\">\n<div class=\"content\">\n<img src=\"data:image/jpeg;base64,Y2hhbmdlZA==\" alt=\"Pic\">\n</div>\n</div>\n</div>\n<div id=\"footer\">\n<div id=\"footer-text\">\n</div>\n</div>\n</body>\n</html>",
@@ -1902,6 +1900,11 @@
         "diagnostics": [],
         "requests": [
           {
+            "path": "/a.css",
+            "status": 200,
+            "sha256": "9767e91e9d4b0334e59a1d389e9801bc6a2c5c4a5500a3c2c7915687965b2c16"
+          },
+          {
             "path": "/a.png",
             "status": 200,
             "sha256": "ffdb519b788f33bddc8647611c3a24cc5e1a9ef5780c1f6f828a637c309ad8f1"
@@ -1910,11 +1913,6 @@
             "path": "/a.png",
             "status": 200,
             "sha256": "d67e2e944994496c8d8ec76eed0cf9f09679448d584b532bebf941852a37f5ed"
-          },
-          {
-            "path": "/a.css",
-            "status": 200,
-            "sha256": "9767e91e9d4b0334e59a1d389e9801bc6a2c5c4a5500a3c2c7915687965b2c16"
           }
         ],
         "styles": [
@@ -1925,7 +1923,7 @@
     },
     {
       "id": "stylesheet-warning-order",
-      "status": "XFAIL",
+      "status": "PASS",
       "input": {
         "id": "stylesheet-warning-order",
         "source": ":stylesheet: {uri}/a.css\n:cache-uri:\n:data-uri:\n\nimage::{uri}/a.png[Pic]\n",
@@ -1945,8 +1943,7 @@
           "/a.css",
           "/a.png"
         ],
-        "standalone": true,
-        "known_difference": "core resolves body assets before the standalone HTML stylesheet"
+        "standalone": true
       },
       "reference": {
         "html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\">\n<meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n<meta name=\"generator\" content=\"Asciidoctor 2.0.23\">\n<title>Untitled</title>\n<style>\n\n</style>\n</head>\n<body class=\"article\">\n<div id=\"header\">\n</div>\n<div id=\"content\">\n<div class=\"imageblock\">\n<div class=\"content\">\n<img src=\"http://fixture.test/a.png\" alt=\"Pic\">\n</div>\n</div>\n</div>\n<div id=\"footer\">\n<div id=\"footer-text\">\n</div>\n</div>\n</body>\n</html>",
@@ -1984,24 +1981,24 @@
         "diagnostics": [
           {
             "severity": "warning",
-            "message": "could not retrieve image data from URI: http://fixture.test/a.png",
+            "message": "could not retrieve contents of stylesheet at URI: http://fixture.test/a.css",
             "location": null
           },
           {
             "severity": "warning",
-            "message": "could not retrieve contents of stylesheet at URI: http://fixture.test/a.css",
+            "message": "could not retrieve image data from URI: http://fixture.test/a.png",
             "location": null
           }
         ],
         "requests": [
           {
-            "path": "/a.png",
-            "status": 404,
+            "path": "/a.css",
+            "status": 500,
             "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
           },
           {
-            "path": "/a.css",
-            "status": 500,
+            "path": "/a.png",
+            "status": 404,
             "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
           }
         ],

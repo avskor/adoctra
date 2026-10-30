@@ -13,14 +13,15 @@
 //! ```
 
 pub use adoctra_core::{
-    parse, parse_resource, parse_with_options, tokens, tokens_resource, tokens_with_options,
-    Attributes, Author, AuthorDetails, Backend, BinaryResource, Block, BlockKind, DateTime,
-    Diagnostic, DiagnosticCursor, DiagnosticLocation, DiagnosticReport, DocinfoLocation, Document,
-    DocumentDates, DocumentHeader, Error, IncludeInput, IncludeLimits, IncludeResource, Inline,
-    MemoryResources, OmittedSourceLine, OmittedSourceSpan, ParseOptions, ParseResult, Registry,
-    Resource, ResourceError, ResourceErrorKind, ResourceProvider, ResourceRequest, ResourceResult,
-    Result, Revision, SafeMode, Severity, SourceFile, SourceId, SourceMap, SourcePosition, Span,
-    Token, TokenKind, TreeProcessor,
+    parse, parse_resource, parse_resource_with_start, parse_with_options, parse_with_start, tokens,
+    tokens_resource, tokens_with_options, Attributes, Author, AuthorDetails, Backend,
+    BinaryResource, Block, BlockKind, ConversionStart, DateTime, Diagnostic, DiagnosticCursor,
+    DiagnosticLocation, DiagnosticReport, DocinfoLocation, Document, DocumentDates, DocumentHeader,
+    Error, IncludeInput, IncludeLimits, IncludeResource, Inline, MemoryResources,
+    OmittedSourceLine, OmittedSourceSpan, ParseOptions, ParseResult, Registry, Resource,
+    ResourceError, ResourceErrorKind, ResourceProvider, ResourceRequest, ResourceResult, Result,
+    Revision, SafeMode, Severity, SourceFile, SourceId, SourceMap, SourcePosition, Span, Token,
+    TokenKind, TreeProcessor,
 };
 
 #[cfg(feature = "html")]

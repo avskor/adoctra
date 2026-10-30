@@ -122,7 +122,7 @@ pub(crate) fn tokens_reader<'a>(
     options: &ParseOptions,
     reader: crate::reader::Reader<'a>,
 ) -> Vec<Token> {
-    crate::parser::parse_reader(options, reader).0.tokens
+    crate::parser::parse_reader(options, reader, None).0.tokens
 }
 
 /// Project classifications recorded by the parser; no structural grammar or

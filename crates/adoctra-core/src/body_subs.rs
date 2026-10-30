@@ -229,6 +229,7 @@ impl BodySubs {
         blocks: &mut [Block],
         attributes: Attributes,
         conversion: Conversion,
+        start: Option<&mut dyn crate::ConversionStart>,
     ) -> (
         Attributes,
         Vec<crate::Token>,
@@ -286,6 +287,23 @@ impl BodySubs {
             if let Some(first) = first.filter(|f| crate::resolve::placeholder(&f.title).is_some()) {
                 let (key, title) = (first.heading, first.title.clone());
                 execution.lazy_heading(key, &title);
+            }
+        }
+        // Ruby's head follows the `<title>` and precedes the header outline
+        // and the body: a converter reads its stylesheet now, with the header
+        // attributes, before the body's images.
+        if let Some(start) = start {
+            for message in start.start(&execution.attributes) {
+                execution.diagnostics.push(crate::Diagnostic {
+                    omitted_span: None,
+                    report: crate::DiagnosticReport {
+                        location: crate::DiagnosticLocation::Unlocated,
+                        ..Default::default()
+                    },
+                    span: crate::Span::new(0, 0),
+                    severity: crate::Severity::Warning,
+                    message,
+                });
             }
         }
         let header = &execution.attributes;

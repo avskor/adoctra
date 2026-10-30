@@ -188,12 +188,21 @@ pub(crate) fn parse_toc_macro(line: &str, off: usize) -> Option<MacroMeta> {
 }
 
 pub fn parse_with_options(source: &str, options: &ParseOptions) -> ParseResult {
-    parse_reader(options, Reader::new(source)).0
+    parse_reader(options, Reader::new(source), None).0
+}
+
+pub(crate) fn parse_with_start(
+    source: &str,
+    options: &ParseOptions,
+    start: &mut dyn crate::ConversionStart,
+) -> ParseResult {
+    parse_reader(options, Reader::new(source), Some(start)).0
 }
 
 pub(crate) fn parse_reader<'a>(
     options: &ParseOptions,
     mut lines: Reader<'a>,
+    start: Option<&mut dyn crate::ConversionStart>,
 ) -> (ParseResult, Reader<'a>) {
     lines.set_primary_id(options.source_id);
     let images = crate::data_uri::Images::new(lines.image_source());
@@ -259,8 +268,13 @@ pub(crate) fn parse_reader<'a>(
     let mut references = Vec::new();
     let registry = context.register_references(&mut doc, &lines.include_catalog, &mut references);
     name_attributes(&mut doc);
-    let inline_tokens =
-        context.execute_body(&mut doc, registry, &lines.include_catalog, &mut references);
+    let inline_tokens = context.execute_body(
+        &mut doc,
+        registry,
+        &lines.include_catalog,
+        &mut references,
+        start,
+    );
     let visible_footnotes = visible_footnote_origins(&mut doc);
     let name_heading = doc
         .manpage

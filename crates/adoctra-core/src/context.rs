@@ -857,6 +857,7 @@ impl ParseContext<'_> {
         (registry, early_titles, fixed): crate::resolve::Registered,
         includes: &crate::xref_target::Includes,
         references: &mut Vec<crate::Diagnostic>,
+        start: Option<&mut dyn crate::ConversionStart>,
     ) -> Vec<crate::Token> {
         crate::resolve::resolve_attribute_definitions(&mut document.attributes, &fixed);
         let (attributes, tokens, footnotes) = std::mem::take(&mut self.body_subs).execute(
@@ -875,6 +876,7 @@ impl ParseContext<'_> {
                 footnotes: std::mem::take(&mut self.footnotes),
                 images: self.images,
             },
+            start,
         );
         document.final_attributes = attributes;
         document.footnotes = footnotes;

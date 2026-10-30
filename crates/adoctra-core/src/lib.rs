@@ -69,7 +69,7 @@ mod attribute_list;
 mod attribute_macros;
 mod attribute_quotes;
 mod xref_target;
-pub use backend::Backend;
+pub use backend::{Backend, ConversionStart};
 pub use context::{DateTime, DocumentDates, IncludeLimits, ParseOptions, SafeMode};
 pub use diagnostic::{
     Diagnostic, DiagnosticCursor, DiagnosticLocation, DiagnosticReport, ParseResult, Severity,
@@ -125,7 +125,29 @@ pub fn parse_resource(
 ) -> ResourceResult<ParseResult> {
     let options = options.for_resource(sources, provider);
     let reader = reader::Reader::with_resources(sources, &options, provider)?;
-    Ok(parser::parse_reader(&options, reader).0)
+    Ok(parser::parse_reader(&options, reader, None).0)
+}
+
+/// [`parse_resource`] with a converter's [`ConversionStart`] hook, called
+/// where Ruby's converter starts the document (see the trait).
+pub fn parse_resource_with_start(
+    sources: &mut SourceMap,
+    options: &ParseOptions,
+    provider: &dyn ResourceProvider,
+    start: &mut dyn ConversionStart,
+) -> ResourceResult<ParseResult> {
+    let options = options.for_resource(sources, provider);
+    let reader = reader::Reader::with_resources(sources, &options, provider)?;
+    Ok(parser::parse_reader(&options, reader, Some(start)).0)
+}
+
+/// [`parse_with_options`] with a converter's [`ConversionStart`] hook.
+pub fn parse_with_start(
+    source: &str,
+    options: &ParseOptions,
+    start: &mut dyn ConversionStart,
+) -> ParseResult {
+    parser::parse_with_start(source, options, start)
 }
 
 /// Highlight a registered document and its includes. Each token belongs to one
