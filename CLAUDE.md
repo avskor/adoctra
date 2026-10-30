@@ -27,9 +27,13 @@ Cargo workspace (`crates/*`), virtual manifest at the root.
 - `adoctra-cli` — the `adoctra` binary (native only).
 - `adoctra-wasm` — editor-facing WASM bindings (`parse_json`, `tokens_json`).
   Depends on `adoctra-core` **only** — never on backends.
+- `adoctra-highlight` — std-only port of Rouge (pinned in
+  `compatibility/rouge-version`, MIT, `LICENSE-rouge`) for
+  `source-highlighter=rouge`; depends on nothing in the workspace (a backend
+  may depend on it, core and WASM never).
 
 Dependency direction is one-way: `cli -> adoctra -> {core, backends}`, each
-backend depends only on `core`. Keep it that way. `core` must never depend on a
+backend depends only on `core` (plus `adoctra-highlight`). Keep it that way. `core` must never depend on a
 backend, and `adoctra-wasm` must never pull in a backend.
 
 ## Three consumers, one parser
@@ -227,7 +231,7 @@ test_helper.rb's using_test_webserver, confined to test/) during the run;
 the Ruby side gives each entry its own open-uri-cached cache_path.
 The body-dom-v1 projection maps Ruby's icon colist table and adoctra's
 `ol.colist.icons` (span.colist-icon + div) to ol > li > colist-icon/-text.
-Rouge (26) is the queue; the last DIFF is an incomplete inline SVG neither
+Rouge (26, being ported) is the queue; the last DIFF is an incomplete inline SVG neither
 side can project (raw bodies differ by the intended wrapper). Single-case regressions live in
 crates/adoctra-core/tests/upstream_single_cases.rs (FLEXIBLE_ATTRIBUTES
 sectnums, `max-include-depth` 64 default attribute, invalid-header, fragment,
@@ -1955,9 +1959,25 @@ class and Ruby's `optional gem … not available` warning in Output.warnings,
 once when a source listing converts (Cx.source_listing).
 Head theme and footer scripts (before MathJax) read final attributes with the
 header `asset-uri-scheme`; embedded output has none. Server-side rouge/coderay/
-Rouge (and unknown names) keep the plain `highlight` listing. Rouge was excluded
-by an earlier project decision; this remains an open limitation under the new
-compatibility-first priority. Its implementation approach is undecided;
+Rouge (and unknown names) keep the plain `highlight` listing for now.
+**Rouge port** (user decision 2026-10-31: all 228 lexers before claiming
+support): crate `adoctra-highlight`; `scripts/generate_rouge.rb` generates
+declarative rules from the pinned Rouge classes, Ruby block rules are ported
+by hand per lexer. Done so far: `adoctra_highlight::regex`, a std-only
+backtracking Onigmo engine. `Regex::match_at(rest, 0)` is
+`StringScanner#skip` (the subject is the scanner's rest: `\A`/`^`/`\b` at
+the scan position, no lookbehind before it); `search` is `=~`. Onigmo rules
+kept: `(?i)` without colon covers later alternatives of its group, `{n,m}+`
+is not possessive, `\w\d\s\h` ASCII (never case-extended) but `\b` Unicode
+Word, `/i` classes add no Latin-1 (U+0080-U+00FF) variants, one-char class
+= literal, `\NN` octal without that group. Lookaround/atomic/`\g<0>` are
+committing sub-matches; a 5M step budget bounds backtracking. Unicode
+property/POSIX/fold tables (`regex/unicode_tables.rs`) and the conformance
+corpus (`tests/data/regex_corpus.txt`: all 5913 rule regexps at every demo
+position, FNV fingerprints) are generated (`generate_rouge.rb unicode|
+regex-corpus`, verified in CI); every new pattern feature needs a Ruby probe.
+Next: tokens, RegexLexer runtime, HTML formatter/themes, lexer export, the
+Asciidoctor adapter, then switch the upstream audit reference to real Rouge.
 highlight.js/prettify are available today. adoctra.css
 carries Ruby's `pre.highlightjs`/`pre.prettyprint` rules (checked with
 screenshots). `golden/highlight/` runs the reference `--standalone --safe`.
