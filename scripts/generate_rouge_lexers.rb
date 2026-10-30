@@ -42,9 +42,13 @@ module RougeLexers
 
   class Unsupported < StandardError; end
 
-  # A Ruby file under Rouge's lexers directory as a Rust module name.
+  # A Ruby file of Rouge as a Rust module name: relative to the lexers
+  # directory, else to `lib/rouge` (e.g. `template_lexer.rb`), never an
+  # absolute path that depends on where the gem is installed.
   def self.module_name path
-    rel = path.delete_prefix("#{LEXERS_DIR}/").delete_suffix('.rb')
+    rel = path.delete_prefix("#{LEXERS_DIR}/").delete_prefix("#{File.dirname LEXERS_DIR}/").delete_suffix('.rb')
+    raise "Rouge file outside the gem: #{path}" if rel.start_with?('/')
+
     rel.tr('/', '_').tr('-', '_')
   end
 

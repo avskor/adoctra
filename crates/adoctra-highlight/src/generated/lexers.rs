@@ -14193,7 +14193,7 @@ static LEXER_EEX: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["eex.rs:33 (delegate to an instance)", "eex.rs:46 (evaluate IVAR)", "_home_avskor_.local_share_gem_ruby_3.3.0_gems_rouge_4.7.0_lib_rouge_template_lexer.rs:19 (start)", "eex.rs:20 (start)", "eex.rs (initialize)"],
+    missing: &["eex.rs:33 (delegate to an instance)", "eex.rs:46 (evaluate IVAR)", "template_lexer.rs:19 (start)", "eex.rs:20 (start)", "eex.rs (initialize)"],
 };
 
 static LEXER_EIFFEL: LexerDef = LexerDef {
@@ -14412,7 +14412,7 @@ static LEXER_EPP: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["epp.rs:32 (delegate to an instance)", "epp.rs:45 (evaluate IVAR)", "_home_avskor_.local_share_gem_ruby_3.3.0_gems_rouge_4.7.0_lib_rouge_template_lexer.rs:19 (start)", "epp.rs:19 (start)", "epp.rs (initialize)"],
+    missing: &["epp.rs:32 (delegate to an instance)", "epp.rs:45 (evaluate IVAR)", "template_lexer.rs:19 (start)", "epp.rs:19 (start)", "epp.rs (initialize)"],
 };
 
 static LEXER_ERB: LexerDef = LexerDef {
@@ -14436,7 +14436,7 @@ static LEXER_ERB: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["erb.rs:34 (delegate to an instance)", "erb.rs:47 (evaluate IVAR)", "_home_avskor_.local_share_gem_ruby_3.3.0_gems_rouge_4.7.0_lib_rouge_template_lexer.rs:19 (start)", "erb.rs:21 (start)", "erb.rs (initialize)"],
+    missing: &["erb.rs:34 (delegate to an instance)", "erb.rs:47 (evaluate IVAR)", "template_lexer.rs:19 (start)", "erb.rs:21 (start)", "erb.rs (initialize)"],
 };
 
 static LEXER_ERLANG: LexerDef = LexerDef {
@@ -16062,7 +16062,7 @@ static LEXER_HACK: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["php.rs:227 (delegate to an instance)", "php.rs:96 (delegate to an instance)", "php.rs:97 (delegate to an instance)", "php.rs:108 (DASGN@109)", "php.rs:119 (DASGN@120)", "_home_avskor_.local_share_gem_ruby_3.3.0_gems_rouge_4.7.0_lib_rouge_template_lexer.rs:19 (start)", "php.rs:71 (start)", "php.rs:71 (start)", "php.rs (initialize)"],
+    missing: &["php.rs:227 (delegate to an instance)", "php.rs:96 (delegate to an instance)", "php.rs:97 (delegate to an instance)", "php.rs:108 (DASGN@109)", "php.rs:119 (DASGN@120)", "template_lexer.rs:19 (start)", "php.rs:71 (start)", "php.rs:71 (start)", "php.rs (initialize)"],
 };
 
 static LEXER_HAML: LexerDef = LexerDef {
@@ -16162,7 +16162,7 @@ static LEXER_HAML: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["haml.rs:71 (call indentation)", "haml.rs:85 (call starts_block)", "haml.rs:91 (call starts_block)", "haml.rs:97 (call ruby!)", "haml.rs:104 (call starts_block)", "haml.rs:127 (call ruby!)", "haml.rs:128 (delegate to an instance)", "haml.rs:140 (delegate to an instance)", "haml.rs:147 (call ruby!)", "haml.rs:158 (delegate to an instance)", "haml.rs:160 (delegate to an instance)", "haml.rs:194 (condition IVAR)", "haml.rs:216 (delegate to an instance)", "haml.rs:217 (delegate to an instance)", "haml.rs:218 (delegate to an instance)", "haml.rs:59 (start)", "haml.rs (initialize)", "_home_avskor_.local_share_gem_ruby_3.3.0_gems_rouge_4.7.0_lib_rouge_util.rs (reset!)"],
+    missing: &["haml.rs:71 (call indentation)", "haml.rs:85 (call starts_block)", "haml.rs:91 (call starts_block)", "haml.rs:97 (call ruby!)", "haml.rs:104 (call starts_block)", "haml.rs:127 (call ruby!)", "haml.rs:128 (delegate to an instance)", "haml.rs:140 (delegate to an instance)", "haml.rs:147 (call ruby!)", "haml.rs:158 (delegate to an instance)", "haml.rs:160 (delegate to an instance)", "haml.rs:194 (condition IVAR)", "haml.rs:216 (delegate to an instance)", "haml.rs:217 (delegate to an instance)", "haml.rs:218 (delegate to an instance)", "haml.rs:59 (start)", "haml.rs (initialize)", "util.rs (reset!)"],
 };
 
 static LEXER_HANDLEBARS: LexerDef = LexerDef {
@@ -16217,7 +16217,7 @@ static LEXER_HANDLEBARS: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["handlebars.rs:18 (delegate to an instance)", "handlebars.rs:30 (delegate to an instance)", "handlebars.rs:42 (delegate to an instance)", "_home_avskor_.local_share_gem_ruby_3.3.0_gems_rouge_4.7.0_lib_rouge_template_lexer.rs:19 (start)"],
+    missing: &["handlebars.rs:18 (delegate to an instance)", "handlebars.rs:30 (delegate to an instance)", "handlebars.rs:42 (delegate to an instance)", "template_lexer.rs:19 (start)"],
 };
 
 static LEXER_HASKELL: LexerDef = LexerDef {
@@ -17894,7 +17894,7 @@ static LEXER_JINJA: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["jinja.rs:66 (delegate to an instance)", "jinja.rs:67 (delegate to an instance)", "_home_avskor_.local_share_gem_ruby_3.3.0_gems_rouge_4.7.0_lib_rouge_template_lexer.rs:19 (start)"],
+    missing: &["jinja.rs:66 (delegate to an instance)", "jinja.rs:67 (delegate to an instance)", "template_lexer.rs:19 (start)"],
 };
 
 static LEXER_JSL: LexerDef = LexerDef {
@@ -18246,7 +18246,7 @@ static LEXER_JSP: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["jsp.rs:39 (delegate to an instance)", "jsp.rs:40 (delegate to an instance)", "jsp.rs:51 (delegate to an instance)", "jsp.rs:57 (delegate to an instance)", "jsp.rs:63 (evaluate IVAR)", "jsp.rs:68 (evaluate IVAR)", "jsp.rs:74 (delegate to an instance)", "jsp.rs:110 (evaluate IVAR)", "_home_avskor_.local_share_gem_ruby_3.3.0_gems_rouge_4.7.0_lib_rouge_template_lexer.rs:19 (start)", "jsp.rs (initialize)"],
+    missing: &["jsp.rs:39 (delegate to an instance)", "jsp.rs:40 (delegate to an instance)", "jsp.rs:51 (delegate to an instance)", "jsp.rs:57 (delegate to an instance)", "jsp.rs:63 (evaluate IVAR)", "jsp.rs:68 (evaluate IVAR)", "jsp.rs:74 (delegate to an instance)", "jsp.rs:110 (evaluate IVAR)", "template_lexer.rs:19 (start)", "jsp.rs (initialize)"],
 };
 
 static LEXER_JSX: LexerDef = LexerDef {
@@ -18666,7 +18666,7 @@ static LEXER_LASSO: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["lasso.rs:57 (delegate to an instance)", "lasso.rs:63 (delegate to an instance)", "lasso.rs:68 (delegate to an instance)", "lasso.rs:161 (DASGN@162)", "_home_avskor_.local_share_gem_ruby_3.3.0_gems_rouge_4.7.0_lib_rouge_template_lexer.rs:19 (start)", "lasso.rs:33 (start)", "lasso.rs (initialize)"],
+    missing: &["lasso.rs:57 (delegate to an instance)", "lasso.rs:63 (delegate to an instance)", "lasso.rs:68 (delegate to an instance)", "lasso.rs:161 (DASGN@162)", "template_lexer.rs:19 (start)", "lasso.rs:33 (start)", "lasso.rs (initialize)"],
 };
 
 static LEXER_LEAN: LexerDef = LexerDef {
@@ -19482,7 +19482,7 @@ static LEXER_MASON: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["mason.rs:42 (evaluate IVAR)", "mason.rs:61 (delegate to an instance)", "mason.rs:64 (delegate to an instance)", "mason.rs:71 (evaluate IVAR)", "mason.rs:100 (evaluate IVAR)", "mason.rs:106 (evaluate IVAR)", "_home_avskor_.local_share_gem_ruby_3.3.0_gems_rouge_4.7.0_lib_rouge_template_lexer.rs:19 (start)", "mason.rs (initialize)"],
+    missing: &["mason.rs:42 (evaluate IVAR)", "mason.rs:61 (delegate to an instance)", "mason.rs:64 (delegate to an instance)", "mason.rs:71 (evaluate IVAR)", "mason.rs:100 (evaluate IVAR)", "mason.rs:106 (evaluate IVAR)", "template_lexer.rs:19 (start)", "mason.rs (initialize)"],
 };
 
 static LEXER_MATHEMATICA: LexerDef = LexerDef {
@@ -21318,7 +21318,7 @@ static LEXER_PHP: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["php.rs:96 (delegate to an instance)", "php.rs:97 (delegate to an instance)", "php.rs:108 (DASGN@109)", "php.rs:119 (DASGN@120)", "php.rs:227 (delegate to an instance)", "_home_avskor_.local_share_gem_ruby_3.3.0_gems_rouge_4.7.0_lib_rouge_template_lexer.rs:19 (start)", "php.rs:71 (start)", "php.rs:71 (start)", "php.rs (initialize)"],
+    missing: &["php.rs:96 (delegate to an instance)", "php.rs:97 (delegate to an instance)", "php.rs:108 (DASGN@109)", "php.rs:119 (DASGN@120)", "php.rs:227 (delegate to an instance)", "template_lexer.rs:19 (start)", "php.rs:71 (start)", "php.rs:71 (start)", "php.rs (initialize)"],
 };
 
 static LEXER_PLAINTEXT: LexerDef = LexerDef {
@@ -23247,7 +23247,7 @@ static LEXER_SASS: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["sass.rs:22 (call indentation)", "sass.rs:27 (call starts_block)", "sass.rs:32 (call starts_block)", "sass_common.rs:67 (evaluate builtins)", "sass_common.rs:157 (evaluate properties)", "_home_avskor_.local_share_gem_ruby_3.3.0_gems_rouge_4.7.0_lib_rouge_util.rs (reset!)"],
+    missing: &["sass.rs:22 (call indentation)", "sass.rs:27 (call starts_block)", "sass.rs:32 (call starts_block)", "sass_common.rs:67 (evaluate builtins)", "sass_common.rs:157 (evaluate properties)", "util.rs (reset!)"],
 };
 
 static LEXER_SCALA: LexerDef = LexerDef {
@@ -23861,7 +23861,7 @@ static LEXER_SLIM: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["slim.rs:49 (call indentation)", "slim.rs:63 (call starts_block)", "slim.rs:77 (call starts_block)", "slim.rs:87 (delegate to an instance)", "slim.rs:93 (delegate to an instance)", "slim.rs:100 (delegate to an instance)", "slim.rs:122 (delegate to an instance)", "slim.rs:127 (delegate to an instance)", "slim.rs:141 (delegate to an instance)", "slim.rs:165 (delegate to an instance)", "slim.rs:166 (delegate to an instance)", "slim.rs:175 (delegate to an instance)", "slim.rs:177 (delegate to an instance)", "slim.rs:181 (condition IVAR)", "slim.rs:196 (delegate to an instance)", "slim.rs:219 (delegate to an instance)", "slim.rs:220 (delegate to an instance)", "slim.rs:221 (delegate to an instance)", "slim.rs:45 (start)", "_home_avskor_.local_share_gem_ruby_3.3.0_gems_rouge_4.7.0_lib_rouge_util.rs (reset!)"],
+    missing: &["slim.rs:49 (call indentation)", "slim.rs:63 (call starts_block)", "slim.rs:77 (call starts_block)", "slim.rs:87 (delegate to an instance)", "slim.rs:93 (delegate to an instance)", "slim.rs:100 (delegate to an instance)", "slim.rs:122 (delegate to an instance)", "slim.rs:127 (delegate to an instance)", "slim.rs:141 (delegate to an instance)", "slim.rs:165 (delegate to an instance)", "slim.rs:166 (delegate to an instance)", "slim.rs:175 (delegate to an instance)", "slim.rs:177 (delegate to an instance)", "slim.rs:181 (condition IVAR)", "slim.rs:196 (delegate to an instance)", "slim.rs:219 (delegate to an instance)", "slim.rs:220 (delegate to an instance)", "slim.rs:221 (delegate to an instance)", "slim.rs:45 (start)", "util.rs (reset!)"],
 };
 
 static LEXER_SMALLTALK: LexerDef = LexerDef {
@@ -23971,7 +23971,7 @@ static LEXER_SMARTY: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["smarty.rs:33 (delegate to an instance)", "smarty.rs:44 (delegate to an instance)", "smarty.rs:45 (delegate to an instance)", "_home_avskor_.local_share_gem_ruby_3.3.0_gems_rouge_4.7.0_lib_rouge_template_lexer.rs:19 (start)"],
+    missing: &["smarty.rs:33 (delegate to an instance)", "smarty.rs:44 (delegate to an instance)", "smarty.rs:45 (delegate to an instance)", "template_lexer.rs:19 (start)"],
 };
 
 static LEXER_SML: LexerDef = LexerDef {
@@ -25689,7 +25689,7 @@ static LEXER_TWIG: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["jinja.rs:66 (delegate to an instance)", "jinja.rs:67 (delegate to an instance)", "_home_avskor_.local_share_gem_ruby_3.3.0_gems_rouge_4.7.0_lib_rouge_template_lexer.rs:19 (start)"],
+    missing: &["jinja.rs:66 (delegate to an instance)", "jinja.rs:67 (delegate to an instance)", "template_lexer.rs:19 (start)"],
 };
 
 static LEXER_TYPESCRIPT: LexerDef = LexerDef {
@@ -26031,7 +26031,7 @@ static LEXER_VELOCITY: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["velocity.rs:15 (delegate to an instance)", "_home_avskor_.local_share_gem_ruby_3.3.0_gems_rouge_4.7.0_lib_rouge_template_lexer.rs:19 (start)"],
+    missing: &["velocity.rs:15 (delegate to an instance)", "template_lexer.rs:19 (start)"],
 };
 
 static LEXER_VERILOG: LexerDef = LexerDef {
