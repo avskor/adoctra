@@ -252,7 +252,7 @@ pre {
   line-height: 1.45;
   text-rendering: optimizeSpeed;
 }
-pre code { color: inherit; font-size: inherit; line-height: inherit; }
+pre :is(code, pre) { color: inherit; font-size: inherit; line-height: inherit; }
 pre > code { display: block; }
 /* Ruby's margin is on the 16px wrapper, not the smaller `pre`. */
 pre:is(.listing, .literalblock, .highlight) {
@@ -290,6 +290,24 @@ pre.prettyprint.highlight { padding: 1em; border-width: 0; }
 pre.prettyprint { background: var(--adoctra-code-bg); }
 pre.prettyprint .linenums { line-height: 1.45; margin: 0 0 1.25em 2em; padding: 0; }
 pre.prettyprint li { background: none; list-style-type: inherit; padding-inline-start: 0; }
+/* Ruby's line number table (rouge and pygments `linenums`): the theme paints
+   the listing, the table only lays out the gutter and the code. */
+table.linenotable { border-collapse: separate; border: 0; margin-block-end: 0; background: none; }
+table.linenotable td[class] {
+  color: inherit;
+  vertical-align: top;
+  padding: 0;
+  line-height: inherit;
+  white-space: normal;
+}
+table.linenotable td.code { padding-inline-start: 0.75em; }
+:is(table.linenotable td.linenos, pre.pygments .linenos) {
+  border-inline-end: 1px solid;
+  opacity: 0.35;
+  padding-inline-end: 0.5em;
+  user-select: none;
+}
+pre.pygments span.linenos { display: inline-block; margin-inline-end: 0.75em; }
 
 .stemblock { margin-block-end: 1.25em; }
 
@@ -868,7 +886,7 @@ b.button::after { content: "]"; padding-inline: 3px 2px; }
 h1, h2, h3, h4, h5, h6 { color: var(--adoctra-heading-fg); }
 #header > h1:first-child { color: rgb(0 0 0 / 0.85); }
 code, pre { color: var(--adoctra-code-fg); }
-pre code { color: inherit; }
+pre :is(code, pre) { color: inherit; }
 pre:is(.listing, .literalblock, .highlight) { color: var(--adoctra-code-fg); }
 pre:is(.listing, .literalblock, .highlight:is([class="highlight"], [class^="highlight "])) {
   background: var(--adoctra-code-bg);

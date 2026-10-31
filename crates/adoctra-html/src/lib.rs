@@ -4287,11 +4287,38 @@ mod tests {
         let output = convert(":source-highlighter: coderay\n\n----\nplain\n----\n");
         assert!(output.warnings.is_empty(), "{:?}", output.warnings);
         // No head or footer docinfo.
+        // (adoctra.css itself carries Ruby's `pre.pygments` rules.)
         let html = render_standalone("= T\n:source-highlighter: pygments\n\nx\n");
+        assert!(html.contains(STYLESHEET));
+        let html = html.replace(STYLESHEET, "");
         assert!(
             !html.contains("<script") && !html.contains("pygments"),
             "{html}"
         );
+    }
+
+    #[test]
+    fn rouge_line_number_table_has_ruby_stylesheet_rules() {
+        // `linenums` renders Ruby's `table.linenotable`; the theme paints the
+        // listing, so the stylesheet keeps the table transparent and borderless
+        // and lets nested `pre` inherit the theme colour (Ruby's `pre pre`).
+        let html = render_standalone(
+            "= T\n:source-highlighter: rouge\n\n[source%linenums,java]\n----\nint x;\n----\n",
+        );
+        assert!(
+            html.contains("<table class=\"linenotable\"><tbody><tr><td class=\"linenos gl\"><pre class=\"lineno\">"),
+            "{html}"
+        );
+        for rule in [
+            "table.linenotable { border-collapse: separate; border: 0; margin-block-end: 0; background: none; }",
+            "table.linenotable td[class] {\n  color: inherit;\n  vertical-align: top;\n  padding: 0;",
+            "table.linenotable td.code { padding-inline-start: 0.75em; }",
+            ":is(table.linenotable td.linenos, pre.pygments .linenos) {\n  border-inline-end: 1px solid;\n  opacity: 0.35;",
+            "pre :is(code, pre) { color: inherit; font-size: inherit; line-height: inherit; }",
+            "pre :is(code, pre) { color: inherit; }",
+        ] {
+            assert!(STYLESHEET.contains(rule), "{rule}");
+        }
     }
 
     #[test]

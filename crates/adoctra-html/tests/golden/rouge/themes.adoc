@@ -1,0 +1,103 @@
+= Rouge themes
+:source-highlighter: rouge
+
+A listing per token family, highlighted with the theme of the document
+(`rouge-style`, the visual corpus sets each theme in turn).
+
+.Ruby
+[source,ruby]
+----
+# A comment with TODO
+require 'set'
+
+module Shapes
+  PI = 3.14159 # <1>
+
+  class Circle < Struct.new(:radius)
+    attr_reader :name
+
+    def area = PI * radius**2
+
+    def to_s
+      "#{self.class.name}(r=#{radius}) #{:sym} %w[a b] /re[a-z]+/i"
+    end
+  end
+end
+
+puts Shapes::Circle.new(2).area if $DEBUG || defined?(@x) <2>
+----
+<1> Constant
+<2> Global and instance variables
+
+[source%linenums,python,highlight=3..4]
+----
+@decorator
+def fib(n: int) -> int:
+    """Docstring."""
+    return n if n < 2 else fib(n - 1) + fib(n - 2)
+
+print(f"{fib(10):>5}", 0x1F, 1e-3, None, True)
+----
+
+[source,diff]
+----
+--- a/file.txt
++++ b/file.txt
+@@ -1,3 +1,3 @@
+ context
+-removed line
++added line
+----
+
+[source,html]
+----
+<!DOCTYPE html>
+<a href="/x" class='y'>&amp; text</a> <!-- comment -->
+----
+
+[source,css]
+----
+.box > a:hover { color: #ff0000 !important; margin: 0 1.5em; }
+@media (max-width: 600px) { body { font: 12px/1 serif; } }
+----
+
+[source,shell]
+----
+$ export PATH="$HOME/bin:$PATH" && echo ${#arr[@]} | grep -E '^a' >/dev/null
+----
+
+[source,sql]
+----
+SELECT id, COUNT(*) AS n FROM users WHERE name LIKE 'a%' GROUP BY id; -- comment
+----
+
+[source,yaml]
+----
+key: value
+list:
+  - 1
+  - "two"
+anchor: &a { x: true }
+----
+
+[source,javascript]
+----
+const re = /a+b/g; let s = `t ${1 + 2}`; class X extends Y { #p = null; }
+----
+
+[source,c]
+----
+#include <stdio.h>
+int main(void) { char *s = "x\n"; return s[0] == 'x' ? 0 : -1; }
+----
+
+[source,text?token=Error]
+----
+an error token
+----
+
+[source,console]
+----
+$ ls -la
+total 0
+----

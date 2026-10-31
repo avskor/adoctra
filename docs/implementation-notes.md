@@ -28,7 +28,9 @@ now carries Ruby's typography, column and block styles (body line-height 1,
 lists, TOC, admonition as a CSS table, example box on its `div.content`,
 sidebar, quote/verse, tables, dl, media). The corpus also has the 21
 acceptance documents (resources in a temp tree) and 4 embedded cases (fragment
-plus its own stylesheet): 546 of 548 observations match; the remaining case
+plus its own stylesheet), and `golden/rouge/themes.adoc` under all 25 Rouge
+themes in class and inline mode (`table.linenotable`/`pre pre` rules ported
+from Ruby): 656 of 658 observations match; the remaining case
 (a raw unclosed `<i>`) is documented. Ruby zeroes last-child margins on
 wrappers, so mirror that per element (lists/paragraphs keep theirs).
 Re-record only after reviewing an IMPROVED diff; never loosen tolerances. Visual parity, CLI behavior,
