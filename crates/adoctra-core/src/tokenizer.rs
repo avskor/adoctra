@@ -216,7 +216,7 @@ pub(crate) fn project(
     struct SourceTokens(Vec<(Span, TokenKind)>, Vec<Span>);
     impl crate::visit::VisitorMut for SourceTokens {
         // Callout marks at the ends of verbatim lines.
-        fn visit_block(&mut self, block: &mut crate::Block) {
+        fn enter_block(&mut self, block: &mut crate::Block) -> bool {
             if let crate::BlockKind::Listing { callouts, .. }
             | crate::BlockKind::Literal { callouts, .. } = &block.kind
             {
@@ -224,7 +224,7 @@ pub(crate) fn project(
                     self.0.push((callout.span, TokenKind::Callout));
                 }
             }
-            crate::visit::walk_block_mut(self, block);
+            true
         }
 
         fn visit_inline(&mut self, inline: &mut Inline) {
@@ -585,7 +585,7 @@ mod tests {
         // inline scan the parser uses, so their spans must coincide.
         let src = "lead *bold* and _it_ tail";
         let toks = tokens(src);
-        let blocks = crate::parse(src).document.blocks;
+        let blocks = std::mem::take(&mut crate::parse(src).document.blocks);
         let inlines = match &blocks[0].kind {
             crate::ast::BlockKind::Paragraph { inlines } => inlines.clone(),
             _ => unreachable!(),

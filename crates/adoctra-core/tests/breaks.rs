@@ -27,7 +27,7 @@ fn layout_break_lines_follow_ruby() {
         "'''", "''''", "---", "- - -", "-  -  -", "***", "* * *", "___", "_ _ _", " ---", "   ***",
     ] {
         let source = format!("{line}\n");
-        let blocks = parse(&source).document.blocks;
+        let blocks = parse(&source).document.into_blocks();
         assert_eq!(blocks.len(), 1, "{line:?}");
         assert!(
             matches!(blocks[0].kind, BlockKind::ThematicBreak),
@@ -37,7 +37,7 @@ fn layout_break_lines_follow_ruby() {
         assert_eq!(blocks[0].span, Span::new(0, line.len()), "{line:?}");
     }
     for line in ["<<<", "<<<<<"] {
-        let blocks = parse(line).document.blocks;
+        let blocks = parse(line).document.into_blocks();
         assert!(matches!(blocks[0].kind, BlockKind::PageBreak), "{line:?}");
         assert_eq!(blocks[0].span, Span::new(0, line.len()));
     }
@@ -52,7 +52,7 @@ fn layout_break_lines_follow_ruby() {
         BlockKind::List { .. }
     ));
     for line in ["''", "'''x", "<<<x", "--", "-- -", "*-*", "'''\u{a0}"] {
-        let blocks = parse(line).document.blocks;
+        let blocks = parse(line).document.into_blocks();
         assert!(
             !matches!(
                 blocks[0].kind,
@@ -66,7 +66,9 @@ fn layout_break_lines_follow_ruby() {
 
 #[test]
 fn breaks_start_blocks_but_never_interrupt_paragraphs() {
-    let blocks = parse("para\n'''\nmore\n\n'''\nafter").document.blocks;
+    let blocks = parse("para\n'''\nmore\n\n'''\nafter")
+        .document
+        .into_blocks();
     assert_eq!(blocks.len(), 3);
     assert!(matches!(blocks[0].kind, BlockKind::Paragraph { .. }));
     assert_eq!(blocks[0].span, Span::new(0, 13));
@@ -76,7 +78,7 @@ fn breaks_start_blocks_but_never_interrupt_paragraphs() {
     // A list item's text-only first block keeps the line; after a
     // continuation it is a break, as in a container.
     let source = "* item\n'''\n\n* other\n+\n'''\n\n====\n<<<\n====";
-    let blocks = parse(source).document.blocks;
+    let blocks = parse(source).document.into_blocks();
     let BlockKind::List { items, .. } = &blocks[0].kind else {
         panic!("expected a list");
     };
@@ -89,7 +91,7 @@ fn breaks_start_blocks_but_never_interrupt_paragraphs() {
     assert!(matches!(kids[0].kind, BlockKind::PageBreak));
 
     // A verbatim style keeps the line as paragraph text.
-    let blocks = parse("[literal]\n'''").document.blocks;
+    let blocks = parse("[literal]\n'''").document.into_blocks();
     assert!(matches!(&blocks[0].kind, BlockKind::Literal { text, .. } if text == "'''"));
 }
 
@@ -125,7 +127,7 @@ fn break_metadata_is_kept_and_its_title_is_not_executed() {
         .collect();
     assert_eq!(text, "1");
     // A block title before a break is consumed by it, not carried on.
-    let blocks = parse(".T\n'''\n\npara").document.blocks;
+    let blocks = parse(".T\n'''\n\npara").document.into_blocks();
     assert!(blocks[1].title.is_none());
 }
 
@@ -180,7 +182,7 @@ fn fenced_code_is_a_source_listing() {
 #[test]
 fn fenced_code_closes_at_three_backticks_and_ignores_styles() {
     let source = "[.r#f]\n.Title\n```py\n````\n```py\nz\n```\n\n````\nnot fenced\n````";
-    let blocks = parse(source).document.blocks;
+    let blocks = parse(source).document.into_blocks();
     assert_eq!(listing(&blocks[0]), "````\n```py\nz");
     assert_eq!(blocks[0].id.as_deref(), Some("f"));
     assert_eq!(blocks[0].roles, ["r"]);
@@ -193,7 +195,7 @@ fn fenced_code_closes_at_three_backticks_and_ignores_styles() {
         "[literal]\n```\na\n```\n\n[source,python]\n```\nb\n```\n\n[language=go]\n```\nc\n```",
     )
     .document
-    .blocks;
+    .into_blocks();
     assert_eq!(listing(&blocks[0]), "a");
     assert_eq!(blocks[0].attrs.style.as_deref(), Some("source"));
     assert_eq!(language(&blocks[1]), None);
@@ -213,7 +215,7 @@ fn fenced_code_closes_at_three_backticks_and_ignores_styles() {
 #[test]
 fn fenced_code_works_in_list_continuations_and_is_highlighted() {
     let source = "* item\n+\n```sh\nls *x*\n```";
-    let blocks = parse(source).document.blocks;
+    let blocks = parse(source).document.into_blocks();
     let BlockKind::List { items, .. } = &blocks[0].kind else {
         panic!("expected a list");
     };

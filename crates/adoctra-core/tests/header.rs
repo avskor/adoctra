@@ -17,7 +17,7 @@ fn authors_revision_attributes_and_original_ranges() {
     assert!(result.diagnostics.is_empty());
     let doc = result.document;
     assert_eq!(doc.blocks.len(), 2);
-    let header = doc.header.unwrap();
+    let header = doc.header.as_ref().unwrap();
     assert_eq!(sources.slice(header.title_span), Some("= Документ"));
     assert_eq!(
         sources.slice(header.authors[0].span),
@@ -26,7 +26,7 @@ fn authors_revision_attributes_and_original_ranges() {
     assert_eq!(header.authors[0].initials, "ИП");
     assert_eq!(header.authors[1].firstname, "Mary Jane");
     assert_eq!(header.authors[1].middlename.as_deref(), Some("Q"));
-    let revision = header.revision.unwrap();
+    let revision = header.revision.clone().unwrap();
     assert_eq!(
         sources.slice(revision.span),
         Some("v1.2, 2026-10-11: Выпуск")
@@ -79,7 +79,14 @@ fn attributes_between_header_lines_and_hard_overrides() {
     assert_eq!(doc.attributes.get("extra"), Some("John Doe locked"));
     // Source declarations remain distinguishable from effective overrides.
     assert_eq!(
-        doc.header.unwrap().revision.unwrap().number.as_deref(),
+        doc.header
+            .as_ref()
+            .unwrap()
+            .revision
+            .clone()
+            .unwrap()
+            .number
+            .as_deref(),
         Some("2")
     );
 }
@@ -87,7 +94,7 @@ fn attributes_between_header_lines_and_hard_overrides() {
 #[test]
 fn blank_line_ends_header_and_title_is_required() {
     let doc = parse("= Doc\n\nJohn Doe\nv1.0").document;
-    let header = doc.header.unwrap();
+    let header = doc.header.as_ref().unwrap();
     assert!(header.authors.is_empty());
     assert!(header.revision.is_none());
     assert!(matches!(doc.blocks[1].kind, BlockKind::Paragraph { .. }));
@@ -95,7 +102,7 @@ fn blank_line_ends_header_and_title_is_required() {
     assert!(doc.header.is_none());
     assert!(doc.attributes.get("author").is_none());
     let doc = parse("= Doc\nJohn Doe\n\nv1.0").document;
-    assert!(doc.header.unwrap().revision.is_none());
+    assert!(doc.header.as_ref().unwrap().revision.is_none());
     assert_eq!(doc.blocks.len(), 2);
 }
 
@@ -120,7 +127,7 @@ fn revision_variants_and_body_boundary() {
         ),
     ] {
         let doc = parse(&format!("= Doc\nJohn Doe\n{line}\nBody")).document;
-        let rev = doc.header.unwrap().revision.unwrap();
+        let rev = doc.header.as_ref().unwrap().revision.clone().unwrap();
         assert_eq!(
             (
                 rev.number.as_deref(),
@@ -133,7 +140,7 @@ fn revision_variants_and_body_boundary() {
         assert_eq!(doc.blocks.len(), 2);
     }
     let doc = parse("= Doc\nJohn Doe\n:invalid:value\n\nBody").document;
-    assert!(doc.header.unwrap().revision.is_none());
+    assert!(doc.header.as_ref().unwrap().revision.is_none());
     assert_eq!(doc.blocks.len(), 3);
 }
 
@@ -143,7 +150,7 @@ fn explicit_names_are_derived_and_implicit_declarations_are_retained() {
     assert_eq!(doc.attributes.get("firstname"), Some("Jane"));
     assert_eq!(doc.attributes.get("lastname"), Some("Smith"));
     assert_eq!(doc.attributes.get("authorinitials"), Some("JS"));
-    assert_eq!(doc.header.unwrap().authors[0].name, "John Doe");
+    assert_eq!(doc.header.as_ref().unwrap().authors[0].name, "John Doe");
     let doc = parse(":authors: Jane Smith; Иван Петров\n\n{authors}").document;
     assert!(doc.header.is_none());
     assert_eq!(doc.attributes.get("authorcount"), Some("2"));
@@ -256,7 +263,7 @@ fn setext_rejects_non_titles_and_does_not_cross_comments_or_blank_lines() {
     }
     // ATX takes precedence; the underline is the author declaration here.
     let result = parse("= Doc\n=====\n\nBody");
-    let header = result.document.header.unwrap();
+    let header = result.document.header.as_ref().unwrap();
     assert_eq!(header.title_span, adoctra_core::Span::new(0, 5));
     assert_eq!(header.authors[0].name, "=====");
     assert!(result.document.attributes.get("compat-mode").is_none());
@@ -912,7 +919,10 @@ fn author_override_compares_literal_protection_as_well_as_text() {
     let doc = parse(source).document;
     assert_eq!(doc.attributes.get("firstname"), Some("John"));
     assert_eq!(doc.attributes.get("authorinitials"), Some("JD"));
-    assert_eq!(doc.header.unwrap().authors[0].firstname, "<b>John</b> Doe");
+    assert_eq!(
+        doc.header.as_ref().unwrap().authors[0].firstname,
+        "<b>John</b> Doe"
+    );
 }
 
 fn paragraph_text(block: &adoctra_core::Block) -> String {

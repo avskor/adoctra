@@ -520,9 +520,9 @@ mod tests {
         assert_eq!(doc.attributes.get("manname-title"), Some("Name"));
         assert_eq!(doc.attributes.get("mannames"), Some(r#"["zz"]"#));
         assert_eq!(doc.attributes.get("manname-id"), None);
-        let manpage = doc.manpage.unwrap();
+        let manpage = doc.manpage.as_ref().unwrap();
         assert_eq!(
-            (manpage.names, manpage.name_section),
+            (manpage.names.clone(), manpage.name_section.clone()),
             (vec!["zz".to_owned()], None)
         );
         assert_eq!(heading_id(&doc.blocks[1]), Some("_name"));
@@ -556,12 +556,12 @@ mod tests {
             [("name section expected".to_owned(), Span::new(28, 32))]
         );
         assert_eq!(doc.attributes.get("manname"), Some("command"));
-        assert_eq!(doc.manpage.unwrap().names, ["command"]);
+        assert_eq!(doc.manpage.as_ref().unwrap().names, ["command"]);
         // Like Ruby, the metadata is read twice.
         assert_eq!(doc.blocks[1].roles, ["r", "r"]);
         let (doc, errors) = error("= foo(1)\n:doctype: manpage\n\n=== NAME\n\nx - y\n");
         assert_eq!(errors[0].0, "name section must be at level 1");
-        assert!(doc.manpage.unwrap().name_section.is_none());
+        assert!(doc.manpage.as_ref().unwrap().name_section.is_none());
         // A nonconforming body keeps the section registered under its id.
         let src = "= foo(1)\n:doctype: manpage\n\n== NAME\n\nfoo bar\n\n== D\n\n<<_name>>\n";
         let (doc, errors) = error(src);

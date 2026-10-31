@@ -129,7 +129,7 @@ fn author_derivation_preserves_formatting_and_original_declarations() {
         .raw_parts("authors")
         .unwrap()
         .contains(&P::Open(F::Strong)));
-    assert_eq!(doc.header.unwrap().authors[1].name, "Mary Roe");
+    assert_eq!(doc.header.as_ref().unwrap().authors[1].name, "Mary Roe");
     let doc =
         parse("= Doc\n:authors: pass:q[*Ada* Lovelace; _Grace_ Hopper]\n\n{authors}").document;
     assert_eq!(doc.attributes.get("authorcount"), Some("2"));
@@ -420,7 +420,7 @@ fn attributed_quotes_survive_author_derivation_snapshots_host_values_and_section
         .raw_parts("authors")
         .unwrap()
         .contains(&decorated(F::Strong, None, Some("имя"))));
-    assert_eq!(doc.header.unwrap().authors[1].name, "Mary Roe");
+    assert_eq!(doc.header.as_ref().unwrap().authors[1].name, "Mary Roe");
     let doc = parse(
         ":v: pass:q[[#id.red]*Alpha*]\n\n<<_alpha>>\n\n== {v}\n\n:v: pass:q[[.blue]_Beta_]\n\n{v}",
     )

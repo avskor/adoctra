@@ -49,6 +49,7 @@ pub mod resource;
 mod ruby_strip;
 mod scanner;
 mod section_numbers;
+pub mod segments;
 pub mod source;
 mod source_encoding;
 mod substitution_context;

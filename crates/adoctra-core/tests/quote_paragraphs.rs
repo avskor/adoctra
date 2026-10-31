@@ -45,7 +45,7 @@ fn paragraph(block: &Block) -> &[Inline] {
 #[test]
 fn markdown_blockquote_parses_its_lines_as_blocks() {
     let source = "> para\nlazy\n>\n> * item\n> ----\n> code\n> ----\n> -- Ann, *Work*\n";
-    let blocks = parse(source).document.blocks;
+    let blocks = parse(source).document.into_blocks();
     let [block] = blocks.as_slice() else {
         panic!("one block expected: {blocks:?}");
     };
@@ -81,7 +81,7 @@ fn markdown_blockquote_parses_its_lines_as_blocks() {
 fn nested_blockquotes_and_sections_follow_ruby() {
     // A nested quote needs a new paragraph; a section title is text.
     let source = "> a\n>\n> > b\n> > -- In\n>\n> == Not a section\n";
-    let blocks = parse(source).document.blocks;
+    let blocks = parse(source).document.into_blocks();
     let (attribution, children) = quote(&blocks[0]);
     assert!(attribution.is_none());
     assert_eq!(children.len(), 3);
@@ -96,7 +96,7 @@ fn credit_lines_split_like_ruby() {
     let source = ":who: Ann, Book\n\n> a\n> -- A\n\n> b\n> -- , W\n\n> c\n> -- A, \n\n\
                   > d\n> -- A, W, more\n\n> e\n> -- {who}\n\n> f\n>\n>\n> -- blanks\n\n\
                   > -- only\n\n> g\n> --no space\n";
-    let blocks = parse(source).document.blocks;
+    let blocks = parse(source).document.into_blocks();
     assert_eq!(credit(&blocks[0]), (Some("A".into()), None));
     assert_eq!(credit(&blocks[1]), (Some("".into()), Some("W".into())));
     // Reader lines are right-stripped, so `A, ` keeps its comma.
@@ -159,7 +159,7 @@ fn quote_forms_need_an_unstyled_paragraph() {
     let source = "[quote, Q]\n> styled\n\n[NOTE]\n> note\n\n[foo, A, B]\n> unknown\n\n\
                   [normal]\n\"n\"\n-- N\n\n* item\n> folded\n\n\"open\nend\n-- A\n\n\
                   >no space\n";
-    let blocks = parse(source).document.blocks;
+    let blocks = parse(source).document.into_blocks();
     // A paragraph style keeps the markers as text.
     let (attribution, children) = quote(&blocks[0]);
     assert_eq!(text(attribution.unwrap().author.as_deref().unwrap()), "Q");
@@ -223,7 +223,7 @@ fn reading_attributions_label_their_references() {
     // earlier section lends its title, a later one shows `[id]`.
     let source = "== Sec\n\n[quote, '<<_sec>> <<_later>>']\n____\nx\n____\n\n\
                   > y\n> -- <<_sec>>, <<_later>>\n\n== Later\n";
-    let blocks = parse(source).document.blocks;
+    let blocks = parse(source).document.into_blocks();
     let BlockKind::Section { blocks, .. } = &blocks[0].kind else {
         panic!("expected a section");
     };
@@ -240,7 +240,7 @@ fn credits_split_inside_elements_like_the_browser_repairs_ruby() {
     // element and the rest of the line follows it.
     let source = "> a\n> -- _x *A, B* y_ z\n\n> b\n> -- pass:q[*C, D*] tail\n\n\
                   == E, F\n\n> c\n> -- <<_e_f>>\n";
-    let blocks = parse(source).document.blocks;
+    let blocks = parse(source).document.into_blocks();
     let attribution = quote(&blocks[0]).0.unwrap();
     let emphasis = |inline: &Inline| match inline {
         Inline::Emphasis { children, .. } => format!("_{}_", text(children)),

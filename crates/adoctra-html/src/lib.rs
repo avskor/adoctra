@@ -1,6 +1,7 @@
 //! HTML5 backend.
 
 use adoctra_core::ast::{Attribution, Block, BlockKind, Inline};
+use adoctra_core::segments::Out;
 use adoctra_core::{
     Backend, ConversionStart, DocinfoLocation, Document, ResourceProvider, ResourceRequest, Result,
 };
@@ -805,7 +806,12 @@ fn render_content(cx: &Cx, embedded: bool, out: &mut String) {
                 for child in blocks {
                     match &child.kind {
                         BlockKind::Open { blocks } if is_style(child, "partintro") => {
-                            render_open(child, blocks, cx, out)
+                            adoctra_core::segments::expand_with(
+                                child,
+                                out,
+                                |child, out| render_open(child, blocks, out),
+                                |block, out| render_block_part(block, cx, out),
+                            )
                         }
                         _ => render_block(child, cx, out),
                     }
@@ -991,7 +997,14 @@ impl Cx<'_> {
     }
 }
 
+/// A block and its nested blocks, without recursion
+/// ([`adoctra_core::segments`]).
 fn render_block(block: &Block, cx: &Cx, out: &mut String) {
+    adoctra_core::segments::expand(block, out, |block, out| render_block_part(block, cx, out));
+}
+
+/// One block, marking its nested blocks.
+fn render_block_part<'a>(block: &'a Block, cx: &Cx, out: &mut Out<'a, Block>) {
     // A block's anchor (an explicit `[[id]]`/`[#id]` or a section's auto-generated
     // id) renders as an `id` attribute on the block's element; `None` → none.
     // `[.role]` shorthand roles render as a `class` (appended to any base class
@@ -1115,7 +1128,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
                 render_inlines(&entry.item.inlines, out);
                 for child in &entry.item.blocks {
                     out.push('\n');
-                    render_block(child, cx, out);
+                    out.node(child);
                 }
                 if icons.is_some() {
                     out.push_str("</div>");
@@ -1389,13 +1402,13 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
                 // keeping the principal text from running into the block's text.
                 for child in &item.blocks {
                     out.push('\n');
-                    render_block(child, cx, out);
+                    out.node(child);
                 }
                 out.push_str("</li>\n");
             }
             out.push_str(&format!("</{tag}>\n"));
         }
-        BlockKind::DescriptionList { items } => render_dlist(block, items, cx, out),
+        BlockKind::DescriptionList { items } => render_dlist(block, items, out),
         BlockKind::Admonition {
             kind,
             label,
@@ -1444,7 +1457,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             // the `Note`/`Tip`/… label), rendered above the body — matching where
             // asciidoctor places it in the content cell.
             render_title(&block.title, &caption_html(block), out);
-            render_body(block, blocks, cx, out);
+            render_body(block, blocks, out);
             out.push_str("</div>\n</aside>\n");
         }
         BlockKind::Example { blocks } if has_option(block, "collapsible") => {
@@ -1464,7 +1477,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
                 None => out.push_str("Details"),
             }
             out.push_str("</summary>\n");
-            render_body(block, blocks, cx, out);
+            render_body(block, blocks, out);
             out.push_str("</details>\n");
         }
         BlockKind::Example { blocks } => {
@@ -1476,7 +1489,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             out.push_str(&format!("<div{class}{id}>\n"));
             render_title(&block.title, &caption_html(block), out);
             out.push_str("<div class=\"content\">\n");
-            render_body(block, blocks, cx, out);
+            render_body(block, blocks, out);
             out.push_str("</div>\n</div>\n");
         }
         BlockKind::Sidebar { blocks } => {
@@ -1488,7 +1501,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             let class = class_attr(&["sidebarblock"], &block.roles);
             out.push_str(&format!("<aside{class}{id}>\n"));
             render_title(&block.title, &caption_html(block), out);
-            render_body(block, blocks, cx, out);
+            render_body(block, blocks, out);
             out.push_str("</aside>\n");
         }
         BlockKind::Quote {
@@ -1505,7 +1518,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             out.push_str(&format!("<figure{class}{id}>\n"));
             render_title(&block.title, &caption_html(block), out);
             out.push_str("<blockquote>\n");
-            render_body(block, blocks, cx, out);
+            render_body(block, blocks, out);
             out.push_str("</blockquote>\n");
             render_attribution(attribution, out);
             out.push_str("</figure>\n");
@@ -1531,7 +1544,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             // Like Ruby, a level-0 section (a part) has no wrapper: its `sect0`
             // title (carrying the roles) is followed by its content.
             for child in blocks {
-                render_block(child, cx, out);
+                out.node(child);
             }
         }
         BlockKind::Section { level, blocks } => {
@@ -1549,7 +1562,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
                 render_heading(heading, *level, inlines, true, &[], out);
             }
             for child in content {
-                render_block(child, cx, out);
+                out.node(child);
             }
             out.push_str("</section>\n");
         }
@@ -1559,7 +1572,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             // asciidoctor's `<div id="preamble">` (without its `sectionbody`).
             out.push_str("<section id=\"preamble\">\n");
             for child in blocks {
-                render_block(child, cx, out);
+                out.node(child);
             }
             if cx.has_sections()
                 && cx.header.get("toc").is_some()
@@ -1579,10 +1592,10 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             out.push_str(&format!("<figure{class}{id}>\n"));
             render_title(&block.title, &caption_html(block), out);
             out.push_str("<blockquote>\n");
-            render_body(block, blocks, cx, out);
+            render_body(block, blocks, out);
             out.push_str("</blockquote>\n</figure>\n");
         }
-        BlockKind::Open { blocks } => render_open(block, blocks, cx, out),
+        BlockKind::Open { blocks } => render_open(block, blocks, out),
         // Ruby's `convert_thematic_break` / `convert_page_break` ignore the
         // block's id, roles and title.
         BlockKind::ThematicBreak => out.push_str(&format!("<hr{}>\n", slash())),
@@ -1728,22 +1741,21 @@ fn drop_anchors(html: &str) -> String {
 /// `<dl>` (without its wrapper `<div>`, so id, style and roles hang on the
 /// list); `horizontal` is a `<dl class="hdlist">` of `<div>` entry groups
 /// that the stylesheet lays out like Ruby's layout table, and `qanda` Ruby's ordered list of questions.
-fn render_dlist(
-    block: &Block,
-    items: &[adoctra_core::ast::DescriptionListItem],
-    cx: &Cx,
-    out: &mut String,
+fn render_dlist<'a>(
+    block: &'a Block,
+    items: &'a [adoctra_core::ast::DescriptionListItem],
+    out: &mut Out<'a, Block>,
 ) {
     let id = id_attr(&block.id);
     let style = block.attrs.style.as_deref();
-    let description = |item: &adoctra_core::ast::ListItem, out: &mut String| {
+    let description = |item: &'a adoctra_core::ast::ListItem, out: &mut Out<'a, Block>| {
         if !item.inlines.is_empty() {
             out.push_str("<p>");
             render_inlines(&item.inlines, out);
             out.push_str("</p>\n");
         }
         for child in &item.blocks {
-            render_block(child, cx, out);
+            out.node(child);
         }
     };
     render_title(&block.title, &caption_html(block), out);
@@ -2157,7 +2169,7 @@ fn is_style(block: &Block, style: &str) -> bool {
 /// id/roles, with the `.Title` and children rendered straight inside. A
 /// *container* style on a `--` block masquerades it into another kind in the
 /// parser; any other style (`partintro`, an unknown one) is a class, as in Ruby.
-fn render_open(block: &Block, blocks: &[Block], cx: &Cx, out: &mut String) {
+fn render_open<'a>(block: &'a Block, blocks: &'a [Block], out: &mut Out<'a, Block>) {
     let style = block
         .attrs
         .style
@@ -2167,7 +2179,7 @@ fn render_open(block: &Block, blocks: &[Block], cx: &Cx, out: &mut String) {
     let class = class_attr(&base, &block.roles);
     out.push_str(&format!("<div{class}{}>\n", id_attr(&block.id)));
     render_title(&block.title, &caption_html(block), out);
-    render_body(block, blocks, cx, out);
+    render_body(block, blocks, out);
     out.push_str("</div>\n");
 }
 
@@ -2247,7 +2259,7 @@ fn simple_paragraph(kind: &BlockKind) -> Option<&[Inline]> {
     }
 }
 
-fn render_body(block: &Block, blocks: &[Block], cx: &Cx, out: &mut String) {
+fn render_body<'a>(block: &'a Block, blocks: &'a [Block], out: &mut Out<'a, Block>) {
     if block.simple {
         if let [Block {
             kind: BlockKind::Paragraph { inlines },
@@ -2260,7 +2272,7 @@ fn render_body(block: &Block, blocks: &[Block], cx: &Cx, out: &mut String) {
         }
     }
     for child in blocks {
-        render_block(child, cx, out);
+        out.node(child);
     }
 }
 

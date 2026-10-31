@@ -325,7 +325,7 @@ pub(crate) fn register(
         if let (Some(_), BlockKind::Heading { inlines, .. }) = (&heading.id, &mut heading.kind) {
             ids.resolve_reading(inlines, &attributes);
         }
-        ids.visit_block(heading);
+        visit::walk_block_mut(&mut ids, heading);
     }
     visit::walk_blocks_mut(&mut ids, body);
     ids.flush(usize::MAX);
@@ -350,6 +350,21 @@ struct Ids<'a> {
     early: EarlyTitles,
     registry: Registry,
     diagnostics: &'a mut Vec<Diagnostic>,
+}
+
+/// Where a quote's substituted attribution starts.
+fn credit_start(block: &Block) -> Option<usize> {
+    match &block.kind {
+        BlockKind::Quote {
+            attribution: Some(attribution),
+            ..
+        }
+        | BlockKind::Verse {
+            attribution: Some(attribution),
+            ..
+        } => attribution_start(attribution),
+        _ => None,
+    }
 }
 
 impl Ids<'_> {
@@ -788,48 +803,39 @@ impl Ids<'_> {
 }
 
 impl VisitorMut for Ids<'_> {
-    fn visit_block(&mut self, block: &mut Block) {
+    fn enter_block(&mut self, block: &mut Block) -> bool {
         self.flush(block.span.start);
         self.position = block.span.start;
         // Ruby registers a section when it reads the title
         // (`initialize_section`), any other block at the end of `next_block`:
         // after its content and the inline anchors cataloged in it, converting
         // an anchored title there.
-        let heading = matches!(block.kind, BlockKind::Heading { .. });
-        if heading {
+        if matches!(block.kind, BlockKind::Heading { .. }) {
             self.register_block(block);
         }
         // A quote attribution was substituted while reading: from its
         // attribute line before the content, or from a blockquote credit
         // line after the content was parsed.
-        let credit = match &block.kind {
-            BlockKind::Quote {
-                attribution: Some(attribution),
-                ..
-            }
-            | BlockKind::Verse {
-                attribution: Some(attribution),
-                ..
-            } => attribution_start(attribution),
-            _ => None,
-        };
-        let before = credit.filter(|&start| start < block.span.start);
-        if before.is_some() {
+        if credit_start(block).is_some_and(|start| start < block.span.start) {
             self.resolve_attribution(block);
         }
-        visit::walk_block_mut(self, block);
-        if let (Some(start), None) = (credit, before) {
+        true
+    }
+
+    fn leave_block(&mut self, block: &mut Block) {
+        if let Some(start) = credit_start(block).filter(|&start| start >= block.span.start) {
             self.flush(start);
             self.position = start;
             self.resolve_attribution(block);
         }
-        if !heading {
+        if !matches!(block.kind, BlockKind::Heading { .. }) {
             self.flush(block.span.end);
             self.position = block.span.end;
             self.register_block(block);
         }
     }
-    fn visit_inlines(&mut self, _inlines: &mut [Inline], _context: InlineContext) {}
+
+    fn visit_inlines(&mut self, _inlines: &mut Vec<Inline>, _context: InlineContext) {}
 }
 
 impl Ids<'_> {

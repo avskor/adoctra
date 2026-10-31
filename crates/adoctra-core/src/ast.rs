@@ -83,6 +83,14 @@ pub struct Document {
     pub output: Option<crate::OutputPaths>,
 }
 
+/// A document dismantles its block tree without recursion: the derived drop
+/// of nested `Vec<Block>`s would recurse once per nesting level.
+impl Drop for Document {
+    fn drop(&mut self) {
+        crate::visit::dismantle(std::mem::take(&mut self.blocks));
+    }
+}
+
 /// The names of a manual page, like Ruby's `parse_manpage_header`. The header
 /// attributes keep the values (`mantitle`, `manvolnum`, `manname`,
 /// `mannames`, `manpurpose`, `manname-title`, `manname-id`); this keeps the
@@ -159,7 +167,12 @@ impl Document {
     }
 
     /// The owned counterpart of [`Document::flat_blocks`].
-    pub fn into_flat_blocks(self) -> Vec<Block> {
+    /// The top-level blocks, taken out of the document.
+    pub fn into_blocks(mut self) -> Vec<Block> {
+        std::mem::take(&mut self.blocks)
+    }
+
+    pub fn into_flat_blocks(mut self) -> Vec<Block> {
         fn push(blocks: Vec<Block>, out: &mut Vec<Block>) {
             for block in blocks {
                 match block.kind {
@@ -171,7 +184,7 @@ impl Document {
             }
         }
         let mut out = Vec::new();
-        push(self.blocks, &mut out);
+        push(std::mem::take(&mut self.blocks), &mut out);
         out
     }
 }

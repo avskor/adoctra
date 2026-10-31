@@ -24,6 +24,7 @@ pub use resources::ResourceWorkspace;
 use adoctra_core::ast::{Attribution, Block, BlockKind, Inline, Span};
 use adoctra_core::diagnostic::{Diagnostic, ParseResult};
 use adoctra_core::json::escape_into as write_str;
+use adoctra_core::segments::Out;
 use adoctra_core::{Token, TokenKind};
 use std::collections::BTreeMap;
 
@@ -248,7 +249,7 @@ fn write_header(header: &adoctra_core::DocumentHeader, s: &mut String) {
 /// `stripes`), the columns and the head/body/foot rows of cells. A cell has
 /// `paragraphs` (arrays of inlines; one run in the head), the `blocks` of an
 /// AsciiDoc cell or verbatim `literal` text.
-fn write_table(table: &adoctra_core::ast::Table, s: &mut String) {
+fn write_table<'a>(table: &'a adoctra_core::ast::Table, s: &mut Out<'a, Block>) {
     s.push_str(&format!(",\"width\":{},\"frame\":", table.width));
     write_str(&table.frame, s);
     s.push_str(",\"grid\":");
@@ -298,7 +299,7 @@ fn write_table(table: &adoctra_core::ast::Table, s: &mut String) {
     }
 }
 
-fn write_cell(cell: &adoctra_core::ast::TableCell, s: &mut String) {
+fn write_cell<'a>(cell: &'a adoctra_core::ast::TableCell, s: &mut Out<'a, Block>) {
     let number = |n: Option<u32>| n.map_or("null".to_owned(), |n| n.to_string());
     s.push('{');
     write_span_field(&cell.span, s);
@@ -335,7 +336,7 @@ fn write_cell(cell: &adoctra_core::ast::TableCell, s: &mut String) {
                 if i > 0 {
                     s.push(',');
                 }
-                write_block(block, s);
+                s.node(block);
             }
             s.push(']');
             adoctra_core::json::write_footnote_definitions(footnotes, s, Some(write_span_field));
@@ -396,7 +397,7 @@ fn write_callouts(callouts: &[adoctra_core::ast::Callout], s: &mut String) {
 
 /// A list item (or a description) with its span, text, nested blocks and, in
 /// a checklist, its `checkbox` state.
-fn write_list_item(item: &adoctra_core::ast::ListItem, s: &mut String) {
+fn write_list_item<'a>(item: &'a adoctra_core::ast::ListItem, s: &mut Out<'a, Block>) {
     // Each item carries its own span for the editor.
     s.push('{');
     write_span_field(&item.span, s);
@@ -411,13 +412,20 @@ fn write_list_item(item: &adoctra_core::ast::ListItem, s: &mut String) {
         if j > 0 {
             s.push(',');
         }
-        write_block(child, s);
+        s.node(child);
     }
     s.push(']');
     s.push('}');
 }
 
+/// A block and its nested blocks, without recursion
+/// ([`adoctra_core::segments`]).
 fn write_block(b: &Block, s: &mut String) {
+    adoctra_core::segments::expand(b, s, write_block_part);
+}
+
+/// One block, marking its nested blocks.
+fn write_block_part<'a>(b: &'a Block, s: &mut Out<'a, Block>) {
     s.push('{');
     write_span_field(&b.span, s);
     s.push(',');
@@ -720,7 +728,7 @@ fn write_block(b: &Block, s: &mut String) {
                 if j > 0 {
                     s.push(',');
                 }
-                write_block(child, s);
+                s.node(child);
             }
             s.push(']');
         }
@@ -740,7 +748,7 @@ fn write_block(b: &Block, s: &mut String) {
                 if j > 0 {
                     s.push(',');
                 }
-                write_block(child, s);
+                s.node(child);
             }
             s.push(']');
         }
@@ -760,7 +768,7 @@ fn write_block(b: &Block, s: &mut String) {
                 if j > 0 {
                     s.push(',');
                 }
-                write_block(child, s);
+                s.node(child);
             }
             s.push(']');
         }
@@ -774,7 +782,7 @@ fn write_block(b: &Block, s: &mut String) {
                 if j > 0 {
                     s.push(',');
                 }
-                write_block(child, s);
+                s.node(child);
             }
             s.push(']');
         }
@@ -787,7 +795,7 @@ fn write_block(b: &Block, s: &mut String) {
                 if j > 0 {
                     s.push(',');
                 }
-                write_block(child, s);
+                s.node(child);
             }
             s.push(']');
         }
@@ -807,7 +815,7 @@ fn write_block(b: &Block, s: &mut String) {
                 if j > 0 {
                     s.push(',');
                 }
-                write_block(child, s);
+                s.node(child);
             }
             s.push(']');
         }
@@ -831,7 +839,7 @@ fn write_block(b: &Block, s: &mut String) {
                 if j > 0 {
                     s.push(',');
                 }
-                write_block(child, s);
+                s.node(child);
             }
             s.push(']');
         }

@@ -832,9 +832,10 @@ fn nested_paths_attributes_and_forward_references_share_one_document() {
     assert_eq!(result.include_directives.len(), 2);
     assert_eq!(
         paragraphs(&ParseResult {
-            document: adoctra_core::Document {
-                blocks: vec![result.document.flat_blocks()[2].clone()],
-                ..Default::default()
+            document: {
+                let mut document = adoctra_core::Document::default();
+                document.blocks = vec![result.document.flat_blocks()[2].clone()];
+                document
             },
             ..result.clone()
         }),

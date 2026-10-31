@@ -2073,9 +2073,14 @@ read process output as bytes (`compatibility.run`, `acceptance.invoke`,
 `read_reference`): text mode turned a lone CR into LF. Block reading has no recursion per level (`read_blocks`: a heap stack of
 `Run` frames; containers, list items and blockquotes suspend as `Step::Collect`
 with a `'static` `Resume` and outer `Then`s; lists implement `ItemList`, ready
-items continue in place). Open: AST passes, backends and drop still recurse
-(about 1024 levels on a 1 MiB release stack; user decision: remove the
-recursion, no limit); AsciiDoc table cells read nested documents recursively
-(bounded by separator syntax), cross-pass diagnostic order
+items continue in place). The AST walk is iterative too (`visit`: owned
+frames, block groups taken out and put back, `enter_block`/`leave_block`
+hooks; `body_subs`, `check_open_styles`, ids, footnotes, tokens and span
+mapping run on it), `Document` drops its tree iteratively (`visit::dismantle`;
+use `into_blocks()`/`mem::take` instead of moving fields out) and the HTML,
+JSON and WASM writers mark nested blocks in a `segments::Out` that
+`segments::expand` writes on a stack: 32 768 levels on a 1 MiB stack, no
+`unsafe` (forbidden workspace-wide). Still recursive and bounded by syntax:
+AsciiDoc table cells (nested documents) and inline nesting. Open: cross-pass diagnostic order
 (XFAIL `fuzz-preprocessor-error-order`, `fuzz-missing-attribute-in-title-order`)
 and five body XFAILs (`fuzz-*` in `compatibility/cases.json`).

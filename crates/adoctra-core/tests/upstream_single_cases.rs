@@ -46,6 +46,7 @@ fn revision_line_with_an_empty_date() {
     let header = parse("= Document Title\nAuthor Name\nv1.0.0,:remark\n\ncontent")
         .document
         .header
+        .clone()
         .unwrap();
     let revision = header.revision.unwrap();
     assert_eq!(revision.number.as_deref(), Some("1.0.0"));

@@ -23,7 +23,7 @@ fn collapsible_examples_are_never_numbered() {
                   [example%collapsible,caption=\"X \"]\n.C\n--\nc\n--\n\n\
                   [collapsible-option=]\n.D\n====\nd\n====\n\n\
                   [options=\"open,collapsible\"]\n.E\n====\ne\n====\n\n.F\n====\nf\n====\n";
-    let blocks = parse(source).document.blocks;
+    let blocks = parse(source).document.into_blocks();
     assert_eq!(blocks.len(), 6);
     for block in &blocks {
         assert!(
@@ -52,7 +52,7 @@ fn collapsible_examples_are_never_numbered() {
 #[test]
 fn collapsible_examples_nest_and_number_their_children() {
     let source = "[%collapsible]\n.Outer\n====\n.Inner\n=====\nx\n=====\n====\n";
-    let blocks = parse(source).document.blocks;
+    let blocks = parse(source).document.into_blocks();
     assert_eq!(caption(&blocks[0]), Some(""));
     let BlockKind::Example { blocks: children } = &blocks[0].kind else {
         panic!("expected an example");
@@ -68,7 +68,7 @@ fn collapsible_examples_nest_and_number_their_children() {
 #[test]
 fn xrefstyle_uses_the_title_of_a_collapsible_example() {
     let source = ":xrefstyle: full\n\n[[t]]\n[%collapsible]\n.Target\n====\nx\n====\n\n<<t>>\n";
-    let blocks = parse(source).document.blocks;
+    let blocks = parse(source).document.into_blocks();
     let BlockKind::Paragraph { inlines } = &blocks[1].kind else {
         panic!("expected a paragraph, got {:?}", blocks[1].kind);
     };

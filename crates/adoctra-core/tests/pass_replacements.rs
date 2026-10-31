@@ -119,7 +119,7 @@ fn author_derivation_uses_replacement_spelling_and_keeps_declarations() {
     );
     assert_eq!(doc.attributes.get("lastname"), Some("O&#8217;Neil"));
     assert_eq!(doc.attributes.get("authorinitials"), Some("АO"));
-    let author = &doc.header.unwrap().authors[0];
+    let author = &doc.header.as_ref().unwrap().authors[0];
     assert_eq!(author.name, "John Doe");
     assert_eq!(&source[author.span.start..author.span.end], "John Doe");
 }

@@ -16,6 +16,7 @@ fn attrs(source: &str, safe: SafeMode) -> Attributes {
     parse_with_options(source, &options(safe))
         .document
         .attributes
+        .clone()
 }
 
 #[test]
@@ -83,7 +84,8 @@ fn levels_set_ruby_attributes_and_locks() {
         },
     )
     .document
-    .attributes;
+    .attributes
+    .clone();
     assert_eq!(
         (
             a.get("icons"),
@@ -116,7 +118,8 @@ fn secure_mode_limits_attribute_values_at_a_character_boundary() {
         },
     )
     .document
-    .attributes;
+    .attributes
+    .clone();
     assert_eq!(a.get("v"), Some("é"));
 }
 

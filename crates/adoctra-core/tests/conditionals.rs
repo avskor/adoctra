@@ -71,14 +71,14 @@ fn header_conditions_see_derived_attributes_and_retain_declaration_spans() {
     let source = ":a:\r\nifdef::a[= Заголовок]\r\nifdef::a[Иван Иванов]\r\nifdef::author[v1.2, 2026-10-11: Draft]\r\n\r\n{author}";
     let result = parse(source);
     assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
-    let header = result.document.header.unwrap();
+    let header = result.document.header.as_ref().unwrap();
     assert_eq!(
         &source[header.title_span.start..header.title_span.end],
         "= Заголовок"
     );
     let author = &header.authors[0];
     assert_eq!(&source[author.span.start..author.span.end], "Иван Иванов");
-    let rev = header.revision.unwrap();
+    let rev = header.revision.clone().unwrap();
     assert_eq!(
         &source[rev.span.start..rev.span.end],
         "v1.2, 2026-10-11: Draft"
@@ -462,7 +462,7 @@ fn ifeval_header_container_and_verbatim_share_the_lazy_reader() {
     let source = "ifeval::[1 == 1]\n= Title\nendif::[]\nifeval::[2 > 1]\nJane Doe\nendif::[]\nifeval::[\"{author}\" == \"Jane Doe\"]\nv2, 2026-10-11: Draft\nendif::[]\n\nbody";
     let result = parse(source);
     assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
-    let header = result.document.header.unwrap();
+    let header = result.document.header.as_ref().unwrap();
     assert_eq!(
         &source[header.authors[0].span.start..header.authors[0].span.end],
         "Jane Doe"

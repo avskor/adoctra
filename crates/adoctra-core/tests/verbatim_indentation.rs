@@ -43,7 +43,7 @@ fn flat(inlines: &[Inline]) -> String {
 #[test]
 fn listing_and_source_paragraphs_are_verbatim_listings() {
     let source = "[source,ruby]\nputs *1*\n// kept\n----\n:attr: x\n* item\nimage::a.png[]\n\n[listing]\nplain\n+\nafter";
-    let blocks = parse(source).document.blocks;
+    let blocks = parse(source).document.into_blocks();
     assert_eq!(blocks.len(), 3, "{blocks:?}");
     assert_eq!(
         listing(&blocks[0]),
@@ -75,7 +75,7 @@ fn verbatim_paragraphs_in_list_items_stop_at_siblings() {
 #[test]
 fn listing_masquerades_on_open_blocks() {
     let source = "[listing]\n--\n  a\n--";
-    let blocks = parse(source).document.blocks;
+    let blocks = parse(source).document.into_blocks();
     assert_eq!(listing(&blocks[0]), "  a");
     assert_eq!(blocks[0].span, Span::new(10, source.len()));
     let kinds: Vec<_> = tokens(source)
@@ -95,7 +95,7 @@ fn listing_masquerades_on_open_blocks() {
 #[test]
 fn listings_without_a_style_become_source_with_a_language() {
     let source = ":source-language: ruby\n\n----\na\n----\n\n[listing]\n----\nb\n----\n\n[#x.r]\n----\nc\n----\n\n[foo]\n----\nd\n----\n\n[source]\n....\ne\n....\n\n[source,c]\n----\nf\n----";
-    let blocks = parse(source).document.blocks;
+    let blocks = parse(source).document.into_blocks();
     let summary: Vec<_> = blocks
         .iter()
         .map(|b| (b.attrs.style.as_deref(), named(b, "language")))
@@ -116,21 +116,23 @@ fn listings_without_a_style_become_source_with_a_language() {
     // third positional of a listing turned source is `linenums`.
     let blocks = parse("[,java,on]\n----\nj\n----\n\n[,]\n----\nk\n----")
         .document
-        .blocks;
+        .into_blocks();
     assert_eq!(blocks[0].attrs.style.as_deref(), Some("source"));
     assert_eq!(named(&blocks[0], "language"), Some("java"));
     assert_eq!(named(&blocks[0], "linenums"), Some("on"));
     assert_eq!(blocks[1].attrs.style, None);
     assert_eq!(named(&blocks[1], "language"), None);
     // An empty document value is a language too.
-    let blocks = parse(":source-language:\n\n----\nx\n----").document.blocks;
+    let blocks = parse(":source-language:\n\n----\nx\n----")
+        .document
+        .into_blocks();
     assert_eq!(named(&blocks[0], "language"), Some(""));
 }
 
 #[test]
 fn source_language_follows_body_assignments() {
     let source = "----\na\n----\n\n:source-language: py\n\n----\nb\n----\n\n:source-language!:\n\n[source]\n----\nc\n----";
-    let blocks = parse(source).document.blocks;
+    let blocks = parse(source).document.into_blocks();
     let languages: Vec<_> = blocks
         .iter()
         .filter(|b| matches!(b.kind, BlockKind::Listing { .. }))
@@ -143,21 +145,21 @@ fn source_language_follows_body_assignments() {
 fn fenced_code_takes_the_default_language_over_metadata() {
     let source =
         ":source-language: ruby\n\n[source,language=c]\n```\na\n```\n\n[language=c]\n```go\nb\n```";
-    let blocks = parse(source).document.blocks;
+    let blocks = parse(source).document.into_blocks();
     assert_eq!(named(&blocks[0], "language"), Some("ruby"));
     assert_eq!(named(&blocks[1], "language"), Some("go"));
     // Without a default the metadata language stays.
-    let blocks = parse("[language=c]\n```\na\n```").document.blocks;
+    let blocks = parse("[language=c]\n```\na\n```").document.into_blocks();
     assert_eq!(named(&blocks[0], "language"), Some("c"));
 }
 
 #[test]
 fn linenums_come_from_the_option_or_the_document() {
-    let blocks = parse("[source%linenums,ruby]\n----\na\n----\n\n[source,ruby,x]\n----\nb\n----\n\n[listing%linenums]\n----\nc\n----\n\n[source,ruby]\n----\nd\n----").document.blocks;
+    let blocks = parse("[source%linenums,ruby]\n----\na\n----\n\n[source,ruby,x]\n----\nb\n----\n\n[listing%linenums]\n----\nc\n----\n\n[source,ruby]\n----\nd\n----").document.into_blocks();
     let linenums: Vec<_> = blocks.iter().map(|b| named(b, "linenums")).collect();
     assert_eq!(linenums, [Some(""), Some("x"), None, None]);
     let source = ":source-linenums-option:\n\n[source]\n----\na\n----\n\n```\nb\n```\n\n[source,ruby,linenums=no]\n----\nc\n----";
-    let blocks = parse(source).document.blocks;
+    let blocks = parse(source).document.into_blocks();
     let linenums: Vec<_> = blocks.iter().map(|b| named(b, "linenums")).collect();
     assert_eq!(linenums, [Some(""), Some(""), Some("no")]);
 }
@@ -165,7 +167,7 @@ fn linenums_come_from_the_option_or_the_document() {
 #[test]
 fn source_indent_applies_to_source_blocks_only() {
     let source = ":source-language: ruby\n:source-indent: 2\n\n----\n    a\n      b\n----\n\n[source,indent=0]\n----\n  c\n----\n\n[listing]\n----\n    d\n----\n\n```\n\te\n```";
-    let blocks = parse(source).document.blocks;
+    let blocks = parse(source).document.into_blocks();
     assert_eq!(listing(&blocks[0]), "  a\n    b");
     assert_eq!(named(&blocks[0], "indent"), Some("2"));
     assert_eq!(listing(&blocks[1]), "c");
@@ -178,7 +180,7 @@ fn source_indent_applies_to_source_blocks_only() {
 #[test]
 fn indent_adjusts_listing_literal_and_verse_forms() {
     let source = "[indent=2]\n----\n    a\n      b\n----\n\n[literal,indent=1]\n   c\n     d\n\n[literal,indent=0]\n----\n  e\n----\n\n[listing,indent=abc]\n--\n  f\n   g\n--\n\n[indent=-1]\n....\n  h\n....\n\n[verse,indent=1]\n____\n   *i*\n     j\n____\n\n[verse,indent=0]\n  k\n\n[verse,indent=2]\n--\nl\n--";
-    let blocks = parse(source).document.blocks;
+    let blocks = parse(source).document.into_blocks();
     assert_eq!(listing(&blocks[0]), "  a\n    b");
     assert_eq!(literal(&blocks[1]), " c\n   d");
     assert_eq!(literal(&blocks[2]), "e");
@@ -198,14 +200,14 @@ fn indent_adjusts_listing_literal_and_verse_forms() {
 fn indented_literal_paragraphs_ignore_indent_and_tabsize() {
     let blocks = parse(":tabsize: 4\n\n[indent=4]\n  \ta\n   b")
         .document
-        .blocks;
+        .into_blocks();
     assert_eq!(literal(&blocks[0]), "a\nb");
 }
 
 #[test]
 fn tabsize_expands_tabs_by_character_columns() {
     let source = ":tabsize: 4\n\n----\n\tЯ\tX\na\tb🙂\tc\n----\n\n[tabsize=2]\n....\n\tx\n....\n\n[tabsize=0]\n----\n\ty\n----\n\n[verse]\n\tv\tw";
-    let blocks = parse(source).document.blocks;
+    let blocks = parse(source).document.into_blocks();
     assert_eq!(listing(&blocks[0]), "    Я   X\na   b🙂  c");
     assert_eq!(literal(&blocks[1]), "  x");
     assert_eq!(listing(&blocks[2]), "\ty");

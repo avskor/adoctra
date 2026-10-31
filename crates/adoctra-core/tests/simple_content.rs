@@ -18,7 +18,7 @@ fn children(block: &Block) -> &[Block] {
 fn styled_paragraph_forms_are_simple_containers() {
     let source = "[NOTE]\na\n\nTIP: b\n\n[example]\nc\n\n[example%collapsible]\nd\n\n\
                   [sidebar]\ne\n\n[open]\nf\n\n[quote,A]\ng\n\n[abstract]\nh\n";
-    let blocks = parse(source).document.blocks;
+    let blocks = parse(source).document.into_blocks();
     assert_eq!(blocks.len(), 8);
     for block in &blocks {
         assert!(block.simple, "{:?}", block.kind);
@@ -38,7 +38,7 @@ fn styled_paragraph_forms_are_simple_containers() {
 fn delimited_and_other_blocks_are_not_simple() {
     let source = "====\na\n====\n\n[NOTE]\n====\nb\n====\n\n****\nc\n****\n\n--\nd\n--\n\n\
                   [example]\n--\ne\n--\n\n____\nf\n____\n\npara\n\n[literal]\ng\n\n[verse]\nh\n";
-    for block in parse(source).document.blocks {
+    for block in parse(source).document.into_blocks() {
         assert!(!block.simple, "{:?}", block.kind);
     }
 }
@@ -47,7 +47,7 @@ fn delimited_and_other_blocks_are_not_simple() {
 fn book_parts_follow_ruby_partintro_content_models() {
     let source = "= Book\n:doctype: book\n\n= A\n\n[partintro]\nintro\n\n== C1\n\nx\n\n\
                   = B\n\n[open]\nfirst\n\nsecond\n\n== C2\n\ny\n\n= P\n\n[open]\nonly\n\n== C3\n\nz\n";
-    let blocks = parse(source).document.blocks;
+    let blocks = parse(source).document.into_blocks();
     let intro = |part: &Block| -> Block {
         let BlockKind::Section { blocks, .. } = &part.kind else {
             panic!("expected a part, got {:?}", part.kind);

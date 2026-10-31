@@ -1,7 +1,7 @@
 //! SVG embedding, like Ruby's `convert_image`/`convert_inline_image` below
 //! secure mode: `%inline` reads the file through the resource provider
 //! (`read_svg_contents`), `%interactive` takes a fallback source.
-use adoctra_core::visit::{walk_block_mut, walk_document_mut, walk_inline_mut, VisitorMut};
+use adoctra_core::visit::{walk_document_mut, walk_inline_mut, VisitorMut};
 use adoctra_core::{
     inline_svg, parse_resource, Attributes, Block, BlockKind, Inline, MemoryResources,
     ParseOptions, ParseResult, SafeMode, SourceMap, Svg,
@@ -71,11 +71,11 @@ fn convert(root: &str, options: ParseOptions) -> ParseResult {
 fn images(result: &ParseResult) -> Vec<(String, Option<Svg>)> {
     struct Images(Vec<(String, Option<Svg>)>);
     impl VisitorMut for Images {
-        fn visit_block(&mut self, block: &mut Block) {
+        fn enter_block(&mut self, block: &mut Block) -> bool {
             if let BlockKind::Image { src, svg, .. } = &block.kind {
                 self.0.push((src.clone(), svg.clone()));
             }
-            walk_block_mut(self, block);
+            true
         }
         fn visit_inline(&mut self, inline: &mut Inline) {
             if let Inline::Image { image, .. } = inline {

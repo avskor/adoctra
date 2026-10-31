@@ -266,7 +266,7 @@ pub(crate) fn parse_reader<'a>(
         header.body_pending.unwrap_or(header.pending),
     );
     context.close_sections(0, usize::MAX);
-    let body = nest_sections(
+    let mut body = nest_sections(
         body,
         TopLevel {
             has_header: doc.has_title,
@@ -280,8 +280,7 @@ pub(crate) fn parse_reader<'a>(
         &lines,
     );
     check_open_styles(
-        &body,
-        OpenParent::Document,
+        &mut body,
         book,
         &mut diagnostics,
         &mut context.body_subs.excluded,
@@ -307,7 +306,7 @@ pub(crate) fn parse_reader<'a>(
     doc.footnotes = collect_footnotes_after(
         name_heading,
         &mut doc.blocks,
-        doc.footnotes,
+        std::mem::take(&mut doc.footnotes),
         &visible_footnotes,
     );
 
@@ -1261,65 +1260,91 @@ enum OpenParent {
     Document,
     Part,
     Other,
+    /// Content Ruby's check does not reach here (descriptions, callout list
+    /// items, table cells).
+    Unchecked,
 }
 
 /// Report the abstract and partintro blocks that Ruby's HTML converter
 /// excludes: an abstract directly in a book document (no preamble) and a
 /// partintro outside a book part. Their content is not visited.
 fn check_open_styles(
-    blocks: &[Block],
-    parent: OpenParent,
+    blocks: &mut [Block],
     book: bool,
     diagnostics: &mut Vec<Diagnostic>,
     excluded: &mut std::collections::BTreeSet<(usize, usize)>,
 ) {
-    for block in blocks {
-        let children = match &block.kind {
-            BlockKind::Open { blocks } => {
-                let exclusion = match block.attrs.style.as_deref() {
-                    Some("abstract") if book && parent == OpenParent::Document => Some((
-                        Severity::Warning,
-                        "abstract block cannot be used in a document without a doctitle when doctype is book. Excluding block content.",
-                    )),
-                    Some("partintro") if !book || parent != OpenParent::Part => Some((
-                        Severity::Error,
-                        "partintro block can only be used when doctype is book and must be a child of a book part. Excluding block content.",
-                    )),
-                    _ => None,
-                };
-                if let Some((severity, message)) = exclusion {
-                    diagnostics.push(Diagnostic {
-                        omitted_span: None,
-                        report: Default::default(),
-                        span: block.span,
-                        severity,
-                        message: message.into(),
-                    });
-                    excluded.insert((block.span.start, block.span.end));
-                    continue;
-                }
-                blocks
-            }
-            BlockKind::Section { level: 0, blocks } => {
-                check_open_styles(blocks, OpenParent::Part, book, diagnostics, excluded);
-                continue;
-            }
-            BlockKind::List { items, .. } => {
-                for item in items {
-                    check_open_styles(&item.blocks, OpenParent::Other, book, diagnostics, excluded);
-                }
-                continue;
-            }
-            BlockKind::Admonition { blocks, .. }
-            | BlockKind::Example { blocks }
-            | BlockKind::Quote { blocks, .. }
-            | BlockKind::Sidebar { blocks }
-            | BlockKind::Section { blocks, .. }
-            | BlockKind::Preamble { blocks } => blocks,
-            _ => continue,
-        };
-        check_open_styles(children, OpenParent::Other, book, diagnostics, excluded);
+    struct Check<'a> {
+        book: bool,
+        parents: Vec<OpenParent>,
+        diagnostics: &'a mut Vec<Diagnostic>,
+        excluded: &'a mut std::collections::BTreeSet<(usize, usize)>,
     }
+    impl crate::visit::VisitorMut for Check<'_> {
+        fn enter_block(&mut self, block: &mut Block) -> bool {
+            let parent = *self.parents.last().unwrap_or(&OpenParent::Document);
+            if parent != OpenParent::Unchecked {
+                if let BlockKind::Open { .. } = &block.kind {
+                    let exclusion = match block.attrs.style.as_deref() {
+                        Some("abstract") if self.book && parent == OpenParent::Document => Some((
+                            Severity::Warning,
+                            "abstract block cannot be used in a document without a doctitle when doctype is book. Excluding block content.",
+                        )),
+                        Some("partintro") if !self.book || parent != OpenParent::Part => Some((
+                            Severity::Error,
+                            "partintro block can only be used when doctype is book and must be a child of a book part. Excluding block content.",
+                        )),
+                        _ => None,
+                    };
+                    if let Some((severity, message)) = exclusion {
+                        self.diagnostics.push(Diagnostic {
+                            omitted_span: None,
+                            report: Default::default(),
+                            span: block.span,
+                            severity,
+                            message: message.into(),
+                        });
+                        self.excluded.insert((block.span.start, block.span.end));
+                        return false;
+                    }
+                }
+            }
+            self.parents.push(match &block.kind {
+                _ if parent == OpenParent::Unchecked => OpenParent::Unchecked,
+                BlockKind::Section { level: 0, .. } => OpenParent::Part,
+                BlockKind::List { .. }
+                | BlockKind::Admonition { .. }
+                | BlockKind::Example { .. }
+                | BlockKind::Quote { .. }
+                | BlockKind::Sidebar { .. }
+                | BlockKind::Open { .. }
+                | BlockKind::Section { .. }
+                | BlockKind::Preamble { .. } => OpenParent::Other,
+                _ => OpenParent::Unchecked,
+            });
+            true
+        }
+
+        fn leave_block(&mut self, _block: &mut Block) {
+            self.parents.pop();
+        }
+
+        fn visit_inlines(
+            &mut self,
+            _inlines: &mut Vec<Inline>,
+            _context: crate::visit::InlineContext,
+        ) {
+        }
+    }
+    crate::visit::walk_blocks_mut(
+        &mut Check {
+            book,
+            parents: Vec::new(),
+            diagnostics,
+            excluded,
+        },
+        blocks,
+    );
 }
 
 /// Consume metadata once, both before header detection and at body boundaries.
@@ -2223,9 +2248,9 @@ fn collect_footnotes_after(
         }
     }
     impl VisitorMut for Collect<'_> {
-        fn visit_block(&mut self, block: &mut Block) {
+        fn enter_block(&mut self, block: &mut Block) -> bool {
             let BlockKind::Table(table) = &mut block.kind else {
-                return crate::visit::walk_block_mut(self, block);
+                return true;
             };
             if let Some(title) = &mut block.title {
                 self.visit_inlines(title, InlineContext::Title);
@@ -2250,6 +2275,8 @@ fn collect_footnotes_after(
                     crate::ast::CellContent::Literal(_) => {}
                 }
             }
+            // A cell's own footnotes are collected above, not walked.
+            false
         }
 
         fn visit_inline(&mut self, inline: &mut Inline) {
@@ -2261,7 +2288,7 @@ fn collect_footnotes_after(
     }
     let mut collect = Collect(BTreeMap::new(), visible);
     if let Some(first) = first {
-        collect.visit_block(first);
+        crate::visit::walk_block_mut(&mut collect, first);
     }
     crate::visit::walk_blocks_mut(&mut collect, blocks);
     for (sequence, definition) in registered.into_iter().enumerate() {

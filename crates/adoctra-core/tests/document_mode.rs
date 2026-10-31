@@ -18,7 +18,10 @@ fn time(year: i32, hour: u8, utc_offset: i32) -> DateTime {
 }
 
 fn attributes(source: &str, options: ParseOptions) -> Attributes {
-    parse_with_options(source, &options).document.attributes
+    parse_with_options(source, &options)
+        .document
+        .attributes
+        .clone()
 }
 
 #[test]

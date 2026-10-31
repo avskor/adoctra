@@ -251,6 +251,7 @@ impl BodySubs {
     ) {
         let mut execution = Execution {
             excluded: std::mem::take(&mut self.excluded),
+            heading_converted: false,
             start,
             tokens: &mut self.tokens,
             pending: &mut self.pending,
@@ -357,6 +358,8 @@ impl BodySubs {
 struct Execution<'a, 's> {
     /// See [`BodySubs::excluded`].
     excluded: BTreeSet<(usize, usize)>,
+    /// A heading's text was converted on entry; the walk skips it once.
+    heading_converted: bool,
     /// The converter's hook ([`crate::ConversionStart`]).
     start: Option<&'s mut dyn crate::ConversionStart>,
     tokens: &'a mut Vec<crate::Token>,
@@ -900,210 +903,190 @@ impl Execution<'_, '_> {
         *self.diagnostics = diagnostics;
     }
 
+    /// Convert blocks in Ruby's order (a pre-order walk without recursion,
+    /// see [`crate::visit`]).
     fn blocks(&mut self, blocks: &mut [Block]) {
-        for block in blocks {
-            if self.excluded.contains(&(block.span.start, block.span.end)) {
-                continue;
+        crate::visit::walk_blocks_mut(self, blocks);
+    }
+}
+
+impl crate::visit::VisitorMut for Execution<'_, '_> {
+    /// A block's conversion before its title and content.
+    fn enter_block(&mut self, block: &mut Block) -> bool {
+        if self.excluded.contains(&(block.span.start, block.span.end)) {
+            return false;
+        }
+        self.replay(block.span.start);
+        if let Some((context, parts)) = self
+            .caption_counters
+            .remove(&(block.span.start, block.span.end))
+        {
+            self.attributes
+                .set_parts(format!("{context}-number"), parts);
+        }
+        block.conversion_context = Some(self.snapshot());
+        // Ruby's `image_uri` and `media_uri` read `imagesdir` (and
+        // `asset-uri-scheme`) from the document at conversion./`asset-uri-scheme`
+        let span = block.span;
+        if let BlockKind::Image {
+            target, src, svg, ..
+        } = &mut block.kind
+        {
+            // Ruby reads an inline SVG instead of resolving its source.
+            *svg = crate::data_uri::Images::svg(
+                self.images,
+                target,
+                &block.attrs.named,
+                &block.attrs.options,
+                &self.attributes,
+                span,
+                self.diagnostics,
+            );
+            *src = match svg {
+                Some(crate::Svg::Inline(_)) => {
+                    crate::image::web_path(target, self.attributes.get("imagesdir"))
+                }
+                _ => self.image_uri(target, "imagesdir", span),
+            };
+        }
+        crate::media::resolve(block, &self.attributes);
+        // Callout icons follow the `icons` mode where the block converts.
+        let checklist = block.attrs.options.iter().any(|o| o == "checklist")
+            || block.attrs.named.contains_key("checklist-option");
+        match &mut block.kind {
+            // Ruby's `convert_ulist` reads the document `icons` for a
+            // checklist's marks.
+            BlockKind::List {
+                ordered: false,
+                icons,
+                ..
+            } if checklist => {
+                *icons = self.attributes.get("icons").map(str::to_owned);
             }
-            self.replay(block.span.start);
-            if let Some((context, parts)) = self
-                .caption_counters
-                .remove(&(block.span.start, block.span.end))
-            {
-                self.attributes
-                    .set_parts(format!("{context}-number"), parts);
+            BlockKind::Listing {
+                callouts,
+                inlines: None,
+                ..
             }
-            block.conversion_context = Some(self.snapshot());
-            // Ruby's `image_uri` and `media_uri` read `imagesdir` (and
-            // `asset-uri-scheme`) from the document at conversion./`asset-uri-scheme`
-            let span = block.span;
-            if let BlockKind::Image {
-                target, src, svg, ..
-            } = &mut block.kind
-            {
-                // Ruby reads an inline SVG instead of resolving its source.
-                *svg = crate::data_uri::Images::svg(
-                    self.images,
-                    target,
-                    &block.attrs.named,
-                    &block.attrs.options,
-                    &self.attributes,
-                    span,
-                    self.diagnostics,
-                );
-                *src = match svg {
-                    Some(crate::Svg::Inline(_)) => {
-                        crate::image::web_path(target, self.attributes.get("imagesdir"))
+            | BlockKind::Literal {
+                callouts,
+                inlines: None,
+                ..
+            } => {
+                for callout in callouts {
+                    let (icons, target) = crate::callouts::icon(&self.attributes, &callout.number);
+                    callout.icons = icons;
+                    callout.src = target.map_or_else(String::new, |target| {
+                        self.image_uri(&target, "iconsdir", span)
+                    });
+                }
+            }
+            BlockKind::CalloutList { items } => {
+                for (index, entry) in items.iter_mut().enumerate() {
+                    let (icons, target) =
+                        crate::callouts::icon(&self.attributes, &(index + 1).to_string());
+                    entry.icons = icons;
+                    entry.src = target.map_or_else(String::new, |target| {
+                        self.image_uri(&target, "iconsdir", entry.item.span)
+                    });
+                }
+            }
+            // Ruby's `convert_admonition`: a font glyph unless the block
+            // names an `icon`, else `icon_uri` under the document's
+            // `iconsdir` (a block `iconsdir` is ignored).
+            BlockKind::Admonition {
+                kind, icons, src, ..
+            } => {
+                *icons = self.attributes.get("icons").map(str::to_owned);
+                let icon = block.attrs.named.get("icon").map(String::as_str);
+                *src = match icons.as_deref() {
+                    None => String::new(),
+                    Some("font") if icon.is_none() => String::new(),
+                    Some(_) => {
+                        let target = crate::image::icon_target(
+                            icon,
+                            kind.as_str(),
+                            self.attributes.get("icontype"),
+                        );
+                        self.image_uri(&target, "iconsdir", span)
                     }
-                    _ => self.image_uri(target, "imagesdir", span),
                 };
             }
-            crate::media::resolve(block, &self.attributes);
-            // Callout icons follow the `icons` mode where the block converts.
-            let checklist = block.attrs.options.iter().any(|o| o == "checklist")
-                || block.attrs.named.contains_key("checklist-option");
-            match &mut block.kind {
-                // Ruby's `convert_ulist` reads the document `icons` for a
-                // checklist's marks.
-                BlockKind::List {
-                    ordered: false,
-                    icons,
-                    ..
-                } if checklist => {
-                    *icons = self.attributes.get("icons").map(str::to_owned);
-                }
-                BlockKind::Listing {
-                    callouts,
-                    inlines: None,
-                    ..
-                }
-                | BlockKind::Literal {
-                    callouts,
-                    inlines: None,
-                    ..
-                } => {
-                    for callout in callouts {
-                        let (icons, target) =
-                            crate::callouts::icon(&self.attributes, &callout.number);
-                        callout.icons = icons;
-                        callout.src = target.map_or_else(String::new, |target| {
-                            self.image_uri(&target, "iconsdir", span)
-                        });
-                    }
-                }
-                BlockKind::CalloutList { items } => {
-                    for (index, entry) in items.iter_mut().enumerate() {
-                        let (icons, target) =
-                            crate::callouts::icon(&self.attributes, &(index + 1).to_string());
-                        entry.icons = icons;
-                        entry.src = target.map_or_else(String::new, |target| {
-                            self.image_uri(&target, "iconsdir", entry.item.span)
-                        });
-                    }
-                }
-                // Ruby's `convert_admonition`: a font glyph unless the block
-                // names an `icon`, else `icon_uri` under the document's
-                // `iconsdir` (a block `iconsdir` is ignored).
-                BlockKind::Admonition {
-                    kind, icons, src, ..
-                } => {
-                    *icons = self.attributes.get("icons").map(str::to_owned);
-                    let icon = block.attrs.named.get("icon").map(String::as_str);
-                    *src = match icons.as_deref() {
-                        None => String::new(),
-                        Some("font") if icon.is_none() => String::new(),
-                        Some(_) => {
-                            let target = crate::image::icon_target(
-                                icon,
-                                kind.as_str(),
-                                self.attributes.get("icontype"),
-                            );
-                            self.image_uri(&target, "iconsdir", span)
-                        }
-                    };
-                }
-                _ => {}
-            }
-            if let Some(title) = &mut block.title {
-                self.inlines(title);
-            }
-            // A section number uses the attributes at its title, like Ruby's
-            // `convert_section`.
-            if let (BlockKind::Heading { .. }, Some(section)) = (
-                &block.kind,
-                self.sections.get(&(block.span.start, block.span.end)),
-            ) {
-                block.set_caption(section.caption(&self.attributes));
-            }
-            match &mut block.kind {
-                BlockKind::Paragraph { inlines }
-                | BlockKind::Stem { inlines, .. }
-                | BlockKind::Verse { inlines, .. }
-                | BlockKind::Listing {
-                    inlines: Some(inlines),
-                    ..
-                }
-                | BlockKind::Literal {
-                    inlines: Some(inlines),
-                    ..
-                }
-                | BlockKind::Passthrough {
-                    inlines: Some(inlines),
-                    ..
-                } => self.inlines(inlines),
-                // Section titles were converted while reading; a forward
-                // reference may already have resolved their references. A
-                // title converted at its first use converts here unless a TOC
-                // or reference did (a repeated table cell converts it again).
-                BlockKind::Heading { inlines, .. } => {
-                    let key = (block.span.start, block.span.end);
-                    match self.headings.get(&key) {
-                        Some(resolved) => *inlines = resolved.clone(),
-                        None if crate::resolve::placeholder(inlines).is_some() => {
-                            *inlines = self.title(inlines);
-                            if self.root.is_none() {
-                                self.headings.insert(key, inlines.clone());
-                            }
-                        }
-                        None => {
-                            self.resolve(inlines);
+            _ => {}
+        }
+        if let Some(title) = &mut block.title {
+            self.inlines(title);
+        }
+        // A table converts its cells itself.
+        if let BlockKind::Table(table) = &mut block.kind {
+            self.table(table, &block.attrs, block.span);
+            return false;
+        }
+        // A section number uses the attributes at its title, like Ruby's
+        // `convert_section` (a heading has no block title).
+        if let (BlockKind::Heading { .. }, Some(section)) = (
+            &block.kind,
+            self.sections.get(&(block.span.start, block.span.end)),
+        ) {
+            block.set_caption(section.caption(&self.attributes));
+        }
+        match &mut block.kind {
+            // Section titles were converted while reading; a forward
+            // reference may already have resolved their references. A
+            // title converted at its first use converts here unless a TOC
+            // or reference did (a repeated table cell converts it again).
+            BlockKind::Heading { inlines, .. } => {
+                let key = (block.span.start, block.span.end);
+                match self.headings.get(&key) {
+                    Some(resolved) => *inlines = resolved.clone(),
+                    None if crate::resolve::placeholder(inlines).is_some() => {
+                        *inlines = self.title(inlines);
+                        if self.root.is_none() {
                             self.headings.insert(key, inlines.clone());
                         }
                     }
-                }
-                BlockKind::List { items, .. } => {
-                    for item in items {
-                        self.inlines(&mut item.inlines);
-                        self.blocks(&mut item.blocks);
+                    None => {
+                        self.resolve(inlines);
+                        self.headings.insert(key, inlines.clone());
                     }
                 }
-                BlockKind::CalloutList { items } => {
-                    for entry in items {
-                        self.inlines(&mut entry.item.inlines);
-                        self.blocks(&mut entry.item.blocks);
-                    }
-                }
-                // Ruby converts each term, then the description's text and
-                // blocks.
-                BlockKind::DescriptionList { items } => {
-                    for item in items {
-                        for term in &mut item.terms {
-                            self.inlines(&mut term.inlines);
-                        }
-                        if let Some(description) = &mut item.description {
-                            self.inlines(&mut description.inlines);
-                            self.blocks(&mut description.blocks);
-                        }
-                    }
-                }
-                BlockKind::Table(table) => self.table(table, &block.attrs, block.span),
-                BlockKind::Admonition { blocks, .. }
-                | BlockKind::Example { blocks }
-                | BlockKind::Quote { blocks, .. }
-                | BlockKind::Sidebar { blocks }
-                | BlockKind::Open { blocks }
-                | BlockKind::Section { blocks, .. } => self.blocks(blocks),
-                // Ruby's `convert_preamble` converts its TOC before the content.
-                BlockKind::Preamble { blocks } => {
-                    if let Some(levels) = self.preamble_toc {
-                        self.toc(levels);
-                    }
-                    self.blocks(blocks);
-                }
-                // Ruby's `convert_toc` with the attributes at the macro.
-                BlockKind::Toc
-                    if !self.outline.is_empty()
-                        && self.attributes.get("toc").is_some()
-                        && self.attributes.get("toc-placement") == Some("macro") =>
-                {
-                    let levels = match block.attrs.named.get("levels") {
-                        Some(levels) => toclevels(Some(levels)),
-                        None => toclevels(self.attributes.get("toclevels")),
-                    };
+                self.heading_converted = true;
+            }
+            // Ruby's `convert_preamble` converts its TOC before the content.
+            BlockKind::Preamble { .. } => {
+                if let Some(levels) = self.preamble_toc {
                     self.toc(levels);
                 }
-                _ => {}
             }
+            // Ruby's `convert_toc` with the attributes at the macro.
+            BlockKind::Toc
+                if !self.outline.is_empty()
+                    && self.attributes.get("toc").is_some()
+                    && self.attributes.get("toc-placement") == Some("macro") =>
+            {
+                let levels = match block.attrs.named.get("levels") {
+                    Some(levels) => toclevels(Some(levels)),
+                    None => toclevels(self.attributes.get("toclevels")),
+                };
+                self.toc(levels);
+            }
+            _ => {}
+        }
+        true
+    }
+
+    /// A block's own text: paragraphs, verbatim content
+    /// with substitutions, list item text, terms and descriptions (Ruby
+    /// converts each term, then the description's text and blocks). Reftext
+    /// and quote attributions were substituted while reading.
+    fn visit_inlines(&mut self, inlines: &mut Vec<Inline>, context: crate::visit::InlineContext) {
+        use crate::visit::InlineContext;
+        match context {
+            InlineContext::Body if std::mem::take(&mut self.heading_converted) => {}
+            InlineContext::Body => self.inlines(inlines),
+            // The title converted on entry; reftext and attributions were
+            // substituted while reading.
+            InlineContext::Title | InlineContext::Reftext | InlineContext::Attribution => {}
         }
     }
 }

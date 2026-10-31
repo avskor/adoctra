@@ -229,7 +229,7 @@ fn links_survive_authors_snapshots_section_ids_and_resolved_reference_labels() {
     assert!(
         matches!(&doc.attributes.raw_parts("author_2").unwrap()[0],P::OpenLink(l) if l.target=="author id" && l.role.as_deref()==Some("author role"))
     );
-    assert_eq!(doc.header.unwrap().authors[1].name, "Mary Roe");
+    assert_eq!(doc.header.as_ref().unwrap().authors[1].name, "Mary Roe");
     let result=parse(":v: pass:m[link:page[Alpha]]\n\n<<_alpha>>\n\n== {v}\n\n:v: pass:m[link:other[Beta]]\n\n{v}");
     assert!(result.diagnostics.is_empty());
     assert_eq!(

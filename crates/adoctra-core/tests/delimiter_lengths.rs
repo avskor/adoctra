@@ -92,7 +92,7 @@ fn verse_and_open_masquerades_close_only_at_their_own_fence() {
     let source = "[verse]\n_____\nline\n____\n_____\n\n[source]\n--\nx\n---\n--";
     let result = parse(source);
     assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
-    let blocks = result.document.blocks;
+    let blocks = result.document.into_blocks();
     assert_eq!(blocks.len(), 2);
     // The inner `____` is verse text (Ruby's constrained emphasis `<em>__</em>`).
     match &blocks[0].kind {
@@ -115,7 +115,7 @@ fn verse_and_open_masquerades_close_only_at_their_own_fence() {
 #[test]
 fn indented_and_short_fences_are_not_delimiters() {
     // Ruby checks the unindented line: an indented fence is a literal paragraph.
-    let blocks = parse(" ----\nindented").document.blocks;
+    let blocks = parse(" ----\nindented").document.into_blocks();
     assert_eq!(blocks.len(), 1);
     match &blocks[0].kind {
         BlockKind::Literal { text, .. } => assert_eq!(text, " ----\nindented"),
@@ -124,7 +124,7 @@ fn indented_and_short_fences_are_not_delimiters() {
     // A three-character run is never a fence (`***` is a thematic break, see
     // tests/breaks.rs); a mixed run is not uniform.
     for line in ["===", "====-"] {
-        let blocks = parse(&format!("{line}\ntext")).document.blocks;
+        let blocks = parse(&format!("{line}\ntext")).document.into_blocks();
         assert!(
             matches!(blocks[0].kind, BlockKind::Paragraph { .. }),
             "{line}: {:?}",
@@ -174,7 +174,7 @@ fn styled_paragraphs_end_at_fences_and_attribute_lines_unless_verbatim() {
     // Ruby's `read_paragraph_lines` (StartOfBlockProc) for styled paragraphs.
     let blocks = parse("[quote]\nq1\n=====\nexample\n=====\n\n[quote]\nq2\n[.r]\nnext")
         .document
-        .blocks;
+        .into_blocks();
     assert_eq!(blocks.len(), 4);
     assert!(matches!(blocks[0].kind, BlockKind::Quote { .. }));
     assert_eq!(blocks[0].span, Span::new(8, 10));
@@ -185,7 +185,7 @@ fn styled_paragraphs_end_at_fences_and_attribute_lines_unless_verbatim() {
 
     // A verbatim paragraph ends only at a blank line or a list continuation.
     let source = "[literal]\npara\n------\nmore\n====\n\nafter";
-    let blocks = parse(source).document.blocks;
+    let blocks = parse(source).document.into_blocks();
     assert_eq!(blocks.len(), 2);
     match &blocks[0].kind {
         BlockKind::Literal { text, .. } => assert_eq!(text, "para\n------\nmore\n===="),

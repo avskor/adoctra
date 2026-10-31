@@ -12,6 +12,11 @@ class GenerationTests(unittest.TestCase):
         ids = [case_id for case_id, _ in first]
         self.assertEqual(len(ids), len(set(ids)))
         self.assertEqual(len(first), 40 + len(fuzz.NESTING))
+        # Slow families stop at their cap; the others nest to every depth.
+        deep = [case_id for case_id, _ in fuzz.generate(7, 0, [4, 4096])]
+        self.assertIn("nest-example-4096", deep)
+        self.assertNotIn("nest-list-4096", deep)
+        self.assertIn("nest-list-4", deep)
 
     def test_nesting_families_nest_to_the_requested_depth(self):
         example = fuzz.nesting("example", 3)

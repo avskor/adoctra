@@ -73,7 +73,7 @@ fn a_file_gives_its_directory_and_server_mode_hides_both() {
     let doc = convert(source, target, SafeMode::Server);
     assert_eq!(texts(&doc), ["{outfile} {outdir}"]);
     assert_eq!(
-        doc.output.map(|output| output.file),
+        doc.output.as_ref().map(|output| output.file.clone()),
         Some("/site/a/b.html".to_owned())
     );
     // Without docname and suffix, Ruby's File.join gives a bare name.

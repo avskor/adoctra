@@ -12,9 +12,12 @@ fn comments_in_header_do_not_become_metadata_or_attributes() {
     assert_eq!(result.document.blocks.len(), 2);
     assert_eq!(result.document.attributes.get("author"), Some("Jane Doe"));
     assert_eq!(result.document.attributes.get("revnumber"), Some("2"));
-    let header = result.document.header.unwrap();
+    let header = result.document.header.as_ref().unwrap();
     assert_eq!(header.authors[0].name, "Jane Doe");
-    assert_eq!(header.revision.unwrap().remark.as_deref(), Some("Draft"));
+    assert_eq!(
+        header.revision.clone().unwrap().remark.as_deref(),
+        Some("Draft")
+    );
 }
 
 #[test]

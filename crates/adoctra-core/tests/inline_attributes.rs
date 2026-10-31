@@ -113,7 +113,7 @@ fn document_and_host_values_override_intrinsics_without_mutating_snapshots() {
             ..Default::default()
         },
     );
-    for block in result.document.blocks {
+    for block in result.document.into_blocks() {
         let BlockKind::Paragraph { inlines } = block.kind else {
             panic!()
         };

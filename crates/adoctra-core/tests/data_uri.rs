@@ -1,7 +1,7 @@
 //! `data-uri`, like Ruby's `image_uri`: below secure mode image sources are
 //! embedded as base64 data URIs read through the resource provider.
 
-use adoctra_core::visit::{walk_block_mut, walk_document_mut, walk_inline_mut, VisitorMut};
+use adoctra_core::visit::{walk_document_mut, walk_inline_mut, VisitorMut};
 use adoctra_core::{
     parse, parse_resource, AttributePart, BinaryResource, Block, BlockKind, Inline,
     MemoryResources, ParseOptions, ParseResult, Resource, ResourceError, ResourceErrorKind,
@@ -24,7 +24,7 @@ fn sources(result: &ParseResult) -> Vec<String> {
         }
     }
     impl VisitorMut for Sources {
-        fn visit_block(&mut self, block: &mut Block) {
+        fn enter_block(&mut self, block: &mut Block) -> bool {
             match &block.kind {
                 BlockKind::Image { src, .. } | BlockKind::Admonition { src, .. } => {
                     self.0.push(src.clone())
@@ -37,7 +37,7 @@ fn sources(result: &ParseResult) -> Vec<String> {
                 }
                 _ => {}
             }
-            walk_block_mut(self, block);
+            true
         }
         fn visit_inline(&mut self, inline: &mut Inline) {
             match inline {

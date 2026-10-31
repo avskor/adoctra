@@ -31,7 +31,7 @@ fn listings_number_only_with_a_listing_caption() {
     let source = ":listing-caption: Listing\n\n.First\n----\none\n----\n\n\
                   [source,ruby]\n.Second\n----\ntwo\n----\n\n.Lit\n....\nlit\n....\n\n\
                   [listing]\n.Para\nthree\n\n.Fenced\n```js\nx\n```\n\n----\nuntitled\n----\n";
-    let blocks = parse(source).document.blocks;
+    let blocks = parse(source).document.into_blocks();
     assert!(matches!(blocks[2].kind, BlockKind::Literal { .. }));
     for index in [0, 1, 3, 4, 5] {
         assert!(matches!(blocks[index].kind, BlockKind::Listing { .. }));
@@ -65,7 +65,7 @@ fn listings_without_listing_caption_take_only_explicit_captions() {
     let result = parse(source);
     let blocks: Vec<_> = result
         .document
-        .blocks
+        .into_blocks()
         .into_iter()
         .filter(|block| matches!(block.kind, BlockKind::Listing { .. }))
         .collect();
@@ -85,7 +85,7 @@ fn listing_numbers_follow_attribute_changes_nesting_and_xrefstyle() {
                   :listing-caption!:\n\n.Off\n----\noff\n----\n\n:listing-caption: Code\n\n\
                   [#b]\n.Second\n----\nb\n----\n\n[#c]\n.Third\n----\nc\n----\n\n\
                   Number {listing-number}.\n";
-    let blocks = parse(source).document.blocks;
+    let blocks = parse(source).document.into_blocks();
     let BlockKind::Example { blocks: inner } = &blocks[1].kind else {
         panic!("{:?}", blocks[1].kind);
     };
@@ -116,7 +116,7 @@ fn listing_captions_in_asciidoc_cells_count_on_the_root_document() {
     let source =
         ":listing-caption: Listing\n\n[cols=1a]\n|===\n|\n.Cell\n----\ncell\n----\n|===\n\n\
                   .After\n----\nafter\n----\n";
-    let blocks = parse(source).document.blocks;
+    let blocks = parse(source).document.into_blocks();
     assert_eq!(blocks[1].caption.as_deref(), Some("Listing 2. "));
     let BlockKind::Table(table) = &blocks[0].kind else {
         panic!("{:?}", blocks[0].kind);

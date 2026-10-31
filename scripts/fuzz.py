@@ -58,6 +58,8 @@ MARKERS = [
     "image:", "footnote:[", "kbd:[", "btn:[", "menu:A[", "xref:", "mailto:", "icon:x[", "'", "\"",
     "`'", "'`", "--", "...", "(C)", "->", "=>", " ", "Ж", "🙂", "\t", " +", "<1>", "//",
 ]
+SLOW_NESTING = {"list", "olist"}
+SLOW_DEPTH = 128
 NESTING = ["example", "sidebar", "quote", "list", "olist", "dlist", "table", "inline", "section",
            "open-in-list", "include-cond"]
 
@@ -141,6 +143,11 @@ def generate(seed, count, depths):
     cases = []
     for family in NESTING:
         for depth in depths:
+            # Deep lists read in time growing faster than the square of
+            # their depth (like Ruby's): their depth is capped, not their
+            # stack use, which no longer grows with nesting.
+            if family in SLOW_NESTING and depth > SLOW_DEPTH:
+                continue
             cases.append((f"nest-{family}-{depth}", nesting(family, depth)))
     for n in range(count):
         base = rng.choice(pool)
@@ -329,7 +336,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--count", type=int, default=2000, help="mutated inputs")
-    parser.add_argument("--depths", default="8,64,128", help="nesting depths")
+    parser.add_argument("--depths", default="8,64,128,2048", help="nesting depths")
     parser.add_argument("--stage", choices=["robust", "diff", "both"], default="both")
     parser.add_argument("--diff-count", type=int, default=500, help="inputs compared with Ruby")
     parser.add_argument("--minimize", action="store_true")

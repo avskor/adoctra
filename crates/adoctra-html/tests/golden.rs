@@ -1385,7 +1385,7 @@ fn indexed_author_names_match_asciidoctor() {
         String::from_utf8(HtmlBackend::embedded().convert(&result.document).unwrap()).unwrap();
     assert_eq!(paragraph_inner(&ours), paragraph_inner(&expected));
     assert_eq!(
-        result.document.header.unwrap().authors[1].name,
+        result.document.header.as_ref().unwrap().authors[1].name,
         "Иван Петров"
     );
 }
