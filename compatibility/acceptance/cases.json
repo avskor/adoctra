@@ -462,6 +462,30 @@
     "sources/fuzz/missing-attribute-in-title-order.adoc": {
       "sha256": "3e0574d682e44ae5b747daa6b4d53da18e16b45117e557c3c15468f618fafa49",
       "origin": "adoctra-fuzz-v1"
+    },
+    "sources/diagnostics/order/include-in-container.adoc": {
+      "sha256": "a8a7d9c443f8a37b33daa94b09254013feff57646276a821ecab20291dee884a",
+      "origin": "adoctra-diagnostic-probes"
+    },
+    "sources/diagnostics/order/part.adoc": {
+      "sha256": "f0f3fac346983f0ba2d09e0cf153d2fae82737683e845f849abc4ffa6d523841",
+      "origin": "adoctra-diagnostic-probes"
+    },
+    "sources/diagnostics/order/section-between-directives.adoc": {
+      "sha256": "a8650e4ed8712680fcb79cf804313328eee5ef70698dec49f41e991fce018338",
+      "origin": "adoctra-diagnostic-probes"
+    },
+    "sources/diagnostics/order/cell-section-title.adoc": {
+      "sha256": "7d17ec44ad049f2a7124c60f310539f2f1fd8a111bc0faa64158f7c086f20acb",
+      "origin": "adoctra-diagnostic-probes"
+    },
+    "sources/fuzz/table-cell-attribute-order.adoc": {
+      "sha256": "7105d1a3eac9dee325f4140d2406b94225e00c608f6e1c230d6d8493612dc1f6",
+      "origin": "adoctra-fuzz-v1"
+    },
+    "sources/diagnostics/order/duplicate-ids.adoc": {
+      "sha256": "ab743f23b9694ae55115a4ff34ced907179400cda7976b61f14e797876f2ec37",
+      "origin": "adoctra-diagnostic-probes"
     }
   },
   "cases": [
@@ -566,6 +590,34 @@
       "id": "diagnostic-unterminated-conditional",
       "category": "diagnostics",
       "source": "sources/diagnostics/unterminated-conditional.adoc",
+      "expect": "pass"
+    },
+    {
+      "id": "diagnostic-order-include-in-container",
+      "category": "diagnostics",
+      "source": "sources/diagnostics/order/include-in-container.adoc",
+      "expect": "pass",
+      "profile": "include-body-dom-v1",
+      "resources": {
+        "part.adoc": "sources/diagnostics/order/part.adoc"
+      }
+    },
+    {
+      "id": "diagnostic-order-section-between-directives",
+      "category": "diagnostics",
+      "source": "sources/diagnostics/order/section-between-directives.adoc",
+      "expect": "pass"
+    },
+    {
+      "id": "diagnostic-order-cell-section-title",
+      "category": "diagnostics",
+      "source": "sources/diagnostics/order/cell-section-title.adoc",
+      "expect": "pass"
+    },
+    {
+      "id": "diagnostic-order-duplicate-ids",
+      "category": "diagnostics",
+      "source": "sources/diagnostics/order/duplicate-ids.adoc",
       "expect": "pass"
     },
     {
@@ -2393,15 +2445,20 @@
       "id": "fuzz-preprocessor-error-order",
       "category": "diagnostics",
       "source": "sources/fuzz/preprocessor-error-order.adoc",
-      "expect": "xfail",
-      "reason": "Ruby reports a preprocessor directive error when its reader reaches the line, before the unterminated block warning at the end of input; adoctra appends reader diagnostics after the parser's (cross-pass emission order is not yet unified)"
+      "expect": "pass"
     },
     {
       "id": "fuzz-missing-attribute-in-title-order",
       "category": "diagnostics",
       "source": "sources/fuzz/missing-attribute-in-title-order.adoc",
+      "expect": "pass"
+    },
+    {
+      "id": "fuzz-table-cell-attribute-order",
+      "category": "diagnostics",
+      "source": "sources/fuzz/table-cell-attribute-order.adoc",
       "expect": "xfail",
-      "reason": "Ruby converts a section title while reading it (sectids), so its missing-attribute warning precedes the later unterminated listing; adoctra reports conversion diagnostics after reading diagnostics"
+      "reason": "Ruby substitutes a table cell's text as a whole before splitting it into paragraphs, so a macro attribute's missing-attribute warning follows the later paragraphs' attribute warnings; adoctra substitutes each paragraph of the cell separately"
     }
   ]
 }

@@ -63,7 +63,7 @@ pub(crate) fn consume_delimited_comment(
     }
     context.comments.push(Span::new(start, end));
     if !closed {
-        context.comment_diagnostics.push(Diagnostic {
+        context.diagnostics.push(Diagnostic {
             omitted_span: None,
             report: crate::DiagnosticReport::unterminated("comment"),
             span: Span::new(start, start + fence.len()),

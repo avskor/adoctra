@@ -16,6 +16,8 @@ pub(crate) struct Entry {
     pub span: Span,
     pub reftext: Option<crate::reftext::Read>,
     pub bibliography: bool,
+    /// Where reading cataloged it: a duplicate id is reported there.
+    pub stamp: crate::context::Stamp,
 }
 
 pub(crate) struct Found {
@@ -193,12 +195,14 @@ impl ParseContext<'_> {
             expanded.append_source(&format!("[{}]", &text[range]), true, 0, span);
             crate::reftext::Read::expanded(expanded, Vec::new())
         });
+        let stamp = self.stamp();
         self.anchors.push((
             text[found.id].to_owned(),
             Entry {
                 span,
                 reftext,
                 bibliography: true,
+                stamp,
             },
         ));
     }
@@ -281,12 +285,14 @@ impl ParseContext<'_> {
     }
 
     fn register_anchor(&mut self, id: String, span: Span, reftext: Option<crate::reftext::Read>) {
+        let stamp = self.stamp();
         self.anchors.push((
             id,
             Entry {
                 span,
                 reftext,
                 bibliography: false,
+                stamp,
             },
         ));
     }

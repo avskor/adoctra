@@ -219,12 +219,7 @@ fn merge_fields(
         return references;
     };
     if let Some(raw) = pending.list.value(1).cloned() {
-        let style = parse_style(
-            pending,
-            &raw.text,
-            line_span,
-            &mut context.inline_diagnostics,
-        );
+        let style = parse_style(pending, &raw.text, line_span, &mut context.diagnostics);
         let style = style
             .map(|text| AttrValue {
                 inlines: vec![Inline::Raw {
@@ -564,7 +559,7 @@ mod tests {
                 &Default::default(),
             );
         }
-        (pending, context.inline_diagnostics)
+        (pending, context.diagnostics)
     }
 
     #[test]

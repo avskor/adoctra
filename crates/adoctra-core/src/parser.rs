@@ -230,7 +230,6 @@ pub(crate) fn parse_reader<'a>(
         htmlsyntax: context.htmlsyntax(),
         output: None,
     };
-    let mut diagnostics = Vec::new();
     if let Some(effective) = header.effective_title {
         let inlines = context
             .body_subs
@@ -261,7 +260,6 @@ pub(crate) fn parse_reader<'a>(
         &mut lines,
         &mut i,
         &mut context,
-        &mut diagnostics,
         None,
         header.body_pending.unwrap_or(header.pending),
     );
@@ -275,16 +273,17 @@ pub(crate) fn parse_reader<'a>(
         },
         book,
         doc.attributes.get("preface-title").filter(|_| book),
-        &mut context.sections,
-        &mut diagnostics,
+        &mut context,
         &lines,
     );
     check_open_styles(
         &mut body,
         book,
-        &mut diagnostics,
+        &mut context.diagnostics,
         &mut context.body_subs.excluded,
     );
+    // Ruby's reader reaches the end of the input before conversion.
+    lines.finish(&mut context);
     doc.blocks.extend(body);
 
     let mut references = Vec::new();
@@ -329,32 +328,30 @@ pub(crate) fn parse_reader<'a>(
         },
         &mut doc,
     );
-    lines.finish();
-    let reader_diagnostics_start = diagnostics.len();
-    diagnostics.append(&mut lines.diagnostics);
-    diagnostics.append(&mut context.comment_diagnostics);
-    diagnostics.append(&mut context.inline_diagnostics);
     context.comments.sort_by_key(|span| (span.start, span.end));
     // A folded list paragraph is scanned again as the item text.
     context.comments.dedup();
     lines.comments = context.comments.clone();
-    for diagnostic in &mut diagnostics {
-        lines.map_diagnostic(diagnostic, &mut provenance);
-    }
-    // Selection warnings already have physical spans. Interleave them with the
-    // reader's mapped diagnostics in emission order (before missing-tag errors).
-    let mapped = diagnostics.split_off(reader_diagnostics_start);
-    let mut physical_diagnostics = lines.resource_diagnostics.drain(..).peekable();
-    for (index, diagnostic) in mapped.into_iter().enumerate() {
-        while physical_diagnostics
-            .peek()
-            .is_some_and(|(at, _)| *at == index)
-        {
-            diagnostics.push(physical_diagnostics.next().unwrap().1);
+    // One stream in Ruby's reporting order: reports placed earlier than
+    // adoctra determined them precede the stream entry they were stamped at.
+    let stream = std::mem::take(&mut context.diagnostics);
+    let mut placed = std::mem::take(&mut context.placed);
+    placed.sort_by_key(|placed| placed.stamp);
+    let mut placed = placed.into_iter().peekable();
+    let mut diagnostics = Vec::with_capacity(stream.len() + placed.len() + references.len());
+    let mut map = |mut diagnostic: Diagnostic, physical: bool| {
+        if !physical {
+            lines.map_diagnostic(&mut diagnostic, &mut provenance);
         }
-        diagnostics.push(diagnostic);
+        diagnostic
+    };
+    for (index, diagnostic) in stream.into_iter().enumerate() {
+        while let Some(early) = placed.next_if(|placed| placed.stamp.at <= index) {
+            diagnostics.push(map(early.diagnostic, early.physical));
+        }
+        diagnostics.push(map(diagnostic, false));
     }
-    diagnostics.extend(physical_diagnostics.map(|(_, diagnostic)| diagnostic));
+    diagnostics.extend(placed.map(|late| map(late.diagnostic, late.physical)));
     for mut diagnostic in references {
         lines.map_diagnostic(&mut diagnostic, &mut provenance);
         diagnostics.push(diagnostic);
@@ -419,11 +416,10 @@ fn collect_blocks(
     lines: &mut Reader<'_>,
     i: &mut usize,
     context: &mut ParseContext,
-    diagnostics: &mut Vec<Diagnostic>,
     stop: Option<&str>,
     pending: PendingMeta,
 ) -> Vec<Block> {
-    collect_blocks_in(lines, i, context, diagnostics, stop, pending, Scope::Body)
+    collect_blocks_in(lines, i, context, stop, pending, Scope::Body)
 }
 
 /// Where [`collect_blocks_in`] reads blocks.
@@ -445,7 +441,6 @@ struct Env<'e, 's, 'c> {
     lines: &'e mut Reader<'s>,
     i: &'e mut usize,
     context: &'e mut ParseContext<'c>,
-    diagnostics: &'e mut Vec<Diagnostic>,
 }
 
 /// A nested run of blocks that a suspended step waits for: a container's
@@ -456,6 +451,9 @@ struct Collect<'s> {
     pending: PendingMeta,
     scope: Scope,
     reader: Option<Reader<'s>>,
+    /// Reported when reading ahead to `stop` reaches the end, as Ruby's
+    /// `read_lines_until` does before the body is parsed.
+    unterminated: Option<Diagnostic>,
 }
 
 /// The rest of a suspended step, given the nested run's blocks and its own
@@ -543,12 +541,19 @@ impl<'s, 'c> Run<'s, 'c> {
             pending,
             scope,
             reader,
+            unterminated,
         } = *collect;
         let mut reader = reader.map(|reader| (reader, 0));
-        let previous_limit = stop.as_deref().map(|fence| match &mut reader {
-            Some((reader, j)) => reader.bound(*j, env.context, |line| line == fence),
-            None => env.lines.bound(*env.i, env.context, |line| line == fence),
+        let bounded = stop.as_deref().map(|fence| match &mut reader {
+            Some((reader, j)) => reader.bound_until(*j, env.context, |line| line == fence),
+            None => env
+                .lines
+                .bound_until(*env.i, env.context, |line| line == fence),
         });
+        if let (Some((_, false)), Some(diagnostic)) = (bounded, unterminated) {
+            env.context.diagnostics.push(diagnostic);
+        }
+        let previous_limit = bounded.map(|(limit, _)| limit);
         Run {
             stop,
             previous_limit,
@@ -622,13 +627,8 @@ impl<'s, 'c> Run<'s, 'c> {
 
     /// The block metadata a parsed block takes, its fixups and substitutions.
     fn finish_block(&mut self, env: &mut Env<'_, 's, 'c>, parsed: Option<Block>) {
-        let Env {
-            lines,
-            context,
-            diagnostics,
-            ..
-        } = env;
-        let (lines, context, diagnostics) = (&mut **lines, &mut **context, &mut **diagnostics);
+        let Env { lines, context, .. } = env;
+        let (lines, context) = (&mut **lines, &mut **context);
         let (metadata, entries) = self.parsing.take().expect("a block being parsed");
         if parsed.is_none() {
             context.restore_entries(entries);
@@ -733,7 +733,7 @@ impl<'s, 'c> Run<'s, 'c> {
             }
             trim_verbatim_edges(&mut block);
             let simple = simple || block.simple;
-            commit_subs(&mut block, simple, lines, &attributes, context, diagnostics);
+            commit_subs(&mut block, simple, lines, &attributes, context);
             apply_callouts(&mut block, lines, context);
             if let Some(value) = reftext {
                 context.attach_reftext(&mut block, value);
@@ -767,6 +767,13 @@ impl<'s, 'c> Run<'s, 'c> {
                 // text; it must neither execute expressions nor issue inline
                 // warnings.
             }
+            // Ruby registers the id here, after converting an anchored title.
+            if block.id.is_some() {
+                let stamp = context.stamp();
+                context
+                    .block_stamps
+                    .insert((block.span.start, block.span.end), stamp);
+            }
             block.attribute_context = Arc::clone(&context.attributes);
             self.blocks.push(block);
         }
@@ -783,7 +790,6 @@ fn read_blocks<'s, 'c>(
     lines: &mut Reader<'s>,
     i: &mut usize,
     context: &mut ParseContext<'c>,
-    diagnostics: &mut Vec<Diagnostic>,
     collect: Collect<'s>,
 ) -> Vec<Block> {
     /// Run `f` with the innermost reader of `stack` (or the document's).
@@ -792,7 +798,6 @@ fn read_blocks<'s, 'c>(
         lines: &mut Reader<'s>,
         i: &mut usize,
         context: &mut ParseContext<'c>,
-        diagnostics: &mut Vec<Diagnostic>,
         f: impl FnOnce(&mut Env<'_, 's, 'c>, &mut [Run<'s, 'c>]) -> R,
     ) -> R {
         let owner = stack.iter().rposition(|run| run.reader.is_some());
@@ -802,12 +807,7 @@ fn read_blocks<'s, 'c>(
                 Some((reader, j)) => (reader, j),
                 None => (lines, i),
             };
-            let mut env = Env {
-                lines,
-                i,
-                context,
-                diagnostics,
-            };
+            let mut env = Env { lines, i, context };
             f(&mut env, stack)
         };
         if let Some(owner) = owner {
@@ -822,14 +822,13 @@ fn read_blocks<'s, 'c>(
             lines: &mut *lines,
             i: &mut *i,
             context: &mut *context,
-            diagnostics: &mut *diagnostics,
         };
         Run::begin(Box::new(collect), None, &mut env)
     };
     stack.push(first);
     let mut parsed = None;
     loop {
-        let step = with_env(&mut stack, lines, i, context, diagnostics, |env, stack| {
+        let step = with_env(&mut stack, lines, i, context, |env, stack| {
             let top = stack.last_mut().expect("a run");
             let ctx = top.advance(env, parsed.take())?;
             let (metadata, _) = top.parsing.as_ref().expect("metadata");
@@ -849,7 +848,7 @@ fn read_blocks<'s, 'c>(
                     return blocks;
                 };
                 let reader = run.reader.map(|(reader, _)| reader);
-                with_env(&mut stack, lines, i, context, diagnostics, |env, _| {
+                with_env(&mut stack, lines, i, context, |env, _| {
                     resume(env, blocks, reader).then_all(env, thens)
                 })
             }
@@ -857,7 +856,7 @@ fn read_blocks<'s, 'c>(
         match step {
             Step::Done(block) => parsed = Some(block),
             Step::Collect(collect, resume, thens) => {
-                let run = with_env(&mut stack, lines, i, context, diagnostics, |env, _| {
+                let run = with_env(&mut stack, lines, i, context, |env, _| {
                     Run::begin(collect, Some((resume, thens)), env)
                 });
                 stack.push(run);
@@ -872,7 +871,6 @@ fn collect_blocks_in(
     lines: &mut Reader<'_>,
     i: &mut usize,
     context: &mut ParseContext,
-    diagnostics: &mut Vec<Diagnostic>,
     stop: Option<&str>,
     pending: PendingMeta,
     scope: Scope,
@@ -881,12 +879,12 @@ fn collect_blocks_in(
         lines,
         i,
         context,
-        diagnostics,
         Collect {
             stop: stop.map(str::to_owned),
             pending,
             scope,
             reader: None,
+            unterminated: None,
         },
     )
 }
@@ -911,28 +909,31 @@ fn nest_sections(
     top_level: TopLevel,
     book: bool,
     preface_title: Option<&str>,
-    sections: &mut BTreeMap<(usize, usize), crate::section_numbers::Section>,
-    diagnostics: &mut Vec<Diagnostic>,
+    context: &mut ParseContext<'_>,
     lines: &Reader<'_>,
 ) -> Vec<Block> {
     use crate::section_numbers::Ordinals;
+    // Reading has ended for these blocks: the parts still open close here.
+    let reading = context.stamp();
+    let sections = &mut context.sections;
+    let diagnostics = &mut context.diagnostics;
+    let placed = &mut context.placed;
     let TopLevel {
         has_header,
         invalid_header,
         fragment,
     } = top_level;
-    // Hierarchy diagnostics with the count of reading diagnostics Ruby
-    // reported before them.
-    let reading = diagnostics.len();
-    let mut inserted: Vec<(usize, Diagnostic)> = Vec::new();
+    // Hierarchy diagnostics, placed where Ruby reports them: at the title
+    // (`reading` for the parts closing at the end).
+    let mut inserted: Vec<(crate::context::Stamp, Diagnostic)> = Vec::new();
     // Close the innermost open section into its parent (or the top level).
     // Like Ruby, a book part must end with a nested section.
     fn close(
         open: &mut Vec<Block>,
         top: &mut Vec<Block>,
         book: bool,
-        diagnostics: &mut Vec<(usize, Diagnostic)>,
-        at: usize,
+        diagnostics: &mut Vec<(crate::context::Stamp, Diagnostic)>,
+        at: crate::context::Stamp,
     ) {
         let mut section = open.pop().unwrap();
         if let BlockKind::Section { level, blocks } = &section.kind {
@@ -1124,18 +1125,15 @@ fn nest_sections(
     while !open.is_empty() {
         close(&mut open, &mut top, book, &mut inserted, reading);
     }
-    // Merge in Ruby's reporting order: before the reading diagnostic that
-    // followed the title (stable among the inserted ones).
-    let mut read = std::mem::take(diagnostics).into_iter();
-    let mut position = 0;
-    for (at, diagnostic) in inserted {
-        while position < at {
-            diagnostics.extend(read.next());
-            position += 1;
-        }
-        diagnostics.push(diagnostic);
-    }
-    diagnostics.extend(read);
+    placed.extend(
+        inserted
+            .into_iter()
+            .map(|(stamp, diagnostic)| crate::context::Placed {
+                stamp,
+                diagnostic,
+                physical: false,
+            }),
+    );
     if preamble.is_empty() {
         return top;
     }
@@ -1875,7 +1873,6 @@ fn fenced_code_attributes(line: &str) -> Vec<(String, String)> {
 fn read_container_step<'s, 'c>(
     lines: &mut Reader<'s>,
     i: &mut usize,
-    diagnostics: &[Diagnostic],
     fence: String,
     block_name: &'static str,
     kind: TokenKind,
@@ -1885,39 +1882,30 @@ fn read_container_step<'s, 'c>(
     let opening = Span::new(start, start + opening_line.len());
     *i += 1;
     // Ruby reads the body up to the closing fence before parsing it, so an
-    // unterminated container warns before its children do.
-    let before_children = diagnostics.len();
+    // unterminated container warns before its children do (and after the
+    // preprocessor's reports on its lines).
+    let unterminated = Diagnostic {
+        omitted_span: None,
+        report: crate::DiagnosticReport::unterminated(block_name),
+        span: Span::new(start, start + fence.len()),
+        severity: Severity::Error,
+        message: format!("unterminated {block_name} block (missing closing `{fence}`)"),
+    };
     Step::Collect(
         Box::new(Collect {
             stop: Some(fence.clone()),
             pending: PendingMeta::default(),
             scope: Scope::Body,
             reader: None,
+            unterminated: Some(unterminated),
         }),
         Box::new(move |env, blocks, _| {
-            let Env {
-                lines,
-                i,
-                context,
-                diagnostics,
-            } = env;
+            let Env { lines, i, context } = env;
             let closing = if lines.has(**i, context) && *lines[**i].1 == *fence {
                 let (loff, lline) = lines.line(**i);
                 **i += 1;
                 Some(Span::new(loff, loff + lline.len()))
             } else {
-                diagnostics.insert(
-                    before_children,
-                    Diagnostic {
-                        omitted_span: None,
-                        report: crate::DiagnosticReport::unterminated(block_name),
-                        span: Span::new(start, start + fence.len()),
-                        severity: Severity::Error,
-                        message: format!(
-                            "unterminated {block_name} block (missing closing `{fence}`)"
-                        ),
-                    },
-                );
                 None
             };
             lines.record_fences(opening, closing, kind);
@@ -1968,7 +1956,6 @@ fn capture_verbatim_body(
     fence: &str,
     block_name: &str,
     context: &mut ParseContext,
-    diagnostics: &mut Vec<Diagnostic>,
 ) -> (usize, usize, usize, Option<Span>) {
     let body_start = if lines.has(*i, context) {
         lines[*i].0
@@ -1992,7 +1979,7 @@ fn capture_verbatim_body(
         *i += 1;
     }
     if !closed {
-        diagnostics.push(Diagnostic {
+        context.diagnostics.push(Diagnostic {
             omitted_span: None,
             report: crate::DiagnosticReport::unterminated(block_name),
             span: Span::new(opening.start, opening.start + fence.len()),
@@ -2020,7 +2007,6 @@ fn read_table(
     hint: char,
     attrs: Option<&BlockAttrs>,
     context: &mut ParseContext,
-    diagnostics: &mut Vec<Diagnostic>,
 ) -> Block {
     use crate::ast::{CellContent, Table, TableCell, TableColumn};
     let fence = lines.content(opening.start, opening.end).text;
@@ -2046,7 +2032,7 @@ fn read_table(
         *i += 1;
         off + line.len()
     } else {
-        diagnostics.push(Diagnostic {
+        context.diagnostics.push(Diagnostic {
             omitted_span: None,
             report: Default::default(),
             span: opening,
@@ -2080,7 +2066,7 @@ fn read_table(
             footer: has_option(attrs, "footer"),
         },
         opening,
-        diagnostics,
+        &mut context.diagnostics,
     );
     lines.record_fences(opening, None, TokenKind::TableDelimiter);
     lines.table_separators.extend(parsed.separators);
@@ -2114,13 +2100,8 @@ fn read_table(
         let content = if cell.literal {
             CellContent::Literal(crate::table::text(&cell.text))
         } else if cell.style == Some(crate::ast::CellStyle::Asciidoc) {
-            let (blocks, has_title, attributes) = read_nested_document(
-                lines,
-                &cell.text,
-                (cell.span.start, cell.span.end),
-                context,
-                diagnostics,
-            );
+            let (blocks, has_title, attributes) =
+                read_nested_document(lines, &cell.text, (cell.span.start, cell.span.end), context);
             CellContent::Blocks {
                 blocks,
                 footnotes: Vec::new(),
@@ -2318,7 +2299,6 @@ fn commit_subs(
     lines: &mut Reader<'_>,
     attrs: &Attributes,
     context: &mut ParseContext,
-    diagnostics: &mut Vec<Diagnostic>,
 ) {
     use crate::pass_subs::Defaults;
     let (defaults, subject) = match &block.kind {
@@ -2336,9 +2316,13 @@ fn commit_subs(
         _ => return,
     };
     let mut stages = match block.attrs.named.get("subs") {
-        Some(custom) => {
-            crate::pass_subs::resolve_block(custom, defaults, subject, block.span, diagnostics)
-        }
+        Some(custom) => crate::pass_subs::resolve_block(
+            custom,
+            defaults,
+            subject,
+            block.span,
+            &mut context.diagnostics,
+        ),
         None => defaults.stages(),
     };
     // Fenced bodies are verbatim for highlighting already; verbatim text in
@@ -2557,7 +2541,6 @@ fn read_nested_document(
     text: &[(usize, char)],
     key: (usize, usize),
     context: &mut ParseContext,
-    diagnostics: &mut Vec<Diagnostic>,
 ) -> (Vec<Block>, bool, Arc<Attributes>) {
     // Ruby preprocesses the first line again (`a|include::…[]`).
     let cell = lines
@@ -2606,14 +2589,7 @@ fn read_nested_document(
     context.start_body();
     let snapshot = (*context.render_attributes()).clone();
     let mut i = header.body_start;
-    let blocks = collect_blocks(
-        &mut nested,
-        &mut i,
-        context,
-        diagnostics,
-        None,
-        header.pending,
-    );
+    let blocks = collect_blocks(&mut nested, &mut i, context, None, header.pending);
     context.close_sections(0, usize::MAX);
     let has_title = title.is_some();
     let top_level = TopLevel {
@@ -2621,15 +2597,7 @@ fn read_nested_document(
         invalid_header: header.invalid,
         fragment: context.attributes.get("fragment").is_some(),
     };
-    let blocks = nest_sections(
-        blocks,
-        top_level,
-        context.book,
-        None,
-        &mut context.sections,
-        diagnostics,
-        &nested,
-    );
+    let blocks = nest_sections(blocks, top_level, context.book, None, context, &nested);
     let header = Arc::new(snapshot.clone());
     context.exit_nested(outer, key, snapshot);
     lines.absorb(nested, true);
@@ -2674,7 +2642,6 @@ fn parse_block_step<'s, 'c>(
         env.lines,
         env.i,
         env.context,
-        env.diagnostics,
         ctx,
         pending_attrs,
         has_id,
@@ -2705,7 +2672,6 @@ fn parse_block_content<'s, 'c>(
     lines: &mut Reader<'s>,
     i: &mut usize,
     context: &mut ParseContext<'c>,
-    diagnostics: &mut Vec<Diagnostic>,
     ctx: BlockCtx,
     // The *pending* block style (from a preceding `[verse]` / `[quote]` attribute
     // line). A `____` fence needs it to choose its content model: `verse` is
@@ -2768,7 +2734,7 @@ fn parse_block_content<'s, 'c>(
     if let Some((level, title, end, consumed)) = heading {
         let adjusted = context.section_level(level);
         if adjusted > u8::MAX as i128 {
-            diagnostics.push(Diagnostic {
+            context.diagnostics.push(Diagnostic {
                 omitted_span: None,
                 report: Default::default(),
                 span: Span::new(off, end),
@@ -2788,7 +2754,7 @@ fn parse_block_content<'s, 'c>(
             level
         } else {
             context.close_sections(level, off);
-            context.read_section((off, end), pending_style, level, title, diagnostics.len())
+            context.read_section((off, end), pending_style, level, title)
         };
         let heading_attrs = inline_attributes(&context.attributes, pending_attrs);
         // Ruby converts the title while reading only to generate an id
@@ -2892,7 +2858,6 @@ fn parse_block_content<'s, 'c>(
             hint,
             pending_attrs,
             context,
-            diagnostics,
         ));
     }
 
@@ -2903,7 +2868,7 @@ fn parse_block_content<'s, 'c>(
         let opening = Span::new(off, off + line.len());
         *i += 1;
         let (body_start, body_end, end, closing) =
-            capture_verbatim_body(lines, i, opening, &fence, "listing", context, diagnostics);
+            capture_verbatim_body(lines, i, opening, &fence, "listing", context);
         context
             .verbatim_bodies
             .insert(off, (body_start, body_end, Indentation::default()));
@@ -2988,7 +2953,7 @@ fn parse_block_content<'s, 'c>(
             body_kind,
         );
         if !closed {
-            diagnostics.push(Diagnostic {
+            context.diagnostics.push(Diagnostic {
                 omitted_span: None,
                 report: crate::DiagnosticReport::unterminated(name),
                 span: Span::new(start, start + fence.len()),
@@ -3029,7 +2994,6 @@ fn parse_block_content<'s, 'c>(
             &fence,
             unterminated_context("pass", pending_style),
             context,
-            diagnostics,
         );
         context
             .verbatim_bodies
@@ -3078,7 +3042,6 @@ fn parse_block_content<'s, 'c>(
         *deferred = Some(read_container_step(
             lines,
             i,
-            diagnostics,
             fence,
             unterminated_context("example", pending_style),
             TokenKind::ExampleDelimiter,
@@ -3102,7 +3065,7 @@ fn parse_block_content<'s, 'c>(
             *i += 1;
             let opening = Span::new(start, off + line.len());
             let (body_start, body_end, end, closing) =
-                capture_verbatim_body(lines, i, opening, &fence, "verse", context, diagnostics);
+                capture_verbatim_body(lines, i, opening, &fence, "verse", context);
             lines.record_fences(opening, closing, TokenKind::QuoteDelimiter);
             // Verse keeps its line breaks — scan without folding newlines.
             let indentation = verbatim_indentation(pending_attrs, context);
@@ -3119,7 +3082,6 @@ fn parse_block_content<'s, 'c>(
         *deferred = Some(read_container_step(
             lines,
             i,
-            diagnostics,
             fence,
             "quote",
             TokenKind::QuoteDelimiter,
@@ -3146,7 +3108,6 @@ fn parse_block_content<'s, 'c>(
         *deferred = Some(read_container_step(
             lines,
             i,
-            diagnostics,
             fence,
             "sidebar",
             TokenKind::SidebarDelimiter,
@@ -3189,7 +3150,6 @@ fn parse_block_content<'s, 'c>(
                 &fence,
                 unterminated_context("open", pending_style),
                 context,
-                diagnostics,
             );
             let text = match pending_style {
                 Some("literal") => Some(TokenKind::LiteralText),
@@ -3251,7 +3211,6 @@ fn parse_block_content<'s, 'c>(
         *deferred = Some(read_container_step(
             lines,
             i,
-            diagnostics,
             fence,
             unterminated_context("open", pending_style),
             TokenKind::OpenDelimiter,
@@ -3271,12 +3230,7 @@ fn parse_block_content<'s, 'c>(
         Some("literal" | "listing" | "source" | "verse")
     );
     if !verbatim_style && crate::callouts::list_item(trimmed).is_some() {
-        *deferred = Some(CalloutList::step(&mut Env {
-            lines,
-            i,
-            context,
-            diagnostics,
-        }));
+        *deferred = Some(CalloutList::step(&mut Env { lines, i, context }));
         return None;
     }
     if !verbatim_style {
@@ -3293,12 +3247,7 @@ fn parse_block_content<'s, 'c>(
                     .then_some("bibliography")
                 });
                 *deferred = Some(PlainList::step(
-                    &mut Env {
-                        lines,
-                        i,
-                        context,
-                        diagnostics,
-                    },
+                    &mut Env { lines, i, context },
                     list_type,
                     style.map(str::to_owned),
                 ));
@@ -3520,6 +3469,7 @@ fn quote_paragraph<'s, 'c>(
                 pending: PendingMeta::default(),
                 scope: Scope::Container,
                 reader: Some(nested),
+                unterminated: None,
             }),
             Box::new(move |env, blocks, nested| {
                 let nested = nested.expect("the blockquote's reader");
@@ -3931,6 +3881,7 @@ fn item_blocks_begin<'s>(
             pending: PendingMeta::default(),
             scope: Scope::ListItem(list_type, !has_text),
             reader: Some(item_reader),
+            unterminated: None,
         }),
         adjacent,
     )
@@ -4171,7 +4122,7 @@ impl ItemList for PlainList {
                     crate::lists::expected_ordinal(&m.marker, self.items.len())
                 {
                     if expected != actual {
-                        env.diagnostics.push(Diagnostic {
+                        env.context.diagnostics.push(Diagnostic {
                             omitted_span: None,
                             report: Default::default(),
                             span: Span::new(off, off + line.len()),
@@ -4437,7 +4388,7 @@ impl ItemList for CalloutList {
         let ordinal = self.items.len() as u64 + 1;
         let coids = env.context.callouts.ids(ordinal);
         if coids.is_empty() {
-            env.diagnostics.push(Diagnostic {
+            env.context.diagnostics.push(Diagnostic {
                 omitted_span: None,
                 report: Default::default(),
                 span: line_span,
@@ -4481,7 +4432,7 @@ impl ItemList for CalloutList {
             };
             let expected = (self.items.len() + 1).to_string();
             if number != expected {
-                env.diagnostics.push(Diagnostic {
+                env.context.diagnostics.push(Diagnostic {
                     omitted_span: None,
                     report: Default::default(),
                     span: line_span,

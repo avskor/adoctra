@@ -308,6 +308,23 @@ pub(crate) fn caption_context(kind: &crate::BlockKind) -> Option<&'static str> {
     }
 }
 
+/// A point in [`ParseContext::diagnostics`]: before the entry at `at`, and
+/// among reports placed there, in `seq` order.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub(crate) struct Stamp {
+    pub at: usize,
+    pub seq: u64,
+}
+
+/// A report Ruby emits earlier than adoctra determines it (a section's
+/// level errors at its title, an include's selection warnings), or one that
+/// already has physical ranges.
+pub(crate) struct Placed {
+    pub stamp: Stamp,
+    pub diagnostic: crate::Diagnostic,
+    pub physical: bool,
+}
+
 pub(crate) struct ParseContext<'i> {
     /// Image reads for `data-uri` while converting (Ruby's `image_uri`).
     pub images: Option<&'i crate::data_uri::Images<'i>>,
@@ -327,8 +344,17 @@ pub(crate) struct ParseContext<'i> {
     pending_entries: Vec<crate::body_subs::Declaration>,
     pub body_subs: crate::body_subs::BodySubs,
     pub comments: Vec<crate::Span>,
-    pub comment_diagnostics: Vec<crate::Diagnostic>,
-    pub inline_diagnostics: Vec<crate::Diagnostic>,
+    /// Diagnostics in Ruby's reporting order: the reader's, the parser's and
+    /// reading-time conversions as reading reaches them, then conversion.
+    /// Append-only: a report that belongs earlier goes to [`Self::placed`].
+    pub diagnostics: Vec<crate::Diagnostic>,
+    /// Reports that belong before a later stream entry (see [`Placed`]).
+    pub placed: Vec<Placed>,
+    /// The next [`Stamp`] sequence number.
+    next_stamp: u64,
+    /// Where reading completed each block with an id (see
+    /// [`crate::resolve::Read::block_stamps`]).
+    pub block_stamps: BTreeMap<(usize, usize), Stamp>,
     /// Inline anchors cataloged while reading, in reading order.
     pub anchors: Vec<(String, crate::anchor_catalog::Entry)>,
     /// Early-expanded block reftext keyed by the completed block's reader
@@ -468,6 +494,27 @@ fn default_attributes() -> Attributes {
 }
 
 impl ParseContext<'_> {
+    /// The current point of the diagnostic stream: a report placed with it
+    /// precedes every later stream entry and follows earlier stamps.
+    pub fn stamp(&mut self) -> Stamp {
+        let stamp = Stamp {
+            at: self.diagnostics.len(),
+            seq: self.next_stamp,
+        };
+        self.next_stamp += 1;
+        stamp
+    }
+
+    /// Report `diagnostic` at `stamp` instead of the end of the stream.
+    /// `physical` diagnostics already carry source ranges and locations.
+    pub fn place(&mut self, stamp: Stamp, diagnostic: crate::Diagnostic, physical: bool) {
+        self.placed.push(Placed {
+            stamp,
+            diagnostic,
+            physical,
+        });
+    }
+
     pub fn new(options: &ParseOptions) -> Self {
         let mut attributes = default_attributes();
         let mut locked = BTreeSet::new();
@@ -701,8 +748,10 @@ impl ParseContext<'_> {
             pending_entries: Vec::new(),
             body_subs: Default::default(),
             comments: Vec::new(),
-            comment_diagnostics: Vec::new(),
-            inline_diagnostics: Vec::new(),
+            diagnostics: Vec::new(),
+            placed: Vec::new(),
+            next_stamp: 0,
+            block_stamps: BTreeMap::new(),
             anchors: Vec::new(),
             reftexts: BTreeMap::new(),
             numerals: BTreeMap::new(),
@@ -920,24 +969,19 @@ impl ParseContext<'_> {
             sections: &self.sections,
             definitions: std::mem::take(&mut self.definitions),
             nested_titles: std::mem::take(&mut self.nested_titles),
+            block_stamps: std::mem::take(&mut self.block_stamps),
         };
         let (body_subs, locked, counters) = (&mut self.body_subs, &self.locked, &self.counters);
-        let inline_diagnostics = &mut self.inline_diagnostics;
+        let (stream, placed) = (&mut self.diagnostics, &mut self.placed);
         let xrefs = Self::xrefs(&self.outfilesuffix, includes);
         crate::resolve::register(
             document,
             read,
             &mut |key, attributes| {
-                body_subs.convert_early(
-                    key,
-                    attributes,
-                    locked,
-                    counters,
-                    xrefs,
-                    inline_diagnostics,
-                )
+                body_subs.convert_early(key, attributes, locked, counters, xrefs, stream)
             },
             diagnostics,
+            placed,
         )
     }
 
@@ -973,7 +1017,7 @@ impl ParseContext<'_> {
             crate::body_subs::Conversion {
                 locked: &self.locked,
                 counters: &mut self.counters,
-                diagnostics: &mut self.inline_diagnostics,
+                diagnostics: &mut self.diagnostics,
                 registry: &registry,
                 early_titles,
                 fixed,
@@ -1004,7 +1048,7 @@ impl ParseContext<'_> {
             value,
             &mut evaluation,
             span,
-            &mut self.inline_diagnostics,
+            &mut self.diagnostics,
         );
         if let Some(attributes) = evaluation.changed_attributes() {
             self.attributes = Arc::new(attributes);
@@ -1060,8 +1104,7 @@ impl ParseContext<'_> {
         .with_root(root_of(&mut self.root))
         .with_footnotes(&mut self.footnotes)
         .with_images(self.images);
-        let result =
-            crate::reftext::read(value, base, &mut evaluation, &mut self.inline_diagnostics);
+        let result = crate::reftext::read(value, base, &mut evaluation, &mut self.diagnostics);
         if let Some(attributes) = evaluation.changed_attributes() {
             self.attributes = Arc::new(attributes);
         }
@@ -1087,7 +1130,7 @@ impl ParseContext<'_> {
         .with_footnotes(&mut self.footnotes)
         .with_images(self.images);
         let result =
-            crate::inline_attributes::apply(source, &mut evaluation, &mut self.inline_diagnostics);
+            crate::inline_attributes::apply(source, &mut evaluation, &mut self.diagnostics);
         if let Some(attributes) = evaluation.changed_attributes() {
             self.attributes = Arc::new(attributes);
         }
@@ -1104,7 +1147,7 @@ impl ParseContext<'_> {
         exact: bool,
         includes: &crate::xref_target::Includes,
     ) -> Vec<crate::Inline> {
-        let before = self.inline_diagnostics.len();
+        let before = self.diagnostics.len();
         let attributes = Arc::clone(&self.attributes);
         let token_start = self.body_subs.tokens.len();
         let mut inlines = self.reading_title(value, span.start, &attributes, includes);
@@ -1117,7 +1160,7 @@ impl ParseContext<'_> {
                 }
             }
             crate::visit::walk_inlines_mut(&mut Origin(span), &mut inlines);
-            for diagnostic in &mut self.inline_diagnostics[before..] {
+            for diagnostic in &mut self.diagnostics[before..] {
                 diagnostic.span = span;
             }
         }
@@ -1148,7 +1191,7 @@ impl ParseContext<'_> {
             base,
             &mut evaluation,
             true,
-            &mut self.inline_diagnostics,
+            &mut self.diagnostics,
             Some(&mut self.body_subs.tokens),
         );
         if let Some(mut attributes) = evaluation.changed_attributes() {
@@ -1212,7 +1255,7 @@ impl ParseContext<'_> {
             &format!("counter:{context}-number"),
             block.span,
             &mut None,
-            &mut self.inline_diagnostics,
+            &mut self.diagnostics,
         );
         let number = parts_text(&effect.parts);
         if let Some(attributes) = evaluation.changed_attributes() {
@@ -1253,7 +1296,6 @@ impl ParseContext<'_> {
         style: Option<&str>,
         level: u8,
         title: &str,
-        diagnostics_before: usize,
     ) -> u8 {
         let parent = self
             .open_sections
@@ -1269,7 +1311,7 @@ impl ParseContext<'_> {
             &self.attributes,
             parent,
         );
-        section.diagnostics_before = diagnostics_before;
+        section.diagnostics_before = self.stamp();
         let level = section.level;
         self.sections.insert(key, section);
         self.open_sections.push((level, key));
@@ -1331,7 +1373,7 @@ impl ParseContext<'_> {
                 counter,
                 crate::Span::new(key.0, key.1),
                 &mut None,
-                &mut self.inline_diagnostics,
+                &mut self.diagnostics,
             );
             if let Some(attributes) = evaluation.changed_attributes() {
                 self.attributes = Arc::new(attributes);
@@ -1387,7 +1429,7 @@ impl ParseContext<'_> {
                 &mut evaluation,
                 self.quote_compat,
                 span,
-                &mut self.inline_diagnostics,
+                &mut self.diagnostics,
             );
             if let Some(attributes) = evaluation.changed_attributes() {
                 self.attributes = Arc::new(attributes);

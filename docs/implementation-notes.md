@@ -84,8 +84,8 @@ profile. Fixtures carry SHA-256 and provenance; retain their license notices.
 Offline runs use stored JSON references; `--verify-reference` uses the pinned
 Ruby launcher with `--report`. Never suppress diagnostic differences to pass:
 document them and freeze the complete actual result as XFAIL; drift and XPASS
-fail CI. See `docs/acceptance.adoc` for the 21 document runs and 7 diagnostic
-probes (28 PASS, no XFAIL), update commands and corpus limitations.
+fail CI. See `docs/acceptance.adoc` for the 35 document runs and the
+diagnostic probes (54 PASS, 1 XFAIL), update commands and corpus limitations.
 The separate `compatibility/acceptance/structure.json` manifest uses
 `block-structure-v1`: Ruby `--structure` projects the loaded parser tree without
 conversion; `scripts/structure.py` adapts the CLI's JSON backend. Twenty-one document
@@ -2066,7 +2066,7 @@ end of input, anchored ATX headings/block anchors (no leading whitespace),
 Ruby strip semantics (`ruby_strip.rs`: ASCII whitespace and NUL; Unicode spaces
 are content), `unterminated <context> block` after the style masquerade
 (`unterminated_context`), excluded abstract/partintro skipped by conversion
-(`BodySubs::excluded`), section diagnostics inserted at their reading position
+(`BodySubs::excluded`), section diagnostics placed at their reading position
 (`Section::diagnostics_before`), unknown paragraph style reset before the
 literal check, `Reader::content` normalizing line endings to LF. Harnesses
 read process output as bytes (`compatibility.run`, `acceptance.invoke`,
@@ -2081,6 +2081,39 @@ use `into_blocks()`/`mem::take` instead of moving fields out) and the HTML,
 JSON and WASM writers mark nested blocks in a `segments::Out` that
 `segments::expand` writes on a stack: 32 768 levels on a 1 MiB stack, no
 `unsafe` (forbidden workspace-wide). Still recursive and bounded by syntax:
-AsciiDoc table cells (nested documents) and inline nesting. Open: cross-pass diagnostic order
-(XFAIL `fuzz-preprocessor-error-order`, `fuzz-missing-attribute-in-title-order`)
-and five body XFAILs (`fuzz-*` in `compatibility/cases.json`).
+AsciiDoc table cells (nested documents) and inline nesting. Open: five body
+XFAILs (`fuzz-*` in `compatibility/cases.json`) and the table-cell attribute
+order XFAIL `fuzz-table-cell-attribute-order` (Ruby substitutes a cell's text
+as a whole, adoctra paragraph by paragraph).
+
+**Diagnostic order** (one stream in Ruby's reporting order). Every reading
+report goes to `ParseContext::diagnostics`, append-only, as reading reaches it:
+the reader (`Reader::process`/`expand_include`/`finish` take the context; the
+reader no longer has its own `diagnostics`/`resource_diagnostics`), the
+parser (no `diagnostics` parameter: `context.diagnostics`), comments and
+reading-time conversions (the former `comment_diagnostics`/
+`inline_diagnostics`), then `check_open_styles`, `Reader::finish` (end of
+input, before conversion) and conversion (`execute_body`); unresolved
+references follow. A report that Ruby emits earlier than adoctra determines it
+is *placed*: `ParseContext::stamp()` returns a `Stamp { at, seq }` (the
+current stream length and a sequence number) and `place(stamp, diagnostic,
+physical)` stores it in `ParseContext::placed`; `parse_reader` sorts placed
+reports by stamp (stable) and merges each before the stream entry `at`,
+mapping only non-physical spans. Placed are: section hierarchy errors
+(`nest_sections`, at `Section::diagnostics_before`, a `Stamp` taken in
+`read_section`; `invalid part` at the next title or the end of reading),
+include selection warnings (physical ranges, stamped in `expand_include`),
+and duplicate ids (`resolve::Ids::report`: a section's at its title stamp, a
+block's at `ParseContext::block_stamps` taken in `finish_block` after an
+anchored title converts, an inline anchor's at `anchor_catalog::Entry::stamp`
+taken when cataloged; without a stamp they follow the references as before).
+An unterminated container no longer inserts its warning: `Collect::
+unterminated` is pushed by `Run::begin` when `Reader::bound_until` reaches
+the end without the fence, i.e. after the preprocessor's reports on the body
+and before the children's (Ruby's `read_lines_until`). Never insert into the
+stream (it would shift stamps); place instead. Acceptance probes
+`diagnostic-order-*` and `fuzz-preprocessor-error-order`/
+`fuzz-missing-attribute-in-title-order` (former XFAILs) cover it; core
+`tests/diagnostic_order.rs` and WASM `tests/diagnostic_order.rs` assert order
+and spans. Note: Ruby with `-o /dev/null` skips conversion, so compare
+diagnostics with `-o -`.

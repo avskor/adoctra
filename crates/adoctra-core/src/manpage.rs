@@ -74,7 +74,7 @@ pub(crate) fn read(
             .map_or(0, |last| lines[last].0 + lines[last].1.len());
         Span::new(end, end)
     };
-    context.inline_diagnostics.push(Diagnostic {
+    context.diagnostics.push(Diagnostic {
         omitted_span: None,
         report: Default::default(),
         span,
@@ -123,7 +123,7 @@ fn read_title(lines: &mut Reader<'_>, context: &mut ParseContext) {
             } else {
                 Span::new(0, 0)
             };
-            context.inline_diagnostics.push(Diagnostic {
+            context.diagnostics.push(Diagnostic {
                 omitted_span: None,
                 report: Default::default(),
                 span,

@@ -133,9 +133,6 @@ pub(crate) struct Reader<'a> {
     /// Ruby's `catalog[:includes]`, for interdocument references.
     pub include_catalog: crate::xref_target::Includes,
     pub inactive: Vec<Span>,
-    pub diagnostics: Vec<Diagnostic>,
-    /// Physical diagnostics, paired with their insertion index in `diagnostics`.
-    pub resource_diagnostics: Vec<(usize, Diagnostic)>,
 }
 
 impl<'a> Reader<'a> {
@@ -188,8 +185,6 @@ impl<'a> Reader<'a> {
             includes: Vec::new(),
             include_catalog: Default::default(),
             inactive: Vec::new(),
-            diagnostics: Vec::new(),
-            resource_diagnostics: Vec::new(),
         }
     }
 
@@ -254,14 +249,6 @@ impl<'a> Reader<'a> {
         self.list_markers.sort_by_key(|span| span.start);
         self.quote_markers.extend(nested.quote_markers);
         self.quote_markers.sort_by_key(|span| span.start);
-        let offset = self.diagnostics.len();
-        self.resource_diagnostics.extend(
-            nested
-                .resource_diagnostics
-                .into_iter()
-                .map(|(index, diagnostic)| (offset + index, diagnostic)),
-        );
-        self.diagnostics.extend(nested.diagnostics);
     }
 
     pub fn with_resources(
@@ -688,8 +675,8 @@ impl<'a> Reader<'a> {
         primary
     }
 
-    fn error(&mut self, span: Span, message: String) {
-        self.diagnostics.push(Diagnostic {
+    fn error(context: &mut ParseContext, span: Span, message: String) {
+        context.diagnostics.push(Diagnostic {
             omitted_span: None,
             report: Default::default(),
             span,
@@ -699,8 +686,8 @@ impl<'a> Reader<'a> {
     }
 
     /// An error whose conversion report spells Ruby's message verbatim.
-    fn error_reported(&mut self, span: Span, message: String, ruby: String) {
-        self.diagnostics.push(Diagnostic {
+    fn error_reported(context: &mut ParseContext, span: Span, message: String, ruby: String) {
+        context.diagnostics.push(Diagnostic {
             omitted_span: None,
             report: crate::DiagnosticReport {
                 message: Some(ruby),
@@ -761,7 +748,8 @@ impl<'a> Reader<'a> {
         if keyword == "endif" {
             self.directives.push(span);
             if !text.is_empty() {
-                self.error_reported(
+                Self::error_reported(
+                    context,
                     span,
                     "malformed endif directive: text is not permitted".into(),
                     format!(
@@ -773,7 +761,8 @@ impl<'a> Reader<'a> {
                     self.stack.pop();
                 } else {
                     let expected = open.target.clone();
-                    self.error_reported(
+                    Self::error_reported(
+                        context,
                         span,
                         format!("mismatched endif::{target}[]; expected endif::{expected}[]"),
                         format!(
@@ -782,7 +771,7 @@ impl<'a> Reader<'a> {
                     );
                 }
             } else {
-                self.diagnostics.push(Diagnostic {
+                context.diagnostics.push(Diagnostic {
                     omitted_span: None,
                     span,
                     severity: Severity::Error,
@@ -803,7 +792,8 @@ impl<'a> Reader<'a> {
                 // Skipped branches still balance every ifeval, even malformed ones.
                 false
             } else if !target.is_empty() {
-                self.error_reported(
+                Self::error_reported(
+                    context,
                     span,
                     "malformed ifeval directive: target is not permitted".into(),
                     format!(
@@ -818,7 +808,7 @@ impl<'a> Reader<'a> {
                 let include = crate::conditional_expression::evaluate(text, &mut |value| {
                     context.preprocessor_subs(value, Some("drop"), span, &mut diagnostics)
                 });
-                self.directive_diagnostics(diagnostics);
+                Self::directive_diagnostics(context, diagnostics);
                 include
             } {
                 include
@@ -828,7 +818,8 @@ impl<'a> Reader<'a> {
                 } else {
                     "invalid"
                 };
-                self.error_reported(
+                Self::error_reported(
+                    context,
                     span,
                     format!("malformed ifeval directive: {problem} expression"),
                     format!(
@@ -846,7 +837,8 @@ impl<'a> Reader<'a> {
         }
         if target.is_empty() && active {
             self.directives.push(span);
-            self.error_reported(
+            Self::error_reported(
+                context,
                 span,
                 format!("malformed {keyword} directive: missing target"),
                 format!("malformed preprocessor directive - missing target: {keyword}::[{text}]"),
@@ -966,15 +958,15 @@ impl<'a> Reader<'a> {
         }
         let mut diagnostics = Vec::new();
         let input = context.preprocessor_subs(attrlist, None, span, &mut diagnostics);
-        self.directive_diagnostics(diagnostics);
+        Self::directive_diagnostics(context, diagnostics);
         crate::include_attributes::parse(&input)
     }
 
     /// Diagnostics of a directive's substitutions. The reader reports what
     /// happens to the directive itself, so the informational drop-line
     /// messages (hidden by Ruby's default log level) are not repeated.
-    fn directive_diagnostics(&mut self, diagnostics: Vec<Diagnostic>) {
-        self.diagnostics.extend(
+    fn directive_diagnostics(context: &mut ParseContext, diagnostics: Vec<Diagnostic>) {
+        context.diagnostics.extend(
             diagnostics
                 .into_iter()
                 .filter(|diagnostic| diagnostic.severity != Severity::Info),
@@ -1005,7 +997,7 @@ impl<'a> Reader<'a> {
             let mut diagnostics = Vec::new();
             let expanded =
                 context.preprocessor_subs(target, Some(target_policy), span, &mut diagnostics);
-            self.directive_diagnostics(diagnostics);
+            Self::directive_diagnostics(context, diagnostics);
             expanded
         } else {
             target.to_owned()
@@ -1034,7 +1026,7 @@ impl<'a> Reader<'a> {
                 return true;
             }
             let missing_target = policy == "warn" && missing(context);
-            self.diagnostics.push(Diagnostic {
+            context.diagnostics.push(Diagnostic {
                 omitted_span: None,
                 report: Default::default(),
                 span,
@@ -1073,11 +1065,11 @@ impl<'a> Reader<'a> {
         let current = self.inputs.last().expect("current input");
         if self.inputs.len() > current.max_depth {
             let message = format!("maximum include depth of {} exceeded", current.depth_label);
-            self.error(span, message);
+            Self::error(context, span, message);
             return false;
         }
         let attrs = self.include_attributes(attrlist, span, context);
-        let attributes = &context.attributes;
+        let attributes = Arc::clone(&context.attributes);
         let optional = attrs.contains_key("optional-option");
         let selection = crate::include_selection::Selection::parse(&attrs);
         let target = expanded_target;
@@ -1157,7 +1149,7 @@ impl<'a> Reader<'a> {
             .map(|(resolved, _)| resolved.warnings)
             .unwrap_or_default()
         {
-            self.diagnostics.push(Diagnostic {
+            context.diagnostics.push(Diagnostic {
                 omitted_span: None,
                 span,
                 severity: Severity::Warning,
@@ -1189,7 +1181,7 @@ impl<'a> Reader<'a> {
             Err(error) => {
                 if uri_target.is_some() || error.kind == crate::ResourceErrorKind::InvalidEncoding {
                     let kind = if uri_target.is_some() { "uri" } else { "file" };
-                    self.diagnostics.push(Diagnostic {
+                    context.diagnostics.push(Diagnostic {
                         omitted_span: None,
                         span,
                         severity: Severity::Error,
@@ -1212,12 +1204,13 @@ impl<'a> Reader<'a> {
                         Some(path),
                         crate::ResourceErrorKind::NotFound
                         | crate::ResourceErrorKind::InvalidTarget,
-                    ) => self.error_reported(
+                    ) => Self::error_reported(
+                        context,
                         span,
                         message,
                         format!("include file not found: {path}"),
                     ),
-                    _ => self.error(span, message),
+                    _ => Self::error(context, span, message),
                 }
                 // Ruby cannot tell a denied target (its jail resolves it to
                 // another path) from a missing or unreadable one.
@@ -1231,11 +1224,11 @@ impl<'a> Reader<'a> {
                 .get(input.source_id)
                 .is_some_and(|s| s.name() == file.name())
         }) {
-            self.error(span, format!("cyclic include: {target}"));
+            Self::error(context, span, format!("cyclic include: {target}"));
             return false;
         }
         if file.stored_bytes() > resources.limits.max_bytes.saturating_sub(resources.bytes) {
-            self.error(span, "maximum included byte count exceeded".into());
+            Self::error(context, span, "maximum included byte count exceeded".into());
             return false;
         }
         resources.bytes += file.stored_bytes();
@@ -1296,13 +1289,13 @@ impl<'a> Reader<'a> {
                 diagnostic.report.location = crate::DiagnosticLocation::Cursor(cursor);
             }
         }
-        self.resource_diagnostics.extend(
-            selection_diagnostics
-                .into_iter()
-                .map(|diagnostic| (self.diagnostics.len(), diagnostic)),
-        );
+        // Selection warnings already have physical ranges and cursors.
+        let stamp = context.stamp();
+        for diagnostic in selection_diagnostics {
+            context.place(stamp, diagnostic, true);
+        }
         for (index, tag) in selected.missing.into_iter().enumerate() {
-            self.diagnostics.push(Diagnostic {
+            context.diagnostics.push(Diagnostic {
                 omitted_span: None,
                 report: crate::DiagnosticReport {
                     message: Some(missing_report.clone()),
@@ -1361,7 +1354,8 @@ impl<'a> Reader<'a> {
             ) {
                 Ok(growth) => resources.bytes += growth,
                 Err(()) => {
-                    self.error(
+                    Self::error(
+                        context,
                         span,
                         "maximum included byte count exceeded by indentation".into(),
                     );
@@ -1421,16 +1415,17 @@ impl<'a> Reader<'a> {
             self.resources.is_none() && host_max_include_depth(options).is_some();
     }
 
-    pub fn finish(&mut self) {
+    pub fn finish(&mut self, context: &mut ParseContext) {
         for open in std::mem::take(&mut self.stack) {
-            self.error(
+            Self::error(
+                context,
                 open.span,
                 format!(
                     "unterminated conditional directive: missing endif::{}[]",
                     open.target
                 ),
             );
-            self.diagnostics.last_mut().unwrap().report.suppressed = true;
+            context.diagnostics.last_mut().unwrap().report.suppressed = true;
         }
     }
 
@@ -1442,16 +1437,29 @@ impl<'a> Reader<'a> {
         context: &mut ParseContext,
         stop: impl Fn(&str) -> bool,
     ) -> usize {
+        self.bound_until(start, context, stop).0
+    }
+
+    /// [`Self::bound`], also telling whether a `stop` line ends the body
+    /// (false when reading reached the end of the input or outer bound).
+    pub fn bound_until(
+        &mut self,
+        start: usize,
+        context: &mut ParseContext,
+        stop: impl Fn(&str) -> bool,
+    ) -> (usize, bool) {
         let old = self.limit;
         let mut end = start;
+        let mut found = false;
         while self.has(end, context) {
             if stop(&self[end].1) {
+                found = true;
                 break;
             }
             end += 1;
         }
         self.limit = end;
-        old
+        (old, found)
     }
 
     pub fn content(&self, start: usize, end: usize) -> FilteredSource {
