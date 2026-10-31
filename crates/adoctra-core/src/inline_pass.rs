@@ -15,6 +15,14 @@ struct Slot {
     pending: Option<(String, Vec<Stage>, Option<P>)>,
 }
 
+/// A block's frame for [`Passes::selected_stages`]: its `line-comment`
+/// and the converter's highlighter for a `source` listing.
+#[derive(Default)]
+pub(crate) struct SelectedBlock<'a, 'h> {
+    pub line_comment: Option<&'a str>,
+    pub highlight: Option<crate::highlight_stage::Hook<'h>>,
+}
+
 pub(crate) struct Passes {
     prefix: String,
     slots: Vec<Slot>,
@@ -301,7 +309,7 @@ impl Passes {
             });
             vec![P::Raw(body)]
         } else {
-            self.apply_selected(body, &stages, attrs, compat, span, depth)
+            self.apply_selected(body, &stages, attrs, compat, span, depth, None)
         };
         if let Some(open) = wrapper {
             let kind = match &open {
@@ -404,6 +412,7 @@ impl Passes {
         out
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn apply_selected(
         &mut self,
         body: String,
@@ -412,6 +421,7 @@ impl Passes {
         compat: bool,
         span: Span,
         depth: usize,
+        mut highlight: Option<crate::highlight_stage::Hook<'_>>,
     ) -> Vec<P> {
         let mut parts = if stages.contains(&Stage::Macros) && !body.is_empty() {
             let first = self.slots.len();
@@ -430,7 +440,33 @@ impl Passes {
         } else {
             vec![P::Raw(body)]
         };
+        // A highlighted listing: `highlight` replaces `specialcharacters`
+        // and processes the callouts itself.
+        let mut highlighted = false;
         for &stage in stages {
+            if let (Stage::Specials, Some(hook)) = (stage, highlight.as_deref_mut()) {
+                let process_callouts = stages.contains(&Stage::Callouts);
+                let listing = crate::highlight_stage::Listing {
+                    process_callouts,
+                    line_comment: self.line_comment.as_deref(),
+                    slot_prefix: &self.prefix,
+                };
+                if let Some(result) = crate::highlight_stage::apply(
+                    &parts,
+                    hook,
+                    listing,
+                    attrs,
+                    span,
+                    &mut self.diagnostics,
+                ) {
+                    parts = result;
+                    highlighted = true;
+                    continue;
+                }
+            }
+            if stage == Stage::Callouts && highlighted {
+                continue;
+            }
             parts = pass_subs::apply(parts, stage, attrs, compat, span, depth, self);
         }
         if attrs.stateful() {
@@ -466,6 +502,7 @@ impl Passes {
             compat,
             span,
             depth + 1,
+            None,
         )
     }
 
@@ -478,19 +515,31 @@ impl Passes {
         diagnostics: &mut Vec<crate::Diagnostic>,
     ) -> Vec<P> {
         let stages = pass_subs::resolve(subs, span, diagnostics);
-        Self::selected_stages(body, &stages, None, attrs, compat, span, diagnostics)
+        Self::selected_stages(
+            body,
+            &stages,
+            SelectedBlock::default(),
+            attrs,
+            compat,
+            span,
+            diagnostics,
+        )
     }
 
     /// `line_comment` is a block's `line-comment` for its callouts stage.
     pub fn selected_stages(
         body: &str,
         stages: &[Stage],
-        line_comment: Option<&str>,
+        block: SelectedBlock<'_, '_>,
         attrs: &mut Evaluation<'_>,
         compat: bool,
         span: Span,
         diagnostics: &mut Vec<crate::Diagnostic>,
     ) -> Vec<P> {
+        let SelectedBlock {
+            line_comment,
+            highlight,
+        } = block;
         // Use the same collision check as ordinary source extraction, without
         // extracting anything unless macros is one of the requested stages.
         let mut prefix = "\u{96}".to_owned();
@@ -511,7 +560,7 @@ impl Passes {
             line_comment: line_comment.map(str::to_owned),
             diagnostics: Vec::new(),
         };
-        let parts = passes.apply_selected(body.into(), stages, attrs, compat, span, 0);
+        let parts = passes.apply_selected(body.into(), stages, attrs, compat, span, 0, highlight);
         diagnostics.append(&mut passes.diagnostics);
         parts
     }

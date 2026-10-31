@@ -1259,6 +1259,41 @@ fn stdin_reads_relative_to_the_base_directory_like_ruby() {
     std::fs::remove_dir_all(&root).unwrap();
 }
 
+/// Rouge highlights a source listing with custom `subs` in place of
+/// `specialcharacters` (Ruby's `highlight`), standalone and embedded: the
+/// appended attributes stage then runs over the highlighted HTML.
+#[test]
+fn cli_highlights_custom_subs_with_rouge() {
+    use std::io::Write;
+    use std::process::{Command, Stdio};
+    let source = ":source-highlighter: rouge\n:v: 1.0\n\n[source,java,subs=\"+attributes\"]\n----\nString s = \"{v}\";\n----\n";
+    for embedded in [false, true] {
+        let mut command = Command::new(env!("CARGO_BIN_EXE_adoctra"));
+        command.args(["-", "--stdout"]);
+        if embedded {
+            command.arg("-s");
+        }
+        let mut child = command
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .spawn()
+            .unwrap();
+        child
+            .stdin
+            .take()
+            .unwrap()
+            .write_all(source.as_bytes())
+            .unwrap();
+        let output = child.wait_with_output().unwrap();
+        assert!(output.status.success());
+        let html = String::from_utf8(output.stdout).unwrap();
+        assert!(
+            html.contains("<span class=\"s\">\"1.0\"</span>"),
+            "embedded={embedded}: {html}"
+        );
+    }
+}
+
 /// Like Ruby's `copycss` step, the rouge theme of class-mode listings is
 /// written into `stylesdir` next to the output, beside adoctra's stylesheet.
 #[test]

@@ -2055,6 +2055,12 @@ fn commit_subs(
         callout_ids,
         trim: !matches!(defaults, Defaults::Normal)
             || matches!(block.kind, BlockKind::Verse { .. }),
+        // Ruby's `commit_subs`: a converter's syntax highlighter replaces
+        // `specialcharacters` of a `source` listing (it decides whether it
+        // highlights).
+        source_listing: (matches!(block.kind, BlockKind::Listing { .. })
+            && block.attrs.style.as_deref() == Some("source"))
+        .then(|| (block.attrs.named.clone(), block.attrs.options.clone())),
     };
     lines.callout_marks.extend(marks);
     match &mut block.kind {

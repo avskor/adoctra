@@ -102,25 +102,55 @@ fn highlight(
     class_mode: bool,
     state: &RefCell<RougeState>,
 ) -> String {
-    let attrs = block.conversion_attributes();
     let (source, marks) = extract_callouts(text, callouts);
-    let named = &block.attrs.named;
+    let listing = Source {
+        named: &block.attrs.named,
+        options: &block.attrs.options,
+        attrs: block.conversion_attributes(),
+    };
+    let (highlighted, source_offset) = highlight_text(&listing, &source, lang, class_mode, state);
+    let highlighted = if marks.is_empty() {
+        highlighted
+    } else {
+        restore_callouts(&highlighted, &marks, source_offset)
+    };
+    trim_blank_edge_lines(highlighted)
+}
+
+/// What the adapter's `highlight` reads of a listing: its named attributes
+/// and options, and the document attributes where it converts.
+pub(super) struct Source<'a> {
+    pub named: &'a std::collections::BTreeMap<String, String>,
+    pub options: &'a [String],
+    pub attrs: &'a Attributes,
+}
+
+/// The adapter's `highlight` of callout-free source: the HTML and, in a
+/// line number table, the offset where the code starts.
+pub(super) fn highlight_text(
+    listing: &Source<'_>,
+    source: &str,
+    lang: Option<&str>,
+    class_mode: bool,
+    state: &RefCell<RougeState>,
+) -> (String, Option<usize>) {
+    let named = listing.named;
     let start = named.get("linenums").map(|_| {
         let start = named.get("start").map_or(1, |start| ruby_to_i(start));
         start.max(1)
     });
     let highlight_lines = named
         .get("highlight")
-        .map(|spec| resolve_lines_to_highlight(&source, spec, start));
+        .map(|spec| resolve_lines_to_highlight(source, spec, start));
 
     let style = {
         let mut state = state.borrow_mut();
         if class_mode {
             state.requires_stylesheet = true;
         }
-        *state.style.get_or_insert_with(|| theme(attrs))
+        *state.style.get_or_insert_with(|| theme(listing.attrs))
     };
-    let tokens = lex(block, &source, lang);
+    let tokens = lex(listing, source, lang);
     let style = if class_mode {
         Style::Classes
     } else {
@@ -133,19 +163,32 @@ fn highlight(
     let mut source_offset = None;
     if let Some(start) = start {
         highlighted = format::line_table(&highlighted, start);
-        if !marks.is_empty() {
-            const CODE_CELL: &str = "<td class=\"code\">";
-            source_offset = highlighted
-                .find(CODE_CELL)
-                .map(|index| index + CODE_CELL.len());
-        }
+        const CODE_CELL: &str = "<td class=\"code\">";
+        source_offset = highlighted
+            .find(CODE_CELL)
+            .map(|index| index + CODE_CELL.len());
     }
-    let highlighted = if marks.is_empty() {
-        highlighted
-    } else {
-        restore_callouts(&highlighted, &marks, source_offset)
+    (highlighted, source_offset)
+}
+
+/// [`highlight_text`] for core's `highlight` substitution (custom `subs`):
+/// the CSS mode comes from the attributes where the listing converts.
+pub(super) fn highlight_request(
+    request: &adoctra_core::HighlightRequest<'_>,
+    state: &RefCell<RougeState>,
+) -> adoctra_core::Highlighted {
+    let listing = Source {
+        named: request.named,
+        options: request.options,
+        attrs: request.attributes,
     };
-    trim_blank_edge_lines(highlighted)
+    let class_mode = request.attributes.get("rouge-css").unwrap_or("class") == "class";
+    let lang = request.named.get("language").map(String::as_str);
+    let (html, source_offset) = highlight_text(&listing, request.source, lang, class_mode, state);
+    adoctra_core::Highlighted {
+        html,
+        source_offset,
+    }
 }
 
 /// `Block#content` of a verbatim block: the substituted (here highlighted)
@@ -173,9 +216,9 @@ fn trim_blank_edge_lines(text: String) -> String {
 
 /// `create_lexer` and the lexing; plain text when the lexer is not ported
 /// or fails.
-fn lex(block: &Block, source: &str, lang: Option<&str>) -> Vec<(Token, String)> {
-    let mixed = block.attrs.options.iter().any(|o| o == "mixed")
-        || block.attrs.named.contains_key("mixed-option");
+fn lex(listing: &Source<'_>, source: &str, lang: Option<&str>) -> Vec<(Token, String)> {
+    let mixed =
+        listing.options.iter().any(|o| o == "mixed") || listing.named.contains_key("mixed-option");
     let lexer = lang.and_then(|lang| {
         if lang.contains('?') {
             // `find_fancy` without code: the query string becomes the

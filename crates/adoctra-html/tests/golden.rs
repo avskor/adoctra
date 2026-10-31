@@ -1732,12 +1732,12 @@ fn html_rouge_listings_match_asciidoctor() {
         let name = path.file_stem().unwrap().to_string_lossy().into_owned();
         let source = fs::read_to_string(&path).unwrap();
         let expected = fs::read_to_string(path.with_extension("expected.html")).unwrap();
-        let ours = String::from_utf8(
-            HtmlBackend::new()
-                .convert(&adoctra_core::parse(&source).document)
-                .unwrap(),
-        )
-        .unwrap();
+        // Parsed with the backend's hook: rouge highlights listings with
+        // custom `subs` inside their substitutions.
+        let backend = HtmlBackend::new();
+        let mut start = backend.start();
+        let doc = adoctra_core::parse_with_start(&source, &Default::default(), &mut start).document;
+        let ours = backend.render_with_start(&doc, &start).html;
         // The reference drops Ruby's own stylesheet link like this one.
         let without_theme = |html: &str| {
             rouge_head(html)

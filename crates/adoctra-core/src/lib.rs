@@ -24,6 +24,7 @@ mod entity_references;
 pub mod error;
 pub mod extension;
 mod header;
+mod highlight_stage;
 mod image;
 mod include_attributes;
 mod include_indent;
@@ -70,7 +71,7 @@ mod attribute_list;
 mod attribute_macros;
 mod attribute_quotes;
 mod xref_target;
-pub use backend::{Backend, ConversionStart};
+pub use backend::{Backend, ConversionStart, HighlightRequest, Highlighted};
 pub use context::{DateTime, DocumentDates, IncludeLimits, ParseOptions, SafeMode};
 pub use diagnostic::{
     Diagnostic, DiagnosticCursor, DiagnosticLocation, DiagnosticReport, ParseResult, Severity,

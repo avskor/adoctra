@@ -35,6 +35,9 @@ pub(crate) struct BlockSubs {
     pub callout_ids: Vec<String>,
     /// Verbatim and raw content trims blank edge lines after substitutions.
     pub trim: bool,
+    /// A `source` listing's named attributes and options: a converter may
+    /// highlight it in place of `specialcharacters` (Ruby's `highlight`).
+    pub source_listing: Option<(BTreeMap<String, String>, Vec<String>)>,
 }
 
 impl BlockSubs {
@@ -45,6 +48,7 @@ impl BlockSubs {
             line_comment: None,
             callout_ids: Vec::new(),
             trim: defaults != crate::pass_subs::Defaults::Normal,
+            source_listing: None,
         }
     }
 }
@@ -221,7 +225,13 @@ impl BodySubs {
         let compat = attributes.get("compat-mode").is_some();
         let mut evaluation =
             Evaluation::definition(&attributes, locked, &mut counters, compat).with_xrefs(xrefs);
-        Some(run(pending, &mut evaluation, diagnostics, &mut self.tokens))
+        Some(run(
+            pending,
+            &mut evaluation,
+            diagnostics,
+            &mut self.tokens,
+            None,
+        ))
     }
 
     pub fn execute(
@@ -236,6 +246,7 @@ impl BodySubs {
         Vec<crate::ast::FootnoteDefinition>,
     ) {
         let mut execution = Execution {
+            start,
             tokens: &mut self.tokens,
             pending: &mut self.pending,
             caption_counters: &mut self.caption_counters,
@@ -292,7 +303,7 @@ impl BodySubs {
         // Ruby's head follows the `<title>` and precedes the header outline
         // and the body: a converter reads its stylesheet now, with the header
         // attributes, before the body's images.
-        if let Some(start) = start {
+        if let Some(start) = execution.start.as_deref_mut() {
             for message in start.start(&execution.attributes) {
                 execution.diagnostics.push(crate::Diagnostic {
                     omitted_span: None,
@@ -338,7 +349,9 @@ impl BodySubs {
     }
 }
 
-struct Execution<'a> {
+struct Execution<'a, 's> {
+    /// The converter's hook ([`crate::ConversionStart`]).
+    start: Option<&'s mut dyn crate::ConversionStart>,
     tokens: &'a mut Vec<crate::Token>,
     pending: &'a mut BTreeMap<(usize, usize), Pending>,
     caption_counters: &'a mut BTreeMap<(usize, usize), (&'static str, Vec<AttributePart>)>,
@@ -426,7 +439,7 @@ fn toclevels(levels: Option<&str>) -> i128 {
     levels.map_or(2, crate::include_selection::integer_prefix)
 }
 
-impl crate::substitution_context::Labels for Execution<'_> {
+impl crate::substitution_context::Labels for Execution<'_, '_> {
     /// The natural lookup and label of a reference in the macros stage, with
     /// the converting field's state.
     fn label(
@@ -458,7 +471,7 @@ impl crate::substitution_context::Labels for Execution<'_> {
     }
 }
 
-impl Execution<'_> {
+impl Execution<'_, '_> {
     /// The current conversion attributes as a block snapshot (without the
     /// transient local hardbreaks flag).
     fn snapshot(&mut self) -> Arc<Attributes> {
@@ -802,7 +815,7 @@ impl Execution<'_> {
     /// Ruby's `convert_outline`: every listed section's title, nested while
     /// a section's level is below `toclevels`.
     fn toc(&mut self, toclevels: i128) {
-        fn walk(execution: &mut Execution<'_>, sections: &[Outline], toclevels: i128) {
+        fn walk(execution: &mut Execution<'_, '_>, sections: &[Outline], toclevels: i128) {
             for section in sections {
                 if crate::resolve::placeholder(&section.title).is_some() {
                     execution.lazy_heading(section.heading, &section.title);
@@ -844,6 +857,7 @@ impl Execution<'_> {
         let mut footnotes = std::mem::take(&mut self.footnotes);
         let mut diagnostics = std::mem::take(self.diagnostics);
         let (images, xrefs) = (self.images, self.xrefs);
+        let mut start = self.start.take();
         let mut tokens = Vec::new();
         let changed = {
             let mut evaluation =
@@ -853,9 +867,16 @@ impl Execution<'_> {
                     .with_images(images)
                     .with_xrefs(xrefs)
                     .with_labels(self);
-            *nodes = run(pending, &mut evaluation, &mut diagnostics, &mut tokens);
+            *nodes = run(
+                pending,
+                &mut evaluation,
+                &mut diagnostics,
+                &mut tokens,
+                start.as_deref_mut(),
+            );
             evaluation.changed_attributes()
         };
+        self.start = start;
         self.attributes = changed.unwrap_or(attributes);
         self.tokens.extend(tokens);
         *self.counters = counters;
@@ -1061,7 +1082,7 @@ impl Execution<'_> {
     }
 }
 
-impl Execution<'_> {
+impl Execution<'_, '_> {
     /// Ruby's `convert_table`: the frame, grid and stripes with their
     /// document fallbacks, then every cell in head, body, foot order, each
     /// reading `cellbgcolor` after its content. A repeated cell (`3*|`)
@@ -1206,6 +1227,7 @@ fn run(
     evaluation: &mut Evaluation<'_>,
     diagnostics: &mut Vec<Diagnostic>,
     tokens: &mut Vec<crate::Token>,
+    start: Option<&mut (dyn crate::ConversionStart + '_)>,
 ) -> Vec<Inline> {
     let first_footnote = evaluation.footnotes().map(|registry| registry.len());
     evaluation.bibliography = pending.bibliography;
@@ -1223,12 +1245,33 @@ fn run(
         });
         let text = source.text.replace("\r\n", "\n");
         let span = Span::new(0, source.text.len());
+        // Ruby's `highlight` substitution, through the converter's hook.
+        let mut hook = match (start, &block.source_listing) {
+            (Some(start), Some((named, options))) => {
+                Some(move |source: &str, attributes: &crate::Attributes| {
+                    start.highlight(&crate::HighlightRequest {
+                        source,
+                        named,
+                        options,
+                        attributes,
+                    })
+                })
+            }
+            _ => None,
+        };
+        let compat = evaluation.get("compat-mode").is_some();
+        let frame = crate::inline_pass::SelectedBlock {
+            line_comment: block.line_comment.as_deref(),
+            highlight: hook
+                .as_mut()
+                .map(|hook| hook as crate::highlight_stage::Hook<'_>),
+        };
         let mut parts = crate::inline_pass::Passes::selected_stages(
             &text,
             &block.stages,
-            block.line_comment.as_deref(),
+            frame,
             evaluation,
-            evaluation.get("compat-mode").is_some(),
+            compat,
             span,
             diagnostics,
         );

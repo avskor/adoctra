@@ -76,12 +76,18 @@ fn run() -> adoctra::Result<()> {
         ..Default::default()
     };
     // A standalone HTML document reads its stylesheet where Ruby's converter
-    // builds the head: core calls the backend's hook before the body converts.
+    // builds the head, and rouge highlights listings with custom `subs`
+    // inside their substitutions: core calls the backend's hook.
     let referrer = sources
         .get(source_id)
         .map(|source| source.name().to_owned());
-    let mut html_start = (args.backend == "html" && !args.embedded)
-        .then(|| html_backend(provider.clone(), referrer.clone()).start());
+    let mut html_start = (args.backend == "html").then(|| {
+        if args.embedded {
+            adoctra::html::HtmlBackend::embedded().start()
+        } else {
+            html_backend(provider.clone(), referrer.clone()).start()
+        }
+    });
     let result = match (&provider, html_start.as_mut()) {
         (Some(provider), Some(start)) => {
             adoctra::parse_resource_with_start(&mut sources, &options, provider.as_ref(), start)?
@@ -513,8 +519,11 @@ fn select_backend(
     start: Option<adoctra::html::HtmlStart>,
 ) -> adoctra::Result<Box<dyn Backend>> {
     match name {
-        // Embedded output prints its warnings too (Html, without a start).
-        "html" if embedded => Ok(Box::new(Html(adoctra::html::HtmlBackend::embedded(), None))),
+        // Embedded output prints its warnings too.
+        "html" if embedded => Ok(Box::new(Html(
+            adoctra::html::HtmlBackend::embedded(),
+            start,
+        ))),
         "html" => Ok(Box::new(Html(html_backend(provider, referrer), start))),
         "docx" => Ok(Box::new(adoctra::docx::DocxBackend::new())),
         "json" => Ok(Box::new(adoctra::json::JsonBackend::new())),

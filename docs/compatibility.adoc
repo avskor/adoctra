@@ -80,10 +80,11 @@ stderr, порядка/текста/места сообщений, exit status �
 regex-движок Onigmo (все 5913 regex правил Rouge совпадают с Ruby), runtime
 лексеров, темы, форматтеры, адаптер в HTML, угадывание языка (`Lexer.guess`)
 и все 228 лексеров (потоки токенов на демо и дополнительных случаях
-совпадают с Ruby). Где Ruby падает (ошибка лексера, неоднозначное
-`guess?…`), adoctra выводит листинг без подсветки. Собственные `subs` со
-`specialcharacters` Ruby подсвечивает внутри конвейера подстановок — не
-перенесено.
+совпадают с Ruby). Собственные `subs` со `specialcharacters` подсвечиваются
+внутри конвейера подстановок, как в Ruby (`highlight` на месте
+`specialcharacters`, следующие стадии по HTML), при разборе с хуком
+`HtmlStart` (CLI, `parse_with_start`). Где Ruby падает (ошибка лексера,
+неоднозначное `guess?…`), adoctra выводит листинг без подсветки.
 coderay/pygments проверены как отсутствующие в эталонном окружении.
 |Закрепить конфигурации зависимостей и определить способ воспроизведения
 результата. Пока различия остаются, совместимость таких конфигураций не заявляется.
@@ -1598,14 +1599,18 @@ class="rouge highlight">`, режимы `rouge-css` (`class` — тема в `<s
 (`extract_callouts`/`restore_callouts`, в том числе с таблицей), выбор
 лексера `lang?опции` (`find_fancy`), php `start_inline`/`%mixed`, fallback
 plaintext и обрезку пустых краевых строк `Block#content`. Golden
-`golden/rouge/` сверяет пять standalone-документов (в том числе
-`guess?mimetype=…`, markdown и http). Ограничения: сбой лексера там, где
+`golden/rouge/` сверяет шесть standalone-документов (в том числе
+`guess?mimetype=…`, markdown, http и собственные `subs`). Ограничения: сбой лексера там, где
 Ruby падает (например, `datalines4` в sas, `~(…)` в elixir), и неоднозначное
 угадывание `guess?…` дают plaintext вместо отказа конвертации; в
 долгоживущем процессе Ruby после первого такого отказа состояние класса
-остаётся частично загруженным, adoctra каждый раз сообщает ошибку; собственные `subs` со
-`specialcharacters` Ruby подсвечивает внутри конвейера подстановок (затем
-остальные стадии работают по HTML), adoctra — нет.
+остаётся частично загруженным, adoctra каждый раз сообщает ошибку. Собственные
+`subs` со `specialcharacters` подсвечиваются как в Ruby (`highlight` вместо
+`specialcharacters`: ядро извлекает callout-ы, вызывает
+`ConversionStart::highlight` и разбирает HTML на теги Raw и текст Text, так что
+следующие стадии видят строку Ruby; заполнители passthrough чинятся как
+`HighlightedPassSlotRx`). Без хука (`parse` и `convert` по отдельности)
+остаётся `sub_source` Ruby: специальные символы без подсветки.
 Подсветка без отличий от Ruby доступна через `highlight.js` или `prettify`. Secure mode блокирует атрибут, поэтому 7 PASS стенда
 работают в safe mode (профиль include без ресурсов), ещё один проверяет
 блокировку secure. Golden-тест `golden/highlight/` сравнивает шапку, подвал и

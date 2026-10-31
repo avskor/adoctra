@@ -33,6 +33,39 @@ pub trait ConversionStart {
     /// Called with the document's attributes as conversion starts (the
     /// header attributes, like Ruby's converter sees them). Returns warnings.
     fn start(&mut self, attributes: &Attributes) -> Vec<String>;
+
+    /// Ruby's `highlight` substitution: a `source` listing whose custom
+    /// `subs` keep `specialcharacters` is highlighted by a server-side syntax
+    /// highlighter in their place, and the later stages run over its HTML
+    /// (`highlight_source`). Core extracts and restores the callouts; the
+    /// converter returns the highlighted HTML and, when it wraps the code
+    /// (a line number table), the offset where the code starts. `None`
+    /// keeps Ruby's `sub_source` (special characters, then callouts).
+    fn highlight(&mut self, request: &HighlightRequest<'_>) -> Option<Highlighted> {
+        let _ = request;
+        None
+    }
+}
+
+/// What a [`ConversionStart::highlight`] call highlights.
+#[derive(Debug)]
+pub struct HighlightRequest<'a> {
+    /// The text the earlier stages produced, without callout marks.
+    pub source: &'a str,
+    /// The listing's named attributes (`language`, `linenums`, `start`,
+    /// `highlight` …) and options.
+    pub named: &'a std::collections::BTreeMap<String, String>,
+    pub options: &'a [String],
+    /// The document attributes where the listing converts.
+    pub attributes: &'a Attributes,
+}
+
+/// The highlighted HTML of a [`HighlightRequest`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Highlighted {
+    pub html: String,
+    /// Where the code starts in `html` (Ruby's `source_offset`), if not 0.
+    pub source_offset: Option<usize>,
 }
 
 #[cfg(test)]
@@ -77,5 +110,89 @@ mod tests {
             result.document,
             crate::parse_with_options(source, &Default::default()).document
         );
+    }
+
+    /// Wraps every word in a span, like a highlighter, and records requests.
+    #[derive(Default)]
+    struct Spans(Vec<(String, Option<String>, Option<String>)>);
+
+    impl ConversionStart for Spans {
+        fn start(&mut self, _: &Attributes) -> Vec<String> {
+            Vec::new()
+        }
+
+        fn highlight(&mut self, request: &HighlightRequest<'_>) -> Option<Highlighted> {
+            self.0.push((
+                request.source.to_owned(),
+                request.named.get("language").cloned(),
+                request.attributes.get("x").map(str::to_owned),
+            ));
+            let escaped = request
+                .source
+                .replace('&', "&amp;")
+                .replace('<', "&lt;")
+                .replace('>', "&gt;");
+            Some(Highlighted {
+                html: format!("<span class=\"k\">{escaped}</span>"),
+                source_offset: None,
+            })
+        }
+    }
+
+    fn listing_parts(result: &crate::ParseResult) -> Vec<crate::AttributePart> {
+        let crate::BlockKind::Listing {
+            inlines: Some(inlines),
+            ..
+        } = &result.document.blocks[0].kind
+        else {
+            panic!("listing with substituted content");
+        };
+        let [crate::Inline::Substituted { parts, .. }] = inlines.as_slice() else {
+            panic!("one substituted node");
+        };
+        parts.clone()
+    }
+
+    #[test]
+    fn highlight_replaces_special_characters_of_a_source_listing() {
+        use crate::AttributePart as P;
+        // `attributes+` prepends the stage: the attribute expands first.
+        let source = ":x: <v>\n\n[source,java,subs=\"attributes+\"]\n----\na < {x} // <1>\n----\n";
+        let mut spans = Spans::default();
+        let result = crate::parse_with_start(source, &Default::default(), &mut spans);
+        // The earlier attributes stage feeds the highlighter Ruby's string
+        // (the stored value is escaped), without the callout mark.
+        assert_eq!(
+            spans.0,
+            [(
+                "a < &lt;v&gt; \n".to_owned(),
+                Some("java".to_owned()),
+                Some("<v>".to_owned())
+            )]
+        );
+        let parts = listing_parts(&result);
+        // Tags are raw, text decoded; the mark follows its line.
+        assert_eq!(parts[0], P::Raw("<span class=\"k\">".into()));
+        assert_eq!(parts[1], P::Text("a < &lt;v&gt; ".into()));
+        assert!(
+            matches!(&parts[2], P::Callout(c) if c.number == "1" && c.guard.as_deref() == Some("// ") && c.id.as_deref() == Some("CO1-1"))
+        );
+    }
+
+    #[test]
+    fn without_a_highlighter_custom_subs_substitute_special_characters() {
+        use crate::AttributePart as P;
+        // A converter that does not highlight (and plain parsing) keeps
+        // Ruby's `sub_source`; a non-source listing is never highlighted.
+        let source = "[source,java,subs=\"+attributes\"]\n----\na < b\n----\n";
+        let plain = crate::parse_with_options(source, &Default::default());
+        assert_eq!(listing_parts(&plain), [P::Text("a < b".into())]);
+        let mut recorder = Recorder::default();
+        let hooked = crate::parse_with_start(source, &Default::default(), &mut recorder);
+        assert_eq!(hooked.document, plain.document);
+        let mut spans = Spans::default();
+        let listing = "[listing,subs=\"+attributes\"]\n----\na < b\n----\n";
+        crate::parse_with_start(listing, &Default::default(), &mut spans);
+        assert!(spans.0.is_empty());
     }
 }

@@ -2037,13 +2037,20 @@ linkcss; `Output.highlighter_stylesheet` for the CLI's copycss) or inline
 (pre base style), `rouge-style` (class mode: first listing wins), linenums
 table/start, `highlight` lines, callouts extract/restore, `lang?opts`, php
 `start_inline`, plaintext fallback (unported lexer or LexError), and
-`Block#content`'s blank edge-line trim. Only listings with default subs
-highlight: custom subs keeping specialcharacters would highlight inside the
-subs pipeline in Ruby (not ported). `golden/rouge/` compares standalone
+`Block#content`'s blank edge-line trim. Listings with default subs
+highlight in the adapter; custom subs keeping specialcharacters highlight
+inside core's subs pipeline (below). `golden/rouge/` compares standalone
 documents. All 228 lexers are ported; j, robot_framework and sas are
 hand-written, and a state Rouge cannot load (ceylon's unreachable
 `comment`, sas's `datalines4`) is in `LexerDef.broken`: entering it fails
-like Ruby. Open: the highlight stage for custom subs.
+like Ruby. Custom subs keeping specialcharacters highlight in core
+(`highlight_stage.rs`, Ruby's `highlight` sub): core extracts callouts,
+calls `ConversionStart::highlight` (`HighlightRequest` → `Highlighted`;
+`HtmlStart` answers for rouge from the header and shares the adapter state
+with `render_with_start`), fixes highlighted pass slots and splits the HTML
+into Raw tags and decoded Text, so later stages see Ruby's string; marks
+return as Callout parts. Without the hook it is Ruby's `sub_source`. The CLI
+passes the hook in embedded mode too; `golden/rouge/` parses with it.
 highlight.js/prettify are available today. adoctra.css
 carries Ruby's `pre.highlightjs`/`pre.prettyprint` rules (checked with
 screenshots). `golden/highlight/` runs the reference `--standalone --safe`.

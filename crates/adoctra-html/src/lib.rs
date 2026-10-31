@@ -93,23 +93,29 @@ impl HtmlBackend {
             embedded: self.embedded,
             resources: self.resources.clone(),
             stylesheet: None,
+            rouge: false,
+            rouge_state: std::rc::Rc::default(),
         }
     }
 
     /// Convert and report the warnings.
     pub fn render(&self, doc: &Document) -> Output {
-        self.render_prepared(doc, None)
+        self.render_prepared(doc, None, &Default::default())
     }
 
     /// Convert a document parsed with this backend's [`HtmlBackend::start`]:
     /// the stylesheet it read is used (not read again) and its warnings are
     /// already parse diagnostics.
     pub fn render_with_start(&self, doc: &Document, start: &HtmlStart) -> Output {
-        self.render_prepared(doc, start.stylesheet.as_ref())
+        self.render_prepared(doc, start.stylesheet.as_ref(), &start.rouge_state)
     }
 
-    fn render_prepared(&self, doc: &Document, stylesheet: Option<&Option<String>>) -> Output {
-        let rouge_state = std::cell::RefCell::new(rouge::RougeState::default());
+    fn render_prepared(
+        &self,
+        doc: &Document,
+        stylesheet: Option<&Option<String>>,
+        rouge_state: &std::cell::RefCell<rouge::RougeState>,
+    ) -> Output {
         let cx = Cx {
             doc,
             outline: &doc.blocks,
@@ -117,7 +123,7 @@ impl HtmlBackend {
             book: doc.attributes.get("doctype") == Some("book"),
             highlighter: highlight::Highlighter::of(&doc.attributes),
             source_listing: std::cell::Cell::new(false),
-            rouge: &rouge_state,
+            rouge: rouge_state,
         };
         let mut out = String::new();
         let mut warnings = Vec::new();
@@ -139,7 +145,7 @@ impl HtmlBackend {
         Output {
             html: out,
             warnings,
-            highlighter_stylesheet: rouge::stylesheet_file(&rouge_state),
+            highlighter_stylesheet: rouge::stylesheet_file(rouge_state),
         }
     }
 }
@@ -413,6 +419,11 @@ pub struct HtmlStart {
     resources: Option<Resources>,
     /// The contents read at the start (`Some(None)`: unreadable).
     stylesheet: Option<Option<String>>,
+    /// Whether the header chose rouge: it highlights listings with custom
+    /// `subs` while core converts them.
+    rouge: bool,
+    /// The rouge adapter's state, shared with the render.
+    rouge_state: std::rc::Rc<std::cell::RefCell<rouge::RougeState>>,
 }
 
 impl fmt::Debug for HtmlStart {
@@ -425,7 +436,19 @@ impl fmt::Debug for HtmlStart {
 }
 
 impl ConversionStart for HtmlStart {
+    fn highlight(
+        &mut self,
+        request: &adoctra_core::HighlightRequest<'_>,
+    ) -> Option<adoctra_core::Highlighted> {
+        if !self.rouge {
+            return None;
+        }
+        Some(rouge::highlight_request(request, &self.rouge_state))
+    }
+
     fn start(&mut self, attributes: &adoctra_core::Attributes) -> Vec<String> {
+        // Ruby's syntax highlighter is the header's.
+        self.rouge = highlight::Highlighter::of(attributes) == Some(highlight::Highlighter::Rouge);
         let mut warnings = Vec::new();
         if let Some(sheet) = read_sheet(attributes).filter(|_| !self.embedded) {
             let stylesdir = attributes.get("stylesdir");
@@ -944,9 +967,9 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             {
                 // Rouge highlights the source when the listing keeps its
                 // default substitutions (`highlight` replaces
-                // `specialcharacters`). Custom `subs` keep their result: right
-                // without `specialcharacters`; with it Ruby would highlight
-                // first and run the other stages over the HTML (not ported).
+                // `specialcharacters`). Custom `subs` keep their result: core
+                // highlighted it through `HtmlStart` when they keep
+                // `specialcharacters` and the document was parsed with it.
                 match inlines {
                     None => rouge::listing(block, text, callouts, nowrap(block), cx.rouge, out),
                     Some(_) => rouge::listing_with(block, nowrap(block), cx.rouge, out, |out| {
