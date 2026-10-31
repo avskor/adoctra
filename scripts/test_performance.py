@@ -45,11 +45,17 @@ class PerformanceTests(unittest.TestCase):
         real = [c for c in workloads if c['kind'] == 'document']
         self.assertEqual(len(real), 12)
         self.assertEqual(len(workloads), 24)
-        for workload, origin in zip(real, original):
+        # Only the pinned origins' pages are workloads, in manifest order.
+        sources = {entry['id']: entry['source'] for entry in metadata['cases']}
+        pinned = [case for case in original
+                  if metadata['files'][sources[case['id']]]['origin'] in perf.WORKLOAD_ORIGINS]
+        self.assertEqual(len(pinned), 12)
+        pinned_origins = {name: metadata['origins'][name] for name in perf.WORKLOAD_ORIGINS}
+        for workload, origin in zip(real, pinned):
             self.assertEqual(workload['source'], origin['source'])
             self.assertEqual(workload['attributes'], origin.get('attributes', {}))
             self.assertEqual(workload['resources'], origin.get('resources', {}))
-            self.assertEqual(workload['provenance']['origins'], metadata['origins'])
+            self.assertEqual(workload['provenance']['origins'], pinned_origins)
             self.assertEqual(workload['safe_mode'], 'safe' if 'resources' in origin else 'secure')
 
     def test_synthetic_inputs_are_deterministic_scaled_and_keep_unique_ids(self):

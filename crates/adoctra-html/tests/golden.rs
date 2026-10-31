@@ -449,6 +449,118 @@ fn html_description_lists_match_asciidoctor() {
     assert!(checked > 0, "no golden fixtures found in {dir:?}");
 }
 
+/// One horizontal description list: its label/item widths and its entries
+/// (terms, description text).
+type Hdlist = (Vec<String>, Vec<(Vec<String>, String)>);
+
+/// Horizontal description lists in document order. Ruby's is a layout table
+/// (`<col>` widths, a row per entry, terms joined by `<br>` in `td.hdlist1`);
+/// adoctra's a `<dl class="hdlist">` of `<div>` entries with the widths as
+/// stylesheet variables.
+fn hdlists(html: &str) -> Vec<Hdlist> {
+    let text = |s: &str| {
+        strip_tags(s)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+    let between = |s: &str, open: &str, close: &str| -> Vec<String> {
+        let mut out = Vec::new();
+        let mut rest = s;
+        while let Some(at) = rest.find(open) {
+            let start = at + rest[at..].find('>').unwrap() + 1;
+            let end = start + rest[start..].find(close).unwrap();
+            out.push(rest[start..end].to_string());
+            rest = &rest[end..];
+        }
+        out
+    };
+    let ruby = html.contains("<div class=\"hdlist");
+    let marker = if ruby {
+        "<div class=\"hdlist"
+    } else {
+        "<dl class=\"hdlist"
+    };
+    let mut lists = Vec::new();
+    for chunk in html.split(marker).skip(1) {
+        let chunk = &chunk[..chunk.find(if ruby { "</table>" } else { "</dl>" }).unwrap()];
+        let head = &chunk[..chunk.find('>').unwrap()];
+        let widths = if ruby {
+            chunk
+                .split("<col")
+                .skip(1)
+                .filter(|c| !c.starts_with("group"))
+                .map(|c| {
+                    c.split("width: ")
+                        .nth(1)
+                        .map_or("", |w| &w[..w.find(';').unwrap()])
+                        .to_string()
+                })
+                .collect()
+        } else {
+            let var = |name: &str| {
+                head.split(&format!("--adoctra-hdlist-{name}width: "))
+                    .nth(1)
+                    .map_or(String::new(), |w| w[..w.find(';').unwrap()].to_string())
+            };
+            if head.contains("--adoctra-hdlist-") {
+                vec![var("label"), var("item")]
+            } else {
+                Vec::new()
+            }
+        };
+        let entries = if ruby {
+            between(chunk, "<tr>", "</tr>")
+                .iter()
+                .map(|row| {
+                    let cells = between(row, "<td", "</td>");
+                    let terms = cells[0].split("<br>").map(text).collect();
+                    (terms, text(&cells[1]))
+                })
+                .collect()
+        } else {
+            between(chunk, "<div>", "</dd>\n</div>")
+                .iter()
+                .map(|group| {
+                    let terms = between(group, "<dt", "</dt>")
+                        .iter()
+                        .map(|t| text(t))
+                        .collect();
+                    let dd = &group[group.find("<dd>").unwrap() + 4..];
+                    (terms, text(dd))
+                })
+                .collect()
+        };
+        lists.push((widths, entries));
+    }
+    lists
+}
+
+#[test]
+fn html_horizontal_description_lists_match_asciidoctor() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/hdlists");
+    let mut checked = 0;
+    for entry in fs::read_dir(&dir).expect("golden/hdlists dir is missing") {
+        let path = entry.unwrap().path();
+        if path.extension().and_then(|e| e.to_str()) != Some("adoc") {
+            continue;
+        }
+        let name = path.file_stem().unwrap().to_string_lossy().into_owned();
+        let expected = fs::read_to_string(path.with_extension("expected.html")).unwrap();
+        let doc = adoctra_core::parse(&fs::read_to_string(&path).unwrap()).document;
+        let ours = String::from_utf8(HtmlBackend::embedded().convert(&doc).unwrap()).unwrap();
+        let lists = hdlists(&expected);
+        assert!(lists.len() >= 5, "too few lists in `{name}`: {lists:?}");
+        assert_eq!(
+            hdlists(&ours),
+            lists,
+            "HTML horizontal description lists diverge from asciidoctor for `{name}`"
+        );
+        checked += 1;
+    }
+    assert_eq!(checked, 1);
+}
+
 /// Callouts: the conum markup inside the first `<pre>` matches Ruby's, and
 /// the callout list items match its `colist` items.
 #[test]

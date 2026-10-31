@@ -229,12 +229,16 @@ def normalize(node, verbatim=False, block_kind=None):
         # <dl class="hdlist">. Rows become terms (split at <br>) and descriptions.
         node = hdlist(node)
     if node.tag == "dl" and "hdlist" in node.attrs.get("class", "").split():
+        # adoctra's entries are <div> groups (rows); widths are stylesheet variables.
         attrs = {k: v for k, v in node.attrs.items() if k != "style"}
         classes = [c for c in attrs.get("class", "").split() if c != "hdlist"]
         attrs.pop("class", None)
         if classes:
             attrs["class"] = " ".join(classes)
-        node = Element("dl", attrs, node.children)
+        children = [grandchild for child in node.children
+                    for grandchild in (child.children if isinstance(child, Element) and child.tag == "div"
+                                       else [child])]
+        node = Element("dl", attrs, children)
     if node.tag == "iframe" and node.attrs.get("frameborder") == "0":
         # Ruby's obsolete frameborder="0" is adoctra's stylesheet border.
         node = Element("iframe", {k: v for k, v in node.attrs.items() if k != "frameborder"}, node.children)

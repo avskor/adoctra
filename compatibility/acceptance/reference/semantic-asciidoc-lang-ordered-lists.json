@@ -1,0 +1,2022 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Sometimes, we need to number the items in a list. Instinct might tell you to prefix each item with a number, like in this next list:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "1. Protons\n2. Electrons\n3. Neutrons"
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The above works, but since the numbering is obvious, the AsciiDoc processor will insert the numbers for you if you omit them:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": ". Protons\n. Electrons\n. Neutrons"
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "olist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Protons"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Electrons"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Neutrons"
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": "arabic",
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you number the ordered list explicitly, you have to manually keep the list numerals sequential. Otherwise, you will get a warning. This differs from other lightweight markup languages. But there’s a reason for it."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Using explicit numbering is one way to adjust the numbering offset of a list. For instance, you can type:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "4. Step four\n5. Step five\n6. Step six"
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "However, there’s a simpler way to accomplish the same result without the manual effort. You can use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "start"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute on the list to define the number at which you want the numerals to start."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "[start=4]\n. Step four\n. Step five\n. Step six"
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The start value is always a positive integer value even when using a different numeration style such as loweralpha."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "When an ordered list item contains block content—​such as an image, source block, or table—​you may observe that the number of the next item in the list resets to 1. In fact, what’s happened is that a new list has been started where the number resets due to a missing list continuation."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "In these cases, you should not resort to using the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "start"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute to fix the numbering. Not only does that require manual adjustment as items are added to the list, it doesn’t address the underlying semantics problem, which is what is causing it to be broken. Instead, use a list continuation between each block element you want to attach to the list item to ensure the list item is continuous. The list continuation glues the blocks together within a given item and keeps them at the same level of indentation."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "ulist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "For details on how to use a list continuation, refer to the "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "continuation.html"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "continuation.html"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " page."
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "For an example of the list continuation used in a complex ordered list, see the launch steps in "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "this .adoc file in GitHub"
+                          }
+                        ],
+                        "kind": "link",
+                        "metadata": {
+                          "rel": "noopener",
+                          "window": "_blank"
+                        },
+                        "target": "https://github.com/aws-quickstart/quickstart-microsoft-sql-fci-fsx/blob/main/docs/partner_editable/deploy_steps.adoc"
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "To see how those launch steps look in the final output, see the "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Launch the Quick Start"
+                          }
+                        ],
+                        "kind": "link",
+                        "metadata": {
+                          "rel": "noopener",
+                          "window": "_blank"
+                        },
+                        "target": "https://aws-quickstart.github.io/quickstart-microsoft-sql-fci-fsx/#_launch_the_quick_start"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " section of the generated deployment guide. The list continuations prevent step 2 from resetting to 1. They also prevent step 5, which is pulled in from a separate AsciiDoc file, from resetting to 1."
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": null,
+                "title": null
+              }
+            ],
+            "context": "sidebar",
+            "id": null,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "When not to use the start attribute"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To present list items in reverse order, add the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "reversed"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " option:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "[%reversed]\n.Parts of an atom\n. Protons\n. Electrons\n. Neutrons"
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "olist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Protons"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Electrons"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Neutrons"
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": "arabic",
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Parts of an atom"
+                  }
+                ]
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can give a list a title by prefixing the line with a dot immediately followed by the text (without leaving any space after the dot)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Here’s an example of a list with a title:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": ".Parts of an atom\n. Protons\n. Electrons\n. Neutrons"
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "olist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Protons"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Electrons"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Neutrons"
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": "arabic",
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Parts of an atom"
+                  }
+                ]
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_basic_ordered_list",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Basic ordered list"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You create a nested item by using one or more dots in front of each the item."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": ". Step 1\n. Step 2\n.. Step 2a\n.. Step 2b\n. Step 3"
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "AsciiDoc selects a different number scheme for each level of nesting. Here’s how the previous list renders:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "olist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Step 1"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "olist",
+                        "id": null,
+                        "items": [
+                          {
+                            "blocks": [],
+                            "checkbox": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Step 2a"
+                              }
+                            ]
+                          },
+                          {
+                            "blocks": [],
+                            "checkbox": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Step 2b"
+                              }
+                            ]
+                          }
+                        ],
+                        "roles": [],
+                        "style": "loweralpha",
+                        "title": null
+                      }
+                    ],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Step 2"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Step 3"
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": "arabic",
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "A nested ordered list"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Like with the asterisks in an unordered list, the number of dots in an ordered list doesn’t represent the nesting level. However, it’s much more intuitive to follow the convention that the number of dots equals the level of nesting."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "# of dots = level of nesting"
+                      }
+                    ],
+                    "kind": "strong",
+                    "roles": []
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Again, we are shooting for plain text markup that is readable "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "as is"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": null,
+            "type": "tip"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can mix and match the three list types, ordered, "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "unordered"
+                  }
+                ],
+                "kind": "xref",
+                "target": "unordered.html"
+              },
+              {
+                "kind": "text",
+                "value": ", and "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "description"
+                  }
+                ],
+                "kind": "xref",
+                "target": "description.html"
+              },
+              {
+                "kind": "text",
+                "value": ", within a single hybrid list. The AsciiDoc syntax tries hard to infer the relationships between the items that are most intuitive to us humans."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Here’s an example of nesting an unordered list inside of an ordered list:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": ". Linux\n* Fedora\n* Ubuntu\n* Slackware\n. BSD\n* FreeBSD\n* NetBSD"
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "olist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [
+                      {
+                        "context": "ulist",
+                        "id": null,
+                        "items": [
+                          {
+                            "blocks": [],
+                            "checkbox": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Fedora"
+                              }
+                            ]
+                          },
+                          {
+                            "blocks": [],
+                            "checkbox": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Ubuntu"
+                              }
+                            ]
+                          },
+                          {
+                            "blocks": [],
+                            "checkbox": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Slackware"
+                              }
+                            ]
+                          }
+                        ],
+                        "roles": [],
+                        "style": null,
+                        "title": null
+                      }
+                    ],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Linux"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "ulist",
+                        "id": null,
+                        "items": [
+                          {
+                            "blocks": [],
+                            "checkbox": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "FreeBSD"
+                              }
+                            ]
+                          },
+                          {
+                            "blocks": [],
+                            "checkbox": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "NetBSD"
+                              }
+                            ]
+                          }
+                        ],
+                        "roles": [],
+                        "style": null,
+                        "title": null
+                      }
+                    ],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BSD"
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": "arabic",
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can spread the items out and indent the nested lists if that makes it more readable for you:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": ". Linux\n\n  * Fedora\n  * Ubuntu\n  * Slackware\n\n. BSD\n\n  * FreeBSD\n  * NetBSD"
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The description list page demonstrates how to "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "combine all three list types"
+                  }
+                ],
+                "kind": "xref",
+                "target": "description.html#three-hybrid"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_nested_ordered_list",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Nested ordered list"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For ordered lists, AsciiDoc supports the numeration styles such as lowergreek and decimal-leading-zero. The full list of numeration styles that can be applied to an ordered list are as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "body": [
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "arabic"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "decimal"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "decimal "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "[1]"
+                          }
+                        ],
+                        "kind": "superscript",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "decimal-leading-zero"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "loweralpha"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "lower-alpha"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "upperalpha"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "upper-alpha"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "lowerroman"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "lower-roman"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "upperroman"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "upper-roman"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "lowergreek "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "[1]"
+                          }
+                        ],
+                        "kind": "superscript",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "lower-greek"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ]
+            ],
+            "columns": [
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": null,
+                "valign": "top",
+                "width": "50"
+              },
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": null,
+                "valign": "top",
+                "width": "50"
+              }
+            ],
+            "context": "table",
+            "foot": [],
+            "head": [
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Block style"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "CSS list-style-type"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ]
+            ],
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "[1]"
+                  }
+                ],
+                "kind": "superscript",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " These styles are only supported by the HTML converters."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Here are a few examples showing various numeration styles as defined by the block style shown in the header row:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "body": [
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "olist",
+                        "id": null,
+                        "items": [
+                          {
+                            "blocks": [],
+                            "checkbox": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "one"
+                              }
+                            ]
+                          },
+                          {
+                            "blocks": [],
+                            "checkbox": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "two"
+                              }
+                            ]
+                          },
+                          {
+                            "blocks": [],
+                            "checkbox": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "three"
+                              }
+                            ]
+                          }
+                        ],
+                        "roles": [],
+                        "style": "arabic",
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "olist",
+                        "id": null,
+                        "items": [
+                          {
+                            "blocks": [],
+                            "checkbox": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "one"
+                              }
+                            ]
+                          },
+                          {
+                            "blocks": [],
+                            "checkbox": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "two"
+                              }
+                            ]
+                          },
+                          {
+                            "blocks": [],
+                            "checkbox": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "three"
+                              }
+                            ]
+                          }
+                        ],
+                        "roles": [],
+                        "style": "decimal",
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "olist",
+                        "id": null,
+                        "items": [
+                          {
+                            "blocks": [],
+                            "checkbox": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "one"
+                              }
+                            ]
+                          },
+                          {
+                            "blocks": [],
+                            "checkbox": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "two"
+                              }
+                            ]
+                          },
+                          {
+                            "blocks": [],
+                            "checkbox": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "three"
+                              }
+                            ]
+                          }
+                        ],
+                        "roles": [],
+                        "style": "loweralpha",
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "olist",
+                        "id": null,
+                        "items": [
+                          {
+                            "blocks": [],
+                            "checkbox": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "one"
+                              }
+                            ]
+                          },
+                          {
+                            "blocks": [],
+                            "checkbox": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "two"
+                              }
+                            ]
+                          },
+                          {
+                            "blocks": [],
+                            "checkbox": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "three"
+                              }
+                            ]
+                          }
+                        ],
+                        "roles": [],
+                        "style": "lowergreek",
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                }
+              ]
+            ],
+            "columns": [
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": null,
+                "valign": "top",
+                "width": "25"
+              },
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": null,
+                "valign": "top",
+                "width": "25"
+              },
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": null,
+                "valign": "top",
+                "width": "25"
+              },
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": null,
+                "valign": "top",
+                "width": "25"
+              }
+            ],
+            "context": "table",
+            "foot": [],
+            "head": [
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "[arabic] "
+                    },
+                    {
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "[2]"
+                        }
+                      ],
+                      "kind": "superscript",
+                      "roles": []
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "[decimal]"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "[loweralpha]"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "[lowergreek]"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ]
+            ],
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "[2]"
+                  }
+                ],
+                "kind": "superscript",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " Default numeration if block style is not specified"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Custom numeration styles can be implemented using a custom role. Define a new class selector (e.g., "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": ".custom"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") in your stylesheet that sets the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "list-style-type"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property to the value of your choice. Then, assign the name of that class as a role on any list to which you want that numeration applied."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "tip"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When the role shorthand ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": ".custom"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") is used on an ordered list, the numeration style is no longer omitted."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can override the number scheme for any level by setting its style (the first positional entry in a block attribute list). You can also set the starting number using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "start"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "[lowerroman,start=5]\n. Five\n. Six\n[loweralpha]\n.. a\n.. b\n.. c\n. Seven"
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "olist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Five"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "olist",
+                        "id": null,
+                        "items": [
+                          {
+                            "blocks": [],
+                            "checkbox": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "a"
+                              }
+                            ]
+                          },
+                          {
+                            "blocks": [],
+                            "checkbox": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "b"
+                              }
+                            ]
+                          },
+                          {
+                            "blocks": [],
+                            "checkbox": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "c"
+                              }
+                            ]
+                          }
+                        ],
+                        "roles": [],
+                        "style": "loweralpha",
+                        "title": null
+                      }
+                    ],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Six"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Seven"
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": "lowerroman",
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "start"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute must be a number, even when using a different numeration style. For instance, to start an alphabetic list at letter \"c\", set the numeration style to loweralpha and the start attribute to 3."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "important"
+          }
+        ],
+        "context": "section",
+        "id": "styles",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Number styles"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you have paragraph text that begins with a list marker, but you don’t intend it to be a list item, you need to escape that marker by using the attribute reference to disrupt the pattern."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Consider the case when the line starts with a P.O. box reference:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "P. O. Box"
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In order to prevent this paragraph from being parsed as an ordered list, you need to replace the first space with "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "{empty}"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "P.{empty}O. Box"
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Now the paragraph will remain as a paragraph."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In the future, it will be possible to escape an ordered list marker using a backslash, but that is not currently possible."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_escaping_the_list_marker",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Escaping the list marker"
+          }
+        ]
+      }
+    ],
+    "title": [
+      {
+        "kind": "text",
+        "value": "Ordered Lists"
+      }
+    ]
+  }
+}

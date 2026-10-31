@@ -1,0 +1,3078 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Starting with "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "version 4.6"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.gradle.org/4.6/release-notes.html"
+              },
+              {
+                "kind": "text",
+                "value": ", Gradle provides "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "native support"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.gradle.org/current/userguide/java_testing.html#using_junit5"
+              },
+              {
+                "kind": "text",
+                "value": " for executing tests on the JUnit Platform. To enable it, you need to specify "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "useJUnitPlatform()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " within a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "test"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " task declaration in "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "build.gradle"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ":"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "test {\n\tuseJUnitPlatform()\n}"
+              }
+            ],
+            "language": "groovy",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Filtering by "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "tags"
+                  }
+                ],
+                "kind": "xref",
+                "target": "running-tests/tags.html"
+              },
+              {
+                "kind": "text",
+                "value": ", "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "tag expressions"
+                  }
+                ],
+                "kind": "xref",
+                "target": "running-tests/tags.html#expressions"
+              },
+              {
+                "kind": "text",
+                "value": ", or engines is also supported:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "test {\n\tuseJUnitPlatform {\n\t\tincludeTags(\"fast\", \"smoke & feature-a\")\n\t\t// excludeTags(\"slow\", \"ci\")\n\t\tincludeEngines(\"junit-jupiter\")\n\t\t// excludeEngines(\"junit-vintage\")\n\t}\n}"
+              }
+            ],
+            "language": "groovy",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Please refer to the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "official Gradle documentation"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.gradle.org/current/userguide/java_testing.html"
+              },
+              {
+                "kind": "text",
+                "value": " for a comprehensive list of options."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "admonition",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "See "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Spring Boot"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "#spring-boot"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for details on how to override the version of JUnit used in your Spring Boot application."
+                  }
+                ],
+                "roles": [],
+                "title": null,
+                "type": "tip"
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Unless you’re using Spring Boot which defines its own way of managing dependencies, it is recommended to use the JUnit Platform "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Bill of Materials (BOM)"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "appendix.html#dependency-metadata-junit-bom"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to align the versions of all JUnit artifacts."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "dependencies {\n\ttestImplementation(platform(\"org.junit:junit-bom:{version}\"))\n\ttestImplementation(\"org.junit.jupiter:junit-jupiter\")\n\ttestRuntimeOnly(\"org.junit.platform:junit-platform-launcher\")\n}"
+                  }
+                ],
+                "language": "groovy",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Explicit platform dependency on the BOM"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Using the BOM allows you to omit the version when declaring dependencies on all artifacts with the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "org.junit.platform"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "org.junit.jupiter"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "org.junit.vintage"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " group IDs."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Since all JUnit artifacts declare a "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "platform"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://docs.gradle.org/current/userguide/platforms.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " dependency on the BOM, you usually don’t need to declare an explicit dependency on it yourself. Instead, it’s sufficient to declare "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "one"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " regular dependency that includes a version number. Gradle will then pull in the BOM automatically so you can omit the version for all other JUnit artifacts."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "dependencies {\n\ttestImplementation(\"org.junit.jupiter:junit-jupiter:{version}\") "
+                  },
+                  {
+                    "guard": "// ",
+                    "icons": null,
+                    "id": "CO1-1",
+                    "kind": "callout",
+                    "number": "1",
+                    "src": "",
+                    "xml": false
+                  },
+                  {
+                    "kind": "text",
+                    "value": "\n\ttestRuntimeOnly(\"org.junit.platform:junit-platform-launcher\") "
+                  },
+                  {
+                    "guard": "// ",
+                    "icons": null,
+                    "id": "CO1-2",
+                    "kind": "callout",
+                    "number": "2",
+                    "src": "",
+                    "xml": false
+                  },
+                  {
+                    "kind": "text",
+                    "value": "\n}"
+                  }
+                ],
+                "language": "groovy",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Implicit platform dependency on the BOM"
+                  }
+                ]
+              },
+              {
+                "context": "colist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "coids": [
+                      "CO1-1"
+                    ],
+                    "icons": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Dependency declaration with explicit version. Pulls in the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "junit-bom"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " automatically."
+                      }
+                    ],
+                    "src": ""
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "coids": [
+                      "CO1-2"
+                    ],
+                    "icons": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Dependency declaration without version. The version is supplied by the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "junit-bom"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ],
+                    "src": ""
+                  }
+                ],
+                "roles": [],
+                "style": "arabic",
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Even though pre-8.0 versions of Gradle don’t require declaring an explicit dependency on "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "junit-platform-launcher"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", it is recommended to do so to ensure the versions of JUnit artifacts on the test runtime classpath are aligned."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Moreover, doing so is recommended and in some cases even required when importing the project into an IDE like "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Eclipse"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "running-tests/ide-support.html#eclipse"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " or "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "IntelliJ IDEA"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "running-tests/ide-support.html#intellij-idea"
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "admonition",
+                "id": null,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Declaring a dependency on junit-platform-launcher"
+                  }
+                ],
+                "type": "warning"
+              }
+            ],
+            "context": "section",
+            "id": "gradle-bom",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Aligning dependency versions"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "In order to run any tests at all, a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "TestEngine"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implementation must be on the classpath."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To configure support for JUnit Jupiter based tests, configure a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "testImplementation"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " dependency on the dependency-aggregating JUnit Jupiter artifact similar to the following."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "dependencies {\n\ttestImplementation(\"org.junit.jupiter:junit-jupiter:{version}\")\n\ttestRuntimeOnly(\"org.junit.platform:junit-platform-launcher\")\n}"
+                  }
+                ],
+                "language": "groovy",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Alternatively, you can use Gradle’s "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "JVM Test Suite"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://docs.gradle.org/current/userguide/jvm_test_suite_plugin.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " support."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "testing {\n\tsuites {\n\t\tnamed<JvmTestSuite>(\"test\") {\n\t\t\tuseJUnitJupiter(\"{version}\")\n\t\t}\n\t}\n}"
+                  }
+                ],
+                "language": "kotlin",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Kotlin DSL"
+                  }
+                ]
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "testing {\n\tsuites {\n\t\ttest {\n\t\t\tuseJUnitJupiter(\"{version}\")\n\t\t}\n\t}\n}"
+                  }
+                ],
+                "language": "groovy",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Groovy DSL"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The JUnit Platform can run JUnit 4 based tests as long as you configure a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "testImplementation"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " dependency on JUnit 4 and a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "testRuntimeOnly"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " dependency on the JUnit Vintage "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "TestEngine"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implementation similar to the following."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "dependencies {\n\ttestImplementation(\"junit:junit:{junit4-version}\")\n\ttestRuntimeOnly(\"org.junit.vintage:junit-vintage-engine:{version}\")\n\ttestRuntimeOnly(\"org.junit.platform:junit-platform-launcher\")\n}"
+                  }
+                ],
+                "language": "groovy",
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "gradle-engines-configure",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Configuring Test Engines"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The standard Gradle "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "test"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " task currently does not provide a dedicated DSL to set JUnit Platform "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "configuration parameters"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "running-tests/configuration-parameters.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to influence test discovery and execution. However, you can provide configuration parameters within the build script via system properties (as shown below) or via the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "junit-platform.properties"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " file."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "test {\n\t// ...\n\tsystemProperty(\"junit.jupiter.conditions.deactivate\", \"*\")\n\tsystemProperty(\"junit.jupiter.extensions.autodetection.enabled\", true)\n\tsystemProperty(\"junit.jupiter.testinstance.lifecycle.default\", \"per_class\")\n\t// ...\n}"
+                  }
+                ],
+                "language": "groovy",
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "gradle-config-params",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Configuration Parameters"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "JUnit uses the Java Logging APIs in the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "java.util.logging"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " package (a.k.a. "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "JUL"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ") to emit warnings and debug information. Please refer to the official documentation of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "LogManager"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://docs.oracle.com/en/java/javase/17/docs/api/java.logging/java/util/logging/LogManager.html"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for configuration options."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Alternatively, it’s possible to redirect log messages to other logging frameworks such as "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Log4j"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://logging.apache.org/log4j/2.x/"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " or "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Logback"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://logback.qos.ch/"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". To use a logging framework that provides a custom implementation of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "LogManager"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://docs.oracle.com/en/java/javase/17/docs/api/java.logging/java/util/logging/LogManager.html"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", set the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "java.util.logging.manager"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " system property to the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "fully qualified class name"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "LogManager"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://docs.oracle.com/en/java/javase/17/docs/api/java.logging/java/util/logging/LogManager.html"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implementation to use. The example below demonstrates how to configure Log4j 2.x (see "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Log4j JDK Logging Adapter"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://logging.apache.org/log4j/2.x/log4j-jul/index.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for details)."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "test {\n\tsystemProperty(\"java.util.logging.manager\", \"org.apache.logging.log4j.jul.LogManager\")\n\t// Avoid overhead (see https://logging.apache.org/log4j/2.x/manual/jmx.html#enabling-jmx)\n\tsystemProperty(\"log4j2.disableJmx\", \"true\")\n}"
+                  }
+                ],
+                "language": "groovy",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Other logging frameworks provide different means to redirect messages logged using "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "java.util.logging"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". For example, for "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Logback"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://logback.qos.ch/"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " you can use the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "JUL to SLF4J Bridge"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://www.slf4j.org/legacy.html#jul-to-slf4j"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " by adding it as a dependency to the test runtime classpath."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "gradle-logging",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Configuring Logging (optional)"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "gradle",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Gradle"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Maven Surefire and Maven Failsafe provide "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "native support"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://maven.apache.org/surefire/maven-surefire-plugin/examples/junit-platform.html"
+              },
+              {
+                "kind": "text",
+                "value": " for executing tests on the JUnit Platform. The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "pom.xml"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " file in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "junit-jupiter-starter-maven"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://github.com/junit-team/junit-examples/tree/{release-branch}/junit-jupiter-starter-maven"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " project demonstrates how to use the Maven Surefire plugin and can serve as a starting point for configuring your Maven build."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "As of JUnit 6.0, the minimum required version of Maven Surefire/Failsafe is 3.0.0."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Minimum required version of Maven Surefire/Failsafe"
+              }
+            ],
+            "type": "warning"
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Unless you’re using Spring Boot which defines its own way of managing dependencies, it is recommended to use the JUnit Platform "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Bill of Materials (BOM)"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "appendix.html#dependency-metadata-junit-bom"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to align the versions of all JUnit artifacts."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<dependencyManagement>\n\t<dependencies>\n\t\t<dependency>\n\t\t\t<groupId>org.junit</groupId>\n\t\t\t<artifactId>junit-bom</artifactId>\n\t\t\t<version>{version}</version>\n\t\t\t<type>pom</type>\n\t\t\t<scope>import</scope>\n\t\t</dependency>\n\t</dependencies>\n</dependencyManagement>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Using the BOM allows you to omit the version when declaring dependencies on all artifacts with the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "org.junit.platform"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "org.junit.jupiter"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "org.junit.vintage"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " group IDs."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "admonition",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "See "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Spring Boot"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "#spring-boot"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for details on how to override the version of JUnit used in your Spring Boot application."
+                  }
+                ],
+                "roles": [],
+                "title": null,
+                "type": "tip"
+              }
+            ],
+            "context": "section",
+            "id": "maven-bom",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Aligning dependency versions"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "In order to have Maven Surefire or Maven Failsafe run any tests at all, at least one "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "TestEngine"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implementation must be added to the test classpath."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To configure support for JUnit Jupiter based tests, configure "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "test"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " scoped dependencies on the JUnit Jupiter API and the JUnit Jupiter "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "TestEngine"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implementation similar to the following."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<!-- ... -->\n<dependencies>\n\t<!-- ... -->\n\t<dependency>\n\t\t<groupId>org.junit.jupiter</groupId>\n\t\t<artifactId>junit-jupiter</artifactId>\n\t\t<version>{version}</version> <!-- can be omitted when using the BOM -->\n\t\t<scope>test</scope>\n\t</dependency>\n\t<!-- ... -->\n</dependencies>\n<build>\n\t<plugins>\n\t\t<plugin>\n\t\t\t<artifactId>maven-surefire-plugin</artifactId>\n\t\t\t<version>{surefire-version}</version>\n\t\t</plugin>\n\t\t<plugin>\n\t\t\t<artifactId>maven-failsafe-plugin</artifactId>\n\t\t\t<version>{surefire-version}</version>\n\t\t</plugin>\n\t</plugins>\n</build>\n<!-- ... -->"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Maven Surefire and Maven Failsafe can run JUnit 4 based tests alongside Jupiter tests as long as you configure "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "test"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " scoped dependencies on JUnit 4 and the JUnit Vintage "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "TestEngine"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implementation similar to the following."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<!-- ... -->\n<dependencies>\n\t<!-- ... -->\n\t<dependency>\n\t\t<groupId>junit</groupId>\n\t\t<artifactId>junit</artifactId>\n\t\t<version>{junit4-version}</version>\n\t\t<scope>test</scope>\n\t</dependency>\n\t<dependency>\n\t\t<groupId>org.junit.vintage</groupId>\n\t\t<artifactId>junit-vintage-engine</artifactId>\n\t\t<version>{version}</version> <!-- can be omitted when using the BOM -->\n\t\t<scope>test</scope>\n\t</dependency>\n\t<!-- ... -->\n</dependencies>\n<!-- ... -->\n<build>\n\t<plugins>\n\t\t<plugin>\n\t\t\t<artifactId>maven-surefire-plugin</artifactId>\n\t\t\t<version>{surefire-version}</version>\n\t\t</plugin>\n\t\t<plugin>\n\t\t\t<artifactId>maven-failsafe-plugin</artifactId>\n\t\t\t<version>{surefire-version}</version>\n\t\t</plugin>\n\t</plugins>\n</build>\n<!-- ... -->"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "maven-engines-configure",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Configuring Test Engines"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The Maven Surefire Plugin will scan for test classes whose fully qualified names match the following patterns."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "ulist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "**/Test*.java"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "**/*Test.java"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "**/*Tests.java"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "**/*TestCase.java"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": null,
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Moreover, it will exclude all nested classes (including static member classes) by default."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Note, however, that you can override this default behavior by configuring explicit "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "include"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "exclude"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " rules in your "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "pom.xml"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " file. For example, to keep Maven Surefire from excluding static member classes, you can override its exclude rules as follows."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<!-- ... -->\n<build>\n\t<plugins>\n\t\t<plugin>\n\t\t\t<artifactId>maven-surefire-plugin</artifactId>\n\t\t\t<version>{surefire-version}</version>\n\t\t\t<configuration>\n\t\t\t\t<excludes>\n\t\t\t\t\t<exclude/>\n\t\t\t\t</excludes>\n\t\t\t</configuration>\n\t\t</plugin>\n\t</plugins>\n</build>\n<!-- ... -->"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Overriding exclude rules of Maven Surefire"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Please see the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Inclusions and Exclusions of Tests"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://maven.apache.org/surefire/maven-surefire-plugin/examples/inclusion-exclusion.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " documentation for Maven Surefire for details."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "maven-filter-test-class-names",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Filtering by Test Class Names"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You can filter tests by "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "tags"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "running-tests/tags.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " or "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "tag expressions"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "running-tests/tags.html#expressions"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " using the following configuration properties."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "ulist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "to include "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "tags"
+                          }
+                        ],
+                        "kind": "emphasis",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " or "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "tag expressions"
+                          }
+                        ],
+                        "kind": "emphasis",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", use "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "groups"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "to exclude "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "tags"
+                          }
+                        ],
+                        "kind": "emphasis",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " or "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "tag expressions"
+                          }
+                        ],
+                        "kind": "emphasis",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", use "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "excludedGroups"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": null,
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<!-- ... -->\n<build>\n\t<plugins>\n\t\t<plugin>\n\t\t\t<artifactId>maven-surefire-plugin</artifactId>\n\t\t\t<version>{surefire-version}</version>\n\t\t\t<configuration>\n\t\t\t\t<groups>acceptance | !feature-a</groups>\n\t\t\t\t<excludedGroups>integration, regression</excludedGroups>\n\t\t\t</configuration>\n\t\t</plugin>\n\t</plugins>\n</build>\n<!-- ... -->"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "maven-filter-tags",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Filtering by Tags"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You can set JUnit Platform "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "configuration parameters"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "running-tests/configuration-parameters.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to influence test discovery and execution by declaring the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "configurationParameters"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " property and providing key-value pairs using the Java "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Properties"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " file syntax (as shown below) or via the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "junit-platform.properties"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " file."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<!-- ... -->\n<build>\n\t<plugins>\n\t\t<plugin>\n\t\t\t<artifactId>maven-surefire-plugin</artifactId>\n\t\t\t<version>{surefire-version}</version>\n\t\t\t<configuration>\n\t\t\t\t<properties>\n\t\t\t\t\t<configurationParameters>\n\t\t\t\t\t\tjunit.jupiter.conditions.deactivate = *\n\t\t\t\t\t\tjunit.jupiter.extensions.autodetection.enabled = true\n\t\t\t\t\t\tjunit.jupiter.testinstance.lifecycle.default = per_class\n\t\t\t\t\t</configurationParameters>\n\t\t\t\t</properties>\n\t\t\t</configuration>\n\t\t</plugin>\n\t</plugins>\n</build>\n<!-- ... -->"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "maven-config-params",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Configuration Parameters"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "maven",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Maven"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Starting with version "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "1.10.3"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Ant"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://ant.apache.org/"
+              },
+              {
+                "kind": "text",
+                "value": " has a "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "junitlauncher"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "link",
+                "target": "https://ant.apache.org/manual/Tasks/junitlauncher.html"
+              },
+              {
+                "kind": "text",
+                "value": " task that provides native support for launching tests on the JUnit Platform. The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "junitlauncher"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " task is solely responsible for launching the JUnit Platform and passing it the selected collection of tests. The JUnit Platform then delegates to registered test engines to discover and execute the tests."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "junitlauncher"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " task attempts to align as closely as possible with native Ant constructs such as "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "resource collections"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://ant.apache.org/manual/Types/resources.html#collection"
+              },
+              {
+                "kind": "text",
+                "value": " for allowing users to select the tests that they want executed by test engines. This gives the task a consistent and natural feel when compared to many other core Ant tasks."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Starting with version "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "1.10.6"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " of Ant, the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "junitlauncher"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " task supports "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "forking the tests in a separate JVM"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://ant.apache.org/manual/Tasks/junitlauncher.html#fork"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "build.xml"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " file in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "junit-jupiter-starter-ant"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://github.com/junit-team/junit-examples/tree/{release-branch}/junit-jupiter-starter-ant"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " project demonstrates how to use the task and can serve as a starting point."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The following example demonstrates how to configure the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "junitlauncher"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " task to select a single test class (i.e., "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "com.example.project.CalculatorTests"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ")."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<path id=\"test.classpath\">\n\t<!-- The location where you have your compiled classes -->\n\t<pathelement location=\"${build.classes.dir}\" />\n</path>\n\n<!-- ... -->\n\n<junitlauncher>\n\t<classpath refid=\"test.classpath\" />\n\t<test name=\"com.example.project.CalculatorTests\" />\n</junitlauncher>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "test"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " element allows you to specify a single test class that you want to be selected and executed. The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "classpath"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " element allows you to specify the classpath to be used to launch the JUnit Platform. This classpath will also be used to locate test classes that are part of the execution."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The following example demonstrates how to configure the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "junitlauncher"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " task to select test classes from multiple locations."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<path id=\"test.classpath\">\n\t<!-- The location where you have your compiled classes -->\n\t<pathelement location=\"${build.classes.dir}\" />\n</path>\n<!-- ... -->\n<junitlauncher>\n\t<classpath refid=\"test.classpath\" />\n\t<testclasses outputdir=\"${output.dir}\">\n\t\t<fileset dir=\"${build.classes.dir}\">\n\t\t\t<include name=\"org/example/**/demo/**/\" />\n\t\t</fileset>\n\t\t<fileset dir=\"${some.other.dir}\">\n\t\t\t<include name=\"org/myapp/**/\" />\n\t\t</fileset>\n\t</testclasses>\n</junitlauncher>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "In the above example, the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "testclasses"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " element allows you to select multiple test classes that reside in different locations."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "For further details on usage and configuration options please refer to the official Ant documentation for the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "junitlauncher"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " task"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://ant.apache.org/manual/Tasks/junitlauncher.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "_basic_usage",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Basic Usage"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "ant",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Ant"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For Bazel, add dependencies on "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "rules_jvm_external"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://github.com/bazel-contrib/rules_jvm_external"
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "contrib_rules_jvm"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://github.com/bazel-contrib/rules_jvm"
+              },
+              {
+                "kind": "text",
+                "value": " to your module’s manifest and install JUnit’s artifacts."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "bazel_dep(name = \"rules_jvm_external\", version = \"6.9\")\nbazel_dep(name = \"contrib_rules_jvm\", version = \"0.31.1\")\n\nmaven = use_extension(\"@rules_jvm_external//:extensions.bzl\", \"maven\")\n\nmaven.install(\n    artifacts = [\n        \"org.junit.jupiter:junit-jupiter-api:{version}\",\n        \"org.junit.jupiter:junit-jupiter-params:{version}\",\n        \"org.junit.jupiter:junit-jupiter-engine:{version}\",\n        \"org.junit.platform:junit-platform-launcher:{version}\",\n        \"org.junit.platform:junit-platform-reporting:{version}\",\n    ],\n    repositories = [\n        \"https://repo1.maven.org/maven2\",\n    ],\n)\n\nuse_repo(maven, \"maven\")"
+              }
+            ],
+            "language": "skylark",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "MODULE.bazel"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Next, in your "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BUILD"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " file, define a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "java_test_suite"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " for your tests."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "load(\"@rules_jvm_external//:defs.bzl\", \"artifact\")\nload(\"@contrib_rules_jvm//java:defs.bzl\", \"java_test_suite\")\n\njava_library(\n    name = \"your-library-name\",\n    srcs = glob([\"src/main/java/**/*.java\"]),\n)\n\njava_test_suite(\n    name = \"your-library-name-tests\",\n    size = \"small\",\n    srcs = glob([\"src/test/java/**/*.java\"]),\n    runner = \"junit5\",\n    test_suffixes = [\"Test.java\", \"Tests.java\"],\n    runtime_deps = runtime_deps = [\n        artifact(\"org.junit.jupiter:junit-jupiter-engine\"),\n        artifact(\"org.junit.platform:junit-platform-launcher\"),\n        artifact(\"org.junit.platform:junit-platform-reporting\"),\n    ],\n    deps = [\n        \":your-library-name\",\n        artifact(\"org.junit.jupiter:junit-jupiter-api\"),\n        artifact(\"org.junit.jupiter:junit-jupiter-params\"),\n    ],\n)"
+              }
+            ],
+            "language": "skylark",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "BUILD"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To execute your tests, run "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "bazel test //…​"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". For a full example, please check out the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "junit-jupiter-starter-bazel"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://github.com/junit-team/junit-examples/tree/{release-branch}/junit-jupiter-starter-bazel"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " example project."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "bazel",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Bazel"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For sbt, you first need to declare a dependency on the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "sbt-jupiter-interface"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://github.com/sbt/sbt-jupiter-interface"
+              },
+              {
+                "kind": "text",
+                "value": " plugin. Despite its name, it supports running any class-based JUnit Platform test engine."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "addSbtPlugin(\"com.github.sbt.junit\" % \"sbt-jupiter-interface\" % \"0.17.0\")"
+              }
+            ],
+            "language": "scala",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "project/plugins.sbt"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In your build definition, add dependencies on the corresponding "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "jupiter-interface"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " along JUnit’s artifacts. Moreover, you should configure the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "jupiterTestFramework"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and its "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "options"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://github.com/sbt/sbt-jupiter-interface#framework-options"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "lazy val root = project\n  .in(file(\".\"))\n  .settings(\n    name := \"junit-jupiter-starter-sbt\",\n    libraryDependencies ++= Seq(\n      \"com.github.sbt.junit\" % \"jupiter-interface\" % JupiterKeys.jupiterVersion.value % Test,\n      \"org.junit.jupiter\" % \"junit-jupiter\" % \"{version}\" % Test,\n      \"org.junit.platform\" % \"junit-platform-launcher\" % \"{version}\" % Test,\n    ),\n    testOptions += Tests.Argument(jupiterTestFramework, \"--display-mode=tree\")\n  )"
+              }
+            ],
+            "language": "scala",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "build.sbt"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Finally, execute your tests by running "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "sbt test"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". For a full example, please check out the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "junit-jupiter-starter-sbt"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://github.com/junit-team/junit-examples/tree/{release-branch}/junit-jupiter-starter-sbt"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " example project."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "sbt",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "sbt"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Spring Boot"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://spring.io/projects/spring-boot"
+              },
+              {
+                "kind": "text",
+                "value": " provides automatic support for managing the version of JUnit used in your project. In addition, the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "spring-boot-starter-test"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " artifact automatically includes testing libraries such as JUnit Jupiter, AssertJ, Mockito, etc."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If your build relies on dependency management support from Spring Boot, you should not import JUnit’s "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Bill of Materials (BOM)"
+                  }
+                ],
+                "kind": "xref",
+                "target": "appendix.html#dependency-metadata-junit-bom"
+              },
+              {
+                "kind": "text",
+                "value": " in your build script since that would result in duplicate (and potentially conflicting) management of JUnit dependencies."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you need to override the version of a dependency used in your Spring Boot application, you have to override the exact name of the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "version property"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#appendix.dependency-versions.properties"
+              },
+              {
+                "kind": "text",
+                "value": " defined in the BOM used by the Spring Boot plugin. For example, the name of the JUnit Jupiter version property in Spring Boot is "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "junit-jupiter.version"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". The mechanism for changing a dependency version is documented for both "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Gradle"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.spring.io/spring-boot/docs/current/gradle-plugin/reference/htmlsingle/#managing-dependencies.dependency-management-plugin.customizing"
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Maven"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.spring.io/spring-boot/docs/current/maven-plugin/reference/htmlsingle/#using.parent-pom"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "With Gradle you can override the JUnit Jupiter version by including the following in your "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "build.gradle"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " file."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ext['junit-jupiter.version'] = '{version}'"
+              }
+            ],
+            "language": "groovy",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "With Maven you can override the JUnit Jupiter version by including the following in your "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "pom.xml"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " file."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<properties>\n\t<junit-jupiter.version>{version}</junit-jupiter.version>\n</properties>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "spring-boot",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Spring Boot"
+          }
+        ]
+      }
+    ],
+    "title": [
+      {
+        "kind": "text",
+        "value": "Build Support"
+      }
+    ]
+  }
+}

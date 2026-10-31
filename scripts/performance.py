@@ -53,12 +53,21 @@ def synthetic(family, size):
     raise ValueError(f'unknown workload family: {family}')
 
 
+# The real workloads are the pages of these pinned origins: the recorded
+# studies measure them, so later additions to the semantic corpus do not
+# silently change what a performance report covers.
+WORKLOAD_ORIGINS = ('asciidoctor-docs-2.0.23', 'spring-framework-6.2.0')
+
+
 def workloads(manifest=MANIFEST, sizes=SIZES):
     metadata, loaded = acceptance.load_corpus(manifest)  # Validates bytes, provenance and licenses.
     original = {entry['id']: entry for entry in metadata['cases']}
+    origins = {name: metadata['origins'][name] for name in WORKLOAD_ORIGINS}
     result = []
     for case in loaded:
         entry = original[case['id']]
+        if metadata['files'][entry['source']]['origin'] not in origins:
+            continue
         paths = [entry['source'], *entry.get('resources', {}).values()]
         result.append({
             'id': case['id'].removeprefix('semantic-'), 'kind': 'document',
@@ -67,7 +76,7 @@ def workloads(manifest=MANIFEST, sizes=SIZES):
             'safe_mode': 'safe' if 'resources' in case else 'secure',
             'provenance': {'manifest': str(manifest.relative_to(ROOT)), 'case': case['id'],
                            'files': {path: metadata['files'][path] for path in paths},
-                           'origins': metadata['origins']},
+                           'origins': origins},
         })
     for family in FAMILIES:
         for size in sizes:

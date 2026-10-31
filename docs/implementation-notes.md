@@ -37,7 +37,13 @@ list item in an admonition keeps its `p` gap; `subheader` is on Ruby's
 wrapper, so only colour/weight reach the element), `golden/admonition_icons/font-files.adoc`
 (a vendored Font Awesome 4.7.0 under `admonition_icons/fontawesome/`, MIT +
 SIL OFL 1.1, linked with `iconfont-remote!`) and `golden/lists/checklist.adoc`
-(Ruby's checklist `-1em`/icon rules and form-control normalize): 664 of 666 observations match; the remaining case
+(Ruby's checklist `-1em`/icon rules and form-control normalize), 14 pages
+of other projects (AsciiDoc Language spec 0.3.0, Quarkus 3.40.1, JUnit 6.1.3,
+Groovy 5.1.3, also in the acceptance/structure/semantics corpora; performance
+workloads stay on `WORKLOAD_ORIGINS`) and `golden/hdlists/horizontal.adoc`:
+`[horizontal]` renders `<div>` groups in `<dl class="hdlist">`, laid out as
+Ruby's table (`display: table`; one term is a cell, several share an anonymous
+cell like Ruby's `<br>`; widths are `--adoctra-hdlist-*width` variables): 694 of 696 observations match; the remaining case
 (a raw unclosed `<i>`) is documented. Ruby zeroes last-child margins on
 wrappers, so mirror that per element (lists/paragraphs keep theirs).
 Re-record only after reviewing an IMPROVED diff; never loosen tolerances. Visual parity, CLI behavior,
@@ -845,7 +851,8 @@ marker's own style, as Ruby's symbol style), checklist markers (interactive,
 font icons; `BlockKind::List.icons` captures the document `icons` mode where a
 checklist converts, like `convert_ulist`, so a body entry before it applies;
 JSON writes it on checklists only), `<dl>` (dt.hdlist1 without style), horizontal `<dl class="hdlist">`
-on a CSS grid (labelwidth/itemwidth) instead of Ruby's layout table, qanda
+of `<div>` entry groups laid out as Ruby's layout table (`display: table`,
+labelwidth/itemwidth as `--adoctra-hdlist-*width`), qanda
 `<ol class="qanda">`; the DOM profile maps Ruby's dlist/qlist wrappers and hdlist
 table. JSON/WASM `dlist`, item `checkbox`; parser-recorded `list-marker` tokens
 (markers and delimiters).

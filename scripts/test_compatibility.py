@@ -182,8 +182,8 @@ class ProjectionTests(unittest.TestCase):
     def test_horizontal_description_list_is_ruby_layout_table(self):
         ruby = ('<div class="hdlist r"><table><colgroup><col style="width: 20%;"></colgroup><tr>'
                 '<td class="hdlist1 strong">A<br>B</td><td class="hdlist2"><p>x</p></td></tr></table></div>')
-        ours = ('<dl class="hdlist r" style="grid-template-columns: 20% 1fr;"><dt class="strong">A</dt>'
-                '<dt class="strong">B</dt><dd><p>x</p></dd></dl>')
+        ours = ('<dl class="hdlist r" style="--adoctra-hdlist-labelwidth: 20%;"><div><dt class="strong">A</dt>'
+                '<dt class="strong">B</dt><dd><p>x</p></dd></div></dl>')
         self.assertEqual(projection(ruby), projection(ours))
         self.assertNotEqual(projection(ours), projection(ours.replace('<dt class="strong">B</dt>', '')))
         self.assertNotEqual(projection(ours), projection(ours.replace('class="hdlist r"', 'class="hdlist"')))

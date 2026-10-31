@@ -1726,8 +1726,8 @@ fn drop_anchors(html: &str) -> String {
 
 /// A description list. The default and styled forms keep Ruby's semantic
 /// `<dl>` (without its wrapper `<div>`, so id, style and roles hang on the
-/// list); `horizontal` is a `<dl class="hdlist">` laid out by the stylesheet
-/// instead of Ruby's layout table, and `qanda` Ruby's ordered list of questions.
+/// list); `horizontal` is a `<dl class="hdlist">` of `<div>` entry groups
+/// that the stylesheet lays out like Ruby's layout table, and `qanda` Ruby's ordered list of questions.
 fn render_dlist(
     block: &Block,
     items: &[adoctra_core::ast::DescriptionListItem],
@@ -1773,18 +1773,24 @@ fn render_dlist(
                     .get(key)
                     .map(|w| format!("{}%", w.trim_end_matches('%')))
             };
-            let style_attr = match (width("labelwidth"), width("itemwidth")) {
-                (None, None) => String::new(),
-                (label, item) => format!(
-                    " style=\"grid-template-columns: {} {};\"",
-                    attr_value(&label.unwrap_or_else(|| "auto".into())),
-                    attr_value(&item.unwrap_or_else(|| "1fr".into()))
-                ),
+            // Ruby's `<colgroup>` widths, as stylesheet variables.
+            let widths: Vec<String> = [("labelwidth", "label"), ("itemwidth", "item")]
+                .into_iter()
+                .filter_map(|(key, name)| {
+                    width(key).map(|w| format!("--adoctra-hdlist-{name}width: {w};"))
+                })
+                .collect();
+            let style_attr = if widths.is_empty() {
+                String::new()
+            } else {
+                format!(" style=\"{}\"", attr_value(&widths.join(" ")))
             };
             let strong = block.attrs.options.iter().any(|o| o == "strong")
                 || named.contains_key("strong-option");
             out.push_str(&format!("<dl{id}{class}{style_attr}>\n"));
+            // Each entry is a `<div>` group: Ruby's table row, laid out as one.
             for item in items {
+                out.push_str("<div>\n");
                 for term in &item.terms {
                     out.push_str(if strong {
                         "<dt class=\"strong\">"
@@ -1798,7 +1804,7 @@ fn render_dlist(
                 if let Some(dd) = &item.description {
                     description(dd, out);
                 }
-                out.push_str("</dd>\n");
+                out.push_str("</dd>\n</div>\n");
             }
             out.push_str("</dl>\n");
         }
@@ -3499,7 +3505,10 @@ mod tests {
         let html = render("[#d.r]\nCPU:: The *brain*\nA::\nB:: shared\n+\n----\nx\n----");
         assert!(html.contains("<dl id=\"d\" class=\"r\">\n<dt class=\"hdlist1\">CPU</dt>\n<dd>\n<p>The <strong>brain</strong></p>\n</dd>\n<dt class=\"hdlist1\">A</dt>\n<dt class=\"hdlist1\">B</dt>\n<dd>\n<p>shared</p>\n<pre class=\"listing\">x</pre>\n</dd>\n</dl>"), "{html}");
         let html = render("[horizontal,labelwidth=25]\nA:: one");
-        assert!(html.contains("<dl class=\"hdlist\" style=\"grid-template-columns: 25% 1fr;\">\n<dt>A</dt>\n<dd>\n<p>one</p>\n</dd>\n</dl>"), "{html}");
+        // Each entry is a `<div>` row; Ruby's `<col>` widths are variables.
+        assert!(html.contains("<dl class=\"hdlist\" style=\"--adoctra-hdlist-labelwidth: 25%;\">\n<div>\n<dt>A</dt>\n<dd>\n<p>one</p>\n</dd>\n</div>\n</dl>"), "{html}");
+        let html = render("[horizontal%strong,itemwidth=60]\nA::\nB:: two\nC::");
+        assert!(html.contains("<dl class=\"hdlist\" style=\"--adoctra-hdlist-itemwidth: 60%;\">\n<div>\n<dt class=\"strong\">A</dt>\n<dt class=\"strong\">B</dt>\n<dd>\n<p>two</p>\n</dd>\n</div>\n<div>\n<dt class=\"strong\">C</dt>\n<dd>\n</dd>\n</div>\n</dl>"), "{html}");
         let html = render("[qanda]\nWhy?:: Because");
         assert!(
             html.contains(
@@ -4355,6 +4364,10 @@ mod tests {
             ":is(ul, ol):is(.none, .no-bullet, .unstyled), ol.unnumbered { list-style-type: none; }",
             ":is(ul, ol).unstyled { margin-inline-start: 0; }",
             "ul.inline > li { margin-inline-start: 1.25rem; }",
+            // Ruby's horizontal description list is a layout table.
+            "dl.hdlist { display: table; border-collapse: collapse; border-spacing: 0; overflow-wrap: normal; }",
+            "dl.hdlist > div { display: table-row; }",
+            ".sidebarblock :is(ul, ol):not([class^=\"sectlevel\"]) > li { font-size: 1em; }",
             ":is(dl.unstyled, .unstyled dl) dt { font-weight: 400; font-style: normal; }",
             ".thumb, .th { line-height: 0; display: inline-block; border: 4px solid #fff; box-shadow: 0 0 0 1px #ddd; }",
             // Image callout rows are Ruby's table cells, without list gaps.

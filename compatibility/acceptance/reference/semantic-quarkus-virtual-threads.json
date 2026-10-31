@@ -1,0 +1,3699 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This guide explains how to benefit from Java 21+ virtual threads in Quarkus application."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "A \"thread-like\" data structure managed by the Operating System."
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "OS thread"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Until Java 19, every instance of the "
+                        },
+                        {
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Thread"
+                            }
+                          ],
+                          "kind": "link",
+                          "target": "https://docs.oracle.com/en/java/javase/18/docs/api/java.base/java/lang/Thread.html"
+                        },
+                        {
+                          "kind": "text",
+                          "value": " class was a platform thread, a wrapper around an OS thread. Creating a platform thread creates an OS thread, and blocking a platform thread blocks an OS thread."
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Platform thread"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Lightweight, JVM-managed threads. They extend the "
+                        },
+                        {
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Thread"
+                            }
+                          ],
+                          "kind": "link",
+                          "target": "https://docs.oracle.com/en/java/javase/18/docs/api/java.base/java/lang/Thread.html"
+                        },
+                        {
+                          "kind": "text",
+                          "value": " class but are not tied to one specific OS thread. Thus, scheduling virtual threads is the responsibility of the JVM."
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Virtual thread"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "A platform thread used to execute a virtual thread is called a "
+                        },
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "carrier"
+                            }
+                          ],
+                          "kind": "strong",
+                          "roles": []
+                        },
+                        {
+                          "kind": "text",
+                          "value": " thread. It isn’t a class distinct from "
+                        },
+                        {
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Thread"
+                            }
+                          ],
+                          "kind": "link",
+                          "target": "https://docs.oracle.com/en/java/javase/18/docs/api/java.base/java/lang/Thread.html"
+                        },
+                        {
+                          "kind": "text",
+                          "value": " or "
+                        },
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "VirtualThread"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        },
+                        {
+                          "kind": "text",
+                          "value": " but rather a functional denomination."
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Carrier thread"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "terminology",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Terminology"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "We will give a brief overview of the topic here; please refer to the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "JEP 425"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://openjdk.org/jeps/425"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for more information."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Virtual threads are a feature available since Java 19 (Java 21 is the first LTS version including virtual threads), aiming at providing a cheap alternative to platform threads for I/O-bound workloads."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Until now, platform threads were the concurrency unit of the JVM. They are a wrapper over OS structures. Creating a Java platform thread creates a \"thread-like\" structure in your operating system."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Virtual threads, on the other hand, are managed by the JVM. To be executed, they need to be mounted on a platform thread (which acts as a carrier to that virtual thread). As such, they have been designed to offer the following characteristics:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Virtual threads occupy less space than platform threads in memory. Hence, it becomes possible to use more virtual threads than platform threads simultaneously without blowing up the memory. By default, platform threads are created with a stack of about 1 MB, whereas virtual threads stack is \"pay-as-you-go.\" You can find these numbers and other motivations for virtual threads in this "
+                        },
+                        {
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "presentation"
+                            }
+                          ],
+                          "kind": "link",
+                          "target": "https://youtu.be/lIq-x_iI-kc?t=543"
+                        },
+                        {
+                          "kind": "text",
+                          "value": " given by the lead developer of project Loom (the project that added the virtual thread support to the JVM)."
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Lightweight "
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Creating a platform thread in Java takes time. Currently, techniques such as pooling, where threads are created once and then reused, are strongly encouraged to minimize the time lost in starting them (as well as limiting the maximum number of threads to keep memory consumption low). Virtual threads are supposed to be disposable entities that we create when we need them, it is discouraged to pool them or reuse them for different tasks."
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Cheap to create"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "When performing blocking I/O, the underlying OS thread wrapped by the Java platform thread is put in a wait queue, and a context switch occurs to load a new thread context onto the CPU core. This operation takes time. Since the JVM manages virtual threads, no underlying OS thread is blocked when they perform a blocking operation. Their state is stored in the heap, and another virtual thread is executed on the same Java platform (carrier) thread."
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Cheap to block"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "differences-between-virtual-threads-and-platform-threads",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Differences between virtual threads and platform threads"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "As mentioned above, the JVM schedules the virtual threads. These virtual threads are mounted on carrier threads. The scheduling comes with a pinch of magic. When the virtual thread attempts to use blocking I/O, the JVM "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "transforms"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " this call into a non-blocking one, unmounts the virtual thread, and mounts another virtual thread on the carrier thread. When the I/O completes, the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "waiting"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " virtual thread becomes eligible again and will be re-mounted on a carrier thread to continue its execution. For the user, all this dance is invisible. Your synchronous code is executed asynchronously."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Note that the virtual thread may not be re-mounted on the same carrier thread."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "the-continuation-dance",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "The Continuation Dance"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "We now know we can create more virtual threads than platform threads. One could be tempted to use virtual threads to perform long computations (CPU-bound workload). It is useless and counterproductive. CPU-bound doesn’t consist of quickly swapping threads while they need to wait for the completion of an I/O, but in leaving them attached to a CPU core to compute something. In this scenario, it is worse than useless to have thousands of threads if we have tens of CPU cores, virtual threads won’t enhance the performance of CPU-bound workloads. Even worse, when running a CPU-bound workload on a virtual thread, the virtual thread monopolizes the carrier thread on which it is mounted. It will either reduce the chance for the other virtual thread to run or will start creating new carrier threads, leading to high memory usage."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "cpu-bound",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Virtual threads are useful for I/O-bound workloads only"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "what-are-virtual-threads",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "What are virtual threads?"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In Quarkus, the support of virtual thread is implemented using the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@RunOnVirtualThread"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://javadoc.io/doc/io.smallrye.common/smallrye-common-annotation/latest/io/smallrye/common/annotation/RunOnVirtualThread.html"
+              },
+              {
+                "kind": "text",
+                "value": " annotation. This section briefly overviews the rationale and how to use it. There are dedicated guides for extensions supporting that annotation, such as:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Virtual threads in REST applications"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "./rest-virtual-threads.html"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Virtual threads in reactive messaging applications"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "./messaging-virtual-threads.html"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Virtual threads in gRPC services"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "./grpc-virtual-threads.html"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Execute periodic tasks on virtual threads"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "./scheduler-reference.html#virtual_threads"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "As mentioned above, not everything can run safely on virtual threads. The risk of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "monopolization"
+                      }
+                    ],
+                    "kind": "strong",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " can lead to high-memory usage. Also, there are situations where the virtual thread cannot be unmounted from the carrier thread. This is called "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "pinning"
+                      }
+                    ],
+                    "kind": "strong",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". Finally, some libraries use "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ThreadLocal"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to store and reuse objects. Using virtual threads with these libraries will lead to massive allocation, as the intentionally pooled objects will be instantiated for every (disposable and generally short-lived) virtual thread."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "As of today, it is not possible to use virtual threads in a carefree manner. Following such a laissez-faire approach could quickly lead to memory and resource starvation issues. Thus, Quarkus uses an explicit model until the aforementioned issues disappear (as the Java ecosystem matures). It is also the reason why "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "reactive"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " extensions have the virtual thread support, and rarely the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "classic"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " ones. We need to know when to dispatch on a virtual thread."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "It is essential to understand that these issues are not Quarkus limitations or bugs but are due to the current state of the Java ecosystem which needs to evolve to become virtual thread friendly."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "admonition",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To learn more about the internal design and choices, check the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Considerations for integrating virtual threads in a Java framework: a Quarkus example in a resource-constrained environment"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://dl.acm.org/doi/10.1145/3583678.3596895"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " paper."
+                  }
+                ],
+                "roles": [],
+                "title": null,
+                "type": "note"
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The monopolization has been explained in the "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Virtual threads are useful for I/O-bound workloads only"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "#cpu-bound"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " section. When running long computations, we do not allow the JVM to unmount and switch to another virtual thread until the virtual thread terminates. Indeed, the current scheduler does not support preempting tasks."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "This monopolization can lead to the creation of new carrier threads to execute other virtual threads. Creating carrier threads results in creating platform threads. So, there is a memory cost associated with this creation."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Suppose you run in a constrained environment, such as containers. In that case, monopolization can quickly become a concern, as the high memory usage can lead to out-of-memory issues and container termination. The memory usage may be higher than with regular worker threads because of the inherent cost of the scheduling and virtual threads."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "monopolization",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Monopolization cases"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The promise of \"cheap blocking\" might not always hold: a virtual thread might "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "pin"
+                          }
+                        ],
+                        "kind": "emphasis",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " its carrier on certain occasions. The platform thread is blocked in this situation, precisely as it would have been in a typical blocking scenario."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "admonition",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Java 24+ Improvement:"
+                          }
+                        ],
+                        "kind": "strong",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " Starting with Java 24, thanks to "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "JEP 491: Synchronize Virtual Threads without Pinning"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://openjdk.org/jeps/491"
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "synchronized"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " blocks and methods "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "no longer cause pinning"
+                          }
+                        ],
+                        "kind": "strong",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ". This is a major improvement that eliminates one of the most common pinning scenarios. However, native code interactions can still cause pinning (see below)."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null,
+                    "type": "important"
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "According to "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "JEP 425"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://openjdk.org/jeps/425"
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", pinning can happen in the following situations:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "On Java 21-23:"
+                          }
+                        ],
+                        "kind": "strong",
+                        "roles": []
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "ulist",
+                    "id": null,
+                    "items": [
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "when a virtual thread performs a blocking operation inside a "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "synchronized"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " block or method"
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "when it executes a blocking operation inside a native method or a foreign function"
+                          }
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "style": null,
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "On Java 24+:"
+                          }
+                        ],
+                        "kind": "strong",
+                        "roles": []
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "ulist",
+                    "id": null,
+                    "items": [
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "when a virtual thread calls native code (via JNI or the Foreign Function & Memory API) and that native code calls back to Java code that performs a blocking operation"
+                          }
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "style": null,
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "It can be reasonably easy to avoid these situations in your code, but verifying every dependency you use is hard. Typically, while experimenting with virtual threads, we realized that versions older than 42.6.0 of the "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "postgresql-JDBC driver"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://javadoc.io/doc/org.postgresql/postgresql/latest/index.html"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " result in frequent pinning on Java 21-23. On Java 24+, most JDBC drivers no longer pin the carrier thread due to the synchronized improvements."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "For more information, see "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "When Quarkus meets Virtual Threads"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://quarkus.io/blog/virtual-thread-1/"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "admonition",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "This information about pinning cases applies to PostgreSQL JDBC driver 42.5.4 and earlier on Java 21-23. For PostgreSQL JDBC driver 42.6.0 and later, virtually all synchronized methods have been replaced by reentrant locks. For more information, see the "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Notable Changes"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://jdbc.postgresql.org/changelogs/2023-03-17-42.6.0-release/"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " for PostgreSQL JDBC driver 42.6.0."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null,
+                    "type": "important"
+                  }
+                ],
+                "context": "section",
+                "id": "pinning",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Pinning cases"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Some libraries are using "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "ThreadLocal"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " as an object pooling mechanism. Extremely popular libraries like "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Jackson"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://github.com/FasterXML/jackson-core/issues/919"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " and Netty assume that the application uses a limited number of threads, which are recycled (using a thread pool) to run multiple (unrelated but sequential) tasks."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "This pattern has multiple advantages, such as:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "ulist",
+                    "id": null,
+                    "items": [
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Allocation benefit: heavy objects are only allocated once per thread, but because the number of these threads was intended to be limited, it would not use too much memory."
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Thread safety: only one thread can access the object stored in the thread local - preventing concurrent accesses."
+                          }
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "style": null,
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "However, this pattern is counter-productive when using virtual threads. Virtual threads are not pooled and generally short-lived. So, instead of a few of them, we now have many of them. For each of them, the object stored in the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "ThreadLocal"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " is created (often large and expensive) and won’t be reused, as the virtual thread is not pooled (and won’t be used to run another task once the execution completes). This problem leads to high memory usage. Unfortunately, it requires sophisticated code changes in the libraries themselves."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "pooling",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "The pooling case"
+                  }
+                ]
+              }
+            ],
+            "context": "section",
+            "id": "why-not",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Why not run everything on virtual threads?"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "This section shows a brief example of using the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@RunOnVirtualThread"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://javadoc.io/doc/io.smallrye.common/smallrye-common-annotation/latest/io/smallrye/common/annotation/RunOnVirtualThread.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " annotation. It also explains the various development and execution models offered by Quarkus."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@RunOnVirtualThread"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " annotation instructs Quarkus to invoke the annotated method on a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "new"
+                      }
+                    ],
+                    "kind": "strong",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " virtual thread instead of the current one. Quarkus handles the creation of the virtual thread and the offloading."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Since virtual threads are disposable entities, the fundamental idea of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@RunOnVirtualThread"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is to offload the execution of an endpoint handler on a new virtual thread instead of running it on an event-loop or worker thread (in the case of Quarkus REST)."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To do so, it suffices to add the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@RunOnVirtualThread"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://javadoc.io/doc/io.smallrye.common/smallrye-common-annotation/latest/io/smallrye/common/annotation/RunOnVirtualThread.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " annotation to the endpoint. If the Java Virtual Machine used to "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "run"
+                      }
+                    ],
+                    "kind": "strong",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " the application provides virtual thread support (so Java 21 or later versions), then the endpoint execution is offloaded to a virtual thread. It will then be possible to perform blocking operations without blocking the platform thread upon which the virtual thread is mounted."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "In the case of Quarkus REST, this annotation can only be used on endpoints annotated with "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Blocking"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://javadoc.io/doc/io.smallrye.common/smallrye-common-annotation/latest/io/smallrye/common/annotation/Blocking.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " or considered blocking because of their signature. You can visit "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Execution model, blocking, non-blocking"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "rest.html#execution-model-blocking-non-blocking"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for more information."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Add the following dependency to your build file:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<dependency>\n    <groupId>io.quarkus</groupId>\n    <artifactId>quarkus-rest</artifactId>\n</dependency>"
+                      }
+                    ],
+                    "language": "xml",
+                    "roles": [
+                      "primary",
+                      "asciidoc-tabs-target-sync-cli",
+                      "asciidoc-tabs-target-sync-maven"
+                    ],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "pom.xml"
+                      }
+                    ]
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "implementation(\"io.quarkus:quarkus-rest\")"
+                      }
+                    ],
+                    "language": "gradle",
+                    "roles": [
+                      "secondary",
+                      "asciidoc-tabs-target-sync-gradle"
+                    ],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "build.gradle"
+                      }
+                    ]
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Then, you also need to make sure that you are using Java 21+, this can be enforced in your pom.xml file with the following:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<properties>\n    <maven.compiler.source>21</maven.compiler.source>\n    <maven.compiler.target>21</maven.compiler.target>\n</properties>"
+                      }
+                    ],
+                    "language": "xml",
+                    "roles": [
+                      "primary",
+                      "asciidoc-tabs-target-sync-cli",
+                      "asciidoc-tabs-target-sync-maven"
+                    ],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "pom.xml"
+                      }
+                    ]
+                  }
+                ],
+                "context": "section",
+                "id": "get-started-with-virtual-threads-with-quarkus-rest",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Get started with virtual threads with Quarkus REST"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The example below shows the differences between three endpoints, all of them querying a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "fortune"
+                          }
+                        ],
+                        "kind": "emphasis",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " in the database then returning it to the client."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "ulist",
+                    "id": null,
+                    "items": [
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "the first one uses the traditional blocking style, it is considered blocking due to its signature."
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "the second one uses Mutiny, it is considered non-blocking due to its signature."
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "the third one uses Mutiny but in a synchronous way, since it doesn’t return a \"reactive type\" it is considered blocking and the "
+                          },
+                          {
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "@RunOnVirtualThread"
+                              }
+                            ],
+                            "kind": "link",
+                            "target": "https://javadoc.io/doc/io.smallrye.common/smallrye-common-annotation/latest/io/smallrye/common/annotation/RunOnVirtualThread.html"
+                          },
+                          {
+                            "kind": "text",
+                            "value": " annotation can be used."
+                          }
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "style": null,
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "package org.acme.rest;\n\nimport org.acme.fortune.model.Fortune;\nimport org.acme.fortune.repository.FortuneRepository;\nimport io.smallrye.common.annotation.RunOnVirtualThread;\nimport io.smallrye.mutiny.Uni;\n\nimport jakarta.ws.rs.GET;\nimport jakarta.ws.rs.Path;\nimport java.util.List;\nimport java.util.Random;\n\n\n@Path(\"\")\npublic class FortuneResource {\n\n    @Inject FortuneRepository repository;\n\n    @GET\n    @Path(\"/blocking\")\n    public Fortune blocking() {\n        // Runs on a worker (platform) thread\n        var list = repository.findAllBlocking();\n        return pickOne(list);\n    }\n\n    @GET\n    @Path(\"/reactive\")\n    public Uni<Fortune> reactive() {\n        // Runs on the event loop\n        return repository.findAllAsync()\n                .map(this::pickOne);\n    }\n\n    @GET\n    @Path(\"/virtual\")\n    @RunOnVirtualThread\n    public Fortune virtualThread() {\n        // Runs on a virtual thread\n        var list = repository.findAllAsyncAndAwait();\n        return pickOne(list);\n    }\n\n}"
+                      }
+                    ],
+                    "language": "java",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The following table summarizes the options:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "body": [
+                      [
+                        {
+                          "background": null,
+                          "colspan": 1,
+                          "halign": "left",
+                          "paragraphs": [
+                            [
+                              {
+                                "kind": "text",
+                                "value": "Synchronous code on worker thread"
+                              }
+                            ]
+                          ],
+                          "rowspan": 1,
+                          "style": null,
+                          "valign": "top"
+                        },
+                        {
+                          "background": null,
+                          "colspan": 1,
+                          "halign": "left",
+                          "paragraphs": [
+                            [
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "Fortune blocking()"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              }
+                            ]
+                          ],
+                          "rowspan": 1,
+                          "style": null,
+                          "valign": "top"
+                        },
+                        {
+                          "background": null,
+                          "colspan": 1,
+                          "halign": "left",
+                          "paragraphs": [
+                            [
+                              {
+                                "kind": "text",
+                                "value": "Simple code"
+                              }
+                            ]
+                          ],
+                          "rowspan": 1,
+                          "style": null,
+                          "valign": "top"
+                        },
+                        {
+                          "background": null,
+                          "colspan": 1,
+                          "halign": "left",
+                          "paragraphs": [
+                            [
+                              {
+                                "kind": "text",
+                                "value": "Use worker thread (limit concurrency)"
+                              }
+                            ]
+                          ],
+                          "rowspan": 1,
+                          "style": null,
+                          "valign": "top"
+                        }
+                      ],
+                      [
+                        {
+                          "background": null,
+                          "colspan": 1,
+                          "halign": "left",
+                          "paragraphs": [
+                            [
+                              {
+                                "kind": "text",
+                                "value": "Reactive code on event loop"
+                              }
+                            ]
+                          ],
+                          "rowspan": 1,
+                          "style": null,
+                          "valign": "top"
+                        },
+                        {
+                          "background": null,
+                          "colspan": 1,
+                          "halign": "left",
+                          "paragraphs": [
+                            [
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "Uni<Fortune> reactive()"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              }
+                            ]
+                          ],
+                          "rowspan": 1,
+                          "style": null,
+                          "valign": "top"
+                        },
+                        {
+                          "background": null,
+                          "colspan": 1,
+                          "halign": "left",
+                          "paragraphs": [
+                            [
+                              {
+                                "kind": "text",
+                                "value": "High concurrency and low resource usage"
+                              }
+                            ]
+                          ],
+                          "rowspan": 1,
+                          "style": null,
+                          "valign": "top"
+                        },
+                        {
+                          "background": null,
+                          "colspan": 1,
+                          "halign": "left",
+                          "paragraphs": [
+                            [
+                              {
+                                "kind": "text",
+                                "value": "More complex code"
+                              }
+                            ]
+                          ],
+                          "rowspan": 1,
+                          "style": null,
+                          "valign": "top"
+                        }
+                      ],
+                      [
+                        {
+                          "background": null,
+                          "colspan": 1,
+                          "halign": "left",
+                          "paragraphs": [
+                            [
+                              {
+                                "kind": "text",
+                                "value": "Synchronous code on virtual thread"
+                              }
+                            ]
+                          ],
+                          "rowspan": 1,
+                          "style": null,
+                          "valign": "top"
+                        },
+                        {
+                          "background": null,
+                          "colspan": 1,
+                          "halign": "left",
+                          "paragraphs": [
+                            [
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "@RunOnVirtualThread Fortune vt()"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              }
+                            ]
+                          ],
+                          "rowspan": 1,
+                          "style": null,
+                          "valign": "top"
+                        },
+                        {
+                          "background": null,
+                          "colspan": 1,
+                          "halign": "left",
+                          "paragraphs": [
+                            [
+                              {
+                                "kind": "text",
+                                "value": "Simple code"
+                              }
+                            ]
+                          ],
+                          "rowspan": 1,
+                          "style": null,
+                          "valign": "top"
+                        },
+                        {
+                          "background": null,
+                          "colspan": 1,
+                          "halign": "left",
+                          "paragraphs": [
+                            [
+                              {
+                                "kind": "text",
+                                "value": "Risk of pinning, monopolization and under-efficient object pooling"
+                              }
+                            ]
+                          ],
+                          "rowspan": 1,
+                          "style": null,
+                          "valign": "top"
+                        }
+                      ]
+                    ],
+                    "columns": [
+                      {
+                        "autowidth": false,
+                        "halign": "left",
+                        "style": null,
+                        "valign": "top",
+                        "width": "25"
+                      },
+                      {
+                        "autowidth": false,
+                        "halign": "left",
+                        "style": null,
+                        "valign": "top",
+                        "width": "25"
+                      },
+                      {
+                        "autowidth": false,
+                        "halign": "left",
+                        "style": null,
+                        "valign": "top",
+                        "width": "25"
+                      },
+                      {
+                        "autowidth": false,
+                        "halign": "left",
+                        "style": null,
+                        "valign": "top",
+                        "width": "25"
+                      }
+                    ],
+                    "context": "table",
+                    "foot": [],
+                    "head": [
+                      [
+                        {
+                          "background": null,
+                          "colspan": 1,
+                          "halign": "left",
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Model"
+                            }
+                          ],
+                          "rowspan": 1,
+                          "style": null,
+                          "valign": "top"
+                        },
+                        {
+                          "background": null,
+                          "colspan": 1,
+                          "halign": "left",
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Example of signature"
+                            }
+                          ],
+                          "rowspan": 1,
+                          "style": null,
+                          "valign": "top"
+                        },
+                        {
+                          "background": null,
+                          "colspan": 1,
+                          "halign": "left",
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Pros"
+                            }
+                          ],
+                          "rowspan": 1,
+                          "style": null,
+                          "valign": "top"
+                        },
+                        {
+                          "background": null,
+                          "colspan": 1,
+                          "halign": "left",
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Cons"
+                            }
+                          ],
+                          "rowspan": 1,
+                          "style": null,
+                          "valign": "top"
+                        }
+                      ]
+                    ],
+                    "id": null,
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Note that all three models can be used in a single application."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "three-development-and-execution-models",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Three development and execution models"
+                  }
+                ]
+              }
+            ],
+            "context": "section",
+            "id": "use-runonvirtualthread-with-quarkus-rest-formerly-resteasy-reactive",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Use @RunOnVirtualThread with Quarkus REST (formerly RESTEasy Reactive)"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "run-code-on-virtual-threads-using-runonvirtualthread",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Run code on virtual threads using @RunOnVirtualThread"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "As mentioned in the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Why not run everything on virtual threads?"
+                  }
+                ],
+                "kind": "xref",
+                "target": "#why-not"
+              },
+              {
+                "kind": "text",
+                "value": " section, the Java ecosystem is not entirely ready for virtual threads. So, you need to be careful, especially when using a libraries doing I/O."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Fortunately, Quarkus provides a massive ecosystem that is ready to be used in virtual threads. Mutiny, the reactive programming library used in Quarkus, and the Vert.x Mutiny bindings provides the ability to write blocking code (so, no fear, no learning curve) which do not pin the carrier thread."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "As a result:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "olist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Quarkus extensions providing blocking APIs on top of reactive APIs can be used in virtual threads. This includes the REST Client, the Redis client, the mailer…​"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "API returning "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Uni"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " can be used directly using "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "uni.await().atMost(…​)"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". It blocks the virtual thread, without blocking the carrier thread, and also improves the resilience of your application with an easy (non-blocking) timeout support."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If you use a "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Vert.x client using the Mutiny bindings"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://smallrye.io/smallrye-mutiny-vertx-bindings/latest/"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", use the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "andAwait()"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " methods which block until you get the result without pinning the carrier thread. It includes all the reactive SQL drivers."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "use-virtual-thread-friendly-clients",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Use virtual thread friendly clients"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Java 24+ Change:"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "-Djdk.tracePinnedThreads"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " system property is "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "no longer available starting with Java 24"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". This flag has been removed as part of the virtual thread improvements introduced in "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "JEP 491"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://openjdk.org/jeps/491"
+              },
+              {
+                "kind": "text",
+                "value": ". For Java 24+, use the JFR (Java Flight Recorder) events or the Quarkus testing extensions described below to detect pinning."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "important"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "For Java 21-23 only:"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "We recommend using the following configuration when running tests in applications using virtual threads. It will not fail the tests, but at least dump stack traces if the code pins the carrier thread:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<plugin>\n  <artifactId>maven-surefire-plugin</artifactId>\n  <version>${surefire-plugin.version}</version>\n  <configuration>\n      <systemPropertyVariables>\n        <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>\n        <maven.home>${maven.home}</maven.home>\n      </systemPropertyVariables>\n      <argLine>-Djdk.tracePinnedThreads</argLine> <!-- Only works on Java 21-23 -->\n  </configuration>\n</plugin>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "For all Java versions (21+):"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For a more robust approach that works on all Java versions, use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "junit-virtual-threads"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " extension described in the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Testing virtual thread applications"
+                  }
+                ],
+                "kind": "xref",
+                "target": "#testing-virtual-thread-applications"
+              },
+              {
+                "kind": "text",
+                "value": " section below. This extension uses JFR events to detect pinning and works consistently across Java 21, 24, and later versions."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "detect-pinned-thread-in-tests",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Detect pinned thread in tests"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "java -jar target/quarkus-app/quarkus-run.jar"
+              }
+            ],
+            "language": "bash",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Prior to Java 21, virtual threads were still an experimental feature, you need to start your application with the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "--enable-preview"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " flag."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "tip"
+          }
+        ],
+        "context": "section",
+        "id": "run-application-using-virtual-threads",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Run application using virtual threads"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When running your application in JVM mode (so not compiled into native, for native check "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "the dedicated section"
+                  }
+                ],
+                "kind": "xref",
+                "target": "#native"
+              },
+              {
+                "kind": "text",
+                "value": "), you can follow the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "containerization guide"
+                  }
+                ],
+                "kind": "xref",
+                "target": "./container-image.html"
+              },
+              {
+                "kind": "text",
+                "value": " to build a container."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In this section, we use JIB to build the container. Refer to the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "containerization guide"
+                  }
+                ],
+                "kind": "xref",
+                "target": "./container-image.html"
+              },
+              {
+                "kind": "text",
+                "value": " to learn more about the alternatives."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To containerize your Quarkus application that use "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@RunOnVirtualThread"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", add the following properties in your "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "application.properties"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ":"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "quarkus.container-image.build=true\nquarkus.container-image.group=<your-group-name>\nquarkus.container-image.name=<you-container-name>\nquarkus.jib.base-jvm-image=registry.access.redhat.com/ubi9/openjdk-21-runtime "
+              },
+              {
+                "guard": null,
+                "icons": "font",
+                "id": "CO1-1",
+                "kind": "callout",
+                "number": "1",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\nquarkus.jib.platforms=linux/amd64,linux/arm64 "
+              },
+              {
+                "guard": null,
+                "icons": "font",
+                "id": "CO1-2",
+                "kind": "callout",
+                "number": "2",
+                "src": "",
+                "xml": false
+              }
+            ],
+            "language": "properties",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "colist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-1"
+                ],
+                "icons": "font",
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Make sure you use a base image supporting virtual threads. Here we use an image providing Java 21. Quarkus picks an image providing Java 21+ automatically if you do not set one."
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-2"
+                ],
+                "icons": "font",
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Select the target architecture. You can select more than one to build multi-archs images."
+                  }
+                ],
+                "src": ""
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Then, build your container as you would do usually. For example, if you are using Maven, run:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "mvn package"
+              }
+            ],
+            "language": "bash",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "build-containers-for-application-using-virtual-threads",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Build containers for application using virtual threads"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To compile a Quarkus applications leveraging "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@RunOnVirtualThread"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " into a native executable, you must be sure to use a GraalVM / Mandrel "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "native-image"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " supporting virtual threads, so providing at least Java 21."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Build the native executable as indicated on "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "the native compilation guide"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "./building-native-image.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". For example, with Maven, run:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "mvn package -Dnative"
+                  }
+                ],
+                "language": "bash",
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "using-a-local-graalvm-installation",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Using a local GraalVM installation"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "In-container build allows building Linux 64 executables by using a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "native-image"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " compiler running in a container. It avoids having to install "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "native-image"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " on your machine, and also allows configuring the GraalVM version you need. Note that, to use in-container build, you must have Docker or Podman installed on your machine."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Then, add to your "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "application.properties"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " file:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "# In-container build to get a linux 64 executable\nquarkus.native.container-build=true "
+                  },
+                  {
+                    "guard": null,
+                    "icons": "font",
+                    "id": "CO2-1",
+                    "kind": "callout",
+                    "number": "1",
+                    "src": "",
+                    "xml": false
+                  }
+                ],
+                "language": "properties",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "colist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "coids": [
+                      "CO2-1"
+                    ],
+                    "icons": "font",
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Enables the in-container build"
+                      }
+                    ],
+                    "src": ""
+                  }
+                ],
+                "roles": [],
+                "style": "arabic",
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "If you are using a Mac M1 or M2 (using an ARM64 CPU), you need to be aware that the native executable you will get using an in-container build will be a Linux executable, but using your host (ARM 64) architecture. You can use emulation to force the architecture when using Docker with the following property:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "quarkus.native.container-runtime-options=--platform=linux/amd64"
+                      }
+                    ],
+                    "language": "properties",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Be aware that it increases the compilation time…​ a lot (>10 minutes)."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "admonition",
+                "id": null,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "From ARM/64 to AMD/64"
+                  }
+                ],
+                "type": "important"
+              }
+            ],
+            "context": "section",
+            "id": "using-an-in-container-build",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Using an in-container build"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To build a container running a Quarkus application using virtual threads compiled into a native executable, you must make sure you have a Linux/AMD64 executable (or ARM64 if you are targeting ARM machines)."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Make sure your "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "application.properties"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " contains the configuration explained in "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "the native compilation section"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "#native"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Then, build your container as you would do usually. For example, if you are using Maven, run:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "mvn package -Dnative"
+                  }
+                ],
+                "language": "bash",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "admonition",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If you ever want to build a native container image and already have an existing native image you can set "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "-Dquarkus.native.reuse-existing=true"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and the native image build will not be re-run."
+                  }
+                ],
+                "roles": [],
+                "title": null,
+                "type": "note"
+              }
+            ],
+            "context": "section",
+            "id": "containerize-native-applications-using-virtual-threads",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Containerize native applications using virtual threads"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "native",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Compiling Quarkus application using virtual threads into native executable"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Methods annotated with "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@RunOnVirtualThread"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " inherit from the original duplicated context (See the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "duplicated context reference guide"
+                  }
+                ],
+                "kind": "xref",
+                "target": "duplicated-context.html"
+              },
+              {
+                "kind": "text",
+                "value": " for details). So, the data written in the duplicated context (and the request scope, as the request scoped is stored in the duplicated context) by filters and interceptors are available during the method execution (even if the filters and interceptors are not run on the virtual thread)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "However, thread locals are not propagated."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "use-the-duplicated-context-in-virtual-threads",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Use the duplicated context in virtual threads"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Virtual threads are created without a thread name by default, which is not practical to identify the execution for debugging and logging purposes. Quarkus managed virtual threads are named and prefixed with "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "quarkus-virtual-thread-"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". You can customize this prefix, or disable the naming altogether configuring an empty value:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "quarkus.virtual-threads.name-prefix="
+              }
+            ],
+            "language": "properties",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "virtual-thread-names",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Virtual thread names"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In order to run tasks on virtual threads Quarkus manages an internal "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ThreadPerTaskExecutor"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". In rare instances where you’d need to access this executor directly you can inject it using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@VirtualThreads"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " CDI qualifier:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Injecting the Virtual Thread ExecutorService is experimental and may change in future versions."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "important"
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "package org.acme;\n\nimport org.acme.fortune.repository.FortuneRepository;\n\nimport java.util.concurrent.ExecutorService;\n\nimport jakarta.enterprise.event.Observes;\nimport jakarta.inject.Inject;\nimport jakarta.transaction.Transactional;\n\nimport io.quarkus.logging.Log;\nimport io.quarkus.runtime.StartupEvent;\nimport io.quarkus.virtual.threads.VirtualThreads;\n\npublic class MyApplication {\n\n    @Inject\n    FortuneRepository repository;\n\n    @Inject\n    @VirtualThreads\n    ExecutorService vThreads;\n\n    void onEvent(@Observes StartupEvent event) {\n        vThreads.execute(this::findAll);\n    }\n\n    @Transactional\n    void findAll() {\n        Log.info(repository.findAllBlocking());\n    }\n\n}"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "inject-the-virtual-thread-executor",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Inject the virtual thread executor"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "As mentioned above, virtual threads have a few limitations that can drastically affect your application performance and memory usage. The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "junit-virtual-threads"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " extension provides a way to detect pinned carrier threads while running your tests. Thus, you can eliminate one of the most prominent limitations or be aware of the problem."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To enable this detection:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "1) Add the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "junit-virtual-threads"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " dependency to your project:"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<dependency>\n    <groupId>io.quarkus.junit</groupId>\n    <artifactId>junit-virtual-threads</artifactId>\n    <scope>test</scope>\n</dependency>"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "2) In your test case, add the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "io.quarkus.test.junit.virtual.VirtualThreadUnit"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "io.quarkus.test.junit.virtual.ShouldNotPin"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " annotations:"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@QuarkusTest\n@TestMethodOrder(MethodOrderer.OrderAnnotation.class)\n@VirtualThreadUnit // Use the extension\n@ShouldNotPin // Detect pinned carrier thread\nclass TodoResourceTest {\n    // ...\n}"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When you run your test (remember to use Java 21+), Quarkus detects pinned carrier threads. When it happens, the test fails."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ShouldNotPin"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " can also be used on methods directly."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "junit-virtual-threads"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " also provides a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ShouldPin"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " annotation for cases where pinning is unavoidable. The following snippet demonstrates the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ShouldPin"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " annotation usage."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@VirtualThreadUnit // Use the extension\npublic class LoomUnitExampleTest {\n\n    CodeUnderTest codeUnderTest = new CodeUnderTest();\n\n    @Test\n    @ShouldNotPin\n    public void testThatShouldNotPin() {\n        // ...\n    }\n\n    @Test\n    @ShouldPin(atMost = 1)\n    public void testThatShouldPinAtMostOnce() {\n        codeUnderTest.pin();\n    }\n\n}"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "testing-virtual-thread-applications",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Testing virtual thread applications"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can enable the Micrometer Virtual Thread "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "binder"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " by adding the following artifact to your application:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<dependency>\n    <groupId>io.micrometer</groupId>\n    <artifactId>micrometer-java21</artifactId>\n</dependency>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This binder keeps track of the number of pinning events and the number of virtual threads failed to be started or un-parked. See the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MicroMeter documentation"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.micrometer.io/micrometer/reference/reference/jvm.html#_java_21_metrics"
+              },
+              {
+                "kind": "text",
+                "value": " for more information."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can explicitly disable the binder by setting the following property in your "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "application.properties"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ":"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "# The binder is automatically enabled if the micrometer-java21 dependency is present\nquarkus.micrometer.binder.virtual-threads.enabled=false"
+              }
+            ],
+            "language": "properties",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In addition, if the application is running on a JVM that does not support virtual threads (prior to Java 21), the binder is automatically disabled."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can associate tags to the collected metrics by setting the following properties in your "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "application.properties"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ":"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "quarkus.micrometer.binder.virtual-threads.tags=tag_1=value_1, tag_2=value_2"
+              }
+            ],
+            "language": "properties",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "virtual-thread-metrics",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Virtual thread metrics"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Considerations for integrating virtual threads in a Java framework: a Quarkus example in a resource-constrained environment"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://dl.acm.org/doi/10.1145/3583678.3596895"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "additional-references",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Additional references"
+          }
+        ]
+      }
+    ],
+    "title": [
+      {
+        "kind": "text",
+        "value": "Virtual thread support reference"
+      }
+    ]
+  }
+}

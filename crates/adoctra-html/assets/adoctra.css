@@ -60,6 +60,8 @@ dt, summary, span.alt { font-size: 1.0625rem; text-rendering: optimizeLegibility
 summary, span.alt { letter-spacing: -0.01em; }
 p strong, .admonition-content strong { letter-spacing: -0.005em; }
 .sidebarblock :is(p, dt), p.tableblock { font-size: 1em; }
+/* A list item's text is Ruby's item `p`, so in a sidebar it is 1em too. */
+.sidebarblock :is(ul, ol):not([class^="sectlevel"]) > li { font-size: 1em; }
 p.lead,
 #preamble > p:not([class]):first-child {
   font-size: 1.21875em;
@@ -399,6 +401,9 @@ aside.admonition {
 :is(.exampleblock > .content, .sidebarblock) :is(ul, ol) > li:last-child > :last-child {
   margin-block-end: 0;
 }
+/* Ruby zeroes the last item `p` of every (nested) list in them; adoctra's
+   item text is the `li` itself. */
+:is(.exampleblock > .content, .sidebarblock) :is(ul, ol):not(.colist) > li:last-child { margin-block-end: 0; }
 
 /* A collapsible example (`%collapsible`) is Ruby's `details`: indented,
    with a triangle disclosure marker beside a plain `summary`. */
@@ -781,6 +786,11 @@ ul li ol { margin-inline-start: 1.5em; }
 :is(ul, ol):not([class^="sectlevel"]) > li > :is(p, div, ul, ol, dl, pre, table, figure, aside, details, nav, blockquote, hr):not(:is(p, div, ul, ol, dl, pre, table, figure, aside, details, nav, blockquote, hr) ~ *) {
   margin-block-start: 0.6640625rem;
 }
+/* An item ending in a block ends, like Ruby's, with that block's margin
+   (a nested list's 0.625em of 16px), not the 0.625em of its text. */
+:is(ul, ol):not([class^="sectlevel"]) > li:has(> :is(p, div, ul, ol, dl, pre, table, figure, aside, details, nav, blockquote, hr):last-child) {
+  margin-block-end: 0;
+}
 li p { margin-block-end: 0.625em; }
 ul.circle { list-style-type: circle; }
 ul.disc { list-style-type: disc; }
@@ -824,17 +834,33 @@ dl dd { margin: 0 0 1.25em 1.125em; }
 dl dd:last-child,
 dl dd:last-child > :last-child:is(pre, figure, table, details, aside) { margin-block-end: 0; }
 :is(ul, ol) dd { margin-block-end: 0.625em; }
-/* A horizontal description list: terms beside their descriptions. */
-dl.hdlist {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  column-gap: 1.5rem;
-  row-gap: 0.4rem;
+/* A horizontal description list is Ruby's borderless layout table: each
+   `<div>` entry is a row, a term (or several, stacked like Ruby's `<br>`s in
+   one anonymous cell) and its description are cells with Ruby's padding.
+   `labelwidth`/`itemwidth` are Ruby's `<col>` widths. */
+dl.hdlist { display: table; border-collapse: collapse; border-spacing: 0; overflow-wrap: normal; }
+dl.hdlist > div { display: table-row; }
+dl.hdlist > div > dt {
+  margin: 0;
+  padding: 0 0.625em;
+  font-weight: bold;
+  font-size: 1.0625rem;
+  letter-spacing: normal;
 }
-dl.hdlist > dt { grid-column: 1; }
-dl.hdlist > dt:not(.strong) { font-weight: normal; }
-dl.hdlist > dd { grid-column: 2; margin: 0; }
-dl.hdlist > dd > p:first-child { margin-block-start: 0; }
+dl.hdlist > div > dt:last-of-type { padding-block-end: 1.25em; }
+dl.hdlist > div > dt:only-of-type {
+  display: table-cell;
+  vertical-align: top;
+  inline-size: var(--adoctra-hdlist-labelwidth, auto);
+}
+dl.hdlist > div > dd {
+  display: table-cell;
+  vertical-align: top;
+  margin: 0;
+  padding: 0 0.625em;
+  overflow-wrap: anywhere;
+  inline-size: var(--adoctra-hdlist-itemwidth, auto);
+}
 ol.qanda > li > p:first-child > em { font-weight: 600; }
 
 /* --- Callouts -------------------------------------------------------------- */
