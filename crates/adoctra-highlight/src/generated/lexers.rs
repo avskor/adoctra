@@ -5434,6 +5434,21 @@ fn cb_cython_cython_126(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexEr
     Ok(())
 }
 
+fn cb_cython_cython_135(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    s.token(T::TEXT, m.text());
+    s.goto("c_start")?;
+    if s.lexer.strings.get("indentation").map(String::as_str).is_none() {
+        let value = (m.group(0)).to_string();
+        s.lexer.strings.insert("indentation", value);
+    } else {
+        if (&s.lexer.string("indentation")).chars().count() > (m.group(0)).chars().count() {
+            s.lexer.strings.remove("indentation");
+            s.pop(2)?;
+        }
+    }
+    Ok(())
+}
+
 fn cb_cython_cython_147(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
     s.lexer.strings.remove("indentation");
     s.reset_stack();
@@ -16603,7 +16618,7 @@ static LEXER_CYTHON: LexerDef = LexerDef {
             Rule::Match { regex: 774, bol: false, action: Action::Emit(T::NAME_FUNCTION, Next::Stay) },
             Rule::Match { regex: 775, bol: false, action: Action::Emit(T::NAME_CLASS, Next::Stay) },
             Rule::Match { regex: 776, bol: false, action: Action::Emit(T::LITERAL_STRING_BACKTICK, Next::Stay) },
-            Rule::Match { regex: 777, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 777, bol: false, action: Action::Call(crate::lexers::python::rule_127) },
             Rule::Mixin(7),
             Rule::Match { regex: 778, bol: false, action: Action::Call(cb_cython_python_136) },
             Rule::Match { regex: 779, bol: false, action: Action::Emit(T::NAME, Next::Stay) },
@@ -16639,7 +16654,7 @@ static LEXER_CYTHON: LexerDef = LexerDef {
             Rule::Mixin(0),
         ] },
         StateDef { name: "c_indent", rules: &[
-            Rule::Match { regex: 129, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 129, bol: false, action: Action::Call(cb_cython_cython_135) },
             Rule::Match { regex: 19, bol: false, action: Action::Call(cb_cython_cython_147) },
         ] },
         StateDef { name: "soft_keywords", rules: &[
@@ -16664,12 +16679,12 @@ static LEXER_CYTHON: LexerDef = LexerDef {
             Rule::Match { regex: 797, bol: true, action: Action::Emit(T::GENERIC_PROMPT, Next::State(13)) },
             Rule::Match { regex: 798, bol: false, action: Action::Emit(T::LITERAL_STRING, Next::Stay) },
             Rule::Match { regex: 799, bol: false, action: Action::Emit(T::LITERAL_STRING, Next::Stay) },
-            Rule::Match { regex: 800, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 800, bol: false, action: Action::Call(crate::lexers::python::rule_214) },
             Rule::Match { regex: 801, bol: false, action: Action::Emit(T::LITERAL_STRING, Next::State(12)) },
-            Rule::Match { regex: 270, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 270, bol: false, action: Action::Call(crate::lexers::python::rule_224) },
         ] },
         StateDef { name: "generic_escape", rules: &[
-            Rule::Match { regex: 802, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 802, bol: false, action: Action::Call(crate::lexers::python::rule_235) },
             Rule::Match { regex: 10, bol: false, action: Action::Emit(T::LITERAL_STRING, Next::Pop) },
         ] },
         StateDef { name: "doctest", rules: &[
@@ -16689,7 +16704,7 @@ static LEXER_CYTHON: LexerDef = LexerDef {
     init: Some(init_cython),
     reset: None,
     stream: None,
-    missing: &["python.rs:127 (call register)", "cython.rs:135 (condition nil?)", "python.rs:214 (condition delim?)", "python.rs:224 (condition type?)", "python.rs:235 (condition type?)"],
+    missing: &[],
 };
 
 static LEXER_D: LexerDef = LexerDef {
@@ -22704,7 +22719,7 @@ static LEXER_MOJO: LexerDef = LexerDef {
             Rule::Match { regex: 774, bol: false, action: Action::Emit(T::NAME_FUNCTION, Next::Stay) },
             Rule::Match { regex: 775, bol: false, action: Action::Emit(T::NAME_CLASS, Next::Stay) },
             Rule::Match { regex: 776, bol: false, action: Action::Emit(T::LITERAL_STRING_BACKTICK, Next::Stay) },
-            Rule::Match { regex: 777, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 777, bol: false, action: Action::Call(crate::lexers::python::rule_127) },
             Rule::Mixin(3),
             Rule::Match { regex: 778, bol: false, action: Action::Call(cb_mojo_python_136) },
             Rule::Match { regex: 779, bol: false, action: Action::Emit(T::NAME, Next::Stay) },
@@ -22745,12 +22760,12 @@ static LEXER_MOJO: LexerDef = LexerDef {
             Rule::Match { regex: 797, bol: true, action: Action::Emit(T::GENERIC_PROMPT, Next::State(9)) },
             Rule::Match { regex: 798, bol: false, action: Action::Emit(T::LITERAL_STRING, Next::Stay) },
             Rule::Match { regex: 799, bol: false, action: Action::Emit(T::LITERAL_STRING, Next::Stay) },
-            Rule::Match { regex: 800, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 800, bol: false, action: Action::Call(crate::lexers::python::rule_214) },
             Rule::Match { regex: 801, bol: false, action: Action::Emit(T::LITERAL_STRING, Next::State(8)) },
-            Rule::Match { regex: 270, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 270, bol: false, action: Action::Call(crate::lexers::python::rule_224) },
         ] },
         StateDef { name: "generic_escape", rules: &[
-            Rule::Match { regex: 802, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 802, bol: false, action: Action::Call(crate::lexers::python::rule_235) },
             Rule::Match { regex: 10, bol: false, action: Action::Emit(T::LITERAL_STRING, Next::Pop) },
         ] },
         StateDef { name: "doctest", rules: &[
@@ -22770,7 +22785,7 @@ static LEXER_MOJO: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["python.rs:127 (call register)", "python.rs:214 (condition delim?)", "python.rs:224 (condition type?)", "python.rs:235 (condition type?)"],
+    missing: &[],
 };
 
 static LEXER_MOONSCRIPT: LexerDef = LexerDef {
@@ -25119,7 +25134,7 @@ static LEXER_PYTHON: LexerDef = LexerDef {
             Rule::Match { regex: 774, bol: false, action: Action::Emit(T::NAME_FUNCTION, Next::Stay) },
             Rule::Match { regex: 775, bol: false, action: Action::Emit(T::NAME_CLASS, Next::Stay) },
             Rule::Match { regex: 776, bol: false, action: Action::Emit(T::LITERAL_STRING_BACKTICK, Next::Stay) },
-            Rule::Match { regex: 777, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 777, bol: false, action: Action::Call(crate::lexers::python::rule_127) },
             Rule::Mixin(3),
             Rule::Match { regex: 778, bol: false, action: Action::Call(cb_python_python_136) },
             Rule::Match { regex: 779, bol: false, action: Action::Emit(T::NAME, Next::Stay) },
@@ -25160,12 +25175,12 @@ static LEXER_PYTHON: LexerDef = LexerDef {
             Rule::Match { regex: 797, bol: true, action: Action::Emit(T::GENERIC_PROMPT, Next::State(9)) },
             Rule::Match { regex: 798, bol: false, action: Action::Emit(T::LITERAL_STRING, Next::Stay) },
             Rule::Match { regex: 799, bol: false, action: Action::Emit(T::LITERAL_STRING, Next::Stay) },
-            Rule::Match { regex: 800, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 800, bol: false, action: Action::Call(crate::lexers::python::rule_214) },
             Rule::Match { regex: 801, bol: false, action: Action::Emit(T::LITERAL_STRING, Next::State(8)) },
-            Rule::Match { regex: 270, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 270, bol: false, action: Action::Call(crate::lexers::python::rule_224) },
         ] },
         StateDef { name: "generic_escape", rules: &[
-            Rule::Match { regex: 802, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 802, bol: false, action: Action::Call(crate::lexers::python::rule_235) },
             Rule::Match { regex: 10, bol: false, action: Action::Emit(T::LITERAL_STRING, Next::Pop) },
         ] },
         StateDef { name: "doctest", rules: &[
@@ -25185,7 +25200,7 @@ static LEXER_PYTHON: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["python.rs:127 (call register)", "python.rs:214 (condition delim?)", "python.rs:224 (condition type?)", "python.rs:235 (condition type?)"],
+    missing: &[],
 };
 
 static LEXER_Q: LexerDef = LexerDef {
@@ -25795,7 +25810,7 @@ static LEXER_ROBOT_FRAMEWORK: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["robot_framework.rs:75 (IASGN)", "robot_framework.rs:91 (IASGN)", "robot_framework.rs:101 (IASGN)", "robot_framework.rs:114 (value chomp)", "robot_framework.rs:129 (IASGN)", "robot_framework.rs:146 (IASGN)", "robot_framework.rs:173 (IASGN)", "robot_framework.rs:186 (IASGN)", "robot_framework.rs:200 (condition nil?)", "robot_framework.rs:206 (condition nil?)", "robot_framework.rs:223 (condition nil?)", "robot_framework.rs (initialize) (sub lexer)"],
+    missing: &["robot_framework.rs:75 (IASGN)", "robot_framework.rs:91 (IASGN)", "robot_framework.rs:101 (IASGN)", "robot_framework.rs:114 (value chomp)", "robot_framework.rs:129 (IASGN)", "robot_framework.rs:146 (IASGN)", "robot_framework.rs:173 (IASGN)", "robot_framework.rs:186 (IASGN)", "robot_framework.rs:200 (IASGN)", "robot_framework.rs:206 (IASGN)", "robot_framework.rs:223 (IASGN)", "robot_framework.rs (initialize) (sub lexer)"],
 };
 
 static LEXER_RUBY: LexerDef = LexerDef {

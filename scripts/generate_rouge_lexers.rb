@@ -804,15 +804,27 @@ module RougeLexers
       "#{value recv} #{meth} #{value arg}"
     end
 
+    def stack_size? node
+      node.type == :CALL && %i[size length].include?(node.children[1]) && node.children[2].nil? &&
+        %i[VCALL FCALL].include?(node.children[0].type) && node.children[0].children[0] == :stack
+    end
+
+    # `string.length`: Ruby counts characters.
+    def string_length? node
+      node.type == :CALL && %i[size length].include?(node.children[1]) && node.children[2].nil? &&
+        string_expression?(node.children[0])
+    end
+
     def integer_expr? node
-      (node.type == :LIT && node.children[0].is_a?(Integer)) ||
-        (node.type == :CALL && %i[size length].include?(node.children[1]) && node.children[2].nil? &&
-          %i[VCALL FCALL].include?(node.children[0].type) && node.children[0].children[0] == :stack)
+      (node.type == :LIT && node.children[0].is_a?(Integer)) || stack_size?(node) || string_length?(node)
     end
 
     def integer_expr node
       unsupported(node, 'integer expression') unless integer_expr?(node)
-      node.type == :LIT ? node.children[0].to_s : 's.lexer.stack.len()'
+      return node.children[0].to_s if node.type == :LIT
+      return 's.lexer.stack.len()' if stack_size?(node)
+
+      "(#{value node.children[0]}).chars().count()"
     end
 
     def condition node
@@ -863,7 +875,7 @@ module RougeLexers
           prefix = value(call_args(args)[0])
           "#{value recv}.#{meth == :start_with? ? 'starts_with' : 'ends_with'}(#{prefix})"
         when :nil?
-          unsupported(node, 'condition nil?') unless group_node?(recv)
+          unsupported(node, 'condition nil?') unless group_node?(recv) || recv.type == :IVAR
           "#{optional recv}.is_none()"
         when :empty?
           "#{value recv}.is_empty()"

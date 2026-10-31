@@ -2,5 +2,6 @@
 pub(crate) mod console;
 pub(crate) mod php;
 pub(crate) mod plain_text;
+pub(crate) mod python;
 pub(crate) mod ruby;
 pub(crate) mod template_lexer;

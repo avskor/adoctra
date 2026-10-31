@@ -222,6 +222,8 @@ LEXER_CASES = [
   ['php?start_inline=0', "echo 1; <?= $x ?>\n"],
   ['php?funcnamehighlighting=0&start_inline=1', "strlen($s); mysqli_query($q);\n"],
   ['php?disabledmodules=Apache&start_inline=1', "apache_note('a'); strlen('b');\n"],
+  ['python', "x = f'{a!r:>{w}} {{lit}}' + rb'\\d\\n' + u\"\\u00e9\\n\"\ns = '''doc\n>>> 1 + 1\n2\n\n'''\ndef f(a: int = 0x1F) -> str: return Fr\"{a}\\t\"\n"],
+  ['cython', "cdef int f(int x):\n    cdef:\n        int y\n    return x\n"],
   ['hack?start_inline=1', "<<__Entrypoint>> async function main(): Awaitable<void> { echo strlen('x'); }\n"],
 ].freeze
 
