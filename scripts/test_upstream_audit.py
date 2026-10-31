@@ -32,10 +32,15 @@ class ClassifyTests(unittest.TestCase):
         for options, reason in [
                 ({"backend": "docbook"}, "backend:docbook"),
                 ({"attributes": {"backend": "docbook5"}}, "backend:docbook5"),
-                ({"base_dir": "/x", "to_file": False}, "option:to_file"),
-                ({"safe": "foo"}, "safe:foo"),
-                ({"to_dir": "<UPSTREAM>/test/test_output"}, "option:to_dir")]:
+                ({"base_dir": "/x", "to_file": False}, "option:to_file:non-string"),
+                ({"to_dir": "/tmp/out"}, "option:to_dir:outside-checkout"),
+                ({"safe": 1.5}, "safe:1.5")]:
             self.assertEqual(classify("x", options), (None, reason))
+        # Ruby's Document#initialize: an unknown level name is secure.
+        self.assertEqual(classify("x", {"safe": "foo"})[0], ["-S", "secure", "-s"])
+        # File output inside the checkout runs as the CLI's -D/-o.
+        self.assertEqual(classify("x", {"to_dir": "<UPSTREAM>/test/test_output"}),
+                         (["-S", "secure", "-s", "-D", "<UPSTREAM>/test/test_output"], None))
         self.assertEqual(classify("= T\n:backend: docbook\n", {"safe": "safe"}),
                          (None, "backend:document:docbook"))
         # Not when the host sets the backend or the mode locks it.
