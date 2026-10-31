@@ -82,6 +82,23 @@ pub(crate) fn implicit_title(
         .into_parts()
 }
 
+/// Ruby's `apply_header_subs` on an implicit header value (author and
+/// revision metadata): attribute references with the document's
+/// attribute-missing policy, set/counter expressions executing.
+pub(crate) fn header_value(
+    value: &str,
+    attrs: &mut Evaluation<'_>,
+    span: Span,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> Vec<P> {
+    let mut text = Text::default();
+    text.append_part(&P::Text(value.into()), 0, span);
+    let policy = attrs.get("attribute-missing").unwrap_or("skip").to_owned();
+    apply_with_policy(text, attrs, &policy, false, diagnostics)
+        .0
+        .into_parts()
+}
+
 /// Ruby's `Document#sub_attributes` on a preprocessor string (`ifeval`
 /// operands, include targets and parameter lists). The source is raw text;
 /// substituted values keep the spelling Ruby stores, and set/counter

@@ -37110,8 +37110,7 @@
     {
       "id": "fuzz-list-item-indented-plus-line",
       "category": "fuzz",
-      "expect": "xfail",
-      "reason": "Ruby reads a list item's indented ` +` line so that no hard line break results; adoctra keeps the hard break (list item line reading not yet ported for this case)",
+      "expect": "pass",
       "source": "* a\n +"
     },
     {
@@ -37123,22 +37122,20 @@
     {
       "id": "fuzz-unresolved-xref-markup-fallback",
       "category": "fuzz",
-      "expect": "xfail",
-      "reason": "Ruby's fallback `[refid]` is the substituted id with its markup; adoctra renders the id text escaped",
+      "expect": "pass",
       "source": "D<<y *e*>>"
     },
     {
       "id": "fuzz-role-entity-reference",
       "category": "fuzz",
       "expect": "xfail",
-      "reason": "Ruby writes a role unescaped, so an entity reference in it is decoded by HTML; adoctra escapes the role",
+      "reason": "Ruby writes a role unescaped, so an entity reference in it is decoded by HTML; adoctra escapes the role (intentional difference, user decision 2026-11-01; see compatibility.adoc)",
       "source": "[.&mp;]\n}"
     },
     {
       "id": "fuzz-doctitle-counter-evaluations",
       "category": "fuzz",
-      "expect": "xfail",
-      "reason": "Ruby converts the document title several times, each advancing the counter; adoctra evaluates it once",
+      "expect": "pass",
       "source": "= {counter:n}\n{counter:n}"
     },
     {
@@ -37180,9 +37177,8 @@
     {
       "id": "fuzz-dlist-folded-entry-replay",
       "category": "fuzz",
-      "expect": "xfail",
-      "source": "m;; f\n:x: v\ny\n\n{x}",
-      "reason": "Ruby applies an attribute entry above a description's adjacent paragraph while reading only: the paragraph folds into the description and its entries are never played back during conversion; adoctra replays them"
+      "expect": "pass",
+      "source": "m;; f\n:x: v\ny\n\n{x}"
     },
     {
       "id": "fuzz-section-title-reading-self-reference",
@@ -37195,6 +37191,43 @@
       "category": "fuzz",
       "expect": "pass",
       "source": "[v[,tabsize=2]\n\tx\ty\n\n[v,tabsize=2]\n\ta\tb\n\n[literal,tabsize=2]\n\tc\td"
+    },
+    {
+      "id": "fuzz-unresolved-xref-markup-fallback-contexts",
+      "category": "fuzz",
+      "expect": "pass",
+      "source": "[#s]\n== S <<y *e*>>\n\n.T <<z _f_>>\n----\nx\n----\n\n|===\n|C<<w `g`>>\n|===\n\n* D<<v &lt;b&gt; *h*>>"
+    },
+    {
+      "id": "fuzz-section-id-from-xref-markup-href",
+      "category": "fuzz",
+      "expect": "xfail",
+      "reason": "Ruby generates a section id from the converted title HTML, and its tag-stripping pattern stops at the first `>` inside an href that holds generated tags; adoctra generates the id from the title text (intentional difference, user decision 2026-11-01; see compatibility.adoc)",
+      "source": "== S <<y *e*>>"
+    },
+    {
+      "id": "header-author-line-substitutions",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "= T {counter:n}\nA {counter:n} B <x@{counter:n}>; C {counter:n}\nv{counter:r}, {counter:r}: {counter:r}\n\n{n} {r} {firstname} {author} {authors} {authorinitials} {email} {author_1} {author_2} {firstname_2} {email_1} {revnumber} {revdate} {revremark}"
+    },
+    {
+      "id": "header-author-line-unmatched-substitutions",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "= {counter:n}\n{counter:n}\n\n{n} {r} {firstname} {author} {authors} {authorinitials} {email} {author_1} {author_2} {firstname_2} {email_1} {revnumber} {revdate} {revremark}"
+    },
+    {
+      "id": "header-author-line-missing-policy",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "= T\n:attribute-missing: warn\nA {miss}\nv1, d: {miss2}\n\n{n} {r} {firstname} {author} {authors} {authorinitials} {email} {author_1} {author_2} {firstname_2} {email_1} {revnumber} {revdate} {revremark}"
+    },
+    {
+      "id": "fuzz-dlist-folded-entry-replay-continuation",
+      "category": "fuzz",
+      "expect": "pass",
+      "source": "m;; f\n:x: v\ny\n+\n:z: w\nz {x}{z}\n\n{x}{z}\n\nn;; g\n:q: r\n[e]\nh\n\n{q}"
     }
   ]
 }

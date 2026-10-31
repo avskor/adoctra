@@ -557,9 +557,8 @@ impl Ids<'_> {
         } else if id.is_empty() {
             None
         } else {
-            Some(crate::entity_references::reference_inlines(
-                &format!("[{id}]"),
-                span,
+            Some(crate::entity_references::unknown_reference_label(
+                xref, &id, lexical, span,
             ))
         }
     }

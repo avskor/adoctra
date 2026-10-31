@@ -2143,3 +2143,22 @@ indented paragraphs**: `adjust_verbatim` keeps the strip-only indentation
 unless the style is `literal` (Ruby's `adjust_indentation!` without a tab
 size). **`include dropped …`** carries Ruby's full directive in
 `report.message`; the editor message keeps the short target.
+**Fold indentation**: `fold_indentation` strips the common indentation from
+the folded paragraph's first line too (it lies inside the content when the
+item text starts it), so ` +` alone loses its break like Ruby's. **Unknown
+reference labels** (`[refid]`) come from the refid's lexical spelling
+(`entity_references::unknown_reference_label`): generated tags are `Raw`,
+protected characters text; a decoded AST node keeps that spelling in
+`Xref::spelling` (passthroughs restored in `Passes::restore`) for labels built
+later (reading-converted titles). **Header metadata subs**: author and
+revision values take Ruby's `apply_header_subs` one by one
+(`ParseContext::set_header_value`, document attribute-missing policy, counters
+executing) in `process_authors` order (`header::author_entries`: per author
+`firstname`, `authorinitials`, `middlename`, `lastname`, `author`, `email`,
+then `authors`, the `_1` copies at the second author). **Undisplayed
+document title**: with `embedded` and `notitle` the title is not converted
+first (`Execution::header_lazy`); a reference converts it, else it converts
+after the body so the tree keeps its nodes. **Folded entries**: when
+`item_blocks_end` folds a paragraph, the declarations between the item's
+first line and the paragraph leave `body_subs.entries` (Ruby never plays a
+discarded block's entries back).

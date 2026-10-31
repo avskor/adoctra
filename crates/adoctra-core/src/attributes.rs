@@ -88,6 +88,10 @@ pub struct Xref {
     /// keep their own spans); the field's resolution installs them after the
     /// field's spans are restored.
     pub(crate) label: Option<(crate::Span, Vec<crate::Inline>)>,
+    /// The refid's lexical spelling (with the tags earlier substitutions
+    /// generated) of a node whose fields were decoded: Ruby labels an
+    /// unknown id with it verbatim (`[refid]`).
+    pub(crate) spelling: Option<String>,
 }
 
 impl Xref {

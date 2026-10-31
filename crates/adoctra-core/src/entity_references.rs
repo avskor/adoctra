@@ -105,6 +105,49 @@ pub(crate) fn reference_inlines(value: &str, span: crate::Span) -> Vec<crate::as
         .collect()
 }
 
+/// Ruby's `[refid]` label written from the refid's lexical spelling: the tags
+/// earlier substitutions generated stay markup (source `<` is protected as
+/// `&lt;` there), the rest reads like [`reference_inlines`] after decoding.
+pub(crate) fn lexical_reference_inlines(value: &str, span: crate::Span) -> Vec<crate::ast::Inline> {
+    let mut out = Vec::new();
+    let mut rest = value;
+    while !rest.is_empty() {
+        if rest.starts_with('<') {
+            if let Some(end) = rest.find('>') {
+                out.push(crate::ast::Inline::Raw {
+                    value: rest[..=end].to_owned(),
+                    span,
+                });
+                rest = &rest[end + 1..];
+                continue;
+            }
+        }
+        let end = rest[1..].find('<').map_or(rest.len(), |at| at + 1);
+        out.extend(reference_inlines(&decode_protection(&rest[..end]), span));
+        rest = &rest[end..];
+    }
+    out
+}
+
+/// The `[refid]` label of a reference to an unknown id: from the lexical
+/// spelling when `lexical` (Ruby writes it verbatim), else from `id`.
+pub(crate) fn unknown_reference_label(
+    xref: &crate::Xref,
+    id: &str,
+    lexical: bool,
+    span: crate::Span,
+) -> Vec<crate::ast::Inline> {
+    let spelling = if lexical {
+        xref.refid.as_deref()
+    } else {
+        xref.spelling.as_deref()
+    };
+    match spelling {
+        Some(spelling) => lexical_reference_inlines(&format!("[{spelling}]"), span),
+        None => reference_inlines(&format!("[{id}]"), span),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

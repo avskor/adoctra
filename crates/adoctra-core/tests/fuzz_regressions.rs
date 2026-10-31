@@ -368,3 +368,170 @@ fn an_ignored_style_keeps_the_literal_paragraph_tabs() {
     assert_eq!(text("[v[,tabsize=2]\n\tx\ty"), "x\ty");
     assert_eq!(text("[literal,tabsize=2]\n\tx\ty"), "  x y");
 }
+
+#[test]
+fn a_folded_paragraph_loses_its_common_indentation_before_hard_breaks() {
+    // Ruby's `adjust_indentation!` strips the common indentation from every
+    // line of the paragraph folded into an item, its first included: ` +`
+    // alone becomes `+`, which is no hard line break.
+    let breaks = |source: &str| {
+        let result = parse(source);
+        let BlockKind::List { items, .. } = &result.document.flat_blocks()[0].kind else {
+            panic!("{source:?}");
+        };
+        format!("{:?}", items[0].inlines).contains("LineBreak")
+    };
+    assert!(!breaks("* a\n +"));
+    assert!(!breaks("* a\n  +"));
+    assert!(breaks("* a\n  b +\n   +"));
+    // A less indented line keeps the others' indentation.
+    assert!(breaks("* a\nb\n +"));
+    assert!(breaks("* a\n +\nb"));
+}
+
+#[test]
+fn an_unknown_reference_label_keeps_generated_markup() {
+    // Ruby writes `[refid]` verbatim: tags the quotes stage generated stay
+    // markup, protected source characters stay text.
+    let label = |source: &str| {
+        let result = parse(source);
+        let blocks = result.document.flat_blocks();
+        let inlines = match &blocks.last().unwrap().kind {
+            BlockKind::Paragraph { inlines } | BlockKind::Heading { inlines, .. } => {
+                inlines.clone()
+            }
+            other => panic!("{other:?}"),
+        };
+        let Some(Inline::CrossReference { children, span, .. }) = inlines
+            .into_iter()
+            .find(|inline| matches!(inline, Inline::CrossReference { .. }))
+        else {
+            panic!("{source:?}");
+        };
+        assert_eq!(span.start, source.find("<<").unwrap(), "{source:?}");
+        children
+            .iter()
+            .map(|child| match child {
+                Inline::Raw { value, .. } => format!("R({value})"),
+                Inline::Text { value, .. } => value.clone(),
+                other => panic!("{other:?}"),
+            })
+            .collect::<String>()
+    };
+    assert_eq!(label("D<<y *e*>>"), "[y R(<strong>)eR(</strong>)]");
+    // Ruby's macro ends at the first `>>`, inside the protected `&gt;`.
+    assert_eq!(label("D<<y &lt;b&gt;>>"), "[y <b]");
+    // A section title converted while reading labels it the same way.
+    assert_eq!(label("== S <<y *e*>>"), "[y R(<strong>)eR(</strong>)]");
+}
+
+#[test]
+fn author_and_revision_values_take_ruby_header_substitutions() {
+    // `parse_header_metadata` applies the header subs to every implicit
+    // value in `process_authors` order: a counter advances for each value
+    // naming it, with the document's attribute-missing policy.
+    let source = "= T {counter:n}\nA {counter:n} B <x@{counter:n}>\nv{counter:r}, {counter:r}: x\n";
+    let result = parse(source);
+    let attrs = &result.document.attributes;
+    let get = |key: &str| attrs.get(key).map(str::to_owned);
+    assert_eq!(get("firstname").as_deref(), Some("A 2 B <x@3>"));
+    assert_eq!(get("author").as_deref(), Some("A 4 B <x@5>"));
+    assert_eq!(get("authors").as_deref(), Some("A 6 B <x@7>"));
+    assert_eq!(get("n").as_deref(), Some("7"));
+    // RevisionInfoLineRx splits inside the expression, as in Ruby.
+    assert_eq!(get("revnumber").as_deref(), Some("1"));
+    assert_eq!(get("revdate").as_deref(), Some("{counter"));
+    assert_eq!(get("revremark").as_deref(), Some("r}: x"));
+    // A second author adds the `_1` copies; the author attributes are then
+    // derived again from the substituted `author` (values from Ruby).
+    let result = parse("= T\nA {counter:m}; B\n");
+    let attrs = &result.document.attributes;
+    for (key, value) in [
+        ("m", "5"),
+        ("lastname", "4"),
+        ("author", "A 4"),
+        ("authorinitials", "A4"),
+        ("authors", "A 4, B"),
+        ("author_1", "A 4"),
+        ("author_2", "B"),
+    ] {
+        assert_eq!(attrs.get(key), Some(value), "{key}");
+    }
+    // Missing references warn at the author line under `warn`.
+    let source = "= T\n:attribute-missing: warn\nA {miss}\n";
+    let result = parse(source);
+    let line = source.find("A {miss}").unwrap();
+    let warnings: Vec<_> = result
+        .diagnostics
+        .iter()
+        .map(|d| (d.message.as_str(), d.span))
+        .collect();
+    let at = Span::new(line, line + "A {miss}".len());
+    assert_eq!(
+        warnings,
+        [
+            ("skipping reference to missing attribute: miss", at),
+            ("skipping reference to missing attribute: miss", at),
+            ("skipping reference to missing attribute: miss", at),
+        ]
+    );
+}
+
+#[test]
+fn an_undisplayed_document_title_converts_at_its_first_use() {
+    // Embedded output without the title (`notitle`) does not convert it;
+    // a reference to the document would, and the tree still gets its nodes.
+    let embedded = adoctra_core::ParseOptions {
+        embedded: true,
+        ..Default::default()
+    };
+    let counter = |source: &str| {
+        let result = adoctra_core::parse_with_options(source, &embedded);
+        let title = match &result.document.flat_blocks()[0].kind {
+            BlockKind::Heading { inlines, .. } => format!("{inlines:?}"),
+            other => panic!("{other:?}"),
+        };
+        let BlockKind::Paragraph { inlines } = &result.document.flat_blocks()[1].kind else {
+            panic!();
+        };
+        (format!("{inlines:?}"), title)
+    };
+    let (body, title) = counter("= T {counter:n}\n\n{n}");
+    assert!(body.contains("value: Some(\"1\")"), "{body}");
+    assert!(title.contains("\"2\""), "{title}");
+    let (body, _) = counter("[[top]]\n= T {counter:n}\n\n{n} <<top>> {n}");
+    assert!(
+        body.contains("value: Some(\"1\")") && body.contains("value: Some(\"2\")"),
+        "{body}"
+    );
+}
+
+#[test]
+fn a_folded_paragraph_entries_are_not_played_back() {
+    // Ruby applies an entry above a description's adjacent paragraph while
+    // reading; the paragraph folds away, so conversion never replays it.
+    // A later block's own entry still is.
+    let source = "m;; f\n:x: v\ny\n+\n:z: w\nz\n\n{x}{z}";
+    let result = parse(source);
+    let blocks = result.document.flat_blocks();
+    let BlockKind::Paragraph { inlines } = &blocks.last().unwrap().kind else {
+        panic!("{blocks:?}");
+    };
+    let values: Vec<_> = inlines
+        .iter()
+        .map(|inline| match inline {
+            Inline::AttributeRef {
+                name, value, span, ..
+            } => (name.as_str(), value.clone(), *span),
+            other => panic!("{other:?}"),
+        })
+        .collect();
+    let at = source.rfind("{x}").unwrap();
+    assert_eq!(
+        values,
+        [
+            ("x", None, Span::new(at, at + 3)),
+            ("z", Some("w".to_owned()), Span::new(at + 3, at + 6)),
+        ]
+    );
+}

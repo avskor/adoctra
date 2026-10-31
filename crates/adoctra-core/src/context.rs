@@ -1056,6 +1056,34 @@ impl ParseContext<'_> {
         parts_text(&parts)
     }
 
+    /// Ruby's `apply_header_subs` on an implicit header value, assigned to
+    /// `key` unless the document already defines it (explicit attributes win).
+    pub fn set_header_value(&mut self, key: &str, value: &str, span: crate::Span) {
+        if self.attributes.get(key).is_some() {
+            return;
+        }
+        let mut evaluation = crate::substitution_context::Evaluation::definition(
+            &self.attributes,
+            &self.locked,
+            &mut self.counters,
+            self.quote_compat,
+        )
+        .with_root(root_of(&mut self.root))
+        .with_footnotes(&mut self.footnotes)
+        .with_images(self.images);
+        let parts = crate::inline_attributes::header_value(
+            value,
+            &mut evaluation,
+            span,
+            &mut self.diagnostics,
+        );
+        let mut attributes = evaluation
+            .changed_attributes()
+            .unwrap_or_else(|| (*self.attributes).clone());
+        attributes.set_parts(key, parts);
+        self.attributes = Arc::new(attributes);
+    }
+
     /// Ruby's `Document#sub_attributes` from the preprocessor (`ifeval`
     /// operands, include targets and parameter lists) while reading: set and
     /// counter expressions change the reading attributes only, like other
@@ -1718,26 +1746,6 @@ pub(crate) fn attribute_entry_parts_report(
         span,
         &policy,
         diagnostics,
-    )
-}
-
-pub(crate) fn substitute_attribute_parts(
-    value: &str,
-    attributes: &Attributes,
-    raw: bool,
-) -> Vec<AttributePart> {
-    // String-only header callers explicitly retain unknown references. Actual
-    // assignments use attribute_entry_parts_report and the document policy.
-    crate::inline_attributes::parts(
-        &[if raw {
-            AttributePart::Raw(value.into())
-        } else {
-            AttributePart::Text(value.into())
-        }],
-        &mut crate::substitution_context::Evaluation::read_only(attributes),
-        crate::Span::new(0, 0),
-        "skip",
-        &mut Vec::new(),
     )
 }
 

@@ -395,6 +395,7 @@ fn xref_node(
     let Part::OpenXref(mut xref) = parts.remove(0) else {
         unreachable!()
     };
+    xref.spelling = xref.refid.clone();
     xref.map_fields(crate::attributes::decode_special);
     // A label built in the macros stage keeps its nodes unless a later
     // stage changed it.

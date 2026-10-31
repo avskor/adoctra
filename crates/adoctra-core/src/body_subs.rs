@@ -278,19 +278,25 @@ impl BodySubs {
             converting: BTreeMap::new(),
             header_title: None,
             header_converting: None,
+            header_lazy: None,
             first_section: None,
             resolving: false,
             outline: Vec::new(),
             preamble_toc: None,
         };
         let mut body = 0;
+        // Ruby converts the document title first where the output shows it
+        // (`<title>`, or the embedded heading without `notitle`); otherwise
+        // only a use (a reference to the document) converts it.
+        let displayed = execution.attributes.get("embedded").is_none()
+            || execution.attributes.get("notitle").is_none();
         if let (Some(header), Some(block)) = (self.header, blocks.first_mut()) {
             if let BlockKind::Heading { inlines, .. } = &mut block.kind {
-                execution.header_converting = Some(header.clone());
-                execution.evaluate(inlines, header);
-                execution.header_converting = None;
-                execution.resolve(inlines);
-                execution.header_title = Some(inlines.clone());
+                if displayed {
+                    *inlines = execution.convert_header(header);
+                } else {
+                    execution.header_lazy = Some(header);
+                }
                 body = 1;
             }
         }
@@ -352,6 +358,18 @@ impl BodySubs {
             _ => None,
         });
         execution.blocks(&mut blocks[body..]);
+        // An undisplayed title keeps its nodes in the tree: one a reference
+        // converted, else converted now (after the body, which it cannot
+        // affect any more).
+        if body == 1 {
+            if let BlockKind::Heading { inlines, .. } = &mut blocks[0].kind {
+                if let Some(header) = execution.header_lazy.take() {
+                    *inlines = execution.convert_header(header);
+                } else if let Some(title) = &execution.header_title {
+                    inlines.clone_from(title);
+                }
+            }
+        }
         crate::resolve::resolve_attribute_definitions(&mut execution.attributes, &execution.fixed);
         let footnotes = execution.footnotes.into_definitions(&execution.fixed);
         (execution.attributes, self.tokens, footnotes)
@@ -406,6 +424,9 @@ struct Execution<'a, 's> {
     /// inside it converts it again (Ruby memoizes the title only after the
     /// outer conversion).
     header_converting: Option<Pending>,
+    /// The document title not converted yet because the output does not
+    /// show it: the first reference to the document converts it.
+    header_lazy: Option<Pending>,
     /// Without a document title, Ruby's `doctitle` is the first top-level
     /// section's title (keyed by its heading range).
     first_section: Option<((usize, usize), Vec<Inline>)>,
@@ -678,7 +699,9 @@ impl Execution<'_, '_> {
                     Some(style) => Some(crate::resolve::decoded(style, lexical)),
                     None => self.attributes.get("xrefstyle").map(str::to_owned),
                 };
-                self.label(&id, style.as_deref(), span)
+                let fallback =
+                    crate::entity_references::unknown_reference_label(xref, &id, lexical, span);
+                self.label(&id, style.as_deref(), span, fallback)
             }
             _ => {
                 let mut label = None;
@@ -729,16 +752,21 @@ impl Execution<'_, '_> {
 
     /// Ruby's `xreftext`: a nonempty reftext, else the (styled) title, else
     /// `[id]`. References inside a label being produced display `[id]`.
-    fn label(&mut self, id: &str, style: Option<&str>, span: Span) -> Vec<Inline> {
-        let fallback = || crate::entity_references::reference_inlines(&format!("[{id}]"), span);
+    fn label(
+        &mut self,
+        id: &str,
+        style: Option<&str>,
+        span: Span,
+        fallback: Vec<Inline>,
+    ) -> Vec<Inline> {
         if !self.registry.contains_key(id) || self.resolving {
-            return fallback();
+            return fallback;
         }
         self.resolving = true;
         let label = self.xreftext(id, style, span);
         self.resolving = false;
         let Some(mut label) = label else {
-            return fallback();
+            return fallback;
         };
         crate::resolve::strip_label(&mut label);
         label
@@ -772,11 +800,26 @@ impl Execution<'_, '_> {
         ))
     }
 
+    /// Convert the document title once (Ruby's memo is assigned after the
+    /// conversion, so a reference inside it converts it again).
+    fn convert_header(&mut self, header: Pending) -> Vec<Inline> {
+        self.header_converting = Some(header.clone());
+        let mut inlines = Vec::new();
+        self.evaluate(&mut inlines, header);
+        self.header_converting = None;
+        self.resolve(&mut inlines);
+        self.header_title = Some(inlines.clone());
+        inlines
+    }
+
     /// The converted document title; inside its own conversion, converted
     /// again (the reference being labeled makes inner ones display `[id]`).
     fn header_label(&mut self) -> Option<Vec<Inline>> {
         if self.header_title.is_some() {
             return self.header_title.clone();
+        }
+        if let Some(header) = self.header_lazy.take() {
+            return Some(self.convert_header(header));
         }
         let pending = self.header_converting.clone()?;
         let mut nodes = Vec::new();

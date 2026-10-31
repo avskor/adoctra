@@ -1836,12 +1836,13 @@ mod tests {
 
     #[test]
     fn multi_line_item_text_serializes_folded() {
-        // A wrapped line folds into the item's text — its newline and indent
-        // become spaces (the resolved content), while the source is two lines.
+        // A wrapped line folds into the item's text without its indentation
+        // (Ruby's `adjust_indentation!`); the newline becomes a space in the
+        // resolved content, while the source is two lines.
         let json = render("* one\n  two");
         assert!(json.contains("\"name\":\"list\""), "got: {json}");
         assert!(
-            json.contains("{\"name\":\"text\",\"value\":\"one   two\"}"),
+            json.contains("{\"name\":\"text\",\"value\":\"one two\"}"),
             "got: {json}"
         );
     }

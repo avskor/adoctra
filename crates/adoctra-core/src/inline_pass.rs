@@ -709,6 +709,14 @@ impl Passes {
                     if let Some((_, label)) = &mut xref.label {
                         self.restore(label, attrs, compat);
                     }
+                    if let Some(spelling) = &mut xref.spelling {
+                        *spelling = reference_text(&self.restore_evaluated(
+                            vec![P::Raw(std::mem::take(spelling))],
+                            attrs,
+                            compat,
+                            0,
+                        ));
+                    }
                     self.restore(children, attrs, compat);
                 }
                 Inline::Image { image, .. } => {

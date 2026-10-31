@@ -3899,6 +3899,11 @@ fn item_blocks_end(
     item_reader: Option<Reader<'_>>,
     adjacent: bool,
 ) -> (Vec<Block>, Option<Span>) {
+    // Where the item's own lines start: metadata of a folded paragraph lies
+    // between there and the paragraph.
+    let first_line = item_reader
+        .as_ref()
+        .and_then(|reader| reader.loaded.first().map(|(off, _)| *off));
     if let Some(item_reader) = item_reader {
         lines.absorb(item_reader, false);
     }
@@ -3910,6 +3915,14 @@ fn item_blocks_end(
         // Ruby removes the paragraph's indentation before folding it.
         let paragraph = blocks.remove(0);
         let span = paragraph.span;
+        // Ruby never plays back the attribute entries of the discarded
+        // paragraph: they changed reading only.
+        if let Some(first_line) = first_line {
+            context
+                .body_subs
+                .entries
+                .retain(|(at, _, _)| !(first_line..span.start).contains(at));
+        }
         // Ruby registered the paragraph's id before folding it away.
         if let Some(id) = paragraph.id {
             let key = (span.start, span.end);
@@ -4002,15 +4015,18 @@ fn fold_indentation(
 ) -> crate::scanner::FilteredSource {
     use crate::scanner::Piece;
     let blank = |c: char| c == ' ' || c == '\t';
-    let first = folded.start - lines.line_start(folded.start);
+    let paragraph = lines.line_start(folded.start);
+    let first = folded.start - paragraph;
     let text = content.text.as_str();
-    // Lines of the folded paragraph after its first: (start, leading blanks).
+    // Lines of the folded paragraph after the item text: (start, leading
+    // blanks). Its first line keeps its indentation here when the content
+    // starts at the item text; Ruby strips the common indentation from it too.
     let mut continued = Vec::new();
     let mut at = 0;
     for line in text.split_inclusive('\n') {
         let original = content.original_span(Span::new(at, at)).start;
         let body = line.trim_end_matches(['\n', '\r']);
-        if at > 0 && original > folded.start && !body.trim_matches(blank).is_empty() {
+        if at > 0 && original >= paragraph && !body.trim_matches(blank).is_empty() {
             continued.push((at, body.len() - body.trim_start_matches(blank).len()));
         }
         at += line.len();

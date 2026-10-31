@@ -158,10 +158,10 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
         if lines.has(i, context) && !lines[i].1.is_ruby_blank() {
             result.author_line = Some(i);
             authors = parse_authors(&lines[i].1, lines[i].0);
-            let values = author_attributes(&authors);
             Arc::make_mut(&mut context.attributes).set("authorcount", authors.len().to_string());
-            for (key, value) in values.iter().filter(|(key, _)| *key != "authorcount") {
-                set_implicit(context, key, value);
+            let line = line_span((lines[i].0, &lines[i].1));
+            for (key, value) in author_entries(&authors) {
+                context.set_header_value(&key, &value, line);
             }
             implicit_author = context
                 .attributes
@@ -187,7 +187,7 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
                         ("revremark", &rev.remark),
                     ] {
                         if let Some(value) = value {
-                            set_implicit(context, key, value);
+                            context.set_header_value(key, value, rev.span);
                         }
                     }
                     i += 1;
@@ -479,11 +479,61 @@ fn line_span((off, line): (usize, &str)) -> Span {
     Span::new(off, off + line.len())
 }
 
-fn set_implicit(context: &mut ParseContext, key: &str, value: &str) {
-    if context.attributes.get(key).is_none() {
-        let parts = crate::context::substitute_attribute_parts(value, &context.attributes, false);
-        Arc::make_mut(&mut context.attributes).set_parts(key, parts);
+/// The implicit author attributes in the order of Ruby's `process_authors`
+/// hash, which `parse_header_metadata` substitutes one by one (a counter in
+/// the author line advances for each value naming it). `authorinitials` is
+/// a single character and has no effect where it falls.
+fn author_entries(authors: &[Author]) -> Vec<(String, String)> {
+    let mut entries = Vec::new();
+    let keyed = |author: &Author, suffix: &str| {
+        [
+            ("firstname", Some(&author.firstname)),
+            ("authorinitials", Some(&author.initials)),
+            ("middlename", author.middlename.as_ref()),
+            ("lastname", author.lastname.as_ref()),
+            ("author", Some(&author.name)),
+            ("email", author.email.as_ref()),
+        ]
+        .into_iter()
+        .filter_map(|(key, value)| value.map(|v| (format!("{key}{suffix}"), v.clone())))
+        .collect::<Vec<_>>()
+    };
+    for (index, author) in authors.iter().enumerate() {
+        let suffix = if index == 0 {
+            String::new()
+        } else {
+            format!("_{}", index + 1)
+        };
+        entries.extend(keyed(author, &suffix));
+        if index == 0 {
+            entries.push(("authors".to_owned(), author.name.clone()));
+        } else if index == 1 {
+            // Ruby assigns the `_1` copies once it sees the second author
+            // (`AuthorKeys` order), before `authors` grows (its slot stays).
+            let first = keyed(&authors[0], "");
+            for key in [
+                "author",
+                "authorinitials",
+                "firstname",
+                "middlename",
+                "lastname",
+                "email",
+            ] {
+                if let Some((_, value)) = first.iter().find(|(k, _)| k == key) {
+                    entries.push((format!("{key}_1"), value.clone()));
+                }
+            }
+        }
     }
+    // `authors` keeps the first author's slot but takes the joined value.
+    if let Some(entry) = entries.iter_mut().find(|(key, _)| key == "authors") {
+        entry.1 = authors
+            .iter()
+            .map(|a| a.name.as_str())
+            .collect::<Vec<_>>()
+            .join(", ");
+    }
+    entries
 }
 
 fn author_attributes(authors: &[Author]) -> Attributes {

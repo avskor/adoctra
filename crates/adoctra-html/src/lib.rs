@@ -6379,6 +6379,21 @@ mod tests {
     }
 
     #[test]
+    fn unknown_reference_labels_keep_generated_markup() {
+        // Ruby writes `[refid]` verbatim: generated tags stay markup, the
+        // href escapes them (same attribute value), protected text stays text.
+        let html = render("D<<y *e*>>");
+        assert!(
+            html.contains(
+                "<a href=\"#y &lt;strong&gt;e&lt;/strong&gt;\">[y <strong>e</strong>]</a>"
+            ),
+            "{html}"
+        );
+        let html = render("D<<y +*e*+>>");
+        assert!(html.contains(">[y *e*]</a>"), "{html}");
+    }
+
+    #[test]
     fn empty_tables_and_asciidoc_cells() {
         assert!(STYLESHEET.contains("table.tableblock"));
         let html = render("|===\n|===\n\n[cols=a]\n|===\n|*x*\n\ny\n|===");
