@@ -259,6 +259,12 @@ LEXER_CASES = [
   ['markdown', "# T\n\n```ruby\nputs 1\n```\n\n~~~\n#!/bin/sh\necho $X\n~~~\n\n```nope\nx\n```\n\n```erb?parent=html\n<b><%= x %></b>\n```\n"],
   ['markdown', "Text\n\n```python\ndef f():\n    pass\n"],
   ['markdown', "```\nplain\n```\n\n ```js\n  var x;\n  ```\n"],
+  ['slim', "doctype html\nhtml\n  head\n    javascript:\n      var x = 1;\n    ruby:\n      y = 2\n    nope:\n      text\n  body#id.c\n    p = @x\n"],
+  ['haml', "!!! 5\n%html\n  %head{lang: 'en'}\n    :javascript\n      var x = 1;\n    :nope\n      text\n  %body#id.c(a=\"1\")\n    - if @x\n      = @x\n    -# comment\n    / html comment\n"],
+  ['haml?filters[javascript]=ruby&filters[extra]=json', "%p\n  :javascript\n    puts 1\n  :extra\n    {\"a\": 1}\n"],
+  ['vue', "<template>\n  <div :a=\"b\">{{ x + {y: 1}.y }}</div>\n</template>\n<script>\nexport default { data() { return {} } }\n</script>\n<style lang=\"SCSS\">\n.a { .b { color: red; } }\n</style>\n<style lang='nope'>\nx\n</style>\n"],
+  ['meson', "project('x', 'c')\nmsg = f'v @ver@ and \\n'\ns = '''multi\n'line'''\nif true and not false\n  message(msg)\nendif\n"],
+  ['liquid', "{% liquid\n  assign x = 1\n  echo x\n%}\n{% cycle 'a': 1, 2 %}{% cycle \"b\": 3 %}{% cycle k: 4 %}{% cycle 5 %}{{ x | upcase }}\n"],
   ['varnish', "sub vcl_recv { set req.ttl = 10s; if (req.url ~ \"x\") { return (pass); } set a = 0x1f; }\n"],
 ].freeze
 

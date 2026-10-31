@@ -2000,6 +2000,7 @@ pub(crate) static REGEXES: &[(&str, u32)] = &[
     ("(raw)(\\s*)(-?%\\})", 0),
     ("(assign|echo)\\b", 0),
     ("(include|render)(\\s+)([/\\w-]+(?:\\.[\\w-]+)+\\b)?", 0),
+    ("'[^']*'", 0),
     ("(cycle)(\\s+)(?:([\\w-]+|'[^']*'|\"[^\"]*\")(\\s*)(:))?(\\s*)", 0),
     ("(\\w+)\\b", 0),
     ("(\\|)(\\s*)", 0),
@@ -2015,7 +2016,6 @@ pub(crate) static REGEXES: &[(&str, u32)] = &[
     ("[a-zA-Z_](?:\\w|-(?![%}]))*", 0),
     ("([a-zA-Z_][\\w-]*)(\\s*)(=|:)", 0),
     ("(false|true|nil)\\b", 0),
-    ("'[^']*'", 0),
     ("[,:]", 0),
     ("#.*?(?=$|-?[}%]})", 0),
     ("\\d+\\.\\d+", 0),
@@ -9150,6 +9150,16 @@ fn cb_liquid_liquid_30(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexErr
     Ok(())
 }
 
+fn cb_liquid_liquid_35(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    s.token(T::TEXT_WHITESPACE, m.text());
+    if s.in_state("liquid") {
+        while !(s.state_is("liquid")) {
+            s.pop(1)?;
+        }
+    }
+    Ok(())
+}
+
 fn cb_liquid_liquid_46(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
     s.groups(m, &[T::TEXT_WHITESPACE, T::COMMENT_PREPROC]);
     s.reset_stack();
@@ -9183,6 +9193,14 @@ fn cb_liquid_liquid_84(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexErr
 fn cb_liquid_liquid_92(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
     s.groups(m, &[T::NAME_TAG, T::TEXT_WHITESPACE, T::TEXT]);
     s.push("include")?;
+    Ok(())
+}
+
+fn cb_liquid_liquid_97(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    let mut v_token_class: T::Token = T::TEXT;
+    v_token_class = if (search(1991, m.group(3))) { T::LITERAL_STRING_SINGLE } else { if (search(231, m.group(3))) { T::LITERAL_STRING_DOUBLE } else { T::NAME_ATTRIBUTE } };
+    s.groups(m, &[T::NAME_TAG, T::TEXT_WHITESPACE, v_token_class, T::TEXT_WHITESPACE, T::PUNCTUATION, T::TEXT_WHITESPACE]);
+    s.push("tag_args")?;
     Ok(())
 }
 
@@ -13311,6 +13329,19 @@ fn cb_tap_tap_81(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
     Ok(())
 }
 
+fn cb_tcl_tcl_119(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    if s.in_state("brace") {
+        while !(s.state_is("brace")) {
+            s.pop(1)?;
+        }
+        s.pop(1)?;
+        s.token(T::PUNCTUATION, m.text());
+    } else {
+        s.token(T::ERROR, m.text());
+    }
+    Ok(())
+}
+
 fn cb_tcl_tcl_68(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
     if contains(SET_315, m.group(0)) {
         s.token(T::KEYWORD, m.text());
@@ -14153,6 +14184,30 @@ fn cb_viml_viml_48(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> 
             }
         }
     }
+    Ok(())
+}
+
+fn cb_vue_vue_39(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    s.groups(m, &[T::NAME_TAG, T::TEXT, T::KEYWORD]);
+    s.lexer.set_class("lang", "html")?;
+    s.push("template")?;
+    s.push("lang_tag")?;
+    Ok(())
+}
+
+fn cb_vue_vue_46(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    s.groups(m, &[T::NAME_TAG, T::TEXT, T::KEYWORD]);
+    s.lexer.set_class("lang", "css")?;
+    s.push("style")?;
+    s.push("lang_tag")?;
+    Ok(())
+}
+
+fn cb_vue_vue_53(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    s.groups(m, &[T::NAME_TAG, T::TEXT, T::KEYWORD]);
+    s.lexer.set_class("lang", "javascript")?;
+    s.push("script")?;
+    s.push("lang_tag")?;
     Ok(())
 }
 
@@ -19735,8 +19790,8 @@ static LEXER_HAML: LexerDef = LexerDef {
             Rule::Match { regex: 1451, bol: false, action: Action::Call(cb_haml_haml_78) },
             Rule::Match { regex: 1452, bol: false, action: Action::Call(cb_haml_haml_85) },
             Rule::Match { regex: 1453, bol: false, action: Action::Call(cb_haml_haml_91) },
-            Rule::Match { regex: 300, bol: false, action: Action::Call(crate::lexer::unported) },
-            Rule::Match { regex: 1454, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 300, bol: false, action: Action::Call(crate::lexers::haml::rule_97) },
+            Rule::Match { regex: 1454, bol: false, action: Action::Call(crate::lexers::haml::rule_104) },
             Rule::Mixin(5),
         ] },
         StateDef { name: "css", rules: &[
@@ -19745,7 +19800,7 @@ static LEXER_HAML: LexerDef = LexerDef {
         ] },
         StateDef { name: "tag", rules: &[
             Rule::Mixin(2),
-            Rule::Match { regex: 18, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 18, bol: false, action: Action::Call(crate::lexers::haml::rule_127) },
             Rule::Match { regex: 1457, bol: false, action: Action::Call(cb_haml_haml_128) },
             Rule::Match { regex: 558, bol: false, action: Action::Emit(T::PUNCTUATION, Next::State(8)) },
             Rule::Match { regex: 1447, bol: false, action: Action::Emit(T::TEXT, Next::Pop) },
@@ -19759,7 +19814,7 @@ static LEXER_HAML: LexerDef = LexerDef {
         ] },
         StateDef { name: "eval_or_plain", rules: &[
             Rule::Match { regex: 1460, bol: false, action: Action::Emit(T::PUNCTUATION, Next::State(4)) },
-            Rule::Match { regex: 1461, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 1461, bol: false, action: Action::Call(crate::lexers::haml::rule_147) },
             Rule::Match { regex: 19, bol: false, action: Action::Call(cb_haml_haml_153) },
         ] },
         StateDef { name: "ruby_line", rules: &[
@@ -19794,7 +19849,7 @@ static LEXER_HAML: LexerDef = LexerDef {
             Rule::Mixin(16),
         ] },
         StateDef { name: "filter_block", rules: &[
-            Rule::Match { regex: 1459, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 1459, bol: false, action: Action::Call(crate::lexers::haml::rule_194) },
             Rule::Mixin(13),
             Rule::Mixin(16),
         ] },
@@ -19815,10 +19870,10 @@ static LEXER_HAML: LexerDef = LexerDef {
         ] },
     ],
     start: &[st_haml_haml_59],
-    init: None,
+    init: Some(crate::lexers::haml::init),
     reset: Some(crate::lexers::util::reset),
     stream: None,
-    missing: &["haml.rs:97 (call ruby!)", "haml.rs:104 (value strip)", "haml.rs:127 (call ruby!)", "haml.rs:147 (call ruby!)", "haml.rs:194 (condition IVAR)", "haml.rs (initialize) (assignment in a hook)"],
+    missing: &[],
 };
 
 static LEXER_HANDLEBARS: LexerDef = LexerDef {
@@ -22368,7 +22423,7 @@ static LEXER_LIQUID: LexerDef = LexerDef {
         ] },
         StateDef { name: "end_logic", rules: &[
             Rule::Match { regex: 1977, bol: false, action: Action::Call(cb_liquid_liquid_30) },
-            Rule::Match { regex: 1978, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 1978, bol: false, action: Action::Call(cb_liquid_liquid_35) },
             Rule::Mixin(21),
         ] },
         StateDef { name: "end_output", rules: &[
@@ -22390,19 +22445,19 @@ static LEXER_LIQUID: LexerDef = LexerDef {
             Rule::Match { regex: 1988, bol: false, action: Action::Call(cb_liquid_liquid_84) },
             Rule::Match { regex: 1989, bol: false, action: Action::Emit(T::NAME_TAG, Next::State(13)) },
             Rule::Match { regex: 1990, bol: false, action: Action::Call(cb_liquid_liquid_92) },
-            Rule::Match { regex: 1991, bol: false, action: Action::Call(crate::lexer::unported) },
-            Rule::Match { regex: 1992, bol: false, action: Action::Emit(T::NAME_TAG, Next::State(9)) },
+            Rule::Match { regex: 1992, bol: false, action: Action::Call(cb_liquid_liquid_97) },
+            Rule::Match { regex: 1993, bol: false, action: Action::Emit(T::NAME_TAG, Next::State(9)) },
             Rule::Mixin(1),
         ] },
         StateDef { name: "output", rules: &[
-            Rule::Match { regex: 1993, bol: false, action: Action::Call(cb_liquid_liquid_116) },
+            Rule::Match { regex: 1994, bol: false, action: Action::Call(cb_liquid_liquid_116) },
             Rule::Mixin(2),
             Rule::Mixin(20),
             Rule::Mixin(23),
         ] },
         StateDef { name: "condition", rules: &[
-            Rule::Match { regex: 1994, bol: false, action: Action::Emit(T::OPERATOR, Next::Stay) },
-            Rule::Match { regex: 1995, bol: false, action: Action::Emit(T::OPERATOR_WORD, Next::Stay) },
+            Rule::Match { regex: 1995, bol: false, action: Action::Emit(T::OPERATOR, Next::Stay) },
+            Rule::Match { regex: 1996, bol: false, action: Action::Emit(T::OPERATOR_WORD, Next::Stay) },
             Rule::Mixin(7),
         ] },
         StateDef { name: "value", rules: &[
@@ -22411,13 +22466,13 @@ static LEXER_LIQUID: LexerDef = LexerDef {
             Rule::Mixin(23),
         ] },
         StateDef { name: "iteration_args", rules: &[
-            Rule::Match { regex: 1996, bol: false, action: Action::Emit(T::NAME_ATTRIBUTE, Next::Stay) },
+            Rule::Match { regex: 1997, bol: false, action: Action::Emit(T::NAME_ATTRIBUTE, Next::Stay) },
             Rule::Match { regex: 558, bol: false, action: Action::Emit(T::PUNCTUATION, Next::State(16)) },
             Rule::Mixin(10),
         ] },
         StateDef { name: "block_args", rules: &[
-            Rule::Match { regex: 1997, bol: false, action: Action::Emit(T::COMMENT_PREPROC, Next::State(15)) },
-            Rule::Match { regex: 1993, bol: false, action: Action::Call(cb_liquid_liquid_150) },
+            Rule::Match { regex: 1998, bol: false, action: Action::Emit(T::COMMENT_PREPROC, Next::State(15)) },
+            Rule::Match { regex: 1994, bol: false, action: Action::Call(cb_liquid_liquid_150) },
             Rule::Mixin(10),
         ] },
         StateDef { name: "tag_args", rules: &[
@@ -22426,28 +22481,28 @@ static LEXER_LIQUID: LexerDef = LexerDef {
         ] },
         StateDef { name: "comment", rules: &[
             Rule::Match { regex: 1974, bol: false, action: Action::Emit(T::COMMENT, Next::Stay) },
-            Rule::Match { regex: 1998, bol: false, action: Action::Call(cb_liquid_liquid_167) },
+            Rule::Match { regex: 1999, bol: false, action: Action::Call(cb_liquid_liquid_167) },
             Rule::Match { regex: 262, bol: false, action: Action::Emit(T::COMMENT, Next::Stay) },
         ] },
         StateDef { name: "raw", rules: &[
             Rule::Match { regex: 1974, bol: false, action: Action::Emit(T::TEXT, Next::Stay) },
-            Rule::Match { regex: 1999, bol: false, action: Action::Call(cb_liquid_liquid_178) },
+            Rule::Match { regex: 2000, bol: false, action: Action::Call(cb_liquid_liquid_178) },
             Rule::Match { regex: 262, bol: false, action: Action::Emit(T::TEXT, Next::Stay) },
         ] },
         StateDef { name: "assign", rules: &[
             Rule::Match { regex: 261, bol: false, action: Action::Emit(T::OPERATOR, Next::Stay) },
             Rule::Match { regex: 558, bol: false, action: Action::Emit(T::PUNCTUATION, Next::State(16)) },
-            Rule::Match { regex: 1993, bol: false, action: Action::Call(cb_liquid_liquid_190) },
+            Rule::Match { regex: 1994, bol: false, action: Action::Call(cb_liquid_liquid_190) },
             Rule::Mixin(7),
         ] },
         StateDef { name: "include", rules: &[
-            Rule::Match { regex: 1997, bol: false, action: Action::Emit(T::COMMENT_PREPROC, Next::State(15)) },
-            Rule::Match { regex: 2000, bol: false, action: Action::Emit(T::KEYWORD_RESERVED, Next::Stay) },
+            Rule::Match { regex: 1998, bol: false, action: Action::Emit(T::COMMENT_PREPROC, Next::State(15)) },
+            Rule::Match { regex: 2001, bol: false, action: Action::Emit(T::KEYWORD_RESERVED, Next::Stay) },
             Rule::Mixin(10),
         ] },
         StateDef { name: "output_embed", rules: &[
-            Rule::Match { regex: 2001, bol: false, action: Action::Call(cb_liquid_liquid_207) },
-            Rule::Match { regex: 2002, bol: false, action: Action::Emit(T::COMMENT_PREPROC, Next::Pop) },
+            Rule::Match { regex: 2002, bol: false, action: Action::Call(cb_liquid_liquid_207) },
+            Rule::Match { regex: 2003, bol: false, action: Action::Emit(T::COMMENT_PREPROC, Next::Pop) },
             Rule::Mixin(19),
         ] },
         StateDef { name: "range", rules: &[
@@ -22458,23 +22513,23 @@ static LEXER_LIQUID: LexerDef = LexerDef {
             Rule::Mixin(23),
         ] },
         StateDef { name: "filters", rules: &[
-            Rule::Match { regex: 1993, bol: false, action: Action::Call(cb_liquid_liquid_226) },
+            Rule::Match { regex: 1994, bol: false, action: Action::Call(cb_liquid_liquid_226) },
             Rule::Mixin(1),
             Rule::Mixin(2),
             Rule::Mixin(19),
         ] },
         StateDef { name: "filter", rules: &[
-            Rule::Match { regex: 2003, bol: false, action: Action::Emit(T::NAME_FUNCTION, Next::Pop) },
+            Rule::Match { regex: 2004, bol: false, action: Action::Emit(T::NAME_FUNCTION, Next::Pop) },
             Rule::Mixin(21),
         ] },
         StateDef { name: "args", rules: &[
             Rule::Mixin(20),
-            Rule::Match { regex: 2004, bol: false, action: Action::Call(cb_liquid_liquid_245) },
+            Rule::Match { regex: 2005, bol: false, action: Action::Call(cb_liquid_liquid_245) },
             Rule::Mixin(23),
         ] },
         StateDef { name: "static", rules: &[
-            Rule::Match { regex: 2005, bol: false, action: Action::Emit(T::KEYWORD_CONSTANT, Next::Stay) },
-            Rule::Match { regex: 2006, bol: false, action: Action::Emit(T::LITERAL_STRING_SINGLE, Next::Stay) },
+            Rule::Match { regex: 2006, bol: false, action: Action::Emit(T::KEYWORD_CONSTANT, Next::Stay) },
+            Rule::Match { regex: 1991, bol: false, action: Action::Emit(T::LITERAL_STRING_SINGLE, Next::Stay) },
             Rule::Match { regex: 231, bol: false, action: Action::Emit(T::LITERAL_STRING_DOUBLE, Next::Stay) },
             Rule::Match { regex: 2007, bol: false, action: Action::Emit(T::PUNCTUATION, Next::Stay) },
             Rule::Mixin(21),
@@ -22501,7 +22556,7 @@ static LEXER_LIQUID: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["liquid.rs:35 (UNTIL@38)", "liquid.rs:97 (value CASE)"],
+    missing: &[],
 };
 
 static LEXER_LITERATE_COFFEESCRIPT: LexerDef = LexerDef {
@@ -23222,7 +23277,7 @@ static LEXER_MESON: LexerDef = LexerDef {
             Rule::Match { regex: 197, bol: false, action: Action::Emit(T::TEXT, Next::Stay) },
             Rule::Match { regex: 1192, bol: false, action: Action::Emit(T::OPERATOR_WORD, Next::Stay) },
             Rule::Match { regex: 2177, bol: false, action: Action::Emit(T::OPERATOR, Next::Stay) },
-            Rule::Match { regex: 2178, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 2178, bol: false, action: Action::Call(crate::lexers::meson::rule_58) },
             Rule::Match { regex: 2179, bol: false, action: Action::Call(cb_meson_meson_64) },
             Rule::Match { regex: 2180, bol: false, action: Action::Call(cb_meson_meson_72) },
             Rule::Match { regex: 779, bol: false, action: Action::Emit(T::NAME, Next::Stay) },
@@ -23233,9 +23288,9 @@ static LEXER_MESON: LexerDef = LexerDef {
         ] },
         StateDef { name: "generic_string", rules: &[
             Rule::Match { regex: 2181, bol: false, action: Action::Emit(T::LITERAL_STRING, Next::Stay) },
-            Rule::Match { regex: 2182, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 2182, bol: false, action: Action::Call(crate::lexers::meson::rule_93) },
             Rule::Match { regex: 801, bol: false, action: Action::Emit(T::LITERAL_STRING, Next::State(2)) },
-            Rule::Match { regex: 2183, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 2183, bol: false, action: Action::Call(crate::lexers::meson::rule_103) },
         ] },
         StateDef { name: "generic_escape", rules: &[
             Rule::Match { regex: 2184, bol: false, action: Action::Call(cb_meson_meson_114) },
@@ -23250,7 +23305,7 @@ static LEXER_MESON: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["meson.rs:58 (call register)", "meson.rs:93 (condition delim?)", "meson.rs:103 (condition type?)"],
+    missing: &[],
 };
 
 static LEXER_MINIZINC: LexerDef = LexerDef {
@@ -25441,7 +25496,7 @@ static LEXER_PROLOG: LexerDef = LexerDef {
         ] },
         StateDef { name: "atoms", rules: &[
             Rule::Match { regex: 2631, bol: false, action: Action::Emit(T::LITERAL_STRING_SYMBOL, Next::Stay) },
-            Rule::Match { regex: 2006, bol: false, action: Action::Emit(T::LITERAL_STRING_SYMBOL, Next::Stay) },
+            Rule::Match { regex: 1991, bol: false, action: Action::Emit(T::LITERAL_STRING_SYMBOL, Next::Stay) },
         ] },
         StateDef { name: "operators", rules: &[
             Rule::Match { regex: 2632, bol: false, action: Action::Emit(T::OPERATOR, Next::Stay) },
@@ -27447,7 +27502,7 @@ static LEXER_SLIM: LexerDef = LexerDef {
             Rule::Mixin(3),
             Rule::Match { regex: 3012, bol: false, action: Action::Emit(T::COMMENT, Next::State(11)) },
             Rule::Match { regex: 3013, bol: false, action: Action::Call(cb_slim_slim_57) },
-            Rule::Match { regex: 3014, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 3014, bol: false, action: Action::Call(crate::lexers::slim::rule_63) },
             Rule::Match { regex: 3015, bol: false, action: Action::Call(cb_slim_slim_77) },
             Rule::Match { regex: 3016, bol: false, action: Action::Emit(T::PUNCTUATION, Next::State(5)) },
             Rule::Match { regex: 3017, bol: false, action: Action::Call(cb_slim_slim_87) },
@@ -27486,7 +27541,7 @@ static LEXER_SLIM: LexerDef = LexerDef {
             Rule::Match { regex: 3032, bol: false, action: Action::Call(cb_slim_slim_177) },
         ] },
         StateDef { name: "filter_block", rules: &[
-            Rule::Match { regex: 1459, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 1459, bol: false, action: Action::Call(crate::lexers::slim::rule_181) },
             Rule::Mixin(8),
             Rule::Mixin(11),
         ] },
@@ -27517,7 +27572,7 @@ static LEXER_SLIM: LexerDef = LexerDef {
     init: None,
     reset: Some(crate::lexers::util::reset),
     stream: None,
-    missing: &["slim.rs:63 (value strip)", "slim.rs:181 (condition IVAR)"],
+    missing: &[],
 };
 
 static LEXER_SMALLTALK: LexerDef = LexerDef {
@@ -28500,7 +28555,7 @@ static LEXER_SYZPROG: LexerDef = LexerDef {
         StateDef { name: "mixin_string", rules: &[
             Rule::Match { regex: 231, bol: false, action: Action::Emit(T::LITERAL_STRING_DOUBLE, Next::Stay) },
             Rule::Match { regex: 3228, bol: false, action: Action::Emit(T::LITERAL_STRING_BACKTICK, Next::Stay) },
-            Rule::Match { regex: 2006, bol: false, action: Action::Emit(T::LITERAL_STRING_SINGLE, Next::Stay) },
+            Rule::Match { regex: 1991, bol: false, action: Action::Emit(T::LITERAL_STRING_SINGLE, Next::Stay) },
         ] },
         StateDef { name: "mixin_term", rules: &[
             Rule::Mixin(3),
@@ -28596,7 +28651,7 @@ static LEXER_TCL: LexerDef = LexerDef {
             Rule::Match { regex: 3254, bol: false, action: Action::Emit(T::TEXT, Next::Stay) },
         ] },
         StateDef { name: "brace_abort", rules: &[
-            Rule::Match { regex: 281, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 281, bol: false, action: Action::Call(cb_tcl_tcl_119) },
         ] },
         StateDef { name: "params", rules: &[
             Rule::Match { regex: 36, bol: false, action: Action::Emit(T::PUNCTUATION, Next::Pop) },
@@ -28693,7 +28748,7 @@ static LEXER_TCL: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["tcl.rs:119 (UNTIL@121)", "tcl.rs:64 (literal)", "tcl.rs:178 (OP_ASGN_OR@179)", "tcl.rs:185 (integer expression)"],
+    missing: &["tcl.rs:64 (literal)", "tcl.rs:178 (OP_ASGN_OR@179)", "tcl.rs:185 (integer expression)"],
 };
 
 static LEXER_TERRAFORM: LexerDef = LexerDef {
@@ -29820,9 +29875,9 @@ static LEXER_VUE: LexerDef = LexerDef {
     tag: "vue",
     states: &[
         StateDef { name: "root", rules: &[
-            Rule::Match { regex: 3437, bol: false, action: Action::Call(crate::lexer::unported) },
-            Rule::Match { regex: 3438, bol: false, action: Action::Call(crate::lexer::unported) },
-            Rule::Match { regex: 3439, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 3437, bol: false, action: Action::Call(cb_vue_vue_39) },
+            Rule::Match { regex: 3438, bol: false, action: Action::Call(cb_vue_vue_46) },
+            Rule::Match { regex: 3439, bol: false, action: Action::Call(cb_vue_vue_53) },
             Rule::Match { regex: 1569, bol: false, action: Action::Emit(T::TEXT, Next::Stay) },
             Rule::Match { regex: 285, bol: false, action: Action::Emit(T::NAME_ENTITY, Next::Stay) },
             Rule::Match { regex: 1570, bol: false, action: Action::Emit(T::COMMENT_PREPROC, Next::Stay) },
@@ -29854,7 +29909,7 @@ static LEXER_VUE: LexerDef = LexerDef {
             Rule::Mixin(8),
         ] },
         StateDef { name: "lang_tag", rules: &[
-            Rule::Match { regex: 3443, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 3443, bol: false, action: Action::Call(crate::lexers::vue::rule_86) },
             Rule::Mixin(1),
         ] },
         StateDef { name: "template", rules: &[
@@ -29922,7 +29977,7 @@ static LEXER_VUE: LexerDef = LexerDef {
     init: Some(init_vue),
     reset: None,
     stream: None,
-    missing: &["vue.rs:39 (IASGN)", "vue.rs:46 (IASGN)", "vue.rs:53 (IASGN)", "vue.rs:86 (IASGN)"],
+    missing: &[],
 };
 
 static LEXER_WOLLOK: LexerDef = LexerDef {

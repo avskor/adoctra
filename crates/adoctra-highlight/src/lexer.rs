@@ -172,14 +172,19 @@ pub struct Lexer {
     /// `@stack` is nil: the next use initializes it to `[:root]`.
     fresh: bool,
     pub options: Options,
-    /// Lexer-specific instance variables, set by `init`/`start` hooks.
-    pub vars: Option<Box<dyn Any>>,
+    /// Lexer-specific instance variables, set by `init`/`start` hooks: one
+    /// value per type (a lexer's own and a mixin's, like slim's and
+    /// `Rouge::Indentation`'s).
+    pub vars: Vec<Box<dyn Any>>,
     /// Persistent delegate lexers (`@ruby ||= Ruby.new(options)`).
     pub subs: BTreeMap<&'static str, Lexer>,
     /// Instance variables naming another one's delegate (`@lang = @css`).
     pub aliases: BTreeMap<&'static str, &'static str>,
     /// String instance variables (`@heredocstr = m[5]`); unset is nil.
     pub strings: BTreeMap<&'static str, String>,
+    /// Instance variables holding a lexer class (vue's `@lang = CSS`):
+    /// delegating to one lexes with a new instance.
+    pub classes: BTreeMap<&'static str, &'static LexerDef>,
 }
 
 /// The ported lexers.
@@ -220,10 +225,11 @@ impl Lexer {
             stack: Vec::new(),
             fresh: true,
             options,
-            vars: None,
+            vars: Vec::new(),
             subs: BTreeMap::new(),
             aliases: BTreeMap::new(),
             strings: BTreeMap::new(),
+            classes: BTreeMap::new(),
         };
         if let Some(init) = def.init {
             init(&mut lexer)?;
@@ -317,6 +323,7 @@ impl Lexer {
     pub fn set_sub(&mut self, key: &'static str, make: MakeSub) -> Result<(), LexError> {
         let sub = make(self)?;
         self.aliases.remove(key);
+        self.classes.remove(key);
         self.subs.insert(key, sub);
         Ok(())
     }
@@ -325,7 +332,17 @@ impl Lexer {
     pub fn alias_sub(&mut self, key: &'static str, other: &'static str) {
         let target = self.resolve_sub(other);
         self.subs.remove(key);
+        self.classes.remove(key);
         self.aliases.insert(key, target);
+    }
+
+    /// `@key = Klass`: a lexer class.
+    pub fn set_class(&mut self, key: &'static str, tag: &str) -> Result<(), LexError> {
+        let def = find_def(tag).ok_or_else(|| LexError(format!("unknown lexer {tag}")))?;
+        self.subs.remove(key);
+        self.aliases.remove(key);
+        self.classes.insert(key, def);
+        Ok(())
     }
 
     fn resolve_sub(&self, key: &'static str) -> &'static str {
@@ -352,13 +369,14 @@ impl Lexer {
 
     /// The lexer-specific variables of type `T`, created on first use.
     pub fn vars<T: Any + Default>(&mut self) -> &mut T {
-        if !self.vars.as_ref().is_some_and(|vars| vars.is::<T>()) {
-            self.vars = Some(Box::new(T::default()));
-        }
-        self.vars
-            .as_mut()
-            .and_then(|vars| vars.downcast_mut())
-            .expect("lexer variables")
+        let index = match self.vars.iter().position(|vars| vars.is::<T>()) {
+            Some(index) => index,
+            None => {
+                self.vars.push(Box::new(T::default()));
+                self.vars.len() - 1
+            }
+        };
+        self.vars[index].downcast_mut().expect("lexer variables")
     }
 
     fn stream_tokens(
@@ -708,6 +726,9 @@ impl<'l, 't> Scan<'l, 't> {
 
     /// `delegate @key, text` for a delegate set by a hook; nil fails.
     pub fn delegate_existing(&mut self, key: &'static str, text: &str) -> Result<(), LexError> {
+        if let Some(def) = self.lexer.classes.get(key) {
+            return self.delegate_class(def.tag, text);
+        }
         let key = self.lexer.resolve_sub(key);
         let sub =
             self.lexer.subs.get_mut(key).ok_or_else(|| {

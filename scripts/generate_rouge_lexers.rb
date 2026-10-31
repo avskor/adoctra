@@ -409,26 +409,7 @@ module RougeLexers
         out << " else {\n#{stmts no, indent + '    '}#{indent}}" if no
         "#{out}\n"
       when :CASE
-        subject = value(node.children[0])
-        clauses = []
-        branch = node.children[1]
-        while branch
-          if branch.type == :WHEN
-            values, body, branch = branch.children
-            tests = call_args(values).map do |v|
-              if (re = static_regex(v))
-                # `when /^#{decimal}$/`: Regexp#=== searches.
-                search(re, node.children[0])
-              else
-                "#{subject} == #{literal_string v}"
-              end
-            end
-            clauses << ["(#{tests.join(' || ')})", body]
-          else
-            clauses << [nil, branch]
-            branch = nil
-          end
-        end
+        clauses = case_clauses(node)
         out = +''
         clauses.each_with_index do |(test, body), i|
           out << (test ? "#{i.zero? ? indent : ' else '}if #{test} {\n" : " else {\n")
@@ -460,6 +441,11 @@ module RougeLexers
         receiver = rule? ? 's.lexer' : 'l'
         key = rust_str(ivar_key(name))
         return "#{indent}#{receiver}.strings.remove(#{key});\n" if rhs.type == :NIL
+        if %i[CONST COLON2].include?(rhs.type) && (klass = (evaluate(rhs) rescue nil)).is_a?(Class) && klass < Rouge::Lexer
+          # `@lang = CSS`: a lexer class.
+          @g.depend(klass.tag)
+          return "#{indent}#{receiver}.set_class(#{key}, #{rust_str klass.tag})?;\n"
+        end
         if string_expression?(rhs)
           # A String instance variable.
           return "#{indent}let value = (#{value rhs}).to_string();\n#{indent}#{receiver}.strings.insert(#{key}, value);\n"
@@ -477,6 +463,12 @@ module RougeLexers
         unsupported(node) if rule?
         ''
       when :NIL then ''
+      # `pop! until state? :liquid`.
+      when :UNTIL, :WHILE
+        cond, body, = node.children
+        test = condition(cond)
+        test = "!(#{test})" if node.type == :UNTIL
+        "#{indent}while #{test} {\n#{stmts body, indent + '    '}#{indent}}\n"
       # `next` leaves a rule block (`next token Keyword if …`: after the
       # token).
       when :NEXT
@@ -490,6 +482,32 @@ module RougeLexers
         ''
       else unsupported(node)
       end
+    end
+
+    # The clauses of `case subject when …`: [Rust test or nil for else,
+    # body].
+    def case_clauses node
+      subject = value(node.children[0])
+      clauses = []
+      branch = node.children[1]
+      while branch
+        if branch.type == :WHEN
+          values, body, branch = branch.children
+          tests = call_args(values).map do |v|
+            if (re = static_regex(v))
+              # `when /^#{decimal}$/`: Regexp#=== searches.
+              search(re, node.children[0])
+            else
+              "#{subject} == #{literal_string v}"
+            end
+          end
+          clauses << ["(#{tests.join(' || ')})", body]
+        else
+          clauses << [nil, branch]
+          branch = nil
+        end
+      end
+      clauses
     end
 
     # `push do … end`: an anonymous state of plain rules and mixins, built
@@ -791,6 +809,8 @@ module RougeLexers
       when :DVAR then @locals[node.children[0]] == :token
       # `push :state; Keyword`: statements, then the token.
       when :BLOCK then token_expression?(node.children.last)
+      # `case m[3] when /re/ then Str::Single … else Name end`.
+      when :CASE then case_clauses(node).all? { |_, body| token_expression?(body) }
       # `name_token(m[0]) || Name`: a token method of the lexer.
       when :OR then method_token?(node.children[0]) && token_expression?(node.children[1])
       when :FCALL then method_token?(node)
@@ -811,6 +831,12 @@ module RougeLexers
       when :BLOCK
         effects = node.children[0..-2].map { |n| stmt(n, '') }.join(' ').tr("\n", ' ')
         "{ #{effects}#{token_expr node.children.last} }"
+      when :CASE
+        clauses = case_clauses(node)
+        unsupported(node, 'token case without else') unless clauses.last[0].nil?
+        clauses.reverse.drop(1).reduce(token_expr(clauses.last[1])) do |rest, (test, body)|
+          "if #{test} { #{token_expr body} } else { #{rest} }"
+        end
       when :OR
         unsupported(node, 'token OR') unless method_token?(node.children[0])
         "#{method_token node.children[0]}.unwrap_or(#{token_expr node.children[1]})"
