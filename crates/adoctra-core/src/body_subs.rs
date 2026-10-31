@@ -609,8 +609,13 @@ impl Execution<'_, '_> {
             if !id.is_empty() && !self.registry.contains_key(&id) {
                 self.references.push(Diagnostic {
                     omitted_span: None,
+                    // Ruby's sub_macros logs an unlocated INFO, only at
+                    // that level.
                     report: crate::DiagnosticReport {
-                        suppressed: true,
+                        verbose_only: true,
+                        severity: Some(crate::Severity::Info),
+                        message: Some(format!("possible invalid reference: {id}")),
+                        location: crate::DiagnosticLocation::Unlocated,
                         ..Default::default()
                     },
                     span,

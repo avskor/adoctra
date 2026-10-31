@@ -1077,14 +1077,18 @@ fn cli_safe_mode_controls_includes_user_home_and_copied_stylesheets() {
     // Server mode hides the home; secure mode links includes.
     let (_, html) = run(&["-s", "-S", "server", "--stdout"]);
     assert!(html.contains("<p>server [.]</p>"), "{html}");
-    let (_, html) = run(&["-s", "-S", "SECURE", "--stdout"]);
+    // A unique prefix names a mode, like Ruby's OptionParser.
+    let (_, html) = run(&["-s", "-S", "sec", "--stdout"]);
     assert!(
         html.contains("<a href=\"../outside.adoc\" class=\"bare include\">../outside.adoc</a>"),
         "{html}"
     );
-    // An unknown mode is a usage error.
-    let (_, html) = run(&["-S", "paranoid", "--stdout"]);
-    assert!(html.is_empty());
+    // An unknown (or differently cased) mode is a usage error: the usage
+    // goes to stdout and the run fails.
+    for mode in ["paranoid", "SECURE"] {
+        let (ok, usage) = run(&["-S", mode, "--stdout"]);
+        assert!(!ok && usage.starts_with("Usage: adoctra"), "{usage}");
+    }
     // Secure mode links the stylesheet but never copies it.
     let out = root.join("out/main.html");
     let (ok, _) = run(&["-S", "secure", "-a", "copycss", "-o", out.to_str().unwrap()]);
@@ -1518,5 +1522,128 @@ fn cli_writes_files_like_ruby_convert() {
             "adoctra: warning: {root_text}/docs/a.adoc: stylesheet does not exist or cannot be read: {root_text}/docs/none.css\n"
         )
     );
+    std::fs::remove_dir_all(&root).unwrap();
+}
+
+/// Ruby's CLI surface (`Asciidoctor::Cli::Options`/`Invoker`): usage and
+/// version streams, OptionParser errors, `--failure-level` with `-q`/`-v`,
+/// several (globbed) inputs, `-R` with `-D` and `-t`. The CLI matrix
+/// (scripts/cli_matrix.py) compares these scenarios with Ruby's command.
+#[test]
+fn cli_options_and_exit_status_follow_ruby() {
+    use std::process::Command;
+    let root = std::env::temp_dir().join(format!("adoctra-cli-options-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(root.join("sub")).unwrap();
+    std::fs::write(
+        root.join("warn.adoc"),
+        "= Doc\n\n=== Skipped\n\nSee <<nope>>.\n",
+    )
+    .unwrap();
+    std::fs::write(root.join("sub/b.adoc"), "b").unwrap();
+    std::fs::write(root.join("sub/c.adoc"), "c").unwrap();
+    let run = |args: &[&str]| {
+        let output = Command::new(env!("CARGO_BIN_EXE_adoctra"))
+            .args(args)
+            .current_dir(&root)
+            .output()
+            .unwrap();
+        (
+            output.status.code().unwrap(),
+            String::from_utf8(output.stdout).unwrap(),
+            String::from_utf8(output.stderr).unwrap(),
+        )
+    };
+    // Usage: stderr and failure without input, stdout and success for -h;
+    // a usage error prints its message and the usage on stdout.
+    let (code, out, err) = run(&[]);
+    assert_eq!((code, out.as_str()), (1, ""));
+    assert!(err.starts_with("Usage: adoctra"), "{err}");
+    let (code, out, _) = run(&["-s", "-h"]);
+    assert_eq!(code, 0);
+    assert!(out.starts_with("Usage: adoctra"), "{out}");
+    for args in [&["-v"][..], &["-V"]] {
+        let (code, out, _) = run(args);
+        assert_eq!(code, 0);
+        assert!(out.starts_with("adoctra "), "{out}");
+    }
+    for (args, message) in [
+        (&["-d", "B", "warn.adoc"][..], "invalid argument: -d B"),
+        (&["-S", "s", "warn.adoc"], "ambiguous argument: -S s"),
+        (&["warn.adoc", "-o"], "option missing argument: -o"),
+        (&["--bogus", "warn.adoc"], "invalid option: --bogus"),
+    ] {
+        let (code, out, err) = run(args);
+        assert_eq!(code, 1);
+        assert_eq!(err, format!("adoctra: {message}\n"));
+        assert!(out.starts_with("Usage: adoctra"), "{out}");
+    }
+    let (code, _, err) = run(&["missing.adoc"]);
+    assert_eq!(
+        (code, err.as_str()),
+        (1, "adoctra: FAILED: input file missing.adoc is missing\n")
+    );
+    let (code, _, err) = run(&["-b", "foo", "warn.adoc"]);
+    assert_eq!(code, 1);
+    assert!(
+        err.contains("FAILED: missing converter for backend 'foo'. Processing aborted."),
+        "{err}"
+    );
+    // The section warning prints; FATAL (the default) does not fail, WARN
+    // does, also with -q (which prints nothing); the reference INFO counts
+    // only with -v, which prints it without a location.
+    let warning = format!(
+        "adoctra: {}/warn.adoc:3: warning: section title out of sequence: expected level 1, got level 2\n",
+        std::fs::canonicalize(&root).unwrap().display()
+    );
+    let warning = warning.as_str();
+    let (code, _, err) = run(&["-s", "-o", "-", "warn.adoc"]);
+    assert_eq!((code, err.as_str()), (0, warning));
+    let (code, _, err) = run(&["--failure-level", "WARN", "-s", "-o", "-", "warn.adoc"]);
+    assert_eq!((code, err.as_str()), (1, warning));
+    let (code, _, err) = run(&[
+        "-q",
+        "--failure-level",
+        "warning",
+        "-s",
+        "-o",
+        "-",
+        "warn.adoc",
+    ]);
+    assert_eq!((code, err.as_str()), (1, ""));
+    let (code, _, err) = run(&["--failure-level", "ERROR", "-s", "-o", "-", "warn.adoc"]);
+    assert_eq!((code, err.as_str()), (0, warning));
+    let (code, _, err) = run(&["-v", "-s", "-o", "-", "warn.adoc"]);
+    assert_eq!(code, 0);
+    assert_eq!(
+        err,
+        format!("{warning}adoctra: info: possible invalid reference: nope\n")
+    );
+    // Several inputs, a glob for a name that is no file, -R keeping the
+    // directories below the source root in -D, and -t on stderr.
+    let (code, _, err) = run(&[
+        "-s",
+        "-t",
+        "-R",
+        ".",
+        "-D",
+        "out",
+        "warn.adoc",
+        "sub/*.adoc",
+    ]);
+    assert_eq!(code, 0);
+    for file in ["out/warn.html", "out/sub/b.html", "out/sub/c.html"] {
+        assert!(root.join(file).is_file(), "{file}");
+    }
+    assert_eq!(err.matches("Input file: ").count(), 3, "{err}");
+    assert!(
+        err.contains("  Total time (read, parse and convert): "),
+        "{err}"
+    );
+    // A `-` among other inputs warns and is skipped.
+    let (code, _, err) = run(&["-s", "-D", "out2", "sub/b.adoc", "-"]);
+    assert_eq!(code, 0);
+    assert!(err.contains("extra arguments detected"), "{err}");
+    assert!(root.join("out2/b.html").is_file());
     std::fs::remove_dir_all(&root).unwrap();
 }

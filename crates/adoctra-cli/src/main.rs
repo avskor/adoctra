@@ -25,16 +25,151 @@ use std::sync::Arc;
 
 use adoctra::Backend;
 
+mod args;
+mod glob;
 mod resources;
 
+use args::{override_name, Args, Command, Level, Verbosity};
+
 fn main() -> ExitCode {
-    match run() {
-        Ok(()) => ExitCode::SUCCESS,
-        Err(e) => {
-            eprintln!("adoctra: {e}");
+    match args::parse(std::env::args().skip(1)) {
+        Command::Help => {
+            print_usage(&mut std::io::stdout());
+            ExitCode::SUCCESS
+        }
+        Command::Version => {
+            println!("adoctra {}", env!("CARGO_PKG_VERSION"));
+            println!(
+                "Compatibility target: Asciidoctor {}",
+                adoctra::COMPATIBILITY_VERSION
+            );
+            ExitCode::SUCCESS
+        }
+        Command::Usage => {
+            print_usage(&mut std::io::stderr());
             ExitCode::FAILURE
         }
+        // Like Ruby's OptionParser errors: the message on stderr, the usage
+        // on stdout.
+        Command::Invalid(message) => {
+            eprintln!("adoctra: {message}");
+            print_usage(&mut std::io::stdout());
+            ExitCode::FAILURE
+        }
+        Command::Failed(message) => {
+            eprintln!("adoctra: {message}");
+            ExitCode::FAILURE
+        }
+        Command::Convert(args) => invoke(args),
     }
+}
+
+/// Ruby's `Invoker#invoke!`: every input converted with the same options
+/// (standard input or a single pipe streams to stdout unless `-o`; `-R`
+/// keeps the input's directory below the source root in `-D`). A failure
+/// stops the run; a logged message at `--failure-level` or above fails it
+/// too.
+fn invoke(args: Args) -> ExitCode {
+    LOG.with(|log| log.borrow_mut().verbosity = args.verbosity);
+    let result = (|| -> Result<(), Failure> {
+        if let Some(backend) = &args.unavailable_backend {
+            return Err(Failure::Message(match backend.as_str() {
+                "docbook" | "docbook5" | "manpage" => {
+                    format!("FAILED: backend '{backend}' is not supported by adoctra")
+                }
+                _ => format!(
+                    "FAILED: missing converter for backend '{backend}'. Processing aborted."
+                ),
+            }));
+        }
+        let single_stream = match args.inputs.as_slice() {
+            [input] => {
+                input == "-" || std::fs::metadata(input).is_ok_and(|meta| args::is_pipe(&meta))
+            }
+            _ => false,
+        };
+        for input in &args.inputs {
+            let mut job = args.clone();
+            job.input = input.clone();
+            if single_stream && job.output.is_none() {
+                job.output = Some("-".into());
+            }
+            if let (Some(source), Some(to_dir), false) =
+                (&args.source_dir, &args.to_dir, input == "-")
+            {
+                let dir = expand_path(Path::new(input))?;
+                let dir = posix(dir.parent().unwrap_or(Path::new("/")));
+                let source = posix(&expand_path(Path::new(source))?);
+                if let Some(rest) = dir.strip_prefix(&format!("{source}/")) {
+                    job.to_dir = Some(format!("{to_dir}/{rest}"));
+                }
+            }
+            convert(&job)?;
+        }
+        Ok(())
+    })();
+    let mut failed = false;
+    if let Err(error) = result {
+        eprintln!("adoctra: {error}");
+        failed = true;
+    }
+    if LOG
+        .with(|log| log.borrow().max)
+        .is_some_and(|max| max >= args.failure_level)
+    {
+        failed = true;
+    }
+    match failed {
+        true => ExitCode::FAILURE,
+        false => ExitCode::SUCCESS,
+    }
+}
+
+/// Ruby's logger for the run: `-q` prints nothing (a NullLogger), `-v`
+/// also prints INFO; every logged message raises the maximum severity
+/// `--failure-level` reads. A message Ruby logs only at INFO level
+/// (`if logger.info?`) is logged with `-v` only (Ruby's NullLogger for `-q`
+/// is at WARN level).
+struct Log {
+    verbosity: Verbosity,
+    max: Option<Level>,
+}
+
+thread_local! {
+    static LOG: std::cell::RefCell<Log> = const {
+        std::cell::RefCell::new(Log { verbosity: Verbosity::Normal, max: None })
+    };
+}
+
+fn log(level: Level, verbose_only: bool, line: impl FnOnce() -> String) {
+    LOG.with(|log| {
+        let mut log = log.borrow_mut();
+        if verbose_only && log.verbosity != Verbosity::Verbose {
+            return;
+        }
+        log.max = log.max.max(Some(level));
+        let shown = match log.verbosity {
+            Verbosity::Quiet => false,
+            Verbosity::Normal => level > Level::Info,
+            Verbosity::Verbose => true,
+        };
+        if shown {
+            eprintln!("adoctra: {}", line());
+        }
+    });
+}
+
+fn level(severity: adoctra::Severity) -> Level {
+    match severity {
+        adoctra::Severity::Info => Level::Info,
+        adoctra::Severity::Warning => Level::Warn,
+        adoctra::Severity::Error => Level::Error,
+    }
+}
+
+/// A warning the CLI itself logs (paths, stylesheets, backend messages).
+fn warn(message: &str) {
+    log(Level::Warn, false, || format!("warning: {message}"));
 }
 
 /// Why a run failed: a processor error, or a failure Ruby's CLI reports
@@ -72,31 +207,9 @@ impl From<std::io::Error> for Failure {
     }
 }
 
-struct Args {
-    input: String,
-    backend: String,
-    /// `-o`: a file, or `-` for standard output.
-    output: Option<String>,
-    /// `-D`: Ruby's `:to_dir`.
-    to_dir: Option<String>,
-    to_stdout: bool,
-    embedded: bool,
-    attributes: adoctra::Attributes,
-    safe: adoctra::SafeMode,
-    json_attributes: bool,
-    editor_diagnostics: bool,
-    base_dir: Option<PathBuf>,
-}
-
-fn run() -> Result<(), Failure> {
-    let args = match parse_args() {
-        Some(a) => a,
-        None => {
-            print_usage();
-            return Ok(());
-        }
-    };
-
+/// One input: Ruby's `Asciidoctor.convert` (or `convert_file`).
+fn convert(args: &Args) -> Result<(), Failure> {
+    let started = std::time::Instant::now();
     let mut sources = adoctra::SourceMap::new();
     let mut attributes = args.attributes.clone();
     // Ruby's CLI streams standard input (and `-o -`) to standard output;
@@ -106,7 +219,7 @@ fn run() -> Result<(), Failure> {
         || (args.input == "-" && args.output.is_none());
     let plan = match stream {
         true => None,
-        false => Some(output_plan(&args)?),
+        false => Some(output_plan(args)?),
     };
     // Ruby's Document#initialize: a `:to_file` path sets `outfilesuffix`
     // to its extension, replacing a host value.
@@ -121,7 +234,7 @@ fn run() -> Result<(), Failure> {
         }
         attributes.set("outfilesuffix", extname(file));
     }
-    let (source_id, provider) = load_source(&args, &mut sources, &mut attributes)?;
+    let (source_id, provider) = load_source(args, &mut sources, &mut attributes)?;
     // Like Ruby below server mode, the document sees the user's home.
     if args.safe < adoctra::SafeMode::Server
         && !attributes
@@ -141,6 +254,11 @@ fn run() -> Result<(), Failure> {
         safe: args.safe,
         dates: Some(dates(&args.input)?),
         output: plan.as_ref().map(|plan| plan.target.clone()),
+        // Ruby's `:base_dir` from `-B`; otherwise core uses `docdir`.
+        base_dir: match &args.base_dir {
+            Some(dir) => Some(posix(&expand_path(dir)?)),
+            None => None,
+        },
         ..Default::default()
     };
     // A standalone HTML document reads its stylesheet where Ruby's converter
@@ -149,7 +267,7 @@ fn run() -> Result<(), Failure> {
     let referrer = sources
         .get(source_id)
         .map(|source| source.name().to_owned());
-    let mut html_start = (args.backend == "html").then(|| {
+    let mut html_start = (args.format == "html").then(|| {
         if args.embedded {
             adoctra::html::HtmlBackend::embedded().start()
         } else {
@@ -174,7 +292,7 @@ fn run() -> Result<(), Failure> {
     for d in &result.diagnostics {
         if !args.editor_diagnostics {
             let severity = d.report.severity.unwrap_or(d.severity);
-            if d.report.suppressed || severity == adoctra::Severity::Info {
+            if d.report.suppressed {
                 continue;
             }
             let message = d.report.message.as_deref().unwrap_or(&d.message);
@@ -193,16 +311,30 @@ fn run() -> Result<(), Failure> {
                 let source = sources
                     .get(cursor.source_id)
                     .expect("diagnostic source is registered");
-                eprintln!(
-                    "adoctra: {}:{}: {}: {message}",
-                    source.name(),
-                    cursor.line,
-                    severity.as_str()
-                );
+                log(level(severity), d.report.verbose_only, || {
+                    format!(
+                        "{}:{}: {}: {message}",
+                        source.name(),
+                        cursor.line,
+                        severity.as_str()
+                    )
+                });
             } else {
-                eprintln!("adoctra: {}: {message}", severity.as_str());
+                log(level(severity), d.report.verbose_only, || {
+                    format!("{}: {message}", severity.as_str())
+                });
             }
             continue;
+        }
+        // Editor diagnostics print every physical diagnostic; the run's
+        // failure level still sees what Ruby logs.
+        if !d.report.suppressed && (!d.report.verbose_only || args.verbosity == Verbosity::Verbose)
+        {
+            let severity = d.report.severity.unwrap_or(d.severity);
+            LOG.with(|log| {
+                let mut log = log.borrow_mut();
+                log.max = log.max.max(Some(level(severity)));
+            });
         }
         let file = sources
             .get(d.span.source_id)
@@ -234,15 +366,16 @@ fn run() -> Result<(), Failure> {
         );
     }
 
+    let parsed = started.elapsed();
     let backend = select_backend(
-        &args.backend,
+        &args.format,
         args.embedded,
         provider.clone(),
         referrer,
         html_start,
     )?;
     let bytes = if args.json_attributes {
-        if args.backend != "json" {
+        if args.format != "json" {
             return Err(
                 adoctra::Error::Unsupported("--json-attributes requires --to json".into()).into(),
             );
@@ -252,8 +385,28 @@ fn run() -> Result<(), Failure> {
         backend.convert(&result.document)?
     };
 
+    let converted = started.elapsed();
+    let timings = || {
+        if args.timings {
+            // Ruby's Timings#print_report on stderr.
+            eprintln!("Input file: {}", args.input);
+            eprintln!(
+                "  Time to read and parse source: {:.5}",
+                parsed.as_secs_f64()
+            );
+            eprintln!(
+                "  Time to convert document: {:.5}",
+                (converted - parsed).as_secs_f64()
+            );
+            eprintln!(
+                "  Total time (read, parse and convert): {:.5}",
+                converted.as_secs_f64()
+            );
+        }
+    };
     let Some(plan) = plan else {
         std::io::stdout().write_all(&bytes)?;
+        timings();
         return Ok(());
     };
     let paths = result
@@ -263,7 +416,7 @@ fn run() -> Result<(), Failure> {
         .expect("core resolves the requested output");
     // Other formats keep their own extension next to the input or in the
     // destination directory.
-    let outfile = match (&plan.target, args.backend.as_str()) {
+    let outfile = match (&plan.target, args.format.as_str()) {
         (adoctra::OutputTarget::Directory(dir), "json" | "docx") => format!(
             "{}/{}.{}",
             dir.trim_end_matches('/'),
@@ -287,11 +440,12 @@ fn run() -> Result<(), Failure> {
     // Ruby's Document#write writes the converted string as it is (only a
     // stream gets `output.chomp` and a LF).
     let mut bytes = bytes;
-    if args.backend == "html" && bytes.last() == Some(&b'\n') {
+    if args.format == "html" && bytes.last() == Some(&b'\n') {
         bytes.pop();
     }
     std::fs::write(&outfile, &bytes)?;
-    if args.backend == "html" && args.safe < adoctra::SafeMode::Secure {
+    timings();
+    if args.format == "html" && args.safe < adoctra::SafeMode::Secure {
         let highlighter = HIGHLIGHTER_STYLESHEET.with(|cell| cell.borrow_mut().take());
         let docfile = result
             .document
@@ -301,7 +455,7 @@ fn run() -> Result<(), Failure> {
         copy_stylesheet(
             &result.document.final_attributes,
             &CopyContext {
-                base_dir: &document_base_dir(&args)?,
+                base_dir: &document_base_dir(args)?,
                 outdir: &posix(&outdir),
                 safe: args.safe,
                 docfile,
@@ -506,7 +660,7 @@ impl CopyContext<'_> {
             normalize_system_path(self.base_dir, self.safe, target, start, jail, "path", true)
                 .expect("recovering resolution never fails");
         for warning in resolved.warnings {
-            eprintln!("adoctra: warning: {warning}");
+            warn(&warning);
         }
         resolved.path
     }
@@ -573,10 +727,10 @@ fn copy_stylesheet(
                 }
                 // Like Ruby, an existing copy silences the warning.
                 Err(_) if Path::new(&dest).is_file() => {}
-                Err(_) => eprintln!(
-                    "adoctra: warning: {}: stylesheet does not exist or cannot be read: {source}",
+                Err(_) => warn(&format!(
+                    "{}: stylesheet does not exist or cannot be read: {source}",
                     cx.docfile
-                ),
+                )),
             }
         }
     }
@@ -584,92 +738,6 @@ fn copy_stylesheet(
         std::fs::write(Path::new(&stylesoutdir).join(name), css)?;
     }
     Ok(())
-}
-
-fn parse_args() -> Option<Args> {
-    let mut input: Option<String> = None;
-    let mut backend = "html".to_string();
-    let mut output: Option<String> = None;
-    let mut to_dir: Option<String> = None;
-    let mut to_stdout = false;
-    let mut embedded = false;
-    let mut json_attributes = false;
-    let mut editor_diagnostics = false;
-    let mut attributes = adoctra::Attributes::new();
-    // adoctra's CLI defaults to safe mode (Ruby's to unsafe): paths stay in
-    // the input's directory.
-    let mut safe = adoctra::SafeMode::Safe;
-    let mut base_dir = None;
-
-    let mut it = std::env::args().skip(1);
-    while let Some(arg) = it.next() {
-        match arg.as_str() {
-            "-h" | "--help" => return None,
-            "--to" | "-b" => backend = it.next()?,
-            "-o" | "--out" | "--out-file" => output = Some(it.next()?),
-            "-D" | "--destination-dir" => to_dir = Some(it.next()?),
-            "--stdout" => to_stdout = true,
-            "--json-attributes" => json_attributes = true,
-            "--diagnostics" => {
-                editor_diagnostics = match it.next()?.as_str() {
-                    "compat" => false,
-                    "editor" => true,
-                    _ => return None,
-                }
-            }
-            "-s" | "--embedded" | "--no-header-footer" => embedded = true,
-            "-S" | "--safe-mode" => safe = adoctra::SafeMode::from_name(&it.next()?)?,
-            "--safe" => safe = adoctra::SafeMode::Safe,
-            "-B" | "--base-dir" => base_dir = Some(PathBuf::from(it.next()?)),
-            // Keep Ruby's soft/default and unset markers for ParseOptions.
-            "-a" | "--attribute" => {
-                let entry = it.next()?;
-                let (name, value) = entry.split_once('=').unwrap_or((&entry, ""));
-                if name.trim_matches(['!', '@']).is_empty() {
-                    return None;
-                }
-                // Preserve command-line order when spellings of the same
-                // override change, e.g. `-a x! -a x=value@`.
-                let previous: Vec<_> = attributes
-                    .iter()
-                    .filter(|(key, _)| override_name(key) == override_name(name))
-                    .map(|(key, _)| key.to_owned())
-                    .collect();
-                for key in previous {
-                    attributes.remove(&key);
-                }
-                attributes.set(name, value);
-            }
-            other => {
-                if input.is_some() {
-                    return None;
-                }
-                input = Some(other.to_string());
-            }
-        }
-    }
-
-    Some(Args {
-        input: input?,
-        backend,
-        output,
-        to_dir,
-        to_stdout,
-        embedded,
-        attributes,
-        safe,
-        json_attributes,
-        editor_diagnostics,
-        base_dir,
-    })
-}
-
-fn override_name(name: &str) -> String {
-    let name = name.strip_suffix('@').unwrap_or(name);
-    name.strip_prefix('!')
-        .or_else(|| name.strip_suffix('!'))
-        .unwrap_or(name)
-        .to_lowercase()
 }
 
 /// Ruby's `base_dir` for standard input (Document#initialize): `-B`
@@ -827,7 +895,7 @@ impl Backend for Html {
             output.html.push('\n');
         }
         for warning in &output.warnings {
-            eprintln!("adoctra: warning: {warning}");
+            warn(warning);
         }
         HIGHLIGHTER_STYLESHEET
             .with(|cell| *cell.borrow_mut() = output.highlighter_stylesheet.take());
@@ -835,22 +903,36 @@ impl Backend for Html {
     }
 }
 
-fn print_usage() {
-    eprintln!(
-        "adoctra — AsciiDoc processor\n\n\
-         USAGE:\n  adoctra <input.adoc> [--to html|docx|json] [-s] [-a <name=value>] [-D <dir>] [-o <out>] [--stdout]\n  \
-         adoctra -   (read from stdin)\n\n\
-         OPTIONS:\n  -b, --to <BACKEND>   output format [default: html]\n  \
-         -s, --embedded       HTML body content only (no document shell, header or footer)\n  \
-         -a, --attribute <NAME[=VALUE]>  set a document attribute\n  \
-         -S, --safe-mode <MODE>  unsafe, safe (default), server or secure\n  \
-         -B, --base-dir <DIR>  root for relative paths (default: the input's directory,\n                       \
-         for stdin the docdir attribute or the current directory)\n  \
-         -D, --destination-dir <DIR>  output directory (default: the input's directory)\n  \
-         -o, --out-file <FILE>  output file (`-` for stdout); from safe mode up -D/-o stay\n                       \
-         inside -B or the current directory\n      --stdout         write to stdout\n  \
-         --json-attributes   include header/final attributes with --to json\n  \
-         --diagnostics <MODE> compat (default) or editor with physical byte spans\n  \
-         -h, --help           show this help"
+fn print_usage(out: &mut dyn Write) {
+    let _ = writeln!(
+        out,
+        "Usage: adoctra [OPTION]... FILE...\n\
+         Convert the AsciiDoc input FILE(s) (`-` for standard input) to HTML; the output\n\
+         is written to a file named after the input unless -o says otherwise.\n\
+         Messages are printed to stderr.\n\n\
+         \x20 -b, --backend BACKEND      html5 (default), xhtml5; adoctra's json, docx\n\
+         \x20 -d, --doctype DOCTYPE      article, book, manpage or inline\n\
+         \x20 -e, --embedded             output an embedded document (no header/footer)\n\
+         \x20 -s, --no-header-footer     the same as --embedded\n\
+         \x20 -o, --out-file FILE        output file; - for stdout\n\
+         \x20 -D, --destination-dir DIR  output directory (default: the input's directory)\n\
+         \x20 -R, --source-dir DIR       source root whose structure -D keeps\n\
+         \x20 -B, --base-dir DIR         base directory of the document and its resources\n\
+         \x20 -S, --safe-mode MODE       unsafe, safe (default), server or secure; from safe\n\
+         \x20                            mode up -D/-o stay inside -B or the current directory\n\
+         \x20     --safe                 the same as -S safe\n\
+         \x20 -n, --section-numbers      number section titles (sectnums)\n\
+         \x20 -a, --attribute NAME[=VALUE]  set a document attribute (name@ or value@: soft)\n\
+         \x20     --failure-level LEVEL  INFO, WARN, ERROR or FATAL (default) fails the run\n\
+         \x20 -q, --quiet                print no messages\n\
+         \x20 -v, --verbose              also print INFO messages\n\
+         \x20 -t, --timings              print a timings report\n\
+         \x20 -w, --warnings, --trace    accepted for compatibility (no effect)\n\
+         \x20     --to FORMAT            html, json or docx\n\
+         \x20     --stdout               write to stdout (like -o -)\n\
+         \x20     --json-attributes      include header/final attributes with --to json\n\
+         \x20     --diagnostics MODE     compat (default) or editor with physical byte spans\n\
+         \x20 -h, --help                 print this help\n\
+         \x20 -V, --version              print the version"
     );
 }

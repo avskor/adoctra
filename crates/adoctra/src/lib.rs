@@ -22,6 +22,7 @@ pub use adoctra_core::{
     ParseResult, Registry, Resource, ResourceError, ResourceErrorKind, ResourceProvider,
     ResourceRequest, ResourceResult, Result, Revision, SafeMode, Severity, SourceFile, SourceId,
     SourceMap, SourcePosition, Span, SystemPath, Token, TokenKind, TreeProcessor,
+    COMPATIBILITY_VERSION,
 };
 
 #[cfg(feature = "html")]

@@ -133,6 +133,13 @@ later".
 
 ## Current state (so you don't assume more than exists)
 
+**Project goal (user decision 2026-10-31): convert documents, build the
+syntax tree and support the editor. Ruby API compatibility (extension
+registries/classes, highlighter factories, logger, parse_header_only, Ruby
+objects in options, `-T`/`-E`/`-r`/`-I`) is not a goal; leave those audit
+entries UNSUPPORTED. Observable document conversion and CLI behavior are
+still compared with Ruby.**
+
 **Current user priority: complete compatibility with pinned Asciidoctor
 2.0.23 comes before further performance optimization, incremental parsing,
 DOCX or new extension APIs.** Follow the compatibility-first queue in
@@ -226,7 +233,8 @@ run per document (output chomped + LF, highlighter library status reset).
 every status. Output-neutral Ruby API options (sourcemap, catalog_assets,
 timings, eruby) pass to the reference only; `backend` (html5/html/xhtml/
 xhtml5) maps to a locked `-a backend=`. Remaining UNSUPPORTED: docbook/
-manpage backends (243), extension/logger API (22), parse_header_only (6).
+manpage backends (243; deferred with DOCX by user decision 2026-10-31 —
+do not start them unprompted), extension/logger API (22), parse_header_only (6).
 **File output** (Ruby's Asciidoctor.convert/Invoker): entries with
 to_dir/to_file run one CLI per side (`-D`/`-o`; Ruby through the reference
 script's `--invoke` = Asciidoctor::Cli::Invoker) in the materialized
@@ -241,7 +249,19 @@ base dir), Ruby's error texts, no final LF, no "wrote" line, copycss paths
 like Ruby. Core: `ParseOptions.output` → `Document.output` (OutputTarget/
 OutputPaths; `docname` after reading, header-pinned outfilesuffix) and
 conversion-only `outfile`/`outdir` below server; `resolve_system_path`
-is public. **XML syntax**: `Document.htmlsyntax` is the
+is public.
+**CLI matrix** (docs/cli.adoc, `scripts/cli_matrix.py`, profile cli-v1,
+compatibility/cli/cases.json + report.json in CI): 62 scenarios run by
+adoctra and Ruby's `asciidoctor` (scripts/ruby-cli.rb = Cli::Invoker) in one
+temp dir; compares exit code, stdout (HTML projected, usage/version by
+kind), normalized stderr and written files; 61 PASS, 1 RUBY_ERROR (Ruby's
+uncaught AmbiguousOption). crates/adoctra-cli/src/args.rs ports
+OptionParser (long-option/value prefixes, clusters, Ruby error texts; usage
+on stdout for errors); glob.rs is Dir.glob; main.rs logs through LOG
+(`-q`/`-v`, `--failure-level` max severity; `DiagnosticReport.verbose_only`
+= Ruby's `if logger.info?`, e.g. the unlocated INFO `possible invalid
+reference: <id>`). `-B` is `ParseOptions.base_dir` (Ruby `:base_dir`);
+provider requests stay relative to the referring file. **XML syntax**: `Document.htmlsyntax` is the
 converter's syntax at the last header `backend` (Ruby's create_converter;
 a later `:htmlsyntax:` changes only the attribute); HtmlBackend renders
 Ruby's `@void_element_slash`/`append_boolean_attribute`/`xmlns` through a

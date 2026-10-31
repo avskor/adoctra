@@ -570,6 +570,14 @@ target_name, recover)` — `PathResolver#system_path` для хоста: без 
 выход из jail даёт текст `SecurityError` Ruby (`to_dir … is outside of jail:
 … (disallowed in safe mode)`, `… refers to location outside jail: …`).
 
+`ParseOptions.base_dir` — `:base_dir` Ruby (абсолютный путь, в CLI — `-B`):
+от него разрешаются include и изображения основного документа, он же jail с
+safe mode; без него — абсолютный `docdir`. Provider получает путь
+относительно ссылающегося файла. `DiagnosticReport.verbose_only` помечает
+сообщения, которые Ruby логирует только на уровне INFO (`if logger.info?`,
+например `possible invalid reference: <id>` без позиции): CLI показывает и
+учитывает их только с `-v`.
+
 `ParseOptions.safe` (`SafeMode`, по умолчанию `Safe`; Ruby API — `Secure`)
 задаёт атрибуты и ограничения safe mode Ruby: `safe-mode-*`, блокировки
 server/secure, усечение значений записей до `max-attribute-value-size`, ссылки

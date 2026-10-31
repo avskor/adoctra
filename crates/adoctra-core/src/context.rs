@@ -39,6 +39,10 @@ pub struct ParseOptions {
     /// result is [`Document::output`](crate::Document::output); core writes
     /// nothing.
     pub output: Option<OutputTarget>,
+    /// Ruby's `:base_dir` (absolute): where include and image targets of the
+    /// primary document resolve from and the jail from safe mode up. `None`
+    /// is the absolute `docdir` (the primary file's directory).
+    pub base_dir: Option<String>,
 }
 
 /// The output location a host resolved before parsing (absolute paths, as

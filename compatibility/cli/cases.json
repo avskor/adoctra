@@ -1,0 +1,1065 @@
+{
+ "profile": "cli-v1",
+ "cases": [
+  {
+   "id": "no-arguments",
+   "description": "Without an input the usage goes to stderr and the run fails.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": []
+  },
+  {
+   "id": "help",
+   "description": "-h prints the usage on stdout and succeeds.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "-h"
+   ]
+  },
+  {
+   "id": "help-anywhere",
+   "description": "-h acts when parsed, after other options.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "-s",
+    "a.adoc",
+    "--help"
+   ]
+  },
+  {
+   "id": "version",
+   "description": "-V prints the version.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "-V"
+   ]
+  },
+  {
+   "id": "verbose-alone",
+   "description": "A lone -v prints the version.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "-v"
+   ]
+  },
+  {
+   "id": "invalid-long-option",
+   "description": "An unknown long option is a usage error.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "--bogus",
+    "a.adoc"
+   ]
+  },
+  {
+   "id": "invalid-short-option",
+   "description": "An unknown short option is a usage error.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "-x",
+    "a.adoc"
+   ]
+  },
+  {
+   "id": "invalid-in-cluster",
+   "description": "An unknown flag inside a cluster is a usage error.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "-sx",
+    "a.adoc"
+   ]
+  },
+  {
+   "id": "ambiguous-long-option",
+   "description": "An ambiguous long prefix is a usage error.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "--s",
+    "a.adoc"
+   ]
+  },
+  {
+   "id": "missing-argument",
+   "description": "An option without its value is a usage error.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "a.adoc",
+    "-o"
+   ]
+  },
+  {
+   "id": "invalid-doctype",
+   "description": "-d accepts only Ruby's doctypes.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "-d",
+    "foo",
+    "a.adoc"
+   ]
+  },
+  {
+   "id": "doctype-case",
+   "description": "Enumerated values are case sensitive.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "-d",
+    "Book",
+    "a.adoc"
+   ]
+  },
+  {
+   "id": "ambiguous-safe-mode",
+   "description": "A prefix matching several safe modes is ambiguous.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "-S",
+    "s",
+    "a.adoc"
+   ]
+  },
+  {
+   "id": "safe-mode-case",
+   "description": "Safe mode names are case sensitive.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "-S",
+    "SAFE",
+    "a.adoc"
+   ]
+  },
+  {
+   "id": "invalid-failure-level",
+   "description": "--failure-level accepts Ruby's levels.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "--failure-level",
+    "foo",
+    "a.adoc"
+   ]
+  },
+  {
+   "id": "missing-input",
+   "description": "A missing input fails before converting.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "nofile.adoc"
+   ]
+  },
+  {
+   "id": "directory-input",
+   "description": "A directory input fails before converting.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "sub"
+   ]
+  },
+  {
+   "id": "embedded-e",
+   "description": "-e writes an embedded document.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-e",
+    "-o",
+    "-",
+    "a.adoc"
+   ]
+  },
+  {
+   "id": "embedded-s",
+   "description": "-s writes an embedded document.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-s",
+    "-o",
+    "-",
+    "a.adoc"
+   ]
+  },
+  {
+   "id": "embedded-long",
+   "description": "--no-header-footer writes an embedded document.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "--no-header-footer",
+    "-o",
+    "-",
+    "a.adoc"
+   ]
+  },
+  {
+   "id": "embedded-abbreviated",
+   "description": "A unique long prefix names the option.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "--em",
+    "-o",
+    "-",
+    "a.adoc"
+   ]
+  },
+  {
+   "id": "standalone-stdout",
+   "description": "A standalone document on stdout.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-o",
+    "-",
+    "a.adoc"
+   ]
+  },
+  {
+   "id": "doctype-prefix",
+   "description": "A unique prefix completes the doctype.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-d",
+    "b",
+    "-s",
+    "-o",
+    "-",
+    "a.adoc"
+   ]
+  },
+  {
+   "id": "section-numbers",
+   "description": "-n numbers sections.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n",
+    "sections.adoc": "= Doc\n\n== One\n\n=== Sub\n\n== Two\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-n",
+    "-s",
+    "-o",
+    "-",
+    "sections.adoc"
+   ]
+  },
+  {
+   "id": "clustered-flags",
+   "description": "Short flags cluster (-sn).",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n",
+    "sections.adoc": "= Doc\n\n== One\n\n=== Sub\n\n== Two\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-sn",
+    "-o",
+    "-",
+    "sections.adoc"
+   ]
+  },
+  {
+   "id": "attached-values",
+   "description": "Short options take attached values (-Ssafe, -o-).",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "-Ssafe",
+    "-o-",
+    "-s",
+    "a.adoc"
+   ]
+  },
+  {
+   "id": "long-equals",
+   "description": "--name=value forms.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "--safe-mode=server",
+    "--out-file=-",
+    "--embedded",
+    "a.adoc"
+   ]
+  },
+  {
+   "id": "options-after-inputs",
+   "description": "Options may follow the inputs.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "a.adoc",
+    "-S",
+    "safe",
+    "-s",
+    "-o",
+    "-"
+   ]
+  },
+  {
+   "id": "option-terminator",
+   "description": "-- ends the options.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-s",
+    "-o",
+    "-",
+    "--",
+    "a.adoc"
+   ]
+  },
+  {
+   "id": "backend-xhtml5",
+   "description": "-b xhtml5 converts with the HTML converter in XML syntax.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-b",
+    "xhtml5",
+    "-o",
+    "-",
+    "a.adoc"
+   ]
+  },
+  {
+   "id": "backend-html5",
+   "description": "-b html5 is the default converter.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-b",
+    "html5",
+    "-s",
+    "-o",
+    "-",
+    "a.adoc"
+   ]
+  },
+  {
+   "id": "backend-unknown",
+   "description": "An unknown backend fails without output.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-b",
+    "unknownBackend",
+    "a.adoc"
+   ]
+  },
+  {
+   "id": "attribute-forms",
+   "description": "-a skips blank entries and sets, unsets and overrides attributes.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n",
+    "attrs.adoc": "= Doc\n:z: doc\n:w: doc\n\n[{x}] [{y}] [{z}] [{w}]\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-a",
+    "",
+    "-a",
+    "=",
+    "-a",
+    "x=1 ",
+    "-a",
+    "y",
+    "-a",
+    "z!",
+    "-a",
+    "w=api@",
+    "-s",
+    "-o",
+    "-",
+    "attrs.adoc"
+   ]
+  },
+  {
+   "id": "stdin-to-stdout",
+   "description": "Standard input streams to stdout.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-s",
+    "-"
+   ],
+   "stdin": "From *stdin*.\n"
+  },
+  {
+   "id": "stdin-to-file",
+   "description": "Standard input with -o writes the file.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-s",
+    "-o",
+    "out.html",
+    "-"
+   ],
+   "stdin": "To a file.\n"
+  },
+  {
+   "id": "file-next-to-input",
+   "description": "A file input writes next to itself.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-s",
+    "a.adoc"
+   ]
+  },
+  {
+   "id": "destination-dir",
+   "description": "-D writes into a created directory.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-s",
+    "-D",
+    "out",
+    "a.adoc"
+   ]
+  },
+  {
+   "id": "glob-inputs",
+   "description": "An input that names no file is globbed.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-s",
+    "-D",
+    "out",
+    "sub/*.adoc"
+   ]
+  },
+  {
+   "id": "multiple-inputs",
+   "description": "Several inputs convert in order.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-s",
+    "a.adoc",
+    "sub/b.adoc"
+   ]
+  },
+  {
+   "id": "multiple-inputs-one-file",
+   "description": "Several inputs with -o overwrite the same file.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-s",
+    "-o",
+    "both.html",
+    "a.adoc",
+    "sub/b.adoc"
+   ]
+  },
+  {
+   "id": "source-dir",
+   "description": "-R keeps the input's directory below the source root in -D.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-s",
+    "-R",
+    ".",
+    "-D",
+    "out",
+    "a.adoc",
+    "sub/b.adoc"
+   ]
+  },
+  {
+   "id": "extra-stdin-argument",
+   "description": "A - among other inputs warns and is skipped.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-s",
+    "a.adoc",
+    "-"
+   ]
+  },
+  {
+   "id": "warning-default",
+   "description": "A warning is printed; the default failure level is FATAL.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n",
+    "warn.adoc": "= Doc\n\n=== Skipped level\n\ntext\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-s",
+    "-o",
+    "-",
+    "warn.adoc"
+   ]
+  },
+  {
+   "id": "failure-level-warn",
+   "description": "--failure-level WARN fails on a warning.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n",
+    "warn.adoc": "= Doc\n\n=== Skipped level\n\ntext\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "--failure-level",
+    "WARN",
+    "-s",
+    "-o",
+    "-",
+    "warn.adoc"
+   ]
+  },
+  {
+   "id": "failure-level-error",
+   "description": "--failure-level ERROR ignores warnings.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n",
+    "warn.adoc": "= Doc\n\n=== Skipped level\n\ntext\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "--failure-level",
+    "ERROR",
+    "-s",
+    "-o",
+    "-",
+    "warn.adoc"
+   ]
+  },
+  {
+   "id": "failure-level-info",
+   "description": "--failure-level INFO fails on an INFO message (drop-line).",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n",
+    "missing.adoc": "Before {missing} line.\n\nnext\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "--failure-level",
+    "info",
+    "-a",
+    "attribute-missing=drop-line",
+    "-s",
+    "-o",
+    "-",
+    "missing.adoc"
+   ]
+  },
+  {
+   "id": "failure-level-info-guarded",
+   "description": "An INFO Ruby logs only at INFO level does not count by default.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n",
+    "xrefonly.adoc": "See <<nope>> and xref:gone[].\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "--failure-level",
+    "INFO",
+    "-s",
+    "-o",
+    "-",
+    "xrefonly.adoc"
+   ]
+  },
+  {
+   "id": "quiet",
+   "description": "-q prints no messages.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n",
+    "warn.adoc": "= Doc\n\n=== Skipped level\n\ntext\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-q",
+    "-s",
+    "-o",
+    "-",
+    "warn.adoc"
+   ]
+  },
+  {
+   "id": "quiet-failure-level",
+   "description": "-q still fails at the failure level.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n",
+    "warn.adoc": "= Doc\n\n=== Skipped level\n\ntext\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-q",
+    "--failure-level",
+    "WARN",
+    "-s",
+    "-o",
+    "-",
+    "warn.adoc"
+   ]
+  },
+  {
+   "id": "quiet-guarded-info",
+   "description": "-q records INFO messages logged only at INFO level.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n",
+    "xrefonly.adoc": "See <<nope>> and xref:gone[].\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-q",
+    "--failure-level",
+    "INFO",
+    "-s",
+    "-o",
+    "-",
+    "xrefonly.adoc"
+   ]
+  },
+  {
+   "id": "verbose",
+   "description": "-v also prints INFO messages.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n",
+    "xref.adoc": "Line {missing}.\n\nSee <<nope>>.\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-v",
+    "-a",
+    "attribute-missing=drop-line",
+    "-s",
+    "-o",
+    "-",
+    "xref.adoc"
+   ]
+  },
+  {
+   "id": "verbose-after-quiet",
+   "description": "The last of -q and -v wins.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n",
+    "xrefonly.adoc": "See <<nope>> and xref:gone[].\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-q",
+    "-v",
+    "-s",
+    "-o",
+    "-",
+    "xrefonly.adoc"
+   ]
+  },
+  {
+   "id": "timings",
+   "description": "-t prints the timings report on stderr.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-t",
+    "-s",
+    "-o",
+    "-",
+    "a.adoc"
+   ]
+  },
+  {
+   "id": "accepted-noops",
+   "description": "-w and --trace are accepted.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-w",
+    "--trace",
+    "-s",
+    "-o",
+    "-",
+    "a.adoc"
+   ]
+  },
+  {
+   "id": "safe-flag-include",
+   "description": "--safe confines includes to the base directory.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n",
+    "docs/inc.adoc": "include::../outside.adoc[]\n\ninside\n",
+    "outside.adoc": "outside text\n"
+   },
+   "args": [
+    "--safe",
+    "-s",
+    "-o",
+    "-",
+    "docs/inc.adoc"
+   ]
+  },
+  {
+   "id": "base-dir",
+   "description": "-B sets the base directory.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n",
+    "docs/inc.adoc": "include::../outside.adoc[]\n\ninside\n",
+    "outside.adoc": "outside text\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-B",
+    ".",
+    "-s",
+    "-o",
+    "-",
+    "docs/inc.adoc"
+   ]
+  },
+  {
+   "id": "secure-include",
+   "description": "Secure mode turns includes into links.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n",
+    "docs/inc.adoc": "include::../outside.adoc[]\n\ninside\n",
+    "outside.adoc": "outside text\n"
+   },
+   "args": [
+    "-S",
+    "secure",
+    "-s",
+    "-o",
+    "-",
+    "docs/inc.adoc"
+   ]
+  },
+  {
+   "id": "same-file",
+   "description": "The input is never the output.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-a",
+    "outfilesuffix=.adoc",
+    "a.adoc"
+   ]
+  },
+  {
+   "id": "output-outside-jail",
+   "description": "From safe mode up -D stays inside the working directory.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-D",
+    "/",
+    "a.adoc"
+   ]
+  },
+  {
+   "id": "copy-stylesheet",
+   "description": "linkcss and copycss copy a custom stylesheet.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n",
+    "css/my.css": "p { color: red; }\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-a",
+    "linkcss",
+    "-a",
+    "stylesheet=css/my.css",
+    "-D",
+    "site",
+    "a.adoc"
+   ]
+  },
+  {
+   "id": "base-dir-images",
+   "description": "-B resolves images (data-uri, inline SVG) from the base directory.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n",
+    "docs/img.adoc": ":data-uri:\n\nimage::pic.svg[Pic]\n\nimage::logo.svg[Logo,opts=inline]\n",
+    "pic.svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1\" height=\"1\"></svg>\n",
+    "logo.svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1\" height=\"1\"></svg>\n",
+    "docs/pic.svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"2\" height=\"2\"></svg>\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-B",
+    ".",
+    "-s",
+    "-o",
+    "-",
+    "docs/img.adoc"
+   ]
+  },
+  {
+   "id": "base-dir-docinfo",
+   "description": "-B resolves docinfo files from the base directory.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "sub/b.adoc": "= B\n\nb text\n",
+    "sub/c.adoc": "c text\n",
+    "docs/info.adoc": "= Info\n:docinfo: shared\n\ntext\n",
+    "docinfo.html": "<meta name=\"root\" content=\"1\">\n",
+    "docs/docinfo.html": "<meta name=\"docs\" content=\"1\">\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-B",
+    ".",
+    "-a",
+    "reproducible",
+    "-o",
+    "-",
+    "docs/info.adoc"
+   ]
+  }
+ ]
+}

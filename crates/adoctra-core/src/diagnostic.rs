@@ -57,6 +57,9 @@ pub enum DiagnosticLocation {
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct DiagnosticReport {
     pub suppressed: bool,
+    /// Ruby logs it only when its logger is at INFO level (`if logger.info?`):
+    /// a CLI shows it with `-v` (and its quiet NullLogger records it).
+    pub verbose_only: bool,
     pub severity: Option<Severity>,
     pub message: Option<String>,
     pub location: DiagnosticLocation,

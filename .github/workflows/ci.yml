@@ -56,6 +56,8 @@ jobs:
           ruby scripts/generate_rouge.rb lexer-corpus | diff - crates/adoctra-highlight/tests/data/lexer_corpus.txt
       - name: Differential audit of the upstream test suite inputs
         run: python3 scripts/upstream_audit.py --baseline compatibility/upstream/audit/report.json
+      - name: Compare the CLI with Ruby's command
+        run: python3 scripts/cli_matrix.py --baseline compatibility/cli/report.json --report target/cli-report.json
       - name: Verify URI cache requests and diagnostics
         run: python3 scripts/audit_uri_cache.py --baseline compatibility/uri-cache/report.json --report target/uri-cache-report.json
       - name: Verify URI asset cache and known conversion order gaps

@@ -9,6 +9,9 @@ use crate::{Attributes, Diagnostic, ResourceProvider, ResourceRequest, Severity,
 pub(crate) struct ImageSource<'a> {
     pub provider: &'a dyn ResourceProvider,
     pub referrer: String,
+    /// The referrer's own directory (its `document_path`): requests are
+    /// relative to it, whatever base directory Ruby resolves from.
+    pub referrer_dir: Option<String>,
     pub base_dir: Option<String>,
     pub safe: crate::SafeMode,
 }
@@ -38,6 +41,7 @@ impl<'a> Images<'a> {
     ) -> (String, String) {
         if let Some(ImageSource {
             base_dir: Some(base_dir),
+            referrer_dir,
             safe,
             ..
         }) = &self.source
@@ -47,8 +51,9 @@ impl<'a> Images<'a> {
             for warning in resolved.warnings {
                 warn(diagnostics, span, warning);
             }
+            let from = referrer_dir.as_deref().unwrap_or(base_dir);
             let request = crate::xref_target::relative_path(
-                &format!("{}/_", base_dir.trim_end_matches('/')),
+                &format!("{}/_", from.trim_end_matches('/')),
                 &resolved.path,
             );
             return (resolved.path, request);

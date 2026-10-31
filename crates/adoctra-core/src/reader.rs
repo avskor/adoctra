@@ -70,9 +70,10 @@ struct Resources<'a> {
     /// positive) disables includes.
     max_depth: Option<usize>,
     bytes: usize,
-    /// Ruby's `@base_dir`: an absolute `docdir` given to the parser (the
-    /// primary file's directory, or the host's for standard input). With
-    /// it, include targets resolve like Ruby's `normalize_system_path`.
+    /// Ruby's `@base_dir`: the host's absolute `ParseOptions::base_dir`, else
+    /// an absolute `docdir` (the primary file's directory, or the host's for
+    /// standard input). With it, include targets resolve like Ruby's
+    /// `normalize_system_path`.
     base_dir: Option<String>,
     safe: crate::SafeMode,
 }
@@ -294,8 +295,9 @@ impl<'a> Reader<'a> {
             max_depth,
             bytes: 0,
             base_dir: options
-                .attributes
-                .get("docdir")
+                .base_dir
+                .as_deref()
+                .or_else(|| options.attributes.get("docdir"))
                 .filter(|dir| dir.starts_with('/'))
                 .map(str::to_owned),
             safe: options.safe,
@@ -308,9 +310,15 @@ impl<'a> Reader<'a> {
     pub fn image_source(&self) -> Option<crate::data_uri::ImageSource<'a>> {
         let resources = self.resources.as_ref()?;
         let primary = resources.sources.get(self.inputs[0].source_id)?;
+        let referrer_dir = resources
+            .provider
+            .document_path(primary.name())
+            .and_then(|path| path.rsplit_once('/').map(|(dir, _)| dir.to_owned()))
+            .map(|dir| if dir.is_empty() { "/".to_owned() } else { dir });
         Some(crate::data_uri::ImageSource {
             provider: resources.provider,
             referrer: primary.name().to_owned(),
+            referrer_dir,
             base_dir: resources.base_dir.clone(),
             safe: resources.safe,
         })
@@ -1106,16 +1114,20 @@ impl<'a> Reader<'a> {
         // Ruby's resolve_include_path: relative to the current include's
         // directory (the base directory within the primary document),
         // confined to the base directory from safe mode up.
+        // The current resource's own directory: the provider resolves a
+        // request relative to it, whatever directory Ruby starts from.
+        let referrer_dir = resources
+            .sources
+            .get(current)
+            .and_then(|source| resources.provider.document_path(source.name()))
+            .and_then(|path| path.rsplit_once('/').map(|(dir, _)| dir.to_owned()))
+            .map(|dir| if dir.is_empty() { "/".to_owned() } else { dir });
         let system_path = match (&resources.base_dir, &uri_target) {
             (Some(base_dir), None) => {
                 let dir = if current == self.inputs[0].source_id {
                     Some(base_dir.clone())
                 } else {
-                    resources
-                        .sources
-                        .get(current)
-                        .and_then(|source| resources.provider.document_path(source.name()))
-                        .and_then(|path| path.rsplit_once('/').map(|(dir, _)| dir.to_owned()))
+                    referrer_dir.clone()
                 };
                 dir.map(|dir| {
                     let dir = if dir.is_empty() { "/".to_owned() } else { dir };
@@ -1126,7 +1138,8 @@ impl<'a> Reader<'a> {
                         resources.safe,
                         "include file",
                     );
-                    (resolved, dir)
+                    let from = referrer_dir.clone().unwrap_or(dir);
+                    (resolved, from)
                 })
             }
             _ => None,
@@ -1136,8 +1149,8 @@ impl<'a> Reader<'a> {
         let path = system_path
             .as_ref()
             .map(|(resolved, _)| resolved.path.clone());
-        let request = system_path.as_ref().map(|(resolved, dir)| {
-            crate::xref_target::relative_path(&format!("{dir}/_"), &resolved.path)
+        let request = system_path.as_ref().map(|(resolved, from)| {
+            crate::xref_target::relative_path(&format!("{from}/_"), &resolved.path)
         });
         for warning in system_path
             .map(|(resolved, _)| resolved.warnings)
