@@ -5391,6 +5391,12 @@ fn cb_cython_cython_126(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexEr
     Ok(())
 }
 
+fn cb_cython_cython_147(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    s.lexer.strings.remove("indentation");
+    s.reset_stack();
+    Ok(())
+}
+
 fn cb_cython_python_175(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
     s.token(T::TEXT_WHITESPACE, m.group(1));
     s.token(T::KEYWORD, m.group(2));
@@ -5418,6 +5424,11 @@ fn cb_cython_python_256(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexEr
 
 fn cb_cython_python_265(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
     s.recurse(m.group(0))?;
+    Ok(())
+}
+
+fn init_cython(l: &mut Lexer) -> Result<(), LexError> {
+    l.strings.remove("indentation");
     Ok(())
 }
 
@@ -7155,6 +7166,14 @@ fn cb_haxe_haxe_228(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError>
     Ok(())
 }
 
+fn cb_hcl_hcl_33(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    s.groups(m, &[T::OPERATOR, T::TEXT, T::LITERAL_STRING_HEREDOC, T::LITERAL_STRING_HEREDOC, T::NAME_CONSTANT, T::LITERAL_STRING_HEREDOC]);
+    let value = (&crate::lexer::regexp_escape(m.group(5))).to_string();
+    s.lexer.strings.insert("heredocstr", value);
+    s.push("heredoc")?;
+    Ok(())
+}
+
 fn cb_hcl_hcl_66(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
     s.token(T::PUNCTUATION, m.text());
     s.push("hash")?;
@@ -7206,6 +7225,16 @@ fn cb_hcl_hcl_104(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
     s.token(T::PUNCTUATION, m.text());
     s.pop(1)?;
     s.push("array")?;
+    Ok(())
+}
+
+fn cb_hcl_hcl_153(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    if m.get(1) == s.lexer.strings.get("heredocstr").map(String::as_str) {
+        s.token(T::NAME_CONSTANT, m.text());
+        s.pop(2)?;
+    } else {
+        s.token(T::LITERAL_STRING_HEREDOC, m.text());
+    }
     Ok(())
 }
 
@@ -7378,6 +7407,12 @@ fn cb_http_http_48(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> 
 
 fn cb_http_http_73(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
     s.groups(m, &[T::LITERAL_STRING, T::TEXT]);
+    Ok(())
+}
+
+fn st_http_http_29(l: &mut Lexer) -> Result<(), LexError> {
+    let value = ("text/plain").to_string();
+    l.strings.insert("content_type", value);
     Ok(())
 }
 
@@ -10966,6 +11001,12 @@ fn cb_robot_framework_robot_framework_159(s: &mut Scan<'_, '_>, m: &Match<'_>) -
     Ok(())
 }
 
+fn cb_robot_framework_robot_framework_214(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    s.token(T::NAME_FUNCTION, m.text());
+    s.lexer.strings.remove("next");
+    Ok(())
+}
+
 fn cb_robot_framework_robot_framework_237(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
     s.groups(m, &[T::NAME_VARIABLE, T::TEXT_WHITESPACE, T::PUNCTUATION]);
     s.pop(1)?;
@@ -11482,6 +11523,24 @@ fn cb_sed_sed_169(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
 
 fn cb_shell_shell_61(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
     s.groups(m, &[T::NAME_VARIABLE, T::OPERATOR]);
+    Ok(())
+}
+
+fn cb_shell_shell_71(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    s.groups(m, &[T::OPERATOR, T::TEXT, T::LITERAL_STRING_HEREDOC, T::LITERAL_STRING_HEREDOC, T::NAME_CONSTANT, T::LITERAL_STRING_HEREDOC]);
+    let value = (&crate::lexer::regexp_escape(m.group(5))).to_string();
+    s.lexer.strings.insert("heredocstr", value);
+    s.push("heredoc")?;
+    Ok(())
+}
+
+fn cb_shell_shell_86(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    if m.get(1) == s.lexer.strings.get("heredocstr").map(String::as_str) {
+        s.token(T::NAME_CONSTANT, m.text());
+        s.pop(2)?;
+    } else {
+        s.token(T::LITERAL_STRING_HEREDOC, m.text());
+    }
     Ok(())
 }
 
@@ -12305,8 +12364,23 @@ fn cb_swift_swift_145(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexErro
     Ok(())
 }
 
+fn cb_swift_swift_149(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    let value = (m.group(1)).to_string();
+    s.lexer.strings.insert("re_delim", value);
+    s.token(T::LITERAL_STRING_REGEX, m.text());
+    s.push("re_multi")?;
+    Ok(())
+}
+
 fn cb_swift_swift_158(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
     s.groups(m, &[T::PUNCTUATION, T::NAME_VARIABLE, T::PUNCTUATION]);
+    Ok(())
+}
+
+fn st_swift_swift_33(l: &mut Lexer) -> Result<(), LexError> {
+    l.push_named("bol")?;
+    let value = ("").to_string();
+    l.strings.insert("re_delim", value);
     Ok(())
 }
 
@@ -12557,6 +12631,14 @@ fn cb_terraform_terraform_103(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(),
     Ok(())
 }
 
+fn cb_terraform_hcl_33(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    s.groups(m, &[T::OPERATOR, T::TEXT, T::LITERAL_STRING_HEREDOC, T::LITERAL_STRING_HEREDOC, T::NAME_CONSTANT, T::LITERAL_STRING_HEREDOC]);
+    let value = (&crate::lexer::regexp_escape(m.group(5))).to_string();
+    s.lexer.strings.insert("heredocstr", value);
+    s.push("heredoc")?;
+    Ok(())
+}
+
 fn cb_terraform_hcl_66(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
     s.token(T::PUNCTUATION, m.text());
     s.push("hash")?;
@@ -12608,6 +12690,16 @@ fn cb_terraform_hcl_104(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexEr
     s.token(T::PUNCTUATION, m.text());
     s.pop(1)?;
     s.push("array")?;
+    Ok(())
+}
+
+fn cb_terraform_hcl_153(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    if m.get(1) == s.lexer.strings.get("heredocstr").map(String::as_str) {
+        s.token(T::NAME_CONSTANT, m.text());
+        s.pop(2)?;
+    } else {
+        s.token(T::LITERAL_STRING_HEREDOC, m.text());
+    }
     Ok(())
 }
 
@@ -15563,10 +15655,10 @@ static LEXER_CONSOLE: LexerDef = LexerDef {
     states: &[
     ],
     start: &[],
-    init: None,
+    init: Some(crate::lexers::console::init),
     reset: None,
-    stream: None,
-    missing: &["console.rs (initialize) (sub lexer)", "console.rs (stream_tokens)"],
+    stream: Some(crate::lexers::console::stream),
+    missing: &[],
 };
 
 static LEXER_COQ: LexerDef = LexerDef {
@@ -15651,7 +15743,7 @@ static LEXER_COQ: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["coq.rs:93 (IASGN)", "coq.rs:131 (IASGN)", "coq.rs:179 (IASGN)", "coq.rs:219 (value IVAR)", "coq.rs:226 (condition IVAR)", "coq.rs:241 (condition IVAR)"],
+    missing: &["coq.rs:93 (IASGN)", "coq.rs:131 (IASGN)", "coq.rs:179 (IASGN)", "coq.rs:219 (IASGN)", "coq.rs:226 (condition IVAR)", "coq.rs:241 (condition IVAR)"],
 };
 
 static LEXER_CPP: LexerDef = LexerDef {
@@ -15971,7 +16063,7 @@ static LEXER_CRYSTAL: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["crystal.rs:38 (value escape)", "crystal.rs:228 (value DSTR)", "crystal.rs:235 (value DSTR)", "crystal.rs:260 (MASGN@261)", "crystal.rs:284 (condition IVAR)", "crystal.rs:137 (start) (sub lexer)"],
+    missing: &["crystal.rs:38 (value OR)", "crystal.rs:228 (value DSTR)", "crystal.rs:235 (value DSTR)", "crystal.rs:260 (MASGN@261)", "crystal.rs:284 (condition IVAR)", "crystal.rs:137 (start) (sub lexer)"],
 };
 
 static LEXER_CSHARP: LexerDef = LexerDef {
@@ -16379,7 +16471,7 @@ static LEXER_CYTHON: LexerDef = LexerDef {
         ] },
         StateDef { name: "c_indent", rules: &[
             Rule::Match { regex: 129, bol: false, action: Action::Call(crate::lexer::unported) },
-            Rule::Match { regex: 19, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 19, bol: false, action: Action::Call(cb_cython_cython_147) },
         ] },
         StateDef { name: "soft_keywords", rules: &[
             Rule::Match { regex: 792, bol: false, action: Action::Call(cb_cython_python_175) },
@@ -16425,10 +16517,10 @@ static LEXER_CYTHON: LexerDef = LexerDef {
         ] },
     ],
     start: &[],
-    init: None,
+    init: Some(init_cython),
     reset: None,
     stream: None,
-    missing: &["python.rs:127 (call register)", "cython.rs:108 (evaluate LIST)", "cython.rs:135 (condition nil?)", "cython.rs:147 (IASGN)", "python.rs:214 (condition delim?)", "python.rs:224 (condition type?)", "python.rs:235 (condition type?)", "cython.rs (initialize) (sub lexer)"],
+    missing: &["python.rs:127 (call register)", "cython.rs:108 (evaluate LIST)", "cython.rs:135 (condition nil?)", "python.rs:214 (condition delim?)", "python.rs:224 (condition type?)", "python.rs:235 (condition type?)"],
 };
 
 static LEXER_D: LexerDef = LexerDef {
@@ -16848,7 +16940,7 @@ static LEXER_DIGDAG: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["digdag.rs:63 (call set_indent)", "yaml.rs:176 (call set_indent)", "yaml.rs:92 (call reset_indent)", "yaml.rs:98 (call reset_indent)", "yaml.rs:105 (call reset_indent)", "yaml.rs:112 (MASGN@113)", "yaml.rs:123 (call continue_indent)", "yaml.rs:129 (call set_indent)", "yaml.rs:135 (call continue_indent)", "yaml.rs:222 (value size)", "yaml.rs:234 (value size)", "yaml.rs:254 (IASGN)", "yaml.rs:313 (value size)", "yaml.rs:78 (start) (hook call reset_indent)"],
+    missing: &["digdag.rs:63 (call set_indent)", "yaml.rs:176 (call set_indent)", "yaml.rs:92 (call reset_indent)", "yaml.rs:98 (call reset_indent)", "yaml.rs:105 (call reset_indent)", "yaml.rs:112 (MASGN@113)", "yaml.rs:123 (call continue_indent)", "yaml.rs:129 (call set_indent)", "yaml.rs:135 (call continue_indent)", "yaml.rs:222 (value size)", "yaml.rs:234 (value size)", "yaml.rs:254 (NEXT@261)", "yaml.rs:313 (value size)", "yaml.rs:78 (start) (hook call reset_indent)"],
 };
 
 static LEXER_DOCKER: LexerDef = LexerDef {
@@ -16875,7 +16967,7 @@ static LEXER_DOCKER: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["delegates to unported shell"],
+    missing: &[],
 };
 
 static LEXER_DOT: LexerDef = LexerDef {
@@ -17106,7 +17198,7 @@ static LEXER_ELIXIR: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["elixir.rs:107 (value escape)"],
+    missing: &["elixir.rs:107 (value OR)"],
 };
 
 static LEXER_ELM: LexerDef = LexerDef {
@@ -18856,7 +18948,7 @@ static LEXER_HACK: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["php.rs:108 (evaluate builtins)", "php.rs:119 (evaluate LIST)", "php.rs:71 (start) (value IVAR)", "php.rs (initialize) (sub lexer)"],
+    missing: &["php.rs:108 (evaluate builtins)", "php.rs:119 (evaluate LIST)", "php.rs:71 (start) (literal)", "php.rs (initialize) (sub lexer)"],
 };
 
 static LEXER_HAML: LexerDef = LexerDef {
@@ -19252,7 +19344,7 @@ static LEXER_HCL: LexerDef = LexerDef {
             Rule::Match { regex: 1537, bol: false, action: Action::Emit(T::OPERATOR, Next::Stay) },
             Rule::Match { regex: 52, bol: false, action: Action::Emit(T::LITERAL_STRING_DOUBLE, Next::State(7)) },
             Rule::Match { regex: 68, bol: false, action: Action::Emit(T::LITERAL_STRING_SINGLE, Next::State(8)) },
-            Rule::Match { regex: 1538, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 1538, bol: false, action: Action::Call(cb_hcl_hcl_33) },
         ] },
         StateDef { name: "root", rules: &[
             Rule::Mixin(1),
@@ -19297,7 +19389,7 @@ static LEXER_HCL: LexerDef = LexerDef {
             Rule::Match { regex: 1541, bol: false, action: Action::Emit(T::LITERAL_STRING_HEREDOC, Next::Stay) },
         ] },
         StateDef { name: "heredoc_nl", rules: &[
-            Rule::Match { regex: 1542, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 1542, bol: false, action: Action::Call(cb_hcl_hcl_153) },
             Rule::Match { regex: 19, bol: false, action: Action::Call(cb_hcl_hcl_162) },
         ] },
     ],
@@ -19305,7 +19397,7 @@ static LEXER_HCL: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["hcl.rs:33 (IASGN)", "hcl.rs:153 (value IVAR)"],
+    missing: &[],
 };
 
 static LEXER_HLSL: LexerDef = LexerDef {
@@ -19626,11 +19718,11 @@ static LEXER_HTTP: LexerDef = LexerDef {
             Rule::Match { regex: 682, bol: false, action: Action::Call(crate::lexer::unported) },
         ] },
     ],
-    start: &[crate::lexer::unported_hook],
+    start: &[st_http_http_29],
     init: None,
     reset: None,
     stream: None,
-    missing: &["http.rs:63 (condition zero?)", "http.rs:81 (sub lexer)", "http.rs:29 (start) (sub lexer)"],
+    missing: &["http.rs:63 (condition zero?)", "http.rs:81 (sub lexer)"],
 };
 
 static LEXER_HYLANG: LexerDef = LexerDef {
@@ -20028,10 +20120,10 @@ static LEXER_IRB: LexerDef = LexerDef {
     states: &[
     ],
     start: &[],
-    init: None,
+    init: Some(crate::lexers::console::init),
     reset: None,
-    stream: None,
-    missing: &["console.rs (initialize) (sub lexer)", "console.rs (stream_tokens)"],
+    stream: Some(crate::lexers::console::stream),
+    missing: &["delegates to unported ruby", "delegates to unported irb_output"],
 };
 
 static LEXER_IRB_OUTPUT: LexerDef = LexerDef {
@@ -20229,7 +20321,7 @@ static LEXER_IRB_OUTPUT: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["ruby.rs:42 (value escape)", "ruby.rs:239 (value DSTR)", "ruby.rs:246 (value DSTR)", "ruby.rs:271 (MASGN@272)", "ruby.rs:295 (condition IVAR)", "ruby.rs:149 (start) (sub lexer)"],
+    missing: &["ruby.rs:42 (value OR)", "ruby.rs:239 (value DSTR)", "ruby.rs:246 (value DSTR)", "ruby.rs:271 (MASGN@272)", "ruby.rs:295 (condition IVAR)", "ruby.rs:149 (start) (sub lexer)"],
 };
 
 static LEXER_ISABELLE: LexerDef = LexerDef {
@@ -20389,7 +20481,7 @@ static LEXER_J: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["j.rs:91 (evaluate primitive)", "j.rs:95 (evaluate IF)", "j.rs:99 (evaluate IF)", "j.rs:107 (MASGN@109)", "j.rs:139 (condition IVAR)", "j.rs:149 (IASGN)", "j.rs:166 (IASGN)", "j.rs:181 (literal)", "j.rs:189 (value IVAR)", "j.rs:134 (start) (sub lexer)"],
+    missing: &["j.rs:91 (evaluate primitive)", "j.rs:95 (evaluate IF)", "j.rs:99 (evaluate IF)", "j.rs:107 (MASGN@109)", "j.rs:139 (condition IVAR)", "j.rs:149 (IASGN)", "j.rs:166 (IASGN)", "j.rs:181 (literal)", "j.rs:189 (value LIT)", "j.rs:134 (start) (sub lexer)"],
 };
 
 static LEXER_JANET: LexerDef = LexerDef {
@@ -22151,7 +22243,7 @@ static LEXER_MAKE: LexerDef = LexerDef {
     init: Some(init_make),
     reset: None,
     stream: None,
-    missing: &["delegates to unported shell"],
+    missing: &[],
 };
 
 static LEXER_MARKDOWN: LexerDef = LexerDef {
@@ -22345,7 +22437,7 @@ static LEXER_MATLAB: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["delegates to unported shell"],
+    missing: &[],
 };
 
 static LEXER_MESON: LexerDef = LexerDef {
@@ -24112,7 +24204,7 @@ static LEXER_PHP: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["php.rs:108 (evaluate builtins)", "php.rs:119 (evaluate LIST)", "php.rs:71 (start) (value IVAR)", "php.rs (initialize) (sub lexer)"],
+    missing: &["php.rs:108 (evaluate builtins)", "php.rs:119 (evaluate LIST)", "php.rs:71 (start) (literal)", "php.rs (initialize) (sub lexer)"],
 };
 
 static LEXER_PLAINTEXT: LexerDef = LexerDef {
@@ -24213,7 +24305,7 @@ static LEXER_PLSQL: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["plsql.rs:462 (value escape)"],
+    missing: &["plsql.rs:462 (value OR)"],
 };
 
 static LEXER_PONY: LexerDef = LexerDef {
@@ -25511,7 +25603,7 @@ static LEXER_ROBOT_FRAMEWORK: LexerDef = LexerDef {
             Rule::Match { regex: 2807, bol: false, action: Action::Call(crate::lexer::unported) },
             Rule::Match { regex: 2803, bol: false, action: Action::Emit(T::NAME_FUNCTION, Next::Stay) },
             Rule::Match { regex: 2808, bol: false, action: Action::Emit(T::NAME_BUILTIN, Next::Stay) },
-            Rule::Match { regex: 2804, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 2804, bol: false, action: Action::Call(cb_robot_framework_robot_framework_214) },
             Rule::Mixin(4),
         ] },
         StateDef { name: "args", rules: &[
@@ -25534,7 +25626,7 @@ static LEXER_ROBOT_FRAMEWORK: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["robot_framework.rs:75 (IASGN)", "robot_framework.rs:91 (IASGN)", "robot_framework.rs:101 (IASGN)", "robot_framework.rs:114 (value chomp)", "robot_framework.rs:129 (IASGN)", "robot_framework.rs:146 (IASGN)", "robot_framework.rs:173 (IASGN)", "robot_framework.rs:186 (IASGN)", "robot_framework.rs:200 (condition nil?)", "robot_framework.rs:206 (condition nil?)", "robot_framework.rs:214 (IASGN)", "robot_framework.rs:223 (condition nil?)", "robot_framework.rs (initialize) (sub lexer)"],
+    missing: &["robot_framework.rs:75 (IASGN)", "robot_framework.rs:91 (IASGN)", "robot_framework.rs:101 (IASGN)", "robot_framework.rs:114 (value chomp)", "robot_framework.rs:129 (IASGN)", "robot_framework.rs:146 (IASGN)", "robot_framework.rs:173 (IASGN)", "robot_framework.rs:186 (IASGN)", "robot_framework.rs:200 (condition nil?)", "robot_framework.rs:206 (condition nil?)", "robot_framework.rs:223 (condition nil?)", "robot_framework.rs (initialize) (sub lexer)"],
 };
 
 static LEXER_RUBY: LexerDef = LexerDef {
@@ -25715,7 +25807,7 @@ static LEXER_RUBY: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["ruby.rs:42 (value escape)", "ruby.rs:239 (value DSTR)", "ruby.rs:246 (value DSTR)", "ruby.rs:271 (MASGN@272)", "ruby.rs:295 (condition IVAR)", "ruby.rs:149 (start) (sub lexer)"],
+    missing: &["ruby.rs:42 (value OR)", "ruby.rs:239 (value DSTR)", "ruby.rs:246 (value DSTR)", "ruby.rs:271 (MASGN@272)", "ruby.rs:295 (condition IVAR)", "ruby.rs:149 (start) (sub lexer)"],
 };
 
 static LEXER_RUST: LexerDef = LexerDef {
@@ -25890,7 +25982,7 @@ static LEXER_SAS: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["sas.rs:478 (IASGN)", "sas: state datalines4: Rouge::RegexLexer::InvalidRegex", "sas.rs:546 (condition has_key?)"],
+    missing: &["sas.rs:478 (condition IVAR)", "sas: state datalines4: Rouge::RegexLexer::InvalidRegex", "sas.rs:546 (condition has_key?)"],
 };
 
 static LEXER_SASS: LexerDef = LexerDef {
@@ -26353,7 +26445,7 @@ static LEXER_SHELL: LexerDef = LexerDef {
             Rule::Match { regex: 2977, bol: false, action: Action::Emit(T::OPERATOR, Next::Stay) },
             Rule::Match { regex: 2978, bol: false, action: Action::Emit(T::OPERATOR, Next::Stay) },
             Rule::Match { regex: 2979, bol: false, action: Action::Emit(T::OPERATOR, Next::Stay) },
-            Rule::Match { regex: 2980, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 2980, bol: false, action: Action::Call(cb_shell_shell_71) },
         ] },
         StateDef { name: "heredoc", rules: &[
             Rule::Match { regex: 21, bol: false, action: Action::Emit(T::LITERAL_STRING_HEREDOC, Next::State(2)) },
@@ -26362,7 +26454,7 @@ static LEXER_SHELL: LexerDef = LexerDef {
             Rule::Match { regex: 1541, bol: false, action: Action::Emit(T::LITERAL_STRING_HEREDOC, Next::Stay) },
         ] },
         StateDef { name: "heredoc_nl", rules: &[
-            Rule::Match { regex: 1542, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 1542, bol: false, action: Action::Call(cb_shell_shell_86) },
             Rule::Match { regex: 19, bol: false, action: Action::Call(cb_shell_shell_95) },
         ] },
         StateDef { name: "double_quotes", rules: &[
@@ -26449,7 +26541,7 @@ static LEXER_SHELL: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["shell.rs:71 (IASGN)", "shell.rs:86 (value IVAR)"],
+    missing: &[],
 };
 
 static LEXER_SIEVE: LexerDef = LexerDef {
@@ -27395,7 +27487,7 @@ static LEXER_SWIFT: LexerDef = LexerDef {
             Rule::Match { regex: 3205, bol: false, action: Action::Call(cb_swift_swift_127) },
             Rule::Match { regex: 3206, bol: false, action: Action::Call(cb_swift_swift_131) },
             Rule::Match { regex: 3207, bol: false, action: Action::Call(cb_swift_swift_145) },
-            Rule::Match { regex: 3208, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 3208, bol: false, action: Action::Call(cb_swift_swift_149) },
         ] },
         StateDef { name: "tuple", rules: &[
             Rule::Match { regex: 3209, bol: false, action: Action::Emit(T::NAME_VARIABLE, Next::Stay) },
@@ -27429,11 +27521,11 @@ static LEXER_SWIFT: LexerDef = LexerDef {
             Rule::Match { regex: 320, bol: false, action: Action::Emit(T::LITERAL_STRING_REGEX, Next::Stay) },
         ] },
     ],
-    start: &[crate::lexer::unported_hook],
+    start: &[st_swift_swift_33],
     init: None,
     reset: None,
     stream: None,
-    missing: &["swift.rs:149 (IASGN)", "swift.rs:189 (value DSTR)", "swift.rs:33 (start) (sub lexer)"],
+    missing: &["swift.rs:189 (value DSTR)"],
 };
 
 static LEXER_SYSTEMD: LexerDef = LexerDef {
@@ -27898,7 +27990,7 @@ static LEXER_TERRAFORM: LexerDef = LexerDef {
             Rule::Match { regex: 1537, bol: false, action: Action::Emit(T::OPERATOR, Next::Stay) },
             Rule::Match { regex: 52, bol: false, action: Action::Emit(T::LITERAL_STRING_DOUBLE, Next::State(1)) },
             Rule::Match { regex: 68, bol: false, action: Action::Emit(T::LITERAL_STRING_SINGLE, Next::State(2)) },
-            Rule::Match { regex: 1538, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 1538, bol: false, action: Action::Call(cb_terraform_hcl_33) },
         ] },
         StateDef { name: "root", rules: &[
             Rule::Mixin(9),
@@ -27928,7 +28020,7 @@ static LEXER_TERRAFORM: LexerDef = LexerDef {
             Rule::Mixin(11),
         ] },
         StateDef { name: "heredoc_nl", rules: &[
-            Rule::Match { regex: 1542, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 1542, bol: false, action: Action::Call(cb_terraform_hcl_153) },
             Rule::Match { regex: 19, bol: false, action: Action::Call(cb_terraform_hcl_162) },
         ] },
     ],
@@ -27936,7 +28028,7 @@ static LEXER_TERRAFORM: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["hcl.rs:33 (IASGN)", "hcl.rs:153 (value IVAR)"],
+    missing: &[],
 };
 
 static LEXER_TEX: LexerDef = LexerDef {
@@ -29579,7 +29671,7 @@ static LEXER_YAML: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["yaml.rs:92 (call reset_indent)", "yaml.rs:98 (call reset_indent)", "yaml.rs:105 (call reset_indent)", "yaml.rs:112 (MASGN@113)", "yaml.rs:123 (call continue_indent)", "yaml.rs:129 (call set_indent)", "yaml.rs:135 (call continue_indent)", "yaml.rs:176 (call set_indent)", "yaml.rs:222 (value size)", "yaml.rs:234 (value size)", "yaml.rs:254 (IASGN)", "yaml.rs:313 (value size)", "yaml.rs:78 (start) (hook call reset_indent)"],
+    missing: &["yaml.rs:92 (call reset_indent)", "yaml.rs:98 (call reset_indent)", "yaml.rs:105 (call reset_indent)", "yaml.rs:112 (MASGN@113)", "yaml.rs:123 (call continue_indent)", "yaml.rs:129 (call set_indent)", "yaml.rs:135 (call continue_indent)", "yaml.rs:176 (call set_indent)", "yaml.rs:222 (value size)", "yaml.rs:234 (value size)", "yaml.rs:254 (NEXT@261)", "yaml.rs:313 (value size)", "yaml.rs:78 (start) (hook call reset_indent)"],
 };
 
 static LEXER_YANG: LexerDef = LexerDef {

@@ -67,6 +67,17 @@ module RougeLexers
     (hand_written[module_name(path)] || Set.new).include?(name)
   end
 
+  # Lexers a hand-written module delegates to, by lexer tag: its
+  # `Delegates (tag, …): dep, ….` doc lines.
+  def self.hand_deps path, tag
+    file = File.join(RUST_DIR, "#{module_name path}.rs")
+    return [] unless File.file?(file)
+
+    File.read(file).scan(/Delegates \(([^)]*)\): ([^.]*)\./).flat_map do |tags, deps|
+      tags.split(/,\s*/).include?(tag) ? deps.split(/,\s*/) : []
+    end
+  end
+
   class Generator
     attr_reader :regexes, :sets, :callbacks
 
@@ -255,7 +266,10 @@ module RougeLexers
       return 'None' if [Rouge::Lexer, Rouge::RegexLexer].include?(owner) || !(owner < Rouge::Lexer)
 
       path = owner_file(lexer, :initialize)
-      return "Some(crate::lexers::#{RougeLexers.module_name path}::init)" if RougeLexers.hand?(path, 'init')
+      if RougeLexers.hand?(path, 'init')
+        RougeLexers.hand_deps(path, lexer.tag).each { |dep| depend(dep) }
+        return "Some(crate::lexers::#{RougeLexers.module_name path}::init)"
+      end
 
       # `initialize` creating delegate lexers after `super`.
       name = "init_#{RougeLexers.rust_ident lexer.tag}"
@@ -284,7 +298,10 @@ module RougeLexers
       return 'None' if owner == Rouge::RegexLexer
 
       path = owner_file(lexer, :stream_tokens)
-      return "Some(crate::lexers::#{RougeLexers.module_name path}::stream)" if RougeLexers.hand?(path, 'stream')
+      if RougeLexers.hand?(path, 'stream')
+        RougeLexers.hand_deps(path, lexer.tag).each { |dep| depend(dep) }
+        return "Some(crate::lexers::#{RougeLexers.module_name path}::stream)"
+      end
 
       missing << "#{RougeLexers.module_name path}.rs (stream_tokens)"
       'None'
@@ -409,8 +426,15 @@ module RougeLexers
           receiver = rule? ? 's.lexer' : 'l'
           return "#{indent}#{receiver}.alias_sub(#{rust_str ivar_key(name)}, #{rust_str ivar_key(rhs.children[0])});\n"
         end
+        receiver = rule? ? 's.lexer' : 'l'
+        key = rust_str(ivar_key(name))
+        return "#{indent}#{receiver}.strings.remove(#{key});\n" if rhs.type == :NIL
+        if string_expression?(rhs)
+          # A String instance variable.
+          return "#{indent}let value = (#{value rhs}).to_string();\n#{indent}#{receiver}.strings.insert(#{key}, value);\n"
+        end
         unsupported(node, 'IASGN') if rule?
-        "#{indent}l.set_sub(#{rust_str ivar_key(name)}, #{sub_maker rhs})?;\n"
+        "#{indent}l.set_sub(#{key}, #{sub_maker rhs})?;\n"
       when :CALL
         rule? ? rule_call(node, indent) : hook_call(node, indent)
       when :ZSUPER, :SUPER
@@ -692,6 +716,8 @@ module RougeLexers
         if meth == :[] && recv.type == :DVAR && recv.children[0] == @param
           index = integer(call_args(args)[0])
           "m.group(#{index})"
+        elsif meth == :escape && recv.type == :CONST && recv.children[0] == :Regexp && call_args(args).size == 1
+          "&crate::lexer::regexp_escape(#{value call_args(args)[0]})"
         elsif %i[downcase upcase].include?(meth) && args.nil?
           "&#{value recv}.to_#{meth == :downcase ? 'lowercase' : 'uppercase'}()"
         else
@@ -701,8 +727,21 @@ module RougeLexers
         unsupported(node, 'value variable') unless @locals[node.children[0]] == :string
         "#{local node.children[0]}.as_str()"
       when :STR then rust_str node.children[0]
+      when :IVAR then ivar_value(node)
       else unsupported(node, "value #{node.type}")
       end
+    end
+
+    def string_expression? node
+      value(node)
+      true
+    rescue Unsupported
+      false
+    end
+
+    def ivar_value node
+      receiver = rule? ? 's.lexer' : 'l'
+      "&#{receiver}.string(#{rust_str ivar_key(node.children[0])})"
     end
 
     def present? node
@@ -716,7 +755,13 @@ module RougeLexers
     end
 
     def optional node
-      group_node?(node) ? "m.get(#{integer call_args(node.children[2])[0]})" : "Some(#{value node})"
+      return "m.get(#{integer call_args(node.children[2])[0]})" if group_node?(node)
+      if node.type == :IVAR
+        receiver = rule? ? 's.lexer' : 'l'
+        return "#{receiver}.strings.get(#{rust_str ivar_key(node.children[0])}).map(String::as_str)"
+      end
+
+      "Some(#{value node})"
     end
 
     # `==`/`!=`: Ruby's nil equals no String, so a match group compares as
@@ -725,7 +770,9 @@ module RougeLexers
       if integer_expr?(recv) || integer_expr?(arg)
         return "#{integer_expr recv} #{meth} #{integer_expr arg}"
       end
-      return "#{optional recv} #{meth} #{optional arg}" if group_node?(recv) || group_node?(arg)
+      if [recv, arg].any? { |n| group_node?(n) || n.type == :IVAR }
+        return "#{optional recv} #{meth} #{optional arg}"
+      end
 
       "#{value recv} #{meth} #{value arg}"
     end

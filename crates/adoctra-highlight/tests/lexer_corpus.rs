@@ -48,6 +48,20 @@ fn json_string(text: &str) -> String {
     out
 }
 
+/// `Lexer.find_fancy` for a ported lexer: `tag?key=value&…` options
+/// (percent-decoded; one value per key in these cases).
+fn find_fancy(name: &str) -> Option<Lexer> {
+    let (tag, query) = name.split_once('?').unwrap_or((name, ""));
+    let def = lexer::find_def(tag).filter(|def| def.missing.is_empty())?;
+    let mut options = lexer::Options::new();
+    for pair in query.split('&').filter(|pair| !pair.is_empty()) {
+        let (key, value) = pair.split_once('=').unwrap_or((pair, ""));
+        let value = value.replace("%3E", ">").replace("%23", "#");
+        options.insert(key.to_string(), lexer::OptionValue::Str(value));
+    }
+    Lexer::new(def, options).ok()
+}
+
 fn fingerprint(tokens: &[(adoctra_highlight::token::Token, String)]) -> String {
     let mut hash: u64 = 0xcbf29ce484222325;
     let mut feed = |value: u64| {
@@ -71,9 +85,10 @@ fn ported_lexers_reproduce_rouge_token_streams() {
     let mut checked = 0;
     for line in CORPUS.lines() {
         let fields: Vec<&str> = line.split('\t').collect();
-        assert_eq!(fields[0], "L", "Rouge failed on a demo: {line}");
+        // `L`: a lexer's demo; `C`: an extra case (`tag?options`).
+        assert!(matches!(fields[0], "L" | "C"), "Rouge failed: {line}");
         let (tag, expected, input) = (fields[1], fields[2], json_string(fields[3]));
-        let Some(mut lexer) = Lexer::find(tag) else {
+        let Some(mut lexer) = find_fancy(tag) else {
             continue;
         };
         checked += 1;
@@ -87,8 +102,13 @@ fn ported_lexers_reproduce_rouge_token_streams() {
             Err(error) => failures.push(format!("{tag}: {error}")),
         }
     }
-    let ported = lexer::all().count();
-    assert_eq!(checked, ported, "every ported lexer has a corpus entry");
+    let demos = CORPUS
+        .lines()
+        .filter(|line| {
+            line.starts_with("L\t") && find_fancy(line.split('\t').nth(1).unwrap()).is_some()
+        })
+        .count();
+    assert_eq!(demos, lexer::all().count(), "every ported lexer has a demo");
     assert!(
         failures.is_empty(),
         "{} of {checked} lexers differ:\n{}",
@@ -106,5 +126,11 @@ fn reports_the_port_status() {
         ported.len(),
         ported.join(" ")
     );
-    assert_eq!(total, CORPUS.lines().count());
+    assert_eq!(
+        total,
+        CORPUS
+            .lines()
+            .filter(|line| line.starts_with("L\t"))
+            .count()
+    );
 }

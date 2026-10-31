@@ -201,8 +201,21 @@ def lexers
   incomplete.each { |ident, missing| warn "#{ident}: #{missing.size} missing: #{missing.first(3).join('; ')}" } if ENV['VERBOSE']
 end
 
-# Ruby's token stream for every lexer's complete demo: FNV-1a over each
-# token's id, value length and bytes.
+# Extra lexer inputs beyond the demos, as `find_fancy` names (`tag?options`,
+# like Asciidoctor's `[source,tag?options]`) with their text.
+LEXER_CASES = [
+  ['console', "$ ls -l > out.txt\nfile a > b\n# comment\n...\n<...>\nerror: x\n  $ echo hi # c\n"],
+  ['console?prompt=%3E,$$', "> cd /tmp\n$$ ls\nplain $ text\n# not a comment\n"],
+  ['console?comments=1', "# a comment\n$ x=1\nout\n"],
+  ['console?comments=0&prompt=%23', "# root\nroot@h # whoami\n"],
+  ['console?error=error:,fatal', "$ git x\nerror: unknown\nfatal: bad\nok\n"],
+  ['console?lang=json&output=json', "$ {\"a\": 1}\n[1, 2]\n"],
+  ['shell_session', "user@host:~$ for i in 1 2; do echo $i; done\n1\n2\n"],
+  ['text?token=Comment', "plain <text>\n"],
+].freeze
+
+# Ruby's token stream for every lexer's complete demo, and for the extra
+# cases: FNV-1a over each token's id, value length and bytes.
 def lexer_corpus
   tokens = token_list
   Rouge::Lexer.all.sort_by(&:tag).each do |lexer|
@@ -221,6 +234,18 @@ def lexer_corpus
     rescue StandardError => e
       puts ['E', lexer.tag, JSON.generate(e.message), JSON.generate(input)].join("\t")
     end
+  end
+  LEXER_CASES.each do |name, input|
+    hash = 0xcbf29ce484222325
+    feed = lambda do |value|
+      8.times { |i| hash = ((hash ^ ((value >> (8 * i)) & 0xff)) * 0x100000001b3) & 0xffffffffffffffff }
+    end
+    Rouge::Lexer.find_fancy(name).lex(input) do |tok, val|
+      feed.(tokens.index(tok))
+      feed.(val.bytesize)
+      val.each_byte { |byte| feed.(byte) }
+    end
+    puts ['C', name, format('%016x', hash), JSON.generate(input)].join("\t")
   end
 end
 

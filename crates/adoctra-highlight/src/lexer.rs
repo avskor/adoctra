@@ -165,6 +165,8 @@ pub struct Lexer {
     pub subs: BTreeMap<&'static str, Lexer>,
     /// Instance variables naming another one's delegate (`@lang = @css`).
     pub aliases: BTreeMap<&'static str, &'static str>,
+    /// String instance variables (`@heredocstr = m[5]`); unset is nil.
+    pub strings: BTreeMap<&'static str, String>,
 }
 
 /// The ported lexers.
@@ -208,6 +210,7 @@ impl Lexer {
             vars: None,
             subs: BTreeMap::new(),
             aliases: BTreeMap::new(),
+            strings: BTreeMap::new(),
         };
         if let Some(init) = def.init {
             init(&mut lexer)?;
@@ -329,6 +332,11 @@ impl Lexer {
         self.subs.get_mut(key).expect("delegate lexer").reset()
     }
 
+    /// A String instance variable's value, empty when nil.
+    pub fn string(&self, key: &str) -> String {
+        self.strings.get(key).cloned().unwrap_or_default()
+    }
+
     /// The lexer-specific variables of type `T`, created on first use.
     pub fn vars<T: Any + Default>(&mut self) -> &mut T {
         if !self.vars.as_ref().is_some_and(|vars| vars.is::<T>()) {
@@ -374,6 +382,28 @@ pub(crate) fn unported(_: &mut Scan<'_, '_>, _: &Match<'_>) -> Result<(), LexErr
 /// A `start` block that is not ported.
 pub(crate) fn unported_hook(_: &mut Lexer) -> Result<(), LexError> {
     Err(LexError("unported Rouge hook".into()))
+}
+
+/// Ruby's `Regexp.escape`.
+pub fn regexp_escape(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    for c in text.chars() {
+        match c {
+            '.' | '*' | '?' | '+' | '^' | '$' | '|' | '(' | ')' | '[' | ']' | '{' | '}' | '\\'
+            | '-' | '#' => {
+                out.push('\\');
+                out.push(c);
+            }
+            ' ' => out.push_str("\\ "),
+            '\t' => out.push_str("\\t"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\u{c}' => out.push_str("\\f"),
+            '\u{b}' => out.push_str("\\v"),
+            _ => out.push(c),
+        }
+    }
+    out
 }
 
 /// `collection.include?(value)` for a generated sorted collection.
@@ -809,6 +839,15 @@ mod tests {
         scan.delegate_existing("other", "12").unwrap();
         assert!(scan.delegate_existing("missing", "x").is_err());
         assert_eq!(out, vec![(LITERAL_NUMBER_INTEGER, "12".to_string())]);
+    }
+
+    #[test]
+    fn regexp_escape_matches_ruby() {
+        // Ruby: Regexp.escape(" .*?+^$|()[]{}\\/-#\t\n\r\f\v\0a_é:")
+        assert_eq!(
+            regexp_escape(" .*?+^$|()[]{}\\/-#\t\n\r\u{c}\u{b}\0a_é:"),
+            "\\ \\.\\*\\?\\+\\^\\$\\|\\(\\)\\[\\]\\{\\}\\\\/\\-\\#\\t\\n\\r\\f\\v\0a_é:"
+        );
     }
 
     #[test]
