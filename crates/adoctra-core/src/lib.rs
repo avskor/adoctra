@@ -72,7 +72,9 @@ mod attribute_macros;
 mod attribute_quotes;
 mod xref_target;
 pub use backend::{Backend, ConversionStart, HighlightRequest, Highlighted};
-pub use context::{DateTime, DocumentDates, IncludeLimits, ParseOptions, SafeMode};
+pub use context::{
+    DateTime, DocumentDates, IncludeLimits, OutputPaths, OutputTarget, ParseOptions, SafeMode,
+};
 pub use diagnostic::{
     Diagnostic, DiagnosticCursor, DiagnosticLocation, DiagnosticReport, ParseResult, Severity,
 };
@@ -87,6 +89,7 @@ pub use resource::{
     ResourceRequest, ResourceResult,
 };
 pub use source::{SourceFile, SourceId, SourceMap, SourcePosition};
+pub use system_path::{resolve_system_path, SystemPath};
 pub use tokenizer::{Token, TokenKind};
 
 /// Parse AsciiDoc source into a [`ParseResult`] (never fails on syntax).

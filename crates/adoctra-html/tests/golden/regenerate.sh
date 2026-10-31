@@ -55,6 +55,12 @@ done
 # fixture's files relative to it; secure mode keeps an <img>).
 (cd svg && ruby "../$reference" --safe <svg.adoc >svg.expected.html)
 echo "  svg/svg.expected.html"
+# XML syntax under xhtml/: Ruby's :backend option (a host attribute) set to
+# xhtml, standalone in safe mode (secure mode keeps image icons).
+for adoc in xhtml/*.adoc; do
+  ruby "$reference" --standalone --safe --attribute backend=xhtml <"$adoc" >"${adoc%.adoc}.expected.html"
+  echo "  ${adoc%.adoc}.expected.html"
+done
 # Standalone documents (head, header and footer) under document/.
 for adoc in document/*.adoc; do
   ruby "$reference" --standalone <"$adoc" >"${adoc%.adoc}.expected.html"

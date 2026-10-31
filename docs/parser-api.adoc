@@ -558,6 +558,18 @@ BTreeMap: при прямом использовании API передавай�
 `iconfont-remote`, `stylesheet` и `webfonts`. Присваивание `showtitle` в
 документе, как `store_attribute`, сначала записывает обратный `notitle`.
 
+`ParseOptions.output` (`OutputTarget::File(path)` или `Directory(dir)`,
+абсолютные пути хоста) — запись в файл, как `Asciidoctor.convert`: после чтения
+core выбирает файл (`<dir>/<docname><outfilesuffix>`: `docname` по итогам
+чтения, `outfilesuffix` зафиксирован в конце заголовка, как
+`Document#outfilesuffix`) и ниже server mode присваивает `outfile`/`outdir`
+только для преобразования, как `Document#convert` (препроцессор и снимок
+заголовка их не видят). Результат — `Document.output` (`OutputPaths { file,
+dir }`); core ничего не пишет. `resolve_system_path(target, start, jail,
+target_name, recover)` — `PathResolver#system_path` для хоста: без `recover`
+выход из jail даёт текст `SecurityError` Ruby (`to_dir … is outside of jail:
+… (disallowed in safe mode)`, `… refers to location outside jail: …`).
+
 `ParseOptions.safe` (`SafeMode`, по умолчанию `Safe`; Ruby API — `Secure`)
 задаёт атрибуты и ограничения safe mode Ruby: `safe-mode-*`, блокировки
 server/secure, усечение значений записей до `max-attribute-value-size`, ссылки

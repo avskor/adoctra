@@ -71,6 +71,11 @@ fn traits(backend: &str, htmlsyntax: Option<&str>) -> Traits {
 pub(crate) struct Profile {
     pub backend: Option<String>,
     pub doctype: Option<String>,
+    /// The `htmlsyntax` of the converter Ruby (re)creates for the backend
+    /// (`create_converter` with `htmlsyntax: @attributes['htmlsyntax']`):
+    /// `html`/`xml` for html5, none for other backends. A later
+    /// `htmlsyntax` entry changes the attribute, not the converter.
+    pub htmlsyntax: Option<&'static str>,
 }
 
 impl Profile {
@@ -117,6 +122,7 @@ impl Profile {
         attrs.set("backend", backend.clone());
         let traits = traits(&backend, attrs.get("htmlsyntax"));
         self.backend = Some(backend);
+        self.htmlsyntax = traits.htmlsyntax;
         if let Some(syntax) = traits.htmlsyntax {
             attrs.set("htmlsyntax", syntax);
         }
@@ -202,6 +208,7 @@ impl Profile {
         let mut profile = Self {
             backend: attrs.get("backend").map(str::to_owned),
             doctype: attrs.get("doctype").map(str::to_owned),
+            htmlsyntax: None,
         };
         profile.update_doctype(attrs, DEFAULT_DOCTYPE);
         profile
@@ -376,6 +383,45 @@ mod tests {
         // A later assignment cleans up after the remembered doctype.
         let result = crate::parse("= T\n:doctype: book\n:doctype!:\n:doctype: article\n");
         assert_eq!(result.document.attributes.get("doctype-book"), None);
+    }
+
+    /// Ruby's converter keeps the `htmlsyntax` of its creation: the xhtml
+    /// backends and an `htmlsyntax` before the last `backend` entry make it
+    /// XML; an `htmlsyntax` after it changes only the attribute.
+    #[test]
+    fn document_keeps_the_converter_htmlsyntax() {
+        let syntax = |source: &str, host: &[(&str, &str)]| {
+            let mut attributes = Attributes::new();
+            for (name, value) in host {
+                attributes.set(*name, *value);
+            }
+            let options = crate::ParseOptions {
+                attributes,
+                ..Default::default()
+            };
+            let doc = crate::parse_with_options(source, &options).document;
+            (
+                doc.htmlsyntax,
+                doc.attributes.get("htmlsyntax").map(str::to_owned),
+            )
+        };
+        let xml = (Some("xml"), Some("xml".to_owned()));
+        assert_eq!(syntax("text", &[]), (Some("html"), Some("html".to_owned())));
+        assert_eq!(syntax("text", &[("backend", "xhtml")]), xml);
+        assert_eq!(syntax("text", &[("backend", "xhtml5")]), xml);
+        assert_eq!(syntax("text", &[("htmlsyntax", "xml")]), xml);
+        assert_eq!(syntax(":backend: xhtml\n\ntext", &[]), xml);
+        assert_eq!(
+            syntax(":htmlsyntax: xml\n:backend: html5\n\ntext", &[]),
+            xml
+        );
+        assert_eq!(
+            syntax(":backend: html5\n:htmlsyntax: xml\n\ntext", &[]),
+            (Some("html"), Some("xml".to_owned()))
+        );
+        assert_eq!(syntax(":backend: docbook\n\ntext", &[]).0, None);
+        // A body entry is a plain attribute assignment.
+        assert_eq!(syntax("text\n\n:backend: xhtml\n", &[]).0, Some("html"));
     }
 
     #[test]

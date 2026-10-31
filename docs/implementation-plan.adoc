@@ -3585,6 +3585,35 @@ CLI передаёт хук и в embedded-режиме. Golden `rouge/subs.adoc
 (в том числе `attributes+`, `+attributes` по HTML, `+quotes,+macros`,
 linenums с callout-ами).
 
+Аудит UNSUPPORTED upstream (пункт 1 очереди): опции Ruby API без влияния на
+вывод (`sourcemap`, `catalog_assets`, `timings`, `eruby`) передаются эталону
+и сравниваются; опция `backend` — заблокированный атрибут CLI (`html5`,
+`html`, `xhtml`, `xhtml5`, мягкое `html5@`); неизвестное имя safe-уровня —
+secure, как в Ruby. Для xhtml HTML-бэкенд получил синтаксис XML Ruby
+(`@void_element_slash`, `append_boolean_attribute`, `xmlns`) по синтаксису
+конвертера на момент последнего `backend` (`Document.htmlsyntax`; позднее
+`:htmlsyntax:` меняет только атрибут); комментарии `adoctra.css` больше не
+содержат `&`/`<`, так что встроенная таблица стилей допустима в XML. Golden
+`xhtml/` сравнивает void-теги и булевы атрибуты с Ruby. Аудит: 2304 PASS /
+1 DIFF / 1 RUBY_ERROR / 315 UNSUPPORTED (+22). Оставшиеся UNSUPPORTED:
+docbook/docbook5/manpage (242), `to_dir`/`to_file`/`in_place` (42), Ruby API
+расширений/подсветчиков/logger (22), `parse_header_only` (6), прочие (3).
+
+Файловый вывод, как `Asciidoctor.convert` и `Invoker` Ruby: CLI получил
+`-D`/`--destination-dir`, `-o -`, файл `<docname><outfilesuffix>` рядом со
+входом или в `-D`, `outfilesuffix` из расширения `-o`, разрешение путей
+`normalize_system_path` с `recover: false` (jail — `-B` или текущий каталог
+с safe mode, решение пользователя от 2026-10-31: умолчание safe тоже
+ограничивает вывод), ошибки `SecurityError`/«input file and output file
+cannot be the same» дословно, запись без завершающего LF и без сообщения,
+`copycss` по путям Ruby (предупреждение с именем документа). Core:
+`ParseOptions.output`/`Document.output` (`OutputTarget`, `OutputPaths`) —
+имя файла после чтения (`docname`, `outfilesuffix` заголовка), атрибуты
+`outfile`/`outdir` только для преобразования ниже server mode;
+`resolve_system_path` публичен. Upstream-аудит запускает записи с
+`to_dir`/`to_file` как CLI обеих сторон (`Invoker` Ruby) и сравнивает
+записанные файлы: 2342 PASS / 1 DIFF / 1 RUBY_ERROR / 277 UNSUPPORTED (+38).
+
 *Следующее изменение:* очередь совместимости из начала плана; перенос Rouge
 завершён (ограничения — в compatibility.adoc).
 Каждое исправление переводит записи в PASS с перезаписью baseline.

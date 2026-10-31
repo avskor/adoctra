@@ -137,12 +137,42 @@ python3 scripts/upstream_audit.py --record <copy> --recording rec.jsonl
 окружение не имеет необязательных серверных подсветчиков (`rouge`, `coderay`,
 `pygments`) независимо от установленных на машине gem, как эталоны golden и CI.
 
-UNSUPPORTED — записи, которые контракт CLI не выражает, с причиной:
-бэкенды docbook/manpage/xhtml (в том числе через атрибут `backend`),
-опции `to_dir`/`to_file`, реестры расширений, `sourcemap`,
-`parse_header_only`, `logger`. Это не PASS и не исключение из
-контракта; часть из них можно перевести в поддерживаемые отдельными
-адаптерами.
+UNSUPPORTED — записи, которые контракт CLI не выражает, с причиной
+(277): бэкенды docbook/docbook5/manpage (243, в том числе через атрибут
+`backend` документа) и неизвестный backend (2), реестры расширений и
+фабрики подсветчиков Ruby API (18), `parse_header_only` (6), `logger` (4),
+вывод в абсолютный путь вне копии upstream (`/tmp`, 2), атрибут-объект
+`Pathname` (1) и целочисленный safe-уровень выше secure (1). Это не PASS и
+не исключение из контракта; часть из них можно перевести в поддерживаемые
+отдельными адаптерами.
+
+Записи с `to_dir`/`to_file` (файловый вывод `Asciidoctor.convert`)
+выполняются как один запуск CLI на каждой стороне с одинаковыми аргументами
+(`-D`, `-o`, `-S`, `-a`, `-B`): эталон — `Asciidoctor::Cli::Invoker`
+(режим `--invoke` эталонного скрипта, те же заглушки подсветчиков), рабочий
+каталог — развёрнутая копия upstream. Входом служит фикстура `docfile`,
+если она совпадает с исходником (тогда `docfile`/`docdir`/`docname`/
+`docfilesuffix` выводит сам CLI), иначе stdin. Записанные
+файлы фиксируются по снимку дерева до и после запуска, дерево
+восстанавливается перед следующим запуском. Сравниваются код выхода,
+текст ошибки, предупреждения, stdout и каждый записанный файл (HTML — в
+проекции и по наличию завершающего LF, прочие — побайтно; стандартная
+таблица стилей `asciidoctor.css`/`adoctra.css` — только по наличию).
+Записанный эталон адаптирован: опции зафиксированы на входе `Document.new`
+(`:to_dir` уже разрешён `convert`), поэтому повторный запуск может писать в
+другой путь, чем исходный тест, но обе стороны получают одинаковый вызов.
+
+Опции Ruby API, которые меняют только состояние API, а не вывод
+(`sourcemap`, `catalog_assets`, `timings`, `eruby`: html5-конвертер не
+использует шаблоны), эталон передаёт Ruby, а CLI их не требует
+(`PASSIVE_OPTIONS`). Опция `backend` (`html5`, `html`, `xhtml`, `xhtml5`)
+передаётся CLI как заблокированный атрибут `backend`, как
+`attr_overrides` Ruby; мягкое `backend=html5@` разрешено. Неизвестное имя
+safe-уровня — secure, как `value_for_name … rescue SECURE` Ruby.
+Синтаксис XML (`htmlsyntax=xml`) HTML-бэкенд выводит как html5-конвертер
+Ruby: `/` у void-элементов, булевы атрибуты `name="name"`, `xmlns` у `html`;
+его выбирает синтаксис конвертера на момент последнего `backend`
+(`Document.htmlsyntax`), а не позднее присвоенный атрибут.
 
 === Состояние
 
@@ -162,31 +192,31 @@ UNSUPPORTED — записи, которые контракт CLI не выра�
 [cols="2,1,1,1",options="header"]
 |===
 |Файл |PASS |DIFF/ERROR |UNSUPPORTED
-|substitutions_test.rb |369 |0 |25
-|lists_test.rb |290 |0 |19
+|substitutions_test.rb |370 |0 |24
+|lists_test.rb |291 |0 |18
 |blocks_test.rb |271 |1 |30
 |sections_test.rb |206 |0 |12
-|attributes_test.rb |194 |0 |7
+|attributes_test.rb |195 |0 |6
 |links_test.rb |180 |0 |10
-|document_test.rb |131 |0 |51
+|document_test.rb |138 |0 |44
 |reader_test.rb |154 |1 |1
-|tables_test.rb |120 |0 |17
-|api_test.rb |73 |0 |37
+|tables_test.rb |123 |0 |14
+|api_test.rb |102 |0 |8
 |text_test.rb |84 |0 |2
 |manpage_test.rb |0 |0 |77
 |extensions_test.rb |57 |0 |13
 |syntax_highlighter_test.rb |63 |0 |2
 |paragraphs_test.rb |50 |0 |4
-|invoker_test.rb |26 |0 |20
+|invoker_test.rb |44 |0 |2
 |preamble_test.rb |7 |0 |6
 |logger_test.rb |1 |0 |4
 |parser_test.rb |3 |0 |0
 |attribute_list_test.rb |2 |0 |0
 |paths_test.rb |1 |0 |0
-|Итого |2282 |2 |337
+|Итого |2342 |2 |277
 |===
 
-2282 из 2284 сравнимых записей (99.9%) совпадают в этом профиле. Это доля
+2342 из 2344 сравнимых записей (99.9%) совпадают в этом профиле. Это доля
 наблюдаемых входов тестового набора, а не процент совместимости языка.
 
 Оставшиеся расхождения (все записи syntax_highlighter_test.rb совпадают с

@@ -30,6 +30,64 @@ pub struct ParseOptions {
     /// The default is `Safe`: resource providers already own access policy.
     /// Ruby's API defaults to `Secure`, its CLI to `Unsafe`.
     pub safe: SafeMode,
+    /// Where the host writes the converted document (Ruby's `Asciidoctor.
+    /// convert` writing to a file). Core resolves the file name after
+    /// reading (a directory takes `docname` as reading left it and the
+    /// `outfilesuffix` pinned at the end of the header, Ruby's
+    /// `Document#outfilesuffix`) and, below server mode, assigns the `outfile`
+    /// and `outdir` attributes for conversion like `Document#convert`. The
+    /// result is [`Document::output`](crate::Document::output); core writes
+    /// nothing.
+    pub output: Option<OutputTarget>,
+}
+
+/// The output location a host resolved before parsing (absolute paths, as
+/// Ruby's `normalize_system_path` gives them).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum OutputTarget {
+    /// An explicit output file (Ruby's `:to_file`); its directory is `outdir`.
+    File(String),
+    /// A directory (Ruby's `:to_dir`, or the input's directory): the file is
+    /// `<dir>/<docname><outfilesuffix>`.
+    Directory(String),
+}
+
+/// The output file and directory of a document converted for a file
+/// (Ruby's `outfile`/`outdir`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OutputPaths {
+    pub file: String,
+    pub dir: String,
+}
+
+impl OutputTarget {
+    /// The paths for a document named `docname` with the header's
+    /// `outfilesuffix`: Ruby's `File.join outdir,
+    /// "#{docname}#{outfilesuffix}"` (missing values are empty) or the
+    /// explicit file and its directory.
+    pub fn resolve(&self, docname: Option<&str>, outfilesuffix: Option<&str>) -> OutputPaths {
+        match self {
+            Self::File(file) => OutputPaths {
+                file: file.clone(),
+                dir: match file.rfind('/') {
+                    Some(0) => "/".to_owned(),
+                    Some(slash) => file[..slash].to_owned(),
+                    None => ".".to_owned(),
+                },
+            },
+            Self::Directory(dir) => {
+                let name = format!("{}{}", docname.unwrap_or(""), outfilesuffix.unwrap_or(""));
+                OutputPaths {
+                    file: format!(
+                        "{}/{}",
+                        dir.trim_end_matches('/'),
+                        name.trim_start_matches('/')
+                    ),
+                    dir: dir.clone(),
+                }
+            }
+        }
+    }
 }
 
 /// Ruby's `SafeMode` levels.
@@ -324,6 +382,9 @@ pub(crate) struct ParseContext<'i> {
     htmlsyntax_modified: bool,
     /// Ruby's `@max_attribute_value_size` (secure mode's 4096 bytes).
     max_attribute_value_size: Option<usize>,
+    /// The host's output location and safe mode (see [`ParseOptions::output`]).
+    output: Option<OutputTarget>,
+    safe: SafeMode,
 }
 
 fn root_of(
@@ -658,6 +719,8 @@ impl ParseContext<'_> {
             profile,
             htmlsyntax_modified: false,
             max_attribute_value_size,
+            output: options.output.clone(),
+            safe: options.safe,
         }
     }
 
@@ -759,6 +822,12 @@ impl ParseContext<'_> {
     /// even if the attribute was unset since.
     pub fn doctype(&self) -> Option<&str> {
         self.profile.doctype.as_deref()
+    }
+
+    /// The converter's `htmlsyntax` as of the last backend assignment (see
+    /// [`Document::htmlsyntax`](crate::Document::htmlsyntax)).
+    pub fn htmlsyntax(&self) -> Option<&'static str> {
+        self.profile.htmlsyntax
     }
 
     /// Ruby's `FLEXIBLE_ATTRIBUTES` at header completion: an API override
@@ -878,9 +947,24 @@ impl ParseContext<'_> {
         start: Option<&mut dyn crate::ConversionStart>,
     ) -> Vec<crate::Token> {
         crate::resolve::resolve_attribute_definitions(&mut document.attributes, &fixed);
+        // Ruby's Asciidoctor.convert resolves the output file after loading
+        // (with the attributes reading left) and Document#convert assigns
+        // `outfile`/`outdir` before converting, below server mode.
+        let mut attributes = document.attributes.clone();
+        if let Some(target) = &self.output {
+            let output = target.resolve(
+                self.attributes.get("docname"),
+                self.outfilesuffix.as_deref(),
+            );
+            if self.safe < SafeMode::Server {
+                attributes.set("outfile", output.file.clone());
+                attributes.set("outdir", output.dir.clone());
+            }
+            document.output = Some(output);
+        }
         let (attributes, tokens, footnotes) = std::mem::take(&mut self.body_subs).execute(
             &mut document.blocks,
-            document.attributes.clone(),
+            attributes,
             crate::body_subs::Conversion {
                 locked: &self.locked,
                 counters: &mut self.counters,

@@ -59,7 +59,9 @@ fn asciimath_breaks(source: &str) -> String {
             out.push_str(&source[copied..at]);
             out.push_str(r"\$");
             for _ in 1..lines {
-                out.push_str("\n<br>");
+                out.push_str("\n<br");
+                out.push_str(super::slash());
+                out.push('>');
             }
             out.push_str("\n\\$");
             copied = end;

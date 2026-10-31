@@ -49,6 +49,20 @@ SOURCES = ROOT / "compatibility" / "upstream" / "sources" / "test"
 COMMIT = "2c03d22eb9fe83d04ee452939581d1b842f6d8b4"
 SUPPORTED_OPTIONS = {"standalone", "header_footer", "parse", "attributes", "safe", "doctype",
                      "input_mtime", "warnings", "failure_level", "linkcss_default", "base_dir"}
+# Ruby API options that only fill API state (source locations, the asset
+# catalog, timings, the eRuby implementation of templates the html5 converter
+# does not use): the reference passes them on, the CLI has nothing to change.
+PASSIVE_OPTIONS = {"sourcemap", "catalog_assets", "timings", "eruby", "in_place"}
+# Ruby's file output (Asciidoctor.convert writing a file): such an entry runs
+# as one CLI invocation per side (`-D`/`-o`, see run_cli) in the materialized
+# checkout, and the files it writes are compared too.
+OUTPUT_OPTIONS = {"to_dir", "to_file"}
+# The attributes Ruby's convert_file derives from an input file: a file
+# input supplies them itself.
+INPUT_ATTRIBUTES = ("docfile", "docdir", "docfilesuffix", "docname")
+# Backends Ruby's html5 converter handles (`xhtml*` sets htmlsyntax=xml); a
+# trailing `@` is the soft-set attribute spelling.
+HTML_BACKENDS = ("html5", "html", "xhtml5", "xhtml")
 FIXTURES = SOURCES / "fixtures"
 PLACEHOLDER = "<UPSTREAM>"
 SAFE = {"unsafe": "unsafe", "safe": "safe", "server": "server", "secure": "secure",
@@ -93,15 +107,33 @@ def classify(source, options):
     if source.startswith("#<"):
         return None, "source:non-string"
     backend = options.get("backend")
-    if backend not in (None, "html5", "html"):
+    if backend not in (None, *HTML_BACKENDS):
         return None, f"backend:{backend}"
-    extra = sorted(set(options) - SUPPORTED_OPTIONS - {"backend"})
+    extra = sorted(set(options) - SUPPORTED_OPTIONS - PASSIVE_OPTIONS - OUTPUT_OPTIONS - {"backend"})
     if extra:
         return None, "option:" + ",".join(extra)
-    safe = SAFE.get(options.get("safe", "secure"))
+    safe = options.get("safe", "secure")
+    # Ruby's Document#initialize: an unknown level name falls back to secure
+    # (`value_for_name … rescue SECURE`); other integers stay as given.
+    safe = SAFE.get(safe, "secure" if isinstance(safe, str) else None)
     if safe is None:
         return None, f"safe:{options.get('safe')}"
-    attributes = attribute_args(options.get("attributes"))
+    output = []
+    if options.keys() & OUTPUT_OPTIONS:
+        for key, flag in (("to_dir", "-D"), ("to_file", "-o")):
+            value = options.get(key)
+            if value is True or value is None:
+                continue  # Ruby's convert: `to_file: true` is no explicit file
+            if not isinstance(value, str):
+                return None, f"option:{key}:non-string"
+            if value.startswith("/"):
+                return None, f"option:{key}:outside-checkout"
+            output += [flag, value]
+    input_file = cli_input(source, options)
+    attributes = options.get("attributes")
+    if input_file and isinstance(attributes, dict):
+        attributes = {k: v for k, v in attributes.items() if k not in INPUT_ATTRIBUTES}
+    attributes = attribute_args(attributes)
     if attributes is None:
         return None, "attributes:non-string"
     backends = [a.split("=", 1)[1] for a in attributes if a.startswith("backend=")]
@@ -109,11 +141,14 @@ def classify(source, options):
     # unless the host set one (an override wins).
     if not backends and backend is None and safe in ("unsafe", "safe"):
         for value in re.findall(r"^:backend:[ \t]*(\S*)", source, re.MULTILINE):
-            if value not in ("html5", "html"):
+            if value not in HTML_BACKENDS:
                 return None, f"backend:document:{value}"
-    if any(b not in ("html5", "html") for b in backends):
+    if any(b.removesuffix("@") not in HTML_BACKENDS for b in backends):
         return None, f"backend:{backends[-1]}"
     args = ["-S", safe]
+    if backend:
+        # Ruby's :backend option is a locked attribute override.
+        args += ["-a", f"backend={backend}"]
     if options.get("base_dir"):
         args += ["-B", str(options["base_dir"])]
     if not (options.get("standalone") or options.get("header_footer")):
@@ -122,7 +157,31 @@ def classify(source, options):
         args += ["-a", f"doctype={options['doctype']}"]
     for attribute in attributes:
         args += ["-a", attribute]
-    return args, None
+    return args + output, None
+
+
+def file_mode(options):
+    """Whether an entry writes a file (Ruby's `:to_dir`/`:to_file`)."""
+    return bool(options.keys() & OUTPUT_OPTIONS)
+
+
+def cli_input(source, options):
+    """The input of a file-output run: the checkout fixture the recorded
+    `docfile` names when it holds exactly this source (like the test's
+    convert_file), else None for standard input."""
+    if not file_mode(options):
+        return None
+    docfile = (options.get("attributes") or {}).get("docfile") if isinstance(
+        options.get("attributes"), dict) else None
+    prefix = f"{PLACEHOLDER}/test/fixtures/"
+    if not isinstance(docfile, str) or not docfile.startswith(prefix):
+        return None
+    path = FIXTURES / docfile[len(prefix):]
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+    return docfile if text == source else None
 
 
 def materialize(scratch):
@@ -295,6 +354,124 @@ def adoctra(binary, entry, args):
         return {"error": str(error)}
 
 
+def tree_state(root):
+    """Every file under the checkout with its contents."""
+    return {path.relative_to(root).as_posix(): path.read_bytes()
+            for path in root.rglob("*") if path.is_file()}
+
+
+@contextmanager
+def recording_writes(root):
+    """Yields a dict that receives the files a run created or changed under
+    `root` (relative path -> bytes); afterwards the tree is restored, so
+    every run starts from the same checkout."""
+    before = tree_state(root)
+    dirs = {path for path in root.rglob("*") if path.is_dir()}
+    written = {}
+    try:
+        yield written
+    finally:
+        after = tree_state(root)
+        written.update({name: data for name, data in after.items() if before.get(name) != data})
+        for name in after:
+            if name not in before:
+                (root / name).unlink()
+            elif before[name] != after[name]:
+                (root / name).write_bytes(before[name])
+        for path in sorted((p for p in root.rglob("*") if p.is_dir() and p not in dirs), reverse=True):
+            path.rmdir()
+
+
+def run_cli(binary, entry, args, root):
+    """One file-output entry on both sides, as a CLI run in the checkout:
+    Ruby's Asciidoctor::Cli::Invoker (the reference script's `--invoke`)
+    and adoctra, each with the same arguments and input, from a pristine
+    tree. Returns (expected, actual) with exit code, error text, stdout,
+    diagnostics and written files."""
+    input_file = cli_input(entry["source"], entry["options"])
+    target = localize(input_file, root) if input_file else "-"
+    stdin = None if input_file else entry["source"]
+    env = {**os.environ, **ENVIRONMENT}
+    with recording_writes(root) as files:
+        run = subprocess.run(["ruby", str(ROOT / "scripts/upstream-audit-reference.rb"), "--invoke", *args,
+                              target], input=stdin or "", cwd=root, capture_output=True, text=True,
+                             encoding="utf-8", errors="replace", env=env, timeout=120)
+    if run.returncode:
+        expected = {"error": f"reference runner failed: {run.stderr.strip()[-300:]}"}
+    else:
+        result = json.loads(run.stdout)
+        expected = {"code": result["code"], "stdout": result["stdout"],
+                    "failure": result["error"].split("\n")[0],
+                    "diagnostics": result["diagnostics"], "files": files}
+    with recording_writes(root) as files:
+        run = subprocess.run([str(binary), target, "--to", "html", *args], input=stdin or "", cwd=root,
+                             capture_output=True, text=True, encoding="utf-8", errors="replace",
+                             env=env, timeout=60)
+    stderr = run.stderr
+    failure = ""
+    if run.returncode:
+        lines = stderr.removesuffix("\n").split("\n")
+        failure = lines.pop().removeprefix("adoctra: ")
+        stderr = "\n".join(lines) + ("\n" if lines else "")
+    try:
+        diagnostics = cli_diagnostics(stderr, multiline=True)
+    except ValueError as error:
+        return expected, {"error": str(error)}
+    actual = {"code": run.returncode, "stdout": run.stdout, "failure": failure,
+              "diagnostics": diagnostics, "files": files}
+    return expected, actual
+
+
+# Ruby's default stylesheet and adoctra's own, written by `copycss`: the
+# names and contents differ by design, so only their presence is compared.
+DEFAULT_STYLESHEETS = ("asciidoctor.css", "adoctra.css")
+
+
+def compare_files(entry, args, expected, actual):
+    if "error" in expected:
+        return "RUBY_ERROR", [expected["error"]]
+    if "error" in actual:
+        return "ADOCTRA_ERROR", [actual["error"]]
+    standalone = "-s" not in args
+    reasons = []
+    for key in ("code", "failure", "diagnostics"):
+        if expected[key] != actual[key]:
+            reasons.append(key)
+
+    def page(html):
+        try:
+            return body(html, standalone)
+        except ValueError:
+            return raw_body(html)
+    if bool(expected["stdout"]) != bool(actual["stdout"]) or (
+            expected["stdout"] and page(expected["stdout"]) != page(actual["stdout"])):
+        reasons.append("stdout")
+
+    def files(side):
+        result = {}
+        for name, data in side["files"].items():
+            directory, _, base = name.rpartition("/")
+            if base in DEFAULT_STYLESHEETS:
+                result[f"{directory}/<default stylesheet>"] = None
+            else:
+                result[name] = data
+        return result
+    expected_files, actual_files = files(expected), files(actual)
+    if expected_files.keys() != actual_files.keys():
+        reasons.append("files:" + ",".join(sorted(expected_files.keys() ^ actual_files.keys())))
+    for name in sorted(expected_files.keys() & actual_files.keys()):
+        ours, theirs = actual_files[name], expected_files[name]
+        if theirs is None or ours == theirs:
+            continue
+        if name.endswith(".css"):
+            reasons.append(f"file:{name}")
+            continue
+        text = [data.decode("utf-8", "replace") for data in (theirs, ours)]
+        if text[0].endswith("\n") != text[1].endswith("\n") or page(text[0]) != page(text[1]):
+            reasons.append(f"file:{name}")
+    return ("DIFF" if reasons else "PASS"), reasons
+
+
 def compare(entry, expected, actual):
     if "error" in expected:
         return "RUBY_ERROR", [expected["error"]]
@@ -365,7 +542,8 @@ def load_inventory(path=INVENTORY, sources=SOURCES):
 def audit(binary, only, jobs):
     inventory = load_inventory()
     entries = [e for e in inventory["entries"] if not only or e["id"] in only]
-    supported = [e for e in entries if not e["unsupported"]]
+    supported = [e for e in entries if not e["unsupported"] and not file_mode(e["options"])]
+    writing = [e for e in entries if not e["unsupported"] and file_mode(e["options"])]
     with tempfile.TemporaryDirectory() as scratch:
         root = materialize(scratch)
         local = [localize({k: e[k] for k in ("id", "source", "options")}, root) for e in supported]
@@ -382,10 +560,19 @@ def audit(binary, only, jobs):
                 actuals = dict(zip((e["id"] for e in local), pool.map(
                     lambda e: adoctra(binary, e, localize(classify(e["source"], e["options"])[0], root)),
                     local)))
+            # File output changes the checkout: one entry at a time.
+            written = {}
+            for entry in writing:
+                args = localize(classify(entry["source"], entry["options"])[0], root)
+                written[entry["id"]] = compare_files(entry, args, *run_cli(binary, entry, args, root))
     results = {}
     for entry in entries:
         if entry["unsupported"]:
             results[entry["id"]] = {"status": "UNSUPPORTED", "reasons": [entry["unsupported"]]}
+            continue
+        if entry["id"] in written:
+            status, reasons = written[entry["id"]]
+            results[entry["id"]] = {"status": status, "reasons": reasons}
             continue
         expected = references.get(entry["id"], {"error": "no reference output"})
         status, reasons = compare(entry, expected, actuals[entry["id"]])
@@ -400,6 +587,17 @@ def show(entry, binary):
         root = materialize(scratch)
         local = localize({k: entry[k] for k in ("id", "source", "options")}, root)
         args = localize(classify(entry["source"], entry["options"])[0], root)
+        if file_mode(entry["options"]):
+            with test_server(root):
+                expected, actual = run_cli(binary, entry, args, root)
+            print("options:", json.dumps(entry["options"]), "cli:", " ".join(args),
+                  "input:", cli_input(entry["source"], entry["options"]) or "-")
+            print("status:", compare_files(entry, args, expected, actual))
+            for name, side in (("ruby", expected), ("adoctra", actual)):
+                summary = {k: v for k, v in side.items() if k != "files"}
+                summary["files"] = {n: d.decode("utf-8", "replace")[-200:] for n, d in side.get("files", {}).items()}
+                print(f"--- {name}:", json.dumps(summary, indent=1, ensure_ascii=False))
+            return
         batch = Path(scratch) / "entries.json"
         batch.write_text(json.dumps([local]))
         with test_server(root):

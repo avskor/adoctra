@@ -418,8 +418,9 @@ pub(super) fn head(
             false,
         );
         format!(
-            "<link rel=\"stylesheet\" href=\"{}\">\n",
-            super::attr_value(&href)
+            "<link rel=\"stylesheet\" href=\"{}\"{}>\n",
+            super::attr_value(&href),
+            super::slash()
         )
     } else {
         format!("<style>\n{}\n</style>\n", theme.stylesheet)

@@ -72,6 +72,15 @@ pub struct Document {
     pub footnotes: Vec<FootnoteDefinition>,
     /// A manual page's names (doctype `manpage`), read by the header.
     pub manpage: Option<Manpage>,
+    /// The syntax of the HTML converter Ruby creates for the document's
+    /// backend at the end of the header: `xml` for the `xhtml`/`xhtml5`
+    /// backends or an `htmlsyntax=xml` assigned before the last `backend`
+    /// entry, `html` for other html5 documents, `None` for other backends.
+    /// The `htmlsyntax` attribute can differ (assigned after `backend`).
+    pub htmlsyntax: Option<&'static str>,
+    /// The output file and directory resolved for
+    /// [`ParseOptions::output`](crate::ParseOptions::output), if any.
+    pub output: Option<crate::OutputPaths>,
 }
 
 /// The names of a manual page, like Ruby's `parse_manpage_header`. The header

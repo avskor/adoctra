@@ -1683,6 +1683,100 @@ fn html_svg_images_match_asciidoctor() {
     );
 }
 
+/// Ruby's XML syntax tokens (`htmlsyntax=xml`): every void element tag and
+/// every boolean attribute, outside the inlined stylesheet, sorted (the
+/// markup around them differs by design). Ruby's `X-UA-Compatible` and
+/// generator metas and its web font link have no adoctra counterpart.
+fn xml_syntax_tokens(html: &str) -> Vec<String> {
+    let mut html = html.to_owned();
+    if let (Some(start), Some(end)) = (html.find("<style>\n"), html.find("</style>\n")) {
+        html.replace_range(start..end + "</style>\n".len(), "");
+    }
+    let mut tokens = Vec::new();
+    let mut rest = html.as_str();
+    while let Some(start) = rest.find('<') {
+        rest = &rest[start..];
+        let end = rest.find('>').map_or(rest.len(), |end| end + 1);
+        let tag = &rest[..end];
+        let name: String = tag[1..]
+            .chars()
+            .take_while(|c| c.is_ascii_alphanumeric())
+            .collect();
+        if ["br", "img", "hr", "meta", "link", "input", "col"].contains(&name.as_str())
+            && !tag.contains("http-equiv")
+            && !tag.contains("name=\"generator\"")
+            && !tag.contains("fonts.googleapis.com")
+        {
+            tokens.push(tag.to_owned());
+        }
+        for attr in [
+            "autoplay",
+            "muted",
+            "controls",
+            "loop",
+            "reversed",
+            "allowfullscreen",
+            "checked",
+        ] {
+            for (at, _) in tag.match_indices(&format!(" {attr}")) {
+                let value = &tag[at + 1..];
+                let token: String = value
+                    .chars()
+                    .take_while(|c| !matches!(c, ' ' | '>' | '/'))
+                    .collect();
+                if token == attr || token == format!("{attr}=\"{attr}\"") {
+                    tokens.push(token);
+                }
+            }
+        }
+        rest = &rest[end..];
+    }
+    tokens.sort();
+    tokens
+}
+
+/// The `xhtml` backend, like Ruby's `:backend` option: `htmlsyntax=xml`
+/// closes void elements and spells boolean attributes in full, in the head
+/// and the body, and the root element declares the XHTML namespace.
+#[test]
+fn html_xml_syntax_matches_asciidoctor() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/xhtml");
+    let mut checked = 0usize;
+    for entry in fs::read_dir(&dir).expect("golden/xhtml dir is missing") {
+        let path = entry.unwrap().path();
+        if path.extension().and_then(|e| e.to_str()) != Some("adoc") {
+            continue;
+        }
+        let name = path.file_stem().unwrap().to_string_lossy().into_owned();
+        let source = fs::read_to_string(&path).unwrap();
+        let expected = fs::read_to_string(path.with_extension("expected.html")).unwrap();
+        let mut attributes = adoctra_core::Attributes::default();
+        attributes.set("backend", "xhtml");
+        attributes.set("reproducible", "");
+        let options = adoctra_core::ParseOptions {
+            attributes,
+            safe: adoctra_core::SafeMode::Safe,
+            ..Default::default()
+        };
+        let doc = adoctra_core::parse_with_options(&source, &options).document;
+        let ours = HtmlBackend::new().render(&doc).html;
+        assert!(
+            ours.contains("<html xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"en\">")
+                && expected.contains("<html xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"en\">"),
+            "XHTML namespace missing for `{name}`"
+        );
+        let tokens = xml_syntax_tokens(&expected);
+        assert!(tokens.len() > 20, "{tokens:?}");
+        assert_eq!(
+            xml_syntax_tokens(&ours),
+            tokens,
+            "XML syntax diverges from asciidoctor for `{name}`"
+        );
+        checked += 1;
+    }
+    assert!(checked > 0, "no golden fixtures found in {dir:?}");
+}
+
 /// The rouge theme in the head: a `<style>` or `<link>` naming `pre.rouge`
 /// or `rouge-*.css` (the shell comparison drops the first `<style>`).
 fn rouge_head(html: &str) -> Vec<String> {

@@ -219,6 +219,8 @@ pub(crate) fn parse_reader<'a>(
         has_title: header.effective_title.is_some(),
         footnotes: Vec::new(),
         manpage: header.manpage.take(),
+        htmlsyntax: context.htmlsyntax(),
+        output: None,
     };
     let mut diagnostics = Vec::new();
     if let Some(effective) = header.effective_title {

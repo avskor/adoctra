@@ -42,14 +42,42 @@ rescue Gem::LoadError
 end
 
 LEVELS = { WARN: 'warning', ERROR: 'error', FATAL: 'fatal', UNKNOWN: 'unknown' }.freeze
+
+def logged logger
+  logger.messages.filter_map do |message|
+    next unless (severity = LEVELS[message[:severity]])
+    text = message[:message]
+    { severity: severity, message: (Hash === text ? text.fetch(:text) : text.to_s) }
+  end
+end
+
+# `--invoke ARGS...`: one run of Ruby's CLI (Asciidoctor::Cli::Invoker) in
+# the current directory, standard input as the document for `-`, with the
+# same highlighter environment as the batch mode. Prints one JSON object:
+# exit code, standard output, the error text and the logged diagnostics
+# (the harness collects the files the run wrote).
+if ARGV[0] == '--invoke'
+  require 'asciidoctor/cli'
+  require 'stringio'
+  logger = Asciidoctor::MemoryLogger.new
+  Asciidoctor::LoggerManager.logger = logger
+  invoker = Asciidoctor::Cli::Invoker.new ARGV.drop 1
+  invoker.redirect_streams (out = StringIO.new), (err = StringIO.new)
+  invoker.invoke! { $stdin.read }
+  puts JSON.generate(code: invoker.code, stdout: out.string, error: err.string, diagnostics: (logged logger))
+  exit
+end
 SAFE = { 'unsafe' => :unsafe, 'safe' => :safe, 'server' => :server, 'secure' => :secure }.freeze
 
 def options_of recorded
   recorded.each_with_object({}) do |(key, value), options|
     case key
     when 'safe' then options[:safe] = (SAFE[value] || value)
-    when 'standalone', 'header_footer', 'parse', 'attributes', 'doctype', 'base_dir'
+    when 'standalone', 'header_footer', 'parse', 'attributes', 'doctype', 'base_dir', 'backend',
+         'sourcemap', 'catalog_assets', 'eruby'
       options[key.to_sym] = value
+    # Recorded as the object's class: a fresh collector, as the test passed.
+    when 'timings' then options[:timings] = Asciidoctor::Timings.new
     end
   end
 end
@@ -78,11 +106,7 @@ entries.each do |entry|
     # What Ruby's CLI writes (the other side is the CLI): the output chomped
     # plus a LF, nothing for nil (the inline doctype without a candidate).
     html = output.nil? ? '' : %(#{output.chomp}\n)
-    diagnostics = logger.messages.filter_map do |message|
-      next unless (severity = LEVELS[message[:severity]])
-      text = message[:message]
-      { severity: severity, message: (Hash === text ? text.fetch(:text) : text.to_s) }
-    end
+    diagnostics = logged logger
     puts JSON.generate(id: entry['id'], html: html, diagnostics: diagnostics)
   rescue StandardError, SystemStackError => e
     puts JSON.generate(id: entry['id'], error: "#{e.class}: #{e.message.lines.first&.chomp}")

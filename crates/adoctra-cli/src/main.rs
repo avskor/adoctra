@@ -2,7 +2,7 @@
 //! stderr, and converts via the chosen backend.
 //!
 //! Usage:
-//!   adoctra <input.adoc> [--to html|docx|json] [-s] [-a name[=value]]... [-o out] [--stdout]
+//!   adoctra <input.adoc> [--to html|docx|json] [-s] [-a name[=value]]... [-D dir] [-o out|-] [--stdout]
 //!   adoctra -            (read from stdin)
 //!
 //! The safe mode (`-S unsafe|safe|server|secure`, default safe) confines
@@ -10,6 +10,13 @@
 //! time and the input's modification time) for the date attributes, reads a
 //! custom stylesheet and docinfo files next to the input, and copies the
 //! stylesheet next to the output with `linkcss` and `copycss`.
+//!
+//! Output follows Ruby's `Asciidoctor.convert`: standard input (and `-o -`)
+//! streams to stdout; otherwise the file is `-o`, else
+//! `<docname><outfilesuffix>` in `-D` or next to the input. `-D`/`-o`
+//! resolve against `-B` or the current directory and, from safe mode up,
+//! must stay inside it (an `-o` within `-D` inside the document's base
+//! directory); the document sees `outfile`/`outdir` below server mode.
 
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
@@ -30,10 +37,48 @@ fn main() -> ExitCode {
     }
 }
 
+/// Why a run failed: a processor error, or a failure Ruby's CLI reports
+/// with its own message (an output path outside the jail, writing over the
+/// input file).
+enum Failure {
+    Error(adoctra::Error),
+    Message(String),
+}
+
+impl std::fmt::Display for Failure {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Error(error) => error.fmt(f),
+            Self::Message(message) => f.write_str(message),
+        }
+    }
+}
+
+impl From<adoctra::Error> for Failure {
+    fn from(error: adoctra::Error) -> Self {
+        Self::Error(error)
+    }
+}
+
+impl From<adoctra::ResourceError> for Failure {
+    fn from(error: adoctra::ResourceError) -> Self {
+        Self::Error(error.into())
+    }
+}
+
+impl From<std::io::Error> for Failure {
+    fn from(error: std::io::Error) -> Self {
+        Self::Error(error.into())
+    }
+}
+
 struct Args {
     input: String,
     backend: String,
-    output: Option<PathBuf>,
+    /// `-o`: a file, or `-` for standard output.
+    output: Option<String>,
+    /// `-D`: Ruby's `:to_dir`.
+    to_dir: Option<String>,
     to_stdout: bool,
     embedded: bool,
     attributes: adoctra::Attributes,
@@ -43,7 +88,7 @@ struct Args {
     base_dir: Option<PathBuf>,
 }
 
-fn run() -> adoctra::Result<()> {
+fn run() -> Result<(), Failure> {
     let args = match parse_args() {
         Some(a) => a,
         None => {
@@ -54,7 +99,29 @@ fn run() -> adoctra::Result<()> {
 
     let mut sources = adoctra::SourceMap::new();
     let mut attributes = args.attributes.clone();
-    let (source_id, provider, base) = load_source(&args, &mut sources, &mut attributes)?;
+    // Ruby's CLI streams standard input (and `-o -`) to standard output;
+    // otherwise Asciidoctor.convert writes a file it resolves first.
+    let stream = args.to_stdout
+        || args.output.as_deref() == Some("-")
+        || (args.input == "-" && args.output.is_none());
+    let plan = match stream {
+        true => None,
+        false => Some(output_plan(&args)?),
+    };
+    // Ruby's Document#initialize: a `:to_file` path sets `outfilesuffix`
+    // to its extension, replacing a host value.
+    if let (Some(file), false) = (&args.output, stream) {
+        let previous: Vec<_> = attributes
+            .iter()
+            .filter(|(key, _)| override_name(key) == "outfilesuffix")
+            .map(|(key, _)| key.to_owned())
+            .collect();
+        for key in previous {
+            attributes.remove(&key);
+        }
+        attributes.set("outfilesuffix", extname(file));
+    }
+    let (source_id, provider) = load_source(&args, &mut sources, &mut attributes)?;
     // Like Ruby below server mode, the document sees the user's home.
     if args.safe < adoctra::SafeMode::Server
         && !attributes
@@ -73,6 +140,7 @@ fn run() -> adoctra::Result<()> {
         embedded: args.embedded,
         safe: args.safe,
         dates: Some(dates(&args.input)?),
+        output: plan.as_ref().map(|plan| plan.target.clone()),
         ..Default::default()
     };
     // A standalone HTML document reads its stylesheet where Ruby's converter
@@ -175,39 +243,203 @@ fn run() -> adoctra::Result<()> {
     )?;
     let bytes = if args.json_attributes {
         if args.backend != "json" {
-            return Err(adoctra::Error::Unsupported(
-                "--json-attributes requires --to json".into(),
-            ));
+            return Err(
+                adoctra::Error::Unsupported("--json-attributes requires --to json".into()).into(),
+            );
         }
         adoctra::json::JsonBackend::new().convert_with_attributes(&result.document)?
     } else {
         backend.convert(&result.document)?
     };
 
-    if args.to_stdout || (args.input == "-" && args.output.is_none()) {
+    let Some(plan) = plan else {
         std::io::stdout().write_all(&bytes)?;
         return Ok(());
-    }
-
-    let out_path = args
+    };
+    let paths = result
+        .document
         .output
-        .unwrap_or_else(|| default_output(&args.input, backend.extension()));
-    // Like Ruby's CLI (`mkdirs: true`), create the output directory.
-    if let Some(dir) = out_path.parent().filter(|dir| !dir.as_os_str().is_empty()) {
-        std::fs::create_dir_all(dir)?;
+        .clone()
+        .expect("core resolves the requested output");
+    // Other formats keep their own extension next to the input or in the
+    // destination directory.
+    let outfile = match (&plan.target, args.backend.as_str()) {
+        (adoctra::OutputTarget::Directory(dir), "json" | "docx") => format!(
+            "{}/{}.{}",
+            dir.trim_end_matches('/'),
+            result.document.attributes.get("docname").unwrap_or(""),
+            backend.extension()
+        ),
+        _ => paths.file.clone(),
+    };
+    if plan.input.as_deref() == Some(outfile.as_str()) {
+        return Err(Failure::Message(format!(
+            "input file and output file cannot be the same: {outfile}"
+        )));
     }
-    std::fs::write(&out_path, &bytes)?;
-    eprintln!("wrote {}", out_path.display());
+    // Like Ruby's CLI (`mkdirs: true`), create the output directory.
+    let outdir = Path::new(&outfile)
+        .parent()
+        .filter(|dir| !dir.as_os_str().is_empty())
+        .unwrap_or(Path::new("."))
+        .to_path_buf();
+    std::fs::create_dir_all(&outdir)?;
+    // Ruby's Document#write writes the converted string as it is (only a
+    // stream gets `output.chomp` and a LF).
+    let mut bytes = bytes;
+    if args.backend == "html" && bytes.last() == Some(&b'\n') {
+        bytes.pop();
+    }
+    std::fs::write(&outfile, &bytes)?;
     if args.backend == "html" && args.safe < adoctra::SafeMode::Secure {
         let highlighter = HIGHLIGHTER_STYLESHEET.with(|cell| cell.borrow_mut().take());
+        let docfile = result
+            .document
+            .attributes
+            .get("docfile")
+            .unwrap_or("<stdin>");
         copy_stylesheet(
             &result.document.final_attributes,
-            &base,
-            &out_path,
+            &CopyContext {
+                base_dir: &document_base_dir(&args)?,
+                outdir: &posix(&outdir),
+                safe: args.safe,
+                docfile,
+            },
             highlighter,
         )?;
     }
     Ok(())
+}
+
+/// The output location of a run writing a file, resolved like Ruby's
+/// `Asciidoctor.convert` (paths before loading the document; the file name
+/// in a directory after it, by core).
+struct OutputPlan {
+    target: adoctra::OutputTarget,
+    /// The input file's absolute path (Ruby's `File.absolute_path`), which
+    /// the output must not replace.
+    input: Option<String>,
+}
+
+/// Ruby's resolution of `:to_dir`/`:to_file` (`normalize_system_path` with
+/// `recover: false`): against `-B` or the current directory, jailed there
+/// from safe mode up; a file within the destination directory without a
+/// jail; with neither, the input file's directory.
+fn output_plan(args: &Args) -> Result<OutputPlan, Failure> {
+    let working_dir = posix(&match &args.base_dir {
+        Some(dir) => expand_path(dir)?,
+        None => std::env::current_dir()?,
+    });
+    let jail = (args.safe >= adoctra::SafeMode::Safe).then_some(working_dir.as_str());
+    let input = (args.input != "-")
+        .then(|| expand_path(Path::new(&args.input)).map(|path| posix(&path)))
+        .transpose()?;
+    let base_dir = document_base_dir(args)?;
+    // Document#normalize_system_path: from safe mode up a file without an
+    // explicit jail is confined to the document's base directory.
+    let resolve = |target: &str, start: &str, jail: Option<&str>| {
+        normalize_system_path(
+            &base_dir,
+            args.safe,
+            target,
+            Some(start),
+            jail,
+            "to_dir",
+            false,
+        )
+        .map(|resolved| resolved.path)
+        .map_err(Failure::Message)
+    };
+    let target = match (&args.to_dir, &args.output) {
+        (Some(dir), Some(file)) => {
+            let outdir = resolve(dir, &working_dir, jail)?;
+            adoctra::OutputTarget::File(resolve(file, &outdir, None)?)
+        }
+        (Some(dir), None) => adoctra::OutputTarget::Directory(resolve(dir, &working_dir, jail)?),
+        (None, Some(file)) => adoctra::OutputTarget::File(resolve(file, &working_dir, jail)?),
+        (None, None) => {
+            let input = input
+                .as_deref()
+                .expect("a file input writes next to itself");
+            let dir = match input.rfind('/') {
+                Some(0) => "/",
+                Some(slash) => &input[..slash],
+                None => ".",
+            };
+            adoctra::OutputTarget::Directory(dir.to_owned())
+        }
+    };
+    Ok(OutputPlan { target, input })
+}
+
+/// Ruby's `Document#base_dir` for the CLI: `-B`, else the input file's
+/// directory, else (standard input) a `docdir` attribute or the current
+/// directory, absolute (`File.expand_path`).
+fn document_base_dir(args: &Args) -> std::io::Result<String> {
+    let dir = match (&args.base_dir, args.input.as_str()) {
+        (Some(dir), _) => expand_path(dir)?,
+        (None, "-") => {
+            let docdir = args
+                .attributes
+                .iter()
+                .filter(|(name, _)| override_name(name) == "docdir")
+                .last()
+                .filter(|(name, _)| !name.ends_with('!') && !name.starts_with('!'))
+                .map(|(_, value)| value.to_owned());
+            match docdir {
+                Some(docdir) => expand_path(Path::new(&docdir))?,
+                None => std::env::current_dir()?,
+            }
+        }
+        (None, input) => {
+            let input = expand_path(Path::new(input))?;
+            input.parent().map(Path::to_path_buf).unwrap_or(input)
+        }
+    };
+    Ok(posix(&dir))
+}
+
+/// Ruby's `AbstractNode#normalize_system_path(target, start, jail)` for a
+/// document with this base directory and safe mode: below safe mode a
+/// relative start joins the base directory and there is no default jail;
+/// from safe mode up the base directory is the default start and jail.
+fn normalize_system_path(
+    base_dir: &str,
+    safe: adoctra::SafeMode,
+    target: &str,
+    start: Option<&str>,
+    jail: Option<&str>,
+    target_name: &str,
+    recover: bool,
+) -> Result<adoctra::SystemPath, String> {
+    let (start, jail) = if safe < adoctra::SafeMode::Safe {
+        let start = match start {
+            Some(start) if start.starts_with('/') => start.to_owned(),
+            Some(start) => format!("{base_dir}/{start}"),
+            None => base_dir.to_owned(),
+        };
+        (start, jail)
+    } else {
+        (
+            start.unwrap_or(base_dir).to_owned(),
+            Some(jail.unwrap_or(base_dir)),
+        )
+    };
+    adoctra::resolve_system_path(target, &start, jail, target_name, recover)
+}
+
+/// Ruby's `Helpers.extname`: from the last `.` unless a `/` follows it.
+fn extname(path: &str) -> &str {
+    match path.rfind('.') {
+        Some(dot) if !path[dot..].contains('/') => &path[dot..],
+        _ => "",
+    }
+}
+
+/// A path with `/` separators, as Ruby's posixified paths.
+fn posix(path: &Path) -> String {
+    path.to_string_lossy().replace('\\', "/")
 }
 
 /// The clock for Ruby's date attributes: `SOURCE_DATE_EPOCH` (UTC, also as
@@ -255,78 +487,101 @@ fn dates(input: &str) -> adoctra::Result<adoctra::DocumentDates> {
     })
 }
 
-/// Ruby's `copycss` step after writing a file: with `linkcss` and `copycss`
-/// (and a non-URI `stylesdir`), adoctra's stylesheet is written into
-/// `stylesdir` next to the output, or a custom stylesheet (from `copycss`
-/// when it names a file, else the `stylesheet` path, relative to the input's
-/// directory) is copied there. The syntax highlighter's stylesheet (rouge
-/// after a class-mode listing) is written there too.
+/// Where Ruby's `copycss` step resolves its paths.
+struct CopyContext<'a> {
+    /// The document's base directory (`-B`, else the input's directory).
+    base_dir: &'a str,
+    /// The output file's directory.
+    outdir: &'a str,
+    safe: adoctra::SafeMode,
+    /// `docfile`, or `<stdin>`, naming the document in warnings.
+    docfile: &'a str,
+}
+
+impl CopyContext<'_> {
+    /// Ruby's `normalize_system_path(target, start, jail)` for this
+    /// document, recovering with warnings.
+    fn normalize(&self, target: &str, start: Option<&str>, jail: Option<&str>) -> String {
+        let resolved =
+            normalize_system_path(self.base_dir, self.safe, target, start, jail, "path", true)
+                .expect("recovering resolution never fails");
+        for warning in resolved.warnings {
+            eprintln!("adoctra: warning: {warning}");
+        }
+        resolved.path
+    }
+}
+
+/// Ruby's `Helpers.uriish?` (`UriSniffRx`): a scheme of two or more
+/// characters before a colon.
+fn uriish(value: &str) -> bool {
+    let Some((scheme, _)) = value.split_once(':') else {
+        return false;
+    };
+    let mut chars = scheme.chars();
+    chars.next().is_some_and(|c| c.is_ascii_alphabetic())
+        && scheme.len() > 1
+        && chars.all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '+' | '-'))
+}
+
+/// Ruby's `copycss` step after writing a file (`Asciidoctor.convert`, below
+/// secure mode): with `linkcss` and `copycss` and a non-URI `stylesdir`,
+/// the default stylesheet (adoctra's, under its own name) or a custom one
+/// (read from `copycss` when it names a file, else from `stylesheet`,
+/// against the base directory) goes to `stylesdir` resolved from the output
+/// directory, and so does the syntax highlighter's (rouge after a
+/// class-mode listing). Directories are created like the CLI's `mkdirs`.
 fn copy_stylesheet(
     attributes: &adoctra::Attributes,
-    base: &Path,
-    out_path: &Path,
+    cx: &CopyContext,
     highlighter: Option<(String, &'static str)>,
-) -> adoctra::Result<()> {
-    let uri = |value: &str| value.contains("://");
-    let stylesdir = attributes.get("stylesdir").unwrap_or("");
-    if attributes.get("linkcss").is_none() || attributes.get("copycss").is_none() || uri(stylesdir)
+) -> Result<(), Failure> {
+    let stylesdir = attributes.get("stylesdir");
+    if attributes.get("linkcss").is_none()
+        || attributes.get("copycss").is_none()
+        || stylesdir.is_some_and(uriish)
     {
         return Ok(());
     }
-    let outdir = out_path
-        .parent()
-        .filter(|dir| !dir.as_os_str().is_empty())
-        .unwrap_or(Path::new("."));
-    let stylesoutdir = outdir.join(stylesdir);
-    copy_document_stylesheet(attributes, base, &stylesoutdir)?;
-    if let Some((name, css)) = highlighter {
-        std::fs::create_dir_all(&stylesoutdir)?;
-        std::fs::write(stylesoutdir.join(name), css)?;
-    }
-    Ok(())
-}
-
-fn copy_document_stylesheet(
-    attributes: &adoctra::Attributes,
-    base: &Path,
-    stylesoutdir: &Path,
-) -> adoctra::Result<()> {
-    let uri = |value: &str| value.contains("://");
-    let Some(stylesheet) = attributes.get("stylesheet") else {
+    let stylesheet = attributes.get("stylesheet");
+    let copy_default = matches!(stylesheet, Some("" | "DEFAULT"));
+    let copy_user = !copy_default && stylesheet.is_some_and(|s| !uriish(s));
+    if !copy_default && !copy_user && highlighter.is_none() {
         return Ok(());
-    };
-    if matches!(stylesheet, "" | "DEFAULT") {
-        std::fs::create_dir_all(stylesoutdir)?;
+    }
+    let jail = (cx.safe >= adoctra::SafeMode::Safe).then_some(cx.outdir);
+    let stylesoutdir = cx.normalize(stylesdir.unwrap_or(""), Some(cx.outdir), jail);
+    std::fs::create_dir_all(&stylesoutdir)?;
+    if copy_default {
         std::fs::write(
-            stylesoutdir.join(adoctra::html::DEFAULT_STYLESHEET_NAME),
+            Path::new(&stylesoutdir).join(adoctra::html::DEFAULT_STYLESHEET_NAME),
             adoctra::html::STYLESHEET,
         )?;
-    } else if !uri(stylesheet) {
+    } else if let Some(stylesheet) = stylesheet.filter(|_| copy_user) {
         let source = match attributes.get("copycss") {
-            Some("") | None => base.join(stylesheet),
-            Some(path) => base.join(path),
+            Some("") | None => cx.normalize(stylesheet, None, None),
+            Some(path) => cx.normalize(path, None, None),
         };
-        let dest = stylesoutdir.join(stylesheet);
-        let same = match (source.canonicalize(), dest.canonicalize()) {
-            (Ok(a), Ok(b)) => a == b,
-            _ => false,
-        };
-        if !same {
+        let dest = cx.normalize(stylesheet, Some(&stylesoutdir), jail);
+        if source != dest {
             match std::fs::read(&source) {
                 Ok(data) => {
-                    if let Some(dir) = dest.parent() {
+                    if let Some(dir) = Path::new(&dest).parent() {
                         std::fs::create_dir_all(dir)?;
                     }
                     std::fs::write(&dest, data)?;
                 }
                 // Like Ruby, an existing copy silences the warning.
-                Err(_) if dest.is_file() => {}
+                Err(_) if Path::new(&dest).is_file() => {}
                 Err(_) => eprintln!(
-                    "adoctra: warning: stylesheet does not exist or cannot be read: {}",
-                    source.display()
+                    "adoctra: warning: {}: stylesheet does not exist or cannot be read: {source}",
+                    cx.docfile
                 ),
             }
         }
+    }
+    if let Some((name, css)) = highlighter {
+        std::fs::write(Path::new(&stylesoutdir).join(name), css)?;
     }
     Ok(())
 }
@@ -334,7 +589,8 @@ fn copy_document_stylesheet(
 fn parse_args() -> Option<Args> {
     let mut input: Option<String> = None;
     let mut backend = "html".to_string();
-    let mut output: Option<PathBuf> = None;
+    let mut output: Option<String> = None;
+    let mut to_dir: Option<String> = None;
     let mut to_stdout = false;
     let mut embedded = false;
     let mut json_attributes = false;
@@ -350,7 +606,8 @@ fn parse_args() -> Option<Args> {
         match arg.as_str() {
             "-h" | "--help" => return None,
             "--to" | "-b" => backend = it.next()?,
-            "-o" | "--out" => output = Some(PathBuf::from(it.next()?)),
+            "-o" | "--out" | "--out-file" => output = Some(it.next()?),
+            "-D" | "--destination-dir" => to_dir = Some(it.next()?),
             "--stdout" => to_stdout = true,
             "--json-attributes" => json_attributes = true,
             "--diagnostics" => {
@@ -396,6 +653,7 @@ fn parse_args() -> Option<Args> {
         input: input?,
         backend,
         output,
+        to_dir,
         to_stdout,
         embedded,
         attributes,
@@ -461,11 +719,7 @@ fn load_source(
     args: &Args,
     sources: &mut adoctra::SourceMap,
     attributes: &mut adoctra::Attributes,
-) -> adoctra::Result<(
-    adoctra::SourceId,
-    Option<Arc<resources::FileResources>>,
-    PathBuf,
-)> {
+) -> adoctra::Result<(adoctra::SourceId, Option<Arc<resources::FileResources>>)> {
     let jail = |provider: resources::FileResources| match args.safe {
         adoctra::SafeMode::Unsafe => provider.unjailed(),
         _ => provider,
@@ -477,7 +731,7 @@ fn load_source(
         // Like Ruby, relative paths resolve against the base directory; a
         // missing one simply finds nothing.
         let provider = resources::FileResources::new(&base_dir).ok().map(jail);
-        Ok((sources.add("-", s), provider.map(Arc::new), base_dir))
+        Ok((sources.add("-", s), provider.map(Arc::new)))
     } else {
         // The explicitly requested primary file establishes the resource
         // root, or `-B` does when it contains the file.
@@ -506,7 +760,6 @@ fn load_source(
         Ok((
             sources.load(name, None, &provider)?,
             Some(Arc::new(provider)),
-            parent.to_path_buf(),
         ))
     }
 }
@@ -582,16 +835,10 @@ impl Backend for Html {
     }
 }
 
-fn default_output(input: &str, ext: &str) -> PathBuf {
-    let mut p = PathBuf::from(input);
-    p.set_extension(ext);
-    p
-}
-
 fn print_usage() {
     eprintln!(
         "adoctra — AsciiDoc processor\n\n\
-         USAGE:\n  adoctra <input.adoc> [--to html|docx|json] [-s] [-a <name=value>] [-o <out>] [--stdout]\n  \
+         USAGE:\n  adoctra <input.adoc> [--to html|docx|json] [-s] [-a <name=value>] [-D <dir>] [-o <out>] [--stdout]\n  \
          adoctra -   (read from stdin)\n\n\
          OPTIONS:\n  -b, --to <BACKEND>   output format [default: html]\n  \
          -s, --embedded       HTML body content only (no document shell, header or footer)\n  \
@@ -599,7 +846,9 @@ fn print_usage() {
          -S, --safe-mode <MODE>  unsafe, safe (default), server or secure\n  \
          -B, --base-dir <DIR>  root for relative paths (default: the input's directory,\n                       \
          for stdin the docdir attribute or the current directory)\n  \
-         -o, --out <FILE>     output path\n      --stdout         write to stdout\n  \
+         -D, --destination-dir <DIR>  output directory (default: the input's directory)\n  \
+         -o, --out-file <FILE>  output file (`-` for stdout); from safe mode up -D/-o stay\n                       \
+         inside -B or the current directory\n      --stdout         write to stdout\n  \
          --json-attributes   include header/final attributes with --to json\n  \
          --diagnostics <MODE> compat (default) or editor with physical byte spans\n  \
          -h, --help           show this help"

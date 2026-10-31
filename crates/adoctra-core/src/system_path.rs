@@ -8,9 +8,27 @@ use crate::SafeMode;
 
 /// A resolved path and the warnings Ruby logs while resolving it.
 #[derive(Debug, PartialEq, Eq)]
-pub(crate) struct Resolved {
+pub struct SystemPath {
     pub path: String,
     pub warnings: Vec<String>,
+}
+
+pub(crate) type Resolved = SystemPath;
+
+/// Ruby's `PathResolver#system_path(target, start, jail, target_name:,
+/// recover:)` for a host (e.g. a CLI resolving its output paths): `start`
+/// is absolute, `jail` (if any) absolute. With `recover` an escape from the
+/// jail is moved inside it with Ruby's warnings; without it the result is
+/// Ruby's `SecurityError` message, e.g. `to_dir /x is outside of jail: /doc
+/// (disallowed in safe mode)`.
+pub fn resolve_system_path(
+    target: &str,
+    start: &str,
+    jail: Option<&str>,
+    target_name: &str,
+    recover: bool,
+) -> Result<SystemPath, String> {
+    resolve(target, Some(start), jail, target_name, start, recover)
 }
 
 /// Ruby's `partition_path` (no web paths): segments without `.` entries
@@ -77,45 +95,63 @@ pub(crate) fn system_path(
     target_name: &str,
     working_dir: &str,
 ) -> Resolved {
+    resolve(target, start, jail, target_name, working_dir, true)
+        .expect("recovering resolution never fails")
+}
+
+fn resolve(
+    target: &str,
+    start: Option<&str>,
+    jail: Option<&str>,
+    target_name: &str,
+    working_dir: &str,
+    recover: bool,
+) -> Result<Resolved, String> {
     let mut warnings = Vec::new();
-    let outside = |warnings: &mut Vec<String>| {
+    let outside = |warnings: &mut Vec<String>, jail: &str| {
+        if !recover {
+            return Err(format!(
+                "{target_name} {target} is outside of jail: {jail} (disallowed in safe mode)"
+            ));
+        }
         warnings.push(format!(
             "{target_name} is outside of jail; recovering automatically"
         ));
+        Ok(())
     };
     if target.starts_with('/') {
         let target_path = expand(target);
         if let Some(jail) = jail.filter(|jail| !descends_from(&target_path, jail)) {
-            outside(&mut warnings);
+            outside(&mut warnings, jail)?;
             let (target_segments, _) = partition(&target_path);
             let (mut jail_segments, jail_root) = partition(jail);
             jail_segments.extend(target_segments);
-            return Resolved {
+            return Ok(Resolved {
                 path: join(&jail_segments, jail_root),
                 warnings,
-            };
+            });
         }
-        return Resolved {
+        return Ok(Resolved {
             path: target_path,
             warnings,
-        };
+        });
     }
     let fallback = jail.unwrap_or(working_dir);
     let mut target_segments = partition(target).0;
     let start = match start.filter(|start| !start.is_empty()) {
         _ if target_segments.is_empty() => match start.filter(|start| !start.is_empty()) {
             None => {
-                return Resolved {
+                return Ok(Resolved {
                     path: fallback.to_owned(),
                     warnings,
-                }
+                });
             }
             Some(start) if start.starts_with('/') => {
                 if jail.is_none() {
-                    return Resolved {
+                    return Ok(Resolved {
                         path: expand(start),
                         warnings,
-                    };
+                    });
                 }
                 start.to_owned()
             }
@@ -142,6 +178,10 @@ pub(crate) fn system_path(
                     resolved.push(segment);
                 } else if resolved.len() > jail_depth {
                     resolved.pop();
+                } else if !recover {
+                    return Err(format!(
+                        "{target_name} {target} refers to location outside jail: {jail} (disallowed in safe mode)"
+                    ));
                 } else if !warned {
                     warnings.push(format!(
                         "{target_name} has illegal reference to ancestor of jail; recovering automatically"
@@ -162,23 +202,23 @@ pub(crate) fn system_path(
     if let (true, Some(jail)) = (recheck, jail) {
         let target_path = join(&resolved, root);
         if descends_from(&target_path, jail) {
-            return Resolved {
+            return Ok(Resolved {
                 path: target_path,
                 warnings,
-            };
+            });
         }
-        outside(&mut warnings);
+        outside(&mut warnings, jail)?;
         let (mut jail_segments, jail_root) = partition(jail);
         jail_segments.extend(target_segments.iter().copied());
-        return Resolved {
+        return Ok(Resolved {
             path: join(&jail_segments, jail_root),
             warnings,
-        };
+        });
     }
-    Resolved {
+    Ok(Resolved {
         path: join(&resolved, root),
         warnings,
-    }
+    })
 }
 
 /// Ruby's `normalize_system_path(target, start, nil, target_name:)` for a
@@ -217,6 +257,45 @@ mod tests {
     fn resolve(target: &str, start: &str, jail: Option<&str>) -> (String, Vec<String>) {
         let resolved = system_path(target, Some(start), jail, "path", "/cwd");
         (resolved.path, resolved.warnings)
+    }
+
+    /// Ruby's `recover: false` (Asciidoctor.convert resolving `:to_dir` and
+    /// `:to_file`): each jail escape is a SecurityError message instead.
+    #[test]
+    fn unrecovered_jail_escapes_are_errors() {
+        let strict = |target: &str, start: &str, jail: Option<&str>| {
+            resolve_system_path(target, start, jail, "to_dir", false)
+        };
+        assert_eq!(
+            strict("/etc", "/doc", Some("/doc")),
+            Err("to_dir /etc is outside of jail: /doc (disallowed in safe mode)".to_owned())
+        );
+        assert_eq!(
+            strict("../a.html", "/doc", Some("/doc")),
+            Err(
+                "to_dir ../a.html refers to location outside jail: /doc (disallowed in safe mode)"
+                    .to_owned()
+            )
+        );
+        assert_eq!(
+            strict("y/b.htm", "/out", Some("/doc")),
+            Err("to_dir y/b.htm is outside of jail: /doc (disallowed in safe mode)".to_owned())
+        );
+        assert_eq!(
+            strict("out/../b.html", "/doc", Some("/doc")).map(|p| p.path),
+            Ok("/doc/b.html".to_owned())
+        );
+        assert_eq!(
+            strict("/etc/x", "/doc", None).map(|p| p.path),
+            Ok("/etc/x".to_owned())
+        );
+        // Recovering keeps the warnings.
+        let recovered = resolve_system_path("/etc", "/doc", Some("/doc"), "path", true).unwrap();
+        assert_eq!(recovered.path, "/doc/etc");
+        assert_eq!(
+            recovered.warnings,
+            ["path is outside of jail; recovering automatically"]
+        );
     }
 
     #[test]

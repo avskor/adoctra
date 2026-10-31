@@ -11,6 +11,48 @@ mod highlight;
 mod math;
 mod rouge;
 
+thread_local! {
+    /// Ruby's `@xml_mode` of the converter converting on this thread: the
+    /// `htmlsyntax` header attribute is `xml` (the `xhtml`/`xhtml5`
+    /// backends). Set for the duration of one render by [`XmlMode::enter`].
+    static XML_MODE: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Scoped [`XML_MODE`], restored on drop (a render inside a render, like a
+/// nested converter, keeps its caller's mode afterwards).
+struct XmlMode(bool);
+
+impl XmlMode {
+    fn enter(xml: bool) -> Self {
+        XmlMode(XML_MODE.with(|mode| mode.replace(xml)))
+    }
+}
+
+impl Drop for XmlMode {
+    fn drop(&mut self) {
+        XML_MODE.with(|mode| mode.set(self.0));
+    }
+}
+
+/// Ruby's `@void_element_slash`: `/` closing void elements in XML syntax.
+fn slash() -> &'static str {
+    if XML_MODE.with(|mode| mode.get()) {
+        "/"
+    } else {
+        ""
+    }
+}
+
+/// Ruby's `append_boolean_attribute`: ` name="name"` in XML syntax, else
+/// ` name`.
+fn boolean_attr(name: &str) -> String {
+    if XML_MODE.with(|mode| mode.get()) {
+        format!(" {name}=\"{name}\"")
+    } else {
+        format!(" {name}")
+    }
+}
+
 /// adoctra's reference stylesheet — a modern, self-contained theme (custom
 /// properties, `color-mix()`, SVG-mask icons). [`HtmlBackend::convert`] inlines
 /// it into the document `<head>` so output is styled out of the box; consumers
@@ -116,6 +158,9 @@ impl HtmlBackend {
         stylesheet: Option<&Option<String>>,
         rouge_state: &std::cell::RefCell<rouge::RougeState>,
     ) -> Output {
+        // The syntax Ruby's converter was created with (Document#
+        // create_converter at the last backend assignment).
+        let _xml = XmlMode::enter(doc.htmlsyntax == Some("xml"));
         let cx = Cx {
             doc,
             outline: &doc.blocks,
@@ -188,10 +233,16 @@ fn render_document(
             content("lang").unwrap_or_else(|| "en".into())
         ),
     };
+    let s = slash();
+    let xmlns = if s.is_empty() {
+        ""
+    } else {
+        " xmlns=\"http://www.w3.org/1999/xhtml\""
+    };
     out.push_str(&format!(
-        "<!DOCTYPE html>\n<html{lang}>\n<head>\n<meta charset=\"{}\">\n\
-         <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n\
-         <meta name=\"generator\" content=\"adoctra {}\">\n",
+        "<!DOCTYPE html>\n<html{xmlns}{lang}>\n<head>\n<meta charset=\"{}\"{s}>\n\
+         <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"{s}>\n\
+         <meta name=\"generator\" content=\"adoctra {}\"{s}>\n",
         content("encoding").unwrap_or_else(|| "UTF-8".into()),
         env!("CARGO_PKG_VERSION"),
     ));
@@ -201,7 +252,7 @@ fn render_document(
         ("keywords", "keywords"),
     ] {
         if let Some(value) = content(key) {
-            out.push_str(&format!("<meta name=\"{name}\" content=\"{value}\">\n"));
+            out.push_str(&format!("<meta name=\"{name}\" content=\"{value}\"{s}>\n"));
         }
     }
     if let Some(parts) = doc.authors_line() {
@@ -211,12 +262,14 @@ fn render_document(
             authors = strip_tags(&authors);
         }
         out.push_str(&format!(
-            "<meta name=\"author\" content=\"{}\">\n",
+            "<meta name=\"author\" content=\"{}\"{s}>\n",
             authors.replace('"', "&quot;")
         ));
     }
     if let Some(value) = content("copyright") {
-        out.push_str(&format!("<meta name=\"copyright\" content=\"{value}\">\n"));
+        out.push_str(&format!(
+            "<meta name=\"copyright\" content=\"{value}\"{s}>\n"
+        ));
     }
     if let Some(href) = content("favicon") {
         // Ruby's icon type from the extension (`Helpers.extname`).
@@ -232,7 +285,7 @@ fn render_document(
             }
         };
         out.push_str(&format!(
-            "<link rel=\"icon\" type=\"{kind}\" href=\"{href}\">\n"
+            "<link rel=\"icon\" type=\"{kind}\" href=\"{href}\"{s}>\n"
         ));
     }
     out.push_str(&format!("<title>{}</title>\n", document_title(doc)));
@@ -358,10 +411,11 @@ fn stylesheet(
                 let scheme = attributes.get("asset-uri-scheme").unwrap_or("https");
                 let colon = if scheme.is_empty() { "" } else { ":" };
                 out.push_str(&format!(
-                    "<link rel=\"stylesheet\" href=\"{}\">\n",
+                    "<link rel=\"stylesheet\" href=\"{}\"{}>\n",
                     attr_value(&format!(
                         "{scheme}{colon}//fonts.googleapis.com/css?family={families}"
-                    ))
+                    )),
+                    slash()
                 ));
             }
             if linkcss {
@@ -371,8 +425,9 @@ fn stylesheet(
                     false,
                 );
                 out.push_str(&format!(
-                    "<link rel=\"stylesheet\" href=\"{}\">\n",
-                    attr_value(&href)
+                    "<link rel=\"stylesheet\" href=\"{}\"{}>\n",
+                    attr_value(&href),
+                    slash()
                 ));
             } else {
                 out.push_str("<style>\n");
@@ -383,8 +438,9 @@ fn stylesheet(
         Some(sheet) if linkcss => {
             let href = adoctra_core::normalize_web_path(sheet, Some(stylesdir.unwrap_or("")), true);
             out.push_str(&format!(
-                "<link rel=\"stylesheet\" href=\"{}\">\n",
-                attr_value(&href)
+                "<link rel=\"stylesheet\" href=\"{}\"{}>\n",
+                attr_value(&href),
+                slash()
             ));
         }
         Some(sheet) => {
@@ -642,13 +698,15 @@ fn render_details(doc: &Document, out: &mut String) {
         let mut name = String::new();
         render_parts(&author.name, &mut name);
         details.push(format!(
-            "<span id=\"author{n}\" class=\"author\">{name}</span><br>"
+            "<span id=\"author{n}\" class=\"author\">{name}</span><br{}>",
+            slash()
         ));
         if let Some(email) = &author.email {
             let mut html = String::new();
             render_parts(email, &mut html);
             details.push(format!(
-                "<span id=\"email{n}\" class=\"email\">{html}</span><br>"
+                "<span id=\"email{n}\" class=\"email\">{html}</span><br{}>",
+                slash()
             ));
         }
     }
@@ -668,7 +726,10 @@ fn render_details(doc: &Document, out: &mut String) {
         details.push(format!("<span id=\"revdate\">{date}</span>"));
     }
     if let Some(remark) = attribute_html(attributes, "revremark") {
-        details.push(format!("<br><span id=\"revremark\">{remark}</span>"));
+        details.push(format!(
+            "<br{}><span id=\"revremark\">{remark}</span>",
+            slash()
+        ));
     }
     if !details.is_empty() {
         out.push_str("<div class=\"details\">\n");
@@ -687,7 +748,7 @@ fn render_footer(attributes: &adoctra_core::Attributes, max_width: &str, out: &m
     ));
     if let Some(number) = attribute_html(attributes, "revnumber") {
         let label = attribute_html(attributes, "version-label").unwrap_or_default();
-        out.push_str(&format!("{label} {number}<br>\n"));
+        out.push_str(&format!("{label} {number}<br{}>\n", slash()));
     }
     if let (Some(label), Some(date), None) = (
         attribute_html(attributes, "last-update-label"),
@@ -1044,8 +1105,9 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
                         ));
                     } else {
                         out.push_str(&format!(
-                            "<img src=\"{}\" alt=\"{number}\">",
-                            attr_value(&entry.src)
+                            "<img src=\"{}\" alt=\"{number}\"{}>",
+                            attr_value(&entry.src),
+                            slash()
                         ));
                     }
                     out.push_str("</span><div>");
@@ -1116,8 +1178,9 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             }
             let image = |src: &str| {
                 format!(
-                    "<img src=\"{}\" alt=\"{alt_attr}\"{sized}>",
-                    reference_value(src)
+                    "<img src=\"{}\" alt=\"{alt_attr}\"{sized}{}>",
+                    reference_value(src),
+                    slash()
                 )
             };
             // Ruby's SVG branch of `convert_image` (below secure mode).
@@ -1191,9 +1254,9 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             }
             if *embedded {
                 let fullscreen = if option("nofullscreen") {
-                    ""
+                    String::new()
                 } else {
-                    " allowfullscreen"
+                    boolean_attr("allowfullscreen")
                 };
                 out.push_str(&format!(
                     "<iframe{size} src=\"{}\"{fullscreen}></iframe>\n",
@@ -1211,8 +1274,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
                     ("loop", option("loop")),
                 ] {
                     if on {
-                        out.push(' ');
-                        out.push_str(name);
+                        out.push_str(&boolean_attr(name));
                     }
                 }
                 if let Some(preload) = named.get("preload").filter(|p| !p.is_empty()) {
@@ -1235,8 +1297,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
                 ("loop", option("loop")),
             ] {
                 if on {
-                    out.push(' ');
-                    out.push_str(name);
+                    out.push_str(&boolean_attr(name));
                 }
             }
             out.push_str(">\nYour browser does not support the audio tag.\n</audio>\n</figure>\n");
@@ -1285,14 +1346,21 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
                     extra.push_str(&format!(" start=\"{}\"", attr_value(start)));
                 }
                 if option("reversed") {
-                    extra.push_str(" reversed");
+                    extra.push_str(&boolean_attr("reversed"));
                 }
             }
             let (checked, unchecked) = if option("interactive") {
-                (
-                    "<input type=\"checkbox\" data-item-complete=\"1\" checked> ",
-                    "<input type=\"checkbox\" data-item-complete=\"0\"> ",
-                )
+                if slash().is_empty() {
+                    (
+                        "<input type=\"checkbox\" data-item-complete=\"1\" checked> ",
+                        "<input type=\"checkbox\" data-item-complete=\"0\"> ",
+                    )
+                } else {
+                    (
+                        "<input type=\"checkbox\" data-item-complete=\"1\" checked=\"checked\"/> ",
+                        "<input type=\"checkbox\" data-item-complete=\"0\"/> ",
+                    )
+                }
             } else if cx.doc.attributes.get("icons") == Some("font") {
                 (
                     "<i class=\"fa fa-check-square-o\"></i> ",
@@ -1360,7 +1428,11 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
                 Some("font") if src.is_empty() => {
                     format!("<i class=\"fa icon-{ty}\" title=\"{title}\"></i>")
                 }
-                Some(_) => format!("<img src=\"{}\" alt=\"{title}\">", attr_value(src)),
+                Some(_) => format!(
+                    "<img src=\"{}\" alt=\"{title}\"{}>",
+                    attr_value(src),
+                    slash()
+                ),
             };
             out.push_str(&format!("<p class=\"admonition-title\">{icon}</p>\n"));
             out.push_str("<div class=\"admonition-content\">\n");
@@ -1509,7 +1581,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
         BlockKind::Open { blocks } => render_open(block, blocks, cx, out),
         // Ruby's `convert_thematic_break` / `convert_page_break` ignore the
         // block's id, roles and title.
-        BlockKind::ThematicBreak => out.push_str("<hr>\n"),
+        BlockKind::ThematicBreak => out.push_str(&format!("<hr{}>\n", slash())),
         BlockKind::PageBreak => out.push_str("<div style=\"page-break-after: always;\"></div>\n"),
         BlockKind::Toc => {
             // Ruby's `convert_toc`: only with `toc-placement` macro (the header
@@ -1773,8 +1845,9 @@ fn icon_font(attributes: &adoctra_core::Attributes, out: &mut String) {
         adoctra_core::normalize_web_path(&format!("{name}.css"), attributes.get("stylesdir"), false)
     };
     out.push_str(&format!(
-        "<link rel=\"stylesheet\" href=\"{}\">\n",
-        attr_value(&href)
+        "<link rel=\"stylesheet\" href=\"{}\"{}>\n",
+        attr_value(&href),
+        slash()
     ));
 }
 
@@ -1793,7 +1866,11 @@ fn render_conum(
         Some("font") => out.push_str(&format!(
             "<i class=\"conum\" data-value=\"{n}\"></i><b>({n})</b>"
         )),
-        Some(_) => out.push_str(&format!("<img src=\"{}\" alt=\"{n}\">", attr_value(src))),
+        Some(_) => out.push_str(&format!(
+            "<img src=\"{}\" alt=\"{n}\"{}>",
+            attr_value(src),
+            slash()
+        )),
         None if xml => out.push_str(&format!("&lt;!--<b class=\"conum\">({n})</b>--&gt;")),
         None => {
             out.push_str(guard.unwrap_or_default());
@@ -1885,9 +1962,13 @@ fn render_table(block: &Block, table: &adoctra_core::ast::Table, cx: &Cx, out: &
         out.push_str("<colgroup>\n");
         for column in &table.columns {
             if autowidth || column.autowidth {
-                out.push_str("<col>\n");
+                out.push_str(&format!("<col{}>\n", slash()));
             } else {
-                out.push_str(&format!("<col style=\"width: {}%;\">\n", column.width));
+                out.push_str(&format!(
+                    "<col style=\"width: {}%;\"{}>\n",
+                    column.width,
+                    slash()
+                ));
             }
         }
         out.push_str("</colgroup>\n");
@@ -2236,7 +2317,7 @@ fn render_attribution(attribution: &Option<Attribution>, out: &mut String) {
         out.push_str("&#8212; ");
         render_inlines(author, out);
         if attr.citetitle.is_some() {
-            out.push_str("<br>\n");
+            out.push_str(&format!("<br{}>\n", slash()));
         }
     }
     if let Some(cite) = &attr.citetitle {
@@ -2592,8 +2673,9 @@ fn render_inline_image(image: &adoctra_core::InlineImage, out: &mut String) {
             }
             let img = |src: &str| {
                 format!(
-                    "<img src=\"{src}\" alt=\"{}\"{sized}>",
-                    alt.replace('"', "&quot;")
+                    "<img src=\"{src}\" alt=\"{}\"{sized}{}>",
+                    alt.replace('"', "&quot;"),
+                    slash()
                 )
             };
             // Ruby's SVG branch of `convert_inline_image` (below secure mode).
@@ -2729,7 +2811,10 @@ fn render_footnotes(
     if footnotes.is_empty() || attributes.get("nofootnotes").is_some() {
         return;
     }
-    out.push_str(&format!("<div id=\"footnotes\"{max_width}>\n<hr>\n"));
+    out.push_str(&format!(
+        "<div id=\"footnotes\"{max_width}>\n<hr{}>\n",
+        slash()
+    ));
     for footnote in footnotes {
         let index = escape(&footnote.index);
         out.push_str(&format!(
@@ -2786,7 +2871,11 @@ fn render_parts(parts: &[adoctra_core::AttributePart], out: &mut String) {
                 }
                 out.push('>');
             }
-            adoctra_core::AttributePart::LineBreak => out.push_str("<br>"),
+            adoctra_core::AttributePart::LineBreak => {
+                out.push_str("<br");
+                out.push_str(slash());
+                out.push('>');
+            }
             adoctra_core::AttributePart::Image(image) => render_inline_image(image, out),
             adoctra_core::AttributePart::Footnote(footnote) => render_footnote(footnote, out),
             adoctra_core::AttributePart::Ui(ui) => render_ui(ui, out),
@@ -6242,5 +6331,56 @@ mod tests {
         ] {
             assert!(html.contains(expected), "{expected}\n{html}");
         }
+    }
+
+    /// Ruby's `@xml_mode`: the header's `htmlsyntax` (as of its last
+    /// `backend` entry, like `update_backend_attributes`) picks the syntax
+    /// for one render; the next document renders in its own.
+    #[test]
+    fn xml_syntax_follows_the_header_htmlsyntax() {
+        let xml = render(":htmlsyntax: xml\n:backend: html5\n\n---\n\none +\ntwo");
+        assert!(xml.contains("<hr/>"), "{xml}");
+        assert!(xml.contains("one<br/>"), "{xml}");
+        // Assigned after the backend entry, htmlsyntax no longer applies.
+        let html = render(":backend: html5\n:htmlsyntax: xml\n\n---");
+        assert!(html.contains("<hr>") && !html.contains("<hr/>"), "{html}");
+        // The mode ends with its render, also for a render inside it.
+        assert!(render("---").contains("<hr>\n"));
+        {
+            let _outer = XmlMode::enter(true);
+            assert!(render("---").contains("<hr>\n"));
+            assert_eq!(slash(), "/");
+        }
+        assert_eq!(slash(), "");
+        assert_eq!(boolean_attr("loop"), " loop");
+    }
+
+    #[test]
+    fn xhtml_backend_closes_void_elements_and_spells_boolean_attributes() {
+        let source = "= T\nA\n:backend: xhtml\n:icons:\n:favicon:\n\n\
+                      [%interactive]\n* [x] done\n\n[%reversed]\n. a\n\n\
+                      [%autoplay%loop]\nvideo::v.ogg[]\n\nvideo::1[vimeo]\n\n\
+                      audio::a.ogg[]\n\n|===\n|x\n|===\n\nNOTE: n\n\n\
+                      [stem]\n++++\na\n\nb\n++++\n\nfootnote:[f]";
+        let html = render_standalone(source);
+        for expected in [
+            "<html xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"en\">",
+            "<meta charset=\"UTF-8\"/>",
+            "<link rel=\"icon\" type=\"image/x-icon\" href=\"favicon.ico\"/>",
+            "<span id=\"author\" class=\"author\">A</span><br/>",
+            "<input type=\"checkbox\" data-item-complete=\"1\" checked=\"checked\"/> ",
+            "<ol class=\"arabic\" reversed=\"reversed\">",
+            "<video src=\"v.ogg\" autoplay=\"autoplay\" controls=\"controls\" loop=\"loop\">",
+            "allowfullscreen=\"allowfullscreen\"></iframe>",
+            "<audio src=\"a.ogg\" controls=\"controls\">",
+            "<col style=\"width: 100%;\"/>",
+            "<img src=\"./images/icons/note.png\" alt=\"Note\"/>",
+            "\\$a\\$\n<br/>\n\\$b\\$",
+            "<div id=\"footnotes\">\n<hr/>",
+        ] {
+            assert!(html.contains(expected), "{expected}\n{html}");
+        }
+        // A passthrough keeps its own markup.
+        assert!(render(":backend: xhtml\n\n++++\n<br>\n++++").contains("<br>\n"));
     }
 }

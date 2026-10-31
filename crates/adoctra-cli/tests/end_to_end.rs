@@ -936,7 +936,11 @@ fn cli_supplies_dates_docinfo_and_copies_linked_stylesheets() {
     std::fs::write(root.join("css/my.css"), "body { color: red; }").unwrap();
     let run = |args: &[&str], epoch: Option<&str>| {
         let mut command = Command::new(env!("CARGO_BIN_EXE_adoctra"));
-        command.arg(root.join("guide.adoc")).args(args);
+        // Safe mode confines the output to the working directory.
+        command
+            .arg(root.join("guide.adoc"))
+            .args(args)
+            .current_dir(&root);
         match epoch {
             Some(epoch) => command.env("SOURCE_DATE_EPOCH", epoch),
             None => command.env_remove("SOURCE_DATE_EPOCH"),
@@ -1051,6 +1055,7 @@ fn cli_safe_mode_controls_includes_user_home_and_copied_stylesheets() {
         let output = Command::new(env!("CARGO_BIN_EXE_adoctra"))
             .arg(root.join("docs/main.adoc"))
             .args(args)
+            .current_dir(&root)
             .env("HOME", "/home/someone")
             .output()
             .unwrap();
@@ -1321,6 +1326,7 @@ fn cli_copies_the_rouge_stylesheet_with_linkcss_and_copycss() {
                 out.to_str().unwrap(),
             ])
             .args(extra)
+            .current_dir(&root)
             .output()
             .unwrap();
         assert!(output.status.success());
@@ -1342,4 +1348,175 @@ fn cli_copies_the_rouge_stylesheet_with_linkcss_and_copycss() {
     assert!(!root.join("out/css/rouge-monokai.css").exists());
     assert!(root.join("out/css/adoctra.css").exists());
     std::fs::remove_dir_all(root).unwrap();
+}
+
+/// Ruby's file output (`Asciidoctor.convert` from the CLI): `-D`/`-o`
+/// resolved against the working directory (or `-B`) and jailed there from
+/// safe mode up, the file named `<docname><outfilesuffix>` next to the input
+/// or in `-D`, `outfilesuffix` from an `-o` extension, `outfile`/`outdir`
+/// for conversion, the converted string without a final LF, and Ruby's
+/// errors for an escaping path or the input as output.
+#[test]
+fn cli_writes_files_like_ruby_convert() {
+    use std::io::Write;
+    use std::process::{Command, Stdio};
+    let root = std::env::temp_dir().join(format!("adoctra-cli-output-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(root.join("docs/css")).unwrap();
+    let root = std::fs::canonicalize(&root).unwrap();
+    let root_text = root.to_str().unwrap().to_owned();
+    std::fs::write(
+        root.join("docs/a.adoc"),
+        "= A\n\n{outfile}|{outdir}|{outfilesuffix}\n\nifdef::outfile[read]\n",
+    )
+    .unwrap();
+    std::fs::write(root.join("docs/css/my.css"), "p { color: red; }").unwrap();
+    let run = |args: &[&str], stdin: Option<&str>| {
+        let mut child = Command::new(env!("CARGO_BIN_EXE_adoctra"))
+            .args(args)
+            .current_dir(&root)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap();
+        child
+            .stdin
+            .take()
+            .unwrap()
+            .write_all(stdin.unwrap_or("").as_bytes())
+            .unwrap();
+        let output = child.wait_with_output().unwrap();
+        (
+            output.status.code(),
+            String::from_utf8(output.stdout).unwrap(),
+            String::from_utf8(output.stderr).unwrap(),
+        )
+    };
+    let read = |path: &str| std::fs::read_to_string(root.join(path)).unwrap();
+    // Next to the input, quietly, without the stream's final LF; the
+    // attributes exist for conversion only (not for the preprocessor).
+    let (code, out, err) = run(&["docs/a.adoc", "-s"], None);
+    assert_eq!((code, out.as_str(), err.as_str()), (Some(0), "", ""));
+    assert_eq!(
+        read("docs/a.html"),
+        format!("<p>{root_text}/docs/a.html|{root_text}/docs|.html</p>")
+    );
+    // A destination directory, created like `mkdirs`; the document's own
+    // outfilesuffix names the file.
+    let (code, ..) = run(
+        &[
+            "docs/a.adoc",
+            "-s",
+            "-D",
+            "out/x",
+            "-a",
+            "outfilesuffix=.xhtml@",
+        ],
+        None,
+    );
+    assert_eq!(code, Some(0));
+    assert_eq!(
+        read("out/x/a.xhtml"),
+        format!("<p>{root_text}/out/x/a.xhtml|{root_text}/out/x|.xhtml</p>")
+    );
+    // `-o` within `-D` sets outfilesuffix from its extension. Ruby's
+    // normalize_system_path jails it in the document's base directory (the
+    // input's, or `-B`), not the working directory.
+    let (code, _, err) = run(&["docs/a.adoc", "-s", "-D", "out", "-o", "y/b.htm"], None);
+    assert_eq!(code, Some(1));
+    assert_eq!(
+        err,
+        format!(
+            "adoctra: to_dir y/b.htm is outside of jail: {root_text}/docs (disallowed in safe mode)\n"
+        )
+    );
+    let (code, ..) = run(
+        &["docs/a.adoc", "-s", "-B", ".", "-D", "out", "-o", "y/b.htm"],
+        None,
+    );
+    assert_eq!(code, Some(0));
+    assert_eq!(
+        read("out/y/b.htm"),
+        format!("<p>{root_text}/out/y/b.htm|{root_text}/out/y|.htm</p>")
+    );
+    // Standard input writes a file only with `-o`; `-o -` streams.
+    let (code, out, _) = run(&["-", "-s", "-D", "out"], Some("x"));
+    assert_eq!((code, out.as_str()), (Some(0), "<p>x</p>\n"));
+    let (code, out, _) = run(&["docs/a.adoc", "-s", "-o", "-"], None);
+    assert_eq!(code, Some(0));
+    assert!(out.ends_with("|.html</p>\n"), "{out}");
+    let (code, ..) = run(&["-", "-s", "-o", "in.html"], Some("y"));
+    assert_eq!((code, read("in.html").as_str()), (Some(0), "<p>y</p>"));
+    // Server mode hides outfile/outdir from the document.
+    let (code, ..) = run(&["docs/a.adoc", "-s", "-S", "server", "-o", "s.html"], None);
+    assert_eq!(code, Some(0));
+    assert_eq!(read("s.html"), "<p>{outfile}|{outdir}|.html</p>");
+    // Safe mode jails the output in the working directory (or -B).
+    let (code, _, err) = run(&["docs/a.adoc", "-D", "/"], None);
+    assert_eq!(code, Some(1));
+    assert_eq!(
+        err,
+        format!("adoctra: to_dir / is outside of jail: {root_text} (disallowed in safe mode)\n")
+    );
+    let (code, _, err) = run(&["docs/a.adoc", "-o", "../a.html"], None);
+    assert_eq!(code, Some(1));
+    assert!(
+        err.contains(&format!(
+            "to_dir ../a.html refers to location outside jail: {root_text} (disallowed in safe mode)"
+        )),
+        "{err}"
+    );
+    let (code, _, err) = run(&["docs/a.adoc", "-B", "docs", "-o", "../b.html"], None);
+    assert_eq!(code, Some(1), "{err}");
+    let (code, ..) = run(&["docs/a.adoc", "-S", "unsafe", "-o", "../b.html"], None);
+    assert_eq!(code, Some(0));
+    std::fs::remove_file(root.parent().unwrap().join("b.html")).unwrap();
+    // The input is never the output.
+    let (code, _, err) = run(&["docs/a.adoc", "-a", "outfilesuffix=.adoc"], None);
+    assert_eq!(code, Some(1));
+    assert_eq!(
+        err,
+        format!(
+            "adoctra: input file and output file cannot be the same: {root_text}/docs/a.adoc\n"
+        )
+    );
+    assert!(read("docs/a.adoc").starts_with("= A"));
+    // copycss resolves the stylesheet against the base directory and
+    // `stylesdir` against the output directory; a missing one warns with
+    // the document's name.
+    let (code, _, err) = run(
+        &[
+            "docs/a.adoc",
+            "-a",
+            "linkcss",
+            "-a",
+            "stylesheet=css/my.css",
+            "-D",
+            "site",
+        ],
+        None,
+    );
+    assert_eq!((code, err.as_str()), (Some(0), ""));
+    assert_eq!(read("site/css/my.css"), "p { color: red; }");
+    let (code, _, err) = run(
+        &[
+            "docs/a.adoc",
+            "-a",
+            "linkcss",
+            "-a",
+            "stylesheet=none.css",
+            "-D",
+            "site",
+        ],
+        None,
+    );
+    assert_eq!(code, Some(0));
+    assert_eq!(
+        err,
+        format!(
+            "adoctra: warning: {root_text}/docs/a.adoc: stylesheet does not exist or cannot be read: {root_text}/docs/none.css\n"
+        )
+    );
+    std::fs::remove_dir_all(&root).unwrap();
 }

@@ -222,8 +222,32 @@ Supported entries (recorded options mapped to `-S`/`-s`/`-a`) are compared in
 body-dom-v1 plus warnings against pinned Ruby without optional highlighter
 gems; others are UNSUPPORTED with a reason. The reference mimics one Ruby CLI
 run per document (output chomped + LF, highlighter library status reset).
-2282 PASS / 1 DIFF / 1 RUBY_ERROR / 337 UNSUPPORTED of 2621; CI freezes
-every status. All upstream test/fixtures are vendored (SHA-256 in the
+2342 PASS / 1 DIFF / 1 RUBY_ERROR / 277 UNSUPPORTED of 2621; CI freezes
+every status. Output-neutral Ruby API options (sourcemap, catalog_assets,
+timings, eruby) pass to the reference only; `backend` (html5/html/xhtml/
+xhtml5) maps to a locked `-a backend=`. Remaining UNSUPPORTED: docbook/
+manpage backends (243), extension/logger API (22), parse_header_only (6).
+**File output** (Ruby's Asciidoctor.convert/Invoker): entries with
+to_dir/to_file run one CLI per side (`-D`/`-o`; Ruby through the reference
+script's `--invoke` = Asciidoctor::Cli::Invoker) in the materialized
+checkout (input = the docfile fixture when identical, else stdin); written
+files are snapshotted, restored and compared (HTML projected plus final LF,
+default stylesheets by presence). CLI: `-D`, `-o -`, file
+`<docname><outfilesuffix>` next to the input or in `-D`, outfilesuffix from
+the `-o` extension, paths via normalize_system_path with `recover: false`
+(jail = `-B` or cwd from safe mode up — the CLI default safe jails output
+too, user decision 2026-10-31; `-o` within `-D` is jailed in the document
+base dir), Ruby's error texts, no final LF, no "wrote" line, copycss paths
+like Ruby. Core: `ParseOptions.output` → `Document.output` (OutputTarget/
+OutputPaths; `docname` after reading, header-pinned outfilesuffix) and
+conversion-only `outfile`/`outdir` below server; `resolve_system_path`
+is public. **XML syntax**: `Document.htmlsyntax` is the
+converter's syntax at the last header `backend` (Ruby's create_converter;
+a later `:htmlsyntax:` changes only the attribute); HtmlBackend renders
+Ruby's `@void_element_slash`/`append_boolean_attribute`/`xmlns` through a
+per-render XmlMode (`slash()`, `boolean_attr()`); `golden/xhtml/` compares
+void tags and boolean attributes. Keep `&`/`<` out of adoctra.css comments
+(it is inlined into XML documents). All upstream test/fixtures are vendored (SHA-256 in the
 inventory); the harness materializes them in a temp root replacing
 `<UPSTREAM>` on both sides and maps `base_dir` to the CLI's `-B`. It serves
 the tests' web server at their fixed 127.0.0.1:9876 (a copy of

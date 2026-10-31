@@ -131,8 +131,9 @@ impl Highlighter {
             Self::HtmlPipeline | Self::Rouge | Self::CodeRay | Self::Pygments => return,
         };
         out.push_str(&format!(
-            "<link rel=\"stylesheet\" href=\"{}\">\n",
-            super::attr_value(&href)
+            "<link rel=\"stylesheet\" href=\"{}\"{}>\n",
+            super::attr_value(&href),
+            super::slash()
         ));
     }
 
