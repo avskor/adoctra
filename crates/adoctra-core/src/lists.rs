@@ -319,7 +319,8 @@ pub(crate) fn delimiter(line: &str) -> Option<Delimiter> {
     let mut terminator = line.to_owned();
     if tip.starts_with('`') {
         if tip_len == 4 {
-            if tip == "````" || &tip[..3] != "```" {
+            // `tip` holds four characters, not bytes: compare by prefix.
+            if tip == "````" || !tip.starts_with("```") {
                 return None;
             }
             tip.truncate(3);

@@ -7,6 +7,7 @@
 //! unescaping and CSV unquoting keep the physical source of every character.
 use crate::ast::{CellStyle, HAlign, Span, VAlign};
 use crate::diagnostic::{Diagnostic, Severity};
+use crate::ruby_strip::RubyStrip;
 use std::collections::VecDeque;
 
 /// Characters with their reader offsets.
@@ -83,7 +84,7 @@ pub(crate) fn paragraphs(chars: &[(usize, char)]) -> Vec<Chars> {
 
 /// Ruby's `String#to_i`: optional sign and leading digits, else 0.
 pub(crate) fn to_i(value: &str) -> i64 {
-    let value = value.trim_start();
+    let value = value.ruby_lstrip();
     let (sign, digits) = match value.as_bytes().first() {
         Some(b'-') => (-1, &value[1..]),
         Some(b'+') => (1, &value[1..]),

@@ -121,7 +121,8 @@ fn unicode_crlf_comments_and_conditionals_compose_source_maps() {
                 _ => panic!(),
             })
             .collect::<String>(),
-        "до  после"
+        // Ruby normalizes CRLF to one LF: a single separator, not `\r\n`.
+        "до после"
     );
     assert_eq!(
         &source[result.comments[0].start..result.comments[0].end],

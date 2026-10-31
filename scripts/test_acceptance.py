@@ -225,10 +225,15 @@ class ExecutionTests(unittest.TestCase):
             self.run_case(html=changed, verify=True)
 
     def test_process_failure_is_an_error_even_for_xfail(self):
-        failed = subprocess.CompletedProcess(["adoctra"], 1, "", "panic")
+        failed = subprocess.CompletedProcess(["adoctra"], 1, b"", b"panic")
         with patch("acceptance.subprocess.run", return_value=failed):
             with self.assertRaisesRegex(RuntimeError, "panic"):
                 acceptance.invoke(["adoctra"], "")
+        # Output is read as bytes: a lone CR stays content.
+        done = subprocess.CompletedProcess(["adoctra"], 0, "a\rb\r\n".encode(), b"")
+        with patch("acceptance.subprocess.run", return_value=done) as run:
+            self.assertEqual(acceptance.invoke(["adoctra"], "Я").stdout, "a\rb\r\n")
+        self.assertEqual(run.call_args.kwargs["input"], "Я".encode())
         with patch("acceptance.subprocess.run", side_effect=subprocess.TimeoutExpired("adoctra", 30)):
             with self.assertRaises(subprocess.TimeoutExpired):
                 acceptance.invoke(["adoctra"], "")

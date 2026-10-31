@@ -7,6 +7,7 @@ use crate::comments::skip_comment;
 use crate::context::{consume_attribute_entry, AttributeEntry, ParseContext};
 use crate::parser::parse_heading;
 use crate::reader::Reader;
+use crate::ruby_strip::RubyStrip;
 use crate::{Attributes, Author, DocumentHeader, Revision, Span};
 use std::sync::Arc;
 
@@ -47,7 +48,7 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
     while lines.has(i, context) {
         if crate::parser::consume_block_metadata(lines, &mut i, context, &mut pending) {
             continue;
-        } else if !lines[i].1.trim().is_empty() {
+        } else if !lines[i].1.is_ruby_blank() {
             break;
         }
         i += 1;
@@ -154,7 +155,7 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
         consume_attributes(lines, &mut i, context);
         let mut authors = Vec::new();
         let mut revision = None;
-        if lines.has(i, context) && !lines[i].1.trim().is_empty() {
+        if lines.has(i, context) && !lines[i].1.is_ruby_blank() {
             result.author_line = Some(i);
             authors = parse_authors(&lines[i].1, lines[i].0);
             let values = author_attributes(&authors);
@@ -176,7 +177,7 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
                 .map(|p| reference_text(&p));
             i += 1;
             consume_attributes(lines, &mut i, context);
-            if lines.has(i, context) && !lines[i].1.trim().is_empty() {
+            if lines.has(i, context) && !lines[i].1.is_ruby_blank() {
                 revision = parse_revision((lines[i].0, &lines[i].1));
                 if let Some(rev) = &revision {
                     result.revision_line = Some(i);
@@ -198,7 +199,7 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
         let start = lines
             .loaded
             .iter()
-            .find(|(_, line)| !line.trim().is_empty())
+            .find(|(_, line)| !line.is_ruby_blank())
             .map_or(title_span.start, |(off, _)| *off);
         result.metadata = Some(DocumentHeader {
             span: Span::new(start, end),
@@ -574,7 +575,7 @@ fn parse_author(entry: &str, off: usize) -> Author {
             .filter(|p| !p.is_empty())
             .collect::<Vec<_>>()
             .join(" ")
-            .trim()
+            .ruby_strip()
             .to_owned()]
     };
     Author {
@@ -602,7 +603,7 @@ fn parse_revision(line: (usize, &str)) -> Option<Revision> {
                 .find(|c: char| c.is_ascii_digit() || c == '{')
                 .unwrap_or(prefix.len());
             (
-                Some(prefix[start..].trim_end().to_owned()),
+                Some(prefix[start..].ruby_rstrip().to_owned()),
                 rest.trim_start_matches(' '),
             )
         }
@@ -610,16 +611,16 @@ fn parse_revision(line: (usize, &str)) -> Option<Revision> {
     };
     let (date, remark) = rest.split_once(':').map_or((rest, None), |(date, remark)| {
         (
-            date.trim_end().trim_end_matches(','),
-            Some(remark.trim().to_owned()),
+            date.ruby_rstrip().trim_end_matches(','),
+            Some(remark.ruby_strip().to_owned()),
         )
     });
     let mut number = number;
-    let date = if number.is_none() && date.trim().starts_with('v') {
-        number = Some(date.trim()[1..].to_owned());
+    let date = if number.is_none() && date.ruby_strip().starts_with('v') {
+        number = Some(date.ruby_strip()[1..].to_owned());
         None
     } else {
-        (!date.trim().is_empty()).then(|| date.trim().to_owned())
+        (!date.is_ruby_blank()).then(|| date.ruby_strip().to_owned())
     };
     Some(Revision {
         span: line_span(line),

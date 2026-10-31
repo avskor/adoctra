@@ -1,6 +1,7 @@
 //! Include selection runs on physical lines before conditional preprocessing.
 //! Keep the pinned reader's precedence and ordered tag filters, without expanding
 //! potentially enormous line ranges or rewriting the immutable source snapshot.
+use crate::ruby_strip::RubyStrip;
 use crate::{Diagnostic, Severity, SourceId, Span};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -561,7 +562,7 @@ fn split_value(value: &str) -> Vec<&str> {
 }
 
 pub(crate) fn integer_prefix(value: &str) -> i128 {
-    let value = value.trim_start();
+    let value = value.ruby_lstrip();
     let negative = value.starts_with('-');
     let value = value.strip_prefix(['-', '+']).unwrap_or(value);
     let mut number = 0i128;

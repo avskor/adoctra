@@ -17,6 +17,7 @@ use crate::header::{collect_header, setext_level};
 use crate::indentation::Indentation;
 use crate::inline::scan_inlines_report;
 use crate::reader::Reader;
+use crate::ruby_strip::RubyStrip;
 use crate::tokenizer::TokenKind;
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -171,7 +172,14 @@ pub(crate) fn parse_toc_macro(line: &str, off: usize) -> Option<MacroMeta> {
         };
         match &inner[name] {
             "id" => meta.id = Some(text),
-            "role" => meta.roles = Some(text.split_whitespace().map(str::to_owned).collect()),
+            "role" => {
+                meta.roles = Some(
+                    text.split(crate::ruby_strip::is_ruby_space)
+                        .filter(|role| !role.is_empty())
+                        .map(str::to_owned)
+                        .collect(),
+                )
+            }
             "title" => {
                 let range = field.value.clone().unwrap();
                 let exact = inner[range.clone()] == text;
@@ -271,7 +279,13 @@ pub(crate) fn parse_reader<'a>(
         &mut diagnostics,
         &lines,
     );
-    check_open_styles(&body, OpenParent::Document, book, &mut diagnostics);
+    check_open_styles(
+        &body,
+        OpenParent::Document,
+        book,
+        &mut diagnostics,
+        &mut context.body_subs.excluded,
+    );
     doc.blocks.extend(body);
 
     let mut references = Vec::new();
@@ -447,7 +461,7 @@ fn collect_blocks_in(
     while lines.has(*i, context) {
         let (_, line_buffer) = lines.line(*i);
         let line = line_buffer.as_ref();
-        if line.trim().is_empty() {
+        if line.is_ruby_blank() {
             if !metadata_seen {
                 skipped += 1;
             }
@@ -667,26 +681,31 @@ fn nest_sections(
         invalid_header,
         fragment,
     } = top_level;
+    // Hierarchy diagnostics with the count of reading diagnostics Ruby
+    // reported before them.
+    let reading = diagnostics.len();
+    let mut inserted: Vec<(usize, Diagnostic)> = Vec::new();
     // Close the innermost open section into its parent (or the top level).
     // Like Ruby, a book part must end with a nested section.
     fn close(
         open: &mut Vec<Block>,
         top: &mut Vec<Block>,
         book: bool,
-        diagnostics: &mut Vec<Diagnostic>,
+        diagnostics: &mut Vec<(usize, Diagnostic)>,
+        at: usize,
     ) {
         let mut section = open.pop().unwrap();
         if let BlockKind::Section { level, blocks } = &section.kind {
             let last = blocks.last().unwrap();
             if book && *level == 0 && !matches!(last.kind, BlockKind::Section { .. }) {
-                diagnostics.push(Diagnostic {
+                diagnostics.push((at, Diagnostic {
                     omitted_span: None,
                     report: Default::default(),
                     span: blocks[0].span,
                     severity: Severity::Error,
                     message: "invalid part, must have at least one section (e.g., chapter, appendix, etc.)"
                         .into(),
-                });
+                }));
             }
             section.span.end = section.span.end.max(last.span.end);
             section.attribute_context = Arc::clone(&last.attribute_context);
@@ -757,11 +776,16 @@ fn nest_sections(
         let raw = sections
             .get(&key)
             .map_or(level, |section| section.raw_level);
+        // Ruby reports while reading the title (and closes the previous part
+        // just before it).
+        let at = sections
+            .get(&key)
+            .map_or(reading, |section| section.diagnostics_before.min(reading));
         while matches!(
             open.last(),
             Some(Block { kind: BlockKind::Section { level: current, .. }, .. }) if raw <= *current
         ) {
-            close(&mut open, &mut top, book, diagnostics);
+            close(&mut open, &mut top, book, &mut inserted, at);
             numbering.pop();
             intros.pop();
         }
@@ -774,29 +798,36 @@ fn nest_sections(
         });
         let expected = match parent {
             Some((_, Some(parent))) if !parent.allows_nesting() => {
-                diagnostics.push(Diagnostic {
-                    omitted_span: None,
-                    report: Default::default(),
-                    span: block.span,
-                    severity: Severity::Error,
-                    message: format!(
-                        "{} sections do not support nested sections",
-                        parent.sectname
-                    ),
-                });
+                inserted.push((
+                    at,
+                    Diagnostic {
+                        omitted_span: None,
+                        report: Default::default(),
+                        span: block.span,
+                        severity: Severity::Error,
+                        message: format!(
+                            "{} sections do not support nested sections",
+                            parent.sectname
+                        ),
+                    },
+                ));
                 None
             }
             Some((level, _)) => Some(level.saturating_add(1)),
             _ if unchecked => None,
             _ if raw == 0 => {
                 if !book {
-                    diagnostics.push(Diagnostic {
-                        omitted_span: None,
-                        report: Default::default(),
-                        span: block.span,
-                        severity: Severity::Error,
-                        message: "level 0 sections can only be used when doctype is book".into(),
-                    });
+                    inserted.push((
+                        at,
+                        Diagnostic {
+                            omitted_span: None,
+                            report: Default::default(),
+                            span: block.span,
+                            severity: Severity::Error,
+                            message: "level 0 sections can only be used when doctype is book"
+                                .into(),
+                        },
+                    ));
                 }
                 None
             }
@@ -809,19 +840,22 @@ fn nest_sections(
             } else {
                 format!("expected level {expected}")
             };
-            diagnostics.push(Diagnostic {
-                omitted_span: None,
-                report: crate::DiagnosticReport {
-                    location: lines.section_cursor(block.span.start).map_or(
-                        crate::DiagnosticLocation::Source,
-                        crate::DiagnosticLocation::Cursor,
-                    ),
-                    ..Default::default()
+            inserted.push((
+                at,
+                Diagnostic {
+                    omitted_span: None,
+                    report: crate::DiagnosticReport {
+                        location: lines.section_cursor(block.span.start).map_or(
+                            crate::DiagnosticLocation::Source,
+                            crate::DiagnosticLocation::Cursor,
+                        ),
+                        ..Default::default()
+                    },
+                    span: block.span,
+                    severity: Severity::Warning,
+                    message: format!("section title out of sequence: {condition}, got level {raw}"),
                 },
-                span: block.span,
-                severity: Severity::Warning,
-                message: format!("section title out of sequence: {condition}, got level {raw}"),
-            });
+            ));
         }
         // Ruby's `assign_numeral` among the parent's sections.
         let (mut path, mut closes) = (Vec::new(), Vec::new());
@@ -848,8 +882,20 @@ fn nest_sections(
         open.push(section);
     }
     while !open.is_empty() {
-        close(&mut open, &mut top, book, diagnostics);
+        close(&mut open, &mut top, book, &mut inserted, reading);
     }
+    // Merge in Ruby's reporting order: before the reading diagnostic that
+    // followed the title (stable among the inserted ones).
+    let mut read = std::mem::take(diagnostics).into_iter();
+    let mut position = 0;
+    for (at, diagnostic) in inserted {
+        while position < at {
+            diagnostics.extend(read.next());
+            position += 1;
+        }
+        diagnostics.push(diagnostic);
+    }
+    diagnostics.extend(read);
     if preamble.is_empty() {
         return top;
     }
@@ -984,11 +1030,12 @@ fn check_open_styles(
     parent: OpenParent,
     book: bool,
     diagnostics: &mut Vec<Diagnostic>,
+    excluded: &mut std::collections::BTreeSet<(usize, usize)>,
 ) {
     for block in blocks {
         let children = match &block.kind {
             BlockKind::Open { blocks } => {
-                let excluded = match block.attrs.style.as_deref() {
+                let exclusion = match block.attrs.style.as_deref() {
                     Some("abstract") if book && parent == OpenParent::Document => Some((
                         Severity::Warning,
                         "abstract block cannot be used in a document without a doctitle when doctype is book. Excluding block content.",
@@ -999,7 +1046,7 @@ fn check_open_styles(
                     )),
                     _ => None,
                 };
-                if let Some((severity, message)) = excluded {
+                if let Some((severity, message)) = exclusion {
                     diagnostics.push(Diagnostic {
                         omitted_span: None,
                         report: Default::default(),
@@ -1007,17 +1054,18 @@ fn check_open_styles(
                         severity,
                         message: message.into(),
                     });
+                    excluded.insert((block.span.start, block.span.end));
                     continue;
                 }
                 blocks
             }
             BlockKind::Section { level: 0, blocks } => {
-                check_open_styles(blocks, OpenParent::Part, book, diagnostics);
+                check_open_styles(blocks, OpenParent::Part, book, diagnostics, excluded);
                 continue;
             }
             BlockKind::List { items, .. } => {
                 for item in items {
-                    check_open_styles(&item.blocks, OpenParent::Other, book, diagnostics);
+                    check_open_styles(&item.blocks, OpenParent::Other, book, diagnostics, excluded);
                 }
                 continue;
             }
@@ -1029,7 +1077,7 @@ fn check_open_styles(
             | BlockKind::Preamble { blocks } => blocks,
             _ => continue,
         };
-        check_open_styles(children, OpenParent::Other, book, diagnostics);
+        check_open_styles(children, OpenParent::Other, book, diagnostics, excluded);
     }
 }
 
@@ -1040,6 +1088,11 @@ pub(crate) fn consume_block_metadata(
     context: &mut ParseContext,
     pending: &mut PendingMeta,
 ) -> bool {
+    // At the end of input there is no metadata line (a header ending the
+    // document, e.g. a manual page without a body).
+    if !lines.has(*i, context) {
+        return false;
+    }
     let (_, line_buffer) = lines.line(*i);
     let line = line_buffer.as_ref();
     if skip_comment(lines, i, context) {
@@ -1538,9 +1591,9 @@ fn fenced_code_attributes(line: &str) -> Vec<(String, String)> {
             if comma + 1 < rest.len() {
                 named.push(("linenums".to_owned(), String::new()));
             }
-            rest[..comma].trim()
+            rest[..comma].ruby_strip()
         }
-        None => rest.trim_start(),
+        None => rest.ruby_lstrip(),
     };
     if !language.is_empty() {
         named.push(("language".to_owned(), language.to_owned()));
@@ -1599,6 +1652,29 @@ fn read_container(
         |c| c.end,
     );
     (blocks, end)
+}
+
+/// The block context Ruby names in `unterminated <context> block`: the
+/// delimiter's own context, or the masquerading style it accepts
+/// (`DELIMITED_BLOCKS`; `source` reads as `listing`, an admonition style as
+/// `admonition`, the STEM styles as `stem`).
+fn unterminated_context(delimiter: &'static str, style: Option<&str>) -> &'static str {
+    let admonition = matches!(
+        style,
+        Some("NOTE" | "TIP" | "IMPORTANT" | "WARNING" | "CAUTION" | "admonition")
+    );
+    match (delimiter, style) {
+        ("open", Some("quote")) => "quote",
+        ("open", Some("verse")) => "verse",
+        ("open", Some("literal")) => "literal",
+        ("open", Some("listing" | "source")) => "listing",
+        ("open", Some("pass")) => "pass",
+        ("open", Some("example")) => "example",
+        ("open", Some("sidebar")) => "sidebar",
+        ("open" | "example", _) if admonition => "admonition",
+        ("pass", Some("stem" | "latexmath" | "asciimath")) => "stem",
+        (delimiter, _) => delimiter,
+    }
 }
 
 /// Capture the verbatim body of a delimited block whose opening `fence` has just
@@ -2353,9 +2429,9 @@ fn parse_block_content(
     let attrs = inline_attributes(&context.render_attributes(), pending_attrs);
     let (off, line_buffer) = lines.line(*i);
     let line = line_buffer.as_ref();
-    let trimmed = line.trim_end();
+    let trimmed = line.ruby_rstrip();
 
-    if trimmed.trim().is_empty() {
+    if trimmed.is_ruby_blank() {
         *i += 1;
         return None;
     }
@@ -2419,7 +2495,7 @@ fn parse_block_content(
             level
         } else {
             context.close_sections(level, off);
-            context.read_section((off, end), pending_style, level, title)
+            context.read_section((off, end), pending_style, level, title, diagnostics.len())
         };
         let heading_attrs = inline_attributes(&context.attributes, pending_attrs);
         // Ruby converts the title while reading only to generate an id
@@ -2658,7 +2734,7 @@ fn parse_block_content(
             i,
             opening,
             &fence,
-            "passthrough",
+            unterminated_context("pass", pending_style),
             context,
             diagnostics,
         );
@@ -2712,7 +2788,7 @@ fn parse_block_content(
             context,
             diagnostics,
             &fence,
-            "example",
+            unterminated_context("example", pending_style),
             TokenKind::ExampleDelimiter,
         );
         return Some(Block::new(
@@ -2817,8 +2893,15 @@ fn parse_block_content(
         ) {
             *i += 1;
             let opening = Span::new(start, off + line.len());
-            let (body_start, body_end, end, closing) =
-                capture_verbatim_body(lines, i, opening, &fence, "open", context, diagnostics);
+            let (body_start, body_end, end, closing) = capture_verbatim_body(
+                lines,
+                i,
+                opening,
+                &fence,
+                unterminated_context("open", pending_style),
+                context,
+                diagnostics,
+            );
             let text = match pending_style {
                 Some("literal") => Some(TokenKind::LiteralText),
                 Some("source" | "listing") => Some(TokenKind::ListingText),
@@ -2882,7 +2965,7 @@ fn parse_block_content(
             context,
             diagnostics,
             &fence,
-            "open",
+            unterminated_context("open", pending_style),
             TokenKind::OpenDelimiter,
         );
         return Some(Block::new(
@@ -2942,14 +3025,14 @@ fn parse_block_content(
     } {
         let (loff, lline_buffer) = lines.line(*i);
         let lline = lline_buffer.as_ref();
-        let t = lline.trim_end();
+        let t = lline.ruby_rstrip();
         // Ruby's `read_paragraph_lines`: a blank line, a list continuation, a
         // delimited block or a block attribute line ends the paragraph, and in
         // a list item directly after its marker, any list item too. A verbatim
         // paragraph (`[literal]`, `[listing]`, `[source]`, `[verse]`) ends only at a blank
         // line or a list continuation, so it keeps fence-looking lines.
         let ends = (!verbatim && comment_fence(t).is_some())
-            || t.trim().is_empty()
+            || t.is_ruby_blank()
             || t == "+"
             || (!verbatim
                 && (crate::lists::delimited(t).is_some() || crate::lists::block_attribute_line(t)))
@@ -2977,7 +3060,11 @@ fn parse_block_content(
             ..
         }
     );
-    if line.starts_with([' ', '\t']) && pending_style.is_none() && !text_only && !dlist_adjacent {
+    // Ruby resets a style it does not know for a paragraph (outside
+    // `PARAGRAPH_STYLES` and the admonitions) before this check.
+    let unstyled =
+        !pending_style.is_some_and(|style| changes_paragraph_type(style) || style == "normal");
+    if line.starts_with([' ', '\t']) && unstyled && !text_only && !dlist_adjacent {
         let text = Indentation::strip()
             .apply_text(&lines.content(start, end).text)
             .lines()
@@ -3755,7 +3842,7 @@ fn parse_list(
         });
         end = item_end;
         // Ruby's `reader.skip_blank_lines || break`.
-        while lines.has(*i, context) && lines[*i].1.trim().is_empty() {
+        while lines.has(*i, context) && lines[*i].1.is_ruby_blank() {
             *i += 1;
         }
     }
@@ -3946,7 +4033,6 @@ fn abs_offset(source: &str, sub: &str) -> usize {
 /// six `=` or `#`, spaces or tabs, the title, and optionally the same marker
 /// again after spaces or tabs (`== Title ==`), which is not part of the title.
 pub(crate) fn parse_heading(line: &str) -> Option<(u8, &str)> {
-    let line = line.trim_start();
     let marker_char = line.chars().next().filter(|c| matches!(c, '=' | '#'))?;
     let count = line.chars().take_while(|&c| c == marker_char).count();
     if count > 6 {
@@ -4041,13 +4127,18 @@ pub(crate) fn section_anchor(title: &str) -> Option<SectionAnchor<'_>> {
 /// An *inline* `[[id]]` embedded mid-line is a different construct (an empty
 /// `<a id>`); this matches only a line that is wholly an anchor.
 pub(crate) fn parse_block_anchor(line: &str) -> Option<(Option<&str>, Option<&str>)> {
-    let inner = line.trim().strip_prefix("[[")?.strip_suffix("]]")?;
+    // Ruby's `BlockAnchorRx` is anchored at the line start: an indented
+    // anchor is a literal paragraph line.
+    let inner = line
+        .trim_end_matches([' ', '\t'])
+        .strip_prefix("[[")?
+        .strip_suffix("]]")?;
     if inner.is_empty() {
         return Some((None, None));
     }
     let (id, reftext) = match inner.find(',') {
         Some(c) => {
-            let rt = inner[c + 1..].trim();
+            let rt = inner[c + 1..].ruby_strip();
             (&inner[..c], (!rt.is_empty()).then_some(rt))
         }
         None => (inner, None),
@@ -4077,7 +4168,7 @@ pub(crate) fn parse_block_title(line: &str) -> Option<&str> {
     // An optional single dot may lead the title text; the *next* byte is the one
     // that must be significant (non-dot, non-whitespace).
     let significant = if first == b'.' { bytes.next()? } else { first };
-    (significant != b'.' && !significant.is_ascii_whitespace()).then(|| rest.trim_end())
+    (significant != b'.' && !significant.is_ascii_whitespace()).then(|| rest.ruby_rstrip())
 }
 
 /// Whether `id` is a well-formed anchor id (asciidoctor's `[\p{Word}:][\p{Word}:.-]*`):
@@ -4595,8 +4686,10 @@ mod tests {
             parse_block_anchor("[[id,ref text]]"),
             Some((Some("id"), Some("ref text")))
         );
-        // Surrounding whitespace and a trimmed-empty reftext are tolerated.
-        assert_eq!(parse_block_anchor("  [[id]]  "), Some((Some("id"), None)));
+        // Trailing whitespace and a trimmed-empty reftext are tolerated; an
+        // indented line is not an anchor (Ruby's `BlockAnchorRx` is anchored).
+        assert_eq!(parse_block_anchor("[[id]]  "), Some((Some("id"), None)));
+        assert_eq!(parse_block_anchor("  [[id]]"), None);
         assert_eq!(parse_block_anchor("[[id, ]]"), Some((Some("id"), None)));
         // Ruby's BlockAnchorRx: an empty `[[]]` is an anchor without an id;
         // ids are `[\p{Alpha}_:][\p{Word}\-:.]*` (Unicode, no leading digit).

@@ -121,8 +121,10 @@ def load_corpus(path):
 
 
 def invoke(command, source):
-    result = subprocess.run(command, input=source, text=True, encoding="utf-8",
-                            capture_output=True, timeout=30)
+    # Bytes, not text mode: universal newlines would turn a lone CR into LF.
+    raw = subprocess.run(command, input=source.encode("utf-8"), capture_output=True, timeout=30)
+    result = subprocess.CompletedProcess(raw.args, raw.returncode, raw.stdout.decode("utf-8"),
+                                         raw.stderr.decode("utf-8"))
     if result.returncode:
         raise RuntimeError(f"{' '.join(map(str, command))}: {result.stderr.strip()}")
     return result

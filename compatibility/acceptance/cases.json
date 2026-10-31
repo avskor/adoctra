@@ -92,6 +92,11 @@
         "path": "sources/groovy-5.1.3/LICENSE",
         "sha256": "25d17b39701548467d390c288118a7efc52b9f48cdfed9799a7bdb0f76582003"
       }
+    },
+    "adoctra-fuzz-v1": {
+      "project": "adoctra",
+      "revision": "fuzz-v1",
+      "source": "Minimized findings of scripts/fuzz.py (seeded mutations of the compatibility corpus); not upstream test cases"
     }
   },
   "files": {
@@ -425,6 +430,38 @@
       "sha256": "4eb680f8d05e1a23a78c289b55442685902e484d75825ad02722890e735569b6",
       "origin": "quarkus-3.40.1",
       "upstream_path": "docs/src/main/asciidoc/_attributes-local.adoc"
+    },
+    "sources/fuzz/unterminated-pass.adoc": {
+      "sha256": "94ff1124fdde57e3e238e552a49b172776e8378a33264739af716efa5e16ba43",
+      "origin": "adoctra-fuzz-v1"
+    },
+    "sources/fuzz/unterminated-stem.adoc": {
+      "sha256": "44b22880029fc4ebd45bcce37d17a2f00ba6270ded11183bd1193cd81140d19b",
+      "origin": "adoctra-fuzz-v1"
+    },
+    "sources/fuzz/unterminated-admonition-example.adoc": {
+      "sha256": "6ea317213d45059c50bc1660432263b234780dfd27b691eeb42503792bfbd4d9",
+      "origin": "adoctra-fuzz-v1"
+    },
+    "sources/fuzz/unterminated-source-open.adoc": {
+      "sha256": "fb186c8cdef3e4520a684899621954f7d7f88e7e50d547ab884324b4a269dbca",
+      "origin": "adoctra-fuzz-v1"
+    },
+    "sources/fuzz/level-zero-before-unterminated.adoc": {
+      "sha256": "ba74dfbc3183c7684472ae3e3204b6e98d4f4bae07830872f90fc6fbafc44d87",
+      "origin": "adoctra-fuzz-v1"
+    },
+    "sources/fuzz/invalid-part-order.adoc": {
+      "sha256": "43441c4f0fe1cf6a6d0cb7d16f79a332c8a4e6fe8a14b9ffd8ec96b31ac6d822",
+      "origin": "adoctra-fuzz-v1"
+    },
+    "sources/fuzz/preprocessor-error-order.adoc": {
+      "sha256": "447c3d5f6c2a68d23030b4b1d636014925aa414821973fc7b7d33feac3f9cfc1",
+      "origin": "adoctra-fuzz-v1"
+    },
+    "sources/fuzz/missing-attribute-in-title-order.adoc": {
+      "sha256": "3e0574d682e44ae5b747daa6b4d53da18e16b45117e557c3c15468f618fafa49",
+      "origin": "adoctra-fuzz-v1"
     }
   },
   "cases": [
@@ -2315,6 +2352,56 @@
       "category": "document",
       "source": "sources/groovy-5.1.3/src/spec/doc/core-getting-started.adoc",
       "expect": "pass"
+    },
+    {
+      "id": "fuzz-unterminated-pass",
+      "category": "diagnostics",
+      "source": "sources/fuzz/unterminated-pass.adoc",
+      "expect": "pass"
+    },
+    {
+      "id": "fuzz-unterminated-stem",
+      "category": "diagnostics",
+      "source": "sources/fuzz/unterminated-stem.adoc",
+      "expect": "pass"
+    },
+    {
+      "id": "fuzz-unterminated-admonition-example",
+      "category": "diagnostics",
+      "source": "sources/fuzz/unterminated-admonition-example.adoc",
+      "expect": "pass"
+    },
+    {
+      "id": "fuzz-unterminated-source-open",
+      "category": "diagnostics",
+      "source": "sources/fuzz/unterminated-source-open.adoc",
+      "expect": "pass"
+    },
+    {
+      "id": "fuzz-level-zero-before-unterminated",
+      "category": "diagnostics",
+      "source": "sources/fuzz/level-zero-before-unterminated.adoc",
+      "expect": "pass"
+    },
+    {
+      "id": "fuzz-invalid-part-order",
+      "category": "diagnostics",
+      "source": "sources/fuzz/invalid-part-order.adoc",
+      "expect": "pass"
+    },
+    {
+      "id": "fuzz-preprocessor-error-order",
+      "category": "diagnostics",
+      "source": "sources/fuzz/preprocessor-error-order.adoc",
+      "expect": "xfail",
+      "reason": "Ruby reports a preprocessor directive error when its reader reaches the line, before the unterminated block warning at the end of input; adoctra appends reader diagnostics after the parser's (cross-pass emission order is not yet unified)"
+    },
+    {
+      "id": "fuzz-missing-attribute-in-title-order",
+      "category": "diagnostics",
+      "source": "sources/fuzz/missing-attribute-in-title-order.adoc",
+      "expect": "xfail",
+      "reason": "Ruby converts a section title while reading it (sectids), so its missing-attribute warning precedes the later unterminated listing; adoctra reports conversion diagnostics after reading diagnostics"
     }
   ]
 }

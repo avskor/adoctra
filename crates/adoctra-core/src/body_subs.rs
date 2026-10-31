@@ -91,6 +91,10 @@ pub(crate) struct BodySubs {
     pub caption_counters: BTreeMap<(usize, usize), (&'static str, Vec<AttributePart>)>,
     /// AsciiDoc table cells, keyed by the cell's reader range.
     pub nested: BTreeMap<(usize, usize), Nested>,
+    /// Blocks Ruby's converter excludes (a misplaced abstract or partintro),
+    /// keyed by their range: never converted, so nothing inside registers
+    /// (footnotes) or reads the conversion attributes.
+    pub excluded: BTreeSet<(usize, usize)>,
 }
 
 impl BodySubs {
@@ -246,6 +250,7 @@ impl BodySubs {
         Vec<crate::ast::FootnoteDefinition>,
     ) {
         let mut execution = Execution {
+            excluded: std::mem::take(&mut self.excluded),
             start,
             tokens: &mut self.tokens,
             pending: &mut self.pending,
@@ -350,6 +355,8 @@ impl BodySubs {
 }
 
 struct Execution<'a, 's> {
+    /// See [`BodySubs::excluded`].
+    excluded: BTreeSet<(usize, usize)>,
     /// The converter's hook ([`crate::ConversionStart`]).
     start: Option<&'s mut dyn crate::ConversionStart>,
     tokens: &'a mut Vec<crate::Token>,
@@ -895,6 +902,9 @@ impl Execution<'_, '_> {
 
     fn blocks(&mut self, blocks: &mut [Block]) {
         for block in blocks {
+            if self.excluded.contains(&(block.span.start, block.span.end)) {
+                continue;
+            }
             self.replay(block.span.start);
             if let Some((context, parts)) = self
                 .caption_counters

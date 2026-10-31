@@ -37040,6 +37040,107 @@
       "binary_resources": {
         "part.adoc": "efbbbfff2f2f207461673a3a626f64795b5d0afeff002a00730068006f0077006e002a000a2f2f20656e643a3a6f746865725b5d0a"
       }
+    },
+    {
+      "id": "fuzz-indented-heading-is-literal",
+      "category": "fuzz",
+      "expect": "pass",
+      "source": " = t"
+    },
+    {
+      "id": "fuzz-indented-section-after-title-is-literal",
+      "category": "fuzz",
+      "expect": "pass",
+      "source": "= T\n\n == Sub"
+    },
+    {
+      "id": "fuzz-indented-block-anchor-is-literal",
+      "category": "fuzz",
+      "expect": "pass",
+      "source": " [[n,]]"
+    },
+    {
+      "id": "fuzz-no-break-space-line-is-a-paragraph",
+      "category": "fuzz",
+      "expect": "pass",
+      "source": "\u00a0"
+    },
+    {
+      "id": "fuzz-ideographic-space-line-joins-paragraph",
+      "category": "fuzz",
+      "expect": "pass",
+      "source": "a\n\u3000\nb"
+    },
+    {
+      "id": "fuzz-role-keeps-no-break-space",
+      "category": "fuzz",
+      "expect": "pass",
+      "source": "[.r\u00a0s]\npara"
+    },
+    {
+      "id": "fuzz-excluded-partintro-footnote",
+      "category": "fuzz",
+      "expect": "pass",
+      "source": "[partintro]\n--\nfootnote:[e] footnote:x[f]\n--\n\nfootnote:x[] footnote:[g]"
+    },
+    {
+      "id": "fuzz-unknown-style-indented-literal",
+      "category": "fuzz",
+      "expect": "pass",
+      "source": "[e]\n e"
+    },
+    {
+      "id": "fuzz-stem-style-indented-literal",
+      "category": "fuzz",
+      "expect": "pass",
+      "source": "[stem]\n x"
+    },
+    {
+      "id": "fuzz-fence-like-multibyte-paragraph",
+      "category": "fuzz",
+      "expect": "pass",
+      "source": "``\u043e}"
+    },
+    {
+      "id": "fuzz-listing-keeps-lone-carriage-return",
+      "category": "fuzz",
+      "expect": "pass",
+      "source": "----\n\re\n----"
+    },
+    {
+      "id": "fuzz-list-item-indented-plus-line",
+      "category": "fuzz",
+      "expect": "xfail",
+      "reason": "Ruby reads a list item's indented ` +` line so that no hard line break results; adoctra keeps the hard break (list item line reading not yet ported for this case)",
+      "source": "* a\n +"
+    },
+    {
+      "id": "fuzz-dlist-folded-attribute-entry",
+      "category": "fuzz",
+      "expect": "xfail",
+      "reason": "Ruby parses the item's adjacent lines as a block, so a leading attribute entry is consumed before the paragraph folds into the description; adoctra folds the raw lines",
+      "source": "m;; f\n:x: \n["
+    },
+    {
+      "id": "fuzz-unresolved-xref-markup-fallback",
+      "category": "fuzz",
+      "expect": "xfail",
+      "reason": "Ruby's fallback `[refid]` is the substituted id with its markup; adoctra renders the id text escaped",
+      "source": "D<<y *e*>>"
+    },
+    {
+      "id": "fuzz-role-entity-reference",
+      "category": "fuzz",
+      "expect": "xfail",
+      "reason": "Ruby writes a role unescaped, so an entity reference in it is decoded by HTML; adoctra escapes the role",
+      "source": "[.&mp;]\n}"
+    },
+    {
+      "id": "fuzz-doctitle-counter-evaluations",
+      "category": "fuzz",
+      "expect": "xfail",
+      "reason": "Ruby converts the document title several times, each advancing the counter; adoctra evaluates it once",
+      "source": "= {counter:n}\n{counter:n}"
     }
   ]
 }

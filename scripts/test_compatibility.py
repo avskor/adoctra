@@ -1,7 +1,11 @@
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
-from compatibility import case_commands, classify, projection, validate_attributes, validate_resources
+from compatibility import (case_commands, classify, html_classes, projection, read_reference, run,
+                           validate_attributes, validate_resources)
 
 
 class ProjectionTests(unittest.TestCase):
@@ -178,6 +182,22 @@ class ProjectionTests(unittest.TestCase):
         swapped = ours.replace('<span class="colist-icon"><img src="2.png" alt="2"></span><div>Two</div>',
                                '<span class="colist-icon">Two</span><div><img src="2.png" alt="2"></div>')
         self.assertNotEqual(projection(swapped), projection(ruby))
+
+    def test_class_tokens_split_on_ascii_whitespace_only(self):
+        # A no-break space stays inside a class name, like a Ruby role.
+        self.assertEqual(html_classes("paragraph r\u00a0s\tt"), ["paragraph", "r\u00a0s", "t"])
+        self.assertEqual(projection('<div class="paragraph r\u00a0s"><p>x</p></div>'),
+                         projection('<p class="r\u00a0s">x</p>'))
+        self.assertNotEqual(projection('<p class="r\u00a0s">x</p>'), projection('<p class="r s">x</p>'))
+
+    def test_run_and_references_keep_a_lone_carriage_return(self):
+        with patch("compatibility.subprocess.run",
+                   return_value=subprocess.CompletedProcess([], 0, "<pre>\re</pre>".encode(), b"")):
+            self.assertEqual(run(["x"], "s"), "<pre>\re</pre>")
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "r.html"
+            path.write_text("<pre>\re</pre>\n", encoding="utf-8", newline="")
+            self.assertEqual(read_reference(path), "<pre>\re</pre>\n")
 
     def test_horizontal_description_list_is_ruby_layout_table(self):
         ruby = ('<div class="hdlist r"><table><colgroup><col style="width: 20%;"></colgroup><tr>'

@@ -3,6 +3,7 @@
 use crate::context::ParseContext;
 use crate::diagnostic::{Diagnostic, Severity};
 use crate::reader::Reader;
+use crate::ruby_strip::RubyStrip;
 use crate::scanner::FilteredSource;
 use crate::Span;
 
@@ -11,7 +12,7 @@ pub(crate) fn is_line_comment(line: &str) -> bool {
 }
 
 pub(crate) fn comment_fence(line: &str) -> Option<&str> {
-    let line = line.trim_end();
+    let line = line.ruby_rstrip();
     (line.len() >= 4 && line.bytes().all(|b| b == b'/')).then_some(line)
 }
 
@@ -55,7 +56,7 @@ pub(crate) fn consume_delimited_comment(
         let line = line_buffer.as_ref();
         end = off + line.len();
         *i += 1;
-        if line.trim_end() == fence {
+        if line.ruby_rstrip() == fence {
             closed = true;
             break;
         }

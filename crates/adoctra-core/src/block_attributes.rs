@@ -10,6 +10,7 @@ use crate::context::ParseContext;
 use crate::diagnostic::{Diagnostic, Severity};
 use crate::inline_attributes::Reference;
 use crate::parser::PendingMeta;
+use crate::ruby_strip::RubyStrip;
 use crate::substitution_text::Text;
 use crate::{Inline, Span};
 use std::collections::BTreeMap;
@@ -57,7 +58,7 @@ impl BlockList {
 
 /// `^\[(|[\p{Word}.#%{,"'].*)\]$`, excluding `[[` lines (anchors only).
 pub(crate) fn attr_list_inner(line: &str) -> Option<&str> {
-    let line = line.trim_end();
+    let line = line.ruby_rstrip();
     if line.starts_with("[[") {
         return None;
     }
@@ -201,7 +202,13 @@ fn merge_fields(
             }
             "id" => pending.id = Some(text),
             // The named role replaces earlier roles; shorthand roles append.
-            "role" => pending.roles = text.split_whitespace().map(str::to_owned).collect(),
+            "role" => {
+                pending.roles = text
+                    .split(crate::ruby_strip::is_ruby_space)
+                    .filter(|role| !role.is_empty())
+                    .map(str::to_owned)
+                    .collect()
+            }
             _ => {
                 pending.list.named.insert(name, text);
             }

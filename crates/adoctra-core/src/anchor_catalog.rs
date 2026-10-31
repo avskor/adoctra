@@ -5,6 +5,7 @@
 //! reftext runs the early a-stage with reading state; like block-anchor
 //! reftext, each reference formats it with c/q/r during conversion.
 use crate::context::ParseContext;
+use crate::ruby_strip::RubyStrip;
 use crate::unicode_word::is_word;
 use crate::Span;
 use std::ops::Range;
@@ -269,7 +270,7 @@ impl ParseContext<'_> {
         };
         let range = found.reftext.clone().unwrap_or_else(|| {
             let rest = &text[found.end..];
-            found.end + (rest.len() - rest.trim_start().len())..text.len()
+            found.end + (rest.len() - rest.ruby_lstrip().len())..text.len()
         });
         let reftext = (!range.is_empty()).then(|| {
             let base = map(range.clone()).start;

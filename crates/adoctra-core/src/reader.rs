@@ -2,6 +2,7 @@
 //! to the parser; each line is evaluated once, when that parser requests it.
 use crate::context::ParseContext;
 use crate::include_indent::Line;
+use crate::ruby_strip::RubyStrip;
 use crate::scanner::FilteredSource;
 use crate::{Attributes, Diagnostic, Inline, Severity, Span};
 use std::{ops::Index, sync::Arc};
@@ -719,7 +720,7 @@ impl<'a> Reader<'a> {
     ) -> Option<(usize, Arc<str>)> {
         let active = self.stack.last().map_or(true, |c| c.active);
         let span = Span::new(off, off + line.len());
-        let directive_line = line.trim_end();
+        let directive_line = line.ruby_rstrip();
         let (escaped, candidate) = directive_line
             .strip_prefix('\\')
             .map_or((false, directive_line), |s| (true, s));
@@ -876,7 +877,7 @@ impl<'a> Reader<'a> {
             None
         } else if include {
             let start = off + candidate.len() - text.len() - 1;
-            let text = text.trim_end();
+            let text = text.ruby_rstrip();
             self.directives.push(Span::new(off, start));
             self.directives
                 .push(Span::new(start + text.len(), span.end));
@@ -1471,7 +1472,9 @@ impl<'a> Reader<'a> {
             if off + line.len() < end {
                 let (eol_start, eol) = &self.endings[index];
                 if *eol_start < end {
-                    fragments.push((*eol_start, eol.as_str()));
+                    // Ruby's reader normalizes every line ending to LF; the
+                    // LF maps to where the source ending (CRLF too) starts.
+                    fragments.push((*eol_start, if eol.is_empty() { "" } else { "\n" }));
                 }
             }
         }

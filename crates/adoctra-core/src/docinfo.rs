@@ -4,6 +4,7 @@
 //! from `docinfodir` (default: the document's directory), normalized and
 //! substituted with `docinfosubs` (default: attributes).
 use crate::pass_subs::{Defaults, Stage};
+use crate::ruby_strip::RubyStrip;
 use crate::{AttributePart, Attributes, ResourceProvider, ResourceRequest, Span};
 
 /// Where the converter places docinfo content.
@@ -41,7 +42,7 @@ pub fn docinfo(
     let selected: Vec<String> = match attributes.get("docinfo") {
         Some(value) if !value.is_empty() => value
             .split(',')
-            .map(|name| name.trim().to_owned())
+            .map(|name| name.ruby_strip().to_owned())
             .collect(),
         value => {
             let names: &[&str] = if attributes.get("docinfo2").is_some() {

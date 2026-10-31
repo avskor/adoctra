@@ -39,6 +39,9 @@ pub(crate) struct Section {
     pub closes: Vec<usize>,
     /// Where reading closed this section (`usize::MAX` at the end).
     pub closed_at: usize,
+    /// How many reading diagnostics preceded the title line: Ruby reports
+    /// the section's level errors when it reads the title, so they go there.
+    pub diagnostics_before: usize,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -117,6 +120,7 @@ impl Section {
             path: Vec::new(),
             closes: Vec::new(),
             closed_at: usize::MAX,
+            diagnostics_before: 0,
         }
     }
 

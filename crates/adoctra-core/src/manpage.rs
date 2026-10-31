@@ -6,6 +6,7 @@ use crate::attributes::reference_text;
 use crate::context::ParseContext;
 use crate::parser::PendingMeta;
 use crate::reader::Reader;
+use crate::ruby_strip::RubyStrip;
 use crate::substitution_text::Text;
 use crate::{AttributePart, Block, BlockKind, Diagnostic, Manpage, NameSection, Severity, Span};
 use std::ops::Range;
@@ -39,7 +40,7 @@ pub(crate) fn read(
             ..Manpage::default()
         };
     }
-    while lines.has(*i, context) && lines[*i].1.trim().is_empty() {
+    while lines.has(*i, context) && lines[*i].1.is_ruby_blank() {
         *i += 1;
     }
     let save = *i;
@@ -47,7 +48,7 @@ pub(crate) fn read(
         if !crate::parser::consume_block_metadata(lines, i, context, pending) {
             break;
         }
-        while lines.has(*i, context) && lines[*i].1.trim().is_empty() {
+        while lines.has(*i, context) && lines[*i].1.is_ruby_blank() {
             *i += 1;
         }
     }
@@ -193,13 +194,13 @@ fn name_section(
         })
         .collect::<Vec<_>>();
     *i += consumed;
-    while lines.has(*i, context) && lines[*i].1.trim().is_empty() {
+    while lines.has(*i, context) && lines[*i].1.is_ruby_blank() {
         *i += 1;
     }
     // Ruby's `read_lines_until break_on_blank_lines: true, skip_line_comments: true`.
     let mut buffer = Text::default();
     let mut body: Option<Span> = None;
-    while lines.has(*i, context) && !lines[*i].1.trim().is_empty() {
+    while lines.has(*i, context) && !lines[*i].1.is_ruby_blank() {
         let (off, line) = lines.line(*i);
         let span = Span::new(off, off + line.len());
         *i += 1;
@@ -207,7 +208,7 @@ fn name_section(
             context.comments.push(span);
             continue;
         }
-        let text = line.trim_start();
+        let text = line.ruby_lstrip();
         let start = off + line.len() - text.len();
         if let Some(previous) = body {
             buffer.append_source(" ", true, 0, Span::new(previous.end, previous.end));
@@ -237,7 +238,7 @@ fn name_section(
     }
     let mut names = reference_text(&text.into_parts())
         .split(',')
-        .map(|name| name.trim_start().to_owned())
+        .map(|name| name.ruby_lstrip().to_owned())
         .collect::<Vec<_>>();
     // Ruby's `String#split` drops trailing empty fields.
     while names.last().is_some_and(String::is_empty) {

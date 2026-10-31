@@ -89,9 +89,15 @@ def trim_edges(children):
     return [child for child in children if child != ""]
 
 
+def html_classes(value):
+    """A class attribute's tokens: HTML splits on ASCII whitespace only (a
+    no-break space stays inside a class name, as in a Ruby role)."""
+    return [c for c in re.split(r"[ \t\n\f\r]+", value) if c]
+
+
 def hdlist(node):
     attrs = dict(node.attrs)
-    classes = [c for c in attrs.get("class", "").split() if c != "hdlist"]
+    classes = [c for c in html_classes(attrs.get("class", "")) if c != "hdlist"]
     attrs.pop("class", None)
     if classes:
         attrs["class"] = " ".join(classes)
@@ -101,7 +107,7 @@ def hdlist(node):
                 for r in ([c] if c.tag == "tr" else c.children) if isinstance(r, Element) and r.tag == "tr"]
         for row in rows:
             for cell in (c for c in row.children if isinstance(c, Element) and c.tag == "td"):
-                cell_classes = cell.attrs.get("class", "").split()
+                cell_classes = html_classes(cell.attrs.get("class", ""))
                 if "hdlist1" in cell_classes:
                     dt_attrs = {"class": "strong"} if "strong" in cell_classes else {}
                     term = []
@@ -138,7 +144,7 @@ def colist_icons(node):
     """adoctra's callout list with icons: each item's icon <span> and text
     <div> (laid out like Ruby's table by the stylesheet) in the shared form."""
     attrs = dict(node.attrs)
-    attrs["class"] = " ".join(c for c in attrs["class"].split() if c != "icons")
+    attrs["class"] = " ".join(c for c in html_classes(attrs["class"]) if c != "icons")
     items = []
     for item in node.children:
         if isinstance(item, Element) and item.tag == "li":
@@ -161,7 +167,7 @@ def admonition(node):
     attrs = {k: v for k, v in node.attrs.items() if k in {"id"}}
     if node.tag == "aside":
         attrs["type"] = node.attrs.get("data-type", "")
-        roles = [c for c in node.attrs.get("class", "").split() if c != "admonition"]
+        roles = [c for c in html_classes(node.attrs.get("class", "")) if c != "admonition"]
         children = [c for c in node.children if not (isinstance(c, str) and not c.strip())]
         label = []
         if children and isinstance(children[0], Element) and children[0].tag == "p" \
@@ -172,7 +178,7 @@ def admonition(node):
                 and children[0].attrs.get("class") == "admonition-content":
             children = children[0].children
     else:
-        classes = node.attrs.get("class", "").split()
+        classes = html_classes(node.attrs.get("class", ""))
         attrs["type"] = classes[1] if len(classes) > 1 else ""
         roles = classes[2:]
         cells = [cell for table in node.children if isinstance(table, Element) and table.tag == "table"
@@ -209,29 +215,29 @@ def normalize(node, verbatim=False, block_kind=None):
     if node.tag == "nav":
         # adoctra's TOC <nav> is Ruby's <div id="toc">.
         node = Element("div", node.attrs, node.children)
-    if node.tag == "figure" and {"imageblock", "videoblock", "audioblock"} & set(node.attrs.get("class", "").split()):
+    if node.tag == "figure" and {"imageblock", "videoblock", "audioblock"} & set(html_classes(node.attrs.get("class", ""))):
         # adoctra's media <figure> is Ruby's imageblock/videoblock/audioblock
         # <div>, whose player sits in a content wrapper that drops below.
         node = Element("div", node.attrs, node.children)
-    if node.tag == "aside" and "sidebarblock" in node.attrs.get("class", "").split():
+    if node.tag == "aside" and "sidebarblock" in html_classes(node.attrs.get("class", "")):
         # adoctra's sidebar <aside> is Ruby's sidebarblock <div>, whose
         # children sit in a content wrapper that drops below.
         node = Element("div", node.attrs, node.children)
-    if (node.tag == "aside" and "admonition" in node.attrs.get("class", "").split()) \
-            or (node.tag == "div" and node.attrs.get("class", "").split()[:1] == ["admonitionblock"]):
+    if (node.tag == "aside" and "admonition" in html_classes(node.attrs.get("class", ""))) \
+            or (node.tag == "div" and html_classes(node.attrs.get("class", ""))[:1] == ["admonitionblock"]):
         node = admonition(node)
     if node.tag == "figcaption" and node.attrs.get("class") == "title":
         # A media <figcaption> is Ruby's title <div> (trailing for images,
         # leading for video and audio).
         node = Element("div", node.attrs, node.children)
-    if node.tag == "div" and "hdlist" in node.attrs.get("class", "").split():
+    if node.tag == "div" and "hdlist" in html_classes(node.attrs.get("class", "")):
         # Ruby's horizontal description list is a layout table; adoctra's is a
         # <dl class="hdlist">. Rows become terms (split at <br>) and descriptions.
         node = hdlist(node)
-    if node.tag == "dl" and "hdlist" in node.attrs.get("class", "").split():
+    if node.tag == "dl" and "hdlist" in html_classes(node.attrs.get("class", "")):
         # adoctra's entries are <div> groups (rows); widths are stylesheet variables.
         attrs = {k: v for k, v in node.attrs.items() if k != "style"}
-        classes = [c for c in attrs.get("class", "").split() if c != "hdlist"]
+        classes = [c for c in html_classes(attrs.get("class", "")) if c != "hdlist"]
         attrs.pop("class", None)
         if classes:
             attrs["class"] = " ".join(classes)
@@ -242,21 +248,21 @@ def normalize(node, verbatim=False, block_kind=None):
     if node.tag == "iframe" and node.attrs.get("frameborder") == "0":
         # Ruby's obsolete frameborder="0" is adoctra's stylesheet border.
         node = Element("iframe", {k: v for k, v in node.attrs.items() if k != "frameborder"}, node.children)
-    if node.tag == "div" and "colist" in node.attrs.get("class", "").split() \
+    if node.tag == "div" and "colist" in html_classes(node.attrs.get("class", "")) \
             and any(isinstance(c, Element) and c.tag == "table" for c in node.children):
         node = colist_table(node)
-    if node.tag == "ol" and {"colist", "icons"} <= set(node.attrs.get("class", "").split()):
+    if node.tag == "ol" and {"colist", "icons"} <= set(html_classes(node.attrs.get("class", ""))):
         node = colist_icons(node)
-    if node.tag == "ol" and "colist" in node.attrs.get("class", "").split():
+    if node.tag == "ol" and "colist" in html_classes(node.attrs.get("class", "")):
         # adoctra's callout list is Ruby's ordered list inside div.colist.
         attrs = dict(node.attrs)
-        classes = [c for c in attrs["class"].split() if c not in {"colist", "arabic"}]
+        classes = [c for c in html_classes(attrs["class"]) if c not in {"colist", "arabic"}]
         attrs.pop("class")
         if classes:
             attrs["class"] = " ".join(classes)
         node = Element("ol", attrs, node.children)
     tag, attrs = node.tag, dict(node.attrs)
-    classes = attrs.get("class", "").split()
+    classes = html_classes(attrs.get("class", ""))
     wrapper = None
     # Quote and verse blocks: Ruby's div/attribution layout and adoctra's
     # figure/figcaption idiom project to the same named nodes.
@@ -346,8 +352,8 @@ def normalize(node, verbatim=False, block_kind=None):
             target = targets[0]
             for key, value in attrs.items():
                 if key == "class" and key in target["attrs"]:
-                    merged = target["attrs"][key].split()
-                    merged += [c for c in value.split() if c not in merged]
+                    merged = html_classes(target["attrs"][key])
+                    merged += [c for c in html_classes(value) if c not in merged]
                     target["attrs"][key] = " ".join(merged)
                 elif key in target["attrs"]:
                     raise ValueError(f"ambiguous wrapper attribute {key}")
@@ -380,11 +386,19 @@ def projection(html):
     return compact([result for node in roots for result in normalize(node)])
 
 
+def read_reference(path):
+    """A stored reference as written: no universal-newline translation (a
+    lone CR in Ruby's output is content)."""
+    with open(path, encoding="utf-8", newline="") as file:
+        return file.read()
+
+
 def run(command, source):
-    result = subprocess.run(command, input=source, text=True, encoding="utf-8", capture_output=True, timeout=30)
+    # Bytes, not text mode: universal newlines would turn a lone CR into LF.
+    result = subprocess.run(command, input=source.encode("utf-8"), capture_output=True, timeout=30)
     if result.returncode:
-        raise RuntimeError(f"{' '.join(map(str, command))}: {result.stderr.strip()}")
-    return result.stdout
+        raise RuntimeError(f"{' '.join(map(str, command))}: {result.stderr.decode('utf-8', 'replace').strip()}")
+    return result.stdout.decode("utf-8")
 
 
 def validate_resources(case):
@@ -502,12 +516,12 @@ def main():
                 if args.update_reference:
                     projection(reference)  # Reject malformed fixtures before storing them.
                     reference_path.parent.mkdir(exist_ok=True)
-                    reference_path.write_text(reference, encoding="utf-8")
-                elif reference != reference_path.read_text(encoding="utf-8"):
+                    reference_path.write_text(reference, encoding="utf-8", newline="")
+                elif reference != read_reference(reference_path):
                     raise ValueError(f"reference drift: {case['id']}; review before --update-reference")
             if args.update_reference:
                 continue
-            expected = projection(reference_path.read_text(encoding="utf-8"))
+            expected = projection(read_reference(reference_path))
             actual = projection(run(actual_command, case["source"]))
         baseline = None
         if case["expect"] == "xfail":

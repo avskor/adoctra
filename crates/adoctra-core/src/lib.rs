@@ -46,6 +46,7 @@ mod reftext;
 mod replacements;
 mod resolve;
 pub mod resource;
+mod ruby_strip;
 mod scanner;
 mod section_numbers;
 pub mod source;

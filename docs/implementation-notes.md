@@ -2053,3 +2053,24 @@ ExtAtxSectionTitleRx (`=` or Markdown `#` markers, 1-6, spaces/tabs, an
 optional closing marker of the same length after a blank: `== T ==`).
 parse_block_anchor is BlockAnchorRx: ids `[\p{Alpha}_:][\p{Word}\-:.]*` (no
 leading digit), and an empty `[[]]` is an anchor that clears the pending id.
+
+**Fuzzing** (`scripts/fuzz.py`, profile `fuzz-v1`, docs/fuzzing.adoc): seeded
+mutations of `compatibility/cases.json` sources and golden fixtures plus deep
+nesting families. Stage `robust` runs the `adoctra-wasm` example `fuzz`
+(editor path, 1 MiB worker stack, panics/aborts/timeouts, main-source span
+bounds and char boundaries); stage `diff` compares the CLI with a persistent
+Ruby worker (`scripts/asciidoctor-batch.rb`) on the acceptance body DOM and
+diagnostics and minimizes differences. CI runs `robust` (seeds 1–3, depths
+8/16). Fixed from findings: `lists::delimiter` byte slicing, metadata past the
+end of input, anchored ATX headings/block anchors (no leading whitespace),
+Ruby strip semantics (`ruby_strip.rs`: ASCII whitespace and NUL; Unicode spaces
+are content), `unterminated <context> block` after the style masquerade
+(`unterminated_context`), excluded abstract/partintro skipped by conversion
+(`BodySubs::excluded`), section diagnostics inserted at their reading position
+(`Section::diagnostics_before`), unknown paragraph style reset before the
+literal check, `Reader::content` normalizing line endings to LF. Harnesses
+read process output as bytes (`compatibility.run`, `acceptance.invoke`,
+`read_reference`): text mode turned a lone CR into LF. Open: recursion depth
+(user decision: remove the recursion, no limit), cross-pass diagnostic order
+(XFAIL `fuzz-preprocessor-error-order`, `fuzz-missing-attribute-in-title-order`)
+and five body XFAILs (`fuzz-*` in `compatibility/cases.json`).

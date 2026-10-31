@@ -2,6 +2,7 @@
 //! include parameters and link macro labels. The lexer only reports field
 //! boundaries in its input; callers decide which substitutions a field gets and
 //! map ranges back to their own source representation.
+use crate::ruby_strip::RubyStrip;
 use crate::unicode_word::is_word;
 use std::ops::Range;
 
@@ -174,7 +175,7 @@ impl Scanner<'_> {
             gap: None,
         };
         let Some(c) = self.peek().filter(|c| *c != '\n') else {
-            if name.is_none() && !self.src.trim_end().ends_with(',') {
+            if name.is_none() && !self.src.ruby_rstrip().ends_with(',') {
                 return None;
             }
             return Some((Some(positional(name)), false));

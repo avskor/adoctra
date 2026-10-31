@@ -1,6 +1,7 @@
 //! Parse configuration and attribute state shared by recursive block parsing.
 
 use crate::attributes::parts_text;
+use crate::ruby_strip::RubyStrip;
 use crate::{AttributePart, Attributes, SourceId};
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -1252,6 +1253,7 @@ impl ParseContext<'_> {
         style: Option<&str>,
         level: u8,
         title: &str,
+        diagnostics_before: usize,
     ) -> u8 {
         let parent = self
             .open_sections
@@ -1259,7 +1261,7 @@ impl ParseContext<'_> {
             .and_then(|(_, parent)| self.sections.get(parent));
         // Ruby compares the source title (`casecmp`) of an unstyled section.
         let synopsis = self.manpage && title.eq_ignore_ascii_case("synopsis");
-        let section = crate::section_numbers::Section::read(
+        let mut section = crate::section_numbers::Section::read(
             style,
             level,
             self.book,
@@ -1267,6 +1269,7 @@ impl ParseContext<'_> {
             &self.attributes,
             parent,
         );
+        section.diagnostics_before = diagnostics_before;
         let level = section.level;
         self.sections.insert(key, section);
         self.open_sections.push((level, key));
@@ -1609,7 +1612,7 @@ pub(crate) fn host_attribute<'a>(key: &'a str, value: &'a str) -> (&'a str, Opti
 }
 
 pub(crate) fn parse_attribute_entry(line: &str) -> Option<AttributeEntry> {
-    let rest = line.trim_end().strip_prefix(':')?;
+    let rest = line.ruby_rstrip().strip_prefix(':')?;
     let (key, value) = rest.split_once(':')?;
     if !value.is_empty() && !value.starts_with([' ', '\t']) {
         return None;
@@ -1635,7 +1638,7 @@ pub(crate) fn parse_attribute_entry(line: &str) -> Option<AttributeEntry> {
     Some(if unset {
         AttributeEntry::Unset(key)
     } else {
-        AttributeEntry::Set(key, value.trim().to_owned())
+        AttributeEntry::Set(key, value.ruby_strip().to_owned())
     })
 }
 
