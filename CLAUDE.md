@@ -78,6 +78,9 @@ The model serves three audiences; keep their needs in mind when changing core:
 - WASM glue stays behind `#[cfg(target_arch = "wasm32")]`; the JSON
   serialization layer in `adoctra-wasm` must remain pure Rust so it compiles and
   unit-tests on the native target.
+- **`unsafe` is forbidden** (user decision 2026-10-31): no `unsafe` blocks,
+  functions or impls in any crate. Solve borrowing problems safely (owned
+  frames, `std::mem::take`, indices) even when `unsafe` looks simpler.
 - Run `cargo fmt` and keep `cargo clippy --workspace --all-features` clean.
 - **Localization works exactly like Asciidoctor Ruby.** Every reader-visible
   word is a document attribute with Ruby's built-in default (`toc-title`,
