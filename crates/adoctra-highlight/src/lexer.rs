@@ -691,6 +691,15 @@ impl<'l, 't> Scan<'l, 't> {
         Ok(())
     }
 
+    /// `delegate self.clone, text`: the clone shares this lexer's stack, so
+    /// the text is lexed by this lexer, from its current state.
+    pub fn delegate_self(&mut self, text: &str) -> Result<(), LexError> {
+        let mut tokens = Vec::new();
+        self.lexer.continue_lex(text, &mut tokens)?;
+        self.out.extend(tokens);
+        Ok(())
+    }
+
     /// `delegate @key, text` for a delegate set by a hook; nil fails.
     pub fn delegate_existing(&mut self, key: &'static str, text: &str) -> Result<(), LexError> {
         let key = self.lexer.resolve_sub(key);
@@ -889,6 +898,20 @@ mod tests {
             regexp_escape(" .*?+^$|()[]{}\\/-#\t\n\r\u{c}\u{b}\0a_é:"),
             "\\ \\.\\*\\?\\+\\^\\$\\|\\(\\)\\[\\]\\{\\}\\\\/\\-\\#\\t\\n\\r\\f\\v\0a_é:"
         );
+    }
+
+    #[test]
+    fn a_missing_constant_fails_when_its_rule_fires_like_ruby() {
+        // cisco_ios's `String::Double` is Ruby's ::String: NameError.
+        let mut lexer = Lexer::find("cisco_ios").unwrap();
+        assert_eq!(
+            lexer.lex("password 7 abc\n").unwrap_err(),
+            LexError("uninitialized constant String::Double".into())
+        );
+        assert!(Lexer::find("cisco_ios")
+            .unwrap()
+            .lex("interface x\n")
+            .is_ok());
     }
 
     #[test]

@@ -227,6 +227,8 @@ LEXER_CASES = [
   ['yaml', "a:\n  b: [1, 'x', {c: d}]\n  e:\n    - &anchor f\n    - *anchor\n  g: |2-\n      kept\n    lit\n  h: >+\n    folded\n\n i: x\nj: |-1\n k\n---\n%YAML 1.2\n%TAG ! tag:x,2000:\n...\nl: \"q\\n\" # c\n"],
   ['yaml', "- a\n- b:\n    c: 1.5\n  d: true\n? complex\n: value\n      over: indented\n"],
   ['digdag', "timezone: UTC\n+step:\n  sh>: echo hi\n  _do:\n    echo>: x\n"],
+  ['groovy', "class A {\n  static void main(String[] args) { println 'x' }\n  def int f(x) { x }\n}\n"],
+  ['factor', "USING: io kernel ;\n: hello ( -- ) \"Hi\" print dup drop ;\n"],
   ['hack?start_inline=1', "<<__Entrypoint>> async function main(): Awaitable<void> { echo strlen('x'); }\n"],
 ].freeze
 
