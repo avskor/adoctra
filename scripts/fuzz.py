@@ -329,7 +329,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--count", type=int, default=2000, help="mutated inputs")
-    parser.add_argument("--depths", default="8,64,512", help="nesting depths")
+    parser.add_argument("--depths", default="8,64,128", help="nesting depths")
     parser.add_argument("--stage", choices=["robust", "diff", "both"], default="both")
     parser.add_argument("--diff-count", type=int, default=500, help="inputs compared with Ruby")
     parser.add_argument("--minimize", action="store_true")

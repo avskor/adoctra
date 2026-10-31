@@ -2070,7 +2070,12 @@ are content), `unterminated <context> block` after the style masquerade
 (`Section::diagnostics_before`), unknown paragraph style reset before the
 literal check, `Reader::content` normalizing line endings to LF. Harnesses
 read process output as bytes (`compatibility.run`, `acceptance.invoke`,
-`read_reference`): text mode turned a lone CR into LF. Open: recursion depth
-(user decision: remove the recursion, no limit), cross-pass diagnostic order
+`read_reference`): text mode turned a lone CR into LF. Block reading has no recursion per level (`read_blocks`: a heap stack of
+`Run` frames; containers, list items and blockquotes suspend as `Step::Collect`
+with a `'static` `Resume` and outer `Then`s; lists implement `ItemList`, ready
+items continue in place). Open: AST passes, backends and drop still recurse
+(about 1024 levels on a 1 MiB release stack; user decision: remove the
+recursion, no limit); AsciiDoc table cells read nested documents recursively
+(bounded by separator syntax), cross-pass diagnostic order
 (XFAIL `fuzz-preprocessor-error-order`, `fuzz-missing-attribute-in-title-order`)
 and five body XFAILs (`fuzz-*` in `compatibility/cases.json`).

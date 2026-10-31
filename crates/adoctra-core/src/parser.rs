@@ -439,71 +439,202 @@ enum Scope {
     Container,
 }
 
-/// The blocks of a container, of a list item, or of a compound block read
-/// from its own lines, as `scope` gives.
-fn collect_blocks_in(
-    lines: &mut Reader<'_>,
-    i: &mut usize,
-    context: &mut ParseContext,
-    diagnostics: &mut Vec<Diagnostic>,
-    stop: Option<&str>,
-    mut pending: PendingMeta,
+/// The mutable state a block reading step works on: the reader of the
+/// innermost run (the document's, or a list item's or blockquote's own) and
+/// the shared parse context.
+struct Env<'e, 's, 'c> {
+    lines: &'e mut Reader<'s>,
+    i: &'e mut usize,
+    context: &'e mut ParseContext<'c>,
+    diagnostics: &'e mut Vec<Diagnostic>,
+}
+
+/// A nested run of blocks that a suspended step waits for: a container's
+/// body up to `stop`, or the lines of a list item or blockquote in their own
+/// reader.
+struct Collect<'s> {
+    stop: Option<String>,
+    pending: PendingMeta,
     scope: Scope,
-) -> Vec<Block> {
-    // Ruby first preprocesses and captures a container up to its closing fence,
-    // then parses the body. A nested comment/verbatim region cannot hide that fence.
-    let previous_limit = stop.map(|fence| lines.bound(*i, context, |line| line == fence));
-    let mut blocks = Vec::new();
-    let mut text_only = matches!(scope, Scope::ListItem(_, true));
-    // Blank lines before the next block's metadata (Ruby's `skipped`).
-    let mut skipped = 0usize;
-    let mut metadata_seen = false;
-    while lines.has(*i, context) {
-        let (_, line_buffer) = lines.line(*i);
-        let line = line_buffer.as_ref();
-        if line.is_ruby_blank() {
-            if !metadata_seen {
-                skipped += 1;
+    reader: Option<Reader<'s>>,
+}
+
+/// The rest of a suspended step, given the nested run's blocks and its own
+/// reader (to absorb); it runs with the enclosing run's reader.
+type Resume<'s, 'c> =
+    Box<dyn for<'e> FnOnce(&mut Env<'e, 's, 'c>, Vec<Block>, Option<Reader<'s>>) -> Step<'s, 'c>>;
+
+/// Work on the finished block of a suspended step, innermost first.
+type Then<'s, 'c> = Box<dyn for<'e> FnOnce(&mut Env<'e, 's, 'c>, Option<Block>) -> Option<Block>>;
+
+/// A block reading step: finished (`parse_block`'s result), or suspended on a
+/// nested run, with the work to do on its eventual block. Nesting lives on
+/// [`read_blocks`]' heap stack, not the call stack, so no document depth can
+/// overflow it.
+// A step lives briefly and moves a few times per block; boxing every block
+// would cost more than the size difference.
+#[allow(clippy::large_enum_variant)]
+enum Step<'s, 'c> {
+    Done(Option<Block>),
+    Collect(Box<Collect<'s>>, Resume<'s, 'c>, Vec<Then<'s, 'c>>),
+}
+
+impl<'s, 'c> Step<'s, 'c> {
+    /// Apply `then` to the finished block, now or when the step finishes.
+    fn then(
+        self,
+        env: &mut Env<'_, 's, 'c>,
+        then: impl for<'e> FnOnce(&mut Env<'e, 's, 'c>, Option<Block>) -> Option<Block> + 'static,
+    ) -> Step<'s, 'c> {
+        match self {
+            Step::Done(block) => Step::Done(then(env, block)),
+            Step::Collect(collect, resume, mut thens) => {
+                thens.push(Box::new(then));
+                Step::Collect(collect, resume, thens)
             }
-            *i += 1;
-            continue;
         }
-        // A text-only block takes no title or attribute entry (Ruby's
-        // `parse_block_metadata_line` with `:text_only`).
-        let text_only_now = text_only && skipped == 0;
-        if !(text_only_now && line.starts_with(['.', ':']))
-            && consume_block_metadata(lines, i, context, &mut pending)
-        {
-            metadata_seen = true;
-            continue;
+    }
+
+    /// Apply the outer steps' work after this step's own.
+    fn then_all(self, env: &mut Env<'_, 's, 'c>, outer: Vec<Then<'s, 'c>>) -> Step<'s, 'c> {
+        match self {
+            Step::Done(mut block) => {
+                for then in outer {
+                    block = then(env, block);
+                }
+                Step::Done(block)
+            }
+            Step::Collect(collect, resume, mut thens) => {
+                thens.extend(outer);
+                Step::Collect(collect, resume, thens)
+            }
         }
-        let metadata = std::mem::take(&mut pending);
-        let mut carried = None;
-        let ctx = match scope {
-            Scope::ListItem(list_type, _) => BlockCtx::InListItem {
-                list_type,
-                text_only: text_only && skipped == 0,
-                adjacent: skipped == 0,
-            },
-            Scope::Body if stop.is_none() => BlockCtx::Section,
-            Scope::Body | Scope::Container => BlockCtx::TopLevel,
-        };
-        text_only = false;
-        skipped = 0;
-        metadata_seen = false;
-        let entries = context.flush_entries();
-        let parsed = parse_block(
+    }
+}
+
+/// One run of [`collect_blocks_in`]: its loop state between blocks.
+struct Run<'s, 'c> {
+    stop: Option<String>,
+    previous_limit: Option<usize>,
+    scope: Scope,
+    blocks: Vec<Block>,
+    text_only: bool,
+    /// Blank lines before the next block's metadata (Ruby's `skipped`).
+    skipped: usize,
+    metadata_seen: bool,
+    pending: PendingMeta,
+    /// The metadata and saved entries of the block being parsed.
+    parsing: Option<(PendingMeta, crate::context::Entries)>,
+    /// A list item's or blockquote's own reader and position.
+    reader: Option<(Reader<'s>, usize)>,
+    resume: Option<(Resume<'s, 'c>, Vec<Then<'s, 'c>>)>,
+}
+
+impl<'s, 'c> Run<'s, 'c> {
+    /// Start a run. Ruby first preprocesses and captures a container up to its
+    /// closing fence, then parses the body: a nested comment/verbatim region
+    /// cannot hide that fence.
+    fn begin(
+        collect: Box<Collect<'s>>,
+        resume: Option<(Resume<'s, 'c>, Vec<Then<'s, 'c>>)>,
+        env: &mut Env<'_, 's, 'c>,
+    ) -> Self {
+        let Collect {
+            stop,
+            pending,
+            scope,
+            reader,
+        } = *collect;
+        let mut reader = reader.map(|reader| (reader, 0));
+        let previous_limit = stop.as_deref().map(|fence| match &mut reader {
+            Some((reader, j)) => reader.bound(*j, env.context, |line| line == fence),
+            None => env.lines.bound(*env.i, env.context, |line| line == fence),
+        });
+        Run {
+            stop,
+            previous_limit,
+            scope,
+            blocks: Vec::new(),
+            text_only: matches!(scope, Scope::ListItem(_, true)),
+            skipped: 0,
+            metadata_seen: false,
+            pending,
+            parsing: None,
+            reader,
+            resume,
+        }
+    }
+
+    /// Continue the run with the result of the block being parsed, if any:
+    /// returns the context to parse the next block in, or `None` at its end.
+    fn advance(
+        &mut self,
+        env: &mut Env<'_, 's, 'c>,
+        parsed: Option<Option<Block>>,
+    ) -> Option<BlockCtx> {
+        if let Some(parsed) = parsed {
+            self.finish_block(env, parsed);
+        }
+        let Env {
+            lines, i, context, ..
+        } = env;
+        while lines.has(**i, context) {
+            let (_, line_buffer) = lines.line(**i);
+            let line = line_buffer.as_ref();
+            if line.is_ruby_blank() {
+                if !self.metadata_seen {
+                    self.skipped += 1;
+                }
+                **i += 1;
+                continue;
+            }
+            // A text-only block takes no title or attribute entry (Ruby's
+            // `parse_block_metadata_line` with `:text_only`).
+            let text_only_now = self.text_only && self.skipped == 0;
+            if !(text_only_now && line.starts_with(['.', ':']))
+                && consume_block_metadata(lines, i, context, &mut self.pending)
+            {
+                self.metadata_seen = true;
+                continue;
+            }
+            let metadata = std::mem::take(&mut self.pending);
+            let ctx = match self.scope {
+                Scope::ListItem(list_type, _) => BlockCtx::InListItem {
+                    list_type,
+                    text_only: self.text_only && self.skipped == 0,
+                    adjacent: self.skipped == 0,
+                },
+                Scope::Body if self.stop.is_none() => BlockCtx::Section,
+                Scope::Body | Scope::Container => BlockCtx::TopLevel,
+            };
+            self.text_only = false;
+            self.skipped = 0;
+            self.metadata_seen = false;
+            let entries = context.flush_entries();
+            self.parsing = Some((metadata, entries));
+            return Some(ctx);
+        }
+        context.drop_entries();
+        if let Some(limit) = self.previous_limit {
+            lines.limit = limit;
+        }
+        None
+    }
+
+    /// The block metadata a parsed block takes, its fixups and substitutions.
+    fn finish_block(&mut self, env: &mut Env<'_, 's, 'c>, parsed: Option<Block>) {
+        let Env {
             lines,
-            i,
             context,
             diagnostics,
-            ctx,
-            Some(&metadata.attrs),
-            metadata.id.is_some(),
-        );
+            ..
+        } = env;
+        let (lines, context, diagnostics) = (&mut **lines, &mut **context, &mut **diagnostics);
+        let (metadata, entries) = self.parsing.take().expect("a block being parsed");
         if parsed.is_none() {
             context.restore_entries(entries);
         }
+        let mut carried = None;
         if let Some(mut block) = parsed {
             let pending = metadata;
             // A section-title anchor supplies the id only without one from
@@ -638,17 +769,127 @@ fn collect_blocks_in(
                 // warnings.
             }
             block.attribute_context = Arc::clone(&context.attributes);
-            blocks.push(block);
+            self.blocks.push(block);
         }
         if let Some(title) = carried.take() {
-            pending.title = Some(title);
+            self.pending.title = Some(title);
         }
     }
-    context.drop_entries();
-    if let Some(limit) = previous_limit {
-        lines.limit = limit;
+}
+
+/// Read a run of blocks without recursion: nested runs (container bodies,
+/// list items, blockquotes) are frames of a heap stack, so a deeply nested
+/// document cannot overflow the call stack (user decision 2026-10-31).
+fn read_blocks<'s, 'c>(
+    lines: &mut Reader<'s>,
+    i: &mut usize,
+    context: &mut ParseContext<'c>,
+    diagnostics: &mut Vec<Diagnostic>,
+    collect: Collect<'s>,
+) -> Vec<Block> {
+    /// Run `f` with the innermost reader of `stack` (or the document's).
+    fn with_env<'s, 'c, R>(
+        stack: &mut [Run<'s, 'c>],
+        lines: &mut Reader<'s>,
+        i: &mut usize,
+        context: &mut ParseContext<'c>,
+        diagnostics: &mut Vec<Diagnostic>,
+        f: impl FnOnce(&mut Env<'_, 's, 'c>, &mut [Run<'s, 'c>]) -> R,
+    ) -> R {
+        let owner = stack.iter().rposition(|run| run.reader.is_some());
+        let mut own = owner.and_then(|owner| stack[owner].reader.take());
+        let result = {
+            let (lines, i) = match &mut own {
+                Some((reader, j)) => (reader, j),
+                None => (lines, i),
+            };
+            let mut env = Env {
+                lines,
+                i,
+                context,
+                diagnostics,
+            };
+            f(&mut env, stack)
+        };
+        if let Some(owner) = owner {
+            stack[owner].reader = own;
+        }
+        result
     }
-    blocks
+
+    let mut stack = Vec::new();
+    let first = {
+        let mut env = Env {
+            lines: &mut *lines,
+            i: &mut *i,
+            context: &mut *context,
+            diagnostics: &mut *diagnostics,
+        };
+        Run::begin(Box::new(collect), None, &mut env)
+    };
+    stack.push(first);
+    let mut parsed = None;
+    loop {
+        let step = with_env(&mut stack, lines, i, context, diagnostics, |env, stack| {
+            let top = stack.last_mut().expect("a run");
+            let ctx = top.advance(env, parsed.take())?;
+            let (metadata, _) = top.parsing.as_ref().expect("metadata");
+            Some(parse_block_step(
+                env,
+                ctx,
+                Some(&metadata.attrs),
+                metadata.id.is_some(),
+            ))
+        });
+        let step = match step {
+            Some(step) => step,
+            None => {
+                let mut run = stack.pop().expect("a run");
+                let blocks = std::mem::take(&mut run.blocks);
+                let Some((resume, thens)) = run.resume.take() else {
+                    return blocks;
+                };
+                let reader = run.reader.map(|(reader, _)| reader);
+                with_env(&mut stack, lines, i, context, diagnostics, |env, _| {
+                    resume(env, blocks, reader).then_all(env, thens)
+                })
+            }
+        };
+        match step {
+            Step::Done(block) => parsed = Some(block),
+            Step::Collect(collect, resume, thens) => {
+                let run = with_env(&mut stack, lines, i, context, diagnostics, |env, _| {
+                    Run::begin(collect, Some((resume, thens)), env)
+                });
+                stack.push(run);
+            }
+        }
+    }
+}
+
+/// The blocks of a container, of a list item, or of a compound block read
+/// from its own lines, as `scope` gives.
+fn collect_blocks_in(
+    lines: &mut Reader<'_>,
+    i: &mut usize,
+    context: &mut ParseContext,
+    diagnostics: &mut Vec<Diagnostic>,
+    stop: Option<&str>,
+    pending: PendingMeta,
+    scope: Scope,
+) -> Vec<Block> {
+    read_blocks(
+        lines,
+        i,
+        context,
+        diagnostics,
+        Collect {
+            stop: stop.map(str::to_owned),
+            pending,
+            scope,
+            reader: None,
+        },
+    )
 }
 
 /// Ruby's `next_section`: nest the document-level blocks under their section
@@ -1606,52 +1847,63 @@ fn fenced_code_attributes(line: &str) -> Vec<(String, String)> {
 /// `build_block`. Returns the blocks and the block's end offset; an
 /// unterminated block ends at its last child (or the opening fence when empty),
 /// and the missing close is a diagnostic, not a parse failure.
-fn read_container(
-    lines: &mut Reader<'_>,
+fn read_container_step<'s, 'c>(
+    lines: &mut Reader<'s>,
     i: &mut usize,
-    context: &mut ParseContext,
-    diagnostics: &mut Vec<Diagnostic>,
-    fence: &str,
-    block_name: &str,
+    diagnostics: &[Diagnostic],
+    fence: String,
+    block_name: &'static str,
     kind: TokenKind,
-) -> (Vec<Block>, usize) {
+    build: impl FnOnce(Vec<Block>, usize) -> Block + 'static,
+) -> Step<'s, 'c> {
     let (start, opening_line) = lines.line(*i);
     let opening = Span::new(start, start + opening_line.len());
     *i += 1;
     // Ruby reads the body up to the closing fence before parsing it, so an
     // unterminated container warns before its children do.
     let before_children = diagnostics.len();
-    let blocks = collect_blocks(
-        lines,
-        i,
-        context,
-        diagnostics,
-        Some(fence),
-        PendingMeta::default(),
-    );
-    let closing = if lines.has(*i, context) && &*lines[*i].1 == fence {
-        let (loff, lline) = lines.line(*i);
-        *i += 1;
-        Some(Span::new(loff, loff + lline.len()))
-    } else {
-        diagnostics.insert(
-            before_children,
-            Diagnostic {
-                omitted_span: None,
-                report: crate::DiagnosticReport::unterminated(block_name),
-                span: Span::new(start, start + fence.len()),
-                severity: Severity::Error,
-                message: format!("unterminated {block_name} block (missing closing `{fence}`)"),
-            },
-        );
-        None
-    };
-    lines.record_fences(opening, closing, kind);
-    let end = closing.map_or_else(
-        || blocks.last().map_or(opening.end, |b| b.span.end),
-        |c| c.end,
-    );
-    (blocks, end)
+    Step::Collect(
+        Box::new(Collect {
+            stop: Some(fence.clone()),
+            pending: PendingMeta::default(),
+            scope: Scope::Body,
+            reader: None,
+        }),
+        Box::new(move |env, blocks, _| {
+            let Env {
+                lines,
+                i,
+                context,
+                diagnostics,
+            } = env;
+            let closing = if lines.has(**i, context) && *lines[**i].1 == *fence {
+                let (loff, lline) = lines.line(**i);
+                **i += 1;
+                Some(Span::new(loff, loff + lline.len()))
+            } else {
+                diagnostics.insert(
+                    before_children,
+                    Diagnostic {
+                        omitted_span: None,
+                        report: crate::DiagnosticReport::unterminated(block_name),
+                        span: Span::new(start, start + fence.len()),
+                        severity: Severity::Error,
+                        message: format!(
+                            "unterminated {block_name} block (missing closing `{fence}`)"
+                        ),
+                    },
+                );
+                None
+            };
+            lines.record_fences(opening, closing, kind);
+            let end = closing.map_or_else(
+                || blocks.last().map_or(opening.end, |b| b.span.end),
+                |c| c.end,
+            );
+            Step::Done(Some(build(blocks, end)))
+        }),
+        Vec::new(),
+    )
 }
 
 /// The block context Ruby names in `unterminated <context> block`: the
@@ -2384,19 +2636,29 @@ enum BlockCtx {
 /// only defensively, if a blank line slipped through. Shared by the top-level
 /// loop and by list-item `+` continuations, so attached blocks reuse the very
 /// same block grammar.
-fn parse_block(
-    lines: &mut Reader<'_>,
-    i: &mut usize,
-    context: &mut ParseContext,
-    diagnostics: &mut Vec<Diagnostic>,
+fn parse_block_step<'s, 'c>(
+    env: &mut Env<'_, 's, 'c>,
     ctx: BlockCtx,
     pending_attrs: Option<&BlockAttrs>,
     has_id: bool,
-) -> Option<Block> {
-    let mut block =
-        parse_block_content(lines, i, context, diagnostics, ctx, pending_attrs, has_id)?;
-    block.attribute_context = Arc::clone(&context.attributes);
-    Some(block)
+) -> Step<'s, 'c> {
+    let mut deferred = None;
+    let block = parse_block_content(
+        env.lines,
+        env.i,
+        env.context,
+        env.diagnostics,
+        ctx,
+        pending_attrs,
+        has_id,
+        &mut deferred,
+    );
+    let step = deferred.unwrap_or(Step::Done(block));
+    step.then(env, |env, block| {
+        let mut block = block?;
+        block.attribute_context = Arc::clone(&env.context.attributes);
+        Some(block)
+    })
 }
 
 /// Block options affect this block's inline substitutions, not the document
@@ -2411,10 +2673,11 @@ fn inline_attributes(attributes: &Arc<Attributes>, block: Option<&BlockAttrs>) -
     attributes
 }
 
-fn parse_block_content(
-    lines: &mut Reader<'_>,
+#[allow(clippy::too_many_arguments)]
+fn parse_block_content<'s, 'c>(
+    lines: &mut Reader<'s>,
     i: &mut usize,
-    context: &mut ParseContext,
+    context: &mut ParseContext<'c>,
     diagnostics: &mut Vec<Diagnostic>,
     ctx: BlockCtx,
     // The *pending* block style (from a preceding `[verse]` / `[quote]` attribute
@@ -2424,6 +2687,9 @@ fn parse_block_content(
     pending_attrs: Option<&BlockAttrs>,
     // Whether metadata already supplied an id (a section-title anchor then stays text).
     has_id: bool,
+    // A step suspended on a nested run (a container body, a list item): the
+    // caller's driver resumes it; the function then returns `None`.
+    deferred: &mut Option<Step<'s, 'c>>,
 ) -> Option<Block> {
     let pending_style = pending_attrs.and_then(|attrs| attrs.style.as_deref());
     let attrs = inline_attributes(&context.render_attributes(), pending_attrs);
@@ -2782,19 +3048,16 @@ fn parse_block_content(
     // `collect_blocks` (so nested blocks, inline subs and anchors all apply).
     // Only the identical fence closes it, so a longer or shorter `====` nests.
     if let Some(fence) = fence("====") {
-        let (blocks, end) = read_container(
+        *deferred = Some(read_container_step(
             lines,
             i,
-            context,
             diagnostics,
-            &fence,
+            fence,
             unterminated_context("example", pending_style),
             TokenKind::ExampleDelimiter,
-        );
-        return Some(Block::new(
-            Span::new(off, end),
-            BlockKind::Example { blocks },
+            move |blocks, end| Block::new(Span::new(off, end), BlockKind::Example { blocks }),
         ));
+        return None;
     }
 
     // Quote / verse block, fenced by `____`. asciidoctor's default style for a
@@ -2826,22 +3089,24 @@ fn parse_block_content(
             ));
         }
         // Quote (default): a parsed container, mirror of the `====` example block.
-        let (blocks, end) = read_container(
+        *deferred = Some(read_container_step(
             lines,
             i,
-            context,
             diagnostics,
-            &fence,
+            fence,
             "quote",
             TokenKind::QuoteDelimiter,
-        );
-        return Some(Block::new(
-            Span::new(start, end),
-            BlockKind::Quote {
-                attribution: None,
-                blocks,
+            move |blocks, end| {
+                Block::new(
+                    Span::new(start, end),
+                    BlockKind::Quote {
+                        attribution: None,
+                        blocks,
+                    },
+                )
             },
         ));
+        return None;
     }
 
     // Sidebar block (a parsed container, fenced by `****`). A mirror of the `====`
@@ -2851,19 +3116,16 @@ fn parse_block_content(
     // its content and stays a 4-level list item. Only the identical fence closes
     // the block.
     if let Some(fence) = fence("****") {
-        let (blocks, end) = read_container(
+        *deferred = Some(read_container_step(
             lines,
             i,
-            context,
             diagnostics,
-            &fence,
+            fence,
             "sidebar",
             TokenKind::SidebarDelimiter,
-        );
-        return Some(Block::new(
-            Span::new(off, end),
-            BlockKind::Sidebar { blocks },
+            move |blocks, end| Block::new(Span::new(off, end), BlockKind::Sidebar { blocks }),
         ));
+        return None;
     }
 
     // Open block (a parsed container, fenced by `--`). The *generic* container:
@@ -2959,19 +3221,16 @@ fn parse_block_content(
             };
             return Some(Block::new(Span::new(start, end), kind));
         }
-        let (blocks, end) = read_container(
+        *deferred = Some(read_container_step(
             lines,
             i,
-            context,
             diagnostics,
-            &fence,
+            fence,
             unterminated_context("open", pending_style),
             TokenKind::OpenDelimiter,
-        );
-        return Some(Block::new(
-            Span::new(start, end),
-            BlockKind::Open { blocks },
+            move |blocks, end| Block::new(Span::new(start, end), BlockKind::Open { blocks }),
         ));
+        return None;
     }
 
     // List: a run of items that nests a level deeper whenever a *unique* marker
@@ -2985,7 +3244,13 @@ fn parse_block_content(
         Some("literal" | "listing" | "source" | "verse")
     );
     if !verbatim_style && crate::callouts::list_item(trimmed).is_some() {
-        return Some(parse_callout_list(lines, i, context, diagnostics));
+        *deferred = Some(CalloutList::step(&mut Env {
+            lines,
+            i,
+            context,
+            diagnostics,
+        }));
+        return None;
     }
     if !verbatim_style {
         for list_type in [
@@ -3000,7 +3265,17 @@ fn parse_block_content(
                         && context.bibliography_section())
                     .then_some("bibliography")
                 });
-                return Some(parse_list(lines, i, context, diagnostics, list_type, style));
+                *deferred = Some(PlainList::step(
+                    &mut Env {
+                        lines,
+                        i,
+                        context,
+                        diagnostics,
+                    },
+                    list_type,
+                    style.map(str::to_owned),
+                ));
+                return None;
             }
         }
     }
@@ -3120,15 +3395,16 @@ fn parse_block_content(
     // Markdown blockquote or a quoted paragraph with a credit line. A style
     // Ruby does not know as a paragraph style is ignored there.
     if !text_only && !pending_style.is_some_and(changes_paragraph_type) {
-        if let Some(block) = quote_paragraph(
+        let quoted = quote_paragraph(
             lines,
             first..*i,
             Span::new(start, end),
             &attrs,
             context,
-            diagnostics,
-        ) {
-            return Some(block);
+            deferred,
+        );
+        if quoted.is_some() || deferred.is_some() {
+            return quoted;
         }
     }
     // Parsed text also removes comment lines; verbatim styles keep them.
@@ -3159,13 +3435,14 @@ fn parse_block_content(
 /// `, ` into the attribution and citetitle. A blockquote parses its unmarked lines as
 /// blocks (compound); a quoted paragraph is simple content. Both catalog the
 /// inline anchors of their lines, like an ordinary paragraph.
-fn quote_paragraph(
-    lines: &mut Reader<'_>,
+/// A blockquote reads its body as a nested run: it suspends in `deferred`.
+fn quote_paragraph<'s, 'c>(
+    lines: &mut Reader<'s>,
     range: std::ops::Range<usize>,
     span: Span,
     attrs: &Arc<Attributes>,
-    context: &mut ParseContext,
-    diagnostics: &mut Vec<Diagnostic>,
+    context: &mut ParseContext<'c>,
+    deferred: &mut Option<Step<'s, 'c>>,
 ) -> Option<Block> {
     // Ruby's `read_paragraph_lines` skips line comments.
     let mut comments = Vec::new();
@@ -3209,30 +3486,34 @@ fn quote_paragraph(
             .first()
             .zip(body.last())
             .map(|(first, last)| (first.0, last.0 + last.1.len()));
-        let mut nested = Reader::nested(body, lines.include_catalog.clone());
-        let mut j = 0;
-        let blocks = collect_blocks_in(
-            &mut nested,
-            &mut j,
-            context,
-            diagnostics,
-            None,
-            PendingMeta::default(),
-            Scope::Container,
-        );
-        let attribution =
-            credit.and_then(|(off, line)| credit_attribution(&line, off, lines, context));
-        if let Some((start, end)) = range {
-            nested.catalog_anchors(start, end, false, context);
-        }
-        lines.absorb(nested, false);
-        Block::new(
-            span,
-            BlockKind::Quote {
-                attribution,
-                blocks,
-            },
-        )
+        let nested = Reader::nested(body, lines.include_catalog.clone());
+        *deferred = Some(Step::Collect(
+            Box::new(Collect {
+                stop: None,
+                pending: PendingMeta::default(),
+                scope: Scope::Container,
+                reader: Some(nested),
+            }),
+            Box::new(move |env, blocks, nested| {
+                let nested = nested.expect("the blockquote's reader");
+                let attribution = credit
+                    .and_then(|(off, line)| credit_attribution(&line, off, env.lines, env.context));
+                if let Some((start, end)) = range {
+                    nested.catalog_anchors(start, end, false, env.context);
+                }
+                env.lines.absorb(nested, false);
+                let block = Block::new(
+                    span,
+                    BlockKind::Quote {
+                        attribution,
+                        blocks,
+                    },
+                );
+                Step::Done(Some(quoted_block(block, env.context)))
+            }),
+            Vec::new(),
+        ));
+        return None;
     } else if head.starts_with('"') {
         let [.., (body_off, body, _), (credit_off, credit, _)] = text.as_slice() else {
             return None;
@@ -3262,6 +3543,11 @@ fn quote_paragraph(
     } else {
         return None;
     };
+    Some(quoted_block(block, context))
+}
+
+/// A quoted block sets its own `quote` style; a credit is split later.
+fn quoted_block(block: Block, context: &mut ParseContext) -> Block {
     if matches!(
         block.kind,
         BlockKind::Quote {
@@ -3275,7 +3561,7 @@ fn quote_paragraph(
         style: Some("quote".to_owned()),
         ..MacroMeta::default()
     });
-    Some(block)
+    block
 }
 
 /// A blockquote credit line: normal substitutions while reading (an empty
@@ -3578,17 +3864,21 @@ fn read_list_item_lines(
 
 /// Ruby's `parse_list_item` after the marker line: the item's blocks from its
 /// lines, and the range of a paragraph adjacent to the marker line that
-/// folds into the item text (Ruby's `fold_first`).
-fn parse_item_blocks(
-    lines: &mut Reader<'_>,
+/// folds into the item text (Ruby's `fold_first`). An item with lines reads
+/// them in its own reader as a nested run ([`ItemBlocks::Read`]).
+enum ItemBlocks<'s> {
+    Ready(Vec<Block>, Option<Span>),
+    Read(Box<Collect<'s>>, bool),
+}
+
+fn item_blocks_begin<'s>(
+    lines: &Reader<'s>,
     buffer: Vec<ItemLine>,
-    context: &mut ParseContext,
-    diagnostics: &mut Vec<Diagnostic>,
     list_type: crate::lists::ListType,
     mut has_text: bool,
-) -> (Vec<Block>, Option<Span>) {
+) -> ItemBlocks<'s> {
     if buffer.is_empty() {
-        return (Vec::new(), None);
+        return ItemBlocks::Ready(Vec::new(), None);
     }
     // Peek past comment lines.
     let adjacent = buffer
@@ -3608,17 +3898,28 @@ fn parse_item_blocks(
         lines.include_catalog.clone(),
     );
     item_reader.placeholders = placeholders;
-    let mut j = 0;
-    let mut blocks = collect_blocks_in(
-        &mut item_reader,
-        &mut j,
-        context,
-        diagnostics,
-        None,
-        PendingMeta::default(),
-        Scope::ListItem(list_type, !has_text),
-    );
-    lines.absorb(item_reader, false);
+    ItemBlocks::Read(
+        Box::new(Collect {
+            stop: None,
+            pending: PendingMeta::default(),
+            scope: Scope::ListItem(list_type, !has_text),
+            reader: Some(item_reader),
+        }),
+        adjacent,
+    )
+}
+
+/// The item's blocks once its run is read: absorb its reader and fold an
+/// adjacent paragraph into the item text.
+fn item_blocks_end(
+    lines: &mut Reader<'_>,
+    mut blocks: Vec<Block>,
+    item_reader: Option<Reader<'_>>,
+    adjacent: bool,
+) -> (Vec<Block>, Option<Span>) {
+    if let Some(item_reader) = item_reader {
+        lines.absorb(item_reader, false);
+    }
     let folded = if adjacent
         && matches!(
             blocks.first().map(|b| &b.kind),
@@ -3633,6 +3934,41 @@ fn parse_item_blocks(
         None
     };
     (blocks, folded)
+}
+
+/// A list being read item by item: [`item_step`] hands it each item's blocks
+/// and resumes it after a nested run.
+trait ItemList: Sized + 'static {
+    /// Take the blocks of the item being read.
+    fn add(&mut self, env: &mut Env<'_, '_, '_>, blocks: Vec<Block>, folded: Option<Span>);
+    /// Read on: the next items, or the finished list.
+    fn next<'s, 'c>(self, env: &mut Env<'_, 's, 'c>) -> Step<'s, 'c>;
+}
+
+/// Continue a list once an item's blocks are read. Ready items continue in
+/// place (`Ok`), so a long list does not deepen the call stack either; an
+/// item with lines suspends the list on its run (`Err`).
+#[allow(clippy::result_large_err)] // The `Err` is a brief `Step`, as above.
+fn item_step<'s, 'c, L: ItemList>(
+    env: &mut Env<'_, 's, 'c>,
+    blocks: ItemBlocks<'s>,
+    mut list: L,
+) -> Result<L, Step<'s, 'c>> {
+    match blocks {
+        ItemBlocks::Ready(blocks, folded) => {
+            list.add(env, blocks, folded);
+            Ok(list)
+        }
+        ItemBlocks::Read(collect, adjacent) => Err(Step::Collect(
+            collect,
+            Box::new(move |env, blocks, reader| {
+                let (blocks, folded) = item_blocks_end(env.lines, blocks, reader, adjacent);
+                list.add(env, blocks, folded);
+                list.next(env)
+            }),
+            Vec::new(),
+        )),
+    }
 }
 
 /// The text of an item: the marker line's text through a folded paragraph,
@@ -3699,232 +4035,382 @@ fn fold_indentation(
     content.remap(&pieces)
 }
 
-/// Ruby's `parse_list` for unordered and ordered lists, and
-/// `parse_description_list`.
-fn parse_list(
-    lines: &mut Reader<'_>,
-    i: &mut usize,
-    context: &mut ParseContext,
-    diagnostics: &mut Vec<Diagnostic>,
+/// An item read up to its marker line, waiting for its blocks.
+struct PendingItem {
+    off: usize,
+    line_end: usize,
+    text: Option<Span>,
+    checkbox: Option<bool>,
+    marker: String,
+}
+
+/// An unordered or ordered list (Ruby's `parse_list`): a run of items that
+/// nests a level deeper whenever a *unique* marker appears.
+struct PlainList {
     list_type: crate::lists::ListType,
-    style: Option<&str>,
-) -> Block {
-    use crate::lists::{item, resolve_ordered, ListType, Sibling};
-    let start = lines[*i].0;
-    let mut end = start;
-    if list_type == ListType::Description {
-        let first = item(&lines[*i].1, list_type).expect("a description list item");
-        let delimiter = first.marker.clone();
-        let sibling = Sibling::Delimiter(delimiter.clone());
-        let mut items: Vec<crate::ast::DescriptionListItem> = Vec::new();
-        let mut current = parse_description_item(lines, i, context, diagnostics, first, &sibling);
-        while lines.has(*i, context) {
-            let Some(next) = crate::lists::description_sibling(&lines[*i].1, &delimiter) else {
-                break;
-            };
-            let next = parse_description_item(lines, i, context, diagnostics, next, &sibling);
-            if current.description.is_some() {
-                items.push(std::mem::replace(&mut current, next));
-            } else {
-                current.terms.extend(next.terms);
-                current.description = next.description;
-                current.span.end = next.span.end;
+    style: Option<String>,
+    start: usize,
+    end: usize,
+    items: Vec<ListItem>,
+    implicit_style: Option<String>,
+    checklist: bool,
+    current: Option<PendingItem>,
+}
+
+impl PlainList {
+    fn step<'s, 'c>(
+        env: &mut Env<'_, 's, 'c>,
+        list_type: crate::lists::ListType,
+        style: Option<String>,
+    ) -> Step<'s, 'c> {
+        let start = env.lines[*env.i].0;
+        if list_type == crate::lists::ListType::Description {
+            let first = crate::lists::item(&env.lines[*env.i].1, list_type)
+                .expect("a description list item");
+            let delimiter = first.marker.clone();
+            return DescriptionList {
+                bibliography: style.as_deref() == Some("bibliography"),
+                start,
+                sibling: crate::lists::Sibling::Delimiter(delimiter.clone()),
+                delimiter,
+                first: Some(first),
+                items: Vec::new(),
+                current: None,
+                term: None,
             }
+            .next(env);
         }
-        items.push(current);
-        if style == Some("bibliography") {
-            for item in &items {
-                for term in &item.terms {
-                    context.body_subs.bibliography(&term.inlines);
-                }
-                if let Some(description) = &item.description {
-                    context.body_subs.bibliography(&description.inlines);
-                }
-            }
+        PlainList {
+            list_type,
+            style,
+            start,
+            end: start,
+            items: Vec::new(),
+            implicit_style: None,
+            checklist: false,
+            current: None,
         }
-        end = items.last().map_or(end, |item| item.span.end);
-        let mut block = Block::new(Span::new(start, end), BlockKind::DescriptionList { items });
-        block.attribute_context = Arc::clone(&context.attributes);
-        return block;
+        .next(env)
     }
-    let ordered = list_type == ListType::Ordered;
-    let bibliography = style == Some("bibliography");
-    let mut items = Vec::new();
-    let mut implicit_style = None;
-    let mut checklist = false;
-    while lines.has(*i, context) {
-        let Some(m) = item(&lines[*i].1, list_type) else {
-            break;
-        };
-        let (off, line) = lines.line(*i);
-        let marker_span = Span::new(off + m.marker_range.start, off + m.marker_range.end);
-        lines.list_markers.push(marker_span);
-        let mut text = m
-            .text
-            .clone()
-            .map(|r| Span::new(off + r.start, off + r.end));
-        let mut checkbox = None;
-        let sibling = if ordered {
-            let (marker, style_of) = resolve_ordered(&m.marker);
-            if let Some((expected, actual)) = crate::lists::expected_ordinal(&m.marker, items.len())
-            {
-                if expected != actual {
-                    diagnostics.push(Diagnostic {
-                        omitted_span: None,
-                        report: Default::default(),
-                        span: Span::new(off, off + line.len()),
-                        severity: Severity::Warning,
-                        message: format!("list item index: expected {expected}, got {actual}"),
-                    });
-                }
-            }
-            if items.is_empty() && style.is_none() {
-                implicit_style = Some(style_of.map(str::to_owned).unwrap_or_else(|| {
-                    [
-                        "arabic",
-                        "loweralpha",
-                        "lowerroman",
-                        "upperalpha",
-                        "upperroman",
-                    ]
-                    .get(marker.len() - 1)
-                    .unwrap_or(&"arabic")
-                    .to_string()
-                }));
-            }
-            Sibling::Marker(list_type, marker)
-        } else {
-            // Ruby's checklist items.
-            if let Some(range) = m.text.as_ref().filter(|_| !bibliography) {
-                let item_text = &line[range.clone()];
-                for (prefix, checked) in [("[ ] ", false), ("[x] ", true), ("[*] ", true)] {
-                    if item_text.starts_with(prefix) {
-                        checklist = true;
-                        checkbox = Some(checked);
-                        text = Some(Span::new(off + range.start + 4, off + range.end));
-                    }
-                }
-            }
-            Sibling::Marker(list_type, m.marker.clone())
-        };
-        if let Some(text) = text {
-            if bibliography && !ordered {
-                let content = lines.content(text.start, text.end);
-                context.catalog_bibliography(&content.text, |range| {
-                    content.original_span(Span::new(range.start, range.end))
-                });
-            } else {
-                lines.catalog_anchors(text.start, text.end, true, context);
-            }
-        }
-        *i += 1;
-        let buffer = read_list_item_lines(lines, i, context, list_type, &sibling, true);
-        let (blocks, folded) =
-            parse_item_blocks(lines, buffer, context, diagnostics, list_type, true);
-        let inlines = item_text(lines, text, folded, context);
-        if bibliography {
-            context.body_subs.bibliography(&inlines);
+}
+
+impl ItemList for PlainList {
+    fn add(&mut self, env: &mut Env<'_, '_, '_>, blocks: Vec<Block>, folded: Option<Span>) {
+        let item = self.current.take().expect("an item being read");
+        let inlines = item_text(env.lines, item.text, folded, env.context);
+        if self.style.as_deref() == Some("bibliography") {
+            env.context.body_subs.bibliography(&inlines);
         }
         let item_end = blocks
             .last()
             .map(|b| b.span.end)
             .or(folded.map(|f| f.end))
-            .unwrap_or(off + line.len())
-            .max(off + line.len());
-        items.push(ListItem {
+            .unwrap_or(item.line_end)
+            .max(item.line_end);
+        self.items.push(ListItem {
             inlines,
             blocks,
-            span: Span::new(off, item_end),
-            checkbox,
-            marker: Some(match &sibling {
-                Sibling::Marker(_, marker) | Sibling::Delimiter(marker) => marker.clone(),
-            }),
+            span: Span::new(item.off, item_end),
+            checkbox: item.checkbox,
+            marker: Some(item.marker),
         });
-        end = item_end;
+        self.end = item_end;
         // Ruby's `reader.skip_blank_lines || break`.
-        while lines.has(*i, context) && lines[*i].1.is_ruby_blank() {
-            *i += 1;
+        while env.lines.has(*env.i, env.context) && env.lines[*env.i].1.is_ruby_blank() {
+            *env.i += 1;
         }
     }
-    let mut block = Block::new(
-        Span::new(start, end),
-        BlockKind::List {
-            ordered,
-            items,
-            icons: None,
-        },
-    );
-    block.attrs.style = style.map(str::to_owned).or(implicit_style);
-    if checklist {
-        block.attrs.options.push("checklist".into());
+
+    fn next<'s, 'c>(mut self, env: &mut Env<'_, 's, 'c>) -> Step<'s, 'c> {
+        use crate::lists::{item, resolve_ordered, ListType, Sibling};
+        let list_type = self.list_type;
+        let ordered = list_type == ListType::Ordered;
+        let bibliography = self.style.as_deref() == Some("bibliography");
+        while env.lines.has(*env.i, env.context) {
+            let Some(m) = item(&env.lines[*env.i].1, list_type) else {
+                break;
+            };
+            let (off, line) = env.lines.line(*env.i);
+            let marker_span = Span::new(off + m.marker_range.start, off + m.marker_range.end);
+            env.lines.list_markers.push(marker_span);
+            let mut text = m
+                .text
+                .clone()
+                .map(|r| Span::new(off + r.start, off + r.end));
+            let mut checkbox = None;
+            let sibling = if ordered {
+                let (marker, style_of) = resolve_ordered(&m.marker);
+                if let Some((expected, actual)) =
+                    crate::lists::expected_ordinal(&m.marker, self.items.len())
+                {
+                    if expected != actual {
+                        env.diagnostics.push(Diagnostic {
+                            omitted_span: None,
+                            report: Default::default(),
+                            span: Span::new(off, off + line.len()),
+                            severity: Severity::Warning,
+                            message: format!("list item index: expected {expected}, got {actual}"),
+                        });
+                    }
+                }
+                if self.items.is_empty() && self.style.is_none() {
+                    self.implicit_style = Some(style_of.map(str::to_owned).unwrap_or_else(|| {
+                        [
+                            "arabic",
+                            "loweralpha",
+                            "lowerroman",
+                            "upperalpha",
+                            "upperroman",
+                        ]
+                        .get(marker.len() - 1)
+                        .unwrap_or(&"arabic")
+                        .to_string()
+                    }));
+                }
+                Sibling::Marker(list_type, marker)
+            } else {
+                // Ruby's checklist items.
+                if let Some(range) = m.text.as_ref().filter(|_| !bibliography) {
+                    let item_text = &line[range.clone()];
+                    for (prefix, checked) in [("[ ] ", false), ("[x] ", true), ("[*] ", true)] {
+                        if item_text.starts_with(prefix) {
+                            self.checklist = true;
+                            checkbox = Some(checked);
+                            text = Some(Span::new(off + range.start + 4, off + range.end));
+                        }
+                    }
+                }
+                Sibling::Marker(list_type, m.marker.clone())
+            };
+            if let Some(text) = text {
+                if bibliography && !ordered {
+                    let content = env.lines.content(text.start, text.end);
+                    env.context.catalog_bibliography(&content.text, |range| {
+                        content.original_span(Span::new(range.start, range.end))
+                    });
+                } else {
+                    env.lines
+                        .catalog_anchors(text.start, text.end, true, env.context);
+                }
+            }
+            *env.i += 1;
+            let buffer =
+                read_list_item_lines(env.lines, env.i, env.context, list_type, &sibling, true);
+            self.current = Some(PendingItem {
+                off,
+                line_end: off + line.len(),
+                text,
+                checkbox,
+                marker: match sibling {
+                    Sibling::Marker(_, marker) | Sibling::Delimiter(marker) => marker,
+                },
+            });
+            let blocks = item_blocks_begin(env.lines, buffer, list_type, true);
+            match item_step(env, blocks, self) {
+                Ok(list) => self = list,
+                Err(step) => return step,
+            }
+        }
+        let mut block = Block::new(
+            Span::new(self.start, self.end),
+            BlockKind::List {
+                ordered,
+                items: self.items,
+                icons: None,
+            },
+        );
+        block.attrs.style = self.style.or(self.implicit_style);
+        if self.checklist {
+            block.attrs.options.push("checklist".into());
+        }
+        block.attribute_context = Arc::clone(&env.context.attributes);
+        Step::Done(Some(block))
     }
-    block.attribute_context = Arc::clone(&context.attributes);
-    block
 }
 
-/// Ruby's `parse_callout_list`: items numbered from 1 (`<.>` counts on), each
-/// naming the marks of the current callout catalog list with its number;
-/// the catalog then moves to the next list.
-fn parse_callout_list(
-    lines: &mut Reader<'_>,
-    i: &mut usize,
-    context: &mut ParseContext,
-    diagnostics: &mut Vec<Diagnostic>,
-) -> Block {
-    use crate::lists::{ListType, Sibling};
-    let start = lines[*i].0;
-    let mut end = start;
-    let mut items = Vec::new();
-    let mut autonum = 0u64;
-    let sibling = Sibling::Marker(ListType::Callout, "<1>".into());
-    while lines.has(*i, context) {
-        let Some(m) = crate::callouts::list_item(&lines[*i].1) else {
-            break;
+/// A term waiting for its description's blocks (Ruby's `parse_list_item`
+/// for a description list).
+struct PendingTerm {
+    off: usize,
+    line_end: usize,
+    term: Span,
+    term_inlines: Vec<Inline>,
+    text: Option<Span>,
+}
+
+/// A description list: consecutive terms without a description share the
+/// next one.
+struct DescriptionList {
+    bibliography: bool,
+    start: usize,
+    delimiter: String,
+    sibling: crate::lists::Sibling,
+    first: Option<crate::lists::ItemMatch>,
+    items: Vec<crate::ast::DescriptionListItem>,
+    current: Option<crate::ast::DescriptionListItem>,
+    term: Option<PendingTerm>,
+}
+
+impl ItemList for DescriptionList {
+    fn add(&mut self, env: &mut Env<'_, '_, '_>, blocks: Vec<Block>, folded: Option<Span>) {
+        let PendingTerm {
+            off,
+            line_end,
+            term,
+            term_inlines,
+            text,
+        } = self.term.take().expect("a term being read");
+        let inlines = item_text(env.lines, text, folded, env.context);
+        let item_end = blocks
+            .last()
+            .map(|b| b.span.end)
+            .or(folded.map(|f| f.end))
+            .unwrap_or(line_end)
+            .max(line_end);
+        let description = (!inlines.is_empty() || !blocks.is_empty()).then(|| ListItem {
+            inlines,
+            blocks,
+            span: Span::new(text.or(folded).map_or(line_end, |s| s.start), item_end),
+            checkbox: None,
+            marker: None,
+        });
+        let next = crate::ast::DescriptionListItem {
+            terms: vec![crate::ast::ListTerm {
+                inlines: term_inlines,
+                span: term,
+            }],
+            description,
+            span: Span::new(off, item_end),
         };
-        let (off, line) = lines.line(*i);
-        let line_span = Span::new(off, off + line.len());
-        lines.list_markers.push(Span::new(
-            off + m.marker_range.start,
-            off + m.marker_range.end,
-        ));
-        let number = if m.marker == "." {
-            autonum += 1;
-            autonum.to_string()
-        } else {
-            m.marker.clone()
-        };
-        let expected = (items.len() + 1).to_string();
-        if number != expected {
-            diagnostics.push(Diagnostic {
-                omitted_span: None,
-                report: Default::default(),
-                span: line_span,
-                severity: Severity::Warning,
-                message: format!("callout list item index: expected {expected}, got {number}"),
+        match &mut self.current {
+            None => self.current = Some(next),
+            Some(current) if current.description.is_some() => {
+                self.items.push(std::mem::replace(current, next));
+            }
+            Some(current) => {
+                current.terms.extend(next.terms);
+                current.description = next.description;
+                current.span.end = next.span.end;
+            }
+        }
+    }
+
+    fn next<'s, 'c>(mut self, env: &mut Env<'_, 's, 'c>) -> Step<'s, 'c> {
+        use crate::lists::ListType;
+        loop {
+            let m = match self.first.take() {
+                Some(first) => first,
+                None => {
+                    if !env.lines.has(*env.i, env.context) {
+                        break;
+                    }
+                    let Some(next) =
+                        crate::lists::description_sibling(&env.lines[*env.i].1, &self.delimiter)
+                    else {
+                        break;
+                    };
+                    next
+                }
+            };
+            let (off, line) = env.lines.line(*env.i);
+            let term_range = m.term.clone().expect("a description term");
+            let term = Span::new(off + term_range.start, off + term_range.end);
+            env.lines.list_markers.push(Span::new(
+                off + m.marker_range.start,
+                off + m.marker_range.end,
+            ));
+            env.lines
+                .catalog_term_anchor(term.start, term.end, env.context);
+            let attrs = env.context.render_attributes();
+            let term_inlines = env
+                .lines
+                .scan_content(term.start, term.end, &attrs, env.context);
+            let text = m
+                .text
+                .clone()
+                .map(|r| Span::new(off + r.start, off + r.end));
+            *env.i += 1;
+            let has_text = text.is_some();
+            let buffer = read_list_item_lines(
+                env.lines,
+                env.i,
+                env.context,
+                ListType::Description,
+                &self.sibling,
+                has_text,
+            );
+            self.term = Some(PendingTerm {
+                off,
+                line_end: off + line.len(),
+                term,
+                term_inlines,
+                text,
             });
+            let blocks = item_blocks_begin(env.lines, buffer, ListType::Description, has_text);
+            match item_step(env, blocks, self) {
+                Ok(list) => self = list,
+                Err(step) => return step,
+            }
         }
-        let text = m
-            .text
-            .clone()
-            .map(|r| Span::new(off + r.start, off + r.end));
-        if let Some(text) = text {
-            lines.catalog_anchors(text.start, text.end, true, context);
+        let mut items = self.items;
+        items.extend(self.current);
+        if self.bibliography {
+            for item in &items {
+                for term in &item.terms {
+                    env.context.body_subs.bibliography(&term.inlines);
+                }
+                if let Some(description) = &item.description {
+                    env.context.body_subs.bibliography(&description.inlines);
+                }
+            }
         }
-        *i += 1;
-        let buffer = read_list_item_lines(lines, i, context, ListType::Callout, &sibling, true);
-        let (blocks, folded) =
-            parse_item_blocks(lines, buffer, context, diagnostics, ListType::Callout, true);
-        let inlines = item_text(lines, text, folded, context);
+        let end = items.last().map_or(self.start, |item| item.span.end);
+        let mut block = Block::new(
+            Span::new(self.start, end),
+            BlockKind::DescriptionList { items },
+        );
+        block.attribute_context = Arc::clone(&env.context.attributes);
+        Step::Done(Some(block))
+    }
+}
+
+/// A callout list (`<1> text`), like Ruby's `parse_callout_list`.
+struct CalloutList {
+    start: usize,
+    end: usize,
+    items: Vec<crate::ast::CalloutListItem>,
+    autonum: u64,
+    current: Option<(usize, Span, Option<Span>)>,
+}
+
+impl CalloutList {
+    fn step<'s, 'c>(env: &mut Env<'_, 's, 'c>) -> Step<'s, 'c> {
+        let start = env.lines[*env.i].0;
+        CalloutList {
+            start,
+            end: start,
+            items: Vec::new(),
+            autonum: 0,
+            current: None,
+        }
+        .next(env)
+    }
+}
+
+impl ItemList for CalloutList {
+    fn add(&mut self, env: &mut Env<'_, '_, '_>, blocks: Vec<Block>, folded: Option<Span>) {
+        let (off, line_span, text) = self.current.take().expect("an item being read");
+        let inlines = item_text(env.lines, text, folded, env.context);
         let item_end = blocks
             .last()
             .map(|b| b.span.end)
             .or(folded.map(|f| f.end))
             .unwrap_or(line_span.end)
             .max(line_span.end);
-        let ordinal = items.len() as u64 + 1;
-        let coids = context.callouts.ids(ordinal);
+        let ordinal = self.items.len() as u64 + 1;
+        let coids = env.context.callouts.ids(ordinal);
         if coids.is_empty() {
-            diagnostics.push(Diagnostic {
+            env.diagnostics.push(Diagnostic {
                 omitted_span: None,
                 report: Default::default(),
                 span: line_span,
@@ -3932,7 +4418,7 @@ fn parse_callout_list(
                 message: format!("no callout found for <{ordinal}>"),
             });
         }
-        items.push(crate::ast::CalloutListItem {
+        self.items.push(crate::ast::CalloutListItem {
             item: ListItem {
                 inlines,
                 blocks,
@@ -3944,82 +4430,70 @@ fn parse_callout_list(
             icons: None,
             src: String::new(),
         });
-        end = item_end;
+        self.end = item_end;
     }
-    context.callouts.next_list();
-    let mut block = Block::new(Span::new(start, end), BlockKind::CalloutList { items });
-    block.attrs.style = Some("arabic".into());
-    block.attribute_context = Arc::clone(&context.attributes);
-    block
-}
 
-/// One term and its description (Ruby's `parse_list_item` for a description
-/// list): a leading anchor in the term takes the rest of the term as its
-/// default reftext.
-fn parse_description_item(
-    lines: &mut Reader<'_>,
-    i: &mut usize,
-    context: &mut ParseContext,
-    diagnostics: &mut Vec<Diagnostic>,
-    m: crate::lists::ItemMatch,
-    sibling: &crate::lists::Sibling,
-) -> crate::ast::DescriptionListItem {
-    let (off, line) = lines.line(*i);
-    let term_range = m.term.clone().expect("a description term");
-    let term = Span::new(off + term_range.start, off + term_range.end);
-    lines.list_markers.push(Span::new(
-        off + m.marker_range.start,
-        off + m.marker_range.end,
-    ));
-    lines.catalog_term_anchor(term.start, term.end, context);
-    let attrs = context.render_attributes();
-    let term_inlines = lines.scan_content(term.start, term.end, &attrs, context);
-    let text = m
-        .text
-        .clone()
-        .map(|r| Span::new(off + r.start, off + r.end));
-    *i += 1;
-    let has_text = text.is_some();
-    let buffer = read_list_item_lines(
-        lines,
-        i,
-        context,
-        crate::lists::ListType::Description,
-        sibling,
-        has_text,
-    );
-    let (blocks, folded) = parse_item_blocks(
-        lines,
-        buffer,
-        context,
-        diagnostics,
-        crate::lists::ListType::Description,
-        has_text,
-    );
-    let inlines = item_text(lines, text, folded, context);
-    let item_end = blocks
-        .last()
-        .map(|b| b.span.end)
-        .or(folded.map(|f| f.end))
-        .unwrap_or(off + line.len())
-        .max(off + line.len());
-    let description = (!inlines.is_empty() || !blocks.is_empty()).then(|| ListItem {
-        inlines,
-        blocks,
-        span: Span::new(
-            text.or(folded).map_or(off + line.len(), |s| s.start),
-            item_end,
-        ),
-        checkbox: None,
-        marker: None,
-    });
-    crate::ast::DescriptionListItem {
-        terms: vec![crate::ast::ListTerm {
-            inlines: term_inlines,
-            span: term,
-        }],
-        description,
-        span: Span::new(off, item_end),
+    fn next<'s, 'c>(mut self, env: &mut Env<'_, 's, 'c>) -> Step<'s, 'c> {
+        use crate::lists::{ListType, Sibling};
+        let sibling = Sibling::Marker(ListType::Callout, "<1>".into());
+        while env.lines.has(*env.i, env.context) {
+            let Some(m) = crate::callouts::list_item(&env.lines[*env.i].1) else {
+                break;
+            };
+            let (off, line) = env.lines.line(*env.i);
+            let line_span = Span::new(off, off + line.len());
+            env.lines.list_markers.push(Span::new(
+                off + m.marker_range.start,
+                off + m.marker_range.end,
+            ));
+            let number = if m.marker == "." {
+                self.autonum += 1;
+                self.autonum.to_string()
+            } else {
+                m.marker.clone()
+            };
+            let expected = (self.items.len() + 1).to_string();
+            if number != expected {
+                env.diagnostics.push(Diagnostic {
+                    omitted_span: None,
+                    report: Default::default(),
+                    span: line_span,
+                    severity: Severity::Warning,
+                    message: format!("callout list item index: expected {expected}, got {number}"),
+                });
+            }
+            let text = m
+                .text
+                .clone()
+                .map(|r| Span::new(off + r.start, off + r.end));
+            if let Some(text) = text {
+                env.lines
+                    .catalog_anchors(text.start, text.end, true, env.context);
+            }
+            *env.i += 1;
+            let buffer = read_list_item_lines(
+                env.lines,
+                env.i,
+                env.context,
+                ListType::Callout,
+                &sibling,
+                true,
+            );
+            self.current = Some((off, line_span, text));
+            let blocks = item_blocks_begin(env.lines, buffer, ListType::Callout, true);
+            match item_step(env, blocks, self) {
+                Ok(list) => self = list,
+                Err(step) => return step,
+            }
+        }
+        env.context.callouts.next_list();
+        let mut block = Block::new(
+            Span::new(self.start, self.end),
+            BlockKind::CalloutList { items: self.items },
+        );
+        block.attrs.style = Some("arabic".into());
+        block.attribute_context = Arc::clone(&env.context.attributes);
+        Step::Done(Some(block))
     }
 }
 
