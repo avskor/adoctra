@@ -2,6 +2,7 @@
 
 #![allow(clippy::all, dead_code, non_snake_case, unreachable_code, unused_assignments, unused_mut, unused_parens, unused_variables)]
 
+use crate::guess::{GuessEntry, TextAnalyzer};
 use crate::lexer::{contains, search, Action, LexError, Lexer, LexerDef, Match, Next, Rule, Scan, StateDef, Tables};
 use crate::regex::Regex;
 use crate::token as T;
@@ -3563,11 +3564,68 @@ pub(crate) static REGEXES: &[(&str, u32)] = &[
     ("\n          [0-9]+\n          ((?-mix:[.][0-9_]+)  (?-mix:e[-+]?[0-9_]+)?\n          |(?-mix:[.][0-9_]+)? (?-mix:e[-+]?[0-9_]+)\n          )\n        ", 2),
     ("\n        ( 0b[10_]+\n         | 0x[0-9a-fA-F_]+\n         | [0-9_]+\n        )\n        ", 2),
     ("\\\\ ([nrt'\"\\\\0] | x\\h{2} | u\\h{4} | U\\h{8})", 2),
+    ("\\bawk(\\s|$)", 0),
+    ("html", 0),
+    ("\\A<\\?xml\\b", 0),
+    ("<\\s*Biml\\b", 0),
+    ("\\bcoffee(\\s|$)", 0),
+    ("\\bcrystal(\\s|$)", 0),
+    ("\\b(?-mix:pythonw?(?:[23](?:\\.\\d+)?)?)(\\s|$)", 0),
+    ("\\Adiff[^\\n]*?\\ba/[^\\n]*\\bb/", 0),
+    ("---.*?\\n[+][+][+]", 0),
+    ("[+][+][+].*?\\n---", 0),
+    ("\\A\\s*%YAML", 4),
+    ("\\belixir(\\s|$)", 0),
+    ("\\bfactor(\\s|$)", 0),
+    ("\\bcucumber(\\s|$)", 0),
+    ("\\bnode(\\s|$)", 0),
+    ("\\bjsc(\\s|$)", 0),
+    ("\\b(?-mix:groovy)(\\s|$)", 0),
+    ("\\b(?-mix:nextflow)(\\s|$)", 0),
+    ("\\bphp(\\s|$)", 0),
+    ("^<\\?hh", 0),
+    ("^<\\?php", 0),
+    ("<\\?hh", 0),
+    ("\\bhhvm(\\s|$)", 0),
+    ("async function [a-zA-Z]", 0),
+    ("\\): Awaitable<", 0),
+    ("\\brunhaskell(\\s|$)", 0),
+    ("\\bhaxe(\\s|$)", 0),
+    ("\\bhtml\\b", 1),
+    ("<\\s*html\\b", 0),
+    ("\\bio(\\s|$)", 0),
+    ("\\bruby(\\s|$)", 0),
+    ("\\bjulia(\\s|$)", 0),
+    ("\\blasso9(\\s|$)", 0),
+    ("\\A.*?<\\?(lasso(script)?|=)", 0),
+    ("\\blsc(\\s|$)", 0),
+    ("\\blua(\\s|$)", 0),
+    ("\\b(?-mix:mojow?(?:[23](?:\\.\\d+)?)?)(\\s|$)", 0),
+    ("\\bmoon(\\s|$)", 0),
+    ("\\bperl(\\s|$)", 0),
+    ("^%!", 0),
+    ("\\bpraat(\\s|$)", 0),
+    ("\\bpuppet-apply(\\s|$)", 0),
+    ("\\bpuppet(\\s|$)", 0),
+    ("\\bRscript(\\s|$)", 0),
+    ("\\brustc(\\s|$)", 0),
+    ("\\bsed(\\s|$)", 0),
+    ("\\b(?-mix:(ba|z|k)?sh)(\\s|$)", 0),
+    ("\\btclsh(\\s|$)", 0),
+    ("\\bwish(\\s|$)", 0),
+    ("\\bjimsh(\\s|$)", 0),
+    ("\\A\\s*\\\\(documentclass|input|documentstyle|relax|ProvidesPackage|ProvidesClass)", 0),
+    ("\\btulip(\\s|$)", 0),
+    ("\\A\\s*#!(.*)$", 0),
+    ("\\A\\s*\n        (?:<\\?.*?\\?>\\s*)? # possible <?xml...?> tag\n        <!DOCTYPE\\s+(.+?)>\n      ", 6),
+    ("-\\*-\\s*(?:(?!mode)[\\w-]+\\s*:\\s*(?:[\\w+-]+)\\s*;?\\s*)*(?:mode\\s*:)?\\s*([\\w+-]+)\\s*(?:;\\s*(?!mode)[\\w-]+\\s*:\\s*[\\w+-]+\\s*)*;?\\s*-\\*-", 1),
+    ("(?:vim|vi|ex):\\s*(?:ft|filetype|syntax)=(\\w+)\\s?", 1),
+    ("(?:vim|vi|Vim|ex):\\s*se(?:t)?.*\\s(?:ft|filetype|syntax)=(\\w+)\\s?.*:", 1),
 ];
 
 #[allow(clippy::declare_interior_mutable_const)]
 const UNCOMPILED: OnceLock<Regex> = OnceLock::new();
-static COMPILED: [OnceLock<Regex>; 3555] = [UNCOMPILED; 3555];
+static COMPILED: [OnceLock<Regex>; 3612] = [UNCOMPILED; 3612];
 
 static SET_0: &[&str] = &["DATA", "FIELD-SYMBOL"];
 static SET_1: &[&str] = &["acos", "apply", "asin", "assign", "atan", "attribute", "bit-set", "boolc", "boolx", "call", "call-method", "cast", "ceil", "cfunc", "char_off", "charlen", "class_constructor", "clear", "cluster", "cmax", "cmin", "cnt", "communication_failure", "concat_lines_of", "cond", "cond-var", "condense", "constructor", "contains", "contains_any_not_of", "contains_any_of", "copy", "cos", "cosh", "count", "count_any_not_of", "count_any_of", "create", "cursor", "data", "dbmaxlen", "dbtab", "deserialize", "destructor", "distance", "empty", "error_message", "escape", "exp", "extensible", "find", "find_any_not_of", "find_any_of", "find_end", "floor", "frac", "from_mixed", "group", "hashed", "header", "idx", "include", "index", "insert", "ipow", "itab", "key", "lax", "line_exists", "line_index", "lines", "log", "log10", "loop", "loop_key", "match", "matches", "me", "mesh_path", "namespace", "nmax", "nmin", "node", "numeric", "numofchar", "object", "parameter", "primary_key", "read", "ref", "repeat", "replace", "rescale", "resource_failure", "reverse", "root", "round", "segment", "sender", "serialize", "shift_left", "shift_right", "sign", "simple", "sin", "sinh", "skip", "sorted", "space", "sqrt", "standard", "strlen", "substring", "substring_after", "substring_before", "substring_from", "substring_to", "sum", "switch", "switch-var", "system_failure", "table", "table_line", "tan", "tanh", "template", "text", "to_lower", "to_mixed", "to_upper", "transform", "translate", "trunc", "type", "value", "variable", "write", "xsdbool", "xsequence", "xstrlen"];
@@ -6748,6 +6806,46 @@ fn cb_graphql_graphql_228(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), Lex
 
 fn cb_graphql_graphql_238(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
     s.token(T::NAME_VARIABLE, m.text());
+    if !(s.state_is("list")) {
+        s.pop(1)?;
+    }
+    Ok(())
+}
+
+fn cb_graphql_graphql_238_2(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    s.token(T::KEYWORD_CONSTANT, m.text());
+    if !(s.state_is("list")) {
+        s.pop(1)?;
+    }
+    Ok(())
+}
+
+fn cb_graphql_graphql_238_3(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    s.token(T::LITERAL_NUMBER_FLOAT, m.text());
+    if !(s.state_is("list")) {
+        s.pop(1)?;
+    }
+    Ok(())
+}
+
+fn cb_graphql_graphql_238_4(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    s.token(T::LITERAL_NUMBER_INTEGER, m.text());
+    if !(s.state_is("list")) {
+        s.pop(1)?;
+    }
+    Ok(())
+}
+
+fn cb_graphql_graphql_238_5(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    s.token(T::LITERAL_STRING_DOUBLE, m.text());
+    if !(s.state_is("list")) {
+        s.pop(1)?;
+    }
+    Ok(())
+}
+
+fn cb_graphql_graphql_238_6(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    s.token(T::NAME, m.text());
     if !(s.state_is("list")) {
         s.pop(1)?;
     }
@@ -14962,7 +15060,7 @@ static LEXER_APIBLUEPRINT: LexerDef = LexerDef {
             Rule::Match { regex: 103, bol: true, action: Action::Emit(T::GENERIC_SUBHEADING, Next::Stay) },
             Rule::Match { regex: 104, bol: true, action: Action::Emit(T::GENERIC_HEADING, Next::Stay) },
             Rule::Match { regex: 105, bol: true, action: Action::Emit(T::GENERIC_SUBHEADING, Next::Stay) },
-            Rule::Match { regex: 106, bol: true, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 106, bol: true, action: Action::Call(crate::lexers::markdown::rule_35) },
             Rule::Match { regex: 107, bol: false, action: Action::Emit(T::LITERAL_STRING_BACKTICK, Next::Stay) },
             Rule::Match { regex: 108, bol: false, action: Action::Emit(T::LITERAL_STRING_BACKTICK, Next::Stay) },
             Rule::Match { regex: 109, bol: true, action: Action::Emit(T::PUNCTUATION, Next::Stay) },
@@ -15018,7 +15116,7 @@ static LEXER_APIBLUEPRINT: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["markdown.rs:35 (value strip)"],
+    missing: &[],
 };
 
 static LEXER_APPLESCRIPT: LexerDef = LexerDef {
@@ -19205,11 +19303,11 @@ static LEXER_GRAPHQL: LexerDef = LexerDef {
         StateDef { name: "value", rules: &[
             Rule::Match { regex: 1288, bol: false, action: Action::Emit(T::LITERAL_STRING_DOUBLE, Next::Stay) },
             Rule::Match { regex: 1373, bol: false, action: Action::Call(cb_graphql_graphql_238) },
-            Rule::Match { regex: 1378, bol: false, action: Action::Call(cb_graphql_graphql_238) },
-            Rule::Match { regex: 1379, bol: false, action: Action::Call(cb_graphql_graphql_238) },
-            Rule::Match { regex: 1380, bol: false, action: Action::Call(cb_graphql_graphql_238) },
-            Rule::Match { regex: 209, bol: false, action: Action::Call(cb_graphql_graphql_238) },
-            Rule::Match { regex: 1367, bol: false, action: Action::Call(cb_graphql_graphql_238) },
+            Rule::Match { regex: 1378, bol: false, action: Action::Call(cb_graphql_graphql_238_2) },
+            Rule::Match { regex: 1379, bol: false, action: Action::Call(cb_graphql_graphql_238_3) },
+            Rule::Match { regex: 1380, bol: false, action: Action::Call(cb_graphql_graphql_238_4) },
+            Rule::Match { regex: 209, bol: false, action: Action::Call(cb_graphql_graphql_238_5) },
+            Rule::Match { regex: 1367, bol: false, action: Action::Call(cb_graphql_graphql_238_6) },
             Rule::Match { regex: 262, bol: false, action: Action::Emit(T::PUNCTUATION, Next::State(16)) },
             Rule::Match { regex: 23, bol: false, action: Action::Emit(T::PUNCTUATION, Next::State(15)) },
             Rule::Mixin(1),
@@ -19219,7 +19317,7 @@ static LEXER_GRAPHQL: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["delegates to unported markdown"],
+    missing: &[],
 };
 
 static LEXER_GROOVY: LexerDef = LexerDef {
@@ -20382,19 +20480,19 @@ static LEXER_HTTP: LexerDef = LexerDef {
             Rule::Match { regex: 1588, bol: false, action: Action::Call(cb_http_http_48) },
         ] },
         StateDef { name: "headers", rules: &[
-            Rule::Match { regex: 1589, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 1589, bol: false, action: Action::Call(crate::lexers::http::rule_63) },
             Rule::Match { regex: 1590, bol: false, action: Action::Call(cb_http_http_73) },
             Rule::Match { regex: 1591, bol: false, action: Action::Emit(T::TEXT, Next::State(2)) },
         ] },
         StateDef { name: "content", rules: &[
-            Rule::Match { regex: 682, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 682, bol: false, action: Action::Call(crate::lexers::http::rule_81) },
         ] },
     ],
     start: &[st_http_http_29],
     init: None,
     reset: None,
     stream: None,
-    missing: &["http.rs:63 (condition zero?)", "http.rs:81 (sub lexer)"],
+    missing: &[],
 };
 
 static LEXER_HYLANG: LexerDef = LexerDef {
@@ -22418,7 +22516,7 @@ static LEXER_LITERATE_COFFEESCRIPT: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["delegates to unported markdown"],
+    missing: &[],
 };
 
 static LEXER_LITERATE_HASKELL: LexerDef = LexerDef {
@@ -22928,7 +23026,7 @@ static LEXER_MARKDOWN: LexerDef = LexerDef {
             Rule::Match { regex: 103, bol: true, action: Action::Emit(T::GENERIC_SUBHEADING, Next::Stay) },
             Rule::Match { regex: 104, bol: true, action: Action::Emit(T::GENERIC_HEADING, Next::Stay) },
             Rule::Match { regex: 105, bol: true, action: Action::Emit(T::GENERIC_SUBHEADING, Next::Stay) },
-            Rule::Match { regex: 106, bol: true, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 106, bol: true, action: Action::Call(crate::lexers::markdown::rule_35) },
             Rule::Match { regex: 107, bol: false, action: Action::Emit(T::LITERAL_STRING_BACKTICK, Next::Stay) },
             Rule::Match { regex: 108, bol: false, action: Action::Emit(T::LITERAL_STRING_BACKTICK, Next::Stay) },
             Rule::Match { regex: 109, bol: true, action: Action::Emit(T::PUNCTUATION, Next::Stay) },
@@ -22984,7 +23082,7 @@ static LEXER_MARKDOWN: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["markdown.rs:35 (value strip)"],
+    missing: &[],
 };
 
 static LEXER_MASON: LexerDef = LexerDef {
@@ -30430,6 +30528,316 @@ static LEXER_ZIG: LexerDef = LexerDef {
     missing: &[],
 };
 
+fn detect_awk(text: &TextAnalyzer) -> bool {
+    if text.shebang_is(3555) {
+        return true;
+    }
+    false
+}
+
+fn detect_xml(text: &TextAnalyzer) -> bool {
+    if text.doctype().is_some_and(|doctype| crate::lexer::search(3556, doctype)) {
+        return false;
+    }
+    if text.search(3557) {
+        return true;
+    }
+    if text.doctype().is_some() {
+        return true;
+    }
+    false
+}
+
+fn detect_biml(text: &TextAnalyzer) -> bool {
+    if text.search(3558) {
+        return true;
+    }
+    false
+}
+
+fn detect_coffeescript(text: &TextAnalyzer) -> bool {
+    if text.shebang_is(3559) {
+        return true;
+    }
+    false
+}
+
+fn detect_crystal(text: &TextAnalyzer) -> bool {
+    if text.shebang_is(3560) {
+        return true;
+    }
+    false
+}
+
+fn detect_python(text: &TextAnalyzer) -> bool {
+    if text.shebang_is(3561) {
+        return true;
+    }
+    false
+}
+
+fn detect_diff(text: &TextAnalyzer) -> bool {
+    if text.text().starts_with("Index: ") {
+        return true;
+    }
+    if text.search(3562) {
+        return true;
+    }
+    if (text.search(3563)) || (text.search(3564)) {
+        return true;
+    }
+    false
+}
+
+fn detect_yaml(text: &TextAnalyzer) -> bool {
+    if text.search(3565) {
+        return true;
+    }
+    false
+}
+
+fn detect_elixir(text: &TextAnalyzer) -> bool {
+    if text.shebang_is(3566) {
+        return true;
+    }
+    false
+}
+
+fn detect_factor(text: &TextAnalyzer) -> bool {
+    if text.shebang_is(3567) {
+        return true;
+    }
+    false
+}
+
+fn detect_gherkin(text: &TextAnalyzer) -> bool {
+    if text.shebang_is(3568) {
+        return true;
+    }
+    false
+}
+
+fn detect_javascript(text: &TextAnalyzer) -> bool {
+    if text.shebang_is(3569) {
+        return true;
+    }
+    if text.shebang_is(3570) {
+        return true;
+    }
+    false
+}
+
+fn detect_groovy(text: &TextAnalyzer) -> bool {
+    if text.shebang_is(3571) {
+        return true;
+    }
+    if text.shebang_is(3572) {
+        return true;
+    }
+    false
+}
+
+fn detect_php(text: &TextAnalyzer) -> bool {
+    if text.shebang_is(3573) {
+        return true;
+    }
+    if text.search(3574) {
+        return false;
+    }
+    if text.search(3575) {
+        return true;
+    }
+    false
+}
+
+fn detect_hack(text: &TextAnalyzer) -> bool {
+    if text.search(3576) {
+        return true;
+    }
+    if text.shebang_is(3577) {
+        return true;
+    }
+    if text.search(3578) {
+        return true;
+    }
+    if text.search(3579) {
+        return true;
+    }
+    false
+}
+
+fn detect_haskell(text: &TextAnalyzer) -> bool {
+    if text.shebang_is(3580) {
+        return true;
+    }
+    false
+}
+
+fn detect_haxe(text: &TextAnalyzer) -> bool {
+    if text.shebang_is(3581) {
+        return true;
+    }
+    false
+}
+
+fn detect_html(text: &TextAnalyzer) -> bool {
+    if text.doctype().is_some_and(|doctype| crate::lexer::search(3582, doctype)) {
+        return true;
+    }
+    if text.search(3557) {
+        return false;
+    }
+    if text.search(3583) {
+        return true;
+    }
+    false
+}
+
+fn detect_io(text: &TextAnalyzer) -> bool {
+    if text.shebang_is(3584) {
+        return true;
+    }
+    false
+}
+
+fn detect_ruby(text: &TextAnalyzer) -> bool {
+    if text.shebang_is(3585) {
+        return true;
+    }
+    false
+}
+
+fn detect_julia(text: &TextAnalyzer) -> bool {
+    if text.shebang_is(3586) {
+        return true;
+    }
+    false
+}
+
+fn detect_lasso(text: &TextAnalyzer) -> bool {
+    if text.shebang_is(3587) {
+        return true;
+    }
+    if text.search(3588) {
+        return true;
+    }
+    false
+}
+
+fn detect_livescript(text: &TextAnalyzer) -> bool {
+    text.shebang_is(3589)
+}
+
+fn detect_lua(text: &TextAnalyzer) -> bool {
+    if text.shebang_is(3590) {
+        return true;
+    }
+    false
+}
+
+fn detect_mojo(text: &TextAnalyzer) -> bool {
+    if text.shebang_is(3591) {
+        return true;
+    }
+    false
+}
+
+fn detect_moonscript(text: &TextAnalyzer) -> bool {
+    if text.shebang_is(3592) {
+        return true;
+    }
+    false
+}
+
+fn detect_perl(text: &TextAnalyzer) -> bool {
+    if text.shebang_is(3593) {
+        return true;
+    }
+    false
+}
+
+fn detect_postscript(text: &TextAnalyzer) -> bool {
+    if text.search(3594) {
+        return true;
+    }
+    false
+}
+
+fn detect_praat(text: &TextAnalyzer) -> bool {
+    if text.shebang_is(3595) {
+        return true;
+    }
+    false
+}
+
+fn detect_puppet(text: &TextAnalyzer) -> bool {
+    if text.shebang_is(3596) {
+        return true;
+    }
+    if text.shebang_is(3597) {
+        return true;
+    }
+    false
+}
+
+fn detect_r(text: &TextAnalyzer) -> bool {
+    if text.shebang_is(3598) {
+        return true;
+    }
+    false
+}
+
+fn detect_rust(text: &TextAnalyzer) -> bool {
+    if text.shebang_is(3599) {
+        return true;
+    }
+    false
+}
+
+fn detect_sed(text: &TextAnalyzer) -> bool {
+    if text.shebang_is(3600) {
+        return true;
+    }
+    false
+}
+
+fn detect_shell(text: &TextAnalyzer) -> bool {
+    if text.shebang_is(3601) {
+        return true;
+    }
+    if text.text().starts_with("#compdef") || text.text().starts_with("#autoload") {
+        return true;
+    }
+    false
+}
+
+fn detect_tcl(text: &TextAnalyzer) -> bool {
+    if text.shebang_is(3602) {
+        return true;
+    }
+    if text.shebang_is(3603) {
+        return true;
+    }
+    if text.shebang_is(3604) {
+        return true;
+    }
+    false
+}
+
+fn detect_tex(text: &TextAnalyzer) -> bool {
+    if text.search(3605) {
+        return true;
+    }
+    false
+}
+
+fn detect_tulip(text: &TextAnalyzer) -> bool {
+    if text.shebang_is(3606) {
+        return true;
+    }
+    false
+}
+
 pub(crate) static TABLES: Tables = Tables {
     regexes: REGEXES,
     compiled: &COMPILED,
@@ -30828,4 +31236,237 @@ pub(crate) static TABLES: Tables = Tables {
         ("zir", 227),
         ("zsh", 182),
     ],
+    guess: &[
+        GuessEntry { lexer: 0, aliases: &[], mimetypes: &["text/x-abap"], detect: None },
+        GuessEntry { lexer: 1, aliases: &["as", "as3"], mimetypes: &["application/x-actionscript"], detect: None },
+        GuessEntry { lexer: 2, aliases: &[], mimetypes: &["text/x-ada"], detect: None },
+        GuessEntry { lexer: 3, aliases: &[], mimetypes: &["text/x-httpd-conf", "text/x-apache-conf"], detect: None },
+        GuessEntry { lexer: 4, aliases: &[], mimetypes: &["text/x-apex"], detect: None },
+        GuessEntry { lexer: 125, aliases: &["md", "mkd", "md", "mkd"], mimetypes: &["text/x-markdown", "text/x-markdown"], detect: None },
+        GuessEntry { lexer: 5, aliases: &["apiblueprint", "apib"], mimetypes: &["text/vnd.apiblueprint"], detect: None },
+        GuessEntry { lexer: 6, aliases: &["applescript"], mimetypes: &["application/x-applescript"], detect: None },
+        GuessEntry { lexer: 7, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 8, aliases: &["aug"], mimetypes: &["text/x-augeas"], detect: None },
+        GuessEntry { lexer: 9, aliases: &[], mimetypes: &["application/x-awk"], detect: Some(detect_awk) },
+        GuessEntry { lexer: 10, aliases: &["bat", "batch", "dosbatch", "winbatch"], mimetypes: &["application/bat", "application/x-bat", "application/x-msdos-program"], detect: None },
+        GuessEntry { lexer: 11, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 12, aliases: &["bib"], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 13, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 221, aliases: &[], mimetypes: &["text/xml", "application/xml", "image/svg+xml", "application/rss+xml", "application/atom+xml", "text/xml", "application/xml", "image/svg+xml", "application/rss+xml", "application/atom+xml"], detect: Some(detect_xml) },
+        GuessEntry { lexer: 14, aliases: &[], mimetypes: &[], detect: Some(detect_biml) },
+        GuessEntry { lexer: 15, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 16, aliases: &["bf"], mimetypes: &["text/x-brainfuck"], detect: None },
+        GuessEntry { lexer: 17, aliases: &["bs", "brs"], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 18, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 19, aliases: &[], mimetypes: &["text/x-chdr", "text/x-csrc", "text/x-chdr", "text/x-csrc"], detect: None },
+        GuessEntry { lexer: 20, aliases: &[], mimetypes: &["text/x-ceylon"], detect: None },
+        GuessEntry { lexer: 21, aliases: &["cfc"], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 22, aliases: &[], mimetypes: &["text/x-cisco-conf"], detect: None },
+        GuessEntry { lexer: 23, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 24, aliases: &["clj", "cljs"], mimetypes: &["text/x-clojure", "application/x-clojure"], detect: None },
+        GuessEntry { lexer: 25, aliases: &[], mimetypes: &["text/x-cmake"], detect: None },
+        GuessEntry { lexer: 26, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 27, aliases: &[], mimetypes: &["text/x-cobol"], detect: None },
+        GuessEntry { lexer: 28, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 29, aliases: &["coffee", "coffee-script"], mimetypes: &["text/coffeescript"], detect: Some(detect_coffeescript) },
+        GuessEntry { lexer: 30, aliases: &["cl", "common-lisp", "elisp", "emacs-lisp", "lisp"], mimetypes: &["text/x-common-lisp"], detect: None },
+        GuessEntry { lexer: 31, aliases: &["config", "configuration"], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 32, aliases: &["terminal", "shell_session", "shell-session", "terminal", "shell_session", "shell-session"], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 33, aliases: &[], mimetypes: &["text/x-coq"], detect: None },
+        GuessEntry { lexer: 34, aliases: &["c++", "c++"], mimetypes: &["text/x-c++hdr", "text/x-c++src", "text/x-c++hdr", "text/x-c++src"], detect: None },
+        GuessEntry { lexer: 35, aliases: &["cr"], mimetypes: &["text/x-crystal", "application/x-crystal"], detect: Some(detect_crystal) },
+        GuessEntry { lexer: 36, aliases: &["c#", "cs"], mimetypes: &["text/x-csharp"], detect: None },
+        GuessEntry { lexer: 37, aliases: &[], mimetypes: &["text/css"], detect: None },
+        GuessEntry { lexer: 38, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 39, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 40, aliases: &["cypher"], mimetypes: &["application/x-cypher-query"], detect: None },
+        GuessEntry { lexer: 164, aliases: &["py", "py"], mimetypes: &["text/x-python", "application/x-python", "text/x-python", "application/x-python"], detect: Some(detect_python) },
+        GuessEntry { lexer: 41, aliases: &["pyx", "pyrex"], mimetypes: &["text/x-cython", "application/x-cython"], detect: None },
+        GuessEntry { lexer: 42, aliases: &["dlang"], mimetypes: &["application/x-dsrc", "text/x-dsrc"], detect: None },
+        GuessEntry { lexer: 43, aliases: &[], mimetypes: &["text/x-dafny"], detect: None },
+        GuessEntry { lexer: 44, aliases: &[], mimetypes: &["text/x-dart"], detect: None },
+        GuessEntry { lexer: 45, aliases: &[], mimetypes: &["text/x-datastudio"], detect: None },
+        GuessEntry { lexer: 46, aliases: &["patch", "udiff"], mimetypes: &["text/x-diff", "text/x-patch"], detect: Some(detect_diff) },
+        GuessEntry { lexer: 225, aliases: &["yml", "yml"], mimetypes: &["text/x-yaml", "text/x-yaml"], detect: Some(detect_yaml) },
+        GuessEntry { lexer: 47, aliases: &[], mimetypes: &["application/x-digdag"], detect: None },
+        GuessEntry { lexer: 48, aliases: &["dockerfile", "Dockerfile", "containerfile", "Containerfile"], mimetypes: &["text/x-dockerfile-config"], detect: None },
+        GuessEntry { lexer: 49, aliases: &["graphviz"], mimetypes: &["text/vnd.graphviz"], detect: None },
+        GuessEntry { lexer: 50, aliases: &[], mimetypes: &["application/x-ecl"], detect: None },
+        GuessEntry { lexer: 51, aliases: &["leex", "heex"], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 52, aliases: &[], mimetypes: &["text/x-eiffel"], detect: None },
+        GuessEntry { lexer: 53, aliases: &["elixir", "exs"], mimetypes: &["text/x-elixir", "application/x-elixir"], detect: Some(detect_elixir) },
+        GuessEntry { lexer: 54, aliases: &[], mimetypes: &["text/x-elm"], detect: None },
+        GuessEntry { lexer: 55, aliases: &["eml", "e-mail"], mimetypes: &["message/rfc822"], detect: None },
+        GuessEntry { lexer: 56, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 57, aliases: &["eruby", "rhtml"], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 58, aliases: &["erl"], mimetypes: &["text/x-erlang", "application/x-erlang"], detect: None },
+        GuessEntry { lexer: 59, aliases: &["esc"], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 60, aliases: &[], mimetypes: &["text/x-factor"], detect: Some(detect_factor) },
+        GuessEntry { lexer: 61, aliases: &["ftl"], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 62, aliases: &[], mimetypes: &["text/x-fortran"], detect: None },
+        GuessEntry { lexer: 63, aliases: &["ff"], mimetypes: &["text/x-ffhdr", "text/x-ffsrc"], detect: None },
+        GuessEntry { lexer: 64, aliases: &[], mimetypes: &["application/fsharp-script", "text/x-fsharp", "text/x-fsi"], detect: None },
+        GuessEntry { lexer: 65, aliases: &["gd", "gdscript"], mimetypes: &["text/x-gdscript", "application/x-gdscript"], detect: None },
+        GuessEntry { lexer: 66, aliases: &["cmm"], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 67, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 68, aliases: &["cucumber", "behat"], mimetypes: &["text/x-gherkin"], detect: Some(detect_gherkin) },
+        GuessEntry { lexer: 101, aliases: &["js", "js"], mimetypes: &["application/javascript", "application/x-javascript", "text/javascript", "text/x-javascript", "application/javascript", "application/x-javascript", "text/javascript", "text/x-javascript"], detect: Some(detect_javascript) },
+        GuessEntry { lexer: 69, aliases: &[], mimetypes: &["text/x-gjs", "application/x-gjs"], detect: None },
+        GuessEntry { lexer: 70, aliases: &[], mimetypes: &["x-shader/x-vertex", "x-shader/x-fragment", "x-shader/x-geometry"], detect: None },
+        GuessEntry { lexer: 71, aliases: &["go", "golang"], mimetypes: &["text/x-go", "application/x-go"], detect: None },
+        GuessEntry { lexer: 74, aliases: &["nextflow", "nf", "nextflow", "nf"], mimetypes: &["text/x-groovy", "text/x-groovy"], detect: Some(detect_groovy) },
+        GuessEntry { lexer: 72, aliases: &[], mimetypes: &["text/x-gradle"], detect: None },
+        GuessEntry { lexer: 73, aliases: &[], mimetypes: &["application/graphql"], detect: None },
+        GuessEntry { lexer: 211, aliases: &["ts", "ts"], mimetypes: &["text/typescript", "text/typescript"], detect: None },
+        GuessEntry { lexer: 75, aliases: &[], mimetypes: &["text/x-gts", "application/x-gts"], detect: None },
+        GuessEntry { lexer: 151, aliases: &["php", "php3", "php4", "php5", "php", "php3", "php4", "php5"], mimetypes: &["text/x-php", "text/x-php"], detect: Some(detect_php) },
+        GuessEntry { lexer: 76, aliases: &["hack", "hh"], mimetypes: &[], detect: Some(detect_hack) },
+        GuessEntry { lexer: 77, aliases: &["HAML"], mimetypes: &["text/x-haml"], detect: None },
+        GuessEntry { lexer: 78, aliases: &["hbs", "mustache"], mimetypes: &["text/x-handlebars", "text/x-mustache"], detect: None },
+        GuessEntry { lexer: 79, aliases: &["hs"], mimetypes: &["text/x-haskell"], detect: Some(detect_haskell) },
+        GuessEntry { lexer: 80, aliases: &["hx", "haxe"], mimetypes: &["text/haxe", "text/x-haxe", "text/x-hx"], detect: Some(detect_haxe) },
+        GuessEntry { lexer: 81, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 82, aliases: &[], mimetypes: &["text/x-hlsl"], detect: None },
+        GuessEntry { lexer: 104, aliases: &[], mimetypes: &["application/json", "application/vnd.api+json", "application/hal+json", "application/problem+json", "application/schema+json", "application/json", "application/vnd.api+json", "application/hal+json", "application/problem+json", "application/schema+json"], detect: None },
+        GuessEntry { lexer: 83, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 191, aliases: &[], mimetypes: &["text/x-sql", "text/x-sql"], detect: None },
+        GuessEntry { lexer: 84, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 85, aliases: &[], mimetypes: &["text/html", "application/xhtml+xml", "text/html", "application/xhtml+xml"], detect: Some(detect_html) },
+        GuessEntry { lexer: 86, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 87, aliases: &["hy"], mimetypes: &["text/x-hy", "application/x-hy"], detect: None },
+        GuessEntry { lexer: 88, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 89, aliases: &["idr"], mimetypes: &["text/x-idris"], detect: None },
+        GuessEntry { lexer: 90, aliases: &[], mimetypes: &["text/x-iecst"], detect: None },
+        GuessEntry { lexer: 91, aliases: &[], mimetypes: &["text/x-igorpro"], detect: None },
+        GuessEntry { lexer: 92, aliases: &[], mimetypes: &["text/x-ini", "text/inf"], detect: None },
+        GuessEntry { lexer: 93, aliases: &[], mimetypes: &["text/x-iosrc"], detect: Some(detect_io) },
+        GuessEntry { lexer: 94, aliases: &["pry"], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 174, aliases: &["rb", "rb"], mimetypes: &["text/x-ruby", "application/x-ruby", "text/x-ruby", "application/x-ruby"], detect: Some(detect_ruby) },
+        GuessEntry { lexer: 95, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 96, aliases: &["isa", "Isabelle"], mimetypes: &["text/x-isabelle"], detect: None },
+        GuessEntry { lexer: 97, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 98, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 99, aliases: &["jdn"], mimetypes: &["text/x-janet", "application/x-janet"], detect: None },
+        GuessEntry { lexer: 100, aliases: &[], mimetypes: &["text/x-java"], detect: None },
+        GuessEntry { lexer: 102, aliases: &["django", "django"], mimetypes: &["application/x-django-templating", "application/x-jinja", "text/html+django", "text/html+jinja", "application/x-django-templating", "application/x-jinja", "text/html+django", "text/html+jinja"], detect: None },
+        GuessEntry { lexer: 103, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 106, aliases: &[], mimetypes: &["application/json5", "application/x-json5"], detect: None },
+        GuessEntry { lexer: 105, aliases: &["jsonc"], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 107, aliases: &[], mimetypes: &["text/x-jsonnet"], detect: None },
+        GuessEntry { lexer: 108, aliases: &[], mimetypes: &["text/x-jsp", "application/x-jsp"], detect: None },
+        GuessEntry { lexer: 109, aliases: &["jsx", "react", "jsx", "react"], mimetypes: &["text/x-jsx", "application/x-jsx", "text/x-jsx", "application/x-jsx"], detect: None },
+        GuessEntry { lexer: 110, aliases: &["jl"], mimetypes: &["text/x-julia", "application/x-julia"], detect: Some(detect_julia) },
+        GuessEntry { lexer: 111, aliases: &[], mimetypes: &["text/x-kotlin"], detect: None },
+        GuessEntry { lexer: 112, aliases: &["lassoscript"], mimetypes: &["text/x-lasso", "text/html+lasso", "application/x-httpd-lasso"], detect: Some(detect_lasso) },
+        GuessEntry { lexer: 113, aliases: &["lean"], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 114, aliases: &[], mimetypes: &["text/html+liquid"], detect: None },
+        GuessEntry { lexer: 115, aliases: &["litcoffee"], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 116, aliases: &["lithaskell", "lhaskell", "lhs"], mimetypes: &["text/x-literate-haskell"], detect: None },
+        GuessEntry { lexer: 117, aliases: &["ls"], mimetypes: &["text/livescript"], detect: Some(detect_livescript) },
+        GuessEntry { lexer: 118, aliases: &[], mimetypes: &["text/x-llvm"], detect: None },
+        GuessEntry { lexer: 119, aliases: &[], mimetypes: &["text/x-lua", "application/x-lua", "text/x-lua", "application/x-lua"], detect: Some(detect_lua) },
+        GuessEntry { lexer: 120, aliases: &[], mimetypes: &["text/x-lustre", "text/x-lustre"], detect: None },
+        GuessEntry { lexer: 121, aliases: &[], mimetypes: &["text/x-lutin"], detect: None },
+        GuessEntry { lexer: 122, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 123, aliases: &[], mimetypes: &["text/x-magik", "application/x-magik"], detect: None },
+        GuessEntry { lexer: 124, aliases: &["makefile", "mf", "gnumake", "bsdmake"], mimetypes: &["text/x-makefile"], detect: None },
+        GuessEntry { lexer: 126, aliases: &[], mimetypes: &["text/x-mason", "application/x-mason"], detect: None },
+        GuessEntry { lexer: 127, aliases: &["wl", "wolfram"], mimetypes: &["application/vnd.wolfram.mathematica.package", "application/vnd.wolfram.wl"], detect: None },
+        GuessEntry { lexer: 128, aliases: &["m"], mimetypes: &["text/x-matlab", "application/x-matlab"], detect: None },
+        GuessEntry { lexer: 129, aliases: &[], mimetypes: &["text/x-meson"], detect: None },
+        GuessEntry { lexer: 130, aliases: &[], mimetypes: &["text/minizinc"], detect: None },
+        GuessEntry { lexer: 131, aliases: &["mojo"], mimetypes: &["text/x-mojo", "application/x-mojo"], detect: Some(detect_mojo) },
+        GuessEntry { lexer: 132, aliases: &["moon"], mimetypes: &["text/x-moonscript", "application/x-moonscript"], detect: Some(detect_moonscript) },
+        GuessEntry { lexer: 133, aliases: &[], mimetypes: &["text/x-mosel"], detect: None },
+        GuessEntry { lexer: 134, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 135, aliases: &[], mimetypes: &["application/xv+xml"], detect: None },
+        GuessEntry { lexer: 136, aliases: &[], mimetypes: &["text/x-nasm"], detect: None },
+        GuessEntry { lexer: 137, aliases: &["nes"], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 138, aliases: &[], mimetypes: &["text/x-nginx-conf"], detect: None },
+        GuessEntry { lexer: 139, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 140, aliases: &["nimrod"], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 141, aliases: &["nixos"], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 142, aliases: &["objc", "obj-c", "obj_c", "objectivec", "objective-c"], mimetypes: &["text/x-objective_c", "application/x-objective_c"], detect: None },
+        GuessEntry { lexer: 143, aliases: &["objcpp", "obj-cpp", "obj_cpp", "objectivecpp", "objc++", "obj-c++", "obj_c++", "objectivec++"], mimetypes: &["text/x-objective-c++", "application/x-objective-c++"], detect: None },
+        GuessEntry { lexer: 144, aliases: &[], mimetypes: &["text/x-ocaml"], detect: None },
+        GuessEntry { lexer: 145, aliases: &["OCL"], mimetypes: &["text/x-ocl"], detect: None },
+        GuessEntry { lexer: 146, aliases: &["abl"], mimetypes: &["text/x-openedge"], detect: None },
+        GuessEntry { lexer: 147, aliases: &["fea", "opentype", "opentypefeature"], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 148, aliases: &[], mimetypes: &["text/x-p4"], detect: None },
+        GuessEntry { lexer: 149, aliases: &[], mimetypes: &["text/x-pascal"], detect: None },
+        GuessEntry { lexer: 150, aliases: &["pl"], mimetypes: &["text/x-perl", "application/x-perl"], detect: Some(detect_perl) },
+        GuessEntry { lexer: 152, aliases: &["text"], mimetypes: &["text/plain"], detect: None },
+        GuessEntry { lexer: 153, aliases: &["plist"], mimetypes: &["text/x-plist", "application/x-plist"], detect: None },
+        GuessEntry { lexer: 154, aliases: &[], mimetypes: &["text/x-plsql"], detect: None },
+        GuessEntry { lexer: 155, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 156, aliases: &["postscr", "postscript", "ps", "eps"], mimetypes: &["application/postscript"], detect: Some(detect_postscript) },
+        GuessEntry { lexer: 157, aliases: &["posh", "microsoftshell", "msshell"], mimetypes: &["text/x-powershell"], detect: None },
+        GuessEntry { lexer: 158, aliases: &[], mimetypes: &[], detect: Some(detect_praat) },
+        GuessEntry { lexer: 159, aliases: &["prolog"], mimetypes: &["text/x-prolog"], detect: None },
+        GuessEntry { lexer: 160, aliases: &["prometheus"], mimetypes: &["text/x-prometheus", "application/x-prometheus"], detect: None },
+        GuessEntry { lexer: 161, aliases: &[], mimetypes: &["text/x-java-properties"], detect: None },
+        GuessEntry { lexer: 162, aliases: &["proto"], mimetypes: &["text/x-proto"], detect: None },
+        GuessEntry { lexer: 163, aliases: &["pp"], mimetypes: &[], detect: Some(detect_puppet) },
+        GuessEntry { lexer: 165, aliases: &["kdb+"], mimetypes: &["text/x-q", "application/x-q"], detect: None },
+        GuessEntry { lexer: 166, aliases: &["qml"], mimetypes: &["application/x-qml", "text/x-qml"], detect: None },
+        GuessEntry { lexer: 167, aliases: &["r", "R", "s", "S"], mimetypes: &["text/x-r-source", "text/x-r", "text/x-R", "text/x-r", "application/x-r"], detect: Some(detect_r) },
+        GuessEntry { lexer: 168, aliases: &[], mimetypes: &["text/x-racket", "application/x-racket"], detect: Some(crate::lexers::racket::detect) },
+        GuessEntry { lexer: 169, aliases: &[], mimetypes: &["text/x-reasonml"], detect: None },
+        GuessEntry { lexer: 170, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 171, aliases: &[], mimetypes: &["text/x-rescript"], detect: None },
+        GuessEntry { lexer: 172, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 173, aliases: &["robot", "robot-framework"], mimetypes: &["text/x-robot"], detect: None },
+        GuessEntry { lexer: 175, aliases: &["rs", "rust,no_run", "rs,no_run", "rust,ignore", "rs,ignore", "rust,should_panic", "rs,should_panic"], mimetypes: &["text/x-rust"], detect: Some(detect_rust) },
+        GuessEntry { lexer: 176, aliases: &[], mimetypes: &["application/x-sas", "application/x-stat-sas", "application/x-sas-syntax"], detect: None },
+        GuessEntry { lexer: 177, aliases: &[], mimetypes: &["text/x-sass"], detect: None },
+        GuessEntry { lexer: 178, aliases: &["scala"], mimetypes: &["text/x-scala", "application/x-scala"], detect: None },
+        GuessEntry { lexer: 179, aliases: &[], mimetypes: &["text/x-scheme", "application/x-scheme"], detect: None },
+        GuessEntry { lexer: 180, aliases: &[], mimetypes: &["text/x-scss"], detect: None },
+        GuessEntry { lexer: 181, aliases: &[], mimetypes: &["text/x-sed"], detect: Some(detect_sed) },
+        GuessEntry { lexer: 182, aliases: &["bash", "zsh", "ksh", "sh"], mimetypes: &["application/x-sh", "application/x-shellscript", "text/x-sh", "text/x-shellscript"], detect: Some(detect_shell) },
+        GuessEntry { lexer: 183, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 184, aliases: &[], mimetypes: &["text/slice"], detect: None },
+        GuessEntry { lexer: 185, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 186, aliases: &["st", "squeak"], mimetypes: &["text/x-smalltalk"], detect: None },
+        GuessEntry { lexer: 187, aliases: &["smarty"], mimetypes: &["application/x-smarty", "text/x-smarty"], detect: None },
+        GuessEntry { lexer: 188, aliases: &["ml"], mimetypes: &["text/x-standardml", "application/x-standardml"], detect: None },
+        GuessEntry { lexer: 189, aliases: &[], mimetypes: &["application/sparql-query"], detect: None },
+        GuessEntry { lexer: 190, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 192, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 193, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 194, aliases: &[], mimetypes: &["application/x-stata", "text/x-stata"], detect: None },
+        GuessEntry { lexer: 195, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 196, aliases: &[], mimetypes: &["text/x-svelte", "application/x-svelte"], detect: None },
+        GuessEntry { lexer: 197, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 198, aliases: &["unit-file"], mimetypes: &["text/x-systemd-unit"], detect: None },
+        GuessEntry { lexer: 199, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 200, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 201, aliases: &["tap"], mimetypes: &["text/x-tap", "application/x-tap"], detect: None },
+        GuessEntry { lexer: 202, aliases: &[], mimetypes: &["text/x-tcl", "text/x-script.tcl", "application/x-tcl"], detect: Some(detect_tcl) },
+        GuessEntry { lexer: 203, aliases: &["tf"], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 204, aliases: &["TeX", "LaTeX", "latex"], mimetypes: &["text/x-tex", "text/x-latex"], detect: Some(detect_tex) },
+        GuessEntry { lexer: 205, aliases: &[], mimetypes: &["text/x-toml"], detect: None },
+        GuessEntry { lexer: 206, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 207, aliases: &[], mimetypes: &["text/x-ttcn3", "text/x-ttcn"], detect: None },
+        GuessEntry { lexer: 208, aliases: &["tulip"], mimetypes: &["text/x-tulip", "application/x-tulip"], detect: Some(detect_tulip) },
+        GuessEntry { lexer: 209, aliases: &[], mimetypes: &["text/turtle", "application/trig"], detect: None },
+        GuessEntry { lexer: 210, aliases: &[], mimetypes: &["application/x-twig", "text/html+twig"], detect: None },
+        GuessEntry { lexer: 212, aliases: &[], mimetypes: &["text/x-vala"], detect: None },
+        GuessEntry { lexer: 214, aliases: &["varnishconf", "varnish"], mimetypes: &["text/x-varnish", "text/x-vcl"], detect: None },
+        GuessEntry { lexer: 213, aliases: &["visualbasic"], mimetypes: &["text/x-visualbasic", "application/x-visualbasic"], detect: None },
+        GuessEntry { lexer: 215, aliases: &[], mimetypes: &["text/html+velocity"], detect: None },
+        GuessEntry { lexer: 216, aliases: &[], mimetypes: &["text/x-verilog", "text/x-systemverilog"], detect: None },
+        GuessEntry { lexer: 217, aliases: &[], mimetypes: &["text/x-vhdl"], detect: None },
+        GuessEntry { lexer: 218, aliases: &["vim", "vimscript", "ex"], mimetypes: &["text/x-vim"], detect: None },
+        GuessEntry { lexer: 219, aliases: &["vuejs"], mimetypes: &["text/x-vue", "application/x-vue"], detect: None },
+        GuessEntry { lexer: 220, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 222, aliases: &["realbasic"], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 223, aliases: &[], mimetypes: &[], detect: None },
+        GuessEntry { lexer: 224, aliases: &[], mimetypes: &["application/xquery"], detect: None },
+        GuessEntry { lexer: 226, aliases: &[], mimetypes: &["application/yang"], detect: None },
+        GuessEntry { lexer: 227, aliases: &["zir"], mimetypes: &["text/x-zig"], detect: None },
+    ],
+    shebang: 3607,
+    doctype: 3608,
+    modelines: [3609, 3610, 3611],
 };

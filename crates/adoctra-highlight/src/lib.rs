@@ -7,6 +7,7 @@
 //! `scripts/generate_rouge.rb`. No Ruby code runs here.
 
 pub mod format;
+pub mod guess;
 pub mod lexer;
 mod lexers;
 pub mod regex;

@@ -111,13 +111,19 @@ pub struct Tables {
     pub lexers: &'static [&'static LexerDef],
     /// `Lexer.registry`: tag or alias to lexer.
     pub registry: &'static [(&'static str, usize)],
+    /// `Lexer.all` in Rouge's order, for guessing.
+    pub guess: &'static [crate::guess::GuessEntry],
+    /// The regexps of `TextAnalyzer#shebang`/`#doctype` and the modelines.
+    pub shebang: usize,
+    pub doctype: usize,
+    pub modelines: [usize; 3],
 }
 
-fn tables() -> &'static Tables {
+pub(crate) fn tables() -> &'static Tables {
     &crate::generated::lexers::TABLES
 }
 
-fn regex(index: usize) -> &'static Regex {
+pub(crate) fn regex(index: usize) -> &'static Regex {
     let tables = tables();
     tables.compiled[index].get_or_init(|| {
         let (source, options) = tables.regexes[index];

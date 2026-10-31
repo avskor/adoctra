@@ -253,7 +253,32 @@ LEXER_CASES = [
   ['livescript', "x = \"\"\"a \#{b} c\"\"\"\nf = ({a, b}) -> break\nfor i in [1 2] then continue\n"],
   ['swift', "let r = #/a+/#\nlet m = ##/\n  x\n/##\nlet s = \"\\(a)\"\n"],
   ['sml', "structure S = struct val x = List.map end\nval y = S.x\n"],
+  ['http', "POST /x HTTP/1.1\nContent-Type: application/json; charset=utf-8\nX: y\n\n{\"a\": [1, true]}\n"],
+  ['http', "HTTP/1.1 200 OK\ncontent-type: text/x-nope\n\nplain\n"],
+  ['http?content=ruby', "GET / HTTP/1.1\nContent-Type: application/json\n\nputs :x\n"],
+  ['markdown', "# T\n\n```ruby\nputs 1\n```\n\n~~~\n#!/bin/sh\necho $X\n~~~\n\n```nope\nx\n```\n\n```erb?parent=html\n<b><%= x %></b>\n```\n"],
+  ['markdown', "Text\n\n```python\ndef f():\n    pass\n"],
+  ['markdown', "```\nplain\n```\n\n ```js\n  var x;\n  ```\n"],
   ['varnish', "sub vcl_recv { set req.ttl = 10s; if (req.url ~ \"x\") { return (pass); } set a = 0x1f; }\n"],
+].freeze
+
+# Lexer.guesses inputs besides the demos: [mimetype, source].
+GUESS_CASES = [
+  [nil, "#!/usr/bin/env python3\nprint(1)\n"],
+  [nil, "\xEF\xBB\xBF#!/bin/sh\r\necho\r\n".dup.force_encoding('UTF-8')],
+  [nil, "x = 1\n# vim: set ft=python :\n"],
+  [nil, "-*- mode: ruby -*-\nx\n"],
+  [nil, "a\nb\nc\nd\ne\nf\ng\nh\ni\nj\nk\n// vim: ft=rust\n"],
+  [nil, "<?xml version=\"1.0\"?>\n<!DOCTYPE html>\n<html/>\n"],
+  [nil, "<?xml version=\"1.0\"?>\n<root/>\n"],
+  [nil, "#lang scribble/manual\n"],
+  [nil, "#lang\nracket\n"],
+  [nil, "<?hh\nasync function f(): Awaitable<void> {}\n"],
+  [nil, "--- a\n+++ b\n"],
+  [nil, "plain words\n"],
+  ['application/json', '{}'],
+  ['text/x-ruby', "#!/usr/bin/env python\n"],
+  ['text/nope', "#!/usr/bin/env perl\n"],
 ].freeze
 
 # Ruby's token stream for every lexer's complete demo, and for the extra
@@ -288,6 +313,12 @@ def lexer_corpus
       val.each_byte { |byte| feed.(byte) }
     end
     puts ['C', name, format('%016x', hash), JSON.generate(input)].join("\t")
+  end
+  # Lexer.guesses on every demo and the extra guessing cases.
+  demos = Rouge::Lexer.all.sort_by(&:tag).map { |lexer| [nil, (lexer.demo rescue '').to_s.encode('UTF-8')] }
+  (demos + GUESS_CASES).each do |mimetype, source|
+    tags = Rouge::Lexer.guesses(source: source, mimetype: mimetype).map(&:tag)
+    puts ['G', mimetype || '-', tags.join(','), JSON.generate(source)].join("\t")
   end
 end
 

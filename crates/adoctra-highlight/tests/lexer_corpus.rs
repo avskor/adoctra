@@ -85,8 +85,12 @@ fn ported_lexers_reproduce_rouge_token_streams() {
     let mut checked = 0;
     for line in CORPUS.lines() {
         let fields: Vec<&str> = line.split('\t').collect();
-        // `L`: a lexer's demo; `C`: an extra case (`tag?options`).
-        assert!(matches!(fields[0], "L" | "C"), "Rouge failed: {line}");
+        // `L`: a lexer's demo; `C`: an extra case (`tag?options`); `G`: a
+        // guess (below).
+        assert!(matches!(fields[0], "L" | "C" | "G"), "Rouge failed: {line}");
+        if fields[0] == "G" {
+            continue;
+        }
         let (tag, expected, input) = (fields[1], fields[2], json_string(fields[3]));
         let Some(mut lexer) = find_fancy(tag) else {
             continue;
@@ -132,5 +136,33 @@ fn reports_the_port_status() {
             .lines()
             .filter(|line| line.starts_with("L\t"))
             .count()
+    );
+}
+
+/// `G` lines: `Lexer.guesses(source:, mimetype:)` on every demo and the
+/// guessing cases, over all lexers (ported or not).
+#[test]
+fn guesses_match_rouge() {
+    let mut failures = Vec::new();
+    let mut checked = 0;
+    for line in CORPUS.lines().filter(|line| line.starts_with("G\t")) {
+        let fields: Vec<&str> = line.split('\t').collect();
+        let mimetype = (fields[1] != "-").then_some(fields[1]);
+        let source = json_string(fields[3]);
+        let actual: Vec<&str> = adoctra_highlight::guess::guesses(Some(&source), mimetype)
+            .iter()
+            .map(|def| def.tag)
+            .collect();
+        checked += 1;
+        if actual.join(",") != fields[2] {
+            failures.push(format!("{}: {:?} != {}", fields[3], actual, fields[2]));
+        }
+    }
+    assert!(checked > 200);
+    assert!(
+        failures.is_empty(),
+        "{} of {checked} guesses differ:\n{}",
+        failures.len(),
+        failures.join("\n")
     );
 }

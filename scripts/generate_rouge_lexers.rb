@@ -227,22 +227,22 @@ module RougeLexers
       end
 
       name = "cb_#{RougeLexers.rust_ident lexer.tag}_#{RougeLexers.rust_ident RougeLexers.module_name(path)}_#{line}"
-      unless @callback_names.key?(name)
-        @callback_names[name] = begin
-          body = Translator.of_block(self, lexer, blk, states, :rule).translate
-          @callbacks << "fn #{name}(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {\n#{body}    Ok(())\n}\n"
-          true
-        rescue Unsupported => e
-          missing << "#{where} (#{e.message})"
-          false
-        end
+      begin
+        body = Translator.of_block(self, lexer, blk, states, :rule).translate
+      rescue Unsupported => e
+        missing << "#{where} (#{e.message})" unless missing.any? { |m| m.start_with?(where) }
+        return 'Action::Call(crate::lexer::unported)'
       end
-      if @callback_names[name]
-        "Action::Call(#{name})"
-      else
-        missing << where unless missing.any? { |m| m.start_with?(where) }
-        'Action::Call(crate::lexer::unported)'
+      # One block can close over different values (graphql's
+      # `pop_unless_list[Name::Variable]`): one callback per translation.
+      bodies = (@callback_names[name] ||= [])
+      index = bodies.index(body)
+      unless index
+        index = bodies.size
+        bodies << body
+        @callbacks << "fn #{name}#{index.zero? ? '' : "_#{index + 1}"}(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {\n#{body}    Ok(())\n}\n"
       end
+      "Action::Call(#{name}#{index.zero? ? '' : "_#{index + 1}"})"
     end
 
     def hooks_start lexer, missing
@@ -1195,6 +1195,131 @@ module RougeLexers
     end
   end
 
+  # `self.detect?(text)` of a lexer (the Source guesser) as a Rust function
+  # on a `TextAnalyzer`; hand-written as `detect` in the lexer's module.
+  class Detector
+    def initialize generator, lexer
+      @g = generator
+      @lexer = lexer
+      @method = lexer.method(:detect?)
+      @ast = RubyVM::AbstractSyntaxTree.of(@method)
+      raise Unsupported, 'detect? without AST' unless @ast
+
+      @param = @ast.children[0].first
+    end
+
+    def translate
+      body = @ast.children[2]
+      list = body.type == :BLOCK ? body.children : [body]
+      *init, last = list
+      out = init.map { |node| stmt(node) }.join
+      # The last statement's value is the result (Ruby drops a tail
+      # `return`), an `if` without else is nil.
+      if %i[IF UNLESS].include?(last.type) && last.children[2].nil?
+        "#{out}#{stmt last}    false\n"
+      else
+        "#{out}    #{truthy(last.type == :RETURN ? last.children[0] : last)}\n"
+      end
+    end
+
+    def stmt node
+      case node.type
+      when :IF, :UNLESS
+        cond, yes, no = node.children
+        raise Unsupported, 'detect? if' unless no.nil?
+
+        yes = yes.children[0] if yes.type == :RETURN
+        test = condition(cond)
+        test = "!(#{test})" if node.type == :UNLESS
+        "    if #{test} {\n        return #{truthy yes};\n    }\n"
+      else raise Unsupported, "detect? #{node.type}"
+      end
+    end
+
+    def truthy node
+      case node&.type
+      when :TRUE then 'true'
+      when nil, :FALSE, :NIL then 'false'
+      when :LIT then node.children[0].nil? || node.children[0] == false ? 'false' : 'true'
+      else condition(node)
+      end
+    end
+
+    def text? node
+      %i[LVAR DVAR].include?(node.type) && node.children[0] == @param
+    end
+
+    def regexp node
+      raise Unsupported, 'detect? regexp' unless node.type == :LIT && node.children[0].is_a?(Regexp)
+
+      node.children[0]
+    end
+
+    def condition node
+      case node.type
+      when :OR then "(#{condition node.children[0]}) || (#{condition node.children[1]})"
+      when :AND then "(#{condition node.children[0]}) && (#{condition node.children[1]})"
+      when :MATCH2 then "text.search(#{@g.regex regexp(node.children[0])})"
+      when :MATCH3
+        raise Unsupported, 'detect? match' unless text?(node.children[1])
+
+        "text.search(#{@g.regex regexp(node.children[0])})"
+      when :OPCALL
+        recv, meth, args = node.children
+        arg = args&.children&.compact&.first
+        raise Unsupported, "detect? #{meth}" unless meth == :=~ && text?(recv) && arg
+
+        "text.search(#{@g.regex regexp(arg)})"
+      when :CALL
+        recv, meth, args = node.children
+        raise Unsupported, "detect? #{meth}" unless text?(recv)
+
+        args = args ? args.children.compact : []
+        case meth
+        when :shebang?
+          match = args[0].type == :STR ? args[0].children[0] : regexp(args[0])
+          # `TextAnalyzer#shebang?`: `/\b#{match}(\s|$)/ === shebang`.
+          "text.shebang_is(#{@g.regex(/\b#{match}(\s|$)/)})"
+        when :start_with?
+          args.map { |a| "text.text().starts_with(#{rust_str a.children[0]})" }.join(' || ')
+        when :doctype?
+          return 'text.doctype().is_some()' if args.empty?
+
+          "text.doctype().is_some_and(|doctype| crate::lexer::search(#{@g.regex regexp(args[0])}, doctype))"
+        else raise Unsupported, "detect? #{meth}"
+        end
+      else raise Unsupported, "detect? #{node.type}"
+      end
+    end
+  end
+
+  # The guessing data: Lexer.all in Rouge's order with aliases, mimetypes
+  # and the translated `detect?` (Rust functions, else nil and a note).
+  def self.guess_table generator, lexers
+    detects = []
+    entries = Rouge::Lexer.all.map do |lexer|
+      detect = 'None'
+      if lexer.detectable?
+        path, = lexer.method(:detect?).source_location
+        if hand?(path, 'detect')
+          detect = "Some(crate::lexers::#{module_name path}::detect)"
+        else
+          begin
+            name = "detect_#{rust_ident(lexer.tag)}"
+            detects << "fn #{name}(text: &TextAnalyzer) -> bool {\n#{Detector.new(generator, lexer).translate}}\n"
+            detect = "Some(#{name})"
+          rescue Unsupported => e
+            abort "#{lexer.tag}: detect? not translated (#{e.message}): hand-write `detect`"
+          end
+        end
+      end
+      aliases = "&[#{lexer.aliases.map { |a| rust_str a }.join(', ')}]"
+      mimetypes = "&[#{lexer.mimetypes.map { |a| rust_str a }.join(', ')}]"
+      "        GuessEntry { lexer: #{lexers.index(lexer)}, aliases: #{aliases}, mimetypes: #{mimetypes}, detect: #{detect} },\n"
+    end
+    [detects, entries]
+  end
+
   def self.generate tokens
     install_hook
     generator = Generator.new(tokens)
@@ -1221,8 +1346,15 @@ module RougeLexers
       [ident, source.sub('__MISSING__', "&[#{missing.map { |m| rust_str m }.join(', ')}]"), missing]
     end
     registry = Rouge::Lexer.send(:registry).sort_by { |name, _| name.b }
+    detects, guess_entries = guess_table(generator, lexers)
+    # TextAnalyzer#shebang and #doctype, Guessers::Modeline::MODELINES.
+    guess_regexes = [/\A\s*#!(.*)$/, %r(\A\s*
+        (?:<\?.*?\?>\s*)? # possible <?xml...?> tag
+        <!DOCTYPE\s+(.+?)>
+      )xm, *Rouge::Guessers::Modeline::MODELINES].map { |re| generator.regex(re) }
     out = +"// Generated by scripts/generate_rouge.rb from Rouge #{ROUGE_VERSION}. Do not edit by hand.\n\n"
     out << "#![allow(clippy::all, dead_code, non_snake_case, unreachable_code, unused_assignments, unused_mut, unused_parens, unused_variables)]\n\n"
+    out << "use crate::guess::{GuessEntry, TextAnalyzer};\n"
     out << "use crate::lexer::{contains, search, Action, LexError, Lexer, LexerDef, Match, Next, Rule, Scan, StateDef, Tables};\n"
     out << "use crate::regex::Regex;\n"
     out << "use crate::token as T;\n"
@@ -1238,13 +1370,19 @@ module RougeLexers
     out << "\n"
     generator.callbacks.each { |cb| out << cb << "\n" }
     items.each { |_, source, _| out << source << "\n" }
+    detects.each { |source| out << source << "\n" }
     out << "pub(crate) static TABLES: Tables = Tables {\n"
     out << "    regexes: REGEXES,\n"
     out << "    compiled: &COMPILED,\n"
     out << "    lexers: &[#{items.map { |ident, _, _| "&#{ident}" }.join(', ')}],\n"
     out << "    registry: &[\n"
     registry.each { |name, lexer| out << "        (#{rust_str name}, #{lexers.index(lexer)}),\n" }
-    out << "    ],\n};\n"
+    out << "    ],\n"
+    out << "    guess: &[\n#{guess_entries.join}    ],\n"
+    out << "    shebang: #{guess_regexes[0]},\n"
+    out << "    doctype: #{guess_regexes[1]},\n"
+    out << "    modelines: [#{guess_regexes[2..].join(', ')}],\n"
+    out << "};\n"
     report = items.map { |ident, _, missing| [ident, missing] }
     [out, report]
   end

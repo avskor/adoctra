@@ -16,6 +16,7 @@
 use adoctra_core::ast::{Block, Callout};
 use adoctra_core::Attributes;
 use adoctra_highlight::format::{self, Style};
+use adoctra_highlight::guess::{self, Guess};
 use adoctra_highlight::lexer::{self, Lexer, OptionValue, Options};
 use adoctra_highlight::theme::{ThemeData, DEFAULT_THEME};
 use adoctra_highlight::token::Token;
@@ -176,10 +177,16 @@ fn lex(block: &Block, source: &str, lang: Option<&str>) -> Vec<(Token, String)> 
     let mixed = block.attrs.options.iter().any(|o| o == "mixed")
         || block.attrs.named.contains_key("mixed-option");
     let lexer = lang.and_then(|lang| {
-        if let Some((name, query)) = lang.split_once('?') {
-            // `find_fancy`: the query string becomes the lexer's options.
-            let def = lexer::find_def(name).filter(|def| def.missing.is_empty())?;
-            let mut options = decode_www_form(query);
+        if lang.contains('?') {
+            // `find_fancy` without code: the query string becomes the
+            // lexer's options; `guess?mimetype=…` guesses by mimetype (an
+            // ambiguous guess raises in Ruby: plain text here).
+            let (found, mut options) = guess::lookup_fancy(lang, None, &Options::new());
+            let def = match found? {
+                Guess::Found(def) => def,
+                Guess::Ambiguous(_) => return None,
+            };
+            let def = Some(def).filter(|def| def.missing.is_empty())?;
             if def.tag == "php" && !mixed && !options.contains_key("start_inline") {
                 options.insert("start_inline".into(), OptionValue::Bool(true));
             }
@@ -199,56 +206,6 @@ fn lex(block: &Block, source: &str, lang: Option<&str>) -> Vec<(Token, String)> 
     Lexer::new(lexer::plaintext(), Options::new())
         .and_then(|mut lexer| lexer.lex(source))
         .unwrap_or_default()
-}
-
-/// `URI.decode_www_form` grouped like `lookup_fancy`: one value is a string,
-/// a repeated key a list.
-fn decode_www_form(query: &str) -> Options {
-    let mut values: Vec<(String, Vec<String>)> = Vec::new();
-    if !query.is_empty() {
-        for pair in query.split('&') {
-            let (key, value) = pair.split_once('=').unwrap_or((pair, ""));
-            let (key, value) = (decode_component(key), decode_component(value));
-            match values.iter_mut().find(|(k, _)| *k == key) {
-                Some((_, list)) => list.push(value),
-                None => values.push((key, vec![value])),
-            }
-        }
-    }
-    values
-        .into_iter()
-        .map(|(key, mut list)| {
-            let value = if list.len() == 1 {
-                OptionValue::Str(list.remove(0))
-            } else {
-                OptionValue::List(list)
-            };
-            (key, value)
-        })
-        .collect()
-}
-
-/// `URI.decode_www_form_component`: `+` is a space, `%XX` a byte.
-fn decode_component(text: &str) -> String {
-    let bytes = text.as_bytes();
-    let mut out = Vec::with_capacity(bytes.len());
-    let mut i = 0;
-    while i < bytes.len() {
-        match bytes[i] {
-            b'+' => out.push(b' '),
-            b'%' if i + 2 < bytes.len()
-                && bytes[i + 1].is_ascii_hexdigit()
-                && bytes[i + 2].is_ascii_hexdigit() =>
-            {
-                let hex = |b: u8| (b as char).to_digit(16).unwrap_or(0) as u8;
-                out.push(hex(bytes[i + 1]) * 16 + hex(bytes[i + 2]));
-                i += 2;
-            }
-            byte => out.push(byte),
-        }
-        i += 1;
-    }
-    String::from_utf8_lossy(&out).into_owned()
 }
 
 /// A callout mark taken out of the source: its 1-based line and markup.
@@ -475,19 +432,5 @@ mod tests {
         assert_eq!(ruby_to_i("-3"), -3);
         assert_eq!(ruby_to_i("1_000"), 1000);
         assert_eq!(ruby_to_i("x"), 0);
-    }
-
-    #[test]
-    fn decodes_lexer_options() {
-        let options = decode_www_form("token=Name+Builtin&a=%41&a=b&flag");
-        assert_eq!(
-            options.get("token"),
-            Some(&OptionValue::Str("Name Builtin".into()))
-        );
-        assert_eq!(
-            options.get("a"),
-            Some(&OptionValue::List(vec!["A".into(), "b".into()]))
-        );
-        assert_eq!(options.get("flag"), Some(&OptionValue::Str(String::new())));
     }
 }
