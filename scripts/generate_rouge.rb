@@ -224,6 +224,9 @@ LEXER_CASES = [
   ['php?disabledmodules=Apache&start_inline=1', "apache_note('a'); strlen('b');\n"],
   ['python', "x = f'{a!r:>{w}} {{lit}}' + rb'\\d\\n' + u\"\\u00e9\\n\"\ns = '''doc\n>>> 1 + 1\n2\n\n'''\ndef f(a: int = 0x1F) -> str: return Fr\"{a}\\t\"\n"],
   ['cython', "cdef int f(int x):\n    cdef:\n        int y\n    return x\n"],
+  ['yaml', "a:\n  b: [1, 'x', {c: d}]\n  e:\n    - &anchor f\n    - *anchor\n  g: |2-\n      kept\n    lit\n  h: >+\n    folded\n\n i: x\nj: |-1\n k\n---\n%YAML 1.2\n%TAG ! tag:x,2000:\n...\nl: \"q\\n\" # c\n"],
+  ['yaml', "- a\n- b:\n    c: 1.5\n  d: true\n? complex\n: value\n      over: indented\n"],
+  ['digdag', "timezone: UTC\n+step:\n  sh>: echo hi\n  _do:\n    echo>: x\n"],
   ['hack?start_inline=1', "<<__Entrypoint>> async function main(): Awaitable<void> { echo strlen('x'); }\n"],
 ].freeze
 

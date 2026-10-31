@@ -14530,7 +14530,7 @@ static LEXER_APIBLUEPRINT: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["markdown.rs:35 (value strip)", "delegates to unported yaml"],
+    missing: &["markdown.rs:35 (value strip)"],
 };
 
 static LEXER_APPLESCRIPT: LexerDef = LexerDef {
@@ -16996,8 +16996,8 @@ static LEXER_DIGDAG: LexerDef = LexerDef {
     tag: "digdag",
     states: &[
         StateDef { name: "block_nodes", rules: &[
-            Rule::Match { regex: 917, bol: false, action: Action::Call(crate::lexer::unported) },
-            Rule::Match { regex: 918, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 917, bol: false, action: Action::Call(crate::lexers::digdag::rule_63) },
+            Rule::Match { regex: 918, bol: false, action: Action::Call(crate::lexers::yaml::rule_176) },
             Rule::Match { regex: 919, bol: false, action: Action::Call(cb_digdag_yaml_182) },
         ] },
         StateDef { name: "basic", rules: &[
@@ -17007,16 +17007,16 @@ static LEXER_DIGDAG: LexerDef = LexerDef {
             Rule::Mixin(1),
             Rule::Match { regex: 490, bol: false, action: Action::Emit(T::TEXT, Next::Stay) },
             Rule::Match { regex: 920, bol: false, action: Action::Emit(T::TEXT, Next::Stay) },
-            Rule::Match { regex: 921, bol: true, action: Action::Call(crate::lexer::unported) },
-            Rule::Match { regex: 922, bol: true, action: Action::Call(crate::lexer::unported) },
-            Rule::Match { regex: 923, bol: true, action: Action::Call(crate::lexer::unported) },
-            Rule::Match { regex: 924, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 921, bol: true, action: Action::Call(crate::lexers::yaml::rule_92) },
+            Rule::Match { regex: 922, bol: true, action: Action::Call(crate::lexers::yaml::rule_98) },
+            Rule::Match { regex: 923, bol: true, action: Action::Call(crate::lexers::yaml::rule_105) },
+            Rule::Match { regex: 924, bol: false, action: Action::Call(crate::lexers::yaml::rule_112) },
         ] },
         StateDef { name: "indentation", rules: &[
             Rule::Match { regex: 925, bol: false, action: Action::Call(cb_digdag_yaml_121) },
-            Rule::Match { regex: 926, bol: false, action: Action::Call(crate::lexer::unported) },
-            Rule::Match { regex: 927, bol: false, action: Action::Call(crate::lexer::unported) },
-            Rule::Match { regex: 928, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 926, bol: false, action: Action::Call(crate::lexers::yaml::rule_123) },
+            Rule::Match { regex: 927, bol: false, action: Action::Call(crate::lexers::yaml::rule_129) },
+            Rule::Match { regex: 928, bol: false, action: Action::Call(crate::lexers::yaml::rule_135) },
         ] },
         StateDef { name: "block_line", rules: &[
             Rule::Match { regex: 929, bol: false, action: Action::Emit(T::TEXT, Next::Pop) },
@@ -17056,12 +17056,12 @@ static LEXER_DIGDAG: LexerDef = LexerDef {
         ] },
         StateDef { name: "block_scalar_content", rules: &[
             Rule::Match { regex: 490, bol: false, action: Action::Emit(T::TEXT, Next::Stay) },
-            Rule::Match { regex: 938, bol: true, action: Action::Call(crate::lexer::unported) },
-            Rule::Match { regex: 939, bol: true, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 938, bol: true, action: Action::Call(crate::lexers::yaml::rule_222) },
+            Rule::Match { regex: 939, bol: true, action: Action::Call(crate::lexers::yaml::rule_234) },
             Rule::Match { regex: 940, bol: false, action: Action::Emit(T::LITERAL_STRING, Next::Stay) },
         ] },
         StateDef { name: "block_scalar_header", rules: &[
-            Rule::Match { regex: 941, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 941, bol: false, action: Action::Call(crate::lexers::yaml::rule_254) },
         ] },
         StateDef { name: "ignored_line", rules: &[
             Rule::Mixin(1),
@@ -17091,7 +17091,7 @@ static LEXER_DIGDAG: LexerDef = LexerDef {
             Rule::Match { regex: 948, bol: true, action: Action::Emit(T::TEXT, Next::Stay) },
             Rule::Match { regex: 358, bol: false, action: Action::Emit(T::TEXT, Next::Stay) },
             Rule::Match { regex: 949, bol: true, action: Action::Call(cb_digdag_yaml_308) },
-            Rule::Match { regex: 939, bol: true, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 939, bol: true, action: Action::Call(crate::lexers::yaml::rule_313) },
         ] },
         StateDef { name: "plain_scalar_in_block_context", rules: &[
             Rule::Match { regex: 950, bol: false, action: Action::Emit(T::TEXT, Next::Pop) },
@@ -17120,11 +17120,11 @@ static LEXER_DIGDAG: LexerDef = LexerDef {
             Rule::Match { regex: 958, bol: false, action: Action::Call(cb_digdag_yaml_366) },
         ] },
     ],
-    start: &[crate::lexer::unported_hook, crate::lexer::unported_hook],
+    start: &[crate::lexers::yaml::start_78, crate::lexers::yaml::start_78],
     init: None,
     reset: None,
     stream: None,
-    missing: &["digdag.rs:63 (call set_indent)", "yaml.rs:176 (call set_indent)", "yaml.rs:92 (call reset_indent)", "yaml.rs:98 (call reset_indent)", "yaml.rs:105 (call reset_indent)", "yaml.rs:112 (MASGN@113)", "yaml.rs:123 (call continue_indent)", "yaml.rs:129 (call set_indent)", "yaml.rs:135 (call continue_indent)", "yaml.rs:222 (value size)", "yaml.rs:234 (value size)", "yaml.rs:254 (NEXT@261)", "yaml.rs:313 (value size)", "yaml.rs:78 (start) (hook call reset_indent)"],
+    missing: &[],
 };
 
 static LEXER_DOCKER: LexerDef = LexerDef {
@@ -22496,7 +22496,7 @@ static LEXER_MARKDOWN: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["markdown.rs:35 (value strip)", "delegates to unported yaml"],
+    missing: &["markdown.rs:35 (value strip)"],
 };
 
 static LEXER_MASON: LexerDef = LexerDef {
@@ -29734,16 +29734,16 @@ static LEXER_YAML: LexerDef = LexerDef {
             Rule::Mixin(0),
             Rule::Match { regex: 490, bol: false, action: Action::Emit(T::TEXT, Next::Stay) },
             Rule::Match { regex: 920, bol: false, action: Action::Emit(T::TEXT, Next::Stay) },
-            Rule::Match { regex: 921, bol: true, action: Action::Call(crate::lexer::unported) },
-            Rule::Match { regex: 922, bol: true, action: Action::Call(crate::lexer::unported) },
-            Rule::Match { regex: 923, bol: true, action: Action::Call(crate::lexer::unported) },
-            Rule::Match { regex: 924, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 921, bol: true, action: Action::Call(crate::lexers::yaml::rule_92) },
+            Rule::Match { regex: 922, bol: true, action: Action::Call(crate::lexers::yaml::rule_98) },
+            Rule::Match { regex: 923, bol: true, action: Action::Call(crate::lexers::yaml::rule_105) },
+            Rule::Match { regex: 924, bol: false, action: Action::Call(crate::lexers::yaml::rule_112) },
         ] },
         StateDef { name: "indentation", rules: &[
             Rule::Match { regex: 925, bol: false, action: Action::Call(cb_yaml_yaml_121) },
-            Rule::Match { regex: 926, bol: false, action: Action::Call(crate::lexer::unported) },
-            Rule::Match { regex: 927, bol: false, action: Action::Call(crate::lexer::unported) },
-            Rule::Match { regex: 928, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 926, bol: false, action: Action::Call(crate::lexers::yaml::rule_123) },
+            Rule::Match { regex: 927, bol: false, action: Action::Call(crate::lexers::yaml::rule_129) },
+            Rule::Match { regex: 928, bol: false, action: Action::Call(crate::lexers::yaml::rule_135) },
         ] },
         StateDef { name: "block_line", rules: &[
             Rule::Match { regex: 929, bol: false, action: Action::Emit(T::TEXT, Next::Pop) },
@@ -29760,7 +29760,7 @@ static LEXER_YAML: LexerDef = LexerDef {
             Rule::Match { regex: 935, bol: false, action: Action::Emit(T::NAME_VARIABLE, Next::Stay) },
         ] },
         StateDef { name: "block_nodes", rules: &[
-            Rule::Match { regex: 918, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 918, bol: false, action: Action::Call(crate::lexers::yaml::rule_176) },
             Rule::Match { regex: 919, bol: false, action: Action::Call(cb_yaml_yaml_182) },
         ] },
         StateDef { name: "flow_nodes", rules: &[
@@ -29787,12 +29787,12 @@ static LEXER_YAML: LexerDef = LexerDef {
         ] },
         StateDef { name: "block_scalar_content", rules: &[
             Rule::Match { regex: 490, bol: false, action: Action::Emit(T::TEXT, Next::Stay) },
-            Rule::Match { regex: 938, bol: true, action: Action::Call(crate::lexer::unported) },
-            Rule::Match { regex: 939, bol: true, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 938, bol: true, action: Action::Call(crate::lexers::yaml::rule_222) },
+            Rule::Match { regex: 939, bol: true, action: Action::Call(crate::lexers::yaml::rule_234) },
             Rule::Match { regex: 940, bol: false, action: Action::Emit(T::LITERAL_STRING, Next::Stay) },
         ] },
         StateDef { name: "block_scalar_header", rules: &[
-            Rule::Match { regex: 941, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 941, bol: false, action: Action::Call(crate::lexers::yaml::rule_254) },
         ] },
         StateDef { name: "ignored_line", rules: &[
             Rule::Mixin(0),
@@ -29822,7 +29822,7 @@ static LEXER_YAML: LexerDef = LexerDef {
             Rule::Match { regex: 948, bol: true, action: Action::Emit(T::TEXT, Next::Stay) },
             Rule::Match { regex: 358, bol: false, action: Action::Emit(T::TEXT, Next::Stay) },
             Rule::Match { regex: 949, bol: true, action: Action::Call(cb_yaml_yaml_308) },
-            Rule::Match { regex: 939, bol: true, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 939, bol: true, action: Action::Call(crate::lexers::yaml::rule_313) },
         ] },
         StateDef { name: "plain_scalar_in_block_context", rules: &[
             Rule::Match { regex: 950, bol: false, action: Action::Emit(T::TEXT, Next::Pop) },
@@ -29851,11 +29851,11 @@ static LEXER_YAML: LexerDef = LexerDef {
             Rule::Match { regex: 958, bol: false, action: Action::Call(cb_yaml_yaml_366) },
         ] },
     ],
-    start: &[crate::lexer::unported_hook, crate::lexer::unported_hook],
+    start: &[crate::lexers::yaml::start_78, crate::lexers::yaml::start_78],
     init: None,
     reset: None,
     stream: None,
-    missing: &["yaml.rs:92 (call reset_indent)", "yaml.rs:98 (call reset_indent)", "yaml.rs:105 (call reset_indent)", "yaml.rs:112 (MASGN@113)", "yaml.rs:123 (call continue_indent)", "yaml.rs:129 (call set_indent)", "yaml.rs:135 (call continue_indent)", "yaml.rs:176 (call set_indent)", "yaml.rs:222 (value size)", "yaml.rs:234 (value size)", "yaml.rs:254 (NEXT@261)", "yaml.rs:313 (value size)", "yaml.rs:78 (start) (hook call reset_indent)"],
+    missing: &[],
 };
 
 static LEXER_YANG: LexerDef = LexerDef {

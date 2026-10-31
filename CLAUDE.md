@@ -1994,11 +1994,11 @@ persistent `Lexer.subs` (`TemplateLexer#parent` hand-written). Hand-written
 `rule_<line>`/`start_<line>`/`init`/`reset`/`stream` in
 `src/lexers/<rouge file>.rs` win; anything else lands in `LexerDef.missing`
 and the lexer is unused, as is one delegating to an unused lexer (166 of
-228 ported, now 171). Also translated: delegate aliases (`@lang = @css`),
+228 ported, now 173). Also translated: delegate aliases (`@lang = @css`),
 `coll.any? { |x| … }`, nil-aware `m[i]`/ivar comparisons, stack sizes,
 String ivars (`Lexer.strings`) and `Regexp.escape`; `puts … if @debug` is
 dropped. Hand ports so far: plaintext, template_lexer (`parent`), console
-(+irb), python (string register), php (+hack: options, start state, builtins), ruby (`%`-sigils build a cached dynamic state: `dynamic_state`/
+(+irb), python (string register), yaml (+digdag: indentation stack), php (+hack: options, start state, builtins), ruby (`%`-sigils build a cached dynamic state: `dynamic_state`/
 `Rule::Compiled`; heredoc queue); a hand module declares its delegates as
 `Delegates (tag, …): dep, ….` doc lines and the Rouge data it needs as
 `Data: Klass.method, ….` (exported as `DATA_KLASS_METHOD` slices). `tests/data/lexer_corpus.txt` also
