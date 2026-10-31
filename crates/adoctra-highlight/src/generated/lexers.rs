@@ -7011,6 +7011,12 @@ fn st_hack_template_lexer_19(l: &mut Lexer) -> Result<(), LexError> {
     Ok(())
 }
 
+fn cb_haml_haml_71(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    s.token(T::TEXT, m.text());
+    crate::lexers::util::indentation(s, m.group(0))?;
+    Ok(())
+}
+
 fn cb_haml_haml_76(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
     s.token(T::NAME_TAG, m.text());
     s.goto("tag")?;
@@ -7020,6 +7026,20 @@ fn cb_haml_haml_76(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> 
 fn cb_haml_haml_78(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
     s.groups(m, &[T::COMMENT, T::COMMENT_SPECIAL, T::COMMENT]);
     s.pop(1)?;
+    Ok(())
+}
+
+fn cb_haml_haml_85(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    s.token(T::COMMENT, m.text());
+    s.pop(1)?;
+    crate::lexers::util::starts_block(s, "html_comment_block");
+    Ok(())
+}
+
+fn cb_haml_haml_91(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    s.token(T::COMMENT, m.text());
+    s.pop(1)?;
+    crate::lexers::util::starts_block(s, "haml_comment_block");
     Ok(())
 }
 
@@ -11521,6 +11541,26 @@ fn cb_sas_sas_499(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
     Ok(())
 }
 
+fn cb_sass_sass_22(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    s.token(T::TEXT, m.text());
+    crate::lexers::util::indentation(s, m.group(0))?;
+    Ok(())
+}
+
+fn cb_sass_sass_27(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    s.token(T::COMMENT_SINGLE, m.text());
+    s.pop(1)?;
+    crate::lexers::util::starts_block(s, "single_comment");
+    Ok(())
+}
+
+fn cb_sass_sass_32(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    s.token(T::COMMENT_MULTILINE, m.text());
+    s.pop(1)?;
+    crate::lexers::util::starts_block(s, "multi_comment");
+    Ok(())
+}
+
 fn cb_sass_sass_46(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
     s.push("attribute")?;
     Ok(())
@@ -11564,6 +11604,19 @@ fn cb_sass_sass_common_26(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), Lex
 fn cb_sass_sass_common_35(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
     s.groups(m, &[T::NAME_VARIABLE, T::TEXT, T::PUNCTUATION]);
     s.push("value")?;
+    Ok(())
+}
+
+fn cb_sass_sass_common_67(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    if contains(SET_60, m.group(0)) {
+        s.token(T::NAME_BUILTIN, m.text());
+    } else {
+        if contains(SET_38, m.group(0)) {
+            s.token(T::NAME_CONSTANT, m.text());
+        } else {
+            s.token(T::NAME, m.text());
+        }
+    }
     Ok(())
 }
 
@@ -11726,6 +11779,19 @@ fn cb_scss_sass_common_26(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), Lex
 fn cb_scss_sass_common_35(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
     s.groups(m, &[T::NAME_VARIABLE, T::TEXT, T::PUNCTUATION]);
     s.push("value")?;
+    Ok(())
+}
+
+fn cb_scss_sass_common_67(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    if contains(SET_60, m.group(0)) {
+        s.token(T::NAME_BUILTIN, m.text());
+    } else {
+        if contains(SET_38, m.group(0)) {
+            s.token(T::NAME_CONSTANT, m.text());
+        } else {
+            s.token(T::NAME, m.text());
+        }
+    }
     Ok(())
 }
 
@@ -11912,9 +11978,23 @@ fn st_slice_c_63(l: &mut Lexer) -> Result<(), LexError> {
     Ok(())
 }
 
+fn cb_slim_slim_49(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    s.token(T::TEXT, m.text());
+    crate::lexers::util::indentation(s, m.group(0))?;
+    Ok(())
+}
+
 fn cb_slim_slim_57(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
     s.groups(m, &[T::NAME_NAMESPACE, T::TEXT_WHITESPACE, T::TEXT]);
     s.pop(1)?;
+    Ok(())
+}
+
+fn cb_slim_slim_77(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    s.token(T::PUNCTUATION, m.text());
+    s.pop(1)?;
+    crate::lexers::util::starts_block(s, "plain_block");
+    s.goto("plain_block")?;
     Ok(())
 }
 
@@ -19243,15 +19323,15 @@ static LEXER_HAML: LexerDef = LexerDef {
     states: &[
         StateDef { name: "root", rules: &[
             Rule::Match { regex: 1447, bol: false, action: Action::Emit(T::TEXT, Next::Stay) },
-            Rule::Match { regex: 1448, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 1448, bol: false, action: Action::Call(cb_haml_haml_71) },
         ] },
         StateDef { name: "content", rules: &[
             Rule::Mixin(2),
             Rule::Match { regex: 1449, bol: false, action: Action::Call(cb_haml_haml_76) },
             Rule::Match { regex: 1450, bol: false, action: Action::Emit(T::NAME_NAMESPACE, Next::Pop) },
             Rule::Match { regex: 1451, bol: false, action: Action::Call(cb_haml_haml_78) },
-            Rule::Match { regex: 1452, bol: false, action: Action::Call(crate::lexer::unported) },
-            Rule::Match { regex: 1453, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 1452, bol: false, action: Action::Call(cb_haml_haml_85) },
+            Rule::Match { regex: 1453, bol: false, action: Action::Call(cb_haml_haml_91) },
             Rule::Match { regex: 300, bol: false, action: Action::Call(crate::lexer::unported) },
             Rule::Match { regex: 1454, bol: false, action: Action::Call(crate::lexer::unported) },
             Rule::Mixin(5),
@@ -19333,9 +19413,9 @@ static LEXER_HAML: LexerDef = LexerDef {
     ],
     start: &[st_haml_haml_59],
     init: None,
-    reset: None,
+    reset: Some(crate::lexers::util::reset),
     stream: None,
-    missing: &["haml.rs:71 (call indentation)", "haml.rs:85 (call starts_block)", "haml.rs:91 (call starts_block)", "haml.rs:97 (call ruby!)", "haml.rs:104 (call starts_block)", "haml.rs:127 (call ruby!)", "haml.rs:147 (call ruby!)", "haml.rs:194 (condition IVAR)", "haml.rs (initialize) (assignment in a hook)", "util.rs (reset!)"],
+    missing: &["haml.rs:97 (call ruby!)", "haml.rs:104 (value strip)", "haml.rs:127 (call ruby!)", "haml.rs:147 (call ruby!)", "haml.rs:194 (condition IVAR)", "haml.rs (initialize) (assignment in a hook)"],
 };
 
 static LEXER_HANDLEBARS: LexerDef = LexerDef {
@@ -26277,11 +26357,11 @@ static LEXER_SASS: LexerDef = LexerDef {
     states: &[
         StateDef { name: "root", rules: &[
             Rule::Match { regex: 2888, bol: false, action: Action::Emit(T::TEXT, Next::Stay) },
-            Rule::Match { regex: 2889, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 2889, bol: false, action: Action::Call(cb_sass_sass_22) },
         ] },
         StateDef { name: "content", rules: &[
-            Rule::Match { regex: 15, bol: false, action: Action::Call(crate::lexer::unported) },
-            Rule::Match { regex: 2890, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 15, bol: false, action: Action::Call(cb_sass_sass_27) },
+            Rule::Match { regex: 2890, bol: false, action: Action::Call(cb_sass_sass_32) },
             Rule::Match { regex: 2891, bol: false, action: Action::Emit(T::KEYWORD, Next::State(4)) },
             Rule::Mixin(7),
             Rule::Match { regex: 2892, bol: false, action: Action::Emit(T::NAME_FUNCTION, Next::State(8)) },
@@ -26337,7 +26417,7 @@ static LEXER_SASS: LexerDef = LexerDef {
             Rule::Match { regex: 2912, bol: false, action: Action::Emit(T::PUNCTUATION, Next::Stay) },
             Rule::Match { regex: 753, bol: false, action: Action::Emit(T::COMMENT_MULTILINE, Next::State(24)) },
             Rule::Match { regex: 2823, bol: false, action: Action::Emit(T::COMMENT_SINGLE, Next::Stay) },
-            Rule::Match { regex: 2913, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 2913, bol: false, action: Action::Call(cb_sass_sass_common_67) },
         ] },
         StateDef { name: "has_interp", rules: &[
             Rule::Match { regex: 529, bol: false, action: Action::Emit(T::LITERAL_STRING_INTERPOL, Next::State(11)) },
@@ -26418,9 +26498,9 @@ static LEXER_SASS: LexerDef = LexerDef {
     ],
     start: &[],
     init: None,
-    reset: None,
+    reset: Some(crate::lexers::util::reset),
     stream: None,
-    missing: &["sass.rs:22 (call indentation)", "sass.rs:27 (call starts_block)", "sass.rs:32 (call starts_block)", "sass_common.rs:67 (collection)", "util.rs (reset!)"],
+    missing: &[],
 };
 
 static LEXER_SCALA: LexerDef = LexerDef {
@@ -26583,7 +26663,7 @@ static LEXER_SCSS: LexerDef = LexerDef {
             Rule::Match { regex: 2912, bol: false, action: Action::Emit(T::PUNCTUATION, Next::Stay) },
             Rule::Match { regex: 753, bol: false, action: Action::Emit(T::COMMENT_MULTILINE, Next::State(19)) },
             Rule::Match { regex: 2823, bol: false, action: Action::Emit(T::COMMENT_SINGLE, Next::Stay) },
-            Rule::Match { regex: 2913, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 2913, bol: false, action: Action::Call(cb_scss_sass_common_67) },
         ] },
         StateDef { name: "has_interp", rules: &[
             Rule::Match { regex: 529, bol: false, action: Action::Emit(T::LITERAL_STRING_INTERPOL, Next::State(6)) },
@@ -26666,7 +26746,7 @@ static LEXER_SCSS: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["sass_common.rs:67 (collection)"],
+    missing: &[],
 };
 
 static LEXER_SED: LexerDef = LexerDef {
@@ -26958,14 +27038,14 @@ static LEXER_SLIM: LexerDef = LexerDef {
     states: &[
         StateDef { name: "root", rules: &[
             Rule::Match { regex: 1447, bol: false, action: Action::Emit(T::TEXT, Next::Stay) },
-            Rule::Match { regex: 1448, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 1448, bol: false, action: Action::Call(cb_slim_slim_49) },
         ] },
         StateDef { name: "content", rules: &[
             Rule::Mixin(3),
             Rule::Match { regex: 3010, bol: false, action: Action::Emit(T::COMMENT, Next::State(11)) },
             Rule::Match { regex: 3011, bol: false, action: Action::Call(cb_slim_slim_57) },
             Rule::Match { regex: 3012, bol: false, action: Action::Call(crate::lexer::unported) },
-            Rule::Match { regex: 3013, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 3013, bol: false, action: Action::Call(cb_slim_slim_77) },
             Rule::Match { regex: 3014, bol: false, action: Action::Emit(T::PUNCTUATION, Next::State(5)) },
             Rule::Match { regex: 3015, bol: false, action: Action::Call(cb_slim_slim_87) },
             Rule::Match { regex: 3016, bol: false, action: Action::Call(cb_slim_slim_93) },
@@ -27032,9 +27112,9 @@ static LEXER_SLIM: LexerDef = LexerDef {
     ],
     start: &[st_slim_slim_45],
     init: None,
-    reset: None,
+    reset: Some(crate::lexers::util::reset),
     stream: None,
-    missing: &["slim.rs:49 (call indentation)", "slim.rs:63 (call starts_block)", "slim.rs:77 (call starts_block)", "slim.rs:181 (condition IVAR)", "util.rs (reset!)"],
+    missing: &["slim.rs:63 (value strip)", "slim.rs:181 (condition IVAR)"],
 };
 
 static LEXER_SMALLTALK: LexerDef = LexerDef {

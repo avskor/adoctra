@@ -12,4 +12,5 @@ pub(crate) mod python;
 pub(crate) mod ruby;
 pub(crate) mod rust;
 pub(crate) mod template_lexer;
+pub(crate) mod util;
 pub(crate) mod yaml;

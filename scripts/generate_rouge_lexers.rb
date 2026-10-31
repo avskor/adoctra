@@ -580,6 +580,9 @@ module RougeLexers
         "#{indent}s.pop(#{times})?;\n"
       when :goto then "#{indent}s.goto(#{state_name args[0]})?;\n"
       when :reset_stack then "#{indent}s.reset_stack();\n"
+      # Rouge::Indentation (util.rb, hand-written).
+      when :starts_block then "#{indent}crate::lexers::util::starts_block(s, #{state_name args[0]});\n"
+      when :indentation then "#{indent}crate::lexers::util::indentation(s, #{value args[0]})?;\n"
       when :recurse
         val = args[0] ? value(args[0]) : 'm.text()'
         "#{indent}s.recurse(#{val})?;\n"
@@ -896,9 +899,9 @@ module RougeLexers
         when :include?, :member?, :key?
           collection = evaluate(recv)
           values = collection.is_a?(Hash) ? collection.keys : collection.to_a
-          # A Symbol never equals the String a match yields.
-          unsupported(node, 'collection') unless values.all? { |v| v.is_a?(String) }
-          "contains(#{@g.set_const values}, #{value call_args(args)[0]})"
+          # Only Strings can equal the String a match yields (sass's
+          # `CSS.constants` is Module#constants, Symbols: never included).
+          "contains(#{@g.set_const values.grep(String)}, #{value call_args(args)[0]})"
         when :==, :!=
           compare(recv, meth, call_args(args)[0])
         when :start_with?, :end_with?

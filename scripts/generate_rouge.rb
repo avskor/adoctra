@@ -239,6 +239,8 @@ LEXER_CASES = [
   ['moonscript?function_highlighting=0', "print math.floor 1\n"],
   ['moonscript?disabled_modules=math', "print math.floor 1\n"],
   ['handlebars', "<div class={{cls}} id=\"{{id}}\">{{#if x}}{{name}}{{/if}}</div>\n"],
+  ['sass', "@mixin m($x)\n  color: red\n.a\n  +m(1px)\n  &:hover\n    width: calc(100% - 2px)\n"],
+  ['scss', "@use 'x';\n.a { color: lighten($c, 10%); &:hover { top: 0; } }\n"],
   ['hack?start_inline=1', "<<__Entrypoint>> async function main(): Awaitable<void> { echo strlen('x'); }\n"],
 ].freeze
 
