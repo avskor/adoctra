@@ -360,8 +360,10 @@ aside.admonition {
 /* Ruby zeroes the content cell's `:last-child > :last-child`: the inner
    element of a wrapped block (a paragraph's `p`, a list), not the wrapper
    that carries a listing's or image's margin. */
+/* An adoctra list is Ruby's wrapped list, so its last item keeps the
+   0.625em of Ruby's item `p`. */
 .admonition-content > :last-child:is(p, ul, ol, dl),
-.admonition-content > :last-child > :last-child { margin-block-end: 0; }
+.admonition-content > :last-child:not(ul, ol) > :last-child { margin-block-end: 0; }
 
 /* `icons=font`: Ruby's Font Awesome glyphs and colours. */
 .admonition-title [class^="fa icon-"] {
@@ -626,6 +628,10 @@ span:is(.image, .icon) img { max-inline-size: 100%; block-size: auto; }
 span.image:is(.left, .right) { margin-block: 0.25em; display: inline-block; line-height: 0; }
 span.image.left { float: left; margin-inline-end: 0.625em; }
 span.image.right { float: right; margin-inline-start: 0.625em; }
+/* Ruby's thumbnail roles: a white frame with a hairline shadow. */
+.thumb, .th { line-height: 0; display: inline-block; border: 4px solid #fff; box-shadow: 0 0 0 1px #ddd; }
+figure.imageblock:is(.thumb, .th) { border-width: 6px; }
+figure.imageblock:is(.thumb, .th) > figcaption.title { padding: 0 0.125em; }
 a.image { text-decoration: none; display: inline-block; }
 a.image object { pointer-events: none; }
 
@@ -787,6 +793,14 @@ ol.lowerroman { list-style-type: lower-roman; }
 ol.upperroman { list-style-type: upper-roman; }
 ol.lowergreek { list-style-type: lower-greek; }
 ul.checklist { list-style: none; padding-inline-start: 1.25rem; }
+/* Ruby's unmarked list styles; `inline` lays the items out in a row. */
+:is(ul, ol):is(.none, .no-bullet, .unstyled), ol.unnumbered { list-style-type: none; }
+:is(ul, ol).no-bullet, ol.unnumbered { margin-inline-start: 0.625em; }
+:is(ul, ol).unstyled { margin-inline-start: 0; }
+ul.inline { display: flex; flex-flow: row wrap; list-style: none; margin: 0 0 0.625em -1.25em; }
+/* Ruby's 1.25em is on a 16px `li` (its text is a `p`); adoctra's `li` is 17px. */
+ul.inline > li { margin-inline-start: 1.25rem; }
+:is(dl.unstyled, .unstyled dl) dt { font-weight: 400; font-style: normal; }
 dl dt { margin-block-end: 0.3125em; font-weight: bold; }
 dl dd { margin: 0 0 1.25em 1.125em; }
 /* Ruby zeroes the last description's last *wrapper*: a listing's, image's
@@ -835,11 +849,13 @@ pre .conum[data-value] { position: relative; top: -0.125em; }
 pre img { vertical-align: middle; }
 pre + ol.colist { margin-block-start: -0.5em; }
 /* With icons the callout list is Ruby's two columns: the icon, then the text. */
-ol.colist.icons { list-style: none; padding-inline-start: 0; }
-ol.colist.icons > li { display: grid; grid-template-columns: auto 1fr; }
-ol.colist.icons > li > .colist-icon { padding: 0.4em 0.75em 0; line-height: 1; }
+/* Ruby's rows are table cells: no list indent, item gap or item `p` gap,
+   and cells at the 16px base. */
+ol.colist.icons { list-style: none; padding-inline-start: 0; margin-inline-start: 0; }
+ol.colist.icons > li { display: grid; grid-template-columns: auto 1fr; margin-block-end: 0; }
+ol.colist.icons > li > .colist-icon { padding: 0.4em 0.75em 0; line-height: 1; font-size: 1rem; }
 ol.colist.icons > li > .colist-icon img { max-width: none; vertical-align: middle; }
-ol.colist.icons > li > div { padding: 0.25em 0; }
+ol.colist.icons > li > div { padding: 0.25em 0; margin-block-start: 0; }
 
 /* --- Keyboard, button and menu macros (experimental) ----------------------- */
 
@@ -938,3 +954,22 @@ pre.literalblock.output { color: #f7f7f8; background: rgb(0 0 0 / 0.9); }
 .white-background { background: #fafafa; }
 .yellow { color: #bfbf00; }
 .yellow-background { background: #fafa00; }
+
+/* --- Roles ----------------------------------------------------------------- */
+
+/* The utility roles of Ruby's default stylesheet. */
+.hide { display: none; }
+/* Ruby sets `subheader` on a block's wrapper `div`; only its inherited
+   colour and weight reach the element, which keeps its own margins. */
+.subheader { color: #7a2518; font-weight: 400; }
+.center { margin-inline: auto; }
+.clearfix::before, .clearfix::after, .float-group::before, .float-group::after { content: " "; display: table; }
+.clearfix::after, .float-group::after { clear: both; }
+:not(pre).nobreak { overflow-wrap: normal; }
+:not(pre).pre-wrap { white-space: pre-wrap; }
+.print-only { display: none !important; }
+@media print {
+  .hide-on-print, .hide-for-print { display: none !important; }
+  .print-only { display: block !important; }
+  .show-for-print { display: inherit !important; }
+}

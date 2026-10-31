@@ -4322,6 +4322,42 @@ mod tests {
     }
 
     #[test]
+    fn roles_and_list_styles_have_ruby_stylesheet_rules() {
+        // Roles and list styles land on the element itself (Ruby puts them on
+        // its wrapper too); adoctra.css carries the rules of Ruby's default
+        // stylesheet, adapted to that markup.
+        let html = render_standalone(
+            "= T\n\n[.hide]\nh\n\n[.subheader]\ns\n\n[inline]\n* a\n\n[unstyled]\n* b\n\n[.thumb]\nimage::i.png[]\n",
+        );
+        for markup in [
+            "<p class=\"hide\">h</p>",
+            "<p class=\"subheader\">s</p>",
+            "<ul class=\"inline\">",
+            "<ul class=\"unstyled\">",
+            "<figure class=\"imageblock thumb\">",
+        ] {
+            assert!(html.contains(markup), "{markup}: {html}");
+        }
+        for rule in [
+            ".hide { display: none; }",
+            ".subheader { color: #7a2518; font-weight: 400; }",
+            ".print-only { display: none !important; }",
+            ".clearfix::after, .float-group::after { clear: both; }",
+            ":is(ul, ol):is(.none, .no-bullet, .unstyled), ol.unnumbered { list-style-type: none; }",
+            ":is(ul, ol).unstyled { margin-inline-start: 0; }",
+            "ul.inline > li { margin-inline-start: 1.25rem; }",
+            ":is(dl.unstyled, .unstyled dl) dt { font-weight: 400; font-style: normal; }",
+            ".thumb, .th { line-height: 0; display: inline-block; border: 4px solid #fff; box-shadow: 0 0 0 1px #ddd; }",
+            // Image callout rows are Ruby's table cells, without list gaps.
+            "ol.colist.icons > li > div { padding: 0.25em 0; margin-block-start: 0; }",
+            // An admonition's last list keeps its last item's gap.
+            ".admonition-content > :last-child:not(ul, ol) > :last-child { margin-block-end: 0; }",
+        ] {
+            assert!(STYLESHEET.contains(rule), "{rule}");
+        }
+    }
+
+    #[test]
     fn rouge_highlights_listings_like_ruby_adapter() {
         // A ported lexer highlights; the theme is embedded in the head.
         let source = "= T\n:source-highlighter: rouge\n\n[source,java]\n----\nint x;\n----\n";

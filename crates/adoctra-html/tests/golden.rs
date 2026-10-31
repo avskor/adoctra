@@ -682,7 +682,79 @@ fn html_admonition_icons_match_asciidoctor() {
         );
         checked += 1;
     }
-    assert_eq!(checked, 2);
+    assert_eq!(checked, 3);
+}
+
+/// The stylesheet roles and list styles of `roles/`, in document order: every
+/// class token naming one, with Ruby's style repeated on the `div.ulist`
+/// wrapper and its list counted once.
+fn role_classes(html: &str) -> Vec<String> {
+    const ROLES: &[&str] = &[
+        "lead",
+        "subheader",
+        "hide",
+        "print-only",
+        "hide-on-print",
+        "center",
+        "text-center",
+        "text-right",
+        "big",
+        "small",
+        "underline",
+        "overline",
+        "line-through",
+        "red",
+        "green-background",
+        "nobreak",
+        "pre-wrap",
+        "unstyled",
+        "no-bullet",
+        "none",
+        "unnumbered",
+        "inline",
+        "thumb",
+        "th",
+        "float-group",
+        "left",
+        "right",
+        "terminal",
+    ];
+    let mut out: Vec<String> = Vec::new();
+    for part in html.split("class=\"").skip(1) {
+        let classes = &part[..part.find('"').unwrap()];
+        for class in classes.split(' ').filter(|class| ROLES.contains(class)) {
+            if out.last().map(String::as_str) != Some(class) {
+                out.push(class.to_string());
+            }
+        }
+    }
+    out
+}
+
+#[test]
+fn html_roles_and_list_styles_match_asciidoctor() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/roles");
+    let mut checked = 0;
+    for entry in fs::read_dir(&dir).expect("golden/roles dir is missing") {
+        let path = entry.unwrap().path();
+        if path.extension().and_then(|e| e.to_str()) != Some("adoc") {
+            continue;
+        }
+        let name = path.file_stem().unwrap().to_string_lossy().into_owned();
+        let adoc = fs::read_to_string(&path).unwrap();
+        let expected = fs::read_to_string(path.with_extension("expected.html")).unwrap();
+        let doc = adoctra_core::parse(&adoc).document;
+        let ours = String::from_utf8(HtmlBackend::embedded().convert(&doc).unwrap()).unwrap();
+        let roles = role_classes(&expected);
+        assert!(roles.len() > 20, "too few roles in `{name}`: {roles:?}");
+        assert_eq!(
+            role_classes(&ours),
+            roles,
+            "HTML roles diverge from asciidoctor for `{name}`"
+        );
+        checked += 1;
+    }
+    assert_eq!(checked, 1);
 }
 
 #[test]

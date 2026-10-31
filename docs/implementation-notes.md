@@ -30,7 +30,11 @@ sidebar, quote/verse, tables, dl, media). The corpus also has the 21
 acceptance documents (resources in a temp tree) and 4 embedded cases (fragment
 plus its own stylesheet), and `golden/rouge/themes.adoc` under all 25 Rouge
 themes in class and inline mode (`table.linenotable`/`pre pre` rules ported
-from Ruby): 656 of 658 observations match; the remaining case
+from Ruby), plus `golden/roles/roles.adoc` (Ruby's utility roles and
+unmarked list styles) and `golden/admonition_icons/files.adoc` (real PNG
+admonition/callout icons; image callout rows are Ruby's table cells, the last
+list item in an admonition keeps its `p` gap; `subheader` is on Ruby's
+wrapper, so only colour/weight reach the element): 660 of 662 observations match; the remaining case
 (a raw unclosed `<i>`) is documented. Ruby zeroes last-child margins on
 wrappers, so mirror that per element (lists/paragraphs keep theirs).
 Re-record only after reviewing an IMPROVED diff; never loosen tolerances. Visual parity, CLI behavior,
