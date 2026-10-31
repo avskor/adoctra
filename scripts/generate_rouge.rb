@@ -231,6 +231,14 @@ LEXER_CASES = [
   ['factor', "USING: io kernel ;\n: hello ( -- ) \"Hi\" print dup drop ;\n"],
   ['rust', "fn main() {\n    println!(\"{} {}\", vec![1, 2][0], (3));\n    let s = r#\"raw\"#;\n    m!{ a [b] (c) }\n}\n"],
   ['crystal', "a = %w(x y) + %(no \#{interp}) + %Q[yes \#{1}] + %r{a+}i\nb = <<-EOS\n  text \#{x}\n  EOS\ndef f(x : Int32) : String; end\n"],
+  ['elixir', "~r/a+/i ++ ~w(a b)c ++ ~S\"\#{x}\" ++ ~s|y| ++ ~R<z>\ndefmodule A do\n  def f(x), do: x * 2\nend\n"],
+  ['eex', "<%= for x <- @list do %><li><%= x %></li><% end %>\n"],
+  ['lua', "local s = string.format('%d', 1)\nprint(s:gsub('a', 'b'), math.floor(2.5), foo.bar)\n"],
+  ['lua?function_highlighting=0', "print(math.floor(1))\n"],
+  ['moonscript', "print math.floor 1\nx = foo.bar\n"],
+  ['moonscript?function_highlighting=0', "print math.floor 1\n"],
+  ['moonscript?disabled_modules=math', "print math.floor 1\n"],
+  ['handlebars', "<div class={{cls}} id=\"{{id}}\">{{#if x}}{{name}}{{/if}}</div>\n"],
   ['hack?start_inline=1', "<<__Entrypoint>> async function main(): Awaitable<void> { echo strlen('x'); }\n"],
 ].freeze
 

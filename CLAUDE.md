@@ -1994,14 +1994,14 @@ persistent `Lexer.subs` (`TemplateLexer#parent` hand-written). Hand-written
 `rule_<line>`/`start_<line>`/`init`/`reset`/`stream` in
 `src/lexers/<rouge file>.rs` win; anything else lands in `LexerDef.missing`
 and the lexer is unused, as is one delegating to an unused lexer (166 of
-228 ported, now 183). Also translated: delegate aliases (`@lang = @css`),
+228 ported, now 190). Also translated: delegate aliases (`@lang = @css`),
 `coll.any? { |x| … }`, nil-aware `m[i]`/ivar comparisons, stack sizes,
 String ivars (`Lexer.strings`) and `Regexp.escape`, parenthesized conditions, methods of closed-over
 modules, `values.any? { |c| c.include? x }` (union), `delegate self.clone`
 (re-entrant: the clone shares the stack), and a missing constant becomes
 the NameError Ruby raises when the rule fires; `puts … if @debug` is
 dropped. Hand ports so far: plaintext, template_lexer (`parent`), console
-(+irb), python (string register), yaml (+digdag: indentation stack), rust (macro delimiters), crystal (ruby's helpers, Crystal sigils), php (+hack: options, start state, builtins), ruby (`%`-sigils build a cached dynamic state: `dynamic_state`/
+(+irb), python (string register), yaml (+digdag: indentation stack), rust (macro delimiters), crystal (ruby's helpers, Crystal sigils), elixir (`~` sigils; no letter = Ruby's TypeError), lua/moonscript (builtins; lua's Symbol-key options never apply), handlebars (parent `:attr` pop), php (+hack: options, start state, builtins), ruby (`%`-sigils build a cached dynamic state: `dynamic_state`/
 `Rule::Compiled`; heredoc queue); a hand module declares its delegates as
 `Delegates (tag, …): dep, ….` doc lines and the Rouge data it needs as
 `Data: Klass.method, ….` (exported as `DATA_KLASS_METHOD` slices). `tests/data/lexer_corpus.txt` also
