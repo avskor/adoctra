@@ -277,6 +277,7 @@ impl BodySubs {
             referable: referable_titles(conversion.registry),
             converting: BTreeMap::new(),
             header_title: None,
+            header_converting: None,
             first_section: None,
             resolving: false,
             outline: Vec::new(),
@@ -285,7 +286,9 @@ impl BodySubs {
         let mut body = 0;
         if let (Some(header), Some(block)) = (self.header, blocks.first_mut()) {
             if let BlockKind::Heading { inlines, .. } = &mut block.kind {
+                execution.header_converting = Some(header.clone());
                 execution.evaluate(inlines, header);
+                execution.header_converting = None;
                 execution.resolve(inlines);
                 execution.header_title = Some(inlines.clone());
                 body = 1;
@@ -399,6 +402,10 @@ struct Execution<'a, 's> {
     /// Titles being converted; a reference inside converts them again.
     converting: BTreeMap<(usize, usize), Pending>,
     header_title: Option<Vec<Inline>>,
+    /// The document title while it converts: a reference to the document
+    /// inside it converts it again (Ruby memoizes the title only after the
+    /// outer conversion).
+    header_converting: Option<Pending>,
     /// Without a document title, Ruby's `doctitle` is the first top-level
     /// section's title (keyed by its heading range).
     first_section: Option<((usize, usize), Vec<Inline>)>,
@@ -713,8 +720,8 @@ impl Execution<'_, '_> {
             crate::visit::walk_inlines_mut(&mut Origin(span), &mut nodes);
             return Some(nodes);
         }
-        if self.header_title.is_some() {
-            return self.header_title.clone();
+        if let Some(title) = self.header_label() {
+            return Some(title);
         }
         let (key, nodes) = self.first_section.clone()?;
         Some(self.heading(key, &nodes))
@@ -753,7 +760,7 @@ impl Execution<'_, '_> {
         let title = match &target.title {
             Some(crate::resolve::Title::Nodes(nodes)) => self.title(nodes),
             Some(crate::resolve::Title::Heading(key, nodes)) => self.heading(*key, nodes),
-            Some(crate::resolve::Title::Header) => return self.header_title.clone(),
+            Some(crate::resolve::Title::Header) => return self.header_label(),
             None => return None,
         };
         Some(crate::resolve::styled(
@@ -763,6 +770,19 @@ impl Execution<'_, '_> {
             &self.attributes,
             span,
         ))
+    }
+
+    /// The converted document title; inside its own conversion, converted
+    /// again (the reference being labeled makes inner ones display `[id]`).
+    fn header_label(&mut self) -> Option<Vec<Inline>> {
+        if self.header_title.is_some() {
+            return self.header_title.clone();
+        }
+        let pending = self.header_converting.clone()?;
+        let mut nodes = Vec::new();
+        self.evaluate(&mut nodes, pending);
+        self.resolve(&mut nodes);
+        Some(nodes)
     }
 
     /// Ruby's `apply_reftext_subs`, executed again at each reference.

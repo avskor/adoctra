@@ -1775,7 +1775,10 @@ fn adjust_verbatim(block: &mut Block, context: &mut ParseContext) {
         span.end,
         Indentation::default(),
     ));
-    if literal && block.attrs.style.is_none() && entry.0 == span.start {
+    // An indented (literal) paragraph keeps Ruby's `adjust_indentation!`
+    // without a tab size, also under a style it ignores; only `[literal]`
+    // builds the block with `tabsize`.
+    if literal && block.attrs.style.as_deref() != Some("literal") && entry.0 == span.start {
         return;
     }
     let indentation = Indentation::of_block(&block.attrs.named, &context.attributes);
@@ -3891,6 +3894,7 @@ fn item_blocks_begin<'s>(
 /// adjacent paragraph into the item text.
 fn item_blocks_end(
     lines: &mut Reader<'_>,
+    context: &mut ParseContext,
     mut blocks: Vec<Block>,
     item_reader: Option<Reader<'_>>,
     adjacent: bool,
@@ -3904,7 +3908,24 @@ fn item_blocks_end(
             Some(BlockKind::Paragraph { .. })
         ) {
         // Ruby removes the paragraph's indentation before folding it.
-        let span = blocks.remove(0).span;
+        let paragraph = blocks.remove(0);
+        let span = paragraph.span;
+        // Ruby registered the paragraph's id before folding it away.
+        if let Some(id) = paragraph.id {
+            let key = (span.start, span.end);
+            let stamp = context.block_stamps.remove(&key).unwrap_or_default();
+            let reftext = context.reftexts.remove(&key);
+            context.anchors.push((
+                id,
+                crate::anchor_catalog::Entry {
+                    span,
+                    reftext,
+                    bibliography: false,
+                    block: true,
+                    stamp,
+                },
+            ));
+        }
         let text = lines.content(span.start, span.end).text;
         let indent = text.len() - text.trim_start_matches([' ', '\t']).len();
         Some(Span::new(span.start + indent, span.end))
@@ -3940,7 +3961,8 @@ fn item_step<'s, 'c, L: ItemList>(
         ItemBlocks::Read(collect, adjacent) => Err(Step::Collect(
             collect,
             Box::new(move |env, blocks, reader| {
-                let (blocks, folded) = item_blocks_end(env.lines, blocks, reader, adjacent);
+                let (blocks, folded) =
+                    item_blocks_end(env.lines, env.context, blocks, reader, adjacent);
                 list.add(env, blocks, folded);
                 list.next(env)
             }),
@@ -3957,14 +3979,13 @@ fn item_text(
     folded: Option<Span>,
     context: &mut ParseContext,
 ) -> Vec<Inline> {
-    let (start, end) = match (text, folded) {
-        (Some(text), Some(folded)) => (text.start, folded.end),
-        (Some(text), None) => (text.start, text.end),
-        (None, Some(folded)) => (folded.start, folded.end),
+    let mut content = match (text, folded) {
+        (Some(text), Some(folded)) => lines.folded_content(text, folded),
+        (Some(text), None) => lines.content(text.start, text.end),
+        (None, Some(folded)) => lines.content(folded.start, folded.end),
         (None, None) => return Vec::new(),
     };
     let attrs = context.render_attributes();
-    let mut content = lines.content(start, end);
     if let Some(folded) = folded {
         content = fold_indentation(content, folded, lines);
     }

@@ -1026,19 +1026,23 @@ impl<'a> Reader<'a> {
                 return true;
             }
             let missing_target = policy == "warn" && missing(context);
+            let reason = if missing_target {
+                "due to missing attribute"
+            } else {
+                "because resolved target is blank"
+            };
             context.diagnostics.push(Diagnostic {
                 omitted_span: None,
-                report: Default::default(),
+                // Ruby's log names the whole directive.
+                report: crate::DiagnosticReport {
+                    message: Some(format!(
+                        "include dropped {reason}: include::{target}[{attrlist}]"
+                    )),
+                    ..Default::default()
+                },
                 span,
                 severity: Severity::Warning,
-                message: format!(
-                    "include dropped {}: {target}",
-                    if missing_target {
-                        "due to missing attribute"
-                    } else {
-                        "because resolved target is blank"
-                    }
-                ),
+                message: format!("include dropped {reason}: {target}"),
             });
             // Ruby names the unexpanded target here.
             return self.unresolved_include(target, attrlist, span);
@@ -1464,6 +1468,33 @@ impl<'a> Reader<'a> {
 
     pub fn content(&self, start: usize, end: usize) -> FilteredSource {
         let mut fragments = Vec::new();
+        self.content_fragments(start, end, &mut fragments);
+        FilteredSource::from_fragments(fragments)
+    }
+
+    /// Ruby's `fold_first`: a list item's text and its adjacent paragraph
+    /// joined by the text line's ending; block metadata lines between them
+    /// are not text.
+    pub fn folded_content(&self, text: Span, folded: Span) -> FilteredSource {
+        let next = self.loaded.partition_point(|(off, _)| *off <= text.end);
+        let gap_start = self.loaded.get(next).map_or(folded.start, |(off, _)| *off);
+        let gap_end = self.line_start(folded.start);
+        let mut fragments = Vec::new();
+        if gap_start < gap_end {
+            self.content_fragments(text.start, gap_start, &mut fragments);
+            self.content_fragments(gap_end, folded.end, &mut fragments);
+        } else {
+            self.content_fragments(text.start, folded.end, &mut fragments);
+        }
+        FilteredSource::from_fragments(fragments)
+    }
+
+    fn content_fragments<'s>(
+        &'s self,
+        start: usize,
+        end: usize,
+        fragments: &mut Vec<(usize, &'s str)>,
+    ) {
         let first = self
             .loaded
             .partition_point(|(off, line)| off + line.len() < start);
@@ -1486,7 +1517,6 @@ impl<'a> Reader<'a> {
                 }
             }
         }
-        FilteredSource::from_fragments(fragments)
     }
 
     /// Defer a verse body: verbatim lines (adjusted like Ruby's `build_block`)

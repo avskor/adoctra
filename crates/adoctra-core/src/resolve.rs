@@ -432,7 +432,8 @@ impl Ids<'_> {
             order: self.registry.len(),
             numbering: Numbering::None,
         };
-        if let Some(duplicate) = register_id(&mut self.registry, id, target, "anchor", entry.span) {
+        let kind = if entry.block { "block" } else { "anchor" };
+        if let Some(duplicate) = register_id(&mut self.registry, id, target, kind, entry.span) {
             self.report(Some(entry.stamp), duplicate);
         }
     }
@@ -871,8 +872,14 @@ impl Ids<'_> {
             .contains(&(block.span.start, block.span.end));
         let attributes = std::sync::Arc::clone(&block.attribute_context);
         match (&mut block.kind, &mut block.title) {
+            // A heading converted while reading (an automatic id, or an
+            // explicit one with an attribute reference: Ruby's
+            // `initialize_section`) resolves its references before its own
+            // id registers.
             (BlockKind::Heading { inlines, .. }, _)
-                if block.id.is_none() && !doctitle && !nested_title =>
+                if (block.id.is_none() || placeholder(inlines).is_none())
+                    && !doctitle
+                    && !nested_title =>
             {
                 self.resolve_reading(inlines, &attributes)
             }

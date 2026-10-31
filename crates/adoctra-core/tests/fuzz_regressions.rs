@@ -178,3 +178,193 @@ fn manpage_doctype_at_end_of_input_does_not_panic() {
         );
     }
 }
+
+fn item_text(source: &str) -> (String, Span) {
+    let result = parse(source);
+    match &result.document.flat_blocks()[0].kind {
+        BlockKind::List { items, .. } => match items[0].inlines.as_slice() {
+            [Inline::Text { value, span }] => (value.clone(), *span),
+            other => panic!("{source:?}: {other:?}"),
+        },
+        other => panic!("{source:?}: expected a list, got {other:?}"),
+    }
+}
+
+#[test]
+fn block_metadata_between_an_item_and_its_folded_paragraph_is_not_text() {
+    // Ruby's text-only first block reads `[...]` lines as metadata and
+    // `fold_first` joins the item text and the paragraph with LF.
+    assert_eq!(item_text("* m\n[e]\n'"), ("m '".into(), Span::new(2, 9)));
+    assert_eq!(item_text(". m\n[.r]\nx"), ("m x".into(), Span::new(2, 10)));
+    assert_eq!(
+        item_text("* m\n[e]\n// c\n[f]\ny"),
+        ("m y".into(), Span::new(2, 18))
+    );
+    // A title or attribute entry line is no metadata there: it stays text.
+    assert_eq!(item_text("* m\n.T\nx"), ("m .T x".into(), Span::new(2, 8)));
+    // Without metadata the fold is unchanged.
+    assert_eq!(item_text("* m\nx"), ("m x".into(), Span::new(2, 5)));
+}
+
+#[test]
+fn a_folded_paragraph_keeps_its_registered_id() {
+    // Ruby registers the paragraph's id (with its reftext) before folding it
+    // away: the reference resolves, and a later duplicate names a block.
+    let source = "* m\n[[id,Ref]]\nx\n\nsee <<id>>\n\n[[id]]\nagain";
+    let result = parse(source);
+    let blocks = result.document.flat_blocks();
+    let BlockKind::Paragraph { inlines } = &blocks[1].kind else {
+        panic!("{blocks:?}");
+    };
+    let Inline::CrossReference { xref, children, .. } = &inlines[1] else {
+        panic!("{inlines:?}");
+    };
+    assert_eq!(xref.target, "#id");
+    let label = source.find("Ref").unwrap();
+    assert!(
+        matches!(children.as_slice(), [Inline::Text { value, span }]
+            if value == "Ref" && *span == Span::new(label, label + 3)),
+        "{children:?}"
+    );
+    let duplicate: Vec<_> = result
+        .diagnostics
+        .iter()
+        .map(|d| (d.message.as_str(), d.span))
+        .collect();
+    let again = source.rfind("[[id]]").unwrap() + "[[id]]\n".len();
+    assert_eq!(
+        duplicate,
+        [(
+            "id assigned to block already in use: id",
+            Span::new(again, source.len())
+        )]
+    );
+}
+
+#[test]
+fn revision_lines_follow_ruby_revision_info_backtracking() {
+    // ` *` gives back the space before `:` (a remark-only revision line); a
+    // line starting with `:` is one only with a comma before.
+    let revision = |line: &str| {
+        let source = format!("= T\nA\n{line}\n");
+        let result = parse(&source);
+        result
+            .document
+            .header
+            .clone()
+            .and_then(|header| header.revision)
+            .map(|r| {
+                assert_eq!(r.span, Span::new(6, 6 + line.len()), "{line:?}");
+                (r.number, r.date, r.remark)
+            })
+    };
+    let some = |s: &str| Some(s.to_owned());
+    assert_eq!(revision(" :"), Some((None, None, some(""))));
+    assert_eq!(revision("  :x"), Some((None, None, some("x"))));
+    assert_eq!(revision(":"), None);
+    assert_eq!(revision(":a,b"), Some((some(""), some("b"), None)));
+    assert_eq!(revision(":a, :b"), Some((some(""), None, some("b"))));
+    assert_eq!(revision("a,b,c"), Some((some(""), some("c"), None)));
+    assert_eq!(revision("x ,: y"), Some((None, some("x"), some("y"))));
+    assert_eq!(
+        revision("v1.0,:remark"),
+        Some((some("1.0"), None, some("remark")))
+    );
+    assert_eq!(
+        revision("1.0, 2020: r :s"),
+        Some((some("1.0"), some("2020"), some("r :s")))
+    );
+    assert_eq!(
+        revision("Ж1, д: р"),
+        Some((some("1"), some("д"), some("р")))
+    );
+}
+
+#[test]
+fn a_generated_reference_label_restores_passthroughs() {
+    // The macros stage writes `[refid]` before passthroughs are restored;
+    // Ruby restores them in that label too.
+    for (source, label) in [
+        ("A<<e +x+>>", "[e x]"),
+        ("A<<e pass:[x]>>", "[e x]"),
+        ("A<<e +++<>>", "[e +<]"),
+    ] {
+        let result = parse(source);
+        let BlockKind::Paragraph { inlines } = &result.document.flat_blocks()[0].kind else {
+            panic!("{source:?}");
+        };
+        let Inline::CrossReference { children, span, .. } = &inlines[1] else {
+            panic!("{inlines:?}");
+        };
+        assert_eq!(*span, Span::new(1, source.len()));
+        assert!(
+            matches!(children.as_slice(), [Inline::Substituted { value, span: s, .. }]
+                if value == label && s == span),
+            "{source:?}: {children:?}"
+        );
+    }
+}
+
+#[test]
+fn a_reference_to_the_document_inside_its_title_converts_the_title_again() {
+    // Ruby memoizes the title after the outer conversion, so the reference's
+    // label converts the title once more (whose own reference shows `[sec]`).
+    let source = ":r: <<sec>>\n[[sec]]\n= r{r}";
+    let result = parse(source);
+    let BlockKind::Heading { inlines, .. } = &result.document.flat_blocks()[0].kind else {
+        panic!();
+    };
+    let reference = source.rfind("{r}").unwrap();
+    assert!(
+        matches!(&inlines[1], Inline::AttributeRef { value: Some(value), span, .. }
+            if value == "r[sec]" && *span == Span::new(reference, reference + 3)),
+        "{inlines:?}"
+    );
+}
+
+#[test]
+fn a_section_title_converted_while_reading_resolves_before_its_id_registers() {
+    // Ruby's `initialize_section` converts an explicit-id title with an
+    // attribute reference before registering the id: the reference to the
+    // section itself is still unknown there. Without `{` it converts later.
+    let label = |source: &str| {
+        let result = parse(source);
+        let blocks = result.document.flat_blocks();
+        let BlockKind::Heading { inlines, .. } = &blocks.last().unwrap().kind else {
+            panic!("{blocks:?}")
+        };
+        let text = |nodes: &[Inline]| -> String {
+            nodes
+                .iter()
+                .map(|node| match node {
+                    Inline::Text { value, .. } | Inline::Substituted { value, .. } => value.clone(),
+                    other => panic!("{other:?}"),
+                })
+                .collect()
+        };
+        inlines
+            .iter()
+            .find_map(|inline| match inline {
+                Inline::AttributeRef { value, .. } => value.clone(),
+                Inline::CrossReference { children, .. } => Some(text(children)),
+                _ => None,
+            })
+            .unwrap()
+    };
+    assert_eq!(label(":r: <<sec>>\n[[sec]]\n== r{r}"), "[sec]");
+    assert_eq!(label("[[o]]\n== O\n\n:r: <<o>>\n[[sec]]\n== r{r}"), "O");
+    assert_eq!(label("[[sec]]\n== r <<sec>>"), "r [sec]");
+}
+
+#[test]
+fn an_ignored_style_keeps_the_literal_paragraph_tabs() {
+    // Ruby's indented paragraph runs `adjust_indentation!` without a tab
+    // size; only `[literal]` builds the block with `tabsize`.
+    let text = |source: &str| match &parse(source).document.flat_blocks()[0].kind {
+        BlockKind::Literal { text, .. } => text.clone(),
+        other => panic!("{source:?}: {other:?}"),
+    };
+    assert_eq!(text("[v,tabsize=2]\n\tx\ty"), "x\ty");
+    assert_eq!(text("[v[,tabsize=2]\n\tx\ty"), "x\ty");
+    assert_eq!(text("[literal,tabsize=2]\n\tx\ty"), "  x y");
+}

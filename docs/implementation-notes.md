@@ -2117,3 +2117,29 @@ stream (it would shift stamps); place instead. Acceptance probes
 `tests/diagnostic_order.rs` and WASM `tests/diagnostic_order.rs` assert order
 and spans. Note: Ruby with `-o /dev/null` skips conversion, so compare
 diagnostics with `-o -`.
+
+**List item fold** (Ruby's `fold_first`): the item text and its adjacent
+paragraph join with the text line's ending; block metadata lines a text-only
+first block consumed (`[e]`, `[.r]`, `[[id]]`, comments) are not text
+(`Reader::folded_content`, used by `item_text`). The folded paragraph's id is
+registered as Ruby does: `item_blocks_end` moves it (with its reftext and
+block stamp) into `ParseContext::anchors` as an `anchor_catalog::Entry` with
+`block: true` (a duplicate's warning names a block). Its attribute entries are
+still replayed (XFAIL `fuzz-dlist-folded-entry-replay`; Ruby never plays back
+a discarded block's entries). **Revision line**: `header::revision_info`
+emulates `RevisionInfoLineRx` with Onigmo's backtracking order (` *` gives
+back spaces, so ` :` is a remark-only line). **Generated xref labels** built in
+the macros stage (`xref.label`) get their passthrough placeholders restored in
+`Passes::restore` (the `natural` spelling is deliberately not restored: Ruby
+looks it up before restoring). **Document title self-reference**:
+`Execution::header_label` converts the pending title again while it converts
+(`header_converting`), like Ruby's late title memo. **AsciiDoc cells** in HTML
+join the inner blocks with LF without a trailing one (footnotes follow after
+an LF). **Reading-converted section titles**: an explicit-id heading whose
+title Ruby converts in `initialize_section` (it contains `{`; not a
+placeholder in the AST) resolves its references in `Ids::register_block`
+before its own id registers, like automatic-id headings. **Ignored styles on
+indented paragraphs**: `adjust_verbatim` keeps the strip-only indentation
+unless the style is `literal` (Ruby's `adjust_indentation!` without a tab
+size). **`include dropped …`** carries Ruby's full directive in
+`report.message`; the editor message keeps the short target.

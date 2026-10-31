@@ -195,6 +195,21 @@ fn blank_and_missing_targets_execute_like_ruby_branches() {
             "include dropped due to missing attribute: {counter:w}{missing}",
         ]
     );
+    // Ruby's log names the whole directive (the conversion report).
+    let reports: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.severity == Severity::Warning)
+        .filter_map(|d| d.report.message.as_deref())
+        .take(2)
+        .collect();
+    assert_eq!(
+        reports,
+        [
+            "include dropped because resolved target is blank: include::{set:foo:bar}[]",
+            "include dropped due to missing attribute: include::{counter:w}{missing}[]",
+        ]
+    );
     // Directive substitutions report no informational drop-line messages.
     assert!(!result
         .diagnostics

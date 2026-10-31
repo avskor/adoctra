@@ -2089,7 +2089,16 @@ fn render_table(block: &Block, table: &adoctra_core::ast::Table, cx: &Cx, out: &
                                 }
                             }
                             cx.source_listing.set(inner.source_listing.get());
-                            render_footnotes(footnotes, &cx.doc.attributes, "", out);
+                            // Ruby joins the inner document's blocks with LF
+                            // (no trailing LF: a passthrough's text ends at
+                            // `</div>`), then its footnotes after another LF.
+                            let joined = out.ends_with('\n') && out.pop().is_some();
+                            let mut notes = String::new();
+                            render_footnotes(footnotes, &cx.doc.attributes, "", &mut notes);
+                            if joined && !notes.is_empty() {
+                                out.push('\n');
+                            }
+                            out.push_str(&notes);
                             out.push_str("</div>");
                         }
                     }
@@ -6377,11 +6386,17 @@ mod tests {
             html.contains("<table class=\"tableblock frame-all grid-all stretch\">\n</table>"),
             "{html}"
         );
-        // The nested document's blocks render like the parent's.
+        // The nested document's blocks render like the parent's, joined by
+        // LF without a trailing one (Ruby's inner `convert`).
         assert!(
-            html.contains("<td class=\"tableblock halign-left valign-top\"><div class=\"content\"><p><strong>x</strong></p>\n<p>y</p>\n</div></td>"),
+            html.contains("<td class=\"tableblock halign-left valign-top\"><div class=\"content\"><p><strong>x</strong></p>\n<p>y</p></div></td>"),
             "{html}"
         );
+        // A passthrough's text therefore ends at the wrapper, even unterminated.
+        for source in ["[cols=a]\n|===\n|++++\n}\n|===", "[cols=a]\n|===\n++++\n}"] {
+            let html = render(source);
+            assert!(html.contains("<div class=\"content\">}</div>"), "{html}");
+        }
         let html = render("[cols=a]\n|===\n|\n----\n<code>\n----\n!===\n!in\n!===\n|===");
         assert!(
             html.contains("<div class=\"content\"><pre class=\"listing\">&lt;code&gt;</pre>\n<table class=\"tableblock frame-all grid-all stretch\">"),

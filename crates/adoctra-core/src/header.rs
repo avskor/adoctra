@@ -590,42 +590,83 @@ fn parse_author(entry: &str, off: usize) -> Author {
 }
 
 fn parse_revision(line: (usize, &str)) -> Option<Revision> {
-    let text = line.1.trim_start_matches(' ');
-    if text.starts_with(':') {
-        return None;
-    }
-    let (number, rest) = match text.split_once(',') {
-        // RevisionInfoLineRx's `(?!:)` rejects a component starting with a
-        // colon after the comma; the regex then backtracks to the branch
-        // without a number, so `v1.0.0,:remark` is a version and a remark.
-        Some((prefix, rest)) if !rest.trim_start_matches(' ').starts_with(':') => {
-            let start = prefix
-                .find(|c: char| c.is_ascii_digit() || c == '{')
-                .unwrap_or(prefix.len());
-            (
-                Some(prefix[start..].ruby_rstrip().to_owned()),
-                rest.trim_start_matches(' '),
-            )
+    let (number, component, remark) = revision_info(line.1)?;
+    let mut number = number.map(|n| n.ruby_rstrip().to_owned());
+    let component = component.ruby_strip();
+    let mut date = None;
+    if !component.is_empty() {
+        // A version must begin with `v` when the date is absent.
+        if number.is_none() && component.starts_with('v') {
+            number = Some(component[1..].to_owned());
+        } else {
+            date = Some(component.to_owned());
         }
-        _ => (None, text),
-    };
-    let (date, remark) = rest.split_once(':').map_or((rest, None), |(date, remark)| {
-        (
-            date.ruby_rstrip().trim_end_matches(','),
-            Some(remark.ruby_strip().to_owned()),
-        )
-    });
-    let mut number = number;
-    let date = if number.is_none() && date.ruby_strip().starts_with('v') {
-        number = Some(date.ruby_strip()[1..].to_owned());
-        None
-    } else {
-        (!date.is_ruby_blank()).then(|| date.ruby_strip().to_owned())
-    };
+    }
     Some(Revision {
         span: line_span(line),
         number,
         date,
-        remark,
+        remark: remark.map(|r| r.ruby_rstrip().to_owned()),
     })
+}
+
+/// Ruby's `RevisionInfoLineRx` with its backtracking order:
+/// `^(?:[^\d{]*(.*?),)? *(?!:)(.*?)(?: *(?!^),?: *(.*))?$`, returning
+/// groups 1–3. Its ` *` may give back the spaces before a colon, so ` :` is a
+/// (remark-only) revision line, while a line starting with `:` is one only
+/// with a comma before.
+fn revision_info(text: &str) -> Option<(Option<&str>, &str, Option<&str>)> {
+    let bytes = text.as_bytes();
+    let spaces = |at: usize| bytes[at..].iter().take_while(|&&b| b == b' ').count();
+    let boundaries = |from: usize| (from..=text.len()).filter(move |&at| text.is_char_boundary(at));
+    // ` *(?!:)(.*?)(?: *(?!^),?: *(.*))?$` from `at`.
+    let rest = |at: usize| -> Option<(&str, Option<&str>)> {
+        for start in (at..=at + spaces(at)).rev() {
+            if bytes.get(start) == Some(&b':') {
+                continue;
+            }
+            for end in boundaries(start) {
+                for colon_at in (end..=end + spaces(end)).rev() {
+                    if colon_at == 0 {
+                        continue;
+                    }
+                    let colon = if bytes.get(colon_at) == Some(&b',')
+                        && bytes.get(colon_at + 1) == Some(&b':')
+                    {
+                        Some(colon_at + 1)
+                    } else if bytes.get(colon_at) == Some(&b':') {
+                        Some(colon_at)
+                    } else {
+                        None
+                    };
+                    if let Some(colon) = colon {
+                        let remark = colon + 1 + spaces(colon + 1);
+                        return Some((&text[start..end], Some(&text[remark..])));
+                    }
+                }
+                if end == text.len() {
+                    return Some((&text[start..end], None));
+                }
+            }
+        }
+        None
+    };
+    let prefix = text
+        .find(|c: char| c.is_ascii_digit() || c == '{')
+        .unwrap_or(text.len());
+    for number_start in boundaries(0)
+        .filter(|&at| at <= prefix)
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+    {
+        for comma in boundaries(number_start) {
+            if bytes.get(comma) == Some(&b',') {
+                if let Some((component, remark)) = rest(comma + 1) {
+                    return Some((Some(&text[number_start..comma]), component, remark));
+                }
+            }
+        }
+    }
+    rest(0).map(|(component, remark)| (None, component, remark))
 }

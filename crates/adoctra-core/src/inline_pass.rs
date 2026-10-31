@@ -704,6 +704,11 @@ impl Passes {
                             0,
                         ))
                     });
+                    // A label the macros stage generated (`[refid]`) still
+                    // holds the placeholders; Ruby restores them in it too.
+                    if let Some((_, label)) = &mut xref.label {
+                        self.restore(label, attrs, compat);
+                    }
                     self.restore(children, attrs, compat);
                 }
                 Inline::Image { image, .. } => {

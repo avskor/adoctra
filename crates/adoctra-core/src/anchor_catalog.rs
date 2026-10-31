@@ -16,6 +16,9 @@ pub(crate) struct Entry {
     pub span: Span,
     pub reftext: Option<crate::reftext::Read>,
     pub bibliography: bool,
+    /// The id of a paragraph folded into a list item's text: Ruby registered
+    /// it with the block (and names a block in a duplicate's warning).
+    pub block: bool,
     /// Where reading cataloged it: a duplicate id is reported there.
     pub stamp: crate::context::Stamp,
 }
@@ -202,6 +205,7 @@ impl ParseContext<'_> {
                 span,
                 reftext,
                 bibliography: true,
+                block: false,
                 stamp,
             },
         ));
@@ -292,6 +296,7 @@ impl ParseContext<'_> {
                 span,
                 reftext,
                 bibliography: false,
+                block: false,
                 stamp,
             },
         ));

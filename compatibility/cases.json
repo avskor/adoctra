@@ -37117,8 +37117,7 @@
     {
       "id": "fuzz-dlist-folded-attribute-entry",
       "category": "fuzz",
-      "expect": "xfail",
-      "reason": "Ruby parses the item's adjacent lines as a block, so a leading attribute entry is consumed before the paragraph folds into the description; adoctra folds the raw lines",
+      "expect": "pass",
       "source": "m;; f\n:x: \n["
     },
     {
@@ -37141,6 +37140,61 @@
       "expect": "xfail",
       "reason": "Ruby converts the document title several times, each advancing the counter; adoctra evaluates it once",
       "source": "= {counter:n}\n{counter:n}"
+    },
+    {
+      "id": "fuzz-list-item-metadata-not-text",
+      "category": "fuzz",
+      "expect": "pass",
+      "source": "* m\n[e]\n'\n\n. n\n[.r]\nx\n\n* o\n[e]\n// c\n[f]\ny"
+    },
+    {
+      "id": "fuzz-list-item-folded-paragraph-id",
+      "category": "fuzz",
+      "expect": "pass",
+      "source": "* m\n[[id,Ref]]\nx\n\nsee <<id>>"
+    },
+    {
+      "id": "fuzz-revision-line-remark-only",
+      "category": "fuzz",
+      "expect": "pass",
+      "source": "= c\nc\n :"
+    },
+    {
+      "id": "fuzz-asciidoc-cell-passthrough-end",
+      "category": "fuzz",
+      "expect": "pass",
+      "source": "[cols=\"a\"]\n|===\n|++++\n}\n|===\n\n[cols=\"a\"]\n|===\n++++\n}"
+    },
+    {
+      "id": "fuzz-xref-fallback-restores-passthrough",
+      "category": "fuzz",
+      "expect": "pass",
+      "source": "A<<e +++<>>\n\nB<<e +x+>> C<<e pass:[x]>>"
+    },
+    {
+      "id": "fuzz-doctitle-self-reference",
+      "category": "fuzz",
+      "expect": "pass",
+      "source": ":r: <<sec>>\n[[sec]]\n= r{r}"
+    },
+    {
+      "id": "fuzz-dlist-folded-entry-replay",
+      "category": "fuzz",
+      "expect": "xfail",
+      "source": "m;; f\n:x: v\ny\n\n{x}",
+      "reason": "Ruby applies an attribute entry above a description's adjacent paragraph while reading only: the paragraph folds into the description and its entries are never played back during conversion; adoctra replays them"
+    },
+    {
+      "id": "fuzz-section-title-reading-self-reference",
+      "category": "fuzz",
+      "expect": "pass",
+      "source": ":r: <<sec>>\n[[sec]]\n== r{r}\n\n[[o]]\n== O\n\n:q: <<o>>\n[[t]]\n== t{q}"
+    },
+    {
+      "id": "fuzz-ignored-style-literal-tabs",
+      "category": "fuzz",
+      "expect": "pass",
+      "source": "[v[,tabsize=2]\n\tx\ty\n\n[v,tabsize=2]\n\ta\tb\n\n[literal,tabsize=2]\n\tc\td"
     }
   ]
 }
