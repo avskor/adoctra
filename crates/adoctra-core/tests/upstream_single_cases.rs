@@ -244,3 +244,28 @@ fn an_unterminated_container_warns_before_its_children() {
         ]
     );
 }
+
+/// syntax_highlighter_test.rb:235 "should rename document attribute named
+/// language to source-language when compat-mode is enabled": Ruby's
+/// save_attributes copies `language` to `source-language` in compat mode,
+/// which then defaults listings to source.
+#[test]
+fn compat_mode_copies_language_to_source_language() {
+    let source = ":language: ruby\n\n{source-language}\n\n----\nputs 1\n----\n";
+    let doc = parse_with_options(source, &with(&[("compat-mode", "")])).document;
+    assert_eq!(doc.attributes.get("source-language"), Some("ruby"));
+    assert_eq!(paragraph(&doc.blocks[0]), "ruby");
+    assert_eq!(doc.blocks[1].attrs.style.as_deref(), Some("source"));
+    assert_eq!(
+        doc.blocks[1]
+            .attrs
+            .named
+            .get("language")
+            .map(String::as_str),
+        Some("ruby")
+    );
+    // Without compat mode the attribute stays unset.
+    let doc = parse(source).document;
+    assert_eq!(doc.attributes.get("source-language"), None);
+    assert_eq!(doc.blocks[1].attrs.style, None);
+}

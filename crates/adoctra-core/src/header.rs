@@ -339,6 +339,7 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
     save_doctitle(Arc::make_mut(&mut context.attributes));
     save_toc(Arc::make_mut(&mut context.attributes));
     save_icons(Arc::make_mut(&mut context.attributes));
+    save_compat_language(Arc::make_mut(&mut context.attributes));
     context.release_flexible_attributes();
     context.quote_compat = context.attributes.get("compat-mode").is_some();
     for (index, kind) in [
@@ -379,6 +380,17 @@ fn save_icons(attributes: &mut crate::Attributes) {
     attributes.set("icons", "");
     if icons != "image" {
         attributes.set("icontype", icons);
+    }
+}
+
+/// Ruby's `save_attributes` at header completion: in compat mode the
+/// `language` attribute also sets `source-language` (bypassing locks).
+fn save_compat_language(attributes: &mut crate::Attributes) {
+    if attributes.get("compat-mode").is_none() {
+        return;
+    }
+    if let Some(language) = attributes.value_parts("language") {
+        attributes.set_parts("source-language", language);
     }
 }
 

@@ -62,6 +62,13 @@ pub enum Rule {
     },
     /// `mixin :state` (an index into the lexer's states).
     Mixin(usize),
+    /// A rule of a state built while lexing (`push do … end`), with its
+    /// regexp compiled then.
+    Compiled {
+        regex: &'static Regex,
+        bol: bool,
+        action: Action,
+    },
 }
 
 pub enum Action {
@@ -374,6 +381,39 @@ impl Lexer {
     }
 }
 
+/// A state built while lexing (Ruby's `push do … end`), shared by every
+/// use with the same `key` (the lexer tag and what the rules depend on), so
+/// the states and regexps kept for the process stay bounded.
+pub fn dynamic_state(
+    key: String,
+    build: impl FnOnce() -> Result<Vec<Rule>, LexError>,
+) -> Result<&'static StateDef, LexError> {
+    use std::collections::HashMap;
+    use std::sync::Mutex;
+    static STATES: OnceLock<Mutex<HashMap<String, &'static StateDef>>> = OnceLock::new();
+    let states = STATES.get_or_init(|| Mutex::new(HashMap::new()));
+    if let Some(state) = states.lock().unwrap_or_else(|e| e.into_inner()).get(&key) {
+        return Ok(state);
+    }
+    let rules: &'static [Rule] = Box::leak(build()?.into_boxed_slice());
+    let state: &'static StateDef = Box::leak(Box::new(StateDef {
+        name: "dynamic",
+        rules,
+    }));
+    states
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .insert(key, state);
+    Ok(state)
+}
+
+/// A regexp for a dynamic rule (compiled once per dynamic state).
+pub fn compiled(source: &str, options: u32) -> Result<&'static Regex, LexError> {
+    let regex = Regex::new(source, options)
+        .map_err(|error| LexError(format!("rouge regexp /{source}/: {error}")))?;
+    Ok(Box::leak(Box::new(regex)))
+}
+
 /// The action of a Ruby block that is not ported (its lexer is unused).
 pub(crate) fn unported(_: &mut Scan<'_, '_>, _: &Match<'_>) -> Result<(), LexError> {
     Err(LexError("unported Rouge rule".into()))
@@ -469,16 +509,17 @@ impl<'l, 't> Scan<'l, 't> {
                         return Ok(true);
                     }
                 }
-                Rule::Match {
-                    regex: index,
-                    bol,
-                    action,
-                } => {
+                Rule::Match { bol, action, .. } | Rule::Compiled { bol, action, .. } => {
                     if *bol && !self.beginning_of_line() {
                         continue;
                     }
+                    let compiled = match rule {
+                        Rule::Match { regex: index, .. } => regex(*index),
+                        Rule::Compiled { regex, .. } => regex,
+                        Rule::Mixin(_) => unreachable!("mixins are handled above"),
+                    };
                     let rest = &self.text[self.pos..];
-                    let Some(captures) = regex(*index).match_at(rest, 0) else {
+                    let Some(captures) = compiled.match_at(rest, 0) else {
                         continue;
                     };
                     let size = captures.end();

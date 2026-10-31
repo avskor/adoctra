@@ -222,7 +222,7 @@ Supported entries (recorded options mapped to `-S`/`-s`/`-a`) are compared in
 body-dom-v1 plus warnings against pinned Ruby without optional highlighter
 gems; others are UNSUPPORTED with a reason. The reference mimics one Ruby CLI
 run per document (output chomped + LF, highlighter library status reset).
-2258 PASS / 25 DIFF / 1 RUBY_ERROR / 337 UNSUPPORTED of 2621; CI freezes
+2278 PASS / 5 DIFF / 1 RUBY_ERROR / 337 UNSUPPORTED of 2621; CI freezes
 every status. All upstream test/fixtures are vendored (SHA-256 in the
 inventory); the harness materializes them in a temp root replacing
 `<UPSTREAM>` on both sides and maps `base_dir` to the CLI's `-B`. It serves
@@ -231,11 +231,12 @@ test_helper.rb's using_test_webserver, confined to test/) during the run;
 the Ruby side gives each entry its own open-uri-cached cache_path.
 The body-dom-v1 projection maps Ruby's icon colist table and adoctra's
 `ol.colist.icons` (span.colist-icon + div) to ol > li > colist-icon/-text.
-Unported Rouge lexers (23: ruby/php/html/console; the reference loads the
-pinned Rouge, other highlighter gems stay stubbed) are the queue; the last
-DIFF is an incomplete inline SVG neither
+The unported php Rouge lexer (4; the reference loads the pinned Rouge,
+other highlighter gems stay stubbed) is the queue; the last DIFF is an
+incomplete inline SVG neither
 side can project (raw bodies differ by the intended wrapper). Single-case regressions live in
-crates/adoctra-core/tests/upstream_single_cases.rs (FLEXIBLE_ATTRIBUTES
+crates/adoctra-core/tests/upstream_single_cases.rs (compat-mode
+`language` → `source-language` in header.rs save_compat_language, FLEXIBLE_ATTRIBUTES
 sectnums, `max-include-depth` 64 default attribute, invalid-header, fragment,
 AttributeList rekey attribution, folded dlist indentation, placeholders);
 the harness marks a document-set non-HTML backend UNSUPPORTED and projects
@@ -1992,8 +1993,16 @@ delegation to ivars or memo methods (`@x ||= K.new(options)`) uses
 persistent `Lexer.subs` (`TemplateLexer#parent` hand-written). Hand-written
 `rule_<line>`/`start_<line>`/`init`/`reset`/`stream` in
 `src/lexers/<rouge file>.rs` win; anything else lands in `LexerDef.missing`
-and the lexer is unused, as is one delegating to an unused lexer (137 of
-228 ported incl. hand-written plaintext, all matching Rouge's token streams
+and the lexer is unused, as is one delegating to an unused lexer (166 of
+228 ported). Also translated: delegate aliases (`@lang = @css`),
+`coll.any? { |x| … }`, nil-aware `m[i]`/ivar comparisons, stack sizes,
+String ivars (`Lexer.strings`) and `Regexp.escape`; `puts … if @debug` is
+dropped. Hand ports so far: plaintext, template_lexer (`parent`), console
+(+irb), ruby (`%`-sigils build a cached dynamic state: `dynamic_state`/
+`Rule::Compiled`; heredoc queue); a hand module declares its delegates as
+`Delegates (tag, …): dep, ….` doc lines. `tests/data/lexer_corpus.txt` also
+holds `C` cases (`find_fancy` names with options) from `LEXER_CASES` in
+generate_rouge.rb (all matching Rouge, incl. hand-written plaintext, all matching Rouge's token streams
 on the demos in `tests/data/lexer_corpus.txt`). adoctra-html `rouge.rs` is
 the RougeAdapter: `<pre class="rouge highlight">`, `rouge-css` class (head
 `<style>` inserted after the body like Ruby's docinfo, `<link>` with

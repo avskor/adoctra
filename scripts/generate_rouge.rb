@@ -212,6 +212,11 @@ LEXER_CASES = [
   ['console?lang=json&output=json', "$ {\"a\": 1}\n[1, 2]\n"],
   ['shell_session', "user@host:~$ for i in 1 2; do echo $i; done\n1\n2\n"],
   ['text?token=Comment', "plain <text>\n"],
+  ['ruby', "a = %w[x (y) z]\nb = %r{a{2}b}i =~ s\nc = %(1 \#{x} (n) \\) 2)\nd = %q|a\\|b|\ne = %.p.\nf = %#h#\ng = %I<a b>\nh = %x`ls`\n"],
+  ['ruby', "x = <<~EOS + <<-'B'\n  one \#{y}\n  EOS\n  two\n  B\nz = <<\"\"\n\nputs <<END\nEND\n"],
+  ['ruby', "def a.b?(c) = c\nclass << self; end\nputs :sym, 'q', ?c, 1.0e3, 0x1F\nfoo&.bar { |x| x ** 2 }\n"],
+  ['irb', "irb(main):001:0> [1, 2].map { |x| x * 2 }\n=> [2, 4]\nirb(main):002:0> raise 'x'\nRuntimeError: x\n"],
+  ['erb', "<p><%= @user.name %></p>\n<% if x %>y<% end %>\n"],
 ].freeze
 
 # Ruby's token stream for every lexer's complete demo, and for the extra

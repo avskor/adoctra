@@ -379,6 +379,10 @@ module RougeLexers
         rule? ? ops(name, args, node, indent) : hook_ops(name, args, node, indent)
       when :IF, :UNLESS
         cond, yes, no = node.children
+        # `puts … if @debug`: Rouge's debugging is off.
+        if cond.type == :IVAR && cond.children[0] == :@debug
+          return stmts(node.type == :IF ? no : yes, indent)
+        end
         test = condition(cond)
         test = "!(#{test})" if node.type == :UNLESS
         out = "#{indent}if #{test} {\n#{stmts yes, indent + '    '}#{indent}}"
