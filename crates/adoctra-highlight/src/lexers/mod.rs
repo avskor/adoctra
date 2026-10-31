@@ -1,13 +1,18 @@
 //! Hand-written ports of Rouge's Ruby blocks and hooks, by lexer file.
 pub(crate) mod ada;
+pub(crate) mod cmake;
 pub(crate) mod console;
+pub(crate) mod coq;
 pub(crate) mod crystal;
 pub(crate) mod digdag;
 pub(crate) mod ecl;
 pub(crate) mod elixir;
+pub(crate) mod epp;
+pub(crate) mod escape;
 pub(crate) mod haml;
 pub(crate) mod handlebars;
 pub(crate) mod http;
+pub(crate) mod lasso;
 pub(crate) mod lua;
 pub(crate) mod markdown;
 pub(crate) mod meson;
@@ -19,6 +24,7 @@ pub(crate) mod racket;
 pub(crate) mod ruby;
 pub(crate) mod rust;
 pub(crate) mod slim;
+pub(crate) mod tcl;
 pub(crate) mod template_lexer;
 pub(crate) mod util;
 pub(crate) mod vue;

@@ -3564,6 +3564,10 @@ pub(crate) static REGEXES: &[(&str, u32)] = &[
     ("\n          [0-9]+\n          ((?-mix:[.][0-9_]+)  (?-mix:e[-+]?[0-9_]+)?\n          |(?-mix:[.][0-9_]+)? (?-mix:e[-+]?[0-9_]+)\n          )\n        ", 2),
     ("\n        ( 0b[10_]+\n         | 0x[0-9a-fA-F_]+\n         | [0-9_]+\n        )\n        ", 2),
     ("\\\\ ([nrt'\"\\\\0] | x\\h{2} | u\\h{4} | U\\h{8})", 2),
+    ("[$^.*]", 0),
+    ("\\^", 0),
+    (".-.", 0),
+    ("[^\\\\&]+", 4),
     ("\\bawk(\\s|$)", 0),
     ("html", 0),
     ("\\A<\\?xml\\b", 0),
@@ -3625,7 +3629,7 @@ pub(crate) static REGEXES: &[(&str, u32)] = &[
 
 #[allow(clippy::declare_interior_mutable_const)]
 const UNCOMPILED: OnceLock<Regex> = OnceLock::new();
-static COMPILED: [OnceLock<Regex>; 3612] = [UNCOMPILED; 3612];
+static COMPILED: [OnceLock<Regex>; 3616] = [UNCOMPILED; 3616];
 
 static SET_0: &[&str] = &["DATA", "FIELD-SYMBOL"];
 static SET_1: &[&str] = &["acos", "apply", "asin", "assign", "atan", "attribute", "bit-set", "boolc", "boolx", "call", "call-method", "cast", "ceil", "cfunc", "char_off", "charlen", "class_constructor", "clear", "cluster", "cmax", "cmin", "cnt", "communication_failure", "concat_lines_of", "cond", "cond-var", "condense", "constructor", "contains", "contains_any_not_of", "contains_any_of", "copy", "cos", "cosh", "count", "count_any_not_of", "count_any_of", "create", "cursor", "data", "dbmaxlen", "dbtab", "deserialize", "destructor", "distance", "empty", "error_message", "escape", "exp", "extensible", "find", "find_any_not_of", "find_any_of", "find_end", "floor", "frac", "from_mixed", "group", "hashed", "header", "idx", "include", "index", "insert", "ipow", "itab", "key", "lax", "line_exists", "line_index", "lines", "log", "log10", "loop", "loop_key", "match", "matches", "me", "mesh_path", "namespace", "nmax", "nmin", "node", "numeric", "numofchar", "object", "parameter", "primary_key", "read", "ref", "repeat", "replace", "rescale", "resource_failure", "reverse", "root", "round", "segment", "sender", "serialize", "shift_left", "shift_right", "sign", "simple", "sin", "sinh", "skip", "sorted", "space", "sqrt", "standard", "strlen", "substring", "substring_after", "substring_before", "substring_from", "substring_to", "sum", "switch", "switch-var", "system_failure", "table", "table_line", "tan", "tanh", "template", "text", "to_lower", "to_mixed", "to_upper", "transform", "translate", "trunc", "type", "value", "variable", "write", "xsdbool", "xsequence", "xstrlen"];
@@ -3982,6 +3986,11 @@ static SET_351: &[&str] = &["binary", "bits", "boolean", "decimal64", "empty", "
 static SET_352: &[&str] = &["add", "current", "delete", "deprecated", "false", "invert-match", "max", "min", "not-supported", "obsolete", "replace", "true", "unbounded", "user"];
 static SET_353: &[&str] = &["align", "allowzero", "and", "anyerror", "anyframe", "asm", "async", "await", "bool", "break", "c_int", "c_long", "c_longdouble", "c_longlong", "c_short", "c_uint", "c_ulong", "c_ulonglong", "c_ushort", "c_void", "callconv", "catch", "comptime", "comptime_float", "const", "continue", "defer", "else", "enum", "errdefer", "error", "export", "extern", "fn", "for", "if", "inline", "linksection", "noalias", "noinline", "noreturn", "nosuspend", "or", "orelse", "packed", "pub", "resume", "return", "struct", "suspend", "switch", "test", "threadlocal", "try", "type", "undefined", "union", "unreachable", "usingnamespace", "usize", "var", "void", "volatile", "while"];
 static SET_354: &[&str] = &["@Frame", "@OpaqueType", "@TagType", "@This", "@Type", "@TypeOf", "@Vector", "@addWithOverflow", "@alignCast", "@alignOf", "@as", "@asyncCall", "@atomicLoad", "@atomicRmw", "@atomicStore", "@bitCast", "@bitOffsetOf", "@bitReverse", "@bitSizeOf", "@boolToInt", "@breakpoint", "@byteOffsetOf", "@byteSwap", "@bytesToSlice", "@cDefine", "@cImport", "@cInclude", "@cUndef", "@call", "@canImplicitCast", "@ceil", "@clz", "@cmpxchgStrong", "@cmpxchgWeak", "@compileError", "@compileLog", "@cos", "@ctz", "@divExact", "@divFloor", "@divTrunc", "@embedFile", "@enumToInt", "@errSetCast", "@errorName", "@errorReturnTrace", "@errorToInt", "@exp", "@exp2", "@export", "@fabs", "@fence", "@field", "@fieldParentPtr", "@floatCast", "@floatToInt", "@floor", "@frame", "@frameAddress", "@frameSize", "@hasDecl", "@hasField", "@import", "@intCast", "@intToEnum", "@intToError", "@intToFloat", "@intToPtr", "@log", "@log10", "@log2", "@memcpy", "@memset", "@mod", "@mulWithOverflow", "@newStackCall", "@panic", "@popCount", "@ptrCast", "@ptrToInt", "@rem", "@returnAddress", "@round", "@setAlignStack", "@setCold", "@setEvalBranchQuota", "@setFloatMode", "@setGlobalLinkage", "@setGlobalSection", "@setRuntimeSafety", "@shlExact", "@shlWithOverflow", "@shrExact", "@shuffle", "@sin", "@sizeOf", "@sliceToBytes", "@splat", "@sqrt", "@subWithOverflow", "@tagName", "@trunc", "@truncate", "@typeInfo", "@typeName", "@unionInit", "comptime_int"];
+pub(crate) static DATA_COQ_COQ: &[&str] = &["About", "Admitted", "Arguments", "Check", "Class", "CoFixpoint", "CoInductive", "Compute", "Context", "Corollary", "Defined", "Definition", "End", "Eval", "Example", "Existing", "Export", "Fixpoint", "Global", "Goal", "Hint", "Immediate", "Import", "Include", "Inductive", "Infix", "Instance", "Lemma", "Local", "Ltac", "Module", "Monomorphic", "Notation", "Opaque", "Polymorphic", "Print", "Printing", "Proof", "Qed", "Record", "Remark", "Require", "Rewrite", "Search", "SearchAbout", "Section", "Theorem", "Transparent", "Universe", "Universes", "Variable", "Variables"];
+pub(crate) static DATA_COQ_GALLINA: &[&str] = &["Prop", "Set", "Type", "as", "else", "end", "forall", "fun", "if", "in", "let", "match", "return", "then"];
+pub(crate) static DATA_COQ_LTAC: &[&str] = &["apply", "as", "at", "auto", "autorewrite", "beta", "cbn", "cbv", "clear", "compute", "constructor", "delta", "dependent", "destruct", "eapply", "eauto", "econstructor", "edestruct", "eexists", "erewrite", "etransitivity", "exfalso", "exists", "f_equal", "fold", "generalize", "in", "induction", "injection", "instantiate", "intro", "intros", "inversion", "iota", "lazy", "native_compute", "red", "refine", "revert", "rewrite", "setoid_rewrite", "simpl", "specialize", "split", "subst", "symmetry", "transitivity", "unfold", "vm_compute", "with", "zeta"];
+pub(crate) static DATA_COQ_TACTICALS: &[&str] = &["first", "repeat", "try"];
+pub(crate) static DATA_COQ_TERMINATORS: &[&str] = &["assumption", "congruence", "eassumption", "exact", "omega", "reflexivity", "solve"];
 pub(crate) static DATA_ECL_FUNCTIONS: &[&str] = &["_token", "abs", "acos", "aggregate", "allnodes", "apply", "ascii", "asin", "assert", "asstring", "atan", "ave", "build", "buildindex", "case", "catch", "choose", "choosen", "choosesets", "clustersize", "combine", "correlation", "cos", "cosh", "count", "covariance", "cron", "dataset", "dedup", "define", "denormalize", "dictionary", "distribute", "distributed", "distribution", "ebcdic", "enth", "error", "evaluate", "event", "eventextra", "eventname", "exists", "exp", "fail", "failcode", "failmessage", "fetch", "fromunicode", "fromxml", "getenv", "getisvalid", "global", "graph", "group", "hash", "hashcrc", "having", "httpcall", "httpheader", "if", "iff", "index", "intformat", "isvalid", "iterate", "join", "keydiff", "keypatch", "keyunicode", "length", "library", "limit", "ln", "loadxml", "local", "log", "loop", "map", "matched", "matchlength", "matchposition", "matchtext", "matchunicode", "max", "merge", "mergejoin", "min", "nofold", "nolocal", "nonempty", "normalize", "nothor", "notify", "output", "parallel", "parse", "pipe", "power", "preload", "process", "project", "pull", "random", "range", "rank", "ranked", "realformat", "recordof", "regexfind", "regexreplace", "regroup", "rejected", "rollup", "round", "roundup", "row", "rowdiff", "sample", "sequential", "set", "sin", "sinh", "sizeof", "soapcall", "sort", "sorted", "sqrt", "stepped", "stored", "sum", "table", "tan", "tanh", "thisnode", "topn", "tounicode", "toxml", "transfer", "transform", "trim", "truncate", "typeof", "ungroup", "unicodeorder", "variance", "wait", "which", "workunit", "xmldecode", "xmlencode", "xmltext", "xmlunicode"];
 pub(crate) static DATA_ECL_KEYWORDS: &[&str] = &["_token", "after", "all", "and", "any", "as", "atmost", "before", "best", "between", "case", "cluster", "compressed", "compression", "const", "counter", "csv", "default", "descend", "encoding", "encrypt", "end", "endmacro", "enum", "escape", "except", "exclusive", "expire", "export", "extend", "fail", "few", "fileposition", "first", "flat", "forward", "from", "full", "function", "functionmacro", "group", "grouped", "heading", "hole", "ifblock", "import", "in", "inner", "interface", "internal", "joined", "keep", "keyed", "last", "left", "limit", "linkcounted", "literal", "load", "local", "locale", "lookup", "lzw", "many", "maxcount", "maxlength", "module", "mofn", "multiple", "named", "namespace", "nocase", "noroot", "noscan", "nosort", "not", "noxpath", "of", "onfail", "only", "opt", "or", "outer", "overwrite", "packed", "partition", "penalty", "physicallength", "pipe", "prefetch", "quote", "record", "repeat", "retry", "return", "right", "rows", "rowset", "scan", "scope", "self", "separator", "service", "shared", "skew", "skip", "smart", "soapaction", "sql", "stable", "store", "terminator", "thor", "threshold", "timelimit", "timeout", "token", "transform", "trim", "type", "unicodeorder", "unordered", "unsorted", "unstable", "update", "use", "validate", "virtual", "whole", "width", "wild", "within", "wnotrim", "xml", "xpath"];
 pub(crate) static DATA_ECL_TEMPLATE: &[&str] = &["append", "apply", "break", "constant", "debug", "declare", "demangle", "else", "elseif", "end", "endregion", "error", "expand", "export", "exportxml", "for", "forall", "getdatatype", "if", "ifdefined", "inmodule", "isdefined", "isvalid", "line", "link", "loadxml", "loop", "mangle", "onwarning", "option", "region", "set", "stored", "text", "trace", "uniquename", "warning", "webservice", "workunit"];
@@ -12183,6 +12192,28 @@ fn cb_sed_sed_66(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
     Ok(())
 }
 
+fn cb_sed_sed_79(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    s.token(T::KEYWORD, m.group(1));
+    s.token(T::PUNCTUATION, m.group(2));
+    s.delegate_sub("regex", |l: &Lexer| l.sub_for("Sed::Regex"), m.group(3))?;
+    s.token(T::PUNCTUATION, m.group(4));
+    s.delegate_sub("replacement", |l: &Lexer| l.sub_for("Sed::Replacement"), m.group(5))?;
+    s.token(T::PUNCTUATION, m.group(6));
+    s.goto("flags")?;
+    Ok(())
+}
+
+fn cb_sed_sed_91(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    s.token(T::KEYWORD, m.group(1));
+    s.token(T::PUNCTUATION, m.group(2));
+    s.delegate_sub("replacement", |l: &Lexer| l.sub_for("Sed::Replacement"), m.group(3))?;
+    s.token(T::PUNCTUATION, m.group(4));
+    s.delegate_sub("replacement", |l: &Lexer| l.sub_for("Sed::Replacement"), m.group(5))?;
+    s.token(T::PUNCTUATION, m.group(6));
+    s.pop(1)?;
+    Ok(())
+}
+
 fn cb_sed_sed_103(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
     s.groups(m, &[T::KEYWORD, T::TEXT]);
     s.goto("text")?;
@@ -12207,6 +12238,20 @@ fn cb_sed_sed_125(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
     Ok(())
 }
 
+fn cb_sed_sed_139(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    s.token(T::KEYWORD_NAMESPACE, m.group(1));
+    s.delegate_sub("regex", |l: &Lexer| l.sub_for("Sed::Regex"), m.group(2))?;
+    s.token(T::KEYWORD_NAMESPACE, m.group(3));
+    Ok(())
+}
+
+fn cb_sed_sed_144(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    s.token(T::KEYWORD_NAMESPACE, &format!("{}{}", m.group(1), m.group(2)));
+    s.delegate_sub("regex", |l: &Lexer| l.sub_for("Sed::Regex"), m.group(3))?;
+    s.token(T::KEYWORD_NAMESPACE, m.group(4));
+    Ok(())
+}
+
 fn cb_sed_sed_150(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
     s.push("command")?;
     Ok(())
@@ -12221,6 +12266,12 @@ fn cb_sed_sed_165(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
 
 fn cb_sed_sed_169(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
     s.pop(1)?;
+    Ok(())
+}
+
+fn st_sed_sed_60(l: &mut Lexer) -> Result<(), LexError> {
+    l.reset_sub("regex", Some(|l: &Lexer| l.sub_for("Sed::Regex")))?;
+    l.reset_sub("replacement", Some(|l: &Lexer| l.sub_for("Sed::Replacement")))?;
     Ok(())
 }
 
@@ -13342,6 +13393,11 @@ fn cb_tcl_tcl_119(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
     Ok(())
 }
 
+fn cb_tcl_tcl_64(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    s.push("params_in_brace")?;
+    Ok(())
+}
+
 fn cb_tcl_tcl_68(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
     if contains(SET_315, m.group(0)) {
         s.token(T::KEYWORD, m.text());
@@ -13358,6 +13414,21 @@ fn cb_tcl_tcl_68(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
 fn cb_tcl_tcl_86(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
     s.token(T::PUNCTUATION, m.text());
     s.pop(2)?;
+    Ok(())
+}
+
+fn cb_tcl_tcl_64_2(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    s.push("params_in_paren")?;
+    Ok(())
+}
+
+fn cb_tcl_tcl_64_3(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    s.push("params_in_bracket")?;
+    Ok(())
+}
+
+fn cb_tcl_tcl_64_4(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    s.push("params")?;
     Ok(())
 }
 
@@ -14846,6 +14917,17 @@ fn cb_zig_zig_84(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
     Ok(())
 }
 
+fn cb_Sed__Regex_sed_28(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    s.token(T::PUNCTUATION, m.text());
+    s.goto("brackets_int")?;
+    Ok(())
+}
+
+fn cb_Sed__Regex_sed_33(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    s.goto("brackets_int")?;
+    Ok(())
+}
+
 static LEXER_ABAP: LexerDef = LexerDef {
     tag: "abap",
     states: &[
@@ -16165,21 +16247,21 @@ static LEXER_CMAKE: LexerDef = LexerDef {
     tag: "cmake",
     states: &[
         StateDef { name: "default", rules: &[
-            Rule::Match { regex: 78, bol: false, action: Action::Call(crate::lexer::unported) },
-            Rule::Match { regex: 27, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 78, bol: false, action: Action::Call(crate::lexers::cmake::rule_138) },
+            Rule::Match { regex: 27, bol: false, action: Action::Call(crate::lexers::cmake::rule_141) },
         ] },
         StateDef { name: "variable_interpolation", rules: &[
             Rule::Match { regex: 475, bol: false, action: Action::Call(cb_cmake_cmake_147) },
         ] },
         StateDef { name: "bracket_close", rules: &[
-            Rule::Match { regex: 476, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 476, bol: false, action: Action::Call(crate::lexers::cmake::rule_154) },
         ] },
         StateDef { name: "root", rules: &[
             Rule::Mixin(1),
             Rule::Match { regex: 477, bol: false, action: Action::Emit(T::TEXT, Next::Stay) },
             Rule::Match { regex: 474, bol: false, action: Action::Emit(T::PUNCTUATION, Next::Stay) },
-            Rule::Match { regex: 478, bol: false, action: Action::Call(crate::lexer::unported) },
-            Rule::Match { regex: 479, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 478, bol: false, action: Action::Call(crate::lexers::cmake::rule_166) },
+            Rule::Match { regex: 479, bol: false, action: Action::Call(crate::lexers::cmake::rule_171) },
             Rule::Match { regex: 480, bol: false, action: Action::Emit(T::TEXT, Next::Stay) },
             Rule::Match { regex: 52, bol: false, action: Action::Emit(T::LITERAL_STRING_DOUBLE, Next::State(7)) },
             Rule::Match { regex: 481, bol: false, action: Action::Call(cb_cmake_cmake_180) },
@@ -16211,7 +16293,7 @@ static LEXER_CMAKE: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["cmake.rs:138 (evaluate [])", "cmake.rs:141 (evaluate [])", "cmake.rs:154 (evaluate [])", "cmake.rs:166 (IASGN)", "cmake.rs:171 (IASGN)"],
+    missing: &[],
 };
 
 static LEXER_CMHG: LexerDef = LexerDef {
@@ -16496,7 +16578,7 @@ static LEXER_COQ: LexerDef = LexerDef {
         StateDef { name: "sentence", rules: &[
             Rule::Mixin(6),
             Rule::Mixin(7),
-            Rule::Match { regex: 568, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 568, bol: false, action: Action::Call(crate::lexers::coq::rule_93) },
         ] },
         StateDef { name: "begin_proof", rules: &[
             Rule::Match { regex: 569, bol: false, action: Action::Call(cb_coq_coq_102) },
@@ -16511,7 +16593,7 @@ static LEXER_COQ: LexerDef = LexerDef {
             Rule::Match { regex: 572, bol: false, action: Action::Call(cb_coq_coq_121) },
             Rule::Match { regex: 3, bol: false, action: Action::Emit(T::LITERAL_NUMBER_INTEGER, Next::State(4)) },
             Rule::Match { regex: 573, bol: false, action: Action::Call(cb_coq_coq_127) },
-            Rule::Match { regex: 568, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 568, bol: false, action: Action::Call(crate::lexers::coq::rule_131) },
         ] },
         StateDef { name: "numeric_labels", rules: &[
             Rule::Mixin(5),
@@ -16534,7 +16616,7 @@ static LEXER_COQ: LexerDef = LexerDef {
             Rule::Mixin(7),
             Rule::Match { regex: 578, bol: false, action: Action::Emit(T::PUNCTUATION, Next::Stay) },
             Rule::Match { regex: 579, bol: false, action: Action::Emit(T::OPERATOR, Next::Stay) },
-            Rule::Match { regex: 568, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 568, bol: false, action: Action::Call(crate::lexers::coq::rule_179) },
             Rule::Match { regex: 580, bol: false, action: Action::Emit(T::PUNCTUATION_INDICATOR, Next::Pop) },
             Rule::Match { regex: 581, bol: false, action: Action::Emit(T::LITERAL_NUMBER_FLOAT, Next::Stay) },
             Rule::Match { regex: 582, bol: false, action: Action::Emit(T::LITERAL_NUMBER_INTEGER, Next::Stay) },
@@ -16559,16 +16641,16 @@ static LEXER_COQ: LexerDef = LexerDef {
             Rule::Match { regex: 52, bol: false, action: Action::Emit(T::LITERAL_STRING_DOUBLE, Next::Pop) },
         ] },
         StateDef { name: "continue_id", rules: &[
-            Rule::Match { regex: 593, bol: false, action: Action::Call(crate::lexer::unported) },
-            Rule::Match { regex: 594, bol: false, action: Action::Call(crate::lexer::unported) },
-            Rule::Match { regex: 19, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 593, bol: false, action: Action::Call(crate::lexers::coq::rule_219) },
+            Rule::Match { regex: 594, bol: false, action: Action::Call(crate::lexers::coq::rule_226) },
+            Rule::Match { regex: 19, bol: false, action: Action::Call(crate::lexers::coq::rule_241) },
         ] },
     ],
     start: &[],
     init: None,
     reset: None,
     stream: None,
-    missing: &["coq.rs:93 (IASGN)", "coq.rs:131 (IASGN)", "coq.rs:179 (IASGN)", "coq.rs:219 (IASGN)", "coq.rs:226 (condition IVAR)", "coq.rs:241 (condition IVAR)"],
+    missing: &[],
 };
 
 static LEXER_CPP: LexerDef = LexerDef {
@@ -18120,10 +18202,10 @@ static LEXER_EPP: LexerDef = LexerDef {
         ] },
     ],
     start: &[st_epp_template_lexer_19, st_epp_epp_19],
-    init: None,
+    init: Some(crate::lexers::epp::init),
     reset: None,
     stream: None,
-    missing: &["epp.rs (initialize) (sub lexer)"],
+    missing: &[],
 };
 
 static LEXER_ERB: LexerDef = LexerDef {
@@ -18201,10 +18283,10 @@ static LEXER_ESCAPE: LexerDef = LexerDef {
     states: &[
     ],
     start: &[],
-    init: None,
+    init: Some(crate::lexers::escape::init),
     reset: None,
-    stream: None,
-    missing: &["escape.rs (initialize) (sub lexer)", "escape.rs (stream_tokens)"],
+    stream: Some(crate::lexers::escape::stream),
+    missing: &[],
 };
 
 static LEXER_FACTOR: LexerDef = LexerDef {
@@ -22373,11 +22455,11 @@ static LEXER_LASSO: LexerDef = LexerDef {
             Rule::Match { regex: 19, bol: false, action: Action::Emit(T::TEXT, Next::Pop) },
         ] },
     ],
-    start: &[st_lasso_template_lexer_19, crate::lexer::unported_hook],
-    init: None,
+    start: &[st_lasso_template_lexer_19, crate::lexers::lasso::start_33],
+    init: Some(crate::lexers::lasso::init),
     reset: None,
     stream: None,
-    missing: &["lasso.rs:33 (start) (condition start_inline?)", "lasso.rs (initialize) (sub lexer)"],
+    missing: &[],
 };
 
 static LEXER_LEAN: LexerDef = LexerDef {
@@ -27221,8 +27303,8 @@ static LEXER_SED: LexerDef = LexerDef {
         ] },
         StateDef { name: "command", rules: &[
             Rule::Mixin(0),
-            Rule::Match { regex: 2966, bol: false, action: Action::Call(crate::lexer::unported) },
-            Rule::Match { regex: 2967, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 2966, bol: false, action: Action::Call(cb_sed_sed_79) },
+            Rule::Match { regex: 2967, bol: false, action: Action::Call(cb_sed_sed_91) },
             Rule::Match { regex: 2968, bol: false, action: Action::Call(cb_sed_sed_103) },
             Rule::Match { regex: 2969, bol: false, action: Action::Emit(T::KEYWORD, Next::Stay) },
             Rule::Match { regex: 2970, bol: false, action: Action::Call(cb_sed_sed_110) },
@@ -27234,8 +27316,8 @@ static LEXER_SED: LexerDef = LexerDef {
             Rule::Mixin(0),
             Rule::Match { regex: 3, bol: false, action: Action::Emit(T::KEYWORD_NAMESPACE, Next::Stay) },
             Rule::Match { regex: 2974, bol: false, action: Action::Emit(T::KEYWORD_NAMESPACE, Next::Stay) },
-            Rule::Match { regex: 2975, bol: false, action: Action::Call(crate::lexer::unported) },
-            Rule::Match { regex: 2976, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 2975, bol: false, action: Action::Call(cb_sed_sed_139) },
+            Rule::Match { regex: 2976, bol: false, action: Action::Call(cb_sed_sed_144) },
             Rule::Match { regex: 19, bol: false, action: Action::Call(cb_sed_sed_150) },
         ] },
         StateDef { name: "text", rules: &[
@@ -27250,11 +27332,11 @@ static LEXER_SED: LexerDef = LexerDef {
             Rule::Match { regex: 19, bol: false, action: Action::Call(cb_sed_sed_169) },
         ] },
     ],
-    start: &[crate::lexer::unported_hook],
+    start: &[st_sed_sed_60],
     init: None,
     reset: None,
     stream: None,
-    missing: &["sed.rs:79 (untagged sub lexer)", "sed.rs:91 (untagged sub lexer)", "sed.rs:139 (untagged sub lexer)", "sed.rs:144 (value OPCALL)", "sed.rs:60 (start) (untagged sub lexer)"],
+    missing: &[],
 };
 
 static LEXER_SHELL: LexerDef = LexerDef {
@@ -28664,7 +28746,7 @@ static LEXER_TCL: LexerDef = LexerDef {
         StateDef { name: "command_in_brace", rules: &[
             Rule::Match { regex: 263, bol: false, action: Action::Emit(T::COMMENT, Next::State(16)) },
             Rule::Mixin(0),
-            Rule::Match { regex: 3257, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 3257, bol: false, action: Action::Call(cb_tcl_tcl_64) },
             Rule::Match { regex: 3256, bol: false, action: Action::Call(cb_tcl_tcl_68) },
             Rule::Mixin(14),
         ] },
@@ -28680,7 +28762,7 @@ static LEXER_TCL: LexerDef = LexerDef {
         StateDef { name: "command_in_paren", rules: &[
             Rule::Match { regex: 263, bol: false, action: Action::Emit(T::COMMENT, Next::State(16)) },
             Rule::Mixin(0),
-            Rule::Match { regex: 3257, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 3257, bol: false, action: Action::Call(cb_tcl_tcl_64_2) },
             Rule::Match { regex: 3256, bol: false, action: Action::Call(cb_tcl_tcl_68) },
             Rule::Mixin(14),
         ] },
@@ -28696,7 +28778,7 @@ static LEXER_TCL: LexerDef = LexerDef {
         StateDef { name: "command_in_bracket", rules: &[
             Rule::Match { regex: 263, bol: false, action: Action::Emit(T::COMMENT, Next::State(16)) },
             Rule::Mixin(0),
-            Rule::Match { regex: 3257, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 3257, bol: false, action: Action::Call(cb_tcl_tcl_64_3) },
             Rule::Match { regex: 3256, bol: false, action: Action::Call(cb_tcl_tcl_68) },
             Rule::Mixin(14),
         ] },
@@ -28712,7 +28794,7 @@ static LEXER_TCL: LexerDef = LexerDef {
         StateDef { name: "command", rules: &[
             Rule::Match { regex: 263, bol: false, action: Action::Emit(T::COMMENT, Next::State(16)) },
             Rule::Mixin(0),
-            Rule::Match { regex: 3257, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 3257, bol: false, action: Action::Call(cb_tcl_tcl_64_4) },
             Rule::Match { regex: 3256, bol: false, action: Action::Call(cb_tcl_tcl_68) },
             Rule::Mixin(14),
         ] },
@@ -28740,15 +28822,15 @@ static LEXER_TCL: LexerDef = LexerDef {
             Rule::Match { regex: 52, bol: false, action: Action::Emit(T::LITERAL_STRING_DOUBLE, Next::Pop) },
             Rule::Mixin(15),
             Rule::Match { regex: 3265, bol: false, action: Action::Emit(T::LITERAL_STRING_DOUBLE, Next::Stay) },
-            Rule::Match { regex: 270, bol: false, action: Action::Call(crate::lexer::unported) },
-            Rule::Match { regex: 281, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 270, bol: false, action: Action::Call(crate::lexers::tcl::rule_178) },
+            Rule::Match { regex: 281, bol: false, action: Action::Call(crate::lexers::tcl::rule_185) },
         ] },
     ],
     start: &[],
     init: None,
     reset: None,
     stream: None,
-    missing: &["tcl.rs:64 (literal)", "tcl.rs:178 (OP_ASGN_OR@179)", "tcl.rs:185 (integer expression)"],
+    missing: &[],
 };
 
 static LEXER_TERRAFORM: LexerDef = LexerDef {
@@ -30583,18 +30665,61 @@ static LEXER_ZIG: LexerDef = LexerDef {
     missing: &[],
 };
 
+static LEXER_SED__REGEX: LexerDef = LexerDef {
+    tag: "Sed::Regex",
+    states: &[
+        StateDef { name: "root", rules: &[
+            Rule::Match { regex: 10, bol: false, action: Action::Emit(T::LITERAL_STRING_ESCAPE, Next::Stay) },
+            Rule::Match { regex: 23, bol: false, action: Action::Emit(T::PUNCTUATION, Next::State(1)) },
+            Rule::Match { regex: 3555, bol: false, action: Action::Emit(T::OPERATOR, Next::Stay) },
+            Rule::Match { regex: 474, bol: false, action: Action::Emit(T::PUNCTUATION, Next::Stay) },
+            Rule::Match { regex: 27, bol: false, action: Action::Emit(T::LITERAL_STRING_REGEX, Next::Stay) },
+        ] },
+        StateDef { name: "brackets", rules: &[
+            Rule::Match { regex: 3556, bol: false, action: Action::Call(cb_Sed__Regex_sed_28) },
+            Rule::Match { regex: 19, bol: false, action: Action::Call(cb_Sed__Regex_sed_33) },
+        ] },
+        StateDef { name: "brackets_int", rules: &[
+            Rule::Match { regex: 3557, bol: false, action: Action::Emit(T::NAME_VARIABLE, Next::Stay) },
+            Rule::Match { regex: 29, bol: false, action: Action::Emit(T::PUNCTUATION, Next::Pop) },
+            Rule::Match { regex: 27, bol: false, action: Action::Emit(T::LITERAL_STRING_REGEX, Next::Stay) },
+        ] },
+    ],
+    start: &[],
+    init: None,
+    reset: None,
+    stream: None,
+    missing: &[],
+};
+
+static LEXER_SED__REPLACEMENT: LexerDef = LexerDef {
+    tag: "Sed::Replacement",
+    states: &[
+        StateDef { name: "root", rules: &[
+            Rule::Match { regex: 374, bol: false, action: Action::Emit(T::LITERAL_STRING_ESCAPE, Next::Stay) },
+            Rule::Match { regex: 1432, bol: false, action: Action::Emit(T::OPERATOR, Next::Stay) },
+            Rule::Match { regex: 3558, bol: false, action: Action::Emit(T::TEXT, Next::Stay) },
+        ] },
+    ],
+    start: &[],
+    init: None,
+    reset: None,
+    stream: None,
+    missing: &[],
+};
+
 fn detect_awk(text: &TextAnalyzer) -> bool {
-    if text.shebang_is(3555) {
+    if text.shebang_is(3559) {
         return true;
     }
     false
 }
 
 fn detect_xml(text: &TextAnalyzer) -> bool {
-    if text.doctype().is_some_and(|doctype| crate::lexer::search(3556, doctype)) {
+    if text.doctype().is_some_and(|doctype| crate::lexer::search(3560, doctype)) {
         return false;
     }
-    if text.search(3557) {
+    if text.search(3561) {
         return true;
     }
     if text.doctype().is_some() {
@@ -30604,28 +30729,28 @@ fn detect_xml(text: &TextAnalyzer) -> bool {
 }
 
 fn detect_biml(text: &TextAnalyzer) -> bool {
-    if text.search(3558) {
+    if text.search(3562) {
         return true;
     }
     false
 }
 
 fn detect_coffeescript(text: &TextAnalyzer) -> bool {
-    if text.shebang_is(3559) {
+    if text.shebang_is(3563) {
         return true;
     }
     false
 }
 
 fn detect_crystal(text: &TextAnalyzer) -> bool {
-    if text.shebang_is(3560) {
+    if text.shebang_is(3564) {
         return true;
     }
     false
 }
 
 fn detect_python(text: &TextAnalyzer) -> bool {
-    if text.shebang_is(3561) {
+    if text.shebang_is(3565) {
         return true;
     }
     false
@@ -30635,85 +30760,69 @@ fn detect_diff(text: &TextAnalyzer) -> bool {
     if text.text().starts_with("Index: ") {
         return true;
     }
-    if text.search(3562) {
+    if text.search(3566) {
         return true;
     }
-    if (text.search(3563)) || (text.search(3564)) {
+    if (text.search(3567)) || (text.search(3568)) {
         return true;
     }
     false
 }
 
 fn detect_yaml(text: &TextAnalyzer) -> bool {
-    if text.search(3565) {
+    if text.search(3569) {
         return true;
     }
     false
 }
 
 fn detect_elixir(text: &TextAnalyzer) -> bool {
-    if text.shebang_is(3566) {
-        return true;
-    }
-    false
-}
-
-fn detect_factor(text: &TextAnalyzer) -> bool {
-    if text.shebang_is(3567) {
-        return true;
-    }
-    false
-}
-
-fn detect_gherkin(text: &TextAnalyzer) -> bool {
-    if text.shebang_is(3568) {
-        return true;
-    }
-    false
-}
-
-fn detect_javascript(text: &TextAnalyzer) -> bool {
-    if text.shebang_is(3569) {
-        return true;
-    }
     if text.shebang_is(3570) {
         return true;
     }
     false
 }
 
-fn detect_groovy(text: &TextAnalyzer) -> bool {
+fn detect_factor(text: &TextAnalyzer) -> bool {
     if text.shebang_is(3571) {
         return true;
     }
+    false
+}
+
+fn detect_gherkin(text: &TextAnalyzer) -> bool {
     if text.shebang_is(3572) {
         return true;
     }
     false
 }
 
-fn detect_php(text: &TextAnalyzer) -> bool {
+fn detect_javascript(text: &TextAnalyzer) -> bool {
     if text.shebang_is(3573) {
         return true;
     }
-    if text.search(3574) {
-        return false;
-    }
-    if text.search(3575) {
+    if text.shebang_is(3574) {
         return true;
     }
     false
 }
 
-fn detect_hack(text: &TextAnalyzer) -> bool {
-    if text.search(3576) {
+fn detect_groovy(text: &TextAnalyzer) -> bool {
+    if text.shebang_is(3575) {
         return true;
     }
+    if text.shebang_is(3576) {
+        return true;
+    }
+    false
+}
+
+fn detect_php(text: &TextAnalyzer) -> bool {
     if text.shebang_is(3577) {
         return true;
     }
     if text.search(3578) {
-        return true;
+        return false;
     }
     if text.search(3579) {
         return true;
@@ -30721,26 +30830,15 @@ fn detect_hack(text: &TextAnalyzer) -> bool {
     false
 }
 
-fn detect_haskell(text: &TextAnalyzer) -> bool {
-    if text.shebang_is(3580) {
+fn detect_hack(text: &TextAnalyzer) -> bool {
+    if text.search(3580) {
         return true;
     }
-    false
-}
-
-fn detect_haxe(text: &TextAnalyzer) -> bool {
     if text.shebang_is(3581) {
         return true;
     }
-    false
-}
-
-fn detect_html(text: &TextAnalyzer) -> bool {
-    if text.doctype().is_some_and(|doctype| crate::lexer::search(3582, doctype)) {
+    if text.search(3582) {
         return true;
-    }
-    if text.search(3557) {
-        return false;
     }
     if text.search(3583) {
         return true;
@@ -30748,116 +30846,143 @@ fn detect_html(text: &TextAnalyzer) -> bool {
     false
 }
 
-fn detect_io(text: &TextAnalyzer) -> bool {
+fn detect_haskell(text: &TextAnalyzer) -> bool {
     if text.shebang_is(3584) {
         return true;
     }
     false
 }
 
-fn detect_ruby(text: &TextAnalyzer) -> bool {
+fn detect_haxe(text: &TextAnalyzer) -> bool {
     if text.shebang_is(3585) {
         return true;
     }
     false
 }
 
+fn detect_html(text: &TextAnalyzer) -> bool {
+    if text.doctype().is_some_and(|doctype| crate::lexer::search(3586, doctype)) {
+        return true;
+    }
+    if text.search(3561) {
+        return false;
+    }
+    if text.search(3587) {
+        return true;
+    }
+    false
+}
+
+fn detect_io(text: &TextAnalyzer) -> bool {
+    if text.shebang_is(3588) {
+        return true;
+    }
+    false
+}
+
+fn detect_ruby(text: &TextAnalyzer) -> bool {
+    if text.shebang_is(3589) {
+        return true;
+    }
+    false
+}
+
 fn detect_julia(text: &TextAnalyzer) -> bool {
-    if text.shebang_is(3586) {
-        return true;
-    }
-    false
-}
-
-fn detect_lasso(text: &TextAnalyzer) -> bool {
-    if text.shebang_is(3587) {
-        return true;
-    }
-    if text.search(3588) {
-        return true;
-    }
-    false
-}
-
-fn detect_livescript(text: &TextAnalyzer) -> bool {
-    text.shebang_is(3589)
-}
-
-fn detect_lua(text: &TextAnalyzer) -> bool {
     if text.shebang_is(3590) {
         return true;
     }
     false
 }
 
-fn detect_mojo(text: &TextAnalyzer) -> bool {
+fn detect_lasso(text: &TextAnalyzer) -> bool {
     if text.shebang_is(3591) {
         return true;
     }
-    false
-}
-
-fn detect_moonscript(text: &TextAnalyzer) -> bool {
-    if text.shebang_is(3592) {
+    if text.search(3592) {
         return true;
     }
     false
 }
 
-fn detect_perl(text: &TextAnalyzer) -> bool {
-    if text.shebang_is(3593) {
+fn detect_livescript(text: &TextAnalyzer) -> bool {
+    text.shebang_is(3593)
+}
+
+fn detect_lua(text: &TextAnalyzer) -> bool {
+    if text.shebang_is(3594) {
         return true;
     }
     false
 }
 
-fn detect_postscript(text: &TextAnalyzer) -> bool {
-    if text.search(3594) {
-        return true;
-    }
-    false
-}
-
-fn detect_praat(text: &TextAnalyzer) -> bool {
+fn detect_mojo(text: &TextAnalyzer) -> bool {
     if text.shebang_is(3595) {
         return true;
     }
     false
 }
 
-fn detect_puppet(text: &TextAnalyzer) -> bool {
+fn detect_moonscript(text: &TextAnalyzer) -> bool {
     if text.shebang_is(3596) {
         return true;
     }
+    false
+}
+
+fn detect_perl(text: &TextAnalyzer) -> bool {
     if text.shebang_is(3597) {
         return true;
     }
     false
 }
 
-fn detect_r(text: &TextAnalyzer) -> bool {
-    if text.shebang_is(3598) {
+fn detect_postscript(text: &TextAnalyzer) -> bool {
+    if text.search(3598) {
         return true;
     }
     false
 }
 
-fn detect_rust(text: &TextAnalyzer) -> bool {
+fn detect_praat(text: &TextAnalyzer) -> bool {
     if text.shebang_is(3599) {
         return true;
     }
     false
 }
 
-fn detect_sed(text: &TextAnalyzer) -> bool {
+fn detect_puppet(text: &TextAnalyzer) -> bool {
     if text.shebang_is(3600) {
+        return true;
+    }
+    if text.shebang_is(3601) {
+        return true;
+    }
+    false
+}
+
+fn detect_r(text: &TextAnalyzer) -> bool {
+    if text.shebang_is(3602) {
+        return true;
+    }
+    false
+}
+
+fn detect_rust(text: &TextAnalyzer) -> bool {
+    if text.shebang_is(3603) {
+        return true;
+    }
+    false
+}
+
+fn detect_sed(text: &TextAnalyzer) -> bool {
+    if text.shebang_is(3604) {
         return true;
     }
     false
 }
 
 fn detect_shell(text: &TextAnalyzer) -> bool {
-    if text.shebang_is(3601) {
+    if text.shebang_is(3605) {
         return true;
     }
     if text.text().starts_with("#compdef") || text.text().starts_with("#autoload") {
@@ -30867,27 +30992,27 @@ fn detect_shell(text: &TextAnalyzer) -> bool {
 }
 
 fn detect_tcl(text: &TextAnalyzer) -> bool {
-    if text.shebang_is(3602) {
+    if text.shebang_is(3606) {
         return true;
     }
-    if text.shebang_is(3603) {
+    if text.shebang_is(3607) {
         return true;
     }
-    if text.shebang_is(3604) {
+    if text.shebang_is(3608) {
         return true;
     }
     false
 }
 
 fn detect_tex(text: &TextAnalyzer) -> bool {
-    if text.search(3605) {
+    if text.search(3609) {
         return true;
     }
     false
 }
 
 fn detect_tulip(text: &TextAnalyzer) -> bool {
-    if text.shebang_is(3606) {
+    if text.shebang_is(3610) {
         return true;
     }
     false
@@ -30896,7 +31021,7 @@ fn detect_tulip(text: &TextAnalyzer) -> bool {
 pub(crate) static TABLES: Tables = Tables {
     regexes: REGEXES,
     compiled: &COMPILED,
-    lexers: &[&LEXER_ABAP, &LEXER_ACTIONSCRIPT, &LEXER_ADA, &LEXER_APACHE, &LEXER_APEX, &LEXER_APIBLUEPRINT, &LEXER_APPLESCRIPT, &LEXER_ARMASM, &LEXER_AUGEAS, &LEXER_AWK, &LEXER_BATCHFILE, &LEXER_BBCBASIC, &LEXER_BIBTEX, &LEXER_BICEP, &LEXER_BIML, &LEXER_BPF, &LEXER_BRAINFUCK, &LEXER_BRIGHTSCRIPT, &LEXER_BSL, &LEXER_C, &LEXER_CEYLON, &LEXER_CFSCRIPT, &LEXER_CISCO_IOS, &LEXER_CLEAN, &LEXER_CLOJURE, &LEXER_CMAKE, &LEXER_CMHG, &LEXER_COBOL, &LEXER_CODEOWNERS, &LEXER_COFFEESCRIPT, &LEXER_COMMON_LISP, &LEXER_CONF, &LEXER_CONSOLE, &LEXER_COQ, &LEXER_CPP, &LEXER_CRYSTAL, &LEXER_CSHARP, &LEXER_CSS, &LEXER_CSVS, &LEXER_CUDA, &LEXER_CYPHER, &LEXER_CYTHON, &LEXER_D, &LEXER_DAFNY, &LEXER_DART, &LEXER_DATASTUDIO, &LEXER_DIFF, &LEXER_DIGDAG, &LEXER_DOCKER, &LEXER_DOT, &LEXER_ECL, &LEXER_EEX, &LEXER_EIFFEL, &LEXER_ELIXIR, &LEXER_ELM, &LEXER_EMAIL, &LEXER_EPP, &LEXER_ERB, &LEXER_ERLANG, &LEXER_ESCAPE, &LEXER_FACTOR, &LEXER_FLUENT, &LEXER_FORTRAN, &LEXER_FREEFEM, &LEXER_FSHARP, &LEXER_GDSCRIPT, &LEXER_GHC_CMM, &LEXER_GHC_CORE, &LEXER_GHERKIN, &LEXER_GJS, &LEXER_GLSL, &LEXER_GO, &LEXER_GRADLE, &LEXER_GRAPHQL, &LEXER_GROOVY, &LEXER_GTS, &LEXER_HACK, &LEXER_HAML, &LEXER_HANDLEBARS, &LEXER_HASKELL, &LEXER_HAXE, &LEXER_HCL, &LEXER_HLSL, &LEXER_HOCON, &LEXER_HQL, &LEXER_HTML, &LEXER_HTTP, &LEXER_HYLANG, &LEXER_IDLANG, &LEXER_IDRIS, &LEXER_IECST, &LEXER_IGORPRO, &LEXER_INI, &LEXER_IO, &LEXER_IRB, &LEXER_IRB_OUTPUT, &LEXER_ISABELLE, &LEXER_ISBL, &LEXER_J, &LEXER_JANET, &LEXER_JAVA, &LEXER_JAVASCRIPT, &LEXER_JINJA, &LEXER_JSL, &LEXER_JSON, &LEXER_JSON_DOC, &LEXER_JSON5, &LEXER_JSONNET, &LEXER_JSP, &LEXER_JSX, &LEXER_JULIA, &LEXER_KOTLIN, &LEXER_LASSO, &LEXER_LEAN, &LEXER_LIQUID, &LEXER_LITERATE_COFFEESCRIPT, &LEXER_LITERATE_HASKELL, &LEXER_LIVESCRIPT, &LEXER_LLVM, &LEXER_LUA, &LEXER_LUSTRE, &LEXER_LUTIN, &LEXER_M68K, &LEXER_MAGIK, &LEXER_MAKE, &LEXER_MARKDOWN, &LEXER_MASON, &LEXER_MATHEMATICA, &LEXER_MATLAB, &LEXER_MESON, &LEXER_MINIZINC, &LEXER_MOJO, &LEXER_MOONSCRIPT, &LEXER_MOSEL, &LEXER_MSGTRANS, &LEXER_MXML, &LEXER_NASM, &LEXER_NESASM, &LEXER_NGINX, &LEXER_NIAL, &LEXER_NIM, &LEXER_NIX, &LEXER_OBJECTIVE_C, &LEXER_OBJECTIVE_CPP, &LEXER_OCAML, &LEXER_OCL, &LEXER_OPENEDGE, &LEXER_OPENTYPE_FEATURE_FILE, &LEXER_P4, &LEXER_PASCAL, &LEXER_PERL, &LEXER_PHP, &LEXER_PLAINTEXT, &LEXER_PLIST, &LEXER_PLSQL, &LEXER_PONY, &LEXER_POSTSCRIPT, &LEXER_POWERSHELL, &LEXER_PRAAT, &LEXER_PROLOG, &LEXER_PROMETHEUS, &LEXER_PROPERTIES, &LEXER_PROTOBUF, &LEXER_PUPPET, &LEXER_PYTHON, &LEXER_Q, &LEXER_QML, &LEXER_R, &LEXER_RACKET, &LEXER_REASONML, &LEXER_REGO, &LEXER_RESCRIPT, &LEXER_RML, &LEXER_ROBOT_FRAMEWORK, &LEXER_RUBY, &LEXER_RUST, &LEXER_SAS, &LEXER_SASS, &LEXER_SCALA, &LEXER_SCHEME, &LEXER_SCSS, &LEXER_SED, &LEXER_SHELL, &LEXER_SIEVE, &LEXER_SLICE, &LEXER_SLIM, &LEXER_SMALLTALK, &LEXER_SMARTY, &LEXER_SML, &LEXER_SPARQL, &LEXER_SQF, &LEXER_SQL, &LEXER_SSH, &LEXER_STAN, &LEXER_STATA, &LEXER_SUPERCOLLIDER, &LEXER_SVELTE, &LEXER_SWIFT, &LEXER_SYSTEMD, &LEXER_SYZLANG, &LEXER_SYZPROG, &LEXER_TAP, &LEXER_TCL, &LEXER_TERRAFORM, &LEXER_TEX, &LEXER_TOML, &LEXER_TSX, &LEXER_TTCN3, &LEXER_TULIP, &LEXER_TURTLE, &LEXER_TWIG, &LEXER_TYPESCRIPT, &LEXER_VALA, &LEXER_VB, &LEXER_VCL, &LEXER_VELOCITY, &LEXER_VERILOG, &LEXER_VHDL, &LEXER_VIML, &LEXER_VUE, &LEXER_WOLLOK, &LEXER_XML, &LEXER_XOJO, &LEXER_XPATH, &LEXER_XQUERY, &LEXER_YAML, &LEXER_YANG, &LEXER_ZIG],
+    lexers: &[&LEXER_ABAP, &LEXER_ACTIONSCRIPT, &LEXER_ADA, &LEXER_APACHE, &LEXER_APEX, &LEXER_APIBLUEPRINT, &LEXER_APPLESCRIPT, &LEXER_ARMASM, &LEXER_AUGEAS, &LEXER_AWK, &LEXER_BATCHFILE, &LEXER_BBCBASIC, &LEXER_BIBTEX, &LEXER_BICEP, &LEXER_BIML, &LEXER_BPF, &LEXER_BRAINFUCK, &LEXER_BRIGHTSCRIPT, &LEXER_BSL, &LEXER_C, &LEXER_CEYLON, &LEXER_CFSCRIPT, &LEXER_CISCO_IOS, &LEXER_CLEAN, &LEXER_CLOJURE, &LEXER_CMAKE, &LEXER_CMHG, &LEXER_COBOL, &LEXER_CODEOWNERS, &LEXER_COFFEESCRIPT, &LEXER_COMMON_LISP, &LEXER_CONF, &LEXER_CONSOLE, &LEXER_COQ, &LEXER_CPP, &LEXER_CRYSTAL, &LEXER_CSHARP, &LEXER_CSS, &LEXER_CSVS, &LEXER_CUDA, &LEXER_CYPHER, &LEXER_CYTHON, &LEXER_D, &LEXER_DAFNY, &LEXER_DART, &LEXER_DATASTUDIO, &LEXER_DIFF, &LEXER_DIGDAG, &LEXER_DOCKER, &LEXER_DOT, &LEXER_ECL, &LEXER_EEX, &LEXER_EIFFEL, &LEXER_ELIXIR, &LEXER_ELM, &LEXER_EMAIL, &LEXER_EPP, &LEXER_ERB, &LEXER_ERLANG, &LEXER_ESCAPE, &LEXER_FACTOR, &LEXER_FLUENT, &LEXER_FORTRAN, &LEXER_FREEFEM, &LEXER_FSHARP, &LEXER_GDSCRIPT, &LEXER_GHC_CMM, &LEXER_GHC_CORE, &LEXER_GHERKIN, &LEXER_GJS, &LEXER_GLSL, &LEXER_GO, &LEXER_GRADLE, &LEXER_GRAPHQL, &LEXER_GROOVY, &LEXER_GTS, &LEXER_HACK, &LEXER_HAML, &LEXER_HANDLEBARS, &LEXER_HASKELL, &LEXER_HAXE, &LEXER_HCL, &LEXER_HLSL, &LEXER_HOCON, &LEXER_HQL, &LEXER_HTML, &LEXER_HTTP, &LEXER_HYLANG, &LEXER_IDLANG, &LEXER_IDRIS, &LEXER_IECST, &LEXER_IGORPRO, &LEXER_INI, &LEXER_IO, &LEXER_IRB, &LEXER_IRB_OUTPUT, &LEXER_ISABELLE, &LEXER_ISBL, &LEXER_J, &LEXER_JANET, &LEXER_JAVA, &LEXER_JAVASCRIPT, &LEXER_JINJA, &LEXER_JSL, &LEXER_JSON, &LEXER_JSON_DOC, &LEXER_JSON5, &LEXER_JSONNET, &LEXER_JSP, &LEXER_JSX, &LEXER_JULIA, &LEXER_KOTLIN, &LEXER_LASSO, &LEXER_LEAN, &LEXER_LIQUID, &LEXER_LITERATE_COFFEESCRIPT, &LEXER_LITERATE_HASKELL, &LEXER_LIVESCRIPT, &LEXER_LLVM, &LEXER_LUA, &LEXER_LUSTRE, &LEXER_LUTIN, &LEXER_M68K, &LEXER_MAGIK, &LEXER_MAKE, &LEXER_MARKDOWN, &LEXER_MASON, &LEXER_MATHEMATICA, &LEXER_MATLAB, &LEXER_MESON, &LEXER_MINIZINC, &LEXER_MOJO, &LEXER_MOONSCRIPT, &LEXER_MOSEL, &LEXER_MSGTRANS, &LEXER_MXML, &LEXER_NASM, &LEXER_NESASM, &LEXER_NGINX, &LEXER_NIAL, &LEXER_NIM, &LEXER_NIX, &LEXER_OBJECTIVE_C, &LEXER_OBJECTIVE_CPP, &LEXER_OCAML, &LEXER_OCL, &LEXER_OPENEDGE, &LEXER_OPENTYPE_FEATURE_FILE, &LEXER_P4, &LEXER_PASCAL, &LEXER_PERL, &LEXER_PHP, &LEXER_PLAINTEXT, &LEXER_PLIST, &LEXER_PLSQL, &LEXER_PONY, &LEXER_POSTSCRIPT, &LEXER_POWERSHELL, &LEXER_PRAAT, &LEXER_PROLOG, &LEXER_PROMETHEUS, &LEXER_PROPERTIES, &LEXER_PROTOBUF, &LEXER_PUPPET, &LEXER_PYTHON, &LEXER_Q, &LEXER_QML, &LEXER_R, &LEXER_RACKET, &LEXER_REASONML, &LEXER_REGO, &LEXER_RESCRIPT, &LEXER_RML, &LEXER_ROBOT_FRAMEWORK, &LEXER_RUBY, &LEXER_RUST, &LEXER_SAS, &LEXER_SASS, &LEXER_SCALA, &LEXER_SCHEME, &LEXER_SCSS, &LEXER_SED, &LEXER_SHELL, &LEXER_SIEVE, &LEXER_SLICE, &LEXER_SLIM, &LEXER_SMALLTALK, &LEXER_SMARTY, &LEXER_SML, &LEXER_SPARQL, &LEXER_SQF, &LEXER_SQL, &LEXER_SSH, &LEXER_STAN, &LEXER_STATA, &LEXER_SUPERCOLLIDER, &LEXER_SVELTE, &LEXER_SWIFT, &LEXER_SYSTEMD, &LEXER_SYZLANG, &LEXER_SYZPROG, &LEXER_TAP, &LEXER_TCL, &LEXER_TERRAFORM, &LEXER_TEX, &LEXER_TOML, &LEXER_TSX, &LEXER_TTCN3, &LEXER_TULIP, &LEXER_TURTLE, &LEXER_TWIG, &LEXER_TYPESCRIPT, &LEXER_VALA, &LEXER_VB, &LEXER_VCL, &LEXER_VELOCITY, &LEXER_VERILOG, &LEXER_VHDL, &LEXER_VIML, &LEXER_VUE, &LEXER_WOLLOK, &LEXER_XML, &LEXER_XOJO, &LEXER_XPATH, &LEXER_XQUERY, &LEXER_YAML, &LEXER_YANG, &LEXER_ZIG, &LEXER_SED__REGEX, &LEXER_SED__REPLACEMENT],
     registry: &[
         ("Containerfile", 48),
         ("Dockerfile", 48),
@@ -31521,7 +31646,7 @@ pub(crate) static TABLES: Tables = Tables {
         GuessEntry { lexer: 226, aliases: &[], mimetypes: &["application/yang"], detect: None },
         GuessEntry { lexer: 227, aliases: &["zir"], mimetypes: &["text/x-zig"], detect: None },
     ],
-    shebang: 3607,
-    doctype: 3608,
-    modelines: [3609, 3610, 3611],
+    shebang: 3611,
+    doctype: 3612,
+    modelines: [3613, 3614, 3615],
 };

@@ -196,6 +196,8 @@ def lexers
   require_relative 'generate_rouge_lexers'
   source, report = RougeLexers.generate(token_list)
   puts source
+  # Registered lexers only (not sed's internal Regex/Replacement).
+  report = report.reject { |ident, _| ident.start_with?('LEXER_SED__') }
   incomplete = report.reject { |_, missing| missing.empty? }
   warn "#{report.size - incomplete.size} of #{report.size} lexers ported"
   incomplete.each { |ident, missing| warn "#{ident}: #{missing.size} missing: #{missing.first(3).join('; ')}" } if ENV['VERBOSE']
@@ -265,6 +267,16 @@ LEXER_CASES = [
   ['vue', "<template>\n  <div :a=\"b\">{{ x + {y: 1}.y }}</div>\n</template>\n<script>\nexport default { data() { return {} } }\n</script>\n<style lang=\"SCSS\">\n.a { .b { color: red; } }\n</style>\n<style lang='nope'>\nx\n</style>\n"],
   ['meson', "project('x', 'c')\nmsg = f'v @ver@ and \\n'\ns = '''multi\n'line'''\nif true and not false\n  message(msg)\nendif\n"],
   ['liquid', "{% liquid\n  assign x = 1\n  echo x\n%}\n{% cycle 'a': 1, 2 %}{% cycle \"b\": 3 %}{% cycle k: 4 %}{% cycle 5 %}{{ x | upcase }}\n"],
+  ['tcl', "proc f {x} {\n  if {$x > 1} { puts \"a { b } c\" }\n  set y [list {a]b} \"q{\"]\n  # c \\\n  more\n}\nputs {x\"y}\n"],
+  ['sed', "#!/bin/sed -f\n/^#/d\n\\%a.b%p\ns/a[^b-d]*\\(x\\)/\\1&b/gw out.txt\ny/abc/xyz/\n3,$ {\n  a\\\n  text\n}\nb end\n"],
+  ['cmake', "#[==[ comment ]] still\n]==]\nset(X [=[ a ]] ${Y} ]=] \"q ${Z}\" \\\" foo)\nmy_func(a) # c\n"],
+  ['coq', "Require Import Coq.Lists.List.\nTheorem t : forall n, n = n.\nProof.\n  intros n. reflexivity.\n  - auto. 1,2: { simpl. }\nQed.\nDefinition x := List.map (* c (* n *) *).\n"],
+  ['epp', "<%- | String $x = 'a' | -%>\nHello <%= $x %> <%# c %> 100%% <%% %%>\n"],
+  ['epp?parent=html', "<b><%= $x %></b>\n"],
+  ['escape', "a <!<b>!> c <!unterminated"],
+  ['escape?start=[[&end=]]&lang=ruby', "x = [[RAW]] + 1\n"],
+  ['lasso', "<?lasso local(x = 1) ?>\n[if(#x > 0)]yes[/if]\n<b>html</b>\n"],
+  ['lasso?start_inline=1', "define x => { return 1 }\nlocal(y) = 'a'\n"],
   ['varnish', "sub vcl_recv { set req.ttl = 10s; if (req.url ~ \"x\") { return (pass); } set a = 0x1f; }\n"],
 ].freeze
 

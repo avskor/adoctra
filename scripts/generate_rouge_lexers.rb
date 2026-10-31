@@ -42,6 +42,23 @@ module RougeLexers
 
   class Unsupported < StandardError; end
 
+  # Lexer classes Rouge does not register (sed's `Regex`/`Replacement`):
+  # exported under their qualified names, which `Lexer.find` never finds.
+  INTERNAL = %w[Sed::Regex Sed::Replacement].freeze
+
+  def self.internal_tag klass
+    name = klass.name&.delete_prefix('Rouge::Lexers::')
+    INTERNAL.include?(name) ? name : nil
+  end
+
+  def self.internal_lexers
+    INTERNAL.map do |name|
+      klass = Rouge::Lexers.const_get(name)
+      klass.instance_variable_set(:@tag, name) unless klass.instance_variable_get(:@tag)
+      klass
+    end
+  end
+
   # A Ruby file of Rouge as a Rust module name: relative to the lexers
   # directory, else to `lib/rouge` (e.g. `template_lexer.rb`), never an
   # absolute path that depends on where the gem is installed.
@@ -652,7 +669,11 @@ module RougeLexers
       klass = evaluate(node.children[0])
       unsupported(node, 'sub lexer class') unless klass.is_a?(Class) && klass < Rouge::Lexer
       # Untagged helper classes (sed's) are not in the registry.
-      unsupported(node, 'untagged sub lexer') unless klass.tag && Rouge::Lexer.find(klass.tag) == klass
+      internal = RougeLexers.internal_tag(klass)
+      unless internal || (klass.tag && Rouge::Lexer.find(klass.tag) == klass)
+        unsupported(node, 'untagged sub lexer')
+      end
+      return "|l: &Lexer| l.sub_for(#{rust_str internal})" if internal
       @g.depend(klass.tag)
       "|l: &Lexer| l.sub_for(#{rust_str klass.tag})"
     end
@@ -774,6 +795,18 @@ module RougeLexers
     def literal node
       case node.type
       when :LIT, :STR then node.children[0]
+      when :DSYM
+        # `:"params#{name}"` over a closed-over local.
+        pieces = [node.children[0], node.children[1], *node.children[2]&.children].compact
+        pieces.map do |piece|
+          next piece if piece.is_a?(String)
+          next piece.children[0] if piece.type == :STR
+          unsupported(node, 'literal') unless piece.type == :EVSTR
+
+          expr = piece.children[0]
+          unsupported(node, 'literal') unless %i[DVAR LVAR].include?(expr.type) && !@locals.key?(expr.children[0])
+          evaluate(expr).to_s
+        end.join.to_sym
       else unsupported(node, 'literal')
       end
     end
@@ -1018,6 +1051,11 @@ module RougeLexers
         "#{local node.children[0]}.as_str()"
       when :STR then rust_str node.children[0]
       when :IVAR then ivar_value(node)
+      # `m[1] + m[2]`.
+      when :OPCALL
+        recv, meth, args = node.children
+        unsupported(node, "value #{meth}") unless meth == :+ && (arg = call_args(args)).size == 1
+        "&format!(\"{}{}\", #{value recv}, #{value arg[0]})"
       when :DSTR
         # `"/#{@re_delim}"`: interpolated String values.
         pieces = [node.children[0]]
@@ -1349,7 +1387,7 @@ module RougeLexers
   def self.generate tokens
     install_hook
     generator = Generator.new(tokens)
-    lexers = Rouge::Lexer.all.sort_by(&:tag)
+    lexers = Rouge::Lexer.all.sort_by(&:tag) + internal_lexers
     items = lexers.map { |lexer| generator.lexer(lexer) }
     # A lexer delegating to an incomplete lexer is incomplete too.
     missing_by_tag = items.each_with_index.to_h { |(_, _, missing), i| [lexers[i].tag, missing] }

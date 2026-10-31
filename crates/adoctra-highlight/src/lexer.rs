@@ -189,16 +189,22 @@ pub struct Lexer {
 
 /// The ported lexers.
 pub fn all() -> impl Iterator<Item = &'static LexerDef> {
+    every().filter(|def| def.missing.is_empty())
+}
+
+/// Every registered lexer class of the pinned Rouge, ported or not.
+pub fn every() -> impl Iterator<Item = &'static LexerDef> {
     tables()
         .lexers
         .iter()
         .copied()
-        .filter(|def| def.missing.is_empty())
+        .filter(|def| !internal(def.tag))
 }
 
-/// Every lexer class of the pinned Rouge, ported or not.
-pub fn every() -> impl Iterator<Item = &'static LexerDef> {
-    tables().lexers.iter().copied()
+/// A lexer class Rouge does not register (`Sed::Regex`): its tag is its
+/// qualified name.
+fn internal(tag: &str) -> bool {
+    tag.contains("::")
 }
 
 /// `Rouge::Lexer.find` (a tag or alias, case sensitive), including lexers
@@ -315,7 +321,14 @@ impl Lexer {
 
     /// A delegate lexer `tag` with this lexer's options (`Klass.new(options)`).
     pub fn sub_for(&self, tag: &str) -> Result<Lexer, LexError> {
-        let def = find_def(tag).ok_or_else(|| LexError(format!("unknown lexer {tag}")))?;
+        let def = find_def(tag)
+            .or_else(|| {
+                let lexers = tables().lexers.iter().copied();
+                lexers
+                    .into_iter()
+                    .find(|def| internal(tag) && def.tag == tag)
+            })
+            .ok_or_else(|| LexError(format!("unknown lexer {tag}")))?;
         Lexer::new(def, self.options.clone())
     }
 
