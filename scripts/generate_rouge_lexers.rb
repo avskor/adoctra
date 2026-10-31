@@ -67,6 +67,26 @@ module RougeLexers
     (hand_written[module_name(path)] || Set.new).include?(name)
   end
 
+  # Data a hand-written module uses: its `Data: Klass.method, ….` doc lines
+  # (an expression in Rouge::Lexers giving Strings or a Hash of them).
+  def self.hand_data
+    Dir[File.join(RUST_DIR, '*.rs')].flat_map do |file|
+      File.read(file).scan(/^\/\/! Data: (.+)\.$/).flat_map { |(list)| list.split(/,\s*/) }
+    end.uniq.sort
+  end
+
+  def self.data_source expression
+    value = Rouge::Lexers.module_eval(expression)
+    name = "DATA_#{expression.gsub(/\W+/, '_').upcase}"
+    strings = ->(items) { "&[#{items.map(&:to_s).uniq.sort.map { |v| rust_str v }.join(', ')}]" }
+    if value.is_a?(Hash)
+      entries = value.sort_by { |key, _| key.to_s }.map { |key, items| "(#{rust_str key.to_s}, #{strings.(items.to_a)})" }
+      "pub(crate) static #{name}: &[(&str, &[&str])] = &[#{entries.join(', ')}];\n"
+    else
+      "pub(crate) static #{name}: &[&str] = #{strings.(value.to_a)};\n"
+    end
+  end
+
   # Lexers a hand-written module delegates to, by lexer tag: its
   # `Delegates (tag, …): dep, ….` doc lines.
   def self.hand_deps path, tag
@@ -666,6 +686,9 @@ module RougeLexers
         end
       when :VCALL
         @lexer.new.send(node.children[0])
+      when :LIST, :ZLIST
+        # `%w(public protected private)`.
+        node.children.compact.map { |item| literal(item) }
       else unsupported(node, "evaluate #{node.type}")
       end
     rescue Unsupported
@@ -912,6 +935,7 @@ module RougeLexers
     out << "const UNCOMPILED: OnceLock<Regex> = OnceLock::new();\n"
     out << "static COMPILED: [OnceLock<Regex>; #{generator.regexes.size}] = [UNCOMPILED; #{generator.regexes.size}];\n\n"
     generator.sets.each { |values, name| out << "static #{name}: &[&str] = &[#{values.map { |v| rust_str v }.join(', ')}];\n" }
+    hand_data.each { |expression| out << data_source(expression) }
     out << "\n"
     generator.callbacks.each { |cb| out << cb << "\n" }
     items.each { |_, source, _| out << source << "\n" }

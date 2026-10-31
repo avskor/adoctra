@@ -217,6 +217,12 @@ LEXER_CASES = [
   ['ruby', "def a.b?(c) = c\nclass << self; end\nputs :sym, 'q', ?c, 1.0e3, 0x1F\nfoo&.bar { |x| x ** 2 }\n"],
   ['irb', "irb(main):001:0> [1, 2].map { |x| x * 2 }\n=> [2, 4]\nirb(main):002:0> raise 'x'\nRuntimeError: x\n"],
   ['erb', "<p><%= @user.name %></p>\n<% if x %>y<% end %>\n"],
+  ['php', "<b>x</b>\n<?php echo strlen($s); apache_note('a'); ?>\n<i>y</i>\n"],
+  ['php?start_inline=1', "echo \"<?php\"; $a = array_map('f', [1]);\nclass A { public function b() {} }\n"],
+  ['php?start_inline=0', "echo 1; <?= $x ?>\n"],
+  ['php?funcnamehighlighting=0&start_inline=1', "strlen($s); mysqli_query($q);\n"],
+  ['php?disabledmodules=Apache&start_inline=1', "apache_note('a'); strlen('b');\n"],
+  ['hack?start_inline=1', "<<__Entrypoint>> async function main(): Awaitable<void> { echo strlen('x'); }\n"],
 ].freeze
 
 # Ruby's token stream for every lexer's complete demo, and for the extra
