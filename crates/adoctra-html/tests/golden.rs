@@ -682,7 +682,7 @@ fn html_admonition_icons_match_asciidoctor() {
         );
         checked += 1;
     }
-    assert_eq!(checked, 3);
+    assert_eq!(checked, 4);
 }
 
 /// The stylesheet roles and list styles of `roles/`, in document order: every

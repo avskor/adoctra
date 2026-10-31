@@ -792,7 +792,23 @@ ol.upperalpha { list-style-type: upper-alpha; }
 ol.lowerroman { list-style-type: lower-roman; }
 ol.upperroman { list-style-type: upper-roman; }
 ol.lowergreek { list-style-type: lower-greek; }
-ul.checklist { list-style: none; padding-inline-start: 1.25rem; }
+/* Ruby pulls a checklist item's first `p` back by 1em (17px); adoctra's item
+   text is the `li` itself, so its blocks get that 17px back. */
+ul.checklist { list-style: none; }
+ul.checklist > li { margin-inline-start: -1em; }
+ul.checklist > li > :is(p, div, dl, pre, table, figure, aside, details, nav, blockquote, hr) { margin-inline-start: 1.0625rem; }
+ul.checklist > li > :is(ul, ol) { margin-inline-start: calc(1.25em + 1.0625rem); }
+ul.checklist > li > :is(.fa-square-o, .fa-check-square-o):first-child {
+  width: 1.25em;
+  font-size: 0.8em;
+  position: relative;
+  bottom: 0.125em;
+}
+ul.checklist > li > input[type="checkbox"]:first-child { margin-inline-end: 0.25em; }
+/* Ruby's normalize for form controls (an interactive checklist's boxes). */
+button, input, select, textarea { font-family: inherit; font-size: 100%; margin: 0; }
+button, input { line-height: normal; }
+input:is([type="checkbox"], [type="radio"]) { padding: 0; }
 /* Ruby's unmarked list styles; `inline` lays the items out in a row. */
 :is(ul, ol):is(.none, .no-bullet, .unstyled), ol.unnumbered { list-style-type: none; }
 :is(ul, ol).no-bullet, ol.unnumbered { margin-inline-start: 0.625em; }

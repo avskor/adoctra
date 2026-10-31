@@ -930,7 +930,18 @@ impl Execution<'_, '_> {
             }
             crate::media::resolve(block, &self.attributes);
             // Callout icons follow the `icons` mode where the block converts.
+            let checklist = block.attrs.options.iter().any(|o| o == "checklist")
+                || block.attrs.named.contains_key("checklist-option");
             match &mut block.kind {
+                // Ruby's `convert_ulist` reads the document `icons` for a
+                // checklist's marks.
+                BlockKind::List {
+                    ordered: false,
+                    icons,
+                    ..
+                } if checklist => {
+                    *icons = self.attributes.get("icons").map(str::to_owned);
+                }
                 BlockKind::Listing {
                     callouts,
                     inlines: None,

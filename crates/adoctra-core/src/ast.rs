@@ -549,7 +549,15 @@ pub enum BlockKind {
     /// different marker nests. An ordered list's implicit style (`arabic`,
     /// `loweralpha`, …) is its [`BlockAttrs::style`]; a checklist has the
     /// `checklist` option.
-    List { ordered: bool, items: Vec<ListItem> },
+    List {
+        ordered: bool,
+        items: Vec<ListItem>,
+        /// For a checklist, the document `icons` mode when the list
+        /// converts, like Ruby's `convert_ulist` reading the document
+        /// attribute then (a body entry before the list applies); `None`
+        /// for other lists.
+        icons: Option<String>,
+    },
     /// A callout list (`<1> text`, `<.> text`), like Ruby's
     /// `parse_callout_list`: each item names the callout marks of the
     /// preceding verbatim blocks with its number (`coids`).

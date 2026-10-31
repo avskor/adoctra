@@ -609,7 +609,7 @@ fn write_block(b: &Block, s: &mut String) {
             write_title(&b.title, s);
             write_caption(b, s);
         }
-        BlockKind::List { ordered, items } => {
+        BlockKind::List { ordered, items, .. } => {
             s.push_str(&format!("\"name\":\"list\",\"ordered\":{ordered},"));
             write_id(&b.id, s);
             write_roles(&b.roles, s);

@@ -1302,7 +1302,11 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
             }
             out.push_str(">\nYour browser does not support the audio tag.\n</audio>\n</figure>\n");
         }
-        BlockKind::List { ordered, items } => {
+        BlockKind::List {
+            ordered,
+            items,
+            icons,
+        } => {
             let tag = if *ordered { "ol" } else { "ul" };
             let option = |name: &str| {
                 block.attrs.options.iter().any(|o| o == name)
@@ -1361,7 +1365,7 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
                         "<input type=\"checkbox\" data-item-complete=\"0\"/> ",
                     )
                 }
-            } else if cx.doc.attributes.get("icons") == Some("font") {
+            } else if icons.as_deref() == Some("font") {
                 (
                     "<i class=\"fa fa-check-square-o\"></i> ",
                     "<i class=\"fa fa-square-o\"></i> ",
@@ -3487,6 +3491,11 @@ mod tests {
         );
         let html = render("* [x] done\n* [ ] todo\n* plain");
         assert!(html.contains("<ul class=\"checklist\">\n<li>&#10003; done</li>\n<li>&#10063; todo</li>\n<li>plain</li>"), "{html}");
+        // Font icons follow the `icons` mode where the checklist converts,
+        // including a body entry after the header.
+        let html = render("* [x] a\n\n:icons: font\n\n* [x] b\n* [ ] c");
+        assert!(html.contains("<li>&#10003; a</li>"), "{html}");
+        assert!(html.contains("<li><i class=\"fa fa-check-square-o\"></i> b</li>\n<li><i class=\"fa fa-square-o\"></i> c</li>"), "{html}");
         let html = render("[#d.r]\nCPU:: The *brain*\nA::\nB:: shared\n+\n----\nx\n----");
         assert!(html.contains("<dl id=\"d\" class=\"r\">\n<dt class=\"hdlist1\">CPU</dt>\n<dd>\n<p>The <strong>brain</strong></p>\n</dd>\n<dt class=\"hdlist1\">A</dt>\n<dt class=\"hdlist1\">B</dt>\n<dd>\n<p>shared</p>\n<pre class=\"listing\">x</pre>\n</dd>\n</dl>"), "{html}");
         let html = render("[horizontal,labelwidth=25]\nA:: one");
@@ -4350,6 +4359,10 @@ mod tests {
             ".thumb, .th { line-height: 0; display: inline-block; border: 4px solid #fff; box-shadow: 0 0 0 1px #ddd; }",
             // Image callout rows are Ruby's table cells, without list gaps.
             "ol.colist.icons > li > div { padding: 0.25em 0; margin-block-start: 0; }",
+            // Ruby's checklist pulls the item text back by 1em; form controls
+            // get Ruby's normalize.
+            "ul.checklist > li { margin-inline-start: -1em; }",
+            "button, input, select, textarea { font-family: inherit; font-size: 100%; margin: 0; }",
             // An admonition's last list keeps its last item's gap.
             ".admonition-content > :last-child:not(ul, ol) > :last-child { margin-block-end: 0; }",
         ] {

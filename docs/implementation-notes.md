@@ -34,7 +34,10 @@ from Ruby), plus `golden/roles/roles.adoc` (Ruby's utility roles and
 unmarked list styles) and `golden/admonition_icons/files.adoc` (real PNG
 admonition/callout icons; image callout rows are Ruby's table cells, the last
 list item in an admonition keeps its `p` gap; `subheader` is on Ruby's
-wrapper, so only colour/weight reach the element): 660 of 662 observations match; the remaining case
+wrapper, so only colour/weight reach the element), `golden/admonition_icons/font-files.adoc`
+(a vendored Font Awesome 4.7.0 under `admonition_icons/fontawesome/`, MIT +
+SIL OFL 1.1, linked with `iconfont-remote!`) and `golden/lists/checklist.adoc`
+(Ruby's checklist `-1em`/icon rules and form-control normalize): 664 of 666 observations match; the remaining case
 (a raw unclosed `<i>`) is documented. Ruby zeroes last-child margins on
 wrappers, so mirror that per element (lists/paragraphs keep theirs).
 Re-record only after reviewing an IMPROVED diff; never loosen tolerances. Visual parity, CLI behavior,
@@ -839,7 +842,9 @@ the rest of the term as reftext. Unstyled indented paragraphs are literal blocks
 (adjust_indentation!) except a list item's text-only/description-adjacent one.
 HTML: `<ol class="style" type start reversed>` (no `type` for a lettered/numbered
 marker's own style, as Ruby's symbol style), checklist markers (interactive,
-font icons), `<dl>` (dt.hdlist1 without style), horizontal `<dl class="hdlist">`
+font icons; `BlockKind::List.icons` captures the document `icons` mode where a
+checklist converts, like `convert_ulist`, so a body entry before it applies;
+JSON writes it on checklists only), `<dl>` (dt.hdlist1 without style), horizontal `<dl class="hdlist">`
 on a CSS grid (labelwidth/itemwidth) instead of Ruby's layout table, qanda
 `<ol class="qanda">`; the DOM profile maps Ruby's dlist/qlist wrappers and hdlist
 table. JSON/WASM `dlist`, item `checkbox`; parser-recorded `list-marker` tokens

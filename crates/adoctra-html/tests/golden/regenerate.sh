@@ -45,6 +45,9 @@ for adoc in rouge/*.adoc; do
   ruby "$reference" --standalone --safe <"$adoc" >"${adoc%.adoc}.expected.html"
   echo "  ${adoc%.adoc}.expected.html"
 done
+# The checklist with icons, in safe mode (secure mode locks icons).
+ruby "$reference" --safe <lists/checklist.adoc >lists/checklist.expected.html
+echo "  lists/checklist.expected.html (safe)"
 # Admonition icons under admonition_icons/, in safe mode (secure mode locks
 # icons).
 for adoc in admonition_icons/*.adoc; do

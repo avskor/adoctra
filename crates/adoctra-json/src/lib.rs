@@ -537,7 +537,11 @@ fn write_block(block: &Block, s: &mut String) {
             write_caption(block, s);
             s.push('}');
         }
-        BlockKind::List { ordered, items } => {
+        BlockKind::List {
+            ordered,
+            items,
+            icons,
+        } => {
             s.push_str(&format!("{{\"name\":\"list\",\"ordered\":{ordered},"));
             write_id(&block.id, s);
             write_roles(&block.roles, s);
@@ -546,6 +550,11 @@ fn write_block(block: &Block, s: &mut String) {
             write_options(&block.attrs.options, s);
             write_title(&block.title, s);
             write_caption(block, s);
+            // A checklist's `icons` mode where it converts (its marks).
+            if let Some(icons) = icons {
+                s.push_str(",\"icons\":");
+                escape_into(icons, s);
+            }
             s.push_str(",\"items\":[");
             for (i, item) in items.iter().enumerate() {
                 if i > 0 {
@@ -2105,6 +2114,19 @@ mod tests {
         let json = render(":data-uri:\n\nimage::a.svg[]");
         assert!(
             json.contains(r#""src":"data:image/svg+xml;base64,""#),
+            "{json}"
+        );
+    }
+
+    #[test]
+    fn checklist_icons_serialize_where_the_list_converts() {
+        let json = render("* [x] a\n\n:icons: font\n\n* [ ] b\n\n//\n* plain");
+        // The first checklist and the plain list carry no mode.
+        assert_eq!(json.matches(r#""icons""#).count(), 1, "{json}");
+        assert!(
+            json.contains(
+                r#""options":["checklist"],"title":null,"caption":null,"icons":"font","items""#
+            ),
             "{json}"
         );
     }

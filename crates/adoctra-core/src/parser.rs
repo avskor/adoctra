@@ -3759,7 +3759,14 @@ fn parse_list(
             *i += 1;
         }
     }
-    let mut block = Block::new(Span::new(start, end), BlockKind::List { ordered, items });
+    let mut block = Block::new(
+        Span::new(start, end),
+        BlockKind::List {
+            ordered,
+            items,
+            icons: None,
+        },
+    );
     block.attrs.style = style.map(str::to_owned).or(implicit_style);
     if checklist {
         block.attrs.options.push("checklist".into());
@@ -4224,7 +4231,7 @@ mod tests {
     /// The list block of `src`, or panic if the first block is not a list.
     fn list(src: &str) -> (bool, Vec<ListItem>) {
         match &parse(src).document.into_flat_blocks()[0].kind {
-            BlockKind::List { ordered, items } => (*ordered, items.clone()),
+            BlockKind::List { ordered, items, .. } => (*ordered, items.clone()),
             other => panic!("expected List, got {other:?}"),
         }
     }
@@ -4233,7 +4240,7 @@ mod tests {
     fn sublist(item: &ListItem) -> (bool, Vec<ListItem>) {
         assert_eq!(item.blocks.len(), 1, "expected exactly one nested block");
         match &item.blocks[0].kind {
-            BlockKind::List { ordered, items } => (*ordered, items.clone()),
+            BlockKind::List { ordered, items, .. } => (*ordered, items.clone()),
             other => panic!("expected nested List, got {other:?}"),
         }
     }
