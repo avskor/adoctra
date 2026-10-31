@@ -16179,7 +16179,7 @@ static LEXER_CRYSTAL: LexerDef = LexerDef {
             Rule::Match { regex: 616, bol: false, action: Action::Emit(T::LITERAL_STRING_SYMBOL, Next::State(5)) },
         ] },
         StateDef { name: "sigil_strings", rules: &[
-            Rule::Match { regex: 617, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 617, bol: false, action: Action::Call(crate::lexers::crystal::rule_38) },
         ] },
         StateDef { name: "strings", rules: &[
             Rule::Mixin(0),
@@ -16258,8 +16258,8 @@ static LEXER_CRYSTAL: LexerDef = LexerDef {
             Rule::Match { regex: 660, bol: false, action: Action::Emit(T::PUNCTUATION, Next::Stay) },
         ] },
         StateDef { name: "has_heredocs", rules: &[
-            Rule::Match { regex: 661, bol: false, action: Action::Call(crate::lexer::unported) },
-            Rule::Match { regex: 662, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 661, bol: false, action: Action::Call(crate::lexers::crystal::rule_228) },
+            Rule::Match { regex: 662, bol: false, action: Action::Call(crate::lexers::crystal::rule_235) },
         ] },
         StateDef { name: "heredoc_queue", rules: &[
             Rule::Match { regex: 663, bol: false, action: Action::Call(cb_crystal_crystal_244) },
@@ -16272,7 +16272,7 @@ static LEXER_CRYSTAL: LexerDef = LexerDef {
             Rule::Match { regex: 665, bol: false, action: Action::Emit(T::LITERAL_STRING_HEREDOC, Next::Stay) },
         ] },
         StateDef { name: "test_heredoc", rules: &[
-            Rule::Match { regex: 666, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 666, bol: false, action: Action::Call(crate::lexers::crystal::rule_260) },
             Rule::Match { regex: 19, bol: false, action: Action::Call(cb_crystal_crystal_278) },
         ] },
         StateDef { name: "funcname", rules: &[
@@ -16345,11 +16345,11 @@ static LEXER_CRYSTAL: LexerDef = LexerDef {
             Rule::Match { regex: 682, bol: false, action: Action::Emit(T::COMMENT_PREPROC, Next::Pop) },
         ] },
     ],
-    start: &[crate::lexer::unported_hook],
+    start: &[crate::lexers::crystal::start_137],
     init: None,
     reset: None,
     stream: None,
-    missing: &["crystal.rs:38 (value OR)", "crystal.rs:228 (value DSTR)", "crystal.rs:235 (value DSTR)", "crystal.rs:260 (MASGN@261)", "crystal.rs:137 (start) (sub lexer)"],
+    missing: &[],
 };
 
 static LEXER_CSHARP: LexerDef = LexerDef {
@@ -26157,8 +26157,8 @@ static LEXER_RUST: LexerDef = LexerDef {
         ] },
         StateDef { name: "macro", rules: &[
             Rule::Mixin(9),
-            Rule::Match { regex: 2844, bol: false, action: Action::Call(crate::lexer::unported) },
-            Rule::Match { regex: 2845, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 2844, bol: false, action: Action::Call(crate::lexers::rust::rule_189) },
+            Rule::Match { regex: 2845, bol: false, action: Action::Call(crate::lexers::rust::rule_195) },
             Rule::Match { regex: 2840, bol: false, action: Action::Emit(T::NAME_DECORATOR, Next::Stay) },
             Rule::Mixin(6),
             Rule::Match { regex: 27, bol: false, action: Action::Emit(T::TEXT, Next::Stay) },
@@ -26182,11 +26182,11 @@ static LEXER_RUST: LexerDef = LexerDef {
             Rule::Match { regex: 2266, bol: false, action: Action::Emit(T::LITERAL_STRING, Next::Stay) },
         ] },
     ],
-    start: &[crate::lexer::unported_hook],
+    start: &[crate::lexers::rust::start_57],
     init: None,
     reset: None,
     stream: None,
-    missing: &["rust.rs:189 (OP_ASGN1@190)", "rust.rs:195 (OP_ASGN1@196)", "rust.rs:57 (start) (sub lexer)"],
+    missing: &[],
 };
 
 static LEXER_SAS: LexerDef = LexerDef {

@@ -23,9 +23,21 @@ pub(crate) fn start_149(lexer: &mut Lexer) -> Result<(), LexError> {
     Ok(())
 }
 
+/// The two `%`-sigil dialects: Ruby's, and Crystal's (no interpolation
+/// without a type letter, delimiters repeated in the character classes).
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Sigils {
+    Ruby,
+    Crystal,
+}
+
 /// `%`-sigil strings: `%r(…)`, `%w[…]`, `%Q<…>`, `%.abc.` … The nested
 /// state depends on the delimiters, the interpolation and the token type.
 pub(crate) fn rule_42(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
+    sigil(s, m, Sigils::Ruby)
+}
+
+pub(crate) fn sigil(s: &mut Scan<'_, '_>, m: &Match<'_>, dialect: Sigils) -> Result<(), LexError> {
     let delimiter = m.group(2);
     let open = crate::lexer::regexp_escape(delimiter);
     let closing = match delimiter {
@@ -37,7 +49,10 @@ pub(crate) fn rule_42(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexErro
     };
     let close = crate::lexer::regexp_escape(closing);
     let kind = m.get(1);
-    let interp = kind.map_or(true, |k| matches!(k, "r" | "Q" | "W" | "x" | "I"));
+    // Ruby: `/[rQWxI]/ === m[1] || !m[1]`; Crystal without `|| !m[1]`.
+    let interp = kind.map_or(dialect == Sigils::Ruby, |k| {
+        matches!(k, "r" | "Q" | "W" | "x" | "I")
+    });
     let mut toktype = LITERAL_STRING_OTHER;
     if kind == Some("r") {
         toktype = LITERAL_STRING_REGEX;
@@ -53,7 +68,9 @@ pub(crate) fn rule_42(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexErro
         .iter()
         .position(|state| state.name == "string_intp_escaped");
     let key = format!("{tag} sigil {open} {close} {interp} {}", toktype.id());
-    let state = dynamic_state(key, || sigil_rules(&open, &close, interp, toktype, mixin))?;
+    let state = dynamic_state(key, || {
+        sigil_rules(&open, &close, interp, toktype, mixin, dialect)
+    })?;
     s.push_state(state);
     Ok(())
 }
@@ -64,6 +81,7 @@ fn sigil_rules(
     interp: bool,
     toktype: Token,
     mixin: Option<usize>,
+    dialect: Sigils,
 ) -> Result<Vec<Rule>, LexError> {
     let rule = |source: &str, options: u32, action: Action| -> Result<Rule, LexError> {
         Ok(Rule::Compiled {
@@ -72,14 +90,11 @@ fn sigil_rules(
             action,
         })
     };
-    let uniq_chars = if open == close {
-        if open == "\\#" {
-            String::new()
-        } else {
-            open.to_string()
-        }
-    } else {
-        format!("{open}{close}")
+    let uniq_chars = match dialect {
+        Sigils::Crystal => format!("{open}{close}"),
+        Sigils::Ruby if open != close => format!("{open}{close}"),
+        Sigils::Ruby if open == "\\#" => String::new(),
+        Sigils::Ruby => open.to_string(),
     };
     let mut rules = vec![rule(
         &format!("\\\\[#{uniq_chars}\\\\]"),

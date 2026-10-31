@@ -229,6 +229,8 @@ LEXER_CASES = [
   ['digdag', "timezone: UTC\n+step:\n  sh>: echo hi\n  _do:\n    echo>: x\n"],
   ['groovy', "class A {\n  static void main(String[] args) { println 'x' }\n  def int f(x) { x }\n}\n"],
   ['factor', "USING: io kernel ;\n: hello ( -- ) \"Hi\" print dup drop ;\n"],
+  ['rust', "fn main() {\n    println!(\"{} {}\", vec![1, 2][0], (3));\n    let s = r#\"raw\"#;\n    m!{ a [b] (c) }\n}\n"],
+  ['crystal', "a = %w(x y) + %(no \#{interp}) + %Q[yes \#{1}] + %r{a+}i\nb = <<-EOS\n  text \#{x}\n  EOS\ndef f(x : Int32) : String; end\n"],
   ['hack?start_inline=1', "<<__Entrypoint>> async function main(): Awaitable<void> { echo strlen('x'); }\n"],
 ].freeze
 
