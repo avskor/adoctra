@@ -277,6 +277,10 @@ LEXER_CASES = [
   ['escape?start=[[&end=]]&lang=ruby', "x = [[RAW]] + 1\n"],
   ['lasso', "<?lasso local(x = 1) ?>\n[if(#x > 0)]yes[/if]\n<b>html</b>\n"],
   ['lasso?start_inline=1', "define x => { return 1 }\nlocal(y) = 'a'\n"],
+  ['j', "f =: 3 : 0\n  if. y > 0 do. y * f y - 1 else. 1 end.\n  for_i. i. 3 do. echo i end.\n)\ng =: dyad def 'x + y NB. c'\nn =: noun define\ntext\n)\nNote 'x'\nnote body\n)\nh =: 4 : '''a'' , x'\nz =: 1 2 3 +/ . * 4 5 6 a. {.: 2:\nbad_. q.:\n"],
+  ['robot_framework', "Prior text\n*** Settings ***\nLibrary    OperatingSystem\nDocumentation    Some doc\nForce Tags    a    b\n\n*** Variables ***\n${X}    1\n@{L}    a    b\n\n*** Test Cases ***\nTemplated\n    [Template]    Keyword\n    a    b\nNormal\n    Given something\n    ${r} =    Get    ${X}\n    FOR    ${i}    IN    @{L}\n    \\    Log    ${i}\n    END\n    ...    more\n| Pipe | Log | x |\n\n*** Keywords ***\nMy ${arg} Keyword\n    [Arguments]    ${arg}\n    Log    ${arg}    # comment\n"],
+  ['sas', "data a;\n  input x y;\n  datalines;\n1 2\n;\nrun;\nproc sort data=a out=b nodupkey;\n  by x;\nrun;\nproc means data=b mean;\n  var y;\nrun;\n"],
+  ['ceylon', "/* c */ shared class A(String s) extends B() {\n  // x\n  value n = 1;\n}\n"],
   ['varnish', "sub vcl_recv { set req.ttl = 10s; if (req.url ~ \"x\") { return (pass); } set a = 0x1f; }\n"],
 ].freeze
 

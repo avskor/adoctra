@@ -3997,9 +3997,16 @@ pub(crate) static DATA_ECL_TEMPLATE: &[&str] = &["append", "apply", "break", "co
 pub(crate) static DATA_ECL_TYPE: &[&str] = &["ascii", "big_endian", "boolean", "data", "decimal", "ebcdic", "grouped", "integer", "linkcounted", "of", "pattern", "qstring", "real", "record", "rule", "set", "streamed", "string", "token", "udecimal", "unicode", "unsigned", "utf8", "varstring", "varunicode"];
 pub(crate) static DATA_ECL_TYPED: &[&str] = &["data", "qstring", "string", "unicode", "utf8", "varstring", "varunicode"];
 pub(crate) static DATA_HACK_KEYWORDS: &[&str] = &["Awaitable", "Stringish", "__class__", "__dir__", "__file__", "__function__", "__halt_compiler", "__line__", "__method__", "__namespace__", "__trait__", "abstract", "and", "array", "arraykey", "as", "async", "await", "bool", "break", "case", "catch", "cfunction", "clone", "continue", "declare", "default", "dict", "die", "do", "double", "echo", "else", "elseif", "empty", "enddeclare", "endfor", "endforeach", "endif", "endswitch", "endwhile", "enum", "eval", "exit", "extends", "final", "finally", "float", "fn", "for", "foreach", "global", "goto", "if", "implements", "include", "include_once", "instanceof", "insteadof", "int", "isset", "keyset", "list", "match", "new", "newtype", "num", "old_function", "or", "parent", "print", "private", "protected", "public", "readonly", "require", "require_once", "return", "self", "static", "string", "super", "switch", "throw", "try", "type", "unset", "var", "vec", "void", "while", "xor", "yield"];
+pub(crate) static DATA_J_CONTROL_WORDS: &[&str] = &["assert", "break", "case", "catch", "catchd", "catcht", "continue", "do", "else", "elseif", "end", "fcase", "for", "if", "return", "select", "throw", "try", "while", "whilst"];
+pub(crate) static DATA_J_CONTROL_WORDS_ID: &[&str] = &["for", "goto", "label"];
 pub(crate) static DATA_LUA_BUILTINS: &[(&str, &[&str])] = &[("basic", &["_g", "_version", "assert", "collectgarbage", "dofile", "error", "file:close", "file:flush", "file:lines", "file:read", "file:seek", "file:setvbuf", "file:write", "getmetatable", "ipairs", "load", "loadfile", "lua_cpath", "lua_cpath_5_3", "lua_errerr", "lua_errfile", "lua_errgcmm", "lua_errmem", "lua_errrun", "lua_errsyntax", "lua_hookcall", "lua_hookcount", "lua_hookline", "lua_hookret", "lua_hooktailcall", "lua_init", "lua_init_5_3", "lua_maskcall", "lua_maskcount", "lua_maskline", "lua_maskret", "lua_maxinteger", "lua_mininteger", "lua_minstack", "lua_multret", "lua_noref", "lua_ok", "lua_opadd", "lua_opband", "lua_opbnot", "lua_opbor", "lua_opbxor", "lua_opdiv", "lua_opeq", "lua_opidiv", "lua_ople", "lua_oplt", "lua_opmod", "lua_opmul", "lua_oppow", "lua_opshl", "lua_opshr", "lua_opsub", "lua_opunm", "lua_path", "lua_path_5_3", "lua_refnil", "lua_registryindex", "lua_ridx_globals", "lua_ridx_mainthread", "lua_tboolean", "lua_tfunction", "lua_tlightuserdata", "lua_tnil", "lua_tnone", "lua_tnumber", "lua_tstring", "lua_ttable", "lua_tthread", "lua_tuserdata", "lua_use_apicheck", "lua_yield", "lual_buffersize", "luaopen_base", "luaopen_coroutine", "luaopen_debug", "luaopen_io", "luaopen_math", "luaopen_os", "luaopen_package", "luaopen_string", "luaopen_table", "luaopen_utf8", "next", "pairs", "pcall", "print", "rawequal", "rawget", "rawlen", "rawset", "select", "setmetatable", "tonumber", "tostring", "type", "xpcall"]), ("coroutine", &["coroutine.create", "coroutine.isyieldable", "coroutine.resume", "coroutine.running", "coroutine.status", "coroutine.wrap", "coroutine.yield"]), ("debug", &["debug.debug", "debug.gethook", "debug.getinfo", "debug.getlocal", "debug.getmetatable", "debug.getregistry", "debug.getupvalue", "debug.getuservalue", "debug.sethook", "debug.setlocal", "debug.setmetatable", "debug.setupvalue", "debug.setuservalue", "debug.traceback", "debug.upvalueid", "debug.upvaluejoin"]), ("io", &["io.close", "io.flush", "io.input", "io.lines", "io.open", "io.output", "io.popen", "io.read", "io.stderr", "io.stdin", "io.stdout", "io.tmpfile", "io.type", "io.write"]), ("math", &["math.abs", "math.acos", "math.asin", "math.atan", "math.ceil", "math.cos", "math.deg", "math.exp", "math.floor", "math.fmod", "math.huge", "math.log", "math.max", "math.maxinteger", "math.min", "math.mininteger", "math.modf", "math.pi", "math.rad", "math.random", "math.randomseed", "math.sin", "math.sqrt", "math.tan", "math.tointeger", "math.type", "math.ult"]), ("modules", &["package.config", "package.cpath", "package.loaded", "package.loadlib", "package.path", "package.preload", "package.searchers", "package.searchpath", "require"]), ("os", &["os.clock", "os.date", "os.difftime", "os.execute", "os.exit", "os.getenv", "os.remove", "os.rename", "os.setlocale", "os.time", "os.tmpname"]), ("string", &["string.byte", "string.char", "string.dump", "string.find", "string.format", "string.gmatch", "string.gsub", "string.len", "string.lower", "string.match", "string.pack", "string.packsize", "string.rep", "string.reverse", "string.sub", "string.unpack", "string.upper"]), ("table", &["table.concat", "table.insert", "table.move", "table.pack", "table.remove", "table.sort", "table.unpack"]), ("utf8", &["utf8.char", "utf8.charpattern", "utf8.codepoint", "utf8.codes", "utf8.len", "utf8.offset"])];
 pub(crate) static DATA_PHP_BUILTINS: &[(&str, &[&str])] = &[("APCu", &["apcu_add", "apcu_cache_info", "apcu_cas", "apcu_clear_cache", "apcu_dec", "apcu_delete", "apcu_enabled", "apcu_entry", "apcu_exists", "apcu_fetch", "apcu_inc", "apcu_key_info", "apcu_sma_info", "apcu_store"]), ("Aliases and deprecated Mysqli", &["mysqli_connect", "mysqli_execute", "mysqli_get_client_stats", "mysqli_get_links_stats", "mysqli_report"]), ("Apache", &["apache_child_terminate", "apache_get_modules", "apache_get_version", "apache_getenv", "apache_lookup_uri", "apache_note", "apache_request_headers", "apache_response_headers", "apache_setenv", "getallheaders", "virtual"]), ("Array", &["array", "array_all", "array_any", "array_change_key_case", "array_chunk", "array_column", "array_combine", "array_count_values", "array_diff", "array_diff_assoc", "array_diff_key", "array_diff_uassoc", "array_diff_ukey", "array_fill", "array_fill_keys", "array_filter", "array_find", "array_find_key", "array_first", "array_flip", "array_intersect", "array_intersect_assoc", "array_intersect_key", "array_intersect_uassoc", "array_intersect_ukey", "array_is_list", "array_key_exists", "array_key_first", "array_key_last", "array_keys", "array_last", "array_map", "array_merge", "array_merge_recursive", "array_multisort", "array_pad", "array_pop", "array_product", "array_push", "array_rand", "array_reduce", "array_replace", "array_replace_recursive", "array_reverse", "array_search", "array_shift", "array_slice", "array_splice", "array_sum", "array_udiff", "array_udiff_assoc", "array_udiff_uassoc", "array_uintersect", "array_uintersect_assoc", "array_uintersect_uassoc", "array_unique", "array_unshift", "array_values", "array_walk", "array_walk_recursive", "arsort", "asort", "compact", "count", "current", "each", "end", "extract", "in_array", "key", "key_exists", "krsort", "ksort", "list", "natcasesort", "natsort", "next", "pos", "prev", "range", "reset", "rsort", "shuffle", "sizeof", "sort", "uasort", "uksort", "usort"]), ("BC Math", &["bcadd", "bcceil", "bccomp", "bcdiv", "bcdivmod", "bcfloor", "bcmod", "bcmul", "bcpow", "bcpowmod", "bcround", "bcscale", "bcsqrt", "bcsub"]), ("Bzip2", &["bzclose", "bzcompress", "bzdecompress", "bzerrno", "bzerror", "bzerrstr", "bzflush", "bzopen", "bzread", "bzwrite"]), ("COM", &["com_create_guid", "com_event_sink", "com_get_active_object", "com_load_typelib", "com_message_pump", "com_print_typeinfo", "variant_abs", "variant_add", "variant_and", "variant_cast", "variant_cat", "variant_cmp", "variant_date_from_timestamp", "variant_date_to_timestamp", "variant_div", "variant_eqv", "variant_fix", "variant_get_type", "variant_idiv", "variant_imp", "variant_int", "variant_mod", "variant_mul", "variant_neg", "variant_not", "variant_or", "variant_pow", "variant_round", "variant_set", "variant_set_type", "variant_sub", "variant_xor"]), ("CUBRID", &["cubrid_bind", "cubrid_close_prepare", "cubrid_close_request", "cubrid_col_get", "cubrid_col_size", "cubrid_column_names", "cubrid_column_types", "cubrid_commit", "cubrid_connect", "cubrid_connect_with_url", "cubrid_current_oid", "cubrid_disconnect", "cubrid_drop", "cubrid_error_code", "cubrid_error_code_facility", "cubrid_error_msg", "cubrid_execute", "cubrid_fetch", "cubrid_free_result", "cubrid_get", "cubrid_get_autocommit", "cubrid_get_charset", "cubrid_get_class_name", "cubrid_get_client_info", "cubrid_get_db_parameter", "cubrid_get_query_timeout", "cubrid_get_server_info", "cubrid_insert_id", "cubrid_is_instance", "cubrid_lob2_bind", "cubrid_lob2_close", "cubrid_lob2_export", "cubrid_lob2_import", "cubrid_lob2_new", "cubrid_lob2_read", "cubrid_lob2_seek", "cubrid_lob2_seek64", "cubrid_lob2_size", "cubrid_lob2_size64", "cubrid_lob2_tell", "cubrid_lob2_tell64", "cubrid_lob2_write", "cubrid_lob_close", "cubrid_lob_export", "cubrid_lob_get", "cubrid_lob_send", "cubrid_lob_size", "cubrid_lock_read", "cubrid_lock_write", "cubrid_move_cursor", "cubrid_next_result", "cubrid_num_cols", "cubrid_num_rows", "cubrid_pconnect", "cubrid_pconnect_with_url", "cubrid_prepare", "cubrid_put", "cubrid_rollback", "cubrid_schema", "cubrid_seq_drop", "cubrid_seq_insert", "cubrid_seq_put", "cubrid_set_add", "cubrid_set_autocommit", "cubrid_set_db_parameter", "cubrid_set_drop", "cubrid_set_query_timeout", "cubrid_version"]), ("Calendar", &["cal_days_in_month", "cal_from_jd", "cal_info", "cal_to_jd", "easter_date", "easter_days", "frenchtojd", "gregoriantojd", "jddayofweek", "jdmonthname", "jdtofrench", "jdtogregorian", "jdtojewish", "jdtojulian", "jdtounix", "jewishtojd", "juliantojd", "unixtojd"]), ("Classes/Object", &["__autoload", "class_alias", "class_exists", "enum_exists", "get_called_class", "get_class", "get_class_methods", "get_class_vars", "get_declared_classes", "get_declared_interfaces", "get_declared_traits", "get_mangled_object_vars", "get_object_vars", "get_parent_class", "interface_exists", "is_a", "is_subclass_of", "method_exists", "property_exists", "trait_exists"]), ("CommonMark", &["CommonMark\\Parse", "CommonMark\\Render", "CommonMark\\Render\\HTML", "CommonMark\\Render\\Latex", "CommonMark\\Render\\Man", "CommonMark\\Render\\XML"]), ("Ctype", &["ctype_alnum", "ctype_alpha", "ctype_cntrl", "ctype_digit", "ctype_graph", "ctype_lower", "ctype_print", "ctype_punct", "ctype_space", "ctype_upper", "ctype_xdigit"]), ("DBA", &["dba_close", "dba_delete", "dba_exists", "dba_fetch", "dba_firstkey", "dba_handlers", "dba_insert", "dba_key_split", "dba_list", "dba_nextkey", "dba_open", "dba_optimize", "dba_popen", "dba_replace", "dba_sync"]), ("DOM", &["Dom\\import_simplexml", "dom_import_simplexml"]), ("Date/Time", &["checkdate", "date", "date_add", "date_create", "date_create_from_format", "date_create_immutable", "date_create_immutable_from_format", "date_date_set", "date_default_timezone_get", "date_default_timezone_set", "date_diff", "date_format", "date_get_last_errors", "date_interval_create_from_date_string", "date_interval_format", "date_isodate_set", "date_modify", "date_offset_get", "date_parse", "date_parse_from_format", "date_sub", "date_sun_info", "date_sunrise", "date_sunset", "date_time_set", "date_timestamp_get", "date_timestamp_set", "date_timezone_get", "date_timezone_set", "getdate", "gettimeofday", "gmdate", "gmmktime", "gmstrftime", "idate", "localtime", "microtime", "mktime", "strftime", "strptime", "strtotime", "time", "timezone_abbreviations_list", "timezone_identifiers_list", "timezone_location_get", "timezone_name_from_abbr", "timezone_name_get", "timezone_offset_get", "timezone_open", "timezone_transitions_get", "timezone_version_get"]), ("Direct IO", &["dio_close", "dio_fcntl", "dio_open", "dio_read", "dio_seek", "dio_stat", "dio_tcsetattr", "dio_truncate", "dio_write"]), ("Directory", &["chdir", "chroot", "closedir", "dir", "getcwd", "opendir", "readdir", "rewinddir", "scandir"]), ("Eio", &["eio_busy", "eio_cancel", "eio_chmod", "eio_chown", "eio_close", "eio_custom", "eio_dup2", "eio_event_loop", "eio_fallocate", "eio_fchmod", "eio_fchown", "eio_fdatasync", "eio_fstat", "eio_fstatvfs", "eio_fsync", "eio_ftruncate", "eio_futime", "eio_get_event_stream", "eio_get_last_error", "eio_grp", "eio_grp_add", "eio_grp_cancel", "eio_grp_limit", "eio_init", "eio_link", "eio_lstat", "eio_mkdir", "eio_mknod", "eio_nop", "eio_npending", "eio_nready", "eio_nreqs", "eio_nthreads", "eio_open", "eio_poll", "eio_read", "eio_readahead", "eio_readdir", "eio_readlink", "eio_realpath", "eio_rename", "eio_rmdir", "eio_seek", "eio_sendfile", "eio_set_max_idle", "eio_set_max_parallel", "eio_set_max_poll_reqs", "eio_set_max_poll_time", "eio_set_min_parallel", "eio_stat", "eio_statvfs", "eio_symlink", "eio_sync", "eio_sync_file_range", "eio_syncfs", "eio_truncate", "eio_unlink", "eio_utime", "eio_write"]), ("Enchant", &["enchant_broker_describe", "enchant_broker_dict_exists", "enchant_broker_free", "enchant_broker_free_dict", "enchant_broker_get_dict_path", "enchant_broker_get_error", "enchant_broker_init", "enchant_broker_list_dicts", "enchant_broker_request_dict", "enchant_broker_request_pwl_dict", "enchant_broker_set_dict_path", "enchant_broker_set_ordering", "enchant_dict_add", "enchant_dict_add_to_personal", "enchant_dict_add_to_session", "enchant_dict_check", "enchant_dict_describe", "enchant_dict_get_error", "enchant_dict_is_added", "enchant_dict_is_in_session", "enchant_dict_quick_check", "enchant_dict_store_replacement", "enchant_dict_suggest"]), ("Error Handling", &["debug_backtrace", "debug_print_backtrace", "error_clear_last", "error_get_last", "error_log", "error_reporting", "get_error_handler", "get_exception_handler", "restore_error_handler", "restore_exception_handler", "set_error_handler", "set_exception_handler", "trigger_error", "user_error"]), ("Exif", &["exif_imagetype", "exif_read_data", "exif_tagname", "exif_thumbnail", "read_exif_data"]), ("Expect", &["expect_expectl", "expect_popen"]), ("FDF", &["fdf_add_doc_javascript", "fdf_add_template", "fdf_close", "fdf_create", "fdf_enum_values", "fdf_errno", "fdf_error", "fdf_get_ap", "fdf_get_attachment", "fdf_get_encoding", "fdf_get_file", "fdf_get_flags", "fdf_get_opt", "fdf_get_status", "fdf_get_value", "fdf_get_version", "fdf_header", "fdf_next_field_name", "fdf_open", "fdf_open_string", "fdf_remove_item", "fdf_save", "fdf_save_string", "fdf_set_ap", "fdf_set_encoding", "fdf_set_file", "fdf_set_flags", "fdf_set_javascript_action", "fdf_set_on_import_javascript", "fdf_set_opt", "fdf_set_status", "fdf_set_submit_form_action", "fdf_set_target_frame", "fdf_set_value", "fdf_set_version"]), ("FPM", &["fastcgi_finish_request", "fpm_get_status"]), ("FTP", &["ftp_alloc", "ftp_append", "ftp_cdup", "ftp_chdir", "ftp_chmod", "ftp_close", "ftp_connect", "ftp_delete", "ftp_exec", "ftp_fget", "ftp_fput", "ftp_get", "ftp_get_option", "ftp_login", "ftp_mdtm", "ftp_mkdir", "ftp_mlsd", "ftp_nb_continue", "ftp_nb_fget", "ftp_nb_fput", "ftp_nb_get", "ftp_nb_put", "ftp_nlist", "ftp_pasv", "ftp_put", "ftp_pwd", "ftp_quit", "ftp_raw", "ftp_rawlist", "ftp_rename", "ftp_rmdir", "ftp_set_option", "ftp_site", "ftp_size", "ftp_ssl_connect", "ftp_systype"]), ("Fann", &["fann_cascadetrain_on_data", "fann_cascadetrain_on_file", "fann_clear_scaling_params", "fann_copy", "fann_create_from_file", "fann_create_shortcut", "fann_create_shortcut_array", "fann_create_sparse", "fann_create_sparse_array", "fann_create_standard", "fann_create_standard_array", "fann_create_train", "fann_create_train_from_callback", "fann_descale_input", "fann_descale_output", "fann_descale_train", "fann_destroy", "fann_destroy_train", "fann_duplicate_train_data", "fann_get_MSE", "fann_get_activation_function", "fann_get_activation_steepness", "fann_get_bias_array", "fann_get_bit_fail", "fann_get_bit_fail_limit", "fann_get_cascade_activation_functions", "fann_get_cascade_activation_functions_count", "fann_get_cascade_activation_steepnesses", "fann_get_cascade_activation_steepnesses_count", "fann_get_cascade_candidate_change_fraction", "fann_get_cascade_candidate_limit", "fann_get_cascade_candidate_stagnation_epochs", "fann_get_cascade_max_cand_epochs", "fann_get_cascade_max_out_epochs", "fann_get_cascade_min_cand_epochs", "fann_get_cascade_min_out_epochs", "fann_get_cascade_num_candidate_groups", "fann_get_cascade_num_candidates", "fann_get_cascade_output_change_fraction", "fann_get_cascade_output_stagnation_epochs", "fann_get_cascade_weight_multiplier", "fann_get_connection_array", "fann_get_connection_rate", "fann_get_errno", "fann_get_errstr", "fann_get_layer_array", "fann_get_learning_momentum", "fann_get_learning_rate", "fann_get_network_type", "fann_get_num_input", "fann_get_num_layers", "fann_get_num_output", "fann_get_quickprop_decay", "fann_get_quickprop_mu", "fann_get_rprop_decrease_factor", "fann_get_rprop_delta_max", "fann_get_rprop_delta_min", "fann_get_rprop_delta_zero", "fann_get_rprop_increase_factor", "fann_get_sarprop_step_error_shift", "fann_get_sarprop_step_error_threshold_factor", "fann_get_sarprop_temperature", "fann_get_sarprop_weight_decay_shift", "fann_get_total_connections", "fann_get_total_neurons", "fann_get_train_error_function", "fann_get_train_stop_function", "fann_get_training_algorithm", "fann_init_weights", "fann_length_train_data", "fann_merge_train_data", "fann_num_input_train_data", "fann_num_output_train_data", "fann_print_error", "fann_randomize_weights", "fann_read_train_from_file", "fann_reset_MSE", "fann_reset_errno", "fann_reset_errstr", "fann_run", "fann_save", "fann_save_train", "fann_scale_input", "fann_scale_input_train_data", "fann_scale_output", "fann_scale_output_train_data", "fann_scale_train", "fann_scale_train_data", "fann_set_activation_function", "fann_set_activation_function_hidden", "fann_set_activation_function_layer", "fann_set_activation_function_output", "fann_set_activation_steepness", "fann_set_activation_steepness_hidden", "fann_set_activation_steepness_layer", "fann_set_activation_steepness_output", "fann_set_bit_fail_limit", "fann_set_callback", "fann_set_cascade_activation_functions", "fann_set_cascade_activation_steepnesses", "fann_set_cascade_candidate_change_fraction", "fann_set_cascade_candidate_limit", "fann_set_cascade_candidate_stagnation_epochs", "fann_set_cascade_max_cand_epochs", "fann_set_cascade_max_out_epochs", "fann_set_cascade_min_cand_epochs", "fann_set_cascade_min_out_epochs", "fann_set_cascade_num_candidate_groups", "fann_set_cascade_output_change_fraction", "fann_set_cascade_output_stagnation_epochs", "fann_set_cascade_weight_multiplier", "fann_set_error_log", "fann_set_input_scaling_params", "fann_set_learning_momentum", "fann_set_learning_rate", "fann_set_output_scaling_params", "fann_set_quickprop_decay", "fann_set_quickprop_mu", "fann_set_rprop_decrease_factor", "fann_set_rprop_delta_max", "fann_set_rprop_delta_min", "fann_set_rprop_delta_zero", "fann_set_rprop_increase_factor", "fann_set_sarprop_step_error_shift", "fann_set_sarprop_step_error_threshold_factor", "fann_set_sarprop_temperature", "fann_set_sarprop_weight_decay_shift", "fann_set_scaling_params", "fann_set_train_error_function", "fann_set_train_stop_function", "fann_set_training_algorithm", "fann_set_weight", "fann_set_weight_array", "fann_shuffle_train_data", "fann_subset_train_data", "fann_test", "fann_test_data", "fann_train", "fann_train_epoch", "fann_train_on_data", "fann_train_on_file"]), ("Fileinfo", &["finfo_buffer", "finfo_close", "finfo_file", "finfo_open", "finfo_set_flags", "mime_content_type"]), ("Filesystem", &["basename", "chgrp", "chmod", "chown", "clearstatcache", "copy", "delete", "dirname", "disk_free_space", "disk_total_space", "diskfreespace", "fclose", "fdatasync", "feof", "fflush", "fgetc", "fgetcsv", "fgets", "fgetss", "file", "file_exists", "file_get_contents", "file_put_contents", "fileatime", "filectime", "filegroup", "fileinode", "filemtime", "fileowner", "fileperms", "filesize", "filetype", "flock", "fnmatch", "fopen", "fpassthru", "fputcsv", "fputs", "fread", "fscanf", "fseek", "fstat", "fsync", "ftell", "ftruncate", "fwrite", "glob", "is_dir", "is_executable", "is_file", "is_link", "is_readable", "is_uploaded_file", "is_writable", "is_writeable", "lchgrp", "lchown", "link", "linkinfo", "lstat", "mkdir", "move_uploaded_file", "parse_ini_file", "parse_ini_string", "pathinfo", "pclose", "popen", "readfile", "readlink", "realpath", "realpath_cache_get", "realpath_cache_size", "rename", "rewind", "rmdir", "set_file_buffer", "stat", "symlink", "tempnam", "tmpfile", "touch", "umask", "unlink"]), ("Filter", &["filter_has_var", "filter_id", "filter_input", "filter_input_array", "filter_list", "filter_var", "filter_var_array"]), ("Firebird/InterBase", &["fbird_add_user", "fbird_affected_rows", "fbird_backup", "fbird_blob_add", "fbird_blob_cancel", "fbird_blob_close", "fbird_blob_create", "fbird_blob_echo", "fbird_blob_get", "fbird_blob_import", "fbird_blob_info", "fbird_blob_open", "fbird_close", "fbird_commit", "fbird_commit_ret", "fbird_connect", "fbird_db_info", "fbird_delete_user", "fbird_drop_db", "fbird_errcode", "fbird_errmsg", "fbird_execute", "fbird_fetch_assoc", "fbird_fetch_object", "fbird_fetch_row", "fbird_field_info", "fbird_free_event_handler", "fbird_free_query", "fbird_free_result", "fbird_gen_id", "fbird_maintain_db", "fbird_modify_user", "fbird_name_result", "fbird_num_fields", "fbird_num_params", "fbird_param_info", "fbird_pconnect", "fbird_prepare", "fbird_query", "fbird_restore", "fbird_rollback", "fbird_rollback_ret", "fbird_server_info", "fbird_service_attach", "fbird_service_detach", "fbird_set_event_handler", "fbird_trans", "fbird_wait_event", "ibase_add_user", "ibase_affected_rows", "ibase_backup", "ibase_blob_add", "ibase_blob_cancel", "ibase_blob_close", "ibase_blob_create", "ibase_blob_echo", "ibase_blob_get", "ibase_blob_import", "ibase_blob_info", "ibase_blob_open", "ibase_close", "ibase_commit", "ibase_commit_ret", "ibase_connect", "ibase_db_info", "ibase_delete_user", "ibase_drop_db", "ibase_errcode", "ibase_errmsg", "ibase_execute", "ibase_fetch_assoc", "ibase_fetch_object", "ibase_fetch_row", "ibase_field_info", "ibase_free_event_handler", "ibase_free_query", "ibase_free_result", "ibase_gen_id", "ibase_maintain_db", "ibase_modify_user", "ibase_name_result", "ibase_num_fields", "ibase_num_params", "ibase_param_info", "ibase_pconnect", "ibase_prepare", "ibase_query", "ibase_restore", "ibase_rollback", "ibase_rollback_ret", "ibase_server_info", "ibase_service_attach", "ibase_service_detach", "ibase_set_event_handler", "ibase_trans", "ibase_wait_event"]), ("Function handling", &["call_user_func", "call_user_func_array", "create_function", "forward_static_call", "forward_static_call_array", "func_get_arg", "func_get_args", "func_num_args", "function_exists", "get_defined_functions", "register_shutdown_function", "register_tick_function", "unregister_tick_function"]), ("GD and Image", &["gd_info", "getimagesize", "getimagesizefromstring", "image2wbmp", "image_type_to_extension", "image_type_to_mime_type", "imageaffine", "imageaffinematrixconcat", "imageaffinematrixget", "imagealphablending", "imageantialias", "imagearc", "imageavif", "imagebmp", "imagechar", "imagecharup", "imagecolorallocate", "imagecolorallocatealpha", "imagecolorat", "imagecolorclosest", "imagecolorclosestalpha", "imagecolorclosesthwb", "imagecolordeallocate", "imagecolorexact", "imagecolorexactalpha", "imagecolormatch", "imagecolorresolve", "imagecolorresolvealpha", "imagecolorset", "imagecolorsforindex", "imagecolorstotal", "imagecolortransparent", "imageconvolution", "imagecopy", "imagecopymerge", "imagecopymergegray", "imagecopyresampled", "imagecopyresized", "imagecreate", "imagecreatefromavif", "imagecreatefrombmp", "imagecreatefromgd", "imagecreatefromgd2", "imagecreatefromgd2part", "imagecreatefromgif", "imagecreatefromjpeg", "imagecreatefrompng", "imagecreatefromstring", "imagecreatefromtga", "imagecreatefromwbmp", "imagecreatefromwebp", "imagecreatefromxbm", "imagecreatefromxpm", "imagecreatetruecolor", "imagecrop", "imagecropauto", "imagedashedline", "imagedestroy", "imageellipse", "imagefill", "imagefilledarc", "imagefilledellipse", "imagefilledpolygon", "imagefilledrectangle", "imagefilltoborder", "imagefilter", "imageflip", "imagefontheight", "imagefontwidth", "imageftbbox", "imagefttext", "imagegammacorrect", "imagegd", "imagegd2", "imagegetclip", "imagegetinterpolation", "imagegif", "imagegrabscreen", "imagegrabwindow", "imageinterlace", "imageistruecolor", "imagejpeg", "imagelayereffect", "imageline", "imageloadfont", "imageopenpolygon", "imagepalettecopy", "imagepalettetotruecolor", "imagepng", "imagepolygon", "imagerectangle", "imageresolution", "imagerotate", "imagesavealpha", "imagescale", "imagesetbrush", "imagesetclip", "imagesetinterpolation", "imagesetpixel", "imagesetstyle", "imagesetthickness", "imagesettile", "imagestring", "imagestringup", "imagesx", "imagesy", "imagetruecolortopalette", "imagettfbbox", "imagettftext", "imagetypes", "imagewbmp", "imagewebp", "imagexbm", "iptcembed", "iptcparse", "jpeg2wbmp", "png2wbmp"]), ("GMP", &["gmp_abs", "gmp_add", "gmp_and", "gmp_binomial", "gmp_clrbit", "gmp_cmp", "gmp_com", "gmp_div", "gmp_div_q", "gmp_div_qr", "gmp_div_r", "gmp_divexact", "gmp_export", "gmp_fact", "gmp_gcd", "gmp_gcdext", "gmp_hamdist", "gmp_import", "gmp_init", "gmp_intval", "gmp_invert", "gmp_jacobi", "gmp_kronecker", "gmp_lcm", "gmp_legendre", "gmp_mod", "gmp_mul", "gmp_neg", "gmp_nextprime", "gmp_or", "gmp_perfect_power", "gmp_perfect_square", "gmp_popcount", "gmp_pow", "gmp_powm", "gmp_prob_prime", "gmp_random", "gmp_random_bits", "gmp_random_range", "gmp_random_seed", "gmp_root", "gmp_rootrem", "gmp_scan0", "gmp_scan1", "gmp_setbit", "gmp_sign", "gmp_sqrt", "gmp_sqrtrem", "gmp_strval", "gmp_sub", "gmp_testbit", "gmp_xor"]), ("GeoIP", &["geoip_asnum_by_name", "geoip_continent_code_by_name", "geoip_country_code3_by_name", "geoip_country_code_by_name", "geoip_country_name_by_name", "geoip_database_info", "geoip_db_avail", "geoip_db_filename", "geoip_db_get_all_info", "geoip_domain_by_name", "geoip_id_by_name", "geoip_isp_by_name", "geoip_netspeedcell_by_name", "geoip_org_by_name", "geoip_record_by_name", "geoip_region_by_name", "geoip_region_name_by_code", "geoip_setup_custom_directory", "geoip_time_zone_by_country_and_region"]), ("Gettext", &["_", "bind_textdomain_codeset", "bindtextdomain", "dcgettext", "dcngettext", "dgettext", "dngettext", "gettext", "ngettext", "textdomain"]), ("GnuPG", &["gnupg_adddecryptkey", "gnupg_addencryptkey", "gnupg_addsignkey", "gnupg_cleardecryptkeys", "gnupg_clearencryptkeys", "gnupg_clearsignkeys", "gnupg_decrypt", "gnupg_decryptverify", "gnupg_deletekey", "gnupg_encrypt", "gnupg_encryptsign", "gnupg_export", "gnupg_getengineinfo", "gnupg_geterror", "gnupg_geterrorinfo", "gnupg_getprotocol", "gnupg_gettrustlist", "gnupg_import", "gnupg_init", "gnupg_keyinfo", "gnupg_listsignatures", "gnupg_setarmor", "gnupg_seterrormode", "gnupg_setsignmode", "gnupg_sign", "gnupg_verify"]), ("Grapheme", &["grapheme_extract", "grapheme_str_split", "grapheme_stripos", "grapheme_stristr", "grapheme_strlen", "grapheme_strpos", "grapheme_strripos", "grapheme_strrpos", "grapheme_strstr", "grapheme_substr"]), ("Hash", &["hash", "hash_algos", "hash_copy", "hash_equals", "hash_file", "hash_final", "hash_hkdf", "hash_hmac", "hash_hmac_algos", "hash_hmac_file", "hash_init", "hash_pbkdf2", "hash_update", "hash_update_file", "hash_update_stream"]), ("IBM DB2", &["db2_autocommit", "db2_bind_param", "db2_client_info", "db2_close", "db2_column_privileges", "db2_columns", "db2_commit", "db2_conn_error", "db2_conn_errormsg", "db2_connect", "db2_cursor_type", "db2_escape_string", "db2_exec", "db2_execute", "db2_fetch_array", "db2_fetch_assoc", "db2_fetch_both", "db2_fetch_object", "db2_fetch_row", "db2_field_display_size", "db2_field_name", "db2_field_num", "db2_field_precision", "db2_field_scale", "db2_field_type", "db2_field_width", "db2_foreign_keys", "db2_free_result", "db2_free_stmt", "db2_get_option", "db2_last_insert_id", "db2_lob_read", "db2_next_result", "db2_num_fields", "db2_num_rows", "db2_pclose", "db2_pconnect", "db2_prepare", "db2_primary_keys", "db2_procedure_columns", "db2_procedures", "db2_result", "db2_rollback", "db2_server_info", "db2_set_option", "db2_special_columns", "db2_statistics", "db2_stmt_error", "db2_stmt_errormsg", "db2_table_privileges", "db2_tables"]), ("IDN", &["idn_to_ascii", "idn_to_utf8"]), ("IMAP", &["imap_8bit", "imap_alerts", "imap_append", "imap_base64", "imap_binary", "imap_body", "imap_bodystruct", "imap_check", "imap_clearflag_full", "imap_close", "imap_create", "imap_createmailbox", "imap_delete", "imap_deletemailbox", "imap_errors", "imap_expunge", "imap_fetch_overview", "imap_fetchbody", "imap_fetchheader", "imap_fetchmime", "imap_fetchstructure", "imap_fetchtext", "imap_gc", "imap_get_quota", "imap_get_quotaroot", "imap_getacl", "imap_getmailboxes", "imap_getsubscribed", "imap_header", "imap_headerinfo", "imap_headers", "imap_is_open", "imap_last_error", "imap_list", "imap_listmailbox", "imap_listscan", "imap_listsubscribed", "imap_lsub", "imap_mail", "imap_mail_compose", "imap_mail_copy", "imap_mail_move", "imap_mailboxmsginfo", "imap_mime_header_decode", "imap_msgno", "imap_mutf7_to_utf8", "imap_num_msg", "imap_num_recent", "imap_open", "imap_ping", "imap_qprint", "imap_rename", "imap_renamemailbox", "imap_reopen", "imap_rfc822_parse_adrlist", "imap_rfc822_parse_headers", "imap_rfc822_write_address", "imap_savebody", "imap_scan", "imap_scanmailbox", "imap_search", "imap_set_quota", "imap_setacl", "imap_setflag_full", "imap_sort", "imap_status", "imap_subscribe", "imap_thread", "imap_timeout", "imap_uid", "imap_undelete", "imap_unsubscribe", "imap_utf7_decode", "imap_utf7_encode", "imap_utf8", "imap_utf8_to_mutf7"]), ("Igbinary", &["igbinary_serialize", "igbinary_unserialize"]), ("Inotify", &["inotify_add_watch", "inotify_init", "inotify_queue_len", "inotify_read", "inotify_rm_watch"]), ("JSON", &["json_decode", "json_encode", "json_last_error", "json_last_error_msg", "json_validate"]), ("LDAP", &["ldap_8859_to_t61", "ldap_add", "ldap_add_ext", "ldap_bind", "ldap_bind_ext", "ldap_close", "ldap_compare", "ldap_connect", "ldap_connect_wallet", "ldap_control_paged_result", "ldap_control_paged_result_response", "ldap_count_entries", "ldap_count_references", "ldap_delete", "ldap_delete_ext", "ldap_dn2ufn", "ldap_err2str", "ldap_errno", "ldap_error", "ldap_escape", "ldap_exop", "ldap_exop_passwd", "ldap_exop_refresh", "ldap_exop_sync", "ldap_exop_whoami", "ldap_explode_dn", "ldap_first_attribute", "ldap_first_entry", "ldap_first_reference", "ldap_free_result", "ldap_get_attributes", "ldap_get_dn", "ldap_get_entries", "ldap_get_option", "ldap_get_values", "ldap_get_values_len", "ldap_list", "ldap_mod_add", "ldap_mod_add_ext", "ldap_mod_del", "ldap_mod_del_ext", "ldap_mod_replace", "ldap_mod_replace_ext", "ldap_modify", "ldap_modify_batch", "ldap_next_attribute", "ldap_next_entry", "ldap_next_reference", "ldap_parse_exop", "ldap_parse_reference", "ldap_parse_result", "ldap_read", "ldap_rename", "ldap_rename_ext", "ldap_sasl_bind", "ldap_search", "ldap_set_option", "ldap_set_rebind_proc", "ldap_sort", "ldap_start_tls", "ldap_t61_to_8859", "ldap_unbind"]), ("LZF", &["lzf_compress", "lzf_decompress", "lzf_optimized_for"]), ("Mail", &["ezmlm_hash", "mail"]), ("Mailparse", &["mailparse_determine_best_xfer_encoding", "mailparse_msg_create", "mailparse_msg_extract_part", "mailparse_msg_extract_part_file", "mailparse_msg_extract_whole_part_file", "mailparse_msg_free", "mailparse_msg_get_part", "mailparse_msg_get_part_data", "mailparse_msg_get_structure", "mailparse_msg_parse", "mailparse_msg_parse_file", "mailparse_rfc822_parse_addresses", "mailparse_stream_encode", "mailparse_uudecode_all"]), ("Math", &["abs", "acos", "acosh", "asin", "asinh", "atan", "atan2", "atanh", "base_convert", "bindec", "ceil", "cos", "cosh", "decbin", "dechex", "decoct", "deg2rad", "exp", "expm1", "fdiv", "floor", "fmod", "fpow", "hexdec", "hypot", "intdiv", "is_finite", "is_infinite", "is_nan", "log", "log10", "log1p", "max", "min", "octdec", "pi", "pow", "rad2deg", "round", "sin", "sinh", "sqrt", "tan", "tanh"]), ("Mcrypt", &["mcrypt_create_iv", "mcrypt_decrypt", "mcrypt_enc_get_algorithms_name", "mcrypt_enc_get_block_size", "mcrypt_enc_get_iv_size", "mcrypt_enc_get_key_size", "mcrypt_enc_get_modes_name", "mcrypt_enc_get_supported_key_sizes", "mcrypt_enc_is_block_algorithm", "mcrypt_enc_is_block_algorithm_mode", "mcrypt_enc_is_block_mode", "mcrypt_enc_self_test", "mcrypt_encrypt", "mcrypt_generic", "mcrypt_generic_deinit", "mcrypt_generic_init", "mcrypt_get_block_size", "mcrypt_get_cipher_name", "mcrypt_get_iv_size", "mcrypt_get_key_size", "mcrypt_list_algorithms", "mcrypt_list_modes", "mcrypt_module_close", "mcrypt_module_get_algo_block_size", "mcrypt_module_get_algo_key_size", "mcrypt_module_get_supported_key_sizes", "mcrypt_module_is_block_algorithm", "mcrypt_module_is_block_algorithm_mode", "mcrypt_module_is_block_mode", "mcrypt_module_open", "mcrypt_module_self_test", "mdecrypt_generic"]), ("Memcache", &["memcache_debug"]), ("Mhash", &["mhash", "mhash_count", "mhash_get_block_size", "mhash_get_hash_name", "mhash_keygen_s2k"]), ("Misc.", &["__halt_compiler", "connection_aborted", "connection_status", "constant", "define", "defined", "die", "eval", "exit", "get_browser", "highlight_file", "highlight_string", "hrtime", "ignore_user_abort", "pack", "php_strip_whitespace", "sapi_windows_cp_conv", "sapi_windows_cp_get", "sapi_windows_cp_is_utf8", "sapi_windows_cp_set", "sapi_windows_generate_ctrl_event", "sapi_windows_set_ctrl_handler", "sapi_windows_vt100_support", "show_source", "sleep", "sys_getloadavg", "time_nanosleep", "time_sleep_until", "uniqid", "unpack", "usleep"]), ("Multibyte String", &["mb_check_encoding", "mb_chr", "mb_convert_case", "mb_convert_encoding", "mb_convert_kana", "mb_convert_variables", "mb_decode_mimeheader", "mb_decode_numericentity", "mb_detect_encoding", "mb_detect_order", "mb_encode_mimeheader", "mb_encode_numericentity", "mb_encoding_aliases", "mb_ereg", "mb_ereg_match", "mb_ereg_replace", "mb_ereg_replace_callback", "mb_ereg_search", "mb_ereg_search_getpos", "mb_ereg_search_getregs", "mb_ereg_search_init", "mb_ereg_search_pos", "mb_ereg_search_regs", "mb_ereg_search_setpos", "mb_eregi", "mb_eregi_replace", "mb_get_info", "mb_http_input", "mb_http_output", "mb_internal_encoding", "mb_language", "mb_lcfirst", "mb_list_encodings", "mb_ltrim", "mb_ord", "mb_output_handler", "mb_parse_str", "mb_preferred_mime_name", "mb_regex_encoding", "mb_regex_set_options", "mb_rtrim", "mb_scrub", "mb_send_mail", "mb_split", "mb_str_pad", "mb_str_split", "mb_strcut", "mb_strimwidth", "mb_stripos", "mb_stristr", "mb_strlen", "mb_strpos", "mb_strrchr", "mb_strrichr", "mb_strripos", "mb_strrpos", "mb_strstr", "mb_strtolower", "mb_strtoupper", "mb_strwidth", "mb_substitute_character", "mb_substr", "mb_substr_count", "mb_trim", "mb_ucfirst"]), ("MySQL", &["mysql_affected_rows", "mysql_client_encoding", "mysql_close", "mysql_connect", "mysql_create_db", "mysql_data_seek", "mysql_db_name", "mysql_db_query", "mysql_drop_db", "mysql_errno", "mysql_error", "mysql_escape_string", "mysql_fetch_array", "mysql_fetch_assoc", "mysql_fetch_field", "mysql_fetch_lengths", "mysql_fetch_object", "mysql_fetch_row", "mysql_field_flags", "mysql_field_len", "mysql_field_name", "mysql_field_seek", "mysql_field_table", "mysql_field_type", "mysql_free_result", "mysql_get_client_info", "mysql_get_host_info", "mysql_get_proto_info", "mysql_get_server_info", "mysql_info", "mysql_insert_id", "mysql_list_dbs", "mysql_list_fields", "mysql_list_processes", "mysql_list_tables", "mysql_num_fields", "mysql_num_rows", "mysql_pconnect", "mysql_ping", "mysql_query", "mysql_real_escape_string", "mysql_result", "mysql_select_db", "mysql_set_charset", "mysql_stat", "mysql_tablename", "mysql_thread_id", "mysql_unbuffered_query"]), ("Mysql_xdevapi", &["expression", "getSession"]), ("Network", &["checkdnsrr", "closelog", "dns_check_record", "dns_get_mx", "dns_get_record", "fsockopen", "gethostbyaddr", "gethostbyname", "gethostbynamel", "gethostname", "getmxrr", "getprotobyname", "getprotobynumber", "getservbyname", "getservbyport", "header", "header_register_callback", "header_remove", "headers_list", "headers_sent", "http_clear_last_response_headers", "http_get_last_response_headers", "http_response_code", "inet_ntop", "inet_pton", "ip2long", "long2ip", "net_get_interfaces", "openlog", "pfsockopen", "request_parse_body", "setcookie", "setrawcookie", "socket_get_status", "socket_set_blocking", "socket_set_timeout", "syslog"]), ("OAuth", &["oauth_get_sbs", "oauth_urlencode"]), ("OCI8", &["oci_bind_array_by_name", "oci_bind_by_name", "oci_cancel", "oci_client_version", "oci_close", "oci_commit", "oci_connect", "oci_define_by_name", "oci_error", "oci_execute", "oci_fetch", "oci_fetch_all", "oci_fetch_array", "oci_fetch_assoc", "oci_fetch_object", "oci_fetch_row", "oci_field_is_null", "oci_field_name", "oci_field_precision", "oci_field_scale", "oci_field_size", "oci_field_type", "oci_field_type_raw", "oci_free_descriptor", "oci_free_statement", "oci_get_implicit_resultset", "oci_lob_copy", "oci_lob_is_equal", "oci_new_collection", "oci_new_connect", "oci_new_cursor", "oci_new_descriptor", "oci_num_fields", "oci_num_rows", "oci_parse", "oci_password_change", "oci_pconnect", "oci_register_taf_callback", "oci_result", "oci_rollback", "oci_server_version", "oci_set_action", "oci_set_call_timeout", "oci_set_client_identifier", "oci_set_client_info", "oci_set_db_operation", "oci_set_edition", "oci_set_module_name", "oci_set_prefetch", "oci_set_prefetch_lob", "oci_statement_type", "oci_unregister_taf_callback"]), ("ODBC", &["odbc_autocommit", "odbc_binmode", "odbc_close", "odbc_close_all", "odbc_columnprivileges", "odbc_columns", "odbc_commit", "odbc_connect", "odbc_connection_string_is_quoted", "odbc_connection_string_quote", "odbc_connection_string_should_quote", "odbc_cursor", "odbc_data_source", "odbc_do", "odbc_error", "odbc_errormsg", "odbc_exec", "odbc_execute", "odbc_fetch_array", "odbc_fetch_into", "odbc_fetch_object", "odbc_fetch_row", "odbc_field_len", "odbc_field_name", "odbc_field_num", "odbc_field_precision", "odbc_field_scale", "odbc_field_type", "odbc_foreignkeys", "odbc_free_result", "odbc_gettypeinfo", "odbc_longreadlen", "odbc_next_result", "odbc_num_fields", "odbc_num_rows", "odbc_pconnect", "odbc_prepare", "odbc_primarykeys", "odbc_procedurecolumns", "odbc_procedures", "odbc_result", "odbc_result_all", "odbc_rollback", "odbc_setoption", "odbc_specialcolumns", "odbc_statistics", "odbc_tableprivileges", "odbc_tables"]), ("OPcache", &["opcache_compile_file", "opcache_get_configuration", "opcache_get_status", "opcache_invalidate", "opcache_is_script_cached", "opcache_reset"]), ("OpenAL", &["openal_buffer_create", "openal_buffer_data", "openal_buffer_destroy", "openal_buffer_get", "openal_buffer_loadwav", "openal_context_create", "openal_context_current", "openal_context_destroy", "openal_context_process", "openal_context_suspend", "openal_device_close", "openal_device_open", "openal_listener_get", "openal_listener_set", "openal_source_create", "openal_source_destroy", "openal_source_get", "openal_source_pause", "openal_source_play", "openal_source_rewind", "openal_source_set", "openal_source_stop", "openal_stream"]), ("OpenSSL", &["openssl_cipher_iv_length", "openssl_cipher_key_length", "openssl_cms_decrypt", "openssl_cms_encrypt", "openssl_cms_read", "openssl_cms_sign", "openssl_cms_verify", "openssl_csr_export", "openssl_csr_export_to_file", "openssl_csr_get_public_key", "openssl_csr_get_subject", "openssl_csr_new", "openssl_csr_sign", "openssl_decrypt", "openssl_dh_compute_key", "openssl_digest", "openssl_encrypt", "openssl_error_string", "openssl_free_key", "openssl_get_cert_locations", "openssl_get_cipher_methods", "openssl_get_curve_names", "openssl_get_md_methods", "openssl_get_privatekey", "openssl_get_publickey", "openssl_open", "openssl_pbkdf2", "openssl_pkcs12_export", "openssl_pkcs12_export_to_file", "openssl_pkcs12_read", "openssl_pkcs7_decrypt", "openssl_pkcs7_encrypt", "openssl_pkcs7_read", "openssl_pkcs7_sign", "openssl_pkcs7_verify", "openssl_pkey_derive", "openssl_pkey_export", "openssl_pkey_export_to_file", "openssl_pkey_free", "openssl_pkey_get_details", "openssl_pkey_get_private", "openssl_pkey_get_public", "openssl_pkey_new", "openssl_private_decrypt", "openssl_private_encrypt", "openssl_public_decrypt", "openssl_public_encrypt", "openssl_random_pseudo_bytes", "openssl_seal", "openssl_sign", "openssl_spki_export", "openssl_spki_export_challenge", "openssl_spki_new", "openssl_spki_verify", "openssl_verify", "openssl_x509_check_private_key", "openssl_x509_checkpurpose", "openssl_x509_export", "openssl_x509_export_to_file", "openssl_x509_fingerprint", "openssl_x509_free", "openssl_x509_parse", "openssl_x509_read", "openssl_x509_verify"]), ("Output Control", &["flush", "ob_clean", "ob_end_clean", "ob_end_flush", "ob_flush", "ob_get_clean", "ob_get_contents", "ob_get_flush", "ob_get_length", "ob_get_level", "ob_get_status", "ob_implicit_flush", "ob_list_handlers", "ob_start", "output_add_rewrite_var", "output_reset_rewrite_vars"]), ("PCNTL", &["pcntl_alarm", "pcntl_async_signals", "pcntl_errno", "pcntl_exec", "pcntl_fork", "pcntl_get_last_error", "pcntl_getcpuaffinity", "pcntl_getpriority", "pcntl_rfork", "pcntl_setcpuaffinity", "pcntl_setpriority", "pcntl_signal", "pcntl_signal_dispatch", "pcntl_signal_get_handler", "pcntl_sigprocmask", "pcntl_sigtimedwait", "pcntl_sigwaitinfo", "pcntl_strerror", "pcntl_unshare", "pcntl_wait", "pcntl_waitid", "pcntl_waitpid", "pcntl_wexitstatus", "pcntl_wifexited", "pcntl_wifsignaled", "pcntl_wifstopped", "pcntl_wstopsig", "pcntl_wtermsig"]), ("PCRE", &["preg_filter", "preg_grep", "preg_last_error", "preg_last_error_msg", "preg_match", "preg_match_all", "preg_quote", "preg_replace", "preg_replace_callback", "preg_replace_callback_array", "preg_split"]), ("PHP Options/Info", &["assert", "assert_options", "cli_get_process_title", "cli_set_process_title", "dl", "extension_loaded", "gc_collect_cycles", "gc_disable", "gc_enable", "gc_enabled", "gc_mem_caches", "gc_status", "get_cfg_var", "get_current_user", "get_defined_constants", "get_extension_funcs", "get_include_path", "get_included_files", "get_loaded_extensions", "get_magic_quotes_gpc", "get_magic_quotes_runtime", "get_required_files", "get_resources", "getenv", "getlastmod", "getmygid", "getmyinode", "getmypid", "getmyuid", "getopt", "getrusage", "ini_alter", "ini_get", "ini_get_all", "ini_parse_quantity", "ini_restore", "ini_set", "memory_get_peak_usage", "memory_get_usage", "memory_reset_peak_usage", "php_ini_loaded_file", "php_ini_scanned_files", "php_sapi_name", "php_uname", "phpcredits", "phpinfo", "phpversion", "putenv", "restore_include_path", "set_include_path", "set_time_limit", "sys_get_temp_dir", "version_compare", "zend_thread_id", "zend_version"]), ("POSIX", &["posix_access", "posix_ctermid", "posix_eaccess", "posix_errno", "posix_fpathconf", "posix_get_last_error", "posix_getcwd", "posix_getegid", "posix_geteuid", "posix_getgid", "posix_getgrgid", "posix_getgrnam", "posix_getgroups", "posix_getlogin", "posix_getpgid", "posix_getpgrp", "posix_getpid", "posix_getppid", "posix_getpwnam", "posix_getpwuid", "posix_getrlimit", "posix_getsid", "posix_getuid", "posix_initgroups", "posix_isatty", "posix_kill", "posix_mkfifo", "posix_mknod", "posix_pathconf", "posix_setegid", "posix_seteuid", "posix_setgid", "posix_setpgid", "posix_setrlimit", "posix_setsid", "posix_setuid", "posix_strerror", "posix_sysconf", "posix_times", "posix_ttyname", "posix_uname"]), ("PS", &["ps_add_bookmark", "ps_add_launchlink", "ps_add_locallink", "ps_add_note", "ps_add_pdflink", "ps_add_weblink", "ps_arc", "ps_arcn", "ps_begin_page", "ps_begin_pattern", "ps_begin_template", "ps_circle", "ps_clip", "ps_close", "ps_close_image", "ps_closepath", "ps_closepath_stroke", "ps_continue_text", "ps_curveto", "ps_delete", "ps_end_page", "ps_end_pattern", "ps_end_template", "ps_fill", "ps_fill_stroke", "ps_findfont", "ps_get_buffer", "ps_get_parameter", "ps_get_value", "ps_hyphenate", "ps_include_file", "ps_lineto", "ps_makespotcolor", "ps_moveto", "ps_new", "ps_open_file", "ps_open_image", "ps_open_image_file", "ps_open_memory_image", "ps_place_image", "ps_rect", "ps_restore", "ps_rotate", "ps_save", "ps_scale", "ps_set_border_color", "ps_set_border_dash", "ps_set_border_style", "ps_set_info", "ps_set_parameter", "ps_set_text_pos", "ps_set_value", "ps_setcolor", "ps_setdash", "ps_setflat", "ps_setfont", "ps_setgray", "ps_setlinecap", "ps_setlinejoin", "ps_setlinewidth", "ps_setmiterlimit", "ps_setoverprintmode", "ps_setpolydash", "ps_shading", "ps_shading_pattern", "ps_shfill", "ps_show", "ps_show2", "ps_show_boxed", "ps_show_xy", "ps_show_xy2", "ps_string_geometry", "ps_stringwidth", "ps_stroke", "ps_symbol", "ps_symbol_name", "ps_symbol_width", "ps_translate"]), ("Password Hashing", &["password_algos", "password_get_info", "password_hash", "password_needs_rehash", "password_verify"]), ("PostgreSQL", &["pg_affected_rows", "pg_cancel_query", "pg_client_encoding", "pg_close", "pg_connect", "pg_connect_poll", "pg_connection_busy", "pg_connection_reset", "pg_connection_status", "pg_consume_input", "pg_convert", "pg_copy_from", "pg_copy_to", "pg_dbname", "pg_delete", "pg_end_copy", "pg_escape_bytea", "pg_escape_identifier", "pg_escape_literal", "pg_escape_string", "pg_execute", "pg_fetch_all", "pg_fetch_all_columns", "pg_fetch_array", "pg_fetch_assoc", "pg_fetch_object", "pg_fetch_result", "pg_fetch_row", "pg_field_is_null", "pg_field_name", "pg_field_num", "pg_field_prtlen", "pg_field_size", "pg_field_table", "pg_field_type", "pg_field_type_oid", "pg_flush", "pg_free_result", "pg_get_notify", "pg_get_pid", "pg_get_result", "pg_host", "pg_insert", "pg_last_error", "pg_last_notice", "pg_last_oid", "pg_lo_close", "pg_lo_create", "pg_lo_export", "pg_lo_import", "pg_lo_open", "pg_lo_read", "pg_lo_read_all", "pg_lo_seek", "pg_lo_tell", "pg_lo_truncate", "pg_lo_unlink", "pg_lo_write", "pg_meta_data", "pg_num_fields", "pg_num_rows", "pg_options", "pg_parameter_status", "pg_pconnect", "pg_ping", "pg_port", "pg_prepare", "pg_put_line", "pg_query", "pg_query_params", "pg_result_error", "pg_result_error_field", "pg_result_memory_size", "pg_result_seek", "pg_result_status", "pg_select", "pg_send_execute", "pg_send_prepare", "pg_send_query", "pg_send_query_params", "pg_set_chunked_rows_size", "pg_set_client_encoding", "pg_set_error_context_visibility", "pg_set_error_verbosity", "pg_socket", "pg_trace", "pg_transaction_status", "pg_tty", "pg_unescape_bytea", "pg_untrace", "pg_update", "pg_version"]), ("Program execution", &["escapeshellarg", "escapeshellcmd", "exec", "passthru", "proc_close", "proc_get_status", "proc_nice", "proc_open", "proc_terminate", "shell_exec", "system"]), ("Pspell", &["pspell_add_to_personal", "pspell_add_to_session", "pspell_check", "pspell_clear_session", "pspell_config_create", "pspell_config_data_dir", "pspell_config_dict_dir", "pspell_config_ignore", "pspell_config_mode", "pspell_config_personal", "pspell_config_repl", "pspell_config_runtogether", "pspell_config_save_repl", "pspell_new", "pspell_new_config", "pspell_new_personal", "pspell_save_wordlist", "pspell_store_replacement", "pspell_suggest"]), ("RRD", &["rrd_create", "rrd_error", "rrd_fetch", "rrd_first", "rrd_graph", "rrd_info", "rrd_last", "rrd_lastupdate", "rrd_restore", "rrd_tune", "rrd_update", "rrd_version", "rrd_xport", "rrdc_disconnect"]), ("Radius", &["radius_acct_open", "radius_add_server", "radius_auth_open", "radius_close", "radius_config", "radius_create_request", "radius_cvt_addr", "radius_cvt_int", "radius_cvt_string", "radius_demangle", "radius_demangle_mppe_key", "radius_get_attr", "radius_get_tagged_attr_data", "radius_get_tagged_attr_tag", "radius_get_vendor_attr", "radius_put_addr", "radius_put_attr", "radius_put_int", "radius_put_string", "radius_put_vendor_addr", "radius_put_vendor_attr", "radius_put_vendor_int", "radius_put_vendor_string", "radius_request_authenticator", "radius_salt_encrypt_attr", "radius_send_request", "radius_server_secret", "radius_strerror"]), ("Random", &["getrandmax", "lcg_value", "mt_getrandmax", "mt_rand", "mt_srand", "rand", "random_bytes", "random_int", "srand"]), ("Rar", &["rar_wrapper_cache_stats"]), ("Readline", &["readline", "readline_add_history", "readline_callback_handler_install", "readline_callback_handler_remove", "readline_callback_read_char", "readline_clear_history", "readline_completion_function", "readline_info", "readline_list_history", "readline_on_new_line", "readline_read_history", "readline_redisplay", "readline_write_history"]), ("Recode", &["recode", "recode_file", "recode_string"]), ("Rnp", &["rnp_backend_string", "rnp_backend_version", "rnp_decrypt", "rnp_dump_packets", "rnp_dump_packets_to_json", "rnp_ffi_create", "rnp_ffi_destroy", "rnp_ffi_set_pass_provider", "rnp_import_keys", "rnp_import_signatures", "rnp_key_export", "rnp_key_export_autocrypt", "rnp_key_export_revocation", "rnp_key_get_info", "rnp_key_remove", "rnp_key_revoke", "rnp_list_keys", "rnp_load_keys", "rnp_load_keys_from_path", "rnp_locate_key", "rnp_op_encrypt", "rnp_op_generate_key", "rnp_op_sign", "rnp_op_sign_cleartext", "rnp_op_sign_detached", "rnp_op_verify", "rnp_op_verify_detached", "rnp_save_keys", "rnp_save_keys_to_path", "rnp_supported_features", "rnp_version_string", "rnp_version_string_full"]), ("RpmInfo", &["rpmaddtag", "rpmdbinfo", "rpmdbsearch", "rpmdefine", "rpmexpand", "rpmexpandnumeric", "rpmgetsymlink", "rpminfo", "rpmvercmp"]), ("SNMP", &["snmp2_get", "snmp2_getnext", "snmp2_real_walk", "snmp2_set", "snmp2_walk", "snmp3_get", "snmp3_getnext", "snmp3_real_walk", "snmp3_set", "snmp3_walk", "snmp_get_quick_print", "snmp_get_valueretrieval", "snmp_read_mib", "snmp_set_enum_print", "snmp_set_oid_numeric_print", "snmp_set_oid_output_format", "snmp_set_quick_print", "snmp_set_valueretrieval", "snmpget", "snmpgetnext", "snmprealwalk", "snmpset", "snmpwalk", "snmpwalkoid"]), ("SOAP", &["is_soap_fault", "use_soap_error_handler"]), ("SPL", &["class_implements", "class_parents", "class_uses", "iterator_apply", "iterator_count", "iterator_to_array", "spl_autoload", "spl_autoload_call", "spl_autoload_extensions", "spl_autoload_functions", "spl_autoload_register", "spl_autoload_unregister", "spl_classes", "spl_object_hash", "spl_object_id"]), ("SQLSRV", &["sqlsrv_begin_transaction", "sqlsrv_cancel", "sqlsrv_client_info", "sqlsrv_close", "sqlsrv_commit", "sqlsrv_configure", "sqlsrv_connect", "sqlsrv_errors", "sqlsrv_execute", "sqlsrv_fetch", "sqlsrv_fetch_array", "sqlsrv_fetch_object", "sqlsrv_field_metadata", "sqlsrv_free_stmt", "sqlsrv_get_config", "sqlsrv_get_field", "sqlsrv_has_rows", "sqlsrv_next_result", "sqlsrv_num_fields", "sqlsrv_num_rows", "sqlsrv_prepare", "sqlsrv_query", "sqlsrv_rollback", "sqlsrv_rows_affected", "sqlsrv_send_stream_data", "sqlsrv_server_info"]), ("SSH2", &["ssh2_auth_agent", "ssh2_auth_hostbased_file", "ssh2_auth_none", "ssh2_auth_password", "ssh2_auth_pubkey_file", "ssh2_connect", "ssh2_disconnect", "ssh2_exec", "ssh2_fetch_stream", "ssh2_fingerprint", "ssh2_forward_accept", "ssh2_forward_listen", "ssh2_methods_negotiated", "ssh2_poll", "ssh2_publickey_add", "ssh2_publickey_init", "ssh2_publickey_list", "ssh2_publickey_remove", "ssh2_scp_recv", "ssh2_scp_send", "ssh2_send_eof", "ssh2_sftp", "ssh2_sftp_chmod", "ssh2_sftp_lstat", "ssh2_sftp_mkdir", "ssh2_sftp_readlink", "ssh2_sftp_realpath", "ssh2_sftp_rename", "ssh2_sftp_rmdir", "ssh2_sftp_stat", "ssh2_sftp_symlink", "ssh2_sftp_unlink", "ssh2_shell", "ssh2_tunnel"]), ("SVN", &["svn_add", "svn_auth_get_parameter", "svn_auth_set_parameter", "svn_blame", "svn_cat", "svn_checkout", "svn_cleanup", "svn_client_version", "svn_commit", "svn_delete", "svn_diff", "svn_export", "svn_fs_abort_txn", "svn_fs_apply_text", "svn_fs_begin_txn2", "svn_fs_change_node_prop", "svn_fs_check_path", "svn_fs_contents_changed", "svn_fs_copy", "svn_fs_delete", "svn_fs_dir_entries", "svn_fs_file_contents", "svn_fs_file_length", "svn_fs_is_dir", "svn_fs_is_file", "svn_fs_make_dir", "svn_fs_make_file", "svn_fs_node_created_rev", "svn_fs_node_prop", "svn_fs_props_changed", "svn_fs_revision_prop", "svn_fs_revision_root", "svn_fs_txn_root", "svn_fs_youngest_rev", "svn_import", "svn_log", "svn_ls", "svn_mkdir", "svn_repos_create", "svn_repos_fs", "svn_repos_fs_begin_txn_for_commit", "svn_repos_fs_commit_txn", "svn_repos_hotcopy", "svn_repos_open", "svn_repos_recover", "svn_revert", "svn_status", "svn_update"]), ("Scoutapm", &["scoutapm_get_calls", "scoutapm_list_instrumented_functions"]), ("Seaslog", &["seaslog_get_author", "seaslog_get_version"]), ("Semaphore", &["ftok", "msg_get_queue", "msg_queue_exists", "msg_receive", "msg_remove_queue", "msg_send", "msg_set_queue", "msg_stat_queue", "sem_acquire", "sem_get", "sem_release", "sem_remove", "shm_attach", "shm_detach", "shm_get_var", "shm_has_var", "shm_put_var", "shm_remove", "shm_remove_var"]), ("Session", &["session_abort", "session_cache_expire", "session_cache_limiter", "session_commit", "session_create_id", "session_decode", "session_destroy", "session_encode", "session_gc", "session_get_cookie_params", "session_id", "session_module_name", "session_name", "session_regenerate_id", "session_register_shutdown", "session_reset", "session_save_path", "session_set_cookie_params", "session_set_save_handler", "session_start", "session_status", "session_unset", "session_write_close"]), ("Shared Memory", &["shmop_close", "shmop_delete", "shmop_open", "shmop_read", "shmop_size", "shmop_write"]), ("Simdjson", &["simdjson_decode", "simdjson_is_valid", "simdjson_key_count", "simdjson_key_exists", "simdjson_key_value"]), ("SimpleXML", &["simplexml_import_dom", "simplexml_load_file", "simplexml_load_string"]), ("Socket", &["socket_accept", "socket_addrinfo_bind", "socket_addrinfo_connect", "socket_addrinfo_explain", "socket_addrinfo_lookup", "socket_atmark", "socket_bind", "socket_clear_error", "socket_close", "socket_cmsg_space", "socket_connect", "socket_create", "socket_create_listen", "socket_create_pair", "socket_export_stream", "socket_get_option", "socket_getopt", "socket_getpeername", "socket_getsockname", "socket_import_stream", "socket_last_error", "socket_listen", "socket_read", "socket_recv", "socket_recvfrom", "socket_recvmsg", "socket_select", "socket_send", "socket_sendmsg", "socket_sendto", "socket_set_block", "socket_set_nonblock", "socket_set_option", "socket_setopt", "socket_shutdown", "socket_strerror", "socket_write", "socket_wsaprotocol_info_export", "socket_wsaprotocol_info_import", "socket_wsaprotocol_info_release"]), ("Sodium", &["sodium_add", "sodium_base642bin", "sodium_bin2base64", "sodium_bin2hex", "sodium_compare", "sodium_crypto_aead_aegis128l_decrypt", "sodium_crypto_aead_aegis128l_encrypt", "sodium_crypto_aead_aegis128l_keygen", "sodium_crypto_aead_aegis256_decrypt", "sodium_crypto_aead_aegis256_encrypt", "sodium_crypto_aead_aegis256_keygen", "sodium_crypto_aead_aes256gcm_decrypt", "sodium_crypto_aead_aes256gcm_encrypt", "sodium_crypto_aead_aes256gcm_is_available", "sodium_crypto_aead_aes256gcm_keygen", "sodium_crypto_aead_chacha20poly1305_decrypt", "sodium_crypto_aead_chacha20poly1305_encrypt", "sodium_crypto_aead_chacha20poly1305_ietf_decrypt", "sodium_crypto_aead_chacha20poly1305_ietf_encrypt", "sodium_crypto_aead_chacha20poly1305_ietf_keygen", "sodium_crypto_aead_chacha20poly1305_keygen", "sodium_crypto_aead_xchacha20poly1305_ietf_decrypt", "sodium_crypto_aead_xchacha20poly1305_ietf_encrypt", "sodium_crypto_aead_xchacha20poly1305_ietf_keygen", "sodium_crypto_auth", "sodium_crypto_auth_keygen", "sodium_crypto_auth_verify", "sodium_crypto_box", "sodium_crypto_box_keypair", "sodium_crypto_box_keypair_from_secretkey_and_publickey", "sodium_crypto_box_open", "sodium_crypto_box_publickey", "sodium_crypto_box_publickey_from_secretkey", "sodium_crypto_box_seal", "sodium_crypto_box_seal_open", "sodium_crypto_box_secretkey", "sodium_crypto_box_seed_keypair", "sodium_crypto_core_ristretto255_add", "sodium_crypto_core_ristretto255_from_hash", "sodium_crypto_core_ristretto255_is_valid_point", "sodium_crypto_core_ristretto255_random", "sodium_crypto_core_ristretto255_scalar_add", "sodium_crypto_core_ristretto255_scalar_complement", "sodium_crypto_core_ristretto255_scalar_invert", "sodium_crypto_core_ristretto255_scalar_mul", "sodium_crypto_core_ristretto255_scalar_negate", "sodium_crypto_core_ristretto255_scalar_random", "sodium_crypto_core_ristretto255_scalar_reduce", "sodium_crypto_core_ristretto255_scalar_sub", "sodium_crypto_core_ristretto255_sub", "sodium_crypto_generichash", "sodium_crypto_generichash_final", "sodium_crypto_generichash_init", "sodium_crypto_generichash_keygen", "sodium_crypto_generichash_update", "sodium_crypto_kdf_derive_from_key", "sodium_crypto_kdf_keygen", "sodium_crypto_kx_client_session_keys", "sodium_crypto_kx_keypair", "sodium_crypto_kx_publickey", "sodium_crypto_kx_secretkey", "sodium_crypto_kx_seed_keypair", "sodium_crypto_kx_server_session_keys", "sodium_crypto_pwhash", "sodium_crypto_pwhash_scryptsalsa208sha256", "sodium_crypto_pwhash_scryptsalsa208sha256_str", "sodium_crypto_pwhash_scryptsalsa208sha256_str_verify", "sodium_crypto_pwhash_str", "sodium_crypto_pwhash_str_needs_rehash", "sodium_crypto_pwhash_str_verify", "sodium_crypto_scalarmult", "sodium_crypto_scalarmult_base", "sodium_crypto_scalarmult_ristretto255", "sodium_crypto_scalarmult_ristretto255_base", "sodium_crypto_secretbox", "sodium_crypto_secretbox_keygen", "sodium_crypto_secretbox_open", "sodium_crypto_secretstream_xchacha20poly1305_init_pull", "sodium_crypto_secretstream_xchacha20poly1305_init_push", "sodium_crypto_secretstream_xchacha20poly1305_keygen", "sodium_crypto_secretstream_xchacha20poly1305_pull", "sodium_crypto_secretstream_xchacha20poly1305_push", "sodium_crypto_secretstream_xchacha20poly1305_rekey", "sodium_crypto_shorthash", "sodium_crypto_shorthash_keygen", "sodium_crypto_sign", "sodium_crypto_sign_detached", "sodium_crypto_sign_ed25519_pk_to_curve25519", "sodium_crypto_sign_ed25519_sk_to_curve25519", "sodium_crypto_sign_keypair", "sodium_crypto_sign_keypair_from_secretkey_and_publickey", "sodium_crypto_sign_open", "sodium_crypto_sign_publickey", "sodium_crypto_sign_publickey_from_secretkey", "sodium_crypto_sign_secretkey", "sodium_crypto_sign_seed_keypair", "sodium_crypto_sign_verify_detached", "sodium_crypto_stream", "sodium_crypto_stream_keygen", "sodium_crypto_stream_xchacha20", "sodium_crypto_stream_xchacha20_keygen", "sodium_crypto_stream_xchacha20_xor", "sodium_crypto_stream_xchacha20_xor_ic", "sodium_crypto_stream_xor", "sodium_hex2bin", "sodium_increment", "sodium_memcmp", "sodium_memzero", "sodium_pad", "sodium_unpad"]), ("Solr", &["solr_get_version"]), ("Statistic", &["stats_absolute_deviation", "stats_cdf_beta", "stats_cdf_binomial", "stats_cdf_cauchy", "stats_cdf_chisquare", "stats_cdf_exponential", "stats_cdf_f", "stats_cdf_gamma", "stats_cdf_laplace", "stats_cdf_logistic", "stats_cdf_negative_binomial", "stats_cdf_noncentral_chisquare", "stats_cdf_noncentral_f", "stats_cdf_noncentral_t", "stats_cdf_normal", "stats_cdf_poisson", "stats_cdf_t", "stats_cdf_uniform", "stats_cdf_weibull", "stats_covariance", "stats_dens_beta", "stats_dens_cauchy", "stats_dens_chisquare", "stats_dens_exponential", "stats_dens_f", "stats_dens_gamma", "stats_dens_laplace", "stats_dens_logistic", "stats_dens_normal", "stats_dens_pmf_binomial", "stats_dens_pmf_hypergeometric", "stats_dens_pmf_negative_binomial", "stats_dens_pmf_poisson", "stats_dens_t", "stats_dens_uniform", "stats_dens_weibull", "stats_harmonic_mean", "stats_kurtosis", "stats_rand_gen_beta", "stats_rand_gen_chisquare", "stats_rand_gen_exponential", "stats_rand_gen_f", "stats_rand_gen_funiform", "stats_rand_gen_gamma", "stats_rand_gen_ibinomial", "stats_rand_gen_ibinomial_negative", "stats_rand_gen_int", "stats_rand_gen_ipoisson", "stats_rand_gen_iuniform", "stats_rand_gen_noncentral_chisquare", "stats_rand_gen_noncentral_f", "stats_rand_gen_noncentral_t", "stats_rand_gen_normal", "stats_rand_gen_t", "stats_rand_get_seeds", "stats_rand_phrase_to_seeds", "stats_rand_ranf", "stats_rand_setall", "stats_skew", "stats_standard_deviation", "stats_stat_binomial_coef", "stats_stat_correlation", "stats_stat_factorial", "stats_stat_independent_t", "stats_stat_innerproduct", "stats_stat_paired_t", "stats_stat_percentile", "stats_stat_powersum", "stats_variance"]), ("Stomp", &["stomp_connect_error", "stomp_version"]), ("Stream", &["stream_bucket_append", "stream_bucket_make_writeable", "stream_bucket_new", "stream_bucket_prepend", "stream_context_create", "stream_context_get_default", "stream_context_get_options", "stream_context_get_params", "stream_context_set_default", "stream_context_set_option", "stream_context_set_options", "stream_context_set_params", "stream_copy_to_stream", "stream_filter_append", "stream_filter_prepend", "stream_filter_register", "stream_filter_remove", "stream_get_contents", "stream_get_filters", "stream_get_line", "stream_get_meta_data", "stream_get_transports", "stream_get_wrappers", "stream_is_local", "stream_isatty", "stream_notification_callback", "stream_register_wrapper", "stream_resolve_include_path", "stream_select", "stream_set_blocking", "stream_set_chunk_size", "stream_set_read_buffer", "stream_set_timeout", "stream_set_write_buffer", "stream_socket_accept", "stream_socket_client", "stream_socket_enable_crypto", "stream_socket_get_name", "stream_socket_pair", "stream_socket_recvfrom", "stream_socket_sendto", "stream_socket_server", "stream_socket_shutdown", "stream_supports_lock", "stream_wrapper_register", "stream_wrapper_restore", "stream_wrapper_unregister"]), ("String", &["addcslashes", "addslashes", "bin2hex", "chop", "chr", "chunk_split", "convert_cyr_string", "convert_uudecode", "convert_uuencode", "count_chars", "crc32", "crypt", "echo", "explode", "fprintf", "get_html_translation_table", "hebrev", "hebrevc", "hex2bin", "html_entity_decode", "htmlentities", "htmlspecialchars", "htmlspecialchars_decode", "implode", "join", "lcfirst", "levenshtein", "localeconv", "ltrim", "md5", "md5_file", "metaphone", "money_format", "nl2br", "nl_langinfo", "number_format", "ord", "parse_str", "print", "printf", "quoted_printable_decode", "quoted_printable_encode", "quotemeta", "rtrim", "setlocale", "sha1", "sha1_file", "similar_text", "soundex", "sprintf", "sscanf", "str_contains", "str_decrement", "str_ends_with", "str_getcsv", "str_increment", "str_ireplace", "str_pad", "str_repeat", "str_replace", "str_rot13", "str_shuffle", "str_split", "str_starts_with", "str_word_count", "strcasecmp", "strchr", "strcmp", "strcoll", "strcspn", "strip_tags", "stripcslashes", "stripos", "stripslashes", "stristr", "strlen", "strnatcasecmp", "strnatcmp", "strncasecmp", "strncmp", "strpbrk", "strpos", "strrchr", "strrev", "strripos", "strrpos", "strspn", "strstr", "strtok", "strtolower", "strtoupper", "strtr", "substr", "substr_compare", "substr_count", "substr_replace", "trim", "ucfirst", "ucwords", "utf8_decode", "utf8_encode", "vfprintf", "vprintf", "vsprintf", "wordwrap"]), ("Swoole", &["swoole_async_dns_lookup", "swoole_async_read", "swoole_async_readfile", "swoole_async_set", "swoole_async_write", "swoole_async_writefile", "swoole_clear_error", "swoole_client_select", "swoole_cpu_num", "swoole_errno", "swoole_error_log", "swoole_event_add", "swoole_event_defer", "swoole_event_del", "swoole_event_exit", "swoole_event_set", "swoole_event_wait", "swoole_event_write", "swoole_get_local_ip", "swoole_last_error", "swoole_load_module", "swoole_select", "swoole_set_process_name", "swoole_strerror", "swoole_timer_after", "swoole_timer_exists", "swoole_timer_tick", "swoole_version"]), ("TCP", &["tcpwrap_check"]), ("Taint", &["is_tainted", "taint", "untaint"]), ("Tidy", &["ob_tidyhandler", "tidy_access_count", "tidy_config_count", "tidy_error_count", "tidy_get_output", "tidy_warning_count"]), ("Tokenizer", &["token_get_all", "token_name"]), ("Trader", &["trader_acos", "trader_ad", "trader_add", "trader_adosc", "trader_adx", "trader_adxr", "trader_apo", "trader_aroon", "trader_aroonosc", "trader_asin", "trader_atan", "trader_atr", "trader_avgprice", "trader_bbands", "trader_beta", "trader_bop", "trader_cci", "trader_cdl2crows", "trader_cdl3blackcrows", "trader_cdl3inside", "trader_cdl3linestrike", "trader_cdl3outside", "trader_cdl3starsinsouth", "trader_cdl3whitesoldiers", "trader_cdlabandonedbaby", "trader_cdladvanceblock", "trader_cdlbelthold", "trader_cdlbreakaway", "trader_cdlclosingmarubozu", "trader_cdlconcealbabyswall", "trader_cdlcounterattack", "trader_cdldarkcloudcover", "trader_cdldoji", "trader_cdldojistar", "trader_cdldragonflydoji", "trader_cdlengulfing", "trader_cdleveningdojistar", "trader_cdleveningstar", "trader_cdlgapsidesidewhite", "trader_cdlgravestonedoji", "trader_cdlhammer", "trader_cdlhangingman", "trader_cdlharami", "trader_cdlharamicross", "trader_cdlhighwave", "trader_cdlhikkake", "trader_cdlhikkakemod", "trader_cdlhomingpigeon", "trader_cdlidentical3crows", "trader_cdlinneck", "trader_cdlinvertedhammer", "trader_cdlkicking", "trader_cdlkickingbylength", "trader_cdlladderbottom", "trader_cdllongleggeddoji", "trader_cdllongline", "trader_cdlmarubozu", "trader_cdlmatchinglow", "trader_cdlmathold", "trader_cdlmorningdojistar", "trader_cdlmorningstar", "trader_cdlonneck", "trader_cdlpiercing", "trader_cdlrickshawman", "trader_cdlrisefall3methods", "trader_cdlseparatinglines", "trader_cdlshootingstar", "trader_cdlshortline", "trader_cdlspinningtop", "trader_cdlstalledpattern", "trader_cdlsticksandwich", "trader_cdltakuri", "trader_cdltasukigap", "trader_cdlthrusting", "trader_cdltristar", "trader_cdlunique3river", "trader_cdlupsidegap2crows", "trader_cdlxsidegap3methods", "trader_ceil", "trader_cmo", "trader_correl", "trader_cos", "trader_cosh", "trader_dema", "trader_div", "trader_dx", "trader_ema", "trader_errno", "trader_exp", "trader_floor", "trader_get_compat", "trader_get_unstable_period", "trader_ht_dcperiod", "trader_ht_dcphase", "trader_ht_phasor", "trader_ht_sine", "trader_ht_trendline", "trader_ht_trendmode", "trader_kama", "trader_linearreg", "trader_linearreg_angle", "trader_linearreg_intercept", "trader_linearreg_slope", "trader_ln", "trader_log10", "trader_ma", "trader_macd", "trader_macdext", "trader_macdfix", "trader_mama", "trader_mavp", "trader_max", "trader_maxindex", "trader_medprice", "trader_mfi", "trader_midpoint", "trader_midprice", "trader_min", "trader_minindex", "trader_minmax", "trader_minmaxindex", "trader_minus_di", "trader_minus_dm", "trader_mom", "trader_mult", "trader_natr", "trader_obv", "trader_plus_di", "trader_plus_dm", "trader_ppo", "trader_roc", "trader_rocp", "trader_rocr", "trader_rocr100", "trader_rsi", "trader_sar", "trader_sarext", "trader_set_compat", "trader_set_unstable_period", "trader_sin", "trader_sinh", "trader_sma", "trader_sqrt", "trader_stddev", "trader_stoch", "trader_stochf", "trader_stochrsi", "trader_sub", "trader_sum", "trader_t3", "trader_tan", "trader_tanh", "trader_tema", "trader_trange", "trader_trima", "trader_trix", "trader_tsf", "trader_typprice", "trader_ultosc", "trader_var", "trader_wclprice", "trader_willr", "trader_wma"]), ("UI", &["UI\\Draw\\Text\\Font\\fontFamilies", "UI\\quit", "UI\\run"]), ("URL", &["base64_decode", "base64_encode", "get_headers", "get_meta_tags", "http_build_query", "parse_url", "rawurldecode", "rawurlencode", "urldecode", "urlencode"]), ("Uopz", &["uopz_add_function", "uopz_allow_exit", "uopz_backup", "uopz_compose", "uopz_copy", "uopz_del_function", "uopz_delete", "uopz_extend", "uopz_flags", "uopz_function", "uopz_get_exit_status", "uopz_get_hook", "uopz_get_mock", "uopz_get_property", "uopz_get_return", "uopz_get_static", "uopz_implement", "uopz_overload", "uopz_redefine", "uopz_rename", "uopz_restore", "uopz_set_hook", "uopz_set_mock", "uopz_set_property", "uopz_set_return", "uopz_set_static", "uopz_undefine", "uopz_unset_hook", "uopz_unset_mock", "uopz_unset_return"]), ("Variable handling", &["boolval", "debug_zval_dump", "doubleval", "empty", "floatval", "get_debug_type", "get_defined_vars", "get_resource_id", "get_resource_type", "gettype", "intval", "is_array", "is_bool", "is_callable", "is_countable", "is_double", "is_float", "is_int", "is_integer", "is_iterable", "is_long", "is_null", "is_numeric", "is_object", "is_real", "is_resource", "is_scalar", "is_string", "isset", "print_r", "serialize", "settype", "strval", "unserialize", "unset", "var_dump", "var_export"]), ("WDDX", &["wddx_add_vars", "wddx_deserialize", "wddx_packet_end", "wddx_packet_start", "wddx_serialize_value", "wddx_serialize_vars"]), ("WinCache", &["wincache_fcache_fileinfo", "wincache_fcache_meminfo", "wincache_lock", "wincache_ocache_fileinfo", "wincache_ocache_meminfo", "wincache_refresh_if_changed", "wincache_rplist_fileinfo", "wincache_rplist_meminfo", "wincache_scache_info", "wincache_scache_meminfo", "wincache_ucache_add", "wincache_ucache_cas", "wincache_ucache_clear", "wincache_ucache_dec", "wincache_ucache_delete", "wincache_ucache_exists", "wincache_ucache_get", "wincache_ucache_inc", "wincache_ucache_info", "wincache_ucache_meminfo", "wincache_ucache_set", "wincache_unlock"]), ("XML Parser", &["xml_error_string", "xml_get_current_byte_index", "xml_get_current_column_number", "xml_get_current_line_number", "xml_get_error_code", "xml_parse", "xml_parse_into_struct", "xml_parser_create", "xml_parser_create_ns", "xml_parser_free", "xml_parser_get_option", "xml_parser_set_option", "xml_set_character_data_handler", "xml_set_default_handler", "xml_set_element_handler", "xml_set_end_namespace_decl_handler", "xml_set_external_entity_ref_handler", "xml_set_notation_decl_handler", "xml_set_object", "xml_set_processing_instruction_handler", "xml_set_start_namespace_decl_handler", "xml_set_unparsed_entity_decl_handler"]), ("XML-RPC", &["xmlrpc_decode", "xmlrpc_decode_request", "xmlrpc_encode", "xmlrpc_encode_request", "xmlrpc_get_type", "xmlrpc_is_fault", "xmlrpc_parse_method_descriptions", "xmlrpc_server_add_introspection_data", "xmlrpc_server_call_method", "xmlrpc_server_create", "xmlrpc_server_destroy", "xmlrpc_server_register_introspection_callback", "xmlrpc_server_register_method", "xmlrpc_set_type"]), ("Xhprof", &["xhprof_disable", "xhprof_enable", "xhprof_sample_disable", "xhprof_sample_enable"]), ("Xpass", &["crypt_checksalt", "crypt_gensalt", "crypt_preferred_method"]), ("YAZ", &["yaz_addinfo", "yaz_ccl_conf", "yaz_ccl_parse", "yaz_close", "yaz_connect", "yaz_database", "yaz_element", "yaz_errno", "yaz_error", "yaz_es", "yaz_es_result", "yaz_get_option", "yaz_hits", "yaz_itemorder", "yaz_present", "yaz_range", "yaz_record", "yaz_scan", "yaz_scan_result", "yaz_schema", "yaz_search", "yaz_set_option", "yaz_sort", "yaz_syntax", "yaz_wait"]), ("Yaml", &["yaml_emit", "yaml_emit_file", "yaml_parse", "yaml_parse_file", "yaml_parse_url"]), ("Zip", &["zip_close", "zip_entry_close", "zip_entry_compressedsize", "zip_entry_compressionmethod", "zip_entry_filesize", "zip_entry_name", "zip_entry_open", "zip_entry_read", "zip_open", "zip_read"]), ("Zlib", &["deflate_add", "deflate_init", "gzclose", "gzcompress", "gzdecode", "gzdeflate", "gzencode", "gzeof", "gzfile", "gzgetc", "gzgets", "gzgetss", "gzinflate", "gzopen", "gzpassthru", "gzputs", "gzread", "gzrewind", "gzseek", "gztell", "gzuncompress", "gzwrite", "inflate_add", "inflate_get_read_len", "inflate_get_status", "inflate_init", "ob_gzhandler", "readgzfile", "zlib_decode", "zlib_encode", "zlib_get_coding_type"]), ("ZooKeeper", &["zookeeper_dispatch"]), ("cURL", &["curl_close", "curl_copy_handle", "curl_errno", "curl_error", "curl_escape", "curl_exec", "curl_getinfo", "curl_init", "curl_multi_add_handle", "curl_multi_close", "curl_multi_errno", "curl_multi_exec", "curl_multi_getcontent", "curl_multi_info_read", "curl_multi_init", "curl_multi_remove_handle", "curl_multi_select", "curl_multi_setopt", "curl_multi_strerror", "curl_pause", "curl_reset", "curl_setopt", "curl_setopt_array", "curl_share_close", "curl_share_errno", "curl_share_init", "curl_share_init_persistent", "curl_share_setopt", "curl_share_strerror", "curl_strerror", "curl_unescape", "curl_upkeep", "curl_version"]), ("dBase", &["dbase_add_record", "dbase_close", "dbase_create", "dbase_delete_record", "dbase_get_header_info", "dbase_get_record", "dbase_get_record_with_names", "dbase_numfields", "dbase_numrecords", "dbase_open", "dbase_pack", "dbase_replace_record"]), ("iconv", &["iconv", "iconv_get_encoding", "iconv_mime_decode", "iconv_mime_decode_headers", "iconv_mime_encode", "iconv_set_encoding", "iconv_strlen", "iconv_strpos", "iconv_strrpos", "iconv_substr", "ob_iconv_handler"]), ("intl", &["intl_error_name", "intl_get_error_code", "intl_get_error_message", "intl_is_failure"]), ("libxml", &["libxml_clear_errors", "libxml_disable_entity_loader", "libxml_get_errors", "libxml_get_external_entity_loader", "libxml_get_last_error", "libxml_set_external_entity_loader", "libxml_set_streams_context", "libxml_use_internal_errors"]), ("mqseries", &["mqseries_back", "mqseries_begin", "mqseries_close", "mqseries_cmit", "mqseries_conn", "mqseries_connx", "mqseries_disc", "mqseries_get", "mqseries_inq", "mqseries_open", "mqseries_put", "mqseries_put1", "mqseries_set", "mqseries_strerror"]), ("phpdbg", &["phpdbg_break_file", "phpdbg_break_function", "phpdbg_break_method", "phpdbg_break_next", "phpdbg_clear", "phpdbg_color", "phpdbg_end_oplog", "phpdbg_exec", "phpdbg_get_executable", "phpdbg_prompt", "phpdbg_start_oplog"]), ("runkit7", &["runkit7_constant_add", "runkit7_constant_redefine", "runkit7_constant_remove", "runkit7_function_add", "runkit7_function_copy", "runkit7_function_redefine", "runkit7_function_remove", "runkit7_function_rename", "runkit7_import", "runkit7_method_add", "runkit7_method_copy", "runkit7_method_redefine", "runkit7_method_remove", "runkit7_method_rename", "runkit7_object_id", "runkit7_superglobals", "runkit7_zval_inspect"]), ("ssdeep", &["ssdeep_fuzzy_compare", "ssdeep_fuzzy_hash", "ssdeep_fuzzy_hash_filename"]), ("var_representation", &["var_representation"]), ("win32service", &["win32_add_right_access_service", "win32_add_service_env_var", "win32_continue_service", "win32_create_service", "win32_delete_service", "win32_get_last_control_message", "win32_get_service_env_vars", "win32_pause_service", "win32_query_service_status", "win32_read_all_rights_access_service", "win32_read_right_access_service", "win32_remove_right_access_service", "win32_remove_service_env_var", "win32_send_custom_control", "win32_set_service_exit_code", "win32_set_service_exit_mode", "win32_set_service_pause_resume_state", "win32_set_service_status", "win32_start_service", "win32_start_service_ctrl_dispatcher", "win32_stop_service"]), ("xattr", &["xattr_get", "xattr_list", "xattr_remove", "xattr_set", "xattr_supported"]), ("xdiff", &["xdiff_file_bdiff", "xdiff_file_bdiff_size", "xdiff_file_bpatch", "xdiff_file_diff", "xdiff_file_diff_binary", "xdiff_file_merge3", "xdiff_file_patch", "xdiff_file_patch_binary", "xdiff_file_rabdiff", "xdiff_string_bdiff", "xdiff_string_bdiff_size", "xdiff_string_bpatch", "xdiff_string_diff", "xdiff_string_diff_binary", "xdiff_string_merge3", "xdiff_string_patch", "xdiff_string_patch_binary", "xdiff_string_rabdiff"])];
 pub(crate) static DATA_PHP_KEYWORDS: &[&str] = &["__class__", "__dir__", "__file__", "__function__", "__halt_compiler", "__line__", "__method__", "__namespace__", "__trait__", "abstract", "and", "array", "as", "break", "case", "catch", "cfunction", "clone", "continue", "declare", "default", "die", "do", "echo", "else", "elseif", "empty", "enddeclare", "endfor", "endforeach", "endif", "endswitch", "endwhile", "eval", "exit", "extends", "final", "finally", "fn", "for", "foreach", "global", "goto", "if", "implements", "include", "include_once", "instanceof", "insteadof", "isset", "list", "match", "new", "old_function", "or", "parent", "print", "private", "protected", "public", "readonly", "require", "require_once", "return", "self", "static", "switch", "throw", "try", "unset", "var", "while", "xor", "yield"];
+pub(crate) static DATA_ROBOTFRAMEWORK_SETTINGS_WITH_ARGS: &[&str] = &["arguments", "default tags", "documentation", "force tags", "metadata", "return", "tags", "task timeout", "test timeout", "timeout"];
+pub(crate) static DATA_ROBOTFRAMEWORK_SETTINGS_WITH_KEYWORDS: &[&str] = &["library", "resource", "setup", "suite setup", "suite teardown", "task setup", "task teardown", "task template", "teardown", "template", "test setup", "test teardown", "test template", "variables"];
+pub(crate) static DATA_SAS_DATA_STEP_STATEMENTS: &[&str] = &["ABORT", "ARRAY", "ATTRIB", "BY", "CALL", "CARDS", "CARDS4", "CATNAME", "CHECKPOINT", "CONTINUE", "DATA", "DATALINES", "DATALINES4", "DELETE", "DESCRIBE", "DISPLAY", "DM", "DO", "DROP", "ELSE", "END", "ENDSAS", "ERROR", "EXECUTE", "EXECUTE_ALWAYS", "FILE", "FILENAME", "FOOTNOTE", "FORMAT", "GO", "IF", "INFILE", "INFORMAT", "INPUT", "KEEP", "LABEL", "LEAVE", "LENGTH", "LIBNAME", "LINK", "LIST", "LOCK", "LOSTCARD", "MERGE", "MISSING", "MODIFY", "OPTIONS", "OUTPUT", "PAGE", "PUT", "PUTLOG", "REDIRECT", "REMOVE", "RENAME", "REPLACE", "RESETLINE", "RETAIN", "RETURN", "RUN", "SASFILE", "SELECT", "SET", "SKIP", "STOP", "SYSECHO", "THEN", "TITLE", "TO", "UNTIL", "UPDATE", "WHERE", "WHILE", "WINDOW", "X"];
+pub(crate) static DATA_SAS_PROC_KEYWORDS: &[(&str, &[&str])] = &[("APPEND", &["APPENDVER", "ATTRIB", "BASE", "DATA", "ENCRYPTKEY", "FORCE", "FORMAT", "GETSORT", "LABEL", "NOWARN", "WHERE"]), ("CORR", &["ALPHA", "BEST", "BY", "COV", "CSSCP", "DATA", "EXCLNPWGHT", "FISHER", "FREQ", "HOEFFDING", "ID", "KENDALL", "MATRIX", "NOCORR", "NOMISS", "NOPRINT", "NOPROB", "NOSIMPLE", "OUTH", "OUTK", "OUTP", "OUTPLC", "OUTPLS", "OUTS", "PARTIAL", "PEARSON", "PLOTS", "POLYCHORIC", "POLYSERIAL", "RANK", "SCATTER", "SINGULAR", "SSCP", "VAR", "VARDEF", "WEIGHT", "WITH"]), ("DATASETS", &["ADD", "AGE", "APPEND", "ATTRIB", "AUDIT", "CENTILES", "CHANGE", "CONTENTS", "COPY", "CREATE", "DELETE", "EXCHANGE", "EXCLUDE", "FORMAT", "IC", "INDEX", "INFORMAT", "INITIATE", "LABEL", "LOG", "MODIFY", "OPTIONS", "REACTIVATE", "REBUILD", "REMOVE", "RENAME", "REPAIR", "RESUME", "SAVE", "SELECT", "SET", "SUSPEND", "TERMINATE", "USER_VAR", "XATTR"]), ("FREQ", &["AGREE", "AJCHI", "ALL", "BARNARD", "BDCHI", "BIN", "BINOMIAL", "BOWKER", "BY", "CELLCHI2", "CHISQ", "CMH", "CMH1", "CMH2", "CMHCOR", "CMHGA", "CMHRMS", "COCHQ", "COMOR", "COMPRESS", "CONTENTS", "CONTGY", "CRAMV", "CROSSLIST", "CUMCOL", "DATA", "DEVIATION", "EQKAP", "EQOR", "EQWKP", "EXACT", "EXPECTED", "FISHER", "FORMAT", "FORMATTED", "FORMCHAR", "FREQ", "GAILSIMON", "GAMMA", "GS", "INTERNAL", "JT", "KAPPA", "KENTB", "LAMCR", "LAMDAS", "LAMRC", "LGOR", "LGRRC1", "LGRRC2", "LIST", "LRCHI", "MAXLEVELS", "MCNEM", "MEASURES", "MHCHI", "MHOR", "MHRRC1", "MHRRC2", "MISSPRINT", "N", "NLEVELS", "NMISS", "NOCOL", "NOCUM", "NOFREQ", "NOPERCENT", "NOPRINT", "NOROW", "NOSPARSE", "NOWARN", "ODDSRATIO", "OR", "ORDER", "OUT", "OUTCUM", "OUTEXPECT", "OUTPCT", "OUTPUT", "PAGE", "PCHI", "PCORR", "PEARSONREF", "PHI", "PLCORR", "PLOTS", "PRINTWKTS", "RDIF1", "RDIF2", "RELRISK", "RELRISK1", "RELRISK2", "RISK1", "RISK11", "RISK12", "RISK21", "RISK22", "RISKDIFF", "RISKDIFF1", "RISKDIFF2", "RRC1", "RRC2", "RSK1", "RSK11", "RSK12", "RSK21", "RSK22", "SCOROUT", "SCORR", "SMDCR", "SMDRC", "SPARSE", "STDRES", "STUTC", "TABLES", "TAUB", "TAUC", "TEST", "TOTPCT", "TREND", "TSYMM", "U", "UCR", "URC", "WEIGHT", "WTKAP", "WTKAPPA", "ZELEN", "ZEROS"]), ("GCHART", &["ACROSS", "ANGLE", "ANNO", "ANNOTATE", "ARROW", "ASCENDING", "AUTOREF", "AXIS", "BARS", "BLOCK", "BLOCKMAX", "BOTH", "BY", "CAUTOREF", "CAXIS", "CERROR", "CFILL", "CFRAME", "CFREQ", "CFREQLABEL", "CLIPREF", "CLM", "CLOCKWISE", "COUTLINE", "CPERCENT", "CPERCENTLABEL", "CREF", "CTEXT", "DATA", "DESCENDING", "DESCRIPTION", "DETAIL_PERCENT", "DETAIL_RADIUS", "DETAIL_SLICE", "DETAIL_THRESHOLD", "DETAIL_VALUE", "DISCRETE", "DONUT", "DONUTPCT", "DOWN", "ERRORBAR", "EXPLODE", "FILL", "FIT", "FORMAT", "FRAME", "FREQ", "FREQLABEL", "FRONTREF", "G100", "GAXIS", "GOUT", "GROUP", "GSPACE", "HBAR", "HBAR3D", "HTML", "HTML_LEGEND", "IFRAME", "IMAGEMAP", "IMAGESTYLE", "INSIDE", "INVISIBLE", "JSTYLE", "LABEL", "LAUTOREF", "LEGEND", "LEVELS", "MATCHCOLOR", "MAXIS", "MEAN", "MEANLABEL", "MIDPOINT", "MINOR", "MISSING", "NAME", "NOAXIS", "NOBASEREF", "NOCONNECT", "NOFRAME", "NOGROUPHEADING", "NOHEADING", "NOLEGEND", "NONE", "NOSTATS", "NOSYMBOL", "NOTE", "NOZERO", "OLD", "OTHERCOLOR", "OTHERLABEL", "OUTSIDE", "PATTERNID", "PERCENT", "PERCENTLABEL", "PERCENTSUM", "PIE", "PIE3D", "PLABEL", "PPERCENT", "RADIUS", "RANGE", "REF", "SHAPE", "SLICE", "SOLID", "SPACE", "STAR", "STARMAX", "STARMIN", "SUBGROUP", "SUBOUTSIDE", "SUM", "SUMVAR", "TILE", "TOP", "TYPE", "URL", "VALUE", "VBAR", "VBAR3D", "WAUTOREF", "WHERE", "WIDTH", "WOUTLINE", "WREF", "X"]), ("GPLOT", &["ANNOTATE", "AREA", "AREAS", "AUTOHREF", "AUTOVREF", "BCOLOR", "BFILL", "BFONT", "BLABEL", "BSCALE", "BSIZE", "BUBBLE", "BUBBLE2", "CAUTOHREF", "CAUTOVREF", "CAXIS", "CBASELINE", "CFRAME", "CHREF", "COUTLINE", "CTEXT", "CVREF", "DATA", "DATAORDER", "DESCRIPTION", "FIT", "FRAME", "FRONTREF", "GOUT", "GRID", "HAXIS", "HMINOR", "HREF", "HREVERSE", "HTML", "HZERO", "IFRAME", "IMAGEMAP", "IMAGESTYLE", "LAUTOHREF", "LAUTOVREF", "LEGEND", "LHREF", "LVREF", "NAME", "NOAXIS", "NOFRAME", "NOLASTAREA", "NOLEGEND", "OVERLAY", "PLOT", "PLOT2", "RADIUS", "REGEQN", "SKIPMISS", "TILE", "UNIFORM", "URL", "VAXIS", "VMINOR", "VREF", "VREVERSE", "VZERO", "WAUTOHREF", "WAUTOVREF", "WHREF", "WVREF"]), ("MEANS", &["ALPHA", "ASCENDING", "ATTRIB", "AUTOLABEL", "AUTONAME", "BY", "CHARTYPE", "CLASS", "CLASSDATA", "CLM", "COMPLETETYPES", "CSS", "CV", "DESCENDING", "DESCENDTYPES", "EXCLNPWGT", "EXCLUSIVE", "FORMAT", "FORMATTED", "FREQ", "FW", "GROUPINTERNAL", "ID", "IDMIN", "KEEPLEN", "KURT", "KURTOSIS", "LABEL", "LCLM", "LEVELS", "MAX", "MAXDEC", "MAXID", "MEAN", "MEDIAN", "MIN", "MISSING", "MLF", "MODE", "N", "NMISS", "NOINHERIT", "NONOBS", "NOPRINT", "NOTHREADS", "NOTRAP", "NOTSORTED", "ORDER", "OUT", "OUTPUT", "P1", "P10", "P20", "P25", "P30", "P40", "P5", "P50", "P60", "P70", "P75", "P80", "P90", "P95", "P99", "PCTLDEF", "PRELOADFMT", "PRINT", "PRINTALLTYPES", "PRINTIDVARS", "PROBT", "PRT", "Q1", "Q3", "QMARKERS", "QMETHOD", "QNTLDEF", "QRANGE", "RANGE", "SKEW", "SKEWNESS", "STACKODSOUTPUT", "STD", "STDDEV", "STDERR", "SUM", "SUMSIZE", "SUMWGT", "T", "THREADS", "TYPES", "UCLM", "UNFORMATTED", "USS", "VAR", "VARDEF", "WAYS", "WEIGHT", "WHERE"]), ("METALIB", &["DBAUTH", "DBPASSWORD", "DBUSER", "DELETE", "DETAIL", "EXCLUDE", "FOLDER", "FOLDERID", "IMPACT_LIMIT", "LIBID", "LIBRARY", "LIBURI", "NOADD", "NODELDUP", "NOEXEC", "NOUPDATE", "OMR", "PREFIX", "READ", "REPORT", "SELECT", "SUMMARY", "TYPE", "UPDATE_RULE"]), ("PRINT", &["ATTRIB", "BLANKLINE", "BY", "CONTENTS", "COUNT", "DATA", "DESCENDING", "DOUBLE", "FORMAT", "GRANDTOTAL_LABEL", "HEADING", "ID", "LABEL", "N", "NOOBS", "NOSUMLABEL", "NOTSORTED", "OBS", "PAGEBY", "ROUND", "ROWS", "SPLIT", "STYLE", "SUM", "SUMBY", "SUMLABEL", "UNIFORM", "VAR", "WHERE", "WIDTH"]), ("REG", &["ADD", "BY", "CODE", "DELETE", "FREQ", "ID", "MODEL", "MTEST", "OUTPUT", "PAINT", "PLOT", "PRINT", "REFIT", "RESTRICT", "REWEIGHT", "STORE", "TEST", "VAR", "WEIGHT"]), ("REPORT", &["ACROSS", "AFTER", "ANALYSIS", "ATTRIB", "BEFORE", "BLINK", "BOX", "BREAK", "BY", "BYPAGENO", "CALL", "CENTER", "CHARACTER", "COLOR", "COLUMN", "COLWIDTH", "COMMAND", "COMPLETECOLS", "COMPLETEROWS", "COMPUTE", "COMPUTED", "CONTENTS", "CSS", "CV", "DATA", "DEFINE", "DESCENDING", "DISPLAY", "DOL", "DUL", "ENDCOMP", "EXCLNPWGT", "EXCLUSIVE", "FLOW", "FORMAT", "FORMATTED", "FORMCHAR", "FREQ", "GROUP", "HEADLINE", "HEADSKIP", "HELP", "HIGHLIGHT", "ID", "INTERNAL", "LABEL", "LEFT", "LENGTH", "LINE", "LIST", "LS", "MAX", "MEAN", "MEDIAN", "MERGE", "MIN", "MISSING", "MLF", "MODE", "N", "NAMED", "NMISS", "NOALIAS", "NOCENTER", "NOCOMPLETECOLS", "NOCOMPLETEROWS", "NOEXEC", "NOHEADER", "NOPRINT", "NOTHREADS", "NOTSORTED", "NOWINDOWS", "NOZERO", "OL", "ORDER", "OUT", "OUTREPT", "P1", "P10", "P20", "P25", "P30", "P40", "P5", "P50", "P60", "P70", "P75", "P80", "P90", "P95", "P99", "PAGE", "PANELS", "PCTLDEF", "PCTN", "PCTSUM", "PRELOADFMT", "PROBT", "PROFILE", "PROMPT", "PRT", "PS", "PSPACE", "Q1", "Q3", "QMARKERS", "QMETHOD", "QNTLDEF", "QRANGE", "RANGE", "RBREAK", "REPLACE", "REPORT", "RIGHT", "RVSVIDEO", "SHOWALL", "SKIP", "SPACING", "SPANROWS", "SPLIT", "STD", "STDERR", "STYLE", "SUM", "SUMMARIZE", "SUMWGT", "SUPPRESS", "T", "THREADS", "UL", "URL", "URLBP", "URLP", "USS", "VAR", "VARDEF", "WEIGHT", "WHERE", "WIDTH", "WINDOWS", "WRAP", "_PAGE_", "_ROW_"]), ("SGPLOT", &["BAND", "BLOCK", "BUBBLE", "DENSITY", "DOT", "DROPLINE", "ELLIPSE", "ELLIPSEPARM", "FRINGE", "GRADLEGEND", "HBAR", "HBARBASIC", "HBARPARM", "HBOX", "HEATMAP", "HEATMAPPARM", "HIGHLOW", "HISTOGRAM", "HLINE", "INSET", "KEYLEGEND", "LINEPARM", "LOESS", "LOWER", "NEEDLE", "PBSPLINE", "POLYGON", "REFLINE", "REG", "SCATTER", "SERIES", "SPLINE", "STEP", "STYLEATTRS", "SYMBOLCHAR", "SYMBOLIMAGE", "TEXT", "UPPER", "VBAR", "VBARBASIC", "VBARPARM", "VBOX", "VECTOR", "VLINE", "WATERFALL", "X", "X2AXIS", "XAXIS", "XAXISTABLE", "Y", "Y2AXIS", "YAXIS", "YAXISTABLE"]), ("SORT", &["ASC", "ASCENDING", "ATTRIB", "BY", "DATECOPY", "DESC", "DESCENDING", "DUPOUT", "EQUALS", "FORCE", "FORMAT", "KEY", "LABEL", "NODUPKEY", "NOEQUALS", "NOTHREADS", "NOUNIQUEKEY", "OUT", "OVERWRITE", "PRESORTED", "SORTSIZE", "TAGSORT", "THREADS", "UNIQUEOUT", "WHERE"]), ("SQL", &["ADD", "ALTER", "AS", "BY", "CONNECT", "CONSTRAINT", "CREATE", "DELETE", "DESCRIBE", "DISCONNECT", "DISTINCT", "DROP", "EXECUTE", "FOREIGN", "FROM", "GROUP", "HAVING", "INDEX", "INNER", "INSERT", "INTO", "JOIN", "KEY", "LEFT", "LIKE", "MODIFY", "ON", "ORDER", "PRIMARY", "RESET", "RIGHT", "SELECT", "SET", "TABLE", "UNIQUE", "UPDATE", "USING", "VALIDATE", "VALUES", "VIEW", "WHERE"]), ("TRANSPOSE", &["ATTRIB", "BY", "COPY", "DELIMITER", "DESCENDING", "FORMAT", "ID", "IDLABEL", "INDB", "LABEL", "LET", "NAME", "NOTSORTED", "OUT", "PREFIX", "SUFFIX", "VAR", "WHERE"])];
+pub(crate) static DATA_SAS_SAS_FUNCTIONS: &[&str] = &["ABS", "ADDR", "ADDRLONG", "AIRY", "ALLCOMB", "ALLPERM", "ANYALNUM", "ANYALPHA", "ANYCNTRL", "ANYDIGIT", "ANYFIRST", "ANYGRAPH", "ANYLOWER", "ANYNAME", "ANYPRINT", "ANYPUNCT", "ANYSPACE", "ANYUPPER", "ANYXDIGIT", "ARCOS", "ARCOSH", "ARSIN", "ARSINH", "ARTANH", "ATAN", "ATAN2", "ATTRC", "ATTRN", "BAND", "BETA", "BETAINV", "BLACKCLPRC", "BLACKPTPRC", "BLKSHCLPRC", "BLKSHPTPRC", "BLSHIFT", "BNOT", "BOR", "BRSHIFT", "BXOR", "BYTE", "CAT", "CATQ", "CATS", "CATT", "CATX", "CDF", "CEIL", "CEILZ", "CEXIST", "CHAR", "CHOOSEC", "CHOOSEN", "CINV", "CLOSE", "CMISS", "CNONCT", "COALESCE", "COALESCEC", "COLLATE", "COMB", "COMPARE", "COMPBL", "COMPFUZZ", "COMPGED", "COMPLEV", "COMPOUND", "COMPRESS", "CONSTANT", "CONVX", "CONVXP", "COS", "COSH", "COT", "COUNT", "COUNTC", "COUNTW", "CSC", "CSS", "CUMIPMT", "CUMPRINC", "CUROBS", "CV", "DACCDB", "DACCDBSL", "DACCSL", "DACCSYD", "DACCTAB", "DAIRY", "DATDIF", "DATE", "DATEJUL", "DATEPART", "DATETIME", "DAY", "DCLOSE", "DCREATE", "DEPDB", "DEPDBSL", "DEPSL", "DEPSYD", "DEPTAB", "DEQUOTE", "DEVIANCE", "DHMS", "DIF", "DIGAMMA", "DIM", "DINFO", "DIVIDE", "DNUM", "DOPEN", "DOPTNAME", "DOPTNUM", "DOSUBL", "DREAD", "DROPNOTE", "DSNAME", "DSNCATLGD", "DUR", "DURP", "EFFRATE", "ENVLEN", "ERF", "ERFC", "EUCLID", "EXIST", "EXP", "FACT", "FAPPEND", "FCLOSE", "FCOL", "FCOPY", "FDELETE", "FETCH", "FETCHOBS", "FEXIST", "FGET", "FILEEXIST", "FILENAME", "FILEREF", "FINANCE", "FIND", "FINDC", "FINDW", "FINFO", "FINV", "FIPNAME", "FIPNAMEL", "FIPSTATE", "FIRST", "FLOOR", "FLOORZ", "FMTINFO", "FNONCT", "FNOTE", "FOPEN", "FOPTNAME", "FOPTNUM", "FPOINT", "FPOS", "FPUT", "FREAD", "FREWIND", "FRLEN", "FSEP", "FUZZ", "FWRITE", "GAMINV", "GAMMA", "GARKHCLPRC", "GARKHPTPRC", "GCD", "GEODIST", "GEOMEAN", "GEOMEANZ", "GETOPTION", "GETVARC", "GETVARN", "GRAYCODE", "HARMEAN", "HARMEANZ", "HBOUND", "HMS", "HOLIDAY", "HOLIDAYCK", "HOLIDAYCOUNT", "HOLIDAYNAME", "HOLIDAYNX", "HOLIDAYNY", "HOLIDAYTEST", "HOUR", "HTMLDECODE", "HTMLENCODE", "IBESSEL", "IFC", "IFN", "INDEX", "INDEXC", "INDEXW", "INPUT", "INPUTC", "INPUTN", "INT", "INTCINDEX", "INTCK", "INTCYCLE", "INTFIT", "INTFMT", "INTGET", "INTINDEX", "INTNX", "INTRR", "INTSEAS", "INTSHIFT", "INTTEST", "INTZ", "IORCMSG", "IPMT", "IQR", "IRR", "JBESSEL", "JULDATE", "JULDATE7", "KURTOSIS", "LAG", "LARGEST", "LBOUND", "LCM", "LCOMB", "LEFT", "LENGTH", "LENGTHC", "LENGTHM", "LENGTHN", "LEXCOMB", "LEXCOMBI", "LEXPERK", "LEXPERM", "LFACT", "LGAMMA", "LIBNAME", "LIBREF", "LOG", "LOG10", "LOG1PX", "LOG2", "LOGBETA", "LOGCDF", "LOGISTIC", "LOGPDF", "LOGSDF", "LOWCASE", "LPERM", "LPNORM", "MAD", "MARGRCLPRC", "MARGRPTPRC", "MAX", "MD5", "MDY", "MEAN", "MEDIAN", "MIN", "MINUTE", "MISSING", "MOD", "MODEXIST", "MODULE", "MODULEC", "MODULEN", "MODZ", "MONTH", "MOPEN", "MORT", "MSPLINT", "MVALID", "N", "NETPV", "NLITERAL", "NMISS", "NOMRATE", "NORMAL", "NOTALNUM", "NOTALPHA", "NOTCNTRL", "NOTDIGIT", "NOTE", "NOTFIRST", "NOTGRAPH", "NOTLOWER", "NOTNAME", "NOTPRINT", "NOTPUNCT", "NOTSPACE", "NOTUPPER", "NOTXDIGIT", "NPV", "NVALID", "NWKDOM", "OPEN", "ORDINAL", "PATHNAME", "PCTL", "PDF", "PEEK", "PEEKC", "PEEKCLONG", "PEEKLONG", "PERM", "PMT", "POINT", "POISSON", "PPMT", "PROBBETA", "PROBBNML", "PROBBNRM", "PROBCHI", "PROBF", "PROBGAM", "PROBHYPR", "PROBIT", "PROBMC", "PROBNEGB", "PROBNORM", "PROBT", "PROPCASE", "PRXCHANGE", "PRXMATCH", "PRXPAREN", "PRXPARSE", "PRXPOSN", "PTRLONGADD", "PUT", "PUTC", "PUTN", "PVP", "QTR", "QUANTILE", "QUOTE", "RANBIN", "RANCAU", "RAND", "RANEXP", "RANGAM", "RANGE", "RANK", "RANNOR", "RANPOI", "RANTBL", "RANTRI", "RANUNI", "RENAME", "REPEAT", "RESOLVE", "REVERSE", "REWIND", "RIGHT", "RMS", "ROUND", "ROUNDE", "ROUNDZ", "SAVING", "SAVINGS", "SCAN", "SDF", "SEC", "SECOND", "SHA256", "SHA256HEX", "SHA256HMACHEX", "SIGN", "SIN", "SINH", "SKEWNESS", "SLEEP", "SMALLEST", "SOAPWEB", "SOAPWEBMETA", "SOAPWIPSERVICE", "SOAPWIPSRS", "SOAPWS", "SOAPWSMETA", "SOUNDEX", "SPEDIS", "SQRT", "SQUANTILE", "STD", "STDERR", "STFIPS", "STNAME", "STNAMEL", "STRIP", "SUBPAD", "SUBSTR", "SUBSTRN", "SUM", "SUMABS", "SYMEXIST", "SYMGET", "SYMGLOBL", "SYMLOCAL", "SYSEXIST", "SYSGET", "SYSMSG", "SYSPARM", "SYSPROCESSID", "SYSPROCESSNAME", "SYSPROD", "SYSRC", "SYSTEM", "TAN", "TANH", "TIME", "TIMEPART", "TIMEVALUE", "TINV", "TNONCT", "TODAY", "TRANSLATE", "TRANSTRN", "TRANWRD", "TRIGAMMA", "TRIM", "TRIMN", "TRUNC", "TSO", "TYPEOF", "TZONEID", "TZONENAME", "TZONEOFF", "TZONES2U", "TZONEU2S", "UNIFORM", "UPCASE", "URLDECODE", "URLENCODE", "USS", "UUIDGEN", "VAR", "VARFMT", "VARINFMT", "VARLABEL", "VARLEN", "VARNAME", "VARNUM", "VARRAY", "VARRAYX", "VARTYPE", "VERIFY", "VFORMAT", "VFORMATD", "VFORMATDX", "VFORMATN", "VFORMATNX", "VFORMATW", "VFORMATWX", "VFORMATX", "VINARRAY", "VINARRAYX", "VINFORMAT", "VINFORMATD", "VINFORMATDX", "VINFORMATN", "VINFORMATNX", "VINFORMATW", "VINFORMATWX", "VINFORMATX", "VLABEL", "VLABELX", "VLENGTH", "VLENGTHX", "VNAME", "VNAMEX", "VTYPE", "VTYPEX", "VVALUE", "VVALUEX", "WEEK", "WEEKDAY", "WHICHC", "WHICHN", "WTO", "YEAR", "YIELDP", "YRDIF", "YYQ", "ZIPCITY", "ZIPCITYDISTANCE", "ZIPFIPS", "ZIPNAME", "ZIPNAMEL", "ZIPSTATE"];
 
 fn cb_abap_abap_194(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
     if m.get(1) != Some("") {
@@ -8277,16 +8284,6 @@ fn cb_isbl_isbl_79(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> 
     Ok(())
 }
 
-fn cb_j_j_95(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
-    s.token(if m.group(1).is_empty() { T::NAME_FUNCTION } else { T::ERROR }, m.text());
-    Ok(())
-}
-
-fn cb_j_j_99(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
-    s.token(if m.group(1).is_empty() { T::LITERAL_NUMBER } else { T::ERROR }, m.text());
-    Ok(())
-}
-
 fn cb_j_j_198(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
     s.pop(1)?;
     Ok(())
@@ -11631,12 +11628,6 @@ fn cb_robot_framework_robot_framework_159(s: &mut Scan<'_, '_>, m: &Match<'_>) -
     Ok(())
 }
 
-fn cb_robot_framework_robot_framework_214(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
-    s.token(T::NAME_FUNCTION, m.text());
-    s.lexer.strings.remove("next");
-    Ok(())
-}
-
 fn cb_robot_framework_robot_framework_237(s: &mut Scan<'_, '_>, m: &Match<'_>) -> Result<(), LexError> {
     s.groups(m, &[T::NAME_VARIABLE, T::TEXT_WHITESPACE, T::PUNCTUATION]);
     s.pop(1)?;
@@ -14959,6 +14950,7 @@ static LEXER_ABAP: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_ACTIONSCRIPT: LexerDef = LexerDef {
@@ -15042,6 +15034,7 @@ static LEXER_ACTIONSCRIPT: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_ADA: LexerDef = LexerDef {
@@ -15101,6 +15094,7 @@ static LEXER_ADA: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_APACHE: LexerDef = LexerDef {
@@ -15130,6 +15124,7 @@ static LEXER_APACHE: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_APEX: LexerDef = LexerDef {
@@ -15179,6 +15174,7 @@ static LEXER_APEX: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_APIBLUEPRINT: LexerDef = LexerDef {
@@ -15254,6 +15250,7 @@ static LEXER_APIBLUEPRINT: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_APPLESCRIPT: LexerDef = LexerDef {
@@ -15295,6 +15292,7 @@ static LEXER_APPLESCRIPT: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_ARMASM: LexerDef = LexerDef {
@@ -15363,6 +15361,7 @@ static LEXER_ARMASM: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_AUGEAS: LexerDef = LexerDef {
@@ -15417,6 +15416,7 @@ static LEXER_AUGEAS: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_AWK: LexerDef = LexerDef {
@@ -15486,6 +15486,7 @@ static LEXER_AWK: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_BATCHFILE: LexerDef = LexerDef {
@@ -15545,6 +15546,7 @@ static LEXER_BATCHFILE: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_BBCBASIC: LexerDef = LexerDef {
@@ -15595,6 +15597,7 @@ static LEXER_BBCBASIC: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_BIBTEX: LexerDef = LexerDef {
@@ -15659,6 +15662,7 @@ static LEXER_BIBTEX: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_BICEP: LexerDef = LexerDef {
@@ -15702,6 +15706,7 @@ static LEXER_BICEP: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_BIML: LexerDef = LexerDef {
@@ -15749,6 +15754,7 @@ static LEXER_BIML: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_BPF: LexerDef = LexerDef {
@@ -15794,6 +15800,7 @@ static LEXER_BPF: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_BRAINFUCK: LexerDef = LexerDef {
@@ -15834,6 +15841,7 @@ static LEXER_BRAINFUCK: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_BRIGHTSCRIPT: LexerDef = LexerDef {
@@ -15857,6 +15865,7 @@ static LEXER_BRIGHTSCRIPT: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_BSL: LexerDef = LexerDef {
@@ -15884,6 +15893,7 @@ static LEXER_BSL: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_C: LexerDef = LexerDef {
@@ -15977,6 +15987,7 @@ static LEXER_C: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_CEYLON: LexerDef = LexerDef {
@@ -16031,7 +16042,8 @@ static LEXER_CEYLON: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["ceylon: state comment: NoMethodError"],
+    missing: &[],
+    broken: &[("comment", "NoMethodError")],
 };
 
 static LEXER_CFSCRIPT: LexerDef = LexerDef {
@@ -16093,6 +16105,7 @@ static LEXER_CFSCRIPT: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_CISCO_IOS: LexerDef = LexerDef {
@@ -16128,6 +16141,7 @@ static LEXER_CISCO_IOS: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_CLEAN: LexerDef = LexerDef {
@@ -16213,6 +16227,7 @@ static LEXER_CLEAN: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_CLOJURE: LexerDef = LexerDef {
@@ -16241,6 +16256,7 @@ static LEXER_CLOJURE: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_CMAKE: LexerDef = LexerDef {
@@ -16294,6 +16310,7 @@ static LEXER_CMAKE: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_CMHG: LexerDef = LexerDef {
@@ -16317,6 +16334,7 @@ static LEXER_CMHG: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_COBOL: LexerDef = LexerDef {
@@ -16352,6 +16370,7 @@ static LEXER_COBOL: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_CODEOWNERS: LexerDef = LexerDef {
@@ -16371,6 +16390,7 @@ static LEXER_CODEOWNERS: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_COFFEESCRIPT: LexerDef = LexerDef {
@@ -16480,6 +16500,7 @@ static LEXER_COFFEESCRIPT: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_COMMON_LISP: LexerDef = LexerDef {
@@ -16536,6 +16557,7 @@ static LEXER_COMMON_LISP: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_CONF: LexerDef = LexerDef {
@@ -16555,6 +16577,7 @@ static LEXER_CONF: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_CONSOLE: LexerDef = LexerDef {
@@ -16566,6 +16589,7 @@ static LEXER_CONSOLE: LexerDef = LexerDef {
     reset: None,
     stream: Some(crate::lexers::console::stream),
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_COQ: LexerDef = LexerDef {
@@ -16651,6 +16675,7 @@ static LEXER_COQ: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_CPP: LexerDef = LexerDef {
@@ -16788,6 +16813,7 @@ static LEXER_CPP: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_CRYSTAL: LexerDef = LexerDef {
@@ -16971,6 +16997,7 @@ static LEXER_CRYSTAL: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_CSHARP: LexerDef = LexerDef {
@@ -17034,6 +17061,7 @@ static LEXER_CSHARP: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_CSS: LexerDef = LexerDef {
@@ -17104,6 +17132,7 @@ static LEXER_CSS: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_CSVS: LexerDef = LexerDef {
@@ -17134,6 +17163,7 @@ static LEXER_CSVS: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_CUDA: LexerDef = LexerDef {
@@ -17271,6 +17301,7 @@ static LEXER_CUDA: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_CYPHER: LexerDef = LexerDef {
@@ -17310,6 +17341,7 @@ static LEXER_CYPHER: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_CYTHON: LexerDef = LexerDef {
@@ -17428,6 +17460,7 @@ static LEXER_CYTHON: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_D: LexerDef = LexerDef {
@@ -17535,6 +17568,7 @@ static LEXER_D: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_DAFNY: LexerDef = LexerDef {
@@ -17585,6 +17619,7 @@ static LEXER_DAFNY: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_DART: LexerDef = LexerDef {
@@ -17650,6 +17685,7 @@ static LEXER_DART: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_DATASTUDIO: LexerDef = LexerDef {
@@ -17690,6 +17726,7 @@ static LEXER_DATASTUDIO: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_DIFF: LexerDef = LexerDef {
@@ -17713,6 +17750,7 @@ static LEXER_DIFF: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_DIGDAG: LexerDef = LexerDef {
@@ -17848,6 +17886,7 @@ static LEXER_DIGDAG: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_DOCKER: LexerDef = LexerDef {
@@ -17875,6 +17914,7 @@ static LEXER_DOCKER: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_DOT: LexerDef = LexerDef {
@@ -17919,6 +17959,7 @@ static LEXER_DOT: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_ECL: LexerDef = LexerDef {
@@ -17963,6 +18004,7 @@ static LEXER_ECL: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_EEX: LexerDef = LexerDef {
@@ -17987,6 +18029,7 @@ static LEXER_EEX: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_EIFFEL: LexerDef = LexerDef {
@@ -18026,6 +18069,7 @@ static LEXER_EIFFEL: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_ELIXIR: LexerDef = LexerDef {
@@ -18106,6 +18150,7 @@ static LEXER_ELIXIR: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_ELM: LexerDef = LexerDef {
@@ -18155,6 +18200,7 @@ static LEXER_ELM: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_EMAIL: LexerDef = LexerDef {
@@ -18182,6 +18228,7 @@ static LEXER_EMAIL: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_EPP: LexerDef = LexerDef {
@@ -18206,6 +18253,7 @@ static LEXER_EPP: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_ERB: LexerDef = LexerDef {
@@ -18230,6 +18278,7 @@ static LEXER_ERB: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_ERLANG: LexerDef = LexerDef {
@@ -18276,6 +18325,7 @@ static LEXER_ERLANG: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_ESCAPE: LexerDef = LexerDef {
@@ -18287,6 +18337,7 @@ static LEXER_ESCAPE: LexerDef = LexerDef {
     reset: None,
     stream: Some(crate::lexers::escape::stream),
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_FACTOR: LexerDef = LexerDef {
@@ -18348,6 +18399,7 @@ static LEXER_FACTOR: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_FLUENT: LexerDef = LexerDef {
@@ -18399,6 +18451,7 @@ static LEXER_FLUENT: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_FORTRAN: LexerDef = LexerDef {
@@ -18452,6 +18505,7 @@ static LEXER_FORTRAN: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_FREEFEM: LexerDef = LexerDef {
@@ -18562,6 +18616,7 @@ static LEXER_FREEFEM: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_FSHARP: LexerDef = LexerDef {
@@ -18618,6 +18673,7 @@ static LEXER_FSHARP: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_GDSCRIPT: LexerDef = LexerDef {
@@ -18723,6 +18779,7 @@ static LEXER_GDSCRIPT: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_GHC_CMM: LexerDef = LexerDef {
@@ -18855,6 +18912,7 @@ static LEXER_GHC_CMM: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_GHC_CORE: LexerDef = LexerDef {
@@ -18945,6 +19003,7 @@ static LEXER_GHC_CORE: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_GHERKIN: LexerDef = LexerDef {
@@ -19018,6 +19077,7 @@ static LEXER_GHERKIN: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_GJS: LexerDef = LexerDef {
@@ -19148,6 +19208,7 @@ static LEXER_GJS: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_GLSL: LexerDef = LexerDef {
@@ -19241,6 +19302,7 @@ static LEXER_GLSL: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_GO: LexerDef = LexerDef {
@@ -19282,6 +19344,7 @@ static LEXER_GO: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_GRADLE: LexerDef = LexerDef {
@@ -19326,6 +19389,7 @@ static LEXER_GRADLE: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_GRAPHQL: LexerDef = LexerDef {
@@ -19455,6 +19519,7 @@ static LEXER_GRAPHQL: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_GROOVY: LexerDef = LexerDef {
@@ -19499,6 +19564,7 @@ static LEXER_GROOVY: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_GTS: LexerDef = LexerDef {
@@ -19634,6 +19700,7 @@ static LEXER_GTS: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_HACK: LexerDef = LexerDef {
@@ -19856,6 +19923,7 @@ static LEXER_HACK: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_HAML: LexerDef = LexerDef {
@@ -19956,6 +20024,7 @@ static LEXER_HAML: LexerDef = LexerDef {
     reset: Some(crate::lexers::util::reset),
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_HANDLEBARS: LexerDef = LexerDef {
@@ -20011,6 +20080,7 @@ static LEXER_HANDLEBARS: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_HASKELL: LexerDef = LexerDef {
@@ -20111,6 +20181,7 @@ static LEXER_HASKELL: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_HAXE: LexerDef = LexerDef {
@@ -20229,6 +20300,7 @@ static LEXER_HAXE: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_HCL: LexerDef = LexerDef {
@@ -20305,6 +20377,7 @@ static LEXER_HCL: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_HLSL: LexerDef = LexerDef {
@@ -20398,6 +20471,7 @@ static LEXER_HLSL: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_HOCON: LexerDef = LexerDef {
@@ -20477,6 +20551,7 @@ static LEXER_HOCON: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_HQL: LexerDef = LexerDef {
@@ -20535,6 +20610,7 @@ static LEXER_HQL: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_HTML: LexerDef = LexerDef {
@@ -20607,6 +20683,7 @@ static LEXER_HTML: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_HTTP: LexerDef = LexerDef {
@@ -20630,6 +20707,7 @@ static LEXER_HTTP: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_HYLANG: LexerDef = LexerDef {
@@ -20658,6 +20736,7 @@ static LEXER_HYLANG: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_IDLANG: LexerDef = LexerDef {
@@ -20712,6 +20791,7 @@ static LEXER_IDLANG: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_IDRIS: LexerDef = LexerDef {
@@ -20826,6 +20906,7 @@ static LEXER_IDRIS: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_IECST: LexerDef = LexerDef {
@@ -20859,6 +20940,7 @@ static LEXER_IECST: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_IGORPRO: LexerDef = LexerDef {
@@ -20950,6 +21032,7 @@ static LEXER_IGORPRO: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_INI: LexerDef = LexerDef {
@@ -20988,6 +21071,7 @@ static LEXER_INI: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_IO: LexerDef = LexerDef {
@@ -21020,6 +21104,7 @@ static LEXER_IO: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_IRB: LexerDef = LexerDef {
@@ -21031,6 +21116,7 @@ static LEXER_IRB: LexerDef = LexerDef {
     reset: None,
     stream: Some(crate::lexers::console::stream),
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_IRB_OUTPUT: LexerDef = LexerDef {
@@ -21229,6 +21315,7 @@ static LEXER_IRB_OUTPUT: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_ISABELLE: LexerDef = LexerDef {
@@ -21282,6 +21369,7 @@ static LEXER_ISABELLE: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_ISBL: LexerDef = LexerDef {
@@ -21320,6 +21408,7 @@ static LEXER_ISBL: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_J: LexerDef = LexerDef {
@@ -21327,12 +21416,12 @@ static LEXER_J: LexerDef = LexerDef {
     states: &[
         StateDef { name: "expr", rules: &[
             Rule::Match { regex: 14, bol: false, action: Action::Emit(T::TEXT, Next::Stay) },
-            Rule::Match { regex: 1722, bol: false, action: Action::Call(crate::lexer::unported) },
-            Rule::Match { regex: 1723, bol: false, action: Action::Call(cb_j_j_95) },
-            Rule::Match { regex: 1724, bol: false, action: Action::Call(cb_j_j_99) },
+            Rule::Match { regex: 1722, bol: false, action: Action::Call(crate::lexers::j::rule_91) },
+            Rule::Match { regex: 1723, bol: false, action: Action::Call(crate::lexers::j::rule_95) },
+            Rule::Match { regex: 1724, bol: false, action: Action::Call(crate::lexers::j::rule_99) },
             Rule::Match { regex: 68, bol: false, action: Action::Emit(T::LITERAL_STRING_SINGLE, Next::State(1)) },
             Rule::Match { regex: 1725, bol: false, action: Action::Emit(T::COMMENT_SINGLE, Next::Stay) },
-            Rule::Match { regex: 1726, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 1726, bol: false, action: Action::Call(crate::lexers::j::rule_107) },
         ] },
         StateDef { name: "str", rules: &[
             Rule::Match { regex: 1169, bol: false, action: Action::Emit(T::LITERAL_STRING_ESCAPE, Next::Stay) },
@@ -21340,9 +21429,9 @@ static LEXER_J: LexerDef = LexerDef {
             Rule::Match { regex: 1728, bol: false, action: Action::Emit(T::LITERAL_STRING_SINGLE, Next::Pop) },
         ] },
         StateDef { name: "root", rules: &[
-            Rule::Match { regex: 21, bol: false, action: Action::Call(crate::lexer::unported) },
-            Rule::Match { regex: 1729, bol: false, action: Action::Call(crate::lexer::unported) },
-            Rule::Match { regex: 1730, bol: true, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 21, bol: false, action: Action::Call(crate::lexers::j::rule_139) },
+            Rule::Match { regex: 1729, bol: false, action: Action::Call(crate::lexers::j::rule_149) },
+            Rule::Match { regex: 1730, bol: true, action: Action::Call(crate::lexers::j::rule_166) },
             Rule::Match { regex: 1731, bol: false, action: Action::Emit(T::NAME, Next::Stay) },
             Rule::Mixin(0),
         ] },
@@ -21351,8 +21440,8 @@ static LEXER_J: LexerDef = LexerDef {
             Rule::Mixin(2),
         ] },
         StateDef { name: "expl_def", rules: &[
-            Rule::Match { regex: 1732, bol: false, action: Action::Call(crate::lexer::unported) },
-            Rule::Match { regex: 68, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 1732, bol: false, action: Action::Call(crate::lexers::j::rule_181) },
+            Rule::Match { regex: 68, bol: false, action: Action::Call(crate::lexers::j::rule_189) },
             Rule::Match { regex: 19, bol: false, action: Action::Call(cb_j_j_198) },
         ] },
         StateDef { name: "q_expr", rules: &[
@@ -21384,11 +21473,12 @@ static LEXER_J: LexerDef = LexerDef {
             Rule::Match { regex: 1737, bol: true, action: Action::Call(cb_j_j_237) },
         ] },
     ],
-    start: &[crate::lexer::unported_hook],
+    start: &[crate::lexers::j::start_134],
     init: None,
     reset: None,
     stream: None,
-    missing: &["j.rs:91 (evaluate primitive)", "j.rs:107 (MASGN@109)", "j.rs:139 (condition IVAR)", "j.rs:149 (IASGN)", "j.rs:166 (IASGN)", "j.rs:181 (literal)", "j.rs:189 (value LIT)", "j.rs:134 (start) (sub lexer)"],
+    missing: &[],
+    broken: &[],
 };
 
 static LEXER_JANET: LexerDef = LexerDef {
@@ -21444,6 +21534,7 @@ static LEXER_JANET: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_JAVA: LexerDef = LexerDef {
@@ -21491,6 +21582,7 @@ static LEXER_JAVA: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_JAVASCRIPT: LexerDef = LexerDef {
@@ -21616,6 +21708,7 @@ static LEXER_JAVASCRIPT: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_JINJA: LexerDef = LexerDef {
@@ -21688,6 +21781,7 @@ static LEXER_JINJA: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_JSL: LexerDef = LexerDef {
@@ -21731,6 +21825,7 @@ static LEXER_JSL: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_JSON: LexerDef = LexerDef {
@@ -21785,6 +21880,7 @@ static LEXER_JSON: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_JSON_DOC: LexerDef = LexerDef {
@@ -21843,6 +21939,7 @@ static LEXER_JSON_DOC: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_JSON5: LexerDef = LexerDef {
@@ -21917,6 +22014,7 @@ static LEXER_JSON5: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_JSONNET: LexerDef = LexerDef {
@@ -21963,6 +22061,7 @@ static LEXER_JSONNET: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_JSP: LexerDef = LexerDef {
@@ -22040,6 +22139,7 @@ static LEXER_JSP: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_JSX: LexerDef = LexerDef {
@@ -22200,6 +22300,7 @@ static LEXER_JSX: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_JULIA: LexerDef = LexerDef {
@@ -22272,6 +22373,7 @@ static LEXER_JULIA: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_KOTLIN: LexerDef = LexerDef {
@@ -22357,6 +22459,7 @@ static LEXER_KOTLIN: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_LASSO: LexerDef = LexerDef {
@@ -22460,6 +22563,7 @@ static LEXER_LASSO: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_LEAN: LexerDef = LexerDef {
@@ -22492,6 +22596,7 @@ static LEXER_LEAN: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_LIQUID: LexerDef = LexerDef {
@@ -22639,6 +22744,7 @@ static LEXER_LIQUID: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_LITERATE_COFFEESCRIPT: LexerDef = LexerDef {
@@ -22654,6 +22760,7 @@ static LEXER_LITERATE_COFFEESCRIPT: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_LITERATE_HASKELL: LexerDef = LexerDef {
@@ -22674,6 +22781,7 @@ static LEXER_LITERATE_HASKELL: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_LIVESCRIPT: LexerDef = LexerDef {
@@ -22797,6 +22905,7 @@ static LEXER_LIVESCRIPT: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_LLVM: LexerDef = LexerDef {
@@ -22826,6 +22935,7 @@ static LEXER_LLVM: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_LUA: LexerDef = LexerDef {
@@ -22922,6 +23032,7 @@ static LEXER_LUA: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_LUSTRE: LexerDef = LexerDef {
@@ -22960,6 +23071,7 @@ static LEXER_LUSTRE: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_LUTIN: LexerDef = LexerDef {
@@ -22998,6 +23110,7 @@ static LEXER_LUTIN: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_M68K: LexerDef = LexerDef {
@@ -23049,6 +23162,7 @@ static LEXER_M68K: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_MAGIK: LexerDef = LexerDef {
@@ -23084,6 +23198,7 @@ static LEXER_MAGIK: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_MAKE: LexerDef = LexerDef {
@@ -23151,6 +23266,7 @@ static LEXER_MAKE: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_MARKDOWN: LexerDef = LexerDef {
@@ -23220,6 +23336,7 @@ static LEXER_MARKDOWN: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_MASON: LexerDef = LexerDef {
@@ -23276,6 +23393,7 @@ static LEXER_MASON: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_MATHEMATICA: LexerDef = LexerDef {
@@ -23307,6 +23425,7 @@ static LEXER_MATHEMATICA: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_MATLAB: LexerDef = LexerDef {
@@ -23345,6 +23464,7 @@ static LEXER_MATLAB: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_MESON: LexerDef = LexerDef {
@@ -23388,6 +23508,7 @@ static LEXER_MESON: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_MINIZINC: LexerDef = LexerDef {
@@ -23417,6 +23538,7 @@ static LEXER_MINIZINC: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_MOJO: LexerDef = LexerDef {
@@ -23509,6 +23631,7 @@ static LEXER_MOJO: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_MOONSCRIPT: LexerDef = LexerDef {
@@ -23564,6 +23687,7 @@ static LEXER_MOONSCRIPT: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_MOSEL: LexerDef = LexerDef {
@@ -23610,6 +23734,7 @@ static LEXER_MOSEL: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_MSGTRANS: LexerDef = LexerDef {
@@ -23632,6 +23757,7 @@ static LEXER_MSGTRANS: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_MXML: LexerDef = LexerDef {
@@ -23676,6 +23802,7 @@ static LEXER_MXML: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_NASM: LexerDef = LexerDef {
@@ -23728,6 +23855,7 @@ static LEXER_NASM: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_NESASM: LexerDef = LexerDef {
@@ -23759,6 +23887,7 @@ static LEXER_NESASM: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_NGINX: LexerDef = LexerDef {
@@ -23800,6 +23929,7 @@ static LEXER_NGINX: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_NIAL: LexerDef = LexerDef {
@@ -23831,6 +23961,7 @@ static LEXER_NIAL: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_NIM: LexerDef = LexerDef {
@@ -23915,6 +24046,7 @@ static LEXER_NIM: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_NIX: LexerDef = LexerDef {
@@ -24064,6 +24196,7 @@ static LEXER_NIX: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_OBJECTIVE_C: LexerDef = LexerDef {
@@ -24226,6 +24359,7 @@ static LEXER_OBJECTIVE_C: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_OBJECTIVE_CPP: LexerDef = LexerDef {
@@ -24434,6 +24568,7 @@ static LEXER_OBJECTIVE_CPP: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_OCAML: LexerDef = LexerDef {
@@ -24491,6 +24626,7 @@ static LEXER_OCAML: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_OCL: LexerDef = LexerDef {
@@ -24516,6 +24652,7 @@ static LEXER_OCL: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_OPENEDGE: LexerDef = LexerDef {
@@ -24613,6 +24750,7 @@ static LEXER_OPENEDGE: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_OPENTYPE_FEATURE_FILE: LexerDef = LexerDef {
@@ -24653,6 +24791,7 @@ static LEXER_OPENTYPE_FEATURE_FILE: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_P4: LexerDef = LexerDef {
@@ -24693,6 +24832,7 @@ static LEXER_P4: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_PASCAL: LexerDef = LexerDef {
@@ -24722,6 +24862,7 @@ static LEXER_PASCAL: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_PERL: LexerDef = LexerDef {
@@ -24894,6 +25035,7 @@ static LEXER_PERL: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_PHP: LexerDef = LexerDef {
@@ -25112,6 +25254,7 @@ static LEXER_PHP: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_PLAINTEXT: LexerDef = LexerDef {
@@ -25123,6 +25266,7 @@ static LEXER_PLAINTEXT: LexerDef = LexerDef {
     reset: None,
     stream: Some(crate::lexers::plain_text::stream),
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_PLIST: LexerDef = LexerDef {
@@ -25162,6 +25306,7 @@ static LEXER_PLIST: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_PLSQL: LexerDef = LexerDef {
@@ -25213,6 +25358,7 @@ static LEXER_PLSQL: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_PONY: LexerDef = LexerDef {
@@ -25256,6 +25402,7 @@ static LEXER_PONY: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_POSTSCRIPT: LexerDef = LexerDef {
@@ -25294,6 +25441,7 @@ static LEXER_POSTSCRIPT: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_POWERSHELL: LexerDef = LexerDef {
@@ -25420,6 +25568,7 @@ static LEXER_POWERSHELL: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_PRAAT: LexerDef = LexerDef {
@@ -25557,6 +25706,7 @@ static LEXER_PRAAT: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_PROLOG: LexerDef = LexerDef {
@@ -25607,6 +25757,7 @@ static LEXER_PROLOG: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_PROMETHEUS: LexerDef = LexerDef {
@@ -25687,6 +25838,7 @@ static LEXER_PROMETHEUS: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_PROPERTIES: LexerDef = LexerDef {
@@ -25724,6 +25876,7 @@ static LEXER_PROPERTIES: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_PROTOBUF: LexerDef = LexerDef {
@@ -25770,6 +25923,7 @@ static LEXER_PROTOBUF: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_PUPPET: LexerDef = LexerDef {
@@ -25832,6 +25986,7 @@ static LEXER_PUPPET: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_PYTHON: LexerDef = LexerDef {
@@ -25924,6 +26079,7 @@ static LEXER_PYTHON: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_Q: LexerDef = LexerDef {
@@ -25981,6 +26137,7 @@ static LEXER_Q: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_QML: LexerDef = LexerDef {
@@ -26127,6 +26284,7 @@ static LEXER_QML: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_R: LexerDef = LexerDef {
@@ -26153,6 +26311,7 @@ static LEXER_R: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_RACKET: LexerDef = LexerDef {
@@ -26213,6 +26372,7 @@ static LEXER_RACKET: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_REASONML: LexerDef = LexerDef {
@@ -26271,6 +26431,7 @@ static LEXER_REASONML: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_REGO: LexerDef = LexerDef {
@@ -26301,6 +26462,7 @@ static LEXER_REGO: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_RESCRIPT: LexerDef = LexerDef {
@@ -26372,6 +26534,7 @@ static LEXER_RESCRIPT: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_RML: LexerDef = LexerDef {
@@ -26440,6 +26603,7 @@ static LEXER_RML: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_ROBOT_FRAMEWORK: LexerDef = LexerDef {
@@ -26465,26 +26629,26 @@ static LEXER_ROBOT_FRAMEWORK: LexerDef = LexerDef {
         ] },
         StateDef { name: "sep", rules: &[
             Rule::Match { regex: 2802, bol: false, action: Action::Emit(T::TEXT_WHITESPACE, Next::Stay) },
-            Rule::Match { regex: 2803, bol: false, action: Action::Call(crate::lexer::unported) },
-            Rule::Match { regex: 2804, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 2803, bol: false, action: Action::Call(crate::lexers::robot_framework::rule_75) },
+            Rule::Match { regex: 2804, bol: false, action: Action::Call(crate::lexers::robot_framework::rule_91) },
             Rule::Match { regex: 2805, bol: false, action: Action::Emit(T::TEXT_WHITESPACE, Next::Stay) },
         ] },
         StateDef { name: "newline", rules: &[
-            Rule::Match { regex: 21, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 21, bol: false, action: Action::Call(crate::lexers::robot_framework::rule_101) },
         ] },
         StateDef { name: "root", rules: &[
             Rule::Mixin(1),
-            Rule::Match { regex: 2806, bol: true, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 2806, bol: true, action: Action::Call(crate::lexers::robot_framework::rule_114) },
         ] },
         StateDef { name: "section_settings", rules: &[
             Rule::Mixin(2),
-            Rule::Match { regex: 2807, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 2807, bol: false, action: Action::Call(crate::lexers::robot_framework::rule_129) },
         ] },
         StateDef { name: "section_tests", rules: &[
             Rule::Mixin(2),
             Rule::Match { regex: 2808, bol: false, action: Action::Emit(T::NAME_LABEL, Next::Stay) },
             Rule::Match { regex: 2809, bol: false, action: Action::Emit(T::NAME_LABEL, Next::Stay) },
-            Rule::Match { regex: 2810, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 2810, bol: false, action: Action::Call(crate::lexers::robot_framework::rule_146) },
         ] },
         StateDef { name: "section_tasks", rules: &[
             Rule::Mixin(9),
@@ -26498,23 +26662,23 @@ static LEXER_ROBOT_FRAMEWORK: LexerDef = LexerDef {
         ] },
         StateDef { name: "section_variables", rules: &[
             Rule::Mixin(2),
-            Rule::Match { regex: 2811, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 2811, bol: false, action: Action::Call(crate::lexers::robot_framework::rule_173) },
         ] },
         StateDef { name: "cell_start", rules: &[
             Rule::Match { regex: 482, bol: false, action: Action::Emit(T::COMMENT, Next::Stay) },
             Rule::Mixin(4),
         ] },
         StateDef { name: "keyword", rules: &[
-            Rule::Match { regex: 2812, bol: false, action: Action::Call(crate::lexer::unported) },
-            Rule::Match { regex: 2811, bol: false, action: Action::Call(crate::lexer::unported) },
-            Rule::Match { regex: 2813, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 2812, bol: false, action: Action::Call(crate::lexers::robot_framework::rule_186) },
+            Rule::Match { regex: 2811, bol: false, action: Action::Call(crate::lexers::robot_framework::rule_200) },
+            Rule::Match { regex: 2813, bol: false, action: Action::Call(crate::lexers::robot_framework::rule_206) },
             Rule::Match { regex: 2809, bol: false, action: Action::Emit(T::NAME_FUNCTION, Next::Stay) },
             Rule::Match { regex: 2814, bol: false, action: Action::Emit(T::NAME_BUILTIN, Next::Stay) },
-            Rule::Match { regex: 2810, bol: false, action: Action::Call(cb_robot_framework_robot_framework_214) },
+            Rule::Match { regex: 2810, bol: false, action: Action::Call(crate::lexers::robot_framework::rule_214) },
             Rule::Mixin(4),
         ] },
         StateDef { name: "args", rules: &[
-            Rule::Match { regex: 2811, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 2811, bol: false, action: Action::Call(crate::lexers::robot_framework::rule_223) },
             Rule::Match { regex: 2815, bol: false, action: Action::Emit(T::LITERAL_STRING, Next::Stay) },
             Rule::Match { regex: 2809, bol: false, action: Action::Emit(T::LITERAL_STRING, Next::Stay) },
             Rule::Match { regex: 2810, bol: false, action: Action::Emit(T::LITERAL_STRING, Next::Stay) },
@@ -26530,10 +26694,11 @@ static LEXER_ROBOT_FRAMEWORK: LexerDef = LexerDef {
         ] },
     ],
     start: &[st_robot_framework_robot_framework_43],
-    init: None,
+    init: Some(crate::lexers::robot_framework::init),
     reset: None,
     stream: None,
-    missing: &["robot_framework.rs:75 (IASGN)", "robot_framework.rs:91 (IASGN)", "robot_framework.rs:101 (IASGN)", "robot_framework.rs:114 (value chomp)", "robot_framework.rs:129 (IASGN)", "robot_framework.rs:146 (IASGN)", "robot_framework.rs:173 (IASGN)", "robot_framework.rs:186 (IASGN)", "robot_framework.rs:200 (IASGN)", "robot_framework.rs:206 (IASGN)", "robot_framework.rs:223 (IASGN)", "robot_framework.rs (initialize) (sub lexer)"],
+    missing: &[],
+    broken: &[],
 };
 
 static LEXER_RUBY: LexerDef = LexerDef {
@@ -26715,6 +26880,7 @@ static LEXER_RUBY: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_RUST: LexerDef = LexerDef {
@@ -26808,6 +26974,7 @@ static LEXER_RUST: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_SAS: LexerDef = LexerDef {
@@ -26881,7 +27048,7 @@ static LEXER_SAS: LexerDef = LexerDef {
         StateDef { name: "proc", rules: &[
             Rule::Match { regex: 2889, bol: false, action: Action::Emit(T::KEYWORD, Next::Pop) },
             Rule::Mixin(0),
-            Rule::Match { regex: 76, bol: false, action: Action::Call(crate::lexer::unported) },
+            Rule::Match { regex: 76, bol: false, action: Action::Call(crate::lexers::sas::rule_546) },
             Rule::Mixin(1),
         ] },
     ],
@@ -26889,7 +27056,8 @@ static LEXER_SAS: LexerDef = LexerDef {
     init: None,
     reset: None,
     stream: None,
-    missing: &["sas: state datalines4: Rouge::RegexLexer::InvalidRegex", "sas.rs:546 (condition has_key?)"],
+    missing: &[],
+    broken: &[("datalines4", "Rouge::RegexLexer::InvalidRegex")],
 };
 
 static LEXER_SASS: LexerDef = LexerDef {
@@ -27041,6 +27209,7 @@ static LEXER_SASS: LexerDef = LexerDef {
     reset: Some(crate::lexers::util::reset),
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_SCALA: LexerDef = LexerDef {
@@ -27119,6 +27288,7 @@ static LEXER_SCALA: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_SCHEME: LexerDef = LexerDef {
@@ -27155,6 +27325,7 @@ static LEXER_SCHEME: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_SCSS: LexerDef = LexerDef {
@@ -27287,6 +27458,7 @@ static LEXER_SCSS: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_SED: LexerDef = LexerDef {
@@ -27337,6 +27509,7 @@ static LEXER_SED: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_SHELL: LexerDef = LexerDef {
@@ -27449,6 +27622,7 @@ static LEXER_SHELL: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_SIEVE: LexerDef = LexerDef {
@@ -27478,6 +27652,7 @@ static LEXER_SIEVE: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_SLICE: LexerDef = LexerDef {
@@ -27571,6 +27746,7 @@ static LEXER_SLICE: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_SLIM: LexerDef = LexerDef {
@@ -27655,6 +27831,7 @@ static LEXER_SLIM: LexerDef = LexerDef {
     reset: Some(crate::lexers::util::reset),
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_SMALLTALK: LexerDef = LexerDef {
@@ -27729,6 +27906,7 @@ static LEXER_SMALLTALK: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_SMARTY: LexerDef = LexerDef {
@@ -27765,6 +27943,7 @@ static LEXER_SMARTY: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_SML: LexerDef = LexerDef {
@@ -27941,6 +28120,7 @@ static LEXER_SML: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_SPARQL: LexerDef = LexerDef {
@@ -28008,6 +28188,7 @@ static LEXER_SPARQL: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_SQF: LexerDef = LexerDef {
@@ -28034,6 +28215,7 @@ static LEXER_SQF: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_SQL: LexerDef = LexerDef {
@@ -28081,6 +28263,7 @@ static LEXER_SQL: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_SSH: LexerDef = LexerDef {
@@ -28107,6 +28290,7 @@ static LEXER_SSH: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_STAN: LexerDef = LexerDef {
@@ -28168,6 +28352,7 @@ static LEXER_STAN: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_STATA: LexerDef = LexerDef {
@@ -28203,6 +28388,7 @@ static LEXER_STATA: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_SUPERCOLLIDER: LexerDef = LexerDef {
@@ -28248,6 +28434,7 @@ static LEXER_SUPERCOLLIDER: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_SVELTE: LexerDef = LexerDef {
@@ -28338,6 +28525,7 @@ static LEXER_SVELTE: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_SWIFT: LexerDef = LexerDef {
@@ -28433,6 +28621,7 @@ static LEXER_SWIFT: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_SYSTEMD: LexerDef = LexerDef {
@@ -28455,6 +28644,7 @@ static LEXER_SYSTEMD: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_SYZLANG: LexerDef = LexerDef {
@@ -28611,6 +28801,7 @@ static LEXER_SYZLANG: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_SYZPROG: LexerDef = LexerDef {
@@ -28679,6 +28870,7 @@ static LEXER_SYZPROG: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_TAP: LexerDef = LexerDef {
@@ -28718,6 +28910,7 @@ static LEXER_TAP: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_TCL: LexerDef = LexerDef {
@@ -28831,6 +29024,7 @@ static LEXER_TCL: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_TERRAFORM: LexerDef = LexerDef {
@@ -28936,6 +29130,7 @@ static LEXER_TERRAFORM: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_TEX: LexerDef = LexerDef {
@@ -28985,6 +29180,7 @@ static LEXER_TEX: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_TOML: LexerDef = LexerDef {
@@ -29076,6 +29272,7 @@ static LEXER_TOML: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_TSX: LexerDef = LexerDef {
@@ -29246,6 +29443,7 @@ static LEXER_TSX: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_TTCN3: LexerDef = LexerDef {
@@ -29295,6 +29493,7 @@ static LEXER_TTCN3: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_TULIP: LexerDef = LexerDef {
@@ -29365,6 +29564,7 @@ static LEXER_TULIP: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_TURTLE: LexerDef = LexerDef {
@@ -29411,6 +29611,7 @@ static LEXER_TURTLE: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_TWIG: LexerDef = LexerDef {
@@ -29483,6 +29684,7 @@ static LEXER_TWIG: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_TYPESCRIPT: LexerDef = LexerDef {
@@ -29616,6 +29818,7 @@ static LEXER_TYPESCRIPT: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_VALA: LexerDef = LexerDef {
@@ -29660,6 +29863,7 @@ static LEXER_VALA: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_VB: LexerDef = LexerDef {
@@ -29736,6 +29940,7 @@ static LEXER_VB: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_VCL: LexerDef = LexerDef {
@@ -29776,6 +29981,7 @@ static LEXER_VCL: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_VELOCITY: LexerDef = LexerDef {
@@ -29825,6 +30031,7 @@ static LEXER_VELOCITY: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_VERILOG: LexerDef = LexerDef {
@@ -29891,6 +30098,7 @@ static LEXER_VERILOG: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_VHDL: LexerDef = LexerDef {
@@ -29922,6 +30130,7 @@ static LEXER_VHDL: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_VIML: LexerDef = LexerDef {
@@ -29951,6 +30160,7 @@ static LEXER_VIML: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_VUE: LexerDef = LexerDef {
@@ -30060,6 +30270,7 @@ static LEXER_VUE: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_WOLLOK: LexerDef = LexerDef {
@@ -30122,6 +30333,7 @@ static LEXER_WOLLOK: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_XML: LexerDef = LexerDef {
@@ -30157,6 +30369,7 @@ static LEXER_XML: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_XOJO: LexerDef = LexerDef {
@@ -30186,6 +30399,7 @@ static LEXER_XOJO: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_XPATH: LexerDef = LexerDef {
@@ -30284,6 +30498,7 @@ static LEXER_XPATH: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_XQUERY: LexerDef = LexerDef {
@@ -30445,6 +30660,7 @@ static LEXER_XQUERY: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_YAML: LexerDef = LexerDef {
@@ -30579,6 +30795,7 @@ static LEXER_YAML: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_YANG: LexerDef = LexerDef {
@@ -30611,6 +30828,7 @@ static LEXER_YANG: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_ZIG: LexerDef = LexerDef {
@@ -30663,6 +30881,7 @@ static LEXER_ZIG: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_SED__REGEX: LexerDef = LexerDef {
@@ -30690,6 +30909,7 @@ static LEXER_SED__REGEX: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 static LEXER_SED__REPLACEMENT: LexerDef = LexerDef {
@@ -30706,6 +30926,7 @@ static LEXER_SED__REPLACEMENT: LexerDef = LexerDef {
     reset: None,
     stream: None,
     missing: &[],
+    broken: &[],
 };
 
 fn detect_awk(text: &TextAnalyzer) -> bool {

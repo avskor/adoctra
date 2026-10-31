@@ -1994,7 +1994,7 @@ persistent `Lexer.subs` (`TemplateLexer#parent` hand-written). Hand-written
 `rule_<line>`/`start_<line>`/`init`/`reset`/`stream` in
 `src/lexers/<rouge file>.rs` win; anything else lands in `LexerDef.missing`
 and the lexer is unused, as is one delegating to an unused lexer (166 of
-228 ported, now 224). Also translated: delegate aliases (`@lang = @css`),
+228 ported, now all 228). Also translated: delegate aliases (`@lang = @css`),
 `coll.any? { |x| … }`, nil-aware `m[i]`/ivar comparisons, stack sizes,
 String ivars (`Lexer.strings`) and `Regexp.escape`, parenthesized conditions, methods of closed-over
 modules, `values.any? { |c| c.include? x }` (union), `include?` over only
@@ -2040,8 +2040,10 @@ table/start, `highlight` lines, callouts extract/restore, `lang?opts`, php
 `Block#content`'s blank edge-line trim. Only listings with default subs
 highlight: custom subs keeping specialcharacters would highlight inside the
 subs pipeline in Ruby (not ported). `golden/rouge/` compares standalone
-documents. Next: hand-port the remaining lexers (ruby, console, html, php
-first) and extend the translator.
+documents. All 228 lexers are ported; j, robot_framework and sas are
+hand-written, and a state Rouge cannot load (ceylon's unreachable
+`comment`, sas's `datalines4`) is in `LexerDef.broken`: entering it fails
+like Ruby. Open: the highlight stage for custom subs.
 highlight.js/prettify are available today. adoctra.css
 carries Ruby's `pre.highlightjs`/`pre.prettyprint` rules (checked with
 screenshots). `golden/highlight/` runs the reference `--standalone --safe`.

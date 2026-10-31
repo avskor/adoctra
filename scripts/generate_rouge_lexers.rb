@@ -183,6 +183,7 @@ module RougeLexers
     def lexer lexer
       @current = lexer.tag
       missing = []
+      broken = []
       ident = "LEXER_#{RougeLexers.rust_ident(lexer.tag).upcase}"
       states = []
       regex_lexer = lexer < Rouge::RegexLexer
@@ -194,9 +195,10 @@ module RougeLexers
         begin
           state = lexer.get_state(name)
         rescue StandardError, NotImplementedError => e
-          # Only the exception class: messages vary across Ruby versions
-          # and carry object addresses.
-          missing << "#{lexer.tag}: state #{name}: #{e.class}"
+          # Rouge raises when the state is first entered (ceylon's
+          # unreachable `comment`, sas's `datalines4`). Only the exception
+          # class: messages vary across Ruby versions and carry addresses.
+          broken << [name.to_s, e.class.name]
           next %(StateDef { name: #{rust_str name.to_s}, rules: &[] })
         end
         rules = state.rules.map do |rule|
@@ -223,6 +225,7 @@ module RougeLexers
       source << "    reset: #{reset},\n"
       source << "    stream: #{stream},\n"
       source << "    missing: __MISSING__,\n"
+      source << "    broken: &[#{broken.map { |n, e| "(#{rust_str n}, #{rust_str e})" }.join(', ')}],\n"
       source << "};\n"
       [ident, source, missing]
     end

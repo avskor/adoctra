@@ -44,6 +44,10 @@ pub struct LexerDef {
     /// Ruby blocks/hooks of this class not yet ported (source locations);
     /// such a lexer is not used.
     pub missing: &'static [&'static str],
+    /// States whose definition raises in Rouge when first loaded (sas's
+    /// `datalines4`: an empty-matching rule): entering one fails with that
+    /// exception's class.
+    pub broken: &'static [(&'static str, &'static str)],
 }
 
 pub struct StateDef {
@@ -310,11 +314,25 @@ impl Lexer {
         self.def.states.iter().find(|state| state.name == name)
     }
 
-    /// `push :name` from a hook (`start { push :bol }`).
-    pub fn push_named(&mut self, name: &str) -> Result<(), LexError> {
+    /// `get_state(name)` to enter: an unknown or broken state raises.
+    pub fn enter_state(&self, name: &str) -> Result<&'static StateDef, LexError> {
         let state = self
             .state_named(name)
             .ok_or_else(|| LexError(format!("unknown state: :{name}")))?;
+        self.check_state(state)?;
+        Ok(state)
+    }
+
+    fn check_state(&self, state: &StateDef) -> Result<(), LexError> {
+        match self.def.broken.iter().find(|(name, _)| *name == state.name) {
+            Some((_, error)) => Err(LexError(format!("state {}: {error}", state.name))),
+            None => Ok(()),
+        }
+    }
+
+    /// `push :name` from a hook (`start { push :bol }`).
+    pub fn push_named(&mut self, name: &str) -> Result<(), LexError> {
+        let state = self.enter_state(name)?;
         self.stack().push(state);
         Ok(())
     }
@@ -452,11 +470,15 @@ pub fn compiled(source: &str, options: u32) -> Result<&'static Regex, LexError> 
 }
 
 /// The action of a Ruby block that is not ported (its lexer is unused).
+/// Every block of the pinned Rouge is ported; the generator still emits it
+/// for a newer Rouge's untranslated blocks.
+#[allow(dead_code)]
 pub(crate) fn unported(_: &mut Scan<'_, '_>, _: &Match<'_>) -> Result<(), LexError> {
     Err(LexError("unported Rouge rule".into()))
 }
 
-/// A `start` block that is not ported.
+/// A `start` block that is not ported (see `unported`).
+#[allow(dead_code)]
 pub(crate) fn unported_hook(_: &mut Lexer) -> Result<(), LexError> {
     Err(LexError("unported Rouge hook".into()))
 }
@@ -596,6 +618,7 @@ impl<'l, 't> Scan<'l, 't> {
             }
             Next::State(index) => {
                 let state = &self.lexer.def.states[*index];
+                self.lexer.check_state(state)?;
                 self.lexer.stack.push(state);
             }
             Next::Unknown(name) => return Err(LexError(format!("unknown state: :{name}"))),
@@ -635,10 +658,7 @@ impl<'l, 't> Scan<'l, 't> {
 
     /// `push :state`.
     pub fn push(&mut self, name: &str) -> Result<(), LexError> {
-        let state = self
-            .lexer
-            .state_named(name)
-            .ok_or_else(|| LexError(format!("unknown state: :{name}")))?;
+        let state = self.lexer.enter_state(name)?;
         self.lexer.stack.push(state);
         Ok(())
     }
@@ -667,10 +687,7 @@ impl<'l, 't> Scan<'l, 't> {
 
     /// `goto :state`.
     pub fn goto(&mut self, name: &str) -> Result<(), LexError> {
-        let state = self
-            .lexer
-            .state_named(name)
-            .ok_or_else(|| LexError(format!("unknown state: :{name}")))?;
+        let state = self.lexer.enter_state(name)?;
         *self.lexer.stack.last_mut().ok_or_else(empty_stack)? = state;
         Ok(())
     }
@@ -788,6 +805,7 @@ mod tests {
             reset: None,
             stream: None,
             missing: &[],
+            broken: &[],
         })
     }
 
