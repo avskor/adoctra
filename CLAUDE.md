@@ -1994,14 +1994,20 @@ persistent `Lexer.subs` (`TemplateLexer#parent` hand-written). Hand-written
 `rule_<line>`/`start_<line>`/`init`/`reset`/`stream` in
 `src/lexers/<rouge file>.rs` win; anything else lands in `LexerDef.missing`
 and the lexer is unused, as is one delegating to an unused lexer (166 of
-228 ported, now 192). Also translated: delegate aliases (`@lang = @css`),
+228 ported, now 207). Also translated: delegate aliases (`@lang = @css`),
 `coll.any? { |x| … }`, nil-aware `m[i]`/ivar comparisons, stack sizes,
 String ivars (`Lexer.strings`) and `Regexp.escape`, parenthesized conditions, methods of closed-over
 modules, `values.any? { |c| c.include? x }` (union), `include?` over only
 the String members (Symbols never equal a match), `delegate self.clone`
 (re-entrant: the clone shares the stack), and a missing constant becomes
 the NameError Ruby raises when the rule fires; `puts … if @debug` is
-dropped. Hand ports so far: plaintext, template_lexer (`parent`), console
+dropped. Token methods of the lexer returning a token or nil
+(`name_token(m[0]) || Name`, token parameters like apache's
+`name_for_token(x, Name::Label)`), `push do … end` states (plain rules and
+mixins; regexps interpolating String locals are cached per value), `next`,
+`case … when /re/`, `/re/.match`, `"…#{x}"`, `a | b` unions, `map[k] || k`
+and `casecmp` are translated too. Hand ports so far: ada (idents), ecl
+(sized types), wollok (`@entities`), plaintext, template_lexer (`parent`), console
 (+irb), python (string register), yaml (+digdag: indentation stack), rust (macro delimiters), crystal (ruby's helpers, Crystal sigils), elixir (`~` sigils; no letter = Ruby's TypeError), lua/moonscript (builtins; lua's Symbol-key options never apply), handlebars (parent `:attr` pop), util (Rouge::Indentation: reset!/starts_block/indentation, used by sass/haml/slim), php (+hack: options, start state, builtins), ruby (`%`-sigils build a cached dynamic state: `dynamic_state`/
 `Rule::Compiled`; heredoc queue); a hand module declares its delegates as
 `Delegates (tag, …): dep, ….` doc lines and the Rouge data it needs as

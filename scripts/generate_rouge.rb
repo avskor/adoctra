@@ -242,6 +242,18 @@ LEXER_CASES = [
   ['sass', "@mixin m($x)\n  color: red\n.a\n  +m(1px)\n  &:hover\n    width: calc(100% - 2px)\n"],
   ['scss', "@use 'x';\n.a { color: lighten($c, 10%); &:hover { top: 0; } }\n"],
   ['hack?start_inline=1', "<<__Entrypoint>> async function main(): Awaitable<void> { echo strlen('x'); }\n"],
+  ['ada', "with Ada.Text_IO, Integer;\nwith procedure Foo;\nwith end;\npackage body P is\n  X : Natural := 16#FF#;\nend P;\n"],
+  ['clojure', "(defn f [x] (map inc x))\n(foo :k 'sym)\n"],
+  ['janet', "(defn f [x] (quote (a b)) (print x))\n"],
+  ['plsql', "SELECT q'[it's]', q'<a>b>' , q'xyx' FROM dual; -- c\n"],
+  ['apache', "<VirtualHost *:80>\n  ServerName example.com\n  Options -Indexes\n</VirtualHost>\n"],
+  ['batchfile', "@echo off\nset X=1\nif exist foo.bat call foo.bat\nunknown.exe /q\n"],
+  ['ecl', "#option x; integer4 a := 1; real8 b; unsigned9 c; string20 d; #foo; INTEGER e := TRUE;\n"],
+  ['wollok', "object pepita { var energia = 100 }\nclass Ave inherits Animal { }\nconst x = pepita\nconst y = otro\n"],
+  ['livescript', "x = \"\"\"a \#{b} c\"\"\"\nf = ({a, b}) -> break\nfor i in [1 2] then continue\n"],
+  ['swift', "let r = #/a+/#\nlet m = ##/\n  x\n/##\nlet s = \"\\(a)\"\n"],
+  ['sml', "structure S = struct val x = List.map end\nval y = S.x\n"],
+  ['varnish', "sub vcl_recv { set req.ttl = 10s; if (req.url ~ \"x\") { return (pass); } set a = 0x1f; }\n"],
 ].freeze
 
 # Ruby's token stream for every lexer's complete demo, and for the extra

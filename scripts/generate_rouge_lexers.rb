@@ -415,7 +415,14 @@ module RougeLexers
         while branch
           if branch.type == :WHEN
             values, body, branch = branch.children
-            tests = call_args(values).map { |v| "#{subject} == #{literal_string v}" }
+            tests = call_args(values).map do |v|
+              if (re = static_regex(v))
+                # `when /^#{decimal}$/`: Regexp#=== searches.
+                search(re, node.children[0])
+              else
+                "#{subject} == #{literal_string v}"
+              end
+            end
             clauses << ["(#{tests.join(' || ')})", body]
           else
             clauses << [nil, branch]
@@ -461,11 +468,20 @@ module RougeLexers
         "#{indent}l.set_sub(#{key}, #{sub_maker rhs})?;\n"
       when :CALL
         rule? ? rule_call(node, indent) : hook_call(node, indent)
+      when :ITER
+        call = node.children[0]
+        unsupported(node) unless rule? && call.type == :FCALL && call.children[0] == :push && call.children[1].nil?
+        push_block(node.children[1], indent)
       when :ZSUPER, :SUPER
         # `super` in `initialize`: the options are already stored.
         unsupported(node) if rule?
         ''
       when :NIL then ''
+      # `next` leaves a rule block (`next token Keyword if …`: after the
+      # token).
+      when :NEXT
+        unsupported(node) unless rule?
+        "#{node.children[0] ? stmt(node.children[0], indent) : ''}#{indent}return Ok(());\n"
       # A literal as a statement (`rule(//) { :pop! }`) has no effect.
       when :LIT, :STR then ''
       # An empty block body (`start do end`).
@@ -474,6 +490,122 @@ module RougeLexers
         ''
       else unsupported(node)
       end
+    end
+
+    # `push do … end`: an anonymous state of plain rules and mixins, built
+    # when the rule fires; its regexps may interpolate String locals, so the
+    # state is cached by their values.
+    def push_block scope, indent
+      body = scope.children[2]
+      list = body.type == :BLOCK ? body.children : [body]
+      parts = []
+      rules = list.filter_map do |item|
+        next if item.type == :BEGIN && item.children.compact.empty?
+
+        unsupported(item, 'push block statement') unless item.type == :FCALL
+        args = call_args(item.children[1])
+        case item.children[0]
+        when :mixin
+          "Rule::Mixin(#{state_index_expr args[0]})"
+        when :rule
+          unsupported(item, 'push block rule') unless (2..3).cover?(args.size)
+          source, options = dynamic_regex(args[0], parts)
+          nxt = args[2] ? @g.next_expr(literal(args[2]), @states) : 'Next::Stay'
+          "{ let source = #{source}; Rule::Compiled { regex: crate::lexer::compiled(&source, #{options})?, " \
+            "bol: source.starts_with('^'), action: Action::Emit(#{token args[1]}, #{nxt}) } }"
+        else unsupported(item, "push block #{item.children[0]}")
+        end
+      end
+      line = scope.first_lineno
+      key = "format!(\"{} #{line}#{' {:?}' * parts.size}\", s.lexer.def.tag#{parts.map { |p| ", #{p}" }.join})"
+      "#{indent}let state = crate::lexer::dynamic_state(#{key}, || Ok(vec![#{rules.join(', ')}]))?;\n" \
+        "#{indent}s.push_state(state);\n"
+    end
+
+    def state_index_expr node
+      name = literal(node).to_s
+      "s.lexer.def.states.iter().position(|st| st.name == #{rust_str name})" \
+        ".ok_or_else(|| LexError(#{rust_str "unknown state: :#{name}"}.into()))?"
+    end
+
+    # A regexp of a dynamic rule as a Rust String expression and its
+    # options; interpolated String locals are added to `parts` (the cache
+    # key), constant interpolations (closed-over regexps) are inlined.
+    def dynamic_regex node, parts
+      case node.type
+      when :LIT
+        re = node.children[0]
+        return [rust_str(re.source) + '.to_string()', (re.options & 7).to_s]
+      when :DREGX
+        pieces = [node.children[0]]
+        pieces << node.children[1] if node.children[1]
+        rest = node.children[2]
+        pieces.concat(rest.children.compact) if rest
+        format = +''
+        args = []
+        pieces.compact.each do |piece|
+          if piece.is_a?(String)
+            format << piece.gsub('{', '{{').gsub('}', '}}')
+          elsif piece.type == :STR
+            format << piece.children[0].gsub('{', '{{').gsub('}', '}}')
+          elsif piece.type == :EVSTR
+            expr = piece.children[0]
+            name = expr.children[0] if %i[VCALL LVAR DVAR].include?(expr.type)
+            if name && @locals[name] == :string
+              format << '{}'
+              args << local(name)
+              parts << local(name)
+            else
+              constant = evaluate(expr.type == :VCALL ? lvar_node(name) : expr)
+              format << constant.to_s.gsub('{', '{{').gsub('}', '}}')
+            end
+          else
+            unsupported(piece, 'dynamic regexp')
+          end
+        end
+        [%(format!(#{rust_str format}#{args.map { |a| ", #{a}" }.join})), regex_flags(node).to_s]
+      else unsupported(node, 'dynamic regexp')
+      end
+    end
+
+    # A regexp literal, also one interpolating only constants, as a Ruby
+    # Regexp; nil for anything else.
+    def static_regex node
+      case node.type
+      when :LIT then node.children[0].is_a?(Regexp) ? node.children[0] : nil
+      when :DREGX
+        parts = []
+        source, = dynamic_regex(node, parts)
+        return nil unless parts.empty?
+
+        pieces = [node.children[0], node.children[1], *node.children[2]&.children].compact
+        text = pieces.map do |piece|
+          next piece if piece.is_a?(String)
+          next piece.children[0] if piece.type == :STR
+
+          expr = piece.children[0]
+          evaluate(expr.type == :VCALL ? lvar_node(expr.children[0]) : expr).to_s
+        end.join
+        flags = regex_flags(node)
+        Regexp.new(text, flags)
+      end
+    rescue Unsupported
+      nil
+    end
+
+    # A closed-over local read by a VCALL-looking name.
+    def lvar_node name
+      Struct.new(:type, :children).new(:LVAR, [name])
+    end
+
+    # The options of a regexp literal from its source text (the AST drops
+    # them for interpolated regexps).
+    def regex_flags node
+      path = @binding.source_location[0]
+      lines = File.readlines(path)
+      text = lines[node.last_lineno - 1][0...node.last_column]
+      flags = text[/[a-z]*\z/]
+      (flags.include?('i') ? 1 : 0) | (flags.include?('x') ? 2 : 0) | (flags.include?('m') ? 4 : 0)
     end
 
     # The value of an expression the generator can evaluate that is not a
@@ -568,9 +700,9 @@ module RougeLexers
       when :token
         unsupported(node, 'token arity') unless [1, 2].include?(args.size)
         val = args[1] ? value(args[1]) : 'm.text()'
-        "#{indent}s.token(#{token args[0]}, #{val});\n"
+        "#{indent}s.token(#{token_expr args[0]}, #{val});\n"
       when :groups
-        "#{indent}s.groups(m, &[#{args.map { |a| token a }.join(', ')}]);\n"
+        "#{indent}s.groups(m, &[#{args.map { |a| token_expr a }.join(', ')}]);\n"
       when :push
         return "#{indent}s.push_current()?;\n" if args.empty?
 
@@ -659,6 +791,9 @@ module RougeLexers
       when :DVAR then @locals[node.children[0]] == :token
       # `push :state; Keyword`: statements, then the token.
       when :BLOCK then token_expression?(node.children.last)
+      # `name_token(m[0]) || Name`: a token method of the lexer.
+      when :OR then method_token?(node.children[0]) && token_expression?(node.children[1])
+      when :FCALL then method_token?(node)
       else false
       end
     rescue Unsupported
@@ -676,7 +811,72 @@ module RougeLexers
       when :BLOCK
         effects = node.children[0..-2].map { |n| stmt(n, '') }.join(' ').tr("\n", ' ')
         "{ #{effects}#{token_expr node.children.last} }"
+      when :OR
+        unsupported(node, 'token OR') unless method_token?(node.children[0])
+        "#{method_token node.children[0]}.unwrap_or(#{token_expr node.children[1]})"
+      when :FCALL
+        unsupported(node, 'token call') unless method_token?(node)
+        # Ruby's `token nil` fails when the rule fires.
+        "#{method_token node}.ok_or_else(|| LexError(\"no token\".into()))?"
       else token(node)
+      end
+    end
+
+    # A lexer instance method of one argument returning a token or nil
+    # (clojure's `name_token`), called with a String value.
+    def method_token? node
+      return false unless node.type == :FCALL && node.children[1]
+
+      args = call_args(node.children[1])
+      method = @lexer.instance_method(node.children[0])
+      return false unless method.arity == args.size && args[1..].all? { |a| token_expression?(a) }
+
+      !RubyVM::AbstractSyntaxTree.of(method).nil?
+    rescue NameError, ArgumentError, Unsupported
+      false
+    end
+
+    # The method's body as an `Option<Token>` expression: its first
+    # parameter bound to the String argument, later ones to token arguments
+    # (apache's `name_for_token(name, Name::Label)`).
+    def method_token node
+      method = @lexer.instance_method(node.children[0])
+      ast = RubyVM::AbstractSyntaxTree.of(method)
+      param, *token_params = ast.children[0].first(method.arity)
+      args = call_args(node.children[1])
+      unsupported(node, 'token method parameter') if @locals.key?(param)
+      arg = value(args[0])
+      saved = @token_params
+      @token_params = token_params.zip(args[1..].map { |a| token_expr a }).to_h
+      @locals[param] = :param
+      body = optional_token(ast.children[2])
+      @locals.delete(param)
+      @token_params = saved
+      "{ let #{local param}: &str = #{arg}; #{body} }"
+    end
+
+    def optional_token node
+      case node&.type
+      when nil, :NIL then 'None'
+      when :BLOCK
+        *init, last = node.children
+        init.reverse.reduce(optional_token(last)) do |rest, stmt|
+          # `return Keyword if cond`.
+          unless stmt.type == :IF && stmt.children[1].type == :RETURN && stmt.children[2].nil?
+            unsupported(stmt, 'token method statement')
+          end
+          "if #{condition stmt.children[0]} { #{optional_token stmt.children[1]} } else { #{rest} }"
+        end
+      when :IF, :UNLESS
+        cond, yes, no = node.children
+        test = condition(cond)
+        test = "!(#{test})" if node.type == :UNLESS
+        "if #{test} { #{optional_token yes} } else { #{optional_token no} }"
+      when :RETURN then optional_token(node.children[0])
+      when :LVAR
+        unsupported(node, 'token method local') unless @token_params&.key?(node.children[0])
+        "Some(#{@token_params[node.children[0]]})"
+      else "Some(#{token node})"
       end
     end
 
@@ -715,6 +915,14 @@ module RougeLexers
         end
       when :VCALL
         @lexer.new.send(node.children[0])
+      # `(['Object'] | self.class.objects)`: a parenthesized union.
+      when :BLOCK
+        unsupported(node, 'evaluate BLOCK') unless node.children.size == 1
+        evaluate(node.children[0])
+      when :OPCALL
+        recv, meth, args = node.children
+        unsupported(node, "evaluate #{meth}") unless meth == :| && (arg = call_args(args)).size == 1
+        evaluate(recv).to_a | evaluate(arg[0]).to_a
       when :LIST, :ZLIST
         # `%w(public protected private)`.
         node.children.compact.map { |item| literal(item) }
@@ -764,7 +972,7 @@ module RougeLexers
     # A String-valued expression (`m[i]`, `m[i].downcase`, a local, a
     # literal).
     def value node
-      return local(node.children[0]) if node.type == :DVAR && @locals[node.children[0]] == :param
+      return local(node.children[0]) if %i[DVAR LVAR].include?(node.type) && @locals[node.children[0]] == :param
 
       case node.type
       when :CALL
@@ -784,6 +992,34 @@ module RougeLexers
         "#{local node.children[0]}.as_str()"
       when :STR then rust_str node.children[0]
       when :IVAR then ivar_value(node)
+      when :DSTR
+        # `"/#{@re_delim}"`: interpolated String values.
+        pieces = [node.children[0]]
+        pieces << node.children[1] if node.children[1]
+        pieces.concat(node.children[2].children.compact) if node.children[2]
+        format = +''
+        args = []
+        pieces.compact.each do |piece|
+          if piece.is_a?(String) || piece.type == :STR
+            text = piece.is_a?(String) ? piece : piece.children[0]
+            format << text.gsub('{', '{{').gsub('}', '}}')
+          elsif piece.type == :EVSTR
+            format << '{}'
+            args << value(piece.children[0])
+          else
+            unsupported(piece, 'value DSTR')
+          end
+        end
+        "&format!(#{rust_str format}#{args.map { |a| ", #{a}" }.join})"
+      when :OR
+        # `delimiter_map[m[1]] || m[1]`: a lookup in a constant Hash.
+        lookup, fallback = node.children
+        unsupported(node, 'value OR') unless lookup.type == :CALL && lookup.children[1] == :[]
+        table = evaluate(lookup.children[0])
+        unsupported(node, 'value OR') unless table.is_a?(Hash) && table.all? { |k, v| k.is_a?(String) && v.is_a?(String) }
+        key = value(call_args(lookup.children[2])[0])
+        arms = table.map { |k, v| "#{rust_str k} => #{rust_str v}, " }.join
+        "match #{key} { #{arms}_ => #{value fallback} }"
       else unsupported(node, "value #{node.type}")
       end
     end
@@ -904,6 +1140,10 @@ module RougeLexers
           "contains(#{@g.set_const values.grep(String)}, #{value call_args(args)[0]})"
         when :==, :!=
           compare(recv, meth, call_args(args)[0])
+        when :match, :match?
+          # `/^[A-Z]/.match(m[0])`.
+          unsupported(node, 'condition match') unless recv.type == :LIT && recv.children[0].is_a?(Regexp)
+          search(recv.children[0], call_args(args)[0])
         when :start_with?, :end_with?
           prefix = value(call_args(args)[0])
           "#{value recv}.#{meth == :start_with? ? 'starts_with' : 'ends_with'}(#{prefix})"
@@ -912,6 +1152,12 @@ module RougeLexers
           "#{optional recv}.is_none()"
         when :empty?
           "#{value recv}.is_empty()"
+        when :casecmp
+          # An Integer (truthy) for any String argument (batchfile's
+          # `"set".casecmp m[1]`).
+          value(recv)
+          value(call_args(args)[0])
+          'true'
         when :[]
           unsupported(node, 'condition index') unless present?(node)
           "m.get(#{integer call_args(args)[0]}).is_some()"
