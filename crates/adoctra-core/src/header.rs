@@ -82,20 +82,36 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
     let mut implicit_author = None;
     let mut implicit_authors = None;
     let mut implicit_initials = None;
-    let title = if !matches!(
-        result.pending.attrs.style.as_deref(),
-        Some("comment" | "discrete" | "float")
-    ) && lines.has(i, context)
-    {
-        // Ruby peeks two processed lines even for ATX. Directives immediately
-        // following it therefore see the context before the implicit doctitle.
-        let has_next = lines.has(i + 1, context);
-        if let Some((level, _)) = parse_heading(&lines[i].1) {
-            Some((level, false))
-        } else if has_next {
-            setext_level(&lines[i].1, &lines[i + 1].1).map(|level| (level, true))
+    let style = result.pending.attrs.style.as_deref();
+    let title = if !matches!(style, Some("discrete" | "float")) && lines.has(i, context) {
+        if style == Some("comment") {
+            // Ruby peeks a comment-styled block's next line without
+            // preprocessing it (`peek_lines` direct): unless it underlines a
+            // title, a later read still preprocesses it.
+            if let Some((level, _)) = parse_heading(&lines[i].1) {
+                Some((level, false))
+            } else {
+                let title = Arc::clone(&lines[i].1);
+                lines
+                    .peek_raw(i + 1)
+                    .and_then(|underline| setext_level(&title, &underline))
+                    .map(|level| {
+                        lines.raw_has(i + 1);
+                        (level, true)
+                    })
+            }
         } else {
-            None
+            // Ruby peeks two processed lines even for ATX. Directives
+            // immediately following it therefore see the context before the
+            // implicit doctitle.
+            let has_next = lines.has(i + 1, context);
+            if let Some((level, _)) = parse_heading(&lines[i].1) {
+                Some((level, false))
+            } else if has_next {
+                setext_level(&lines[i].1, &lines[i + 1].1).map(|level| (level, true))
+            } else {
+                None
+            }
         }
     } else {
         None

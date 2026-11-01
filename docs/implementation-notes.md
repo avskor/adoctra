@@ -992,7 +992,11 @@ Body setext sections share setext_level, but only where Ruby looks for sections
 (BlockCtx::Section: document level, not containers or list items); a
 discrete/float style accepts them anywhere. ATX wins; the underline wins over
 block fences (`----`/`--`/`====`/`++++`); paragraphs are not interrupted; a
-comment style peeks the underline raw. Heading spans both lines. ATX titles
+comment style peeks the underline raw. The implicit document title
+(header.rs, Ruby's `is_next_line_doctitle?`) is likewise refused only under
+discrete/float: a comment style keeps the doctitle and peeks its setext
+underline raw (`Reader::peek_raw`), without processing the next line for an
+ATX title. Heading spans both lines. ATX titles
 follow the same context rule (text inside containers, list items and paragraphs;
 paragraphs are not interrupted). The reader records all section title lines in
 heading_lines, so highlighting emits heading tokens without its own ATX scan.

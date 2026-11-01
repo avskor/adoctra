@@ -213,3 +213,60 @@ fn comment_style_peeks_the_underline_without_preprocessing() {
     ));
     assert!(result.conditional_directives.is_empty());
 }
+
+#[test]
+fn comment_style_does_not_prevent_the_document_title() {
+    // Ruby's `is_next_line_doctitle?` excludes only discrete/float; a comment
+    // style only peeks the underline directly. Both forms are the doctitle.
+    for source in ["[comment]\nTitle\n=====\n\nx", "[comment]\n= Title\n\nx"] {
+        let result = parse(source);
+        assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+        assert!(result.document.has_title, "{source:?}");
+        let blocks = result.document.flat_blocks();
+        assert_eq!(blocks.len(), 2, "{blocks:?}");
+        let (level, inlines) = heading(blocks[0]);
+        assert_eq!(level, 0);
+        assert!(matches!(&inlines[0], Inline::Text { value, .. } if value == "Title"));
+        let title = source.find("Title").unwrap();
+        assert_eq!(inlines[0].span(), Span::new(title, title + 5));
+        assert!(matches!(blocks[1].kind, BlockKind::Paragraph { .. }));
+    }
+    // The header continues after the setext title: an attribute entry applies.
+    let result = parse("[comment]\nTitle\n=====\n:a: b\n\nx {a}");
+    assert!(result.document.has_title);
+    assert_eq!(result.document.attributes.get("a"), Some("b"));
+}
+
+#[test]
+fn comment_style_doctitle_underline_is_peeked_without_preprocessing() {
+    // The raw `ifdef::` line underlines nothing, so there is no doctitle; the
+    // directive is comment paragraph text, `=====` opens an example and the
+    // `endif` is unmatched, as in Ruby.
+    let source = "[comment]\nTitle\nifdef::a[]\n=====\nendif::[]\n\nx";
+    let result = parse(source);
+    assert!(!result.document.has_title);
+    let blocks = result.document.flat_blocks();
+    assert!(
+        matches!(blocks[0].kind, BlockKind::Example { .. }),
+        "{blocks:?}"
+    );
+    let spans: Vec<_> = result
+        .diagnostics
+        .iter()
+        .map(|d| &source[d.span.start..d.span.end])
+        .collect();
+    assert_eq!(spans, ["endif::[]", "====="]);
+}
+
+#[test]
+fn comment_style_document_title_tokens_follow_the_parser() {
+    let tokens = kinds("[comment]\nTitle\n=====\n\nx");
+    assert!(
+        tokens.contains(&(TokenKind::Heading, "Title")),
+        "{tokens:?}"
+    );
+    assert!(
+        tokens.contains(&(TokenKind::Heading, "=====")),
+        "{tokens:?}"
+    );
+}
