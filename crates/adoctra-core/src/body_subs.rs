@@ -98,6 +98,10 @@ pub(crate) struct BodySubs {
     /// keyed by their range: never converted, so nothing inside registers
     /// (footnotes) or reads the conversion attributes.
     pub excluded: BTreeSet<(usize, usize)>,
+    /// AsciiDoc cells Ruby creates and then drops, keyed by their range:
+    /// never converted, but a reference converts their titles (Ruby's lazy
+    /// `Section#title`), so their deferred fields stay pending.
+    pub dropped: BTreeSet<(usize, usize)>,
 }
 
 impl BodySubs {
@@ -272,6 +276,7 @@ impl BodySubs {
     ) {
         let mut execution = Execution {
             excluded: std::mem::take(&mut self.excluded),
+            dropped: std::mem::take(&mut self.dropped),
             heading_converted: false,
             start,
             tokens: &mut self.tokens,
@@ -406,6 +411,8 @@ impl BodySubs {
 struct Execution<'a, 's> {
     /// See [`BodySubs::excluded`].
     excluded: BTreeSet<(usize, usize)>,
+    /// See [`BodySubs::dropped`].
+    dropped: BTreeSet<(usize, usize)>,
     /// A heading's text was converted on entry; the walk skips it once.
     heading_converted: bool,
     /// The converter's hook ([`crate::ConversionStart`]).
@@ -1297,10 +1304,16 @@ impl Execution<'_, '_> {
             self.pending.extend(saved);
             cell.background = self.attributes.get("cellbgcolor").map(str::to_owned);
         }
+        let dropped = &self.dropped;
         let keys: Vec<_> = self
             .pending
             .range((span.start, 0)..=(span.end, usize::MAX))
             .map(|(key, _)| *key)
+            .filter(|key| {
+                !dropped
+                    .range(..=(key.0, usize::MAX))
+                    .any(|cell| cell.0 <= key.0 && key.1 <= cell.1)
+            })
             .collect();
         for key in keys {
             self.pending.remove(&key);

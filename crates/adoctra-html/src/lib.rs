@@ -6008,6 +6008,22 @@ mod tests {
     }
 
     #[test]
+    fn a_dropped_asciidoc_cell_is_not_rendered_but_lends_its_title() {
+        // Ruby registers the dropped cell's section id: the later section
+        // keeps its id in the output, the reference shows the dropped title.
+        let html = render(
+            "[cols=\"a,a\"]\n|===\n|a |b\n|[[y]]\n== S\n\n.Blk\n[#q]\n====\nx\n====\n|===\n\n[[y]]\n== T\n\n<<y>> <<q>>",
+        );
+        assert!(!html.contains("<p>x</p>"), "{html}");
+        assert!(!html.contains(">S</h"), "{html}");
+        assert!(html.contains(r#"<h2 id="y">T</h2>"#), "{html}");
+        assert!(
+            html.contains(r##"<a href="#y">S</a> <a href="#q">Blk</a>"##),
+            "{html}"
+        );
+    }
+
+    #[test]
     fn a_top_reference_in_a_section_title_renders_the_early_document_title() {
         // The document title converts once, for the reference while reading
         // (its counter steps there); the heading and the label show it.

@@ -799,8 +799,14 @@ follows them). Cells Ruby creates and then drops (incomplete last row, a row
 exceeding the column count: `Parsed.dropped`) are completed too — an AsciiDoc
 cell reads its nested document and reports its warnings, a normal cell catalogs
 its anchor — but are not output; normal dropped text is never converted (Ruby's
-lazy `Cell#text`). Ids inside a dropped AsciiDoc cell are not registered: the
-registry walks the output tree (XFAIL `fuzz-table-dropped-cell-anchor`).
+lazy `Cell#text`). A dropped AsciiDoc cell's blocks are kept out of the tree in
+`ParseContext::dropped_blocks` (keyed by the cell start); resolve.rs `Ids`
+walks them when it leaves their table (one entry at a time, so a table inside
+a dropped cell takes its own), so their ids register like Ruby's shared
+catalog (duplicate-id warning on a later section, the reference takes the
+dropped title). `BodySubs::dropped` keeps the dropped cells' deferred fields
+pending after the table converts, so a reference converts such a title
+lazily (`fuzz-table-dropped-cell-anchor` PASS).
 Reading:
 parser.rs read_nested_document builds `Reader::nested` (the cell's lines at their
 reader offsets, no preprocessing; Reader::absorb keeps highlighting records, its

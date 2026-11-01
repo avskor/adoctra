@@ -673,3 +673,81 @@ fn a_dropped_normal_cell_is_not_converted() {
         )]
     );
 }
+
+/// The labels of the cross-references in a paragraph, with their targets.
+fn references(block: &Block) -> Vec<(String, String)> {
+    let BlockKind::Paragraph { inlines } = &block.kind else {
+        panic!("not a paragraph: {:?}", block.kind)
+    };
+    inlines
+        .iter()
+        .filter_map(|inline| match inline {
+            Inline::CrossReference { xref, children, .. } => {
+                Some((xref.refid.clone().unwrap_or_default(), text(children)))
+            }
+            _ => None,
+        })
+        .collect()
+}
+
+#[test]
+fn a_dropped_asciidoc_cell_registers_its_ids() {
+    // Ruby's nested document shares the catalog while it is read: the
+    // dropped section keeps its id, a later section reports the duplicate
+    // and the reference takes the dropped title.
+    let source = "[cols=\"a,a\"]\n|===\n|a |b\n|[[y]]\n== S\n|===\n\n[[y]]\n== T\n\n<<y>>\n";
+    let result = parse(source);
+    assert_eq!(
+        located(source, &result),
+        [
+            (
+                "dropping cells from incomplete row detected end of table",
+                "== S"
+            ),
+            ("id assigned to section already in use: y", "== T"),
+        ]
+    );
+    let t = blocks(source);
+    assert!(table(&t[0]).body.len() == 1);
+    let heading = t
+        .iter()
+        .find(|block| matches!(block.kind, BlockKind::Heading { .. }))
+        .unwrap();
+    assert_eq!(heading.id.as_deref(), Some("y"));
+    assert_eq!(&source[heading.span.start..heading.span.end], "== T");
+    let paragraph = t.last().unwrap();
+    assert_eq!(references(paragraph), [("y".into(), "S".into())]);
+    assert_eq!(&source[paragraph.span.start..paragraph.span.end], "<<y>>");
+}
+
+#[test]
+fn a_dropped_asciidoc_cell_lends_titles_and_anchors_to_references() {
+    // Block ids, inline anchors, automatic section ids and ids of a table
+    // dropped inside the dropped cell all register; a block title converts
+    // at its first reference.
+    let source = "[cols=\"a,a\"]\n|===\n|a |b\n|== S\n\n[#z]\nPara with [[w,W text]] anchor.\n\n.Blk\n[#q]\n====\nx\n====\n\n[cols=\"a,a\"]\n!===\n!p !q\n![[b]]\n=== Inner\n!===\n|===\n\n<<z>> <<w>> <<q>> <<_s>> <<b>>\n";
+    let result = parse(source);
+    let messages: Vec<_> = result
+        .diagnostics
+        .iter()
+        .map(|d| d.message.as_str())
+        .collect();
+    assert_eq!(
+        messages,
+        [
+            "dropping cells from incomplete row detected end of table",
+            "dropping cells from incomplete row detected end of table",
+        ]
+    );
+    let t = blocks(source);
+    assert_eq!(
+        references(t.last().unwrap()),
+        [
+            ("z".into(), "[z]".into()),
+            ("w".into(), "W text".into()),
+            ("q".into(), "Blk".into()),
+            ("_s".into(), "S".into()),
+            ("b".into(), "Inner".into()),
+        ]
+    );
+}

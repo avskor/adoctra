@@ -372,6 +372,10 @@ pub(crate) struct ParseContext<'i> {
     /// Title headings of nested documents (AsciiDoc cells), keyed by range:
     /// like the document title they never take an automatic id.
     pub nested_titles: BTreeSet<(usize, usize)>,
+    /// Blocks of AsciiDoc cells Ruby creates and then drops, keyed by the
+    /// cell's start: never output, but their ids register (Ruby's nested
+    /// document shares the catalog while it is read).
+    pub dropped_blocks: BTreeMap<usize, Vec<crate::Block>>,
     /// Whether the doctype is book, read once the header is complete.
     pub book: bool,
     /// Whether the doctype is manpage (outside nested documents), read once
@@ -758,6 +762,7 @@ impl ParseContext<'_> {
             credits: BTreeSet::new(),
             sections: BTreeMap::new(),
             nested_titles: BTreeSet::new(),
+            dropped_blocks: BTreeMap::new(),
             book: false,
             manpage: false,
             open_sections: Vec::new(),
@@ -969,6 +974,7 @@ impl ParseContext<'_> {
             sections: &self.sections,
             definitions: std::mem::take(&mut self.definitions),
             nested_titles: std::mem::take(&mut self.nested_titles),
+            dropped_blocks: std::mem::take(&mut self.dropped_blocks),
             block_stamps: std::mem::take(&mut self.block_stamps),
         };
         let (body_subs, locked, counters) = (&mut self.body_subs, &self.locked, &self.counters);

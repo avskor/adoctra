@@ -2137,6 +2137,18 @@ fn read_table(
             // is lazy); only its creation-time effects happen.
             continue;
         }
+        if s == 3 {
+            // A dropped AsciiDoc cell is read (its warnings and ids count)
+            // but never output.
+            let (blocks, _, _) =
+                read_nested_document(lines, &cell.text, (cell.span.start, cell.span.end), context);
+            context.dropped_blocks.insert(cell.span.start, blocks);
+            context
+                .body_subs
+                .dropped
+                .insert((cell.span.start, cell.span.end));
+            continue;
+        }
         let content = if cell.literal {
             CellContent::Literal(crate::table::text(&cell.text))
         } else if asciidoc {
