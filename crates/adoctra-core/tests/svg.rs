@@ -39,8 +39,9 @@ fn svg_assets_decode_bom_strictly_without_creating_source_snapshots() {
     assert_eq!(images(&bad)[0].1, Some(Svg::Inline(None)));
     assert_eq!(
         bad.diagnostics[0].message,
-        // Ruby's read_asset names the document (`docfile`, else `<stdin>`).
-        "/main.adoc: SVG does not exist or cannot be read: /encoded.svg"
+        // Ruby's read_asset reads `attr 'docfile'` on the image node, which
+        // does not fall back to the document: `<stdin>` for a file too.
+        "<stdin>: SVG does not exist or cannot be read: /encoded.svg"
     );
     assert_eq!(map.slice(bad.diagnostics[0].span), Some(source.trim_end()));
     assert!(map.get(adoctra_core::SourceId(1)).is_none());
@@ -128,8 +129,25 @@ fn unreadable_inline_svgs_show_their_alt_and_warn() {
         messages(&result),
         [
             "contents of SVG is empty: /docs/empty.svg",
-            "/docs/main.adoc: SVG does not exist or cannot be read: /docs/gone.svg",
+            "<stdin>: SVG does not exist or cannot be read: /docs/gone.svg",
             "cannot retrieve contents of SVG at URI: http://e/a.svg (allow-uri-read attribute not enabled)",
+        ]
+    );
+}
+
+#[test]
+fn unreadable_svg_warnings_name_the_nodes_own_docfile_like_ruby() {
+    // Regression: the document's `docfile` leaked into the warning; Ruby
+    // only sees an explicit `docfile` attribute on the image node itself.
+    let result = convert(
+        "image::gone.svg[opts=inline,docfile=x.adoc]\n\nSee image:gone.svg[opts=inline] here.",
+        ParseOptions::default(),
+    );
+    assert_eq!(
+        messages(&result),
+        [
+            "x.adoc: SVG does not exist or cannot be read: /docs/gone.svg",
+            "<stdin>: SVG does not exist or cannot be read: /docs/gone.svg",
         ]
     );
 }

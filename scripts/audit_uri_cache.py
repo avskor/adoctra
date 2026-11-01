@@ -101,6 +101,36 @@ def cases():
         'include::{uri}/part.adoc[encoding=US-ASCII]\n\n'
         'include::{uri}/part.adoc[lines=1]\n',
         {'/part.adoc': [{'hex': b'one\n\xff\n'.hex()}]}, ruby_error='ArgumentError')
+    # Uncached URI includes decode like files: an explicit `encoding`, a BOM,
+    # selection after decoding and an undecodable byte.
+    def encoded(text, codec):
+        return [{'hex': text.encode(codec).hex()}]
+    for identifier, body, attrs in [
+            ('windows-1251', encoded('*Привет*\n', 'cp1251'), 'encoding=Windows-1251'),
+            ('shift-jis', encoded('*日本語*\n', 'shift_jis'), 'encoding=Shift_JIS'),
+            ('iso-8859-1-lines', encoded('one\n*Grüße*\n', 'latin-1'), 'encoding=ISO-8859-1,lines=2'),
+            ('utf-16le-bom', [{'hex': (b'\xff\xfe' + '*Привет*\n'.encode('utf-16le')).hex()}], ''),
+            ('utf-16be-explicit', encoded('*Привет*\n', 'utf-16be'), 'encoding=UTF-16BE'),
+            ('euc-jp-tag', encoded('// tag::t[]\n*日本*\n// end::t[]\nout\n', 'euc_jp'), 'encoding=EUC-JP,tag=t'),
+            ('invalid-utf8-lines', [{'hex': b'one\n\xff\nthree\n'.hex()}], 'lines=3')]:
+        add(f'uncached-encoding-{identifier}', f'include::{{uri}}/part.adoc[{attrs}]\n',
+            {'/part.adoc': body})
+    # Like a file include, a selected undecodable line aborts Ruby's load.
+    add('uncached-encoding-invalid-utf8', 'include::{uri}/part.adoc[]\n',
+        {'/part.adoc': [{'hex': b'one\n\xff\nthree\n'.hex()}]}, ruby_error='ArgumentError')
+    # Every safe mode for uncached and cached URI includes; secure never reads.
+    for safe in ['safe', 'server', 'unsafe', 'secure']:
+        reads = safe != 'secure'
+        add(f'mode-{safe}-uncached', repeated, safe=safe,
+            requests=['/part.adoc'] * 2 if reads else [])
+        add(f'mode-{safe}-cached-header', ':cache-uri:\n\n' + repeated, safe=safe,
+            requests=['/part.adoc'] if reads else [])
+        # Known difference: from server mode up Ruby trims `docfile` to a
+        # path relative to `docdir`, so its logger cursor's `file` is
+        # `main.adoc`; adoctra's CLI keeps the full path (docs/cli.adoc).
+        add(f'mode-{safe}-missing', 'include::{uri}/missing.adoc[]\n', safe=safe,
+            requests=['/missing.adoc'] if reads else [],
+            **({'known_difference': True} if safe == 'server' else {}))
     return result
 
 
@@ -176,6 +206,24 @@ def asset_cases():
     # though the stylesheet enabled the cache (observed trace).
     add('stylesheet-enables-body-cache', sheet + ':data-uri:\n\n:cache-uri!:\n\n' + image + '\n' + image,
         {**css, **png}, ['/a.css', '/a.png', '/a.png'], standalone=True)
+    # Every safe mode for each asset kind; secure reads no URI.
+    for safe in ['safe', 'server', 'unsafe', 'secure']:
+        reads = safe != 'secure'
+        add(f'mode-{safe}-image', ':data-uri:\n\n' + image + '\n' + image, png,
+            ['/a.png'] * 2 if reads else [], safe=safe)
+        add(f'mode-{safe}-image-cached', ':cache-uri:\n:data-uri:\n\n' + image + '\n' + image, png,
+            ['/a.png'] if reads else [], safe=safe)
+        add(f'mode-{safe}-image-missing', ':data-uri:\n\nimage::{uri}/missing.png[Missing]\n', png,
+            ['/missing.png'] if reads else [], safe=safe)
+        add(f'mode-{safe}-svg', svg + '\n' + svg, vector, ['/a.svg'] * 2 if reads else [], safe=safe)
+        add(f'mode-{safe}-svg-cached', ':cache-uri:\n\n' + svg + '\n' + svg, vector,
+            ['/a.svg'] if reads else [], safe=safe)
+        add(f'mode-{safe}-svg-missing', 'image::{uri}/missing.svg[Pic,opts=inline]\n', vector,
+            ['/missing.svg'] if reads else [], safe=safe)
+        add(f'mode-{safe}-stylesheet', sheet + '\nx\n', css, ['/a.css'] if reads else [],
+            standalone=True, safe=safe)
+        add(f'mode-{safe}-stylesheet-missing', ':stylesheet: {uri}/missing.css\n\nx\n', css,
+            ['/missing.css'] if reads else [], standalone=True, safe=safe)
     add('stylesheet-warning-order', sheet + ':data-uri:\n\n' + image,
         {'/a.css': [{'status': 500}], '/a.png': [{'status': 404}]},
         ['/a.css', '/a.png'], standalone=True)

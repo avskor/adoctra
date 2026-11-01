@@ -140,10 +140,10 @@ OutputPaths; `docname` after reading, header-pinned outfilesuffix) and
 conversion-only `outfile`/`outdir` below server; `resolve_system_path`
 is public.
 **CLI matrix** (docs/cli.adoc, `scripts/cli_matrix.py`, profile cli-v1,
-compatibility/cli/cases.json + report.json in CI): 62 scenarios run by
+compatibility/cli/cases.json + report.json in CI): 64 scenarios run by
 adoctra and Ruby's `asciidoctor` (scripts/ruby-cli.rb = Cli::Invoker) in one
 temp dir; compares exit code, stdout (HTML projected, usage/version by
-kind), normalized stderr and written files; 61 PASS, 1 RUBY_ERROR (Ruby's
+kind), normalized stderr and written files; 63 PASS, 1 RUBY_ERROR (Ruby's
 uncaught AmbiguousOption). crates/adoctra-cli/src/args.rs ports
 OptionParser (long-option/value prefixes, clusters, Ruby error texts; usage
 on stdout for errors); glob.rs is Dir.glob; main.rs logs through LOG
@@ -2037,14 +2037,19 @@ their report uses the resolved URI and directive cursor. document_path must
 return None for URLs so unresolved nested includes retain their URL.
 The pinned optional gem version is in compatibility/open-uri-cached-version.
 scripts/audit_uri_cache.py compares HTML projection, positioned diagnostics and
-request traces against local HTTP servers: 32 PASS / 2 RUBY_ERROR. CI verifies
+request traces against local HTTP servers: 50 PASS / 3 RUBY_ERROR / 1 XFAIL
+(uncached URI includes with explicit encodings, BOM, selection and bad UTF-8;
+every safe mode for uncached/cached/missing includes; the XFAIL is Ruby's
+relative `cursor.file` from server mode up, where `docfile` is trimmed to
+`docdir` — adoctra's CLI prints the full path). CI verifies
 the complete compatibility/uri-cache/report.json baseline. Images with data-uri,
 inline SVG and embedded stylesheets now activate the same cache after permission
 checks. SVG uses ResourceProvider::load_asset_text (default strict binary decode
 with BOM detection); native cache hits preserve BINARY decoding. Do not replace
 bad SVG bytes with U+FFFD. Asset warnings keep editor spans but have Unlocated
 conversion reports. The separate --assets audit compares exact styles/links as
-well as body DOM, diagnostics and requests: 39 PASS in assets.json.
+well as body DOM, diagnostics and requests: 71 PASS in assets.json (images,
+inline SVG and stylesheets in every safe mode: read, cached, missing).
 Only the three known standalone shell tags are mapped to their Ruby divs.
 Like Ruby's `convert_document` (head after `<title>`, before the header outline
 and body), the stylesheet is read before body images: core calls the public
@@ -2281,3 +2286,25 @@ title (after the body) with footnotes,
 counters, attributes and diagnostics restored, and `Unregistered` clears the
 footnote sequences in their nodes, so `collect_footnotes_after` skips them
 (Ruby never converts these titles).
+
+**Phase-marked diagnostics and `-o /dev/null`** (2026-11-01). `parse_reader`
+stamps the end of Ruby's load just before `execute_body`: stream entries after
+it, placed reports stamped later and unresolved references set
+`DiagnosticReport::conversion` (duplicate ids reported during registration
+stay loading). The CLI treats `-o /dev/null` like Ruby's `Asciidoctor.convert`
+(`to_file: '/dev/null'` returns `load`): no output plan or jail check, no HTML
+start hook, conversion reports skipped, `-t` with zero conversion time
+(`cli_output_to_dev_null_only_loads_like_ruby`, CLI matrix `output-dev-null`).
+**SVG `docfile`**: Ruby's `read_asset` warns with `attr 'docfile'` on the
+image node, which never falls back to the document, so the warning names
+`<stdin>` for a file document too unless the macro sets `docfile=` itself;
+`read_svg` takes the node's own `docfile` (`svg-warning-file-document`).
+**Rechecked gaps**: block options with HTML effect in Ruby's converter
+(`collapsible`/`open`, `inline`/`interactive`, `nowrap`, `reversed`,
+`autowidth`, `header`/`noheader`/`footer`, `rotate`, `hardbreaks`, `linenums`,
+`strong`, video/audio options, `nofollow`/`noopener`, `optional`/`partial`)
+and callouts in STEM `subs` all match Ruby (60 body-DOM/diagnostic probes,
+2026-11-01); the remaining options are DocBook-only.
+**Include encoding order audit** covers 93 profiles
+(`scripts/generate_encoding_order.rb` adds every pinned-Ruby encoding with a
+UTF-8 converter): 2699 cases, 2649 PASS, 50 RUBY_ERROR, no DIFF.

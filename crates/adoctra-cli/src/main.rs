@@ -207,6 +207,23 @@ impl From<std::io::Error> for Failure {
     }
 }
 
+/// Ruby's `Timings#print_report` on stderr.
+fn print_timings(input: &str, parsed: std::time::Duration, converting: std::time::Duration) {
+    eprintln!("Input file: {input}");
+    eprintln!(
+        "  Time to read and parse source: {:.5}",
+        parsed.as_secs_f64()
+    );
+    eprintln!(
+        "  Time to convert document: {:.5}",
+        converting.as_secs_f64()
+    );
+    eprintln!(
+        "  Total time (read, parse and convert): {:.5}",
+        (parsed + converting).as_secs_f64()
+    );
+}
+
 /// One input: Ruby's `Asciidoctor.convert` (or `convert_file`).
 fn convert(args: &Args) -> Result<(), Failure> {
     let started = std::time::Instant::now();
@@ -217,13 +234,17 @@ fn convert(args: &Args) -> Result<(), Failure> {
     let stream = args.to_stdout
         || args.output.as_deref() == Some("-")
         || (args.input == "-" && args.output.is_none());
-    let plan = match stream {
+    // Ruby's `Asciidoctor.convert` with `to_file: '/dev/null'` only loads
+    // the document: no conversion, no output path (so no jail check), and
+    // only the messages logged while loading.
+    let load_only = !stream && args.output.as_deref() == Some("/dev/null");
+    let plan = match stream || load_only {
         true => None,
         false => Some(output_plan(args)?),
     };
     // Ruby's Document#initialize: a `:to_file` path sets `outfilesuffix`
     // to its extension, replacing a host value.
-    if let (Some(file), false) = (&args.output, stream) {
+    if let (Some(file), false) = (&args.output, stream || load_only) {
         let previous: Vec<_> = attributes
             .iter()
             .filter(|(key, _)| override_name(key) == "outfilesuffix")
@@ -267,7 +288,7 @@ fn convert(args: &Args) -> Result<(), Failure> {
     let referrer = sources
         .get(source_id)
         .map(|source| source.name().to_owned());
-    let mut html_start = (args.format == "html").then(|| {
+    let mut html_start = (args.format == "html" && !load_only).then(|| {
         if args.embedded {
             adoctra::html::HtmlBackend::embedded().start()
         } else {
@@ -290,6 +311,9 @@ fn convert(args: &Args) -> Result<(), Failure> {
         }
     };
     for d in &result.diagnostics {
+        if load_only && d.report.conversion {
+            continue;
+        }
         if !args.editor_diagnostics {
             let severity = d.report.severity.unwrap_or(d.severity);
             if d.report.suppressed {
@@ -367,6 +391,12 @@ fn convert(args: &Args) -> Result<(), Failure> {
     }
 
     let parsed = started.elapsed();
+    if load_only {
+        if args.timings {
+            print_timings(&args.input, parsed, std::time::Duration::ZERO);
+        }
+        return Ok(());
+    }
     let backend = select_backend(
         &args.format,
         args.embedded,
@@ -388,20 +418,7 @@ fn convert(args: &Args) -> Result<(), Failure> {
     let converted = started.elapsed();
     let timings = || {
         if args.timings {
-            // Ruby's Timings#print_report on stderr.
-            eprintln!("Input file: {}", args.input);
-            eprintln!(
-                "  Time to read and parse source: {:.5}",
-                parsed.as_secs_f64()
-            );
-            eprintln!(
-                "  Time to convert document: {:.5}",
-                (converted - parsed).as_secs_f64()
-            );
-            eprintln!(
-                "  Total time (read, parse and convert): {:.5}",
-                converted.as_secs_f64()
-            );
+            print_timings(&args.input, parsed, converted - parsed);
         }
     };
     let Some(plan) = plan else {

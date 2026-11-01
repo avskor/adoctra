@@ -243,3 +243,33 @@ fn include_selection_reports_keep_their_place_and_physical_ranges() {
         result.diagnostics
     );
 }
+
+/// Ruby's load (`Asciidoctor.load`, the CLI's `-o /dev/null`) logs the
+/// reading reports only: a title converted while reading, a duplicate id
+/// placed at its title and the end of input are loading; the body's
+/// substitutions and the unresolved reference are conversion.
+#[test]
+fn conversion_reports_are_marked_apart_from_loading() {
+    let source = "= T\n:attribute-missing: warn\n\n[[a]]\n== S {one}\n\npara {two} <<nope>>\n\n[[a]]\n== Again\n\n----\nopen\n";
+    let result = parse(source);
+    let phases: Vec<_> = result
+        .diagnostics
+        .iter()
+        .map(|d| {
+            (
+                d.report.message.as_deref().unwrap_or(&d.message),
+                d.report.conversion,
+            )
+        })
+        .collect();
+    assert_eq!(
+        phases,
+        [
+            ("skipping reference to missing attribute: one", false),
+            ("id assigned to section already in use: a", false),
+            ("unterminated listing block", false),
+            ("skipping reference to missing attribute: two", true),
+            ("possible invalid reference: nope", true),
+        ]
+    );
+}

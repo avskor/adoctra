@@ -1525,6 +1525,80 @@ fn cli_writes_files_like_ruby_convert() {
     std::fs::remove_dir_all(&root).unwrap();
 }
 
+/// Ruby's `Asciidoctor.convert` with `to_file: '/dev/null'` only loads
+/// the document: loading messages and `--failure-level` stay, conversion
+/// messages (a missing inline SVG) do not, no file is written and no output
+/// path is jailed; `-t` reports no conversion time. Regression: adoctra
+/// treated `/dev/null` as an output path outside the jail and failed.
+#[test]
+fn cli_output_to_dev_null_only_loads_like_ruby() {
+    use std::process::Command;
+    let root = std::env::temp_dir().join(format!("adoctra-cli-devnull-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(&root).unwrap();
+    let root = std::fs::canonicalize(&root).unwrap();
+    let root_text = root.to_str().unwrap().to_owned();
+    std::fs::write(
+        root.join("a.adoc"),
+        "= T\n\n[[a]]\n== A\n\n[[a]]\npara\n\nimage::gone.svg[opts=inline]\n",
+    )
+    .unwrap();
+    let run = |args: &[&str]| {
+        let output = Command::new(env!("CARGO_BIN_EXE_adoctra"))
+            .args(args)
+            .current_dir(&root)
+            .output()
+            .unwrap();
+        (
+            output.status.code(),
+            String::from_utf8(output.stdout).unwrap(),
+            String::from_utf8(output.stderr).unwrap(),
+        )
+    };
+    let duplicate =
+        format!("adoctra: {root_text}/a.adoc:7: warning: id assigned to block already in use: a\n");
+    let (code, out, err) = run(&[
+        "a.adoc",
+        "-S",
+        "secure",
+        "-D",
+        "/elsewhere",
+        "-o",
+        "/dev/null",
+    ]);
+    assert_eq!(
+        (code, out.as_str(), err.clone()),
+        (Some(0), "", duplicate.clone())
+    );
+    assert_eq!(
+        std::fs::read_dir(&root).unwrap().count(),
+        1,
+        "nothing is written next to the input"
+    );
+    let (code, _, err) = run(&["a.adoc", "--failure-level", "WARN", "-o", "/dev/null"]);
+    assert_eq!((code, err), (Some(1), duplicate.clone()));
+    let (code, _, err) = run(&["a.adoc", "-t", "-o", "/dev/null"]);
+    assert_eq!(code, Some(0));
+    assert!(
+        err.starts_with(&format!("{duplicate}Input file: a.adoc\n")),
+        "{err}"
+    );
+    assert!(
+        err.contains("  Time to convert document: 0.00000\n"),
+        "{err}"
+    );
+    // Converting reports the SVG as well, with Ruby's `<stdin>`.
+    let (code, _, err) = run(&["a.adoc", "-o", "-"]);
+    assert_eq!(code, Some(0));
+    assert_eq!(
+        err,
+        format!(
+            "{duplicate}adoctra: warning: <stdin>: SVG does not exist or cannot be read: {root_text}/gone.svg\n"
+        )
+    );
+    std::fs::remove_dir_all(&root).unwrap();
+}
+
 /// Ruby's CLI surface (`Asciidoctor::Cli::Options`/`Invoker`): usage and
 /// version streams, OptionParser errors, `--failure-level` with `-q`/`-v`,
 /// several (globbed) inputs, `-R` with `-D` and `-t`. The CLI matrix

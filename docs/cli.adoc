@@ -62,6 +62,11 @@ argument: -d foo`, `ambiguous argument: -S s`, `option missing argument: -o`)
 Собственные опции adoctra: `--to html|json|docx`, `--stdout`,
 `--json-attributes`, `--diagnostics compat|editor`. Строки сообщений имеют
 формат adoctra (`adoctra: file:N: warning: …`); имя файла — полный путь.
+Как Ruby (`Asciidoctor.convert` с `to_file: '/dev/null'`), `-o /dev/null`
+только загружает документ: выводятся диагностики чтения и действует
+`--failure-level`, а конвертации, записи файла и проверки jail нет; `-t`
+сообщает нулевое время конвертации. Ядро помечает диагностики конвертации
+(`DiagnosticReport::conversion`).
 
 == Матрица `cli-v1`
 
@@ -76,7 +81,7 @@ Rouge и заглушки подсветчиков, что в остальных
   подсказки `Use --trace`, справка — по виду, отчёт `-t` без чисел;
 * созданные и изменённые файлы, как в upstream-аудите.
 
-Падение Ruby (необработанное исключение) — RUBY_ERROR. Результат: 61 PASS,
+Падение Ruby (необработанное исключение) — RUBY_ERROR. Результат: 63 PASS,
 1 RUBY_ERROR (неоднозначный длинный префикс `--s`: Ruby не перехватывает
 `OptionParser::AmbiguousOption`). CI запускает
 `python3 scripts/cli_matrix.py --baseline compatibility/cli/report.json`;

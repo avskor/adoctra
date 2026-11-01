@@ -291,6 +291,11 @@ pub(crate) fn parse_reader<'a>(
     let mut references = Vec::new();
     let registry = context.register_references(&mut doc, &lines.include_catalog, &mut references);
     name_attributes(&mut doc);
+    // Everything reported so far (placed by an earlier stamp, or a duplicate
+    // id registration reported without one) is Ruby's load; the rest is
+    // conversion.
+    let loaded = context.stamp();
+    let registered = references.len();
     let inline_tokens = context.execute_body(
         &mut doc,
         registry,
@@ -347,15 +352,24 @@ pub(crate) fn parse_reader<'a>(
         }
         diagnostic
     };
+    let converted = |mut diagnostic: Diagnostic, conversion: bool| {
+        diagnostic.report.conversion = conversion;
+        diagnostic
+    };
     for (index, diagnostic) in stream.into_iter().enumerate() {
         while let Some(early) = placed.next_if(|placed| placed.stamp.at <= index) {
-            diagnostics.push(map(early.diagnostic, early.physical));
+            let conversion = early.stamp.seq > loaded.seq;
+            diagnostics.push(converted(map(early.diagnostic, early.physical), conversion));
         }
-        diagnostics.push(map(diagnostic, false));
+        diagnostics.push(converted(map(diagnostic, false), index >= loaded.at));
     }
-    diagnostics.extend(placed.map(|late| map(late.diagnostic, late.physical)));
-    for mut diagnostic in references {
+    diagnostics.extend(placed.map(|late| {
+        let conversion = late.stamp.seq > loaded.seq;
+        converted(map(late.diagnostic, late.physical), conversion)
+    }));
+    for (index, mut diagnostic) in references.into_iter().enumerate() {
         lines.map_diagnostic(&mut diagnostic, &mut provenance);
+        diagnostic.report.conversion = index >= registered;
         diagnostics.push(diagnostic);
     }
     let physical = |spans: &[Span]| {

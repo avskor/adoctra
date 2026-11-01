@@ -172,6 +172,7 @@ impl<'a> Images<'a> {
             Some(crate::Svg::Inline(images.read_svg(
                 target,
                 attrs.get("imagesdir"),
+                named.get("docfile").map(String::as_str),
                 attrs,
                 span,
                 diagnostics,
@@ -189,11 +190,16 @@ impl<'a> Images<'a> {
     /// `read_contents target, start: imagesdir, normalize: true, label:
     /// 'SVG', warn_if_empty: true`: a URI only with `allow-uri-read`, else
     /// the file under `imagesdir`; lines are right-stripped (`prepare_source_string`).
-    /// `None` (Ruby's alt fallback) when unreadable or empty.
+    /// `None` (Ruby's alt fallback) when unreadable or empty. `docfile` is
+    /// the node's *own* attribute: Ruby's `read_asset` warns with `attr
+    /// 'docfile'` on the image node, which does not fall back to the
+    /// document, so a file document still reports `<stdin>`.
+    #[allow(clippy::too_many_arguments)]
     fn read_svg(
         &self,
         target: &str,
         dir: Option<&str>,
+        docfile: Option<&str>,
         attrs: &Attributes,
         span: Span,
         diagnostics: &mut Vec<Diagnostic>,
@@ -235,7 +241,7 @@ impl<'a> Images<'a> {
                     Ok((_, text)) => (path, text),
                     Err(name) => {
                         let name = if self.resolves() { path } else { name };
-                        let docfile = attrs.get("docfile").unwrap_or("<stdin>");
+                        let docfile = docfile.unwrap_or("<stdin>");
                         warn(
                             diagnostics,
                             span,

@@ -1060,6 +1060,41 @@
     "-",
     "docs/info.adoc"
    ]
+  },
+  {
+   "id": "svg-warning-file-document",
+   "description": "A missing inline SVG warns with the node's docfile: <stdin> even for a file document.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "s.adoc": "image::gone.svg[opts=inline]\n\nSee image:gone.svg[opts=inline] here.\n\nimage::gone.svg[opts=inline,docfile=x.adoc]\n"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-s",
+    "-o",
+    "-",
+    "s.adoc"
+   ]
+  },
+  {
+   "id": "output-dev-null",
+   "description": "-o /dev/null only loads: loading warnings and --failure-level, no conversion warnings, no file, no jail.",
+   "files": {
+    "a.adoc": "= Doc\nAuthor Name\n\nText {doctype}.\n\n== Section\n\nBody.\n",
+    "l.adoc": "= T\n\n[[a]]\n== A\n\n[[a]]\npara\n\nimage::gone.svg[opts=inline]\n"
+   },
+   "args": [
+    "-S",
+    "secure",
+    "-D",
+    "/elsewhere",
+    "--failure-level",
+    "WARN",
+    "-o",
+    "/dev/null",
+    "l.adoc"
+   ]
   }
  ]
 }

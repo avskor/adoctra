@@ -63,6 +63,10 @@ pub struct DiagnosticReport {
     pub severity: Option<Severity>,
     pub message: Option<String>,
     pub location: DiagnosticLocation,
+    /// Reported while converting the body (Ruby's `Document#convert`), not
+    /// while loading it: a host that only loads (Ruby's `-o /dev/null`)
+    /// does not log it.
+    pub conversion: bool,
 }
 
 impl DiagnosticReport {
