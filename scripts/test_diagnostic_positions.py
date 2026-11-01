@@ -136,9 +136,9 @@ class PositionHarnessTests(unittest.TestCase):
     def test_corpus_declares_all_pinned_inputs(self):
         manifest, cases = acceptance.load_corpus(acceptance.CORPUS / 'acceptance/positions.json')
         self.assertEqual(manifest['profile'], positions.PROFILE)
-        self.assertEqual(len(cases), 20)
+        self.assertEqual(len(cases), 21)
         xfails = [c['id'] for c in cases if c['expect'] != 'pass']
-        self.assertEqual(xfails, ['position-comment-direct-peek', 'position-title-peek-dropped-directive'])
+        self.assertEqual(xfails, ['position-comment-direct-peek'])
         self.assertTrue(all(c.get('reason') for c in cases if c['expect'] == 'xfail'))
         self.assertTrue(any('\r\n' in c['source'] for c in cases))
 

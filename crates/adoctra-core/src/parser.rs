@@ -1074,13 +1074,22 @@ fn nest_sections(
             ),
             _ => unreachable!("open blocks are sections"),
         });
+        // Ruby reports the level checks at `reader.cursor` after peeking the
+        // title's lines, so a directive dropped by that peek moves the line.
+        let cursor_report = crate::DiagnosticReport {
+            location: lines.section_cursor(block.span.start).map_or(
+                crate::DiagnosticLocation::Source,
+                crate::DiagnosticLocation::Cursor,
+            ),
+            ..Default::default()
+        };
         let expected = match parent {
             Some((_, Some(parent))) if !parent.allows_nesting() => {
                 inserted.push((
                     at,
                     Diagnostic {
                         omitted_span: None,
-                        report: Default::default(),
+                        report: cursor_report.clone(),
                         span: block.span,
                         severity: Severity::Error,
                         message: format!(
@@ -1099,7 +1108,7 @@ fn nest_sections(
                         at,
                         Diagnostic {
                             omitted_span: None,
-                            report: Default::default(),
+                            report: cursor_report.clone(),
                             span: block.span,
                             severity: Severity::Error,
                             message: "level 0 sections can only be used when doctype is book"
@@ -1122,13 +1131,7 @@ fn nest_sections(
                 at,
                 Diagnostic {
                     omitted_span: None,
-                    report: crate::DiagnosticReport {
-                        location: lines.section_cursor(block.span.start).map_or(
-                            crate::DiagnosticLocation::Source,
-                            crate::DiagnosticLocation::Cursor,
-                        ),
-                        ..Default::default()
-                    },
+                    report: cursor_report,
                     span: block.span,
                     severity: Severity::Warning,
                     message: format!("section title out of sequence: {condition}, got level {raw}"),
@@ -5804,6 +5807,55 @@ mod tests {
         let endif = src.find("endif").unwrap();
         assert_eq!(r.diagnostics[0].span, Span::new(endif, src.len()));
         assert_eq!(r.diagnostics[1].span, Span::new(3, 6));
+        // The level error is logged at Ruby's cursor after that peek: the
+        // dropped directive advanced it past the title, while the editor span
+        // stays on the title.
+        let lines: Vec<_> = r.diagnostics.iter().map(report_line).collect();
+        assert_eq!(lines, [Some(4), Some(4)]);
+    }
+
+    fn report_line(diagnostic: &Diagnostic) -> Option<usize> {
+        match diagnostic.report.location {
+            crate::DiagnosticLocation::Cursor(cursor) => Some(cursor.line),
+            _ => None,
+        }
+    }
+
+    #[test]
+    fn every_section_level_check_uses_the_peek_cursor() {
+        // `section title out of sequence`, `level 0 sections …` and
+        // `… do not support nested sections` share Ruby's `reader.cursor`.
+        for (src, message, line) in [
+            (
+                "= D\n\n[glossary]\n== G\n\n=== B\nendif::[]\n\ntext",
+                "glossary sections do not support nested sections",
+                7,
+            ),
+            (
+                "= D\n\n=== B\nendif::[]\nendif::[]\n\ntext",
+                "section title out of sequence: expected level 1, got level 2",
+                5,
+            ),
+            (
+                "x\n\nTitle\nendif::[]\n=====",
+                "level 0 sections can only be used when doctype is book",
+                4,
+            ),
+            // Without a dropped line the cursor is the title's own line.
+            (
+                "x\n\n= T\ny",
+                "level 0 sections can only be used when doctype is book",
+                3,
+            ),
+        ] {
+            let r = parse(src);
+            let found = r
+                .diagnostics
+                .iter()
+                .find(|d| d.message == message)
+                .unwrap_or_else(|| panic!("{src:?}: {:?}", r.diagnostics));
+            assert_eq!(report_line(found), Some(line), "{src:?}");
+        }
     }
 
     #[test]

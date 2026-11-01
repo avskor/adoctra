@@ -2260,7 +2260,10 @@ does not become the header title (`parse_document_header` returns early).
 **Title peek**: an ATX title where sections are read preprocesses the next
 line before `read_section` stamps its diagnostics (Ruby peeks two lines), so
 directive errors there precede the level checks; Ruby's line number for that
-level error is one later (XFAIL `position-title-peek-dropped-directive`).
+level errors (`out of sequence`, `level 0 sections`, `do not support nested
+sections`) all use `Reader::section_cursor` — Ruby's `reader.cursor` after that
+peek, so a directive dropped by it moves them one line later
+(`position-title-peek-dropped-directive`, fixed).
 **Unshown titles**: `Execution::unshown` converts a hidden nested document
 title (`notitle` unless the cell sets `showtitle`) and the hidden document
 title (after the body) with footnotes,
