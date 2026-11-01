@@ -806,7 +806,8 @@ impl Execution<'_, '_> {
         label
     }
 
-    /// A registered node's nonempty reftext (formatted now), else its title
+    /// A registered node's nonempty reftext (an inline anchor's even when
+    /// empty, formatted now), else its title
     /// with the xrefstyle applied (see resolve::styled).
     fn xreftext(&mut self, id: &str, style: Option<&str>, span: Span) -> Option<Vec<Inline>> {
         let registry = self.registry;
@@ -815,7 +816,7 @@ impl Execution<'_, '_> {
             .reftext
             .clone()
             .map(|read| self.reftext(read))
-            .filter(|nodes| !crate::resolve::inline_text(nodes).is_empty());
+            .filter(|nodes| target.inline || !crate::resolve::inline_text(nodes).is_empty());
         if label.is_some() {
             return label;
         }

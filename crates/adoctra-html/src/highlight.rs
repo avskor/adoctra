@@ -70,7 +70,7 @@ impl Highlighter {
             .attrs
             .named
             .get("language")
-            .map(|lang| super::escape(lang));
+            .map(|lang| super::attr_value(lang));
         let id = super::id_attr(&block.id);
         let base = match self {
             Self::HtmlPipeline => {

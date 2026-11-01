@@ -2218,3 +2218,23 @@ numbered section without numerals (`Ids::manpage_name`). **Part content**:
 `illegal block content` is placed at the block's stamp (blocks of books are
 stamped). **AttributeList**: a value starting with `\'` is not
 single-quoted.
+
+**Fuzz seeds 21–28** (2026-11-01). **Attribute quotes**: every HTML attribute
+encodes `"`: `class_attr`/`id_attr` and other attribute sites use
+`attr_value`; values core already special-encoded (inline-format `id`/`role`,
+`OpenLink`/`OpenXref` fields, inline image classes, src, size, title, link and
+icon classes) use `quote`. `escape` stays the text encoder. **Cell span**:
+`Table::new_cell` starts the span at the earlier of the spec and the text, so a
+spec taken from the next separator (no leading separator, Ruby's FIFO
+`take_cellspec`) still covers the text and `BodySubs` keeps its deferred fields
+for the repeated copies. **Quote attributes**: `attribute_quotes::apply_stage`
+retries one character after a failed `[attrs]` form (Ruby's backtracking), so
+`[` can precede the match. **UI labels**: `content_end(.., same_stage)` does
+not nest `kbd:[`/`btn:[` inside a kbd/btn label. **Open style checks**:
+`check_open_styles` treats every container as `OpenParent::Other`
+(descriptions, callout items, AsciiDoc cells); the `Unchecked` parent is gone.
+**Inline anchor reftext**: `resolve::Target::inline` marks inline anchors,
+whose reftext is the label even when empty (`Inline#xreftext`); only the cell's
+leading anchor can register an empty one (`catalog_inline_anchors` skips it).
+**Checklist class**: `checklist` then the list style, then roles.
+**Directive targets**: `reader::directive` splits on Ruby's ASCII `\s` only.

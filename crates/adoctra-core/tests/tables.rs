@@ -751,3 +751,29 @@ fn a_dropped_asciidoc_cell_lends_titles_and_anchors_to_references() {
         ]
     );
 }
+
+#[test]
+fn a_spec_after_a_cell_without_leading_separator_repeats_its_text() {
+    // Ruby's spec queue gives `3*` of the next separator to the cell opened
+    // without one, so its text repeats; the span starts at the text.
+    let source = "|===\ne *x*\n3*|\n|===";
+    let result = parse(source);
+    let table = table(&result.document.blocks[0]);
+    assert_eq!(table.body.len(), 1);
+    for cell in &table.body[0] {
+        assert_eq!(paragraphs(cell), ["e x"]);
+        assert_eq!((cell.span.start, cell.span.end), (5, 10));
+    }
+}
+
+#[test]
+fn a_leading_cell_anchor_with_an_empty_reftext_labels_references_empty() {
+    // Ruby's `catalog_inline_anchor` keeps the expanded reftext even when
+    // empty, and `Inline#xreftext` returns it: the reference has no text.
+    // A paragraph's `catalog_inline_anchors` skips such an anchor instead.
+    let result =
+        parse("|===\n|[[here,{empty}]] cell\n|===\n\n<<here>>\n\n[[there,{empty}]]x\n\n<<there>>");
+    let blocks = result.document.into_flat_blocks();
+    assert_eq!(references(&blocks[1]), [("here".into(), String::new())]);
+    assert_eq!(references(&blocks[3]), [("there".into(), "[there]".into())]);
+}

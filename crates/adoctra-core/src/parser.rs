@@ -1276,10 +1276,9 @@ fn part_content(
 enum OpenParent {
     Document,
     Part,
+    /// Any other container, including descriptions, callout list items and
+    /// AsciiDoc table cells (a nested document, never a book part).
     Other,
-    /// Content Ruby's check does not reach here (descriptions, callout list
-    /// items, table cells).
-    Unchecked,
 }
 
 /// Report the abstract and partintro blocks that Ruby's HTML converter
@@ -1300,44 +1299,33 @@ fn check_open_styles(
     impl crate::visit::VisitorMut for Check<'_> {
         fn enter_block(&mut self, block: &mut Block) -> bool {
             let parent = *self.parents.last().unwrap_or(&OpenParent::Document);
-            if parent != OpenParent::Unchecked {
-                if let BlockKind::Open { .. } = &block.kind {
-                    let exclusion = match block.attrs.style.as_deref() {
-                        Some("abstract") if self.book && parent == OpenParent::Document => Some((
-                            Severity::Warning,
-                            "abstract block cannot be used in a document without a doctitle when doctype is book. Excluding block content.",
-                        )),
-                        Some("partintro") if !self.book || parent != OpenParent::Part => Some((
-                            Severity::Error,
-                            "partintro block can only be used when doctype is book and must be a child of a book part. Excluding block content.",
-                        )),
-                        _ => None,
-                    };
-                    if let Some((severity, message)) = exclusion {
-                        self.diagnostics.push(Diagnostic {
-                            omitted_span: None,
-                            report: Default::default(),
-                            span: block.span,
-                            severity,
-                            message: message.into(),
-                        });
-                        self.excluded.insert((block.span.start, block.span.end));
-                        return false;
-                    }
+            if let BlockKind::Open { .. } = &block.kind {
+                let exclusion = match block.attrs.style.as_deref() {
+                    Some("abstract") if self.book && parent == OpenParent::Document => Some((
+                        Severity::Warning,
+                        "abstract block cannot be used in a document without a doctitle when doctype is book. Excluding block content.",
+                    )),
+                    Some("partintro") if !self.book || parent != OpenParent::Part => Some((
+                        Severity::Error,
+                        "partintro block can only be used when doctype is book and must be a child of a book part. Excluding block content.",
+                    )),
+                    _ => None,
+                };
+                if let Some((severity, message)) = exclusion {
+                    self.diagnostics.push(Diagnostic {
+                        omitted_span: None,
+                        report: Default::default(),
+                        span: block.span,
+                        severity,
+                        message: message.into(),
+                    });
+                    self.excluded.insert((block.span.start, block.span.end));
+                    return false;
                 }
             }
             self.parents.push(match &block.kind {
-                _ if parent == OpenParent::Unchecked => OpenParent::Unchecked,
                 BlockKind::Section { level: 0, .. } => OpenParent::Part,
-                BlockKind::List { .. }
-                | BlockKind::Admonition { .. }
-                | BlockKind::Example { .. }
-                | BlockKind::Quote { .. }
-                | BlockKind::Sidebar { .. }
-                | BlockKind::Open { .. }
-                | BlockKind::Section { .. }
-                | BlockKind::Preamble { .. } => OpenParent::Other,
-                _ => OpenParent::Unchecked,
+                _ => OpenParent::Other,
             });
             true
         }

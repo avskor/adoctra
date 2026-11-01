@@ -87,7 +87,7 @@ fn open(block: &Block, nowrap: &str, state: &RefCell<RougeState>, out: &mut Stri
     if let Some(lang) = block.attrs.named.get("language") {
         // `format` strips the lexer options from the language.
         let data_lang = lang.split('?').next().unwrap_or(lang);
-        out.push_str(&format!(" data-lang=\"{}\"", super::escape(data_lang)));
+        out.push_str(&format!(" data-lang=\"{}\"", super::attr_value(data_lang)));
     }
     out.push('>');
     class_mode

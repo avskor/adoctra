@@ -324,7 +324,7 @@ fn render_document(
     let id = title.map_or_else(String::new, |block| id_attr(&block.id));
     out.push_str(&format!(
         "<body{id} class=\"{}\">\n",
-        escape(&classes.join(" "))
+        attr_value(&classes.join(" "))
     ));
     docinfo(attributes, DocinfoLocation::Header, resources, out);
     let max_width = attributes
@@ -1062,7 +1062,7 @@ fn render_block_part<'a>(block: &'a Block, cx: &Cx, out: &mut Out<'a, Block>) {
                 out.push_str(&format!("<pre{class}{id}>"));
                 match block.attrs.named.get("language") {
                     Some(lang) => {
-                        let lang = escape(lang);
+                        let lang = attr_value(lang);
                         out.push_str(&format!(
                             "<code class=\"language-{lang}\" data-lang=\"{lang}\">"
                         ));
@@ -1326,14 +1326,16 @@ fn render_block_part<'a>(block: &'a Block, cx: &Cx, out: &mut Out<'a, Block>) {
                     || block.attrs.named.contains_key(&format!("{name}-option"))
             };
             let checklist = !*ordered && option("checklist");
-            // Ruby's list class: the style (`checklist` for a checklist), then
-            // roles; an ordered style other than arabic also sets `type`.
-            let style = if checklist {
-                Some("checklist")
-            } else {
-                block.attrs.style.as_deref()
-            };
-            let class = class_attr(&style.into_iter().collect::<Vec<_>>(), &block.roles);
+            // Ruby's list class: the style, then roles; a checklist puts
+            // `checklist` first (Ruby's wrapper `ulist checklist <style>`). An
+            // ordered style other than arabic also sets `type`.
+            let style = block.attrs.style.as_deref();
+            let classes: Vec<_> = checklist
+                .then_some("checklist")
+                .into_iter()
+                .chain(style)
+                .collect();
+            let class = class_attr(&classes, &block.roles);
             let mut extra = String::new();
             // Ruby's implicit style from a numbered or lettered marker is a
             // symbol without a `type` keyword.
@@ -1650,8 +1652,8 @@ fn render_toc(
     };
     out.push_str(&format!(
         "<nav id=\"{}\" class=\"{}\">\n<div{title_attrs}>",
-        escape(id),
-        escape(class)
+        attr_value(id),
+        attr_value(class)
     ));
     match title {
         Some(title) => out.push_str(&title),
@@ -1690,7 +1692,7 @@ fn render_outline(blocks: &[Block], toclevels: i64, out: &mut String) -> bool {
         if let BlockKind::Heading { inlines, .. } = &heading.kind {
             render_inlines(inlines, &mut title);
         }
-        let href = escape(heading.id.as_deref().unwrap_or_default());
+        let href = attr_value(heading.id.as_deref().unwrap_or_default());
         out.push_str(&format!(
             "<li><a href=\"#{href}\">{}</a>",
             drop_anchors(&title)
@@ -1883,7 +1885,7 @@ fn render_conum(
     src: &str,
     out: &mut String,
 ) {
-    let n = escape(number);
+    let n = attr_value(number);
     match icons {
         Some("font") => out.push_str(&format!(
             "<i class=\"conum\" data-value=\"{n}\"></i><b>({n})</b>"
@@ -2320,7 +2322,7 @@ fn render_heading(
         &block.id,
     ) {
         let attributes = block.conversion_attributes();
-        let href = escape(id);
+        let href = attr_value(id);
         if attributes.get("sectlinks").is_some() {
             title = format!("<a class=\"link\" href=\"#{href}\">{title}</a>");
         }
@@ -2440,7 +2442,7 @@ fn render_inlines(inlines: &[Inline], out: &mut String) {
                 ..
             } => {
                 out.push_str("<a href=\"");
-                out.push_str(&escape(target));
+                out.push_str(&attr_value(target));
                 if *bare {
                     out.push_str("\" class=\"bare");
                 }
@@ -2477,7 +2479,7 @@ fn render_inlines(inlines: &[Inline], out: &mut String) {
             // a textless cross-reference's display text during resolution.
             Inline::Anchor { id, .. } => {
                 out.push_str("<a id=\"");
-                out.push_str(&escape(id));
+                out.push_str(&attr_value(id));
                 out.push_str("\"></a>");
             }
             Inline::Image { image, .. } => render_inline_image(image, out),
@@ -2516,7 +2518,7 @@ fn attribute_format_tag(format: adoctra_core::AttributeFormat) -> &'static str {
 /// anchor, or the empty string. The id is escaped as an HTML attribute value.
 fn id_attr(id: &Option<String>) -> String {
     match id {
-        Some(id) => format!(" id=\"{}\"", escape(id)),
+        Some(id) => format!(" id=\"{}\"", attr_value(id)),
         None => String::new(),
     }
 }
@@ -2552,7 +2554,7 @@ fn class_attr(base: &[&str], roles: &[String]) -> String {
     if classes.is_empty() {
         return String::new();
     }
-    format!(" class=\"{}\"", escape(&classes))
+    format!(" class=\"{}\"", attr_value(&classes))
 }
 
 /// The leading `<figcaption>` of a video or audio figure: its title, never
@@ -2563,6 +2565,12 @@ fn render_media_title(title: &Option<Vec<Inline>>, out: &mut String) {
         render_inlines(title, out);
         out.push_str("</figcaption>\n");
     }
+}
+
+/// An attribute value whose special characters core already encoded: only
+/// the quote, which would end the attribute, is left to encode.
+fn quote(s: &str) -> String {
+    s.replace('"', "&quot;")
 }
 
 /// An escaped attribute value (Ruby's `encode_attribute_value` after special
@@ -2690,21 +2698,22 @@ fn render_inline_image(image: &adoctra_core::InlineImage, out: &mut String) {
                 class.push_str(&format!(" fa-rotate-{rotate}"));
             }
             let title = attr("title")
-                .map(|title| format!(" title=\"{title}\""))
+                .map(|title| format!(" title=\"{}\"", quote(title)))
                 .unwrap_or_default();
-            format!("<i class=\"{class}\"{title}></i>")
+            format!("<i class=\"{}\"{title}></i>", quote(&class))
         }
         (true, None) => format!("[{alt}&#93;"),
         _ => {
             let mut sized = String::new();
             for key in ["width", "height", "title"] {
                 if let Some(value) = attr(key) {
-                    sized.push_str(&format!(" {key}=\"{value}\""));
+                    sized.push_str(&format!(" {key}=\"{}\"", quote(value)));
                 }
             }
             let img = |src: &str| {
                 format!(
-                    "<img src=\"{src}\" alt=\"{}\"{sized}{}>",
+                    "<img src=\"{}\" alt=\"{}\"{sized}{}>",
+                    quote(src),
                     alt.replace('"', "&quot;"),
                     slash()
                 )
@@ -2727,10 +2736,11 @@ fn render_inline_image(image: &adoctra_core::InlineImage, out: &mut String) {
             }
         }
     };
-    out.push_str(&format!("<span class=\"{}\">", image.classes()));
+    out.push_str(&format!("<span class=\"{}\">", quote(&image.classes())));
     match attr("link") {
         Some(link) => out.push_str(&format!(
-            "<a class=\"image\" href=\"{link}\"{}>{inner}</a>",
+            "<a class=\"image\" href=\"{}\"{}>{inner}</a>",
+            quote(link),
             constraints(attr("window").map(String::as_str), &image.options)
         )),
         None => out.push_str(&inner),
@@ -2864,7 +2874,7 @@ fn render_parts(parts: &[adoctra_core::AttributePart], out: &mut String) {
             adoctra_core::AttributePart::Raw(text) => out.push_str(text),
             adoctra_core::AttributePart::OpenLink(link) => {
                 out.push_str("<a href=\"");
-                out.push_str(&link.target);
+                out.push_str(&quote(&link.target));
                 out.push('"');
                 for (key, value) in [
                     ("id", &link.id),
@@ -2877,7 +2887,7 @@ fn render_parts(parts: &[adoctra_core::AttributePart], out: &mut String) {
                         out.push(' ');
                         out.push_str(key);
                         out.push_str("=\"");
-                        out.push_str(value);
+                        out.push_str(&quote(value));
                         out.push('"');
                     }
                 }
@@ -2889,7 +2899,7 @@ fn render_parts(parts: &[adoctra_core::AttributePart], out: &mut String) {
             // Lexical values keep their entity protection, like link fields.
             adoctra_core::AttributePart::OpenXref(xref) => {
                 out.push_str("<a href=\"");
-                out.push_str(&xref.target);
+                out.push_str(&quote(&xref.target));
                 out.push('"');
                 for (key, value) in [
                     ("class", &xref.role),
@@ -2897,7 +2907,7 @@ fn render_parts(parts: &[adoctra_core::AttributePart], out: &mut String) {
                     ("rel", &xref.rel),
                 ] {
                     if let Some(value) = value {
-                        out.push_str(&format!(" {key}=\"{value}\""));
+                        out.push_str(&format!(" {key}=\"{}\"", quote(value)));
                     }
                 }
                 out.push('>');
@@ -2930,12 +2940,12 @@ fn render_parts(parts: &[adoctra_core::AttributePart], out: &mut String) {
                 // in these values; escaping again would double entities.
                 if let Some(id) = id {
                     out.push_str(" id=\"");
-                    out.push_str(id);
+                    out.push_str(&id.replace('"', "&quot;"));
                     out.push('"');
                 }
                 if let Some(role) = role {
                     out.push_str(" class=\"");
-                    out.push_str(role);
+                    out.push_str(&role.replace('"', "&quot;"));
                     out.push('"');
                 }
                 out.push('>');
@@ -3625,6 +3635,42 @@ mod tests {
         );
     }
 
+    /// A quote in a role, id, target or link field would end the attribute;
+    /// unlike Ruby, which writes it as is, every attribute encodes it.
+    #[test]
+    fn quote_in_attribute_values_is_encoded() {
+        for (src, want) in [
+            ("[.a\"b]\nt", r#"<p class="a&quot;b">t</p>"#),
+            ("[#a\"b]\nt", r#"<p id="a&quot;b">t</p>"#),
+            (
+                "[.a\"b]\n----\nx\n----",
+                r#"<pre class="listing a&quot;b">"#,
+            ),
+            ("[.a\"b]\n* x", r#"<ul class="a&quot;b">"#),
+            ("[.a\"b]#x#", r#"<span class="a&quot;b">x</span>"#),
+            (
+                "[source,\"a\\\"b\"]\n----\nx\n----",
+                r#"data-lang="a&quot;b""#,
+            ),
+            (
+                "link:a\"b[t,role=r\"s,title=t\"u,window=w\"x]",
+                r#"<a href="a&quot;b" class="r&quot;s" title="t&quot;u" target="w&quot;x">"#,
+            ),
+            ("<<a\"b,t>>", r##"<a href="#a&quot;b">t</a>"##),
+            (
+                "image:x\"y.png[title=a\"b,link=u\"v,role=r\"s,width=1\"]",
+                r#"<span class="image r&quot;s"><a class="image" href="u&quot;v"><img src="x&quot;y.png" alt="x&quot;y" width="1&quot;" title="a&quot;b"></a></span>"#,
+            ),
+            (
+                ":icons: font\n\nicon:a\"b[size=2\"x,title=t\"u]",
+                r#"<i class="fa fa-a&quot;b fa-2&quot;x" title="t&quot;u"></i>"#,
+            ),
+        ] {
+            let html = render(src);
+            assert!(html.contains(want), "{src:?}: {html}");
+        }
+    }
+
     #[test]
     fn shorthand_id_and_role_render_on_paragraph() {
         let html = render("[#intro.lead]\nHello.");
@@ -3677,6 +3723,13 @@ mod tests {
             ),
             "got: {html}"
         );
+    }
+
+    #[test]
+    fn checklist_keeps_its_style_after_the_checklist_class() {
+        // Ruby's wrapper is `ulist checklist <style> <role>`.
+        let html = render("[e.r]\n* [ ] n");
+        assert!(html.contains(r#"<ul class="checklist e r">"#), "{html}");
     }
 
     #[test]

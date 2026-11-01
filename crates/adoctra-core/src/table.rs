@@ -744,11 +744,13 @@ impl<'a> Parser<'a> {
         header_row: Option<Header>,
     ) -> Cell {
         let col = column.map(|i| &self.columns[i]);
-        let start = spec
-            .as_ref()
-            .map(|s| s.start)
-            .or(text.first().map(|(off, _)| *off))
-            .unwrap_or(self.start.start);
+        // The span covers the text too: without a leading separator Ruby
+        // takes the next separator's spec, which follows the text.
+        let first = text.first().map(|(off, _)| *off);
+        let start = match (spec.as_ref().map(|s| s.start), first) {
+            (Some(spec), Some(first)) => spec.min(first),
+            (spec, first) => spec.or(first).unwrap_or(self.start.start),
+        };
         let mut reinitialize = None;
         let mut cell_style = None;
         if col.is_some() {

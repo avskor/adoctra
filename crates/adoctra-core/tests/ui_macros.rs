@@ -425,3 +425,22 @@ fn borrowed_xref_labels_drop_links_inside_labels() {
     };
     assert_eq!(keys[0], [P::Text("K".into())]);
 }
+
+#[test]
+fn a_keyboard_or_button_macro_in_their_label_stays_text() {
+    // One pass of Ruby's regex matches kbd and btn: the inner macro's `]`
+    // closes the outer label, which keeps `btn:[` as text.
+    let source = ":experimental:\n\nekbd:[btn:[]] btn:[kbd:[a]]";
+    let found = macros(&last(source));
+    let labels: Vec<_> = found
+        .iter()
+        .map(|(ui, _)| match ui {
+            UiMacro::Keyboard { keys } => format!("kbd {}", texts(keys).join("+")),
+            UiMacro::Button { label } => format!("btn {}", parts_text(label)),
+            ui => panic!("{ui:?}"),
+        })
+        .collect();
+    assert_eq!(labels, ["kbd btn:[", "btn kbd:[a"]);
+    let start = source.find("kbd:").unwrap();
+    assert_eq!(found[0].1, Span::new(start, start + "kbd:[btn:[]".len()));
+}

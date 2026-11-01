@@ -1636,14 +1636,12 @@ fn directive(line: &str) -> Option<(&str, &str, &str)> {
     let rest = rest.strip_suffix(']')?;
     let (target, text) = rest.split_once('[')?;
     // Ruby's ConditionalDirectiveRx (`\S*?` targets) and IncludeDirectiveRx
-    // (a target neither empty nor starting or ending with whitespace).
+    // (a target neither empty nor starting or ending with whitespace); `\s`
+    // is ASCII, so a no-break space is part of the target.
+    let space = |c: char| matches!(c, ' ' | '\t'..='\r');
     let valid = match keyword {
-        "include" => {
-            !target.is_empty()
-                && !target.starts_with(char::is_whitespace)
-                && !target.ends_with(char::is_whitespace)
-        }
-        _ => !target.chars().any(char::is_whitespace),
+        "include" => !target.is_empty() && !target.starts_with(space) && !target.ends_with(space),
+        _ => !target.chars().any(space),
     };
     valid.then_some((keyword, target, text))
 }

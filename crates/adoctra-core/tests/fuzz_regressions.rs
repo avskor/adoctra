@@ -801,3 +801,50 @@ fn a_top_reference_inside_the_document_title_shows_top() {
         Some("_nt_top")
     );
 }
+
+#[test]
+fn partintro_is_checked_in_callout_lists_descriptions_and_cells() {
+    // Ruby's converter checks every open block it converts: callout list
+    // items and descriptions convert their blocks, an AsciiDoc cell is a
+    // nested document (never a book part, and not the book for abstract).
+    for (source, at) in [
+        ("<1> t\n[partintro]\n}", 18),
+        ("a:: b\n+\n[partintro]\n--\nx\n--", 20),
+        ("[cols=1a]\n|===\n|\n[partintro]\n--\nx\n--\n|===", 29),
+    ] {
+        let result = parse(source);
+        let found: Vec<_> = result
+            .diagnostics
+            .iter()
+            .filter(|d| d.message.starts_with("partintro block can only be used"))
+            .map(|d| (d.severity, d.span.start))
+            .collect();
+        assert_eq!(found, [(Severity::Error, at)], "{source:?}");
+    }
+    let book = parse("= T\n:doctype: book\n\n[cols=1a]\n|===\n|\n[abstract]\n--\nx\n--\n|===");
+    assert!(
+        !book
+            .diagnostics
+            .iter()
+            .any(|d| d.message.starts_with("abstract block")),
+        "{:?}",
+        book.diagnostics
+    );
+}
+
+#[test]
+fn a_no_break_space_is_part_of_a_directive_target() {
+    // Ruby's `\S` and `\s` are ASCII: `ifdef::<NBSP>[]` is a conditional on
+    // an unset attribute, which skips its content.
+    let result = parse("ifdef::\u{a0}[]\nx\nendif::[]\ny");
+    let blocks = result.document.flat_blocks();
+    assert_eq!(blocks.len(), 1, "{blocks:?}");
+    assert_eq!(blocks[0].span, Span::new(24, 25));
+    assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+    // A Unicode space is no ASCII blank either.
+    let source = "ifdef::a\u{2003}b[x]\nz";
+    let result = parse(source);
+    let blocks = result.document.flat_blocks();
+    assert_eq!(blocks.len(), 1, "{blocks:?}");
+    assert_eq!(blocks[0].span.start, source.len() - 1);
+}

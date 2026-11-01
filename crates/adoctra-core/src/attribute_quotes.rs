@@ -195,21 +195,32 @@ fn apply_stage(
             }
         }
         let inner = open + stage.open.len();
+        // Ruby's regex backtracks out of a failed `[attrs]` form: the `[`
+        // may still be the character before a match.
+        let retry = if attr_end.is_some() {
+            at + src[at..].chars().next().unwrap().len_utf8()
+        } else {
+            inner
+        };
         let Some(first) = src[inner..].chars().next() else {
+            if attr_end.is_some() {
+                at = retry;
+                continue;
+            }
             break;
         };
         let no_spaces = matches!(stage.format, Some(Format::Superscript | Format::Subscript));
         if (stage.constrained || no_spaces) && space(first) {
-            at = inner;
+            at = retry;
             continue;
         }
         let next = closings.partition_point(|&close| close < inner + first.len_utf8());
         let Some(&close) = closings.get(next) else {
-            at = inner;
+            at = retry;
             continue;
         };
         if no_spaces && src[inner..close].contains(space) {
-            at = inner;
+            at = retry;
             continue;
         }
         let end = close + stage.close.len();

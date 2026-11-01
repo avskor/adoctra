@@ -518,14 +518,22 @@ fn scan_ui(
 /// a backslash. Like Ruby we take that `]`, unless it closes a macro nested in
 /// the content (`btn:[link:x[y]]`): then the content runs to the bracket that
 /// balances it, so the nested macro is matched whole inside the label instead
-/// of across its markup.
-fn content_end(src: &str, open: usize) -> Option<usize> {
+/// of across its markup. A `kbd`/`btn` content (`same_stage`) does not nest
+/// another `kbd:[`/`btn:[`: one pass of Ruby's regex matches both, so the
+/// inner one stays text and the first `]` is valid markup.
+fn content_end(src: &str, open: usize, same_stage: bool) -> Option<usize> {
     let closes = |close: usize| close > open && src.as_bytes()[close - 1] != b'\\';
+    let nested = |at: usize| {
+        nested_macro(&src[open..at]).is_some_and(|start| {
+            let name = &src[open + start..at];
+            !(same_stage && (name == "kbd:" || name == "btn:"))
+        })
+    };
     let mut depth = 0usize;
     for (i, c) in src[open..].char_indices() {
         let at = open + i;
         match c {
-            '[' if nested_macro(&src[open..at]).is_some() => depth += 1,
+            '[' if nested(at) => depth += 1,
             ']' if closes(at) && depth > 0 => depth -= 1,
             ']' if closes(at) => return Some(at),
             _ => {}
@@ -621,7 +629,7 @@ fn kbd_btn_at(src: &str, start: usize) -> Option<(usize, UiMatch)> {
         return None;
     };
     let open = start + "kbd:[".len();
-    let close = content_end(src, open)?;
+    let close = content_end(src, open, true)?;
     Some((
         close + 1,
         if keyboard {
@@ -661,7 +669,7 @@ fn menu_at(src: &str, start: usize) -> Option<(usize, UiMatch)> {
     if src[open..].starts_with(']') {
         return Some((open + 1, UiMatch::Menu(name..bracket, None)));
     }
-    let close = content_end(src, open)?;
+    let close = content_end(src, open, false)?;
     Some((close + 1, UiMatch::Menu(name..bracket, Some(open..close))))
 }
 

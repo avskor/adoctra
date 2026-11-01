@@ -29,6 +29,9 @@ pub(crate) struct Target {
     pub order: usize,
     /// What an `xrefstyle` can show besides the title.
     pub numbering: Numbering,
+    /// An inline anchor: Ruby's `Inline#xreftext` is its reftext even when
+    /// empty, where a block's `xreftext` falls back on its title.
+    pub inline: bool,
 }
 
 /// Ruby's `xreftext` inputs for an xrefstyle. Example blocks and images carry
@@ -451,6 +454,7 @@ impl Ids<'_> {
             title: None,
             order: self.registry.len(),
             numbering: Numbering::None,
+            inline: !entry.block,
         };
         let kind = if entry.block { "block" } else { "anchor" };
         if let Some(duplicate) = register_id(&mut self.registry, id, target, kind, entry.span) {
@@ -894,7 +898,7 @@ impl Ids<'_> {
             .reftext
             .as_ref()
             .map(|read| read.snapshot(attributes))
-            .filter(|nodes| !inline_text(nodes).is_empty())
+            .filter(|nodes| target.inline || !inline_text(nodes).is_empty())
         {
             return Some(nodes);
         }
@@ -1073,6 +1077,7 @@ impl Ids<'_> {
                 title,
                 order: self.registry.len(),
                 numbering,
+                inline: false,
             };
             // Ruby names a section (not a discrete heading) in its warning.
             let kind = match &block.kind {
@@ -1109,6 +1114,7 @@ impl Ids<'_> {
                 title,
                 order: self.registry.len(),
                 numbering,
+                inline: false,
             };
             self.registry.insert(unique.clone(), target);
             block.id = Some(unique);

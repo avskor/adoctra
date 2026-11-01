@@ -280,6 +280,29 @@ mod tests {
     }
 
     #[test]
+    fn failed_quote_attributes_leave_the_bracket_before_a_match() {
+        // Ruby's regex backtracks out of `[#]` (no text before the closing
+        // `#`): the `[` precedes the constrained mark `#]#`.
+        for (src, mark) in [("[#]#", "#]#"), ("x [*]* y", "*]*"), ("[^]^", "^]^")] {
+            let v = scan_inlines(src, 0, &attrs());
+            let span = v
+                .iter()
+                .find_map(|n| match n {
+                    Inline::Mark { span, .. }
+                    | Inline::Strong { span, .. }
+                    | Inline::Superscript { span, .. } => Some(*span),
+                    _ => None,
+                })
+                .unwrap_or_else(|| panic!("{src}: {v:?}"));
+            assert_eq!(&src[span.start..span.end], mark, "{src}");
+            assert!(
+                matches!(v.first(), Some(Inline::Text { value, .. }) if value.ends_with('[')),
+                "{src}: {v:?}"
+            );
+        }
+    }
+
+    #[test]
     fn unconstrained_with_space_stays_text() {
         // asciidoctor does not render `~a b~` — whitespace inside breaks the match
         let v = scan_inlines("x ~a b~ y", 0, &attrs());
