@@ -121,7 +121,7 @@ Ruby launcher с `--report` использует `MemoryLogger` и возвра�
 
 Этот профиль не сравнивает позиции диагностик (файл, строку, колонку, byte spans),
 полный ASG, атрибуты документа или точный HTML. Файл/строку проверяет отдельный
-link:diagnostic-positions.adoc[diagnostic-positions-v1]: 18 PASS, 1 XFAIL,
+link:diagnostic-positions.adoc[diagnostic-positions-v1]: 18 PASS, 2 XFAIL,
 со своими эталонами и явным отсутствием позиции у некоторых сообщений Ruby.
 Он также не проверяет время, память, WASM-размер или инкрементальность.
 
@@ -236,8 +236,12 @@ XFAIL `fuzz-table-cell-attribute-order` стал PASS. Бывший XFAIL
 `fuzz-table-dropped-cell-anchor` стал PASS: id отброшенной ячейки AsciiDoc
 регистрируются, как в общем каталоге Ruby (повторный id у следующего раздела,
 подпись ссылки из отброшенного раздела). Проба `fuzz-colist-partintro`
-(seed 21–28) проверяет ошибку partintro в пункте списка выносок.
-Итого *63 PASS, 0 XFAIL*. Прежние отличия для незакрытого listing, неизвестной xref
+(seed 21–28) проверяет ошибку partintro в пункте списка выносок. Пробы
+seed 29–36: `fuzz-dropped-first-block-section-check` и
+`fuzz-comment-first-block-section-check` (отброшенный первый блок тела —
+уровень следующего раздела проверяется), `fuzz-section-title-peeks-next-line`
+(ошибка директивы после заголовка раздела идёт раньше проверки уровня).
+Итого *66 PASS, 0 XFAIL*. Прежние отличия для незакрытого listing, неизвестной xref
 и незакрытого условия устранены в стандартном выводе CLI; эталоны Ruby и HTML
 не изменялись. Редакторские сообщения, физические spans и исходные severity/message
 сохраняются в API/WASM и режиме `--diagnostics editor`.

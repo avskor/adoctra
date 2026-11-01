@@ -4620,6 +4620,21 @@ mod tests {
         );
         // A standalone parse shows it in embedded output too.
         assert_eq!(render("= T\n\nx"), "<h1>T</h1>\n<p>x</p>\n");
+        // Ruby never converts the hidden title: its footnote does not exist,
+        // and the body's footnote is the first.
+        let html = render_mode("= T footnote:[f]\n\nx footnote:[g]");
+        assert!(
+            html.contains("_footnotedef_1\">\n<a href=\"#_footnoteref_1\">1</a>. g"),
+            "{html}"
+        );
+        assert!(!html.contains(". f\n"), "{html}");
+        // Likewise a nested document's title (an AsciiDoc cell).
+        let html = render("|===\na|= T footnote:[f]\n\nx footnote:[g]\n|===");
+        assert!(
+            html.contains("<a href=\"#_footnoteref_1\">1</a>. g"),
+            "{html}"
+        );
+        assert!(!html.contains(". f\n"), "{html}");
     }
 
     #[test]

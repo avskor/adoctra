@@ -372,6 +372,10 @@ pub(crate) struct ParseContext<'i> {
     /// Title headings of nested documents (AsciiDoc cells), keyed by range:
     /// like the document title they never take an automatic id.
     pub nested_titles: BTreeSet<(usize, usize)>,
+    /// Where the first block of the document body (or of the nested
+    /// document being read) starts, after its metadata lines: the line
+    /// Ruby's `is_next_line_section?` peeks, even when its block is dropped.
+    pub first_body_line: Option<usize>,
     /// Blocks of AsciiDoc cells Ruby creates and then drops, keyed by the
     /// cell's start: never output, but their ids register (Ruby's nested
     /// document shares the catalog while it is read).
@@ -762,6 +766,7 @@ impl ParseContext<'_> {
             credits: BTreeSet::new(),
             sections: BTreeMap::new(),
             nested_titles: BTreeSet::new(),
+            first_body_line: None,
             dropped_blocks: BTreeMap::new(),
             book: false,
             manpage: false,

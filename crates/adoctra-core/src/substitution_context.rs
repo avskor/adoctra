@@ -167,6 +167,49 @@ pub(crate) fn inline_footnotes(inline: &crate::Inline, f: &mut impl FnMut(&crate
     }
 }
 
+/// [`inline_footnotes`] with mutable access to the footnotes.
+pub(crate) fn inline_footnotes_mut(
+    inline: &mut crate::Inline,
+    f: &mut impl FnMut(&mut crate::Footnote),
+) {
+    fn visit_parts(parts: &mut [P], f: &mut impl FnMut(&mut crate::Footnote)) {
+        for part in parts {
+            match part {
+                P::Footnote(footnote) => f(footnote),
+                P::Ui(ui) => {
+                    for label in ui.labels_mut() {
+                        visit_parts(label, f);
+                    }
+                }
+                P::Stem(stem) => visit_parts(&mut stem.parts, f),
+                P::IndexTerm(term) => {
+                    for label in term.labels_mut() {
+                        visit_parts(label, f);
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+    match inline {
+        crate::Inline::Footnote { footnote, .. } => f(footnote),
+        crate::Inline::AttributeRef { parts: value, .. }
+        | crate::Inline::Substituted { parts: value, .. } => visit_parts(value, f),
+        crate::Inline::Ui { ui, .. } => {
+            for label in ui.labels_mut() {
+                visit_parts(label, f);
+            }
+        }
+        crate::Inline::Stem { stem, .. } => visit_parts(&mut stem.parts, f),
+        crate::Inline::IndexTerm { term, .. } => {
+            for label in term.labels_mut() {
+                visit_parts(label, f);
+            }
+        }
+        _ => {}
+    }
+}
+
 impl Deref for Evaluation<'_> {
     type Target = Attributes;
     fn deref(&self) -> &Attributes {

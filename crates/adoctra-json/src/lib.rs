@@ -1063,6 +1063,28 @@ mod tests {
     }
 
     #[test]
+    fn hidden_title_footnotes_are_not_document_footnotes() {
+        // Ruby never converts a hidden (`notitle`) title: only the body's
+        // footnote is registered.
+        let options = adoctra_core::ParseOptions {
+            embedded: true,
+            ..Default::default()
+        };
+        let doc = adoctra_core::parse_with_options(
+            "= T footnote:[f]\n:notitle:\n\nx footnote:[g]",
+            &options,
+        )
+        .document;
+        let json = String::from_utf8(JsonBackend.convert(&doc).unwrap()).unwrap();
+        assert!(
+            json.contains(
+                r#""footnotes":[{"index":"1","id":null,"parts":[{"kind":"text","value":"g"}]}]"#
+            ),
+            "{json}"
+        );
+    }
+
+    #[test]
     fn optional_attribute_snapshots_export_fixed_xref_labels() {
         let doc = adoctra_core::parse(":early: pass:m[xref:s[]]\n\n[[s]]\n== Target *Ж*\n\n:late: pass:m[xref:s[]]\n\n{early} {late}").document;
         let json = String::from_utf8(JsonBackend.convert_with_attributes(&doc).unwrap()).unwrap();

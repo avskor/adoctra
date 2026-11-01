@@ -256,6 +256,7 @@ pub(crate) fn parse_reader<'a>(
     let book = context.book;
     let invalid_header = header.invalid;
     let mut i = header.body_start;
+    context.first_body_line = None;
     let body = collect_blocks(
         &mut lines,
         &mut i,
@@ -269,6 +270,7 @@ pub(crate) fn parse_reader<'a>(
         TopLevel {
             has_header: doc.has_title,
             invalid_header,
+            first_line: context.first_body_line,
             fragment: doc.attributes.get("fragment").is_some(),
         },
         book,
@@ -830,8 +832,15 @@ fn read_blocks<'s, 'c>(
     let mut parsed = None;
     loop {
         let step = with_env(&mut stack, lines, i, context, |env, stack| {
+            let outermost = stack.len() == 1;
             let top = stack.last_mut().expect("a run");
             let ctx = top.advance(env, parsed.take())?;
+            if outermost
+                && matches!(ctx, BlockCtx::Section)
+                && env.context.first_body_line.is_none()
+            {
+                env.context.first_body_line = Some(env.lines[*env.i].0);
+            }
             let (metadata, _) = top.parsing.as_ref().expect("metadata");
             Some(parse_block_step(
                 env,
@@ -903,6 +912,8 @@ struct TopLevel {
     invalid_header: bool,
     /// Ruby's `fragment`: any top-level section level is expected.
     fragment: bool,
+    /// Where the first body block starts ([`ParseContext::first_body_line`]).
+    first_line: Option<usize>,
 }
 
 fn nest_sections(
@@ -924,6 +935,7 @@ fn nest_sections(
         has_header,
         invalid_header,
         fragment,
+        first_line,
     } = top_level;
     // Hierarchy diagnostics, placed where Ruby reports them: at the title
     // (`reading` for the parts closing at the end).
@@ -974,8 +986,14 @@ fn nest_sections(
     // Without a header, a body that starts with a section title makes Ruby
     // create every top-level section directly, without checking its level,
     // unless a block title cancelled the header (Ruby's `invalid-header`).
-    let unchecked =
-        !has_header && !invalid_header && blocks.first().and_then(section_level).is_some();
+    // Ruby peeks the first body line (`is_next_line_section?`), so a dropped
+    // first block (a `[comment]` paragraph, a `drop-line` block macro) makes
+    // the following section title a checked one.
+    let unchecked = !has_header
+        && !invalid_header
+        && blocks.first().is_some_and(|block| {
+            section_level(block).is_some() && first_line == Some(block.span.start)
+        });
     // Ruby also opens a preamble for a book without a header, unless its first
     // block is an abstract.
     let preamble_open = has_header
@@ -1442,7 +1460,7 @@ fn apply_style_fixup(
     };
     // An uppercase admonition style (`[NOTE]`, …) wraps the block's body into an
     // admonition container. On a paragraph the already-scanned inlines become a
-    // single child paragraph; on a `====` example or `____` quote block its
+    // single child paragraph; on a `====` example or `--` open block its
     // children move over unchanged. Unlike `[literal]`/`[example]` below it also
     // fires on a container, so it is handled before the paragraph-only guard.
     if let Some(kind) = AdmonitionKind::from_style(style) {
@@ -1459,12 +1477,11 @@ fn apply_style_fixup(
                 };
                 block.simple = true;
             }
-            // A `====` example, a `____` quote and a `--` open block all fold
-            // their parsed children into the admonition. A `****` sidebar is the
-            // sole exception (`[NOTE]` on `****` is inert), so it is absent here.
-            BlockKind::Example { blocks }
-            | BlockKind::Quote { blocks, .. }
-            | BlockKind::Open { blocks } => {
+            // A `====` example and a `--` open block fold their parsed
+            // children into the admonition: only these delimiters list
+            // `admonition` among their masquerades (Ruby's `DELIMITED_BLOCKS`),
+            // so `[NOTE]` on `____` or `****` is inert.
+            BlockKind::Example { blocks } | BlockKind::Open { blocks } => {
                 let blocks = std::mem::take(blocks);
                 block.kind = BlockKind::Admonition {
                     kind,
@@ -2628,6 +2645,7 @@ fn read_nested_document(
     context.start_body();
     let snapshot = (*context.render_attributes()).clone();
     let mut i = header.body_start;
+    let outer_first_line = context.first_body_line.take();
     let blocks = collect_blocks(&mut nested, &mut i, context, None, header.pending);
     context.close_sections(0, usize::MAX);
     let has_title = title.is_some();
@@ -2635,6 +2653,7 @@ fn read_nested_document(
         has_header: has_title,
         invalid_header: header.invalid,
         fragment: context.attributes.get("fragment").is_some(),
+        first_line: std::mem::replace(&mut context.first_body_line, outer_first_line),
     };
     let blocks = nest_sections(blocks, top_level, context.book, None, context, &nested);
     let header = Arc::new(snapshot.clone());
@@ -2743,6 +2762,12 @@ fn parse_block_content<'s, 'c>(
     // elsewhere (and within a paragraph) the lines are ordinary text.
     let discrete = matches!(pending_style, Some("discrete" | "float"));
     let sections = ctx == BlockCtx::Section || discrete;
+    // Ruby peeks two lines for a title (`is_next_line_section?`, or
+    // `is_section_title?` with `peek_line` for a discrete heading), so the
+    // line after an ATX title is preprocessed before the title is read.
+    if sections && pending_style != Some("comment") && parse_heading(trimmed).is_some() {
+        lines.has(*i + 1, context);
+    }
     let heading = parse_heading(trimmed)
         .filter(|_| sections)
         .map(|(level, title)| {
@@ -3377,8 +3402,11 @@ fn parse_block_content<'s, 'c>(
     // An admonition label prefix (`NOTE: `, …) on the first line turns the whole
     // paragraph into an admonition: the prefix is stripped and the rest (incl. any
     // folded lines) is the body. The block span stays the whole paragraph. The
-    // `[NOTE]` *style* form is handled later, in the pending-attrs fixup.
-    if let Some((kind, prefix_len)) = AdmonitionKind::from_label_prefix(line).filter(|_| !text_only)
+    // `[NOTE]` *style* form is handled later, in the pending-attrs fixup. Like
+    // Ruby, only a paragraph that stays a paragraph checks the prefix: a style
+    // that changes the block type (`[sidebar]`, `[TIP]`, …) keeps it as text.
+    if let Some((kind, prefix_len)) = AdmonitionKind::from_label_prefix(line)
+        .filter(|_| !text_only && !pending_style.is_some_and(changes_paragraph_type))
     {
         lines.record_fences(
             Span::new(start, start + prefix_len - 1),
@@ -4040,7 +4068,14 @@ fn item_text(
     if let Some(folded) = folded {
         content = fold_indentation(content, folded, lines);
     }
-    lines.scan_filtered(content, &attrs, context)
+    // Ruby skips line comments while reading the lines, before
+    // `adjust_indentation!`: an indented ` // x` stays text.
+    let filtered =
+        crate::scanner::FilteredSource::without_lines_at(&content.text, 0, |at, line| {
+            let original = content.original_span(Span::new(at, at)).start;
+            is_line_comment(line) && lines.line_start(original) == original
+        });
+    lines.scan_prepared(content, filtered, &attrs, context)
 }
 
 /// Ruby's `adjust_indentation!` on a folded paragraph's lines: their common
@@ -5630,6 +5665,163 @@ mod tests {
             other => panic!("expected Text, got {other:?}"),
         };
         (kind, text)
+    }
+
+    #[test]
+    fn type_changing_style_keeps_an_admonition_label_as_text() {
+        // Ruby checks the `NOTE: ` prefix only on a paragraph that stays one:
+        // `[sidebar]`, `[TIP]` or `[literal]` keep it as text.
+        let src = "[sidebar]\nIMPORTANT: .\n\n[TIP]\nNOTE: x\n\n[literal]\nNOTE: y";
+        let blocks = parse(src).document.into_flat_blocks();
+        match &blocks[0].kind {
+            BlockKind::Sidebar { blocks } => match &blocks[0].kind {
+                BlockKind::Paragraph { inlines } => match &inlines[0] {
+                    Inline::Text { value, span } => {
+                        assert_eq!(value, "IMPORTANT: .");
+                        let start = src.find("IMPORTANT").unwrap();
+                        assert_eq!(*span, Span::new(start, start + "IMPORTANT: .".len()));
+                    }
+                    other => panic!("expected Text, got {other:?}"),
+                },
+                other => panic!("expected Paragraph, got {other:?}"),
+            },
+            other => panic!("expected Sidebar, got {other:?}"),
+        }
+        let (kind, text) = admonition(&blocks[1]);
+        assert_eq!((kind, text.as_str()), (AdmonitionKind::Tip, "NOTE: x"));
+        let start = src.find("NOTE: x").unwrap();
+        assert_eq!(blocks[1].span, Span::new(start, start + 7));
+        match &blocks[2].kind {
+            BlockKind::Literal { text, .. } => assert_eq!(text, "NOTE: y"),
+            other => panic!("expected Literal, got {other:?}"),
+        }
+        // An unknown style or `[normal]` keeps the paragraph: the prefix applies.
+        let (kind, text) = admonition(&parse("[normal]\nNOTE: n").document.into_flat_blocks()[0]);
+        assert_eq!((kind, text.as_str()), (AdmonitionKind::Note, "n"));
+    }
+
+    #[test]
+    fn admonition_style_is_inert_on_a_quote_block() {
+        // `____` masquerades only as `verse` (Ruby's `DELIMITED_BLOCKS`).
+        let src = "[NOTE]\n____\nq\n____";
+        let block = &parse(src).document.into_flat_blocks()[0];
+        assert!(
+            matches!(block.kind, BlockKind::Quote { .. }),
+            "{:?}",
+            block.kind
+        );
+        assert_eq!(block.attrs.style.as_deref(), Some("NOTE"));
+        assert_eq!(block.span, Span::new("[NOTE]\n".len(), src.len()));
+    }
+
+    #[test]
+    fn indented_comment_lookalike_stays_list_item_text() {
+        // Ruby skips line comments before `adjust_indentation!`: ` // x` is
+        // text; a `//` line at the left margin is still a comment.
+        let src = "* m\n // x\n\n* d\n// z\n e";
+        let blocks = parse(src).document.into_flat_blocks();
+        let BlockKind::List { items, .. } = &blocks[0].kind else {
+            panic!("expected List, got {:?}", blocks[0].kind);
+        };
+        let text = |inlines: &[Inline]| -> (String, Vec<Span>) {
+            inlines
+                .iter()
+                .map(|inline| match inline {
+                    Inline::Text { value, span } => (value.clone(), *span),
+                    other => panic!("expected Text, got {other:?}"),
+                })
+                .fold(
+                    (String::new(), Vec::new()),
+                    |(mut text, mut spans), (value, span)| {
+                        text.push_str(&value);
+                        spans.push(span);
+                        (text, spans)
+                    },
+                )
+        };
+        let (first, spans) = text(&items[0].inlines);
+        assert!(first.contains("// x"), "{first:?}");
+        assert_eq!(spans.last().unwrap().end, src.find(" // x").unwrap() + 5);
+        let (second, _) = text(&items[1].inlines);
+        assert!(!second.contains("// z"), "{second:?}");
+        assert!(second.ends_with('e'), "{second:?}");
+    }
+
+    #[test]
+    fn doctitle_attribute_is_no_title_under_an_invalid_header() {
+        // A block title above the implicit doctitle ends Ruby's header
+        // parsing before `doctitle` becomes the document title.
+        let r = parse(".e\n:doctitle: d\n= e");
+        assert!(!r.document.has_title);
+        assert_eq!(r.document.attributes.get("doctitle"), Some("d"));
+        // Without a block title it is the document title.
+        assert!(parse(":doctitle: d\n\np").document.has_title);
+    }
+
+    #[test]
+    fn a_dropped_first_block_makes_the_section_check_apply() {
+        // Ruby peeks the first body line (`is_next_line_section?`): a body
+        // whose first block is dropped does not start with a section.
+        for (src, line) in [
+            (":attribute-missing: drop-line\nimage::{e}[]\n= e", 2),
+            ("[comment]\nx\n\n= e", 3),
+            ("|===\na|[comment]\nx\n\n= e\n|===", 4),
+        ] {
+            let r = parse(src);
+            let level0: Vec<_> = r
+                .diagnostics
+                .iter()
+                .filter(|d| d.message == "level 0 sections can only be used when doctype is book")
+                .collect();
+            assert_eq!(level0.len(), 1, "{src:?}: {:?}", r.diagnostics);
+            let start = src
+                .split_inclusive('\n')
+                .take(line)
+                .map(str::len)
+                .sum::<usize>();
+            assert_eq!(level0[0].span, Span::new(start, start + 3), "{src:?}");
+        }
+        // A comment line or block is metadata: the body starts with the title.
+        for src in ["// c\n= e", "////\nx\n////\n= e", "[[x]]\n= e"] {
+            assert!(parse(src).diagnostics.is_empty(), "{src:?}");
+        }
+    }
+
+    #[test]
+    fn section_title_preprocesses_the_next_line_first() {
+        // Ruby peeks two lines for a title, so a directive after it reports
+        // before the title's level check.
+        let src = "1\n\n= c\nendif::[]";
+        let r = parse(src);
+        let messages: Vec<_> = r.diagnostics.iter().map(|d| d.message.as_str()).collect();
+        assert_eq!(
+            messages,
+            [
+                "unmatched endif directive",
+                "level 0 sections can only be used when doctype is book",
+            ]
+        );
+        let endif = src.find("endif").unwrap();
+        assert_eq!(r.diagnostics[0].span, Span::new(endif, src.len()));
+        assert_eq!(r.diagnostics[1].span, Span::new(3, 6));
+    }
+
+    #[test]
+    fn unshown_titles_register_no_footnotes() {
+        // Ruby never converts a nested document's title (`notitle`) nor an
+        // undisplayed document title: their footnotes do not exist.
+        let src = "|===\na|= T footnote:[f]\n\nx footnote:[g]\n|===";
+        let r = parse(src);
+        let BlockKind::Table(table) = &r.document.flat_blocks()[0].kind else {
+            panic!("expected a table");
+        };
+        let cell = table.cells().next().unwrap();
+        let crate::ast::CellContent::Blocks { footnotes, .. } = &cell.content else {
+            panic!("expected an AsciiDoc cell");
+        };
+        let indexes: Vec<_> = footnotes.iter().map(|f| f.index.as_str()).collect();
+        assert_eq!(indexes, ["1"]);
+        assert_eq!(footnotes[0].span.start, src.find("footnote:[g]").unwrap());
     }
 
     #[test]

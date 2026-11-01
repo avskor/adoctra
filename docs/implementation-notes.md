@@ -2238,3 +2238,32 @@ whose reftext is the label even when empty (`Inline#xreftext`); only the cell's
 leading anchor can register an empty one (`catalog_inline_anchors` skips it).
 **Checklist class**: `checklist` then the list style, then roles.
 **Directive targets**: `reader::directive` splits on Ruby's ASCII `\s` only.
+
+**Fuzz seeds 29–36** (2026-11-01). **Admonition label**: the `NOTE: ` prefix
+applies only when `changes_paragraph_type` is false for the paragraph's style
+(Ruby checks `AdmonitionParagraphRx` only in the plain paragraph branch:
+unstyled, `normal` or an unknown style); `[sidebar]`/`[TIP]`/`[literal]` keep
+it as text. **Delimited admonition styles**: `apply_style_fixup` folds an
+admonition style only into `Example`/`Open` (`DELIMITED_BLOCKS` masquerades);
+`[NOTE]` on `____` is a quote that keeps `style` NOTE. **Folded item
+comments**: `item_text` filters line comments with
+`FilteredSource::without_lines_at`, testing the *original* line start, so an
+indented ` // x` (comment-looking only after `adjust_indentation!`) stays text.
+**First body line**: `ParseContext::first_body_line` records where the first
+document-level block starts (after metadata; saved/restored around nested
+documents); `nest_sections` creates sections unchecked only when the first
+produced block is a section title *starting there* — a dropped first block
+(`[comment]` paragraph, `drop-line` block macro) makes the title checked,
+like Ruby's `is_next_line_section?`. **Invalid header**: when a block title
+cancels the implicit doctitle (`Header::invalid`), a `doctitle` attribute
+does not become the header title (`parse_document_header` returns early).
+**Title peek**: an ATX title where sections are read preprocesses the next
+line before `read_section` stamps its diagnostics (Ruby peeks two lines), so
+directive errors there precede the level checks; Ruby's line number for that
+level error is one later (XFAIL `position-title-peek-dropped-directive`).
+**Unshown titles**: `Execution::unshown` converts a hidden nested document
+title (`notitle` unless the cell sets `showtitle`) and the hidden document
+title (after the body) with footnotes,
+counters, attributes and diagnostics restored, and `Unregistered` clears the
+footnote sequences in their nodes, so `collect_footnotes_after` skips them
+(Ruby never converts these titles).

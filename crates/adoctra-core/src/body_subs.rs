@@ -396,7 +396,9 @@ impl BodySubs {
         if body == 1 {
             if let BlockKind::Heading { inlines, .. } = &mut blocks[0].kind {
                 if let Some(header) = execution.header_lazy.take() {
-                    *inlines = execution.convert_header(header);
+                    let first = execution.footnotes.len();
+                    *inlines = execution.unshown(|execution| execution.convert_header(header));
+                    crate::visit::walk_inlines_mut(&mut Unregistered(first), inlines);
                 } else if let Some(title) = &execution.header_title {
                     inlines.clone_from(title);
                 }
@@ -405,6 +407,21 @@ impl BodySubs {
         crate::resolve::resolve_attribute_definitions(&mut execution.attributes, &execution.fixed);
         let footnotes = execution.footnotes.into_definitions(&execution.fixed);
         (execution.attributes, self.tokens, footnotes)
+    }
+}
+
+/// Footnotes of an unshown conversion ([`Execution::unshown`]) from the
+/// registration sequence given on: not registered, so no collection takes them.
+struct Unregistered(usize);
+
+impl crate::visit::VisitorMut for Unregistered {
+    fn visit_inline(&mut self, inline: &mut Inline) {
+        crate::substitution_context::inline_footnotes_mut(inline, &mut |footnote| {
+            if footnote.sequence.is_some_and(|sequence| sequence >= self.0) {
+                footnote.sequence = None;
+            }
+        });
+        crate::visit::walk_inline_mut(self, inline);
     }
 }
 
@@ -837,6 +854,26 @@ impl Execution<'_, '_> {
 
     /// Convert the document title once (Ruby's memo is assigned after the
     /// conversion, so a reference inside it converts it again).
+    /// Run a conversion Ruby never performs (a title the output does not
+    /// show, which only the tree keeps): its footnotes, counters, attribute
+    /// effects and diagnostics do not happen.
+    fn unshown<R>(&mut self, convert: impl FnOnce(&mut Self) -> R) -> R {
+        let footnotes = self.footnotes.clone();
+        let counters = self.counters.clone();
+        let attributes = self.attributes.clone();
+        let root = self.root.as_ref().map(|(root, _)| root.clone());
+        let diagnostics = self.diagnostics.len();
+        let result = convert(self);
+        self.attributes = attributes;
+        if let (Some((current, _)), Some(root)) = (self.root.as_mut(), root) {
+            *current = root;
+        }
+        self.footnotes = footnotes;
+        *self.counters = counters;
+        self.diagnostics.truncate(diagnostics);
+        result
+    }
+
     fn convert_header(&mut self, header: Pending) -> Vec<Inline> {
         self.header_converting = Some(header.clone());
         let mut inlines = Vec::new();
@@ -1278,7 +1315,18 @@ impl Execution<'_, '_> {
                             std::mem::replace(&mut self.outline, Outline::of(&blocks[title..]));
                         let preamble_toc = self.preamble_toc.take();
                         let header = self.attributes.clone();
-                        self.blocks(&mut blocks[..title]);
+                        // A title not shown (`notitle`, unless the cell sets
+                        // `showtitle`) is never converted by Ruby.
+                        if header.get("notitle").is_some() {
+                            let first = self.footnotes.len();
+                            self.unshown(|execution| execution.blocks(&mut blocks[..title]));
+                            crate::visit::walk_blocks_mut(
+                                &mut Unregistered(first),
+                                &mut blocks[..title],
+                            );
+                        } else {
+                            self.blocks(&mut blocks[..title]);
+                        }
                         if !self.outline.is_empty() && header.get("toc").is_some() {
                             let levels = toclevels(header.get("toclevels"));
                             match header.get("toc-placement") {

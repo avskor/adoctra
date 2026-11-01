@@ -1612,6 +1612,18 @@ impl<'a> Reader<'a> {
         context: &mut ParseContext,
     ) -> Vec<Inline> {
         let filtered = crate::comments::filtered_text(&content.text, 0);
+        self.scan_prepared(content, filtered, attrs, context)
+    }
+
+    /// [`Reader::scan_filtered`] with the comment lines already removed
+    /// (`filtered`, over `content.text`).
+    pub fn scan_prepared(
+        &self,
+        content: crate::scanner::FilteredSource,
+        filtered: crate::scanner::FilteredSource,
+        attrs: &Attributes,
+        context: &mut ParseContext,
+    ) -> Vec<Inline> {
         context
             .comments
             .extend(filtered.removed.iter().map(|s| content.original_span(*s)));

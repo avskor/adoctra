@@ -32,3 +32,30 @@ fn editor_diagnostics_follow_ruby_reporting_order_with_spans() {
         "{json}"
     );
 }
+
+/// Ruby peeks the line after a section title before checking its level, and
+/// a dropped first body block (`[comment]`) makes that check apply.
+#[test]
+fn editor_diagnostics_check_a_title_after_a_dropped_first_block() {
+    let source = "[comment]\nx\n\n= c\nendif::[]\n";
+    let json = adoctra_wasm::parse_json(source);
+    let entry = |needle: &str, message: &str| {
+        let start = source.find(needle).unwrap();
+        format!(
+            r#"{{"span":{{"source_id":0,"start":{start},"end":{}}},"severity":"error","message":"{message}"}}"#,
+            start + needle.len()
+        )
+    };
+    let expected = [
+        entry("endif::[]", "unmatched endif directive"),
+        entry(
+            "= c",
+            "level 0 sections can only be used when doctype is book",
+        ),
+    ]
+    .join(",");
+    assert!(
+        json.contains(&format!(r#""diagnostics":[{expected}]"#)),
+        "{json}"
+    );
+}

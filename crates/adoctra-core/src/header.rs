@@ -118,6 +118,11 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
     };
     result.invalid = result.pending.title.is_some()
         && title.is_some_and(|(level, _)| context.section_level(level) == 0);
+    if result.invalid {
+        // Ruby's `parse_document_header` returns before a `doctitle` value
+        // becomes the document title: the document has no header title.
+        result.effective_title = None;
+    }
     if let Some((_, setext)) = title
         .filter(|(level, _)| context.section_level(*level) == 0 && result.pending.title.is_none())
     {

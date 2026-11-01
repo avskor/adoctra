@@ -81,6 +81,12 @@ impl FilteredSource {
 
     /// Retain the first line: a slice may begin after a list/admonition prefix.
     pub fn without_lines(src: &str, base: usize, remove: impl Fn(&str) -> bool) -> Self {
+        Self::without_lines_at(src, base, |_, line| remove(line))
+    }
+
+    /// [`FilteredSource::without_lines`] whose predicate also gets the line's
+    /// offset in `src`.
+    pub fn without_lines_at(src: &str, base: usize, remove: impl Fn(usize, &str) -> bool) -> Self {
         let mut result = Self {
             text: String::new(),
             removed: Vec::new(),
@@ -89,7 +95,7 @@ impl FilteredSource {
         let mut off = base;
         for (index, raw) in src.split_inclusive('\n').enumerate() {
             let line = raw.trim_end_matches(['\n', '\r']);
-            if index > 0 && remove(line) {
+            if index > 0 && remove(off - base, line) {
                 result.removed.push(crate::Span::new(off, off + line.len()));
             } else {
                 result.segments.push(Segment {
