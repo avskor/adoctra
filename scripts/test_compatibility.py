@@ -1,11 +1,14 @@
+import argparse
 import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from compatibility import (case_commands, classify, html_classes, projection, read_reference, run,
-                           validate_attributes, validate_resources)
+import compatibility
+from compatibility import (case_commands, check, classify, html_classes, load_reference_cache, projection,
+                           read_reference, run, store_reference_cache, validate_attributes, validate_resources,
+                           verification_key)
 
 
 class ProjectionTests(unittest.TestCase):
@@ -306,6 +309,72 @@ class ResourceFixtureTests(unittest.TestCase):
         for attributes in [[], {"": "x"}, {"-x": "x"}, {"a=b": "x"}, {"a": 1}]:
             with self.assertRaises(ValueError):
                 validate_attributes({"id": "x", "attributes": attributes})
+
+
+class ReferenceCacheTests(unittest.TestCase):
+    CASE = {"id": "c", "category": "x", "expect": "pass", "source": "Hello"}
+
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        (self.root / "reference").mkdir()
+        (self.root / "reference" / "c.html").write_text("<p>Hello</p>\n", encoding="utf-8")
+        corpus = patch("compatibility.CORPUS", self.root)
+        corpus.start()
+        self.addCleanup(corpus.stop)
+        self.args = argparse.Namespace(verify_reference=True, update_reference=False,
+                                       record_known_differences=False, binary=Path("adoctra"))
+
+    def verify(self, cached, ruby="<p>Hello</p>\n", case=None, environment="env"):
+        calls = []
+
+        def fake_run(command, source):
+            calls.append(command[0])
+            return ruby if command[0] == "ruby" else "<p>Hello</p>"
+
+        verified, hits = set(), []
+        with patch("compatibility.run", side_effect=fake_run):
+            result = check(case or self.CASE, self.args, environment, cached, verified, hits)
+        return result, verified, hits, calls
+
+    def test_an_unchanged_verified_reference_skips_ruby_but_still_compares_adoctra(self):
+        result, verified, hits, calls = self.verify(set())
+        self.assertEqual((result["status"], hits, calls), ("PASS", [], ["ruby", str(Path("adoctra").resolve())]))
+        result, again, hits, calls = self.verify(verified)
+        self.assertEqual((result["status"], hits, again), ("PASS", ["c"], verified))
+        self.assertNotIn("ruby", calls)
+
+    def test_any_input_reference_or_environment_change_runs_ruby_again(self):
+        _, verified, _, _ = self.verify(set())
+        for change in ({"case": {**self.CASE, "attributes": {"a": "b"}}}, {"environment": "other"}):
+            *_, calls = self.verify(verified, **change)
+            self.assertIn("ruby", calls, change)
+        (self.root / "reference" / "c.html").write_text("<p>Edited</p>\n", encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "reference drift: c"):
+            self.verify(verified)
+
+    def test_without_an_environment_every_reference_runs_ruby(self):
+        *_, calls = self.verify({"anything"}, environment=None)
+        self.assertIn("ruby", calls)
+
+    def test_the_key_ignores_the_temporary_include_root_only(self):
+        case = {**self.CASE, "resources": {"a.adoc": "x"}}
+        key = lambda command, reference="r": verification_key("env", case, command, reference)
+        self.assertEqual(key(["ruby", "--include-root", "/tmp/a"]), key(["ruby", "--include-root", "/tmp/b"]))
+        self.assertNotEqual(key(["ruby", "--showtitle"]), key(["ruby"]))
+        self.assertNotEqual(key(["ruby"]), key(["ruby"], "changed"))
+        self.assertNotEqual(key(["ruby"]), verification_key("env", {**case, "resources": {"a.adoc": "y"}},
+                                                            ["ruby"], "r"))
+
+    def test_the_cache_file_round_trips_and_tolerates_damage(self):
+        path = self.root / "cache" / "compatibility.json"
+        self.assertEqual(load_reference_cache(path), set())
+        store_reference_cache({"b", "a"}, path)
+        self.assertEqual(load_reference_cache(path), {"a", "b"})
+        path.write_text("not json", encoding="utf-8")
+        self.assertEqual(load_reference_cache(path), set())
+        self.assertTrue(str(compatibility.REFERENCE_CACHE).startswith(str(compatibility.ROOT / "target")))
 
 
 if __name__ == '__main__':

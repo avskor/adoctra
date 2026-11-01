@@ -10,6 +10,7 @@ from collections import Counter
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 import difflib
+import hashlib
 from html.parser import HTMLParser
 import json
 from pathlib import Path
@@ -21,6 +22,8 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 CORPUS = ROOT / "compatibility"
+# Local, untracked record of references already verified against Ruby.
+REFERENCE_CACHE = ROOT / "target/reference-cache/compatibility.json"
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"}
 INLINE = {"p", "a", "strong", "em", "code", "mark", "sup", "sub", "span", "cite", "h1", "h2", "h3", "h4", "h5", "h6"}
 LIST_BLOCKS = {"ul", "ol", "dl", "p", "listing", "literal", "pre", "div", "aside", "figure", "blockquote", "table", "hr", "details",
@@ -469,6 +472,47 @@ def case_commands(case, binary):
         yield reference, actual
 
 
+def ruby_environment():
+    """A fingerprint of everything outside the case that shapes Ruby's
+    output: the Ruby build, every installed gem version (Asciidoctor, Rouge,
+    ...) and the reference scripts."""
+    result = subprocess.run(
+        ["ruby", "-e", "puts RUBY_DESCRIPTION; puts Gem::Specification.map(&:full_name).sort"],
+        capture_output=True, timeout=60)
+    if result.returncode:
+        raise RuntimeError(f"ruby: {result.stderr.decode('utf-8', 'replace').strip()}")
+    digest = hashlib.sha256(result.stdout)
+    for script in sorted((ROOT / "scripts").glob("asciidoctor-*.rb")):
+        digest.update(script.name.encode("utf-8") + b"\0" + script.read_bytes() + b"\0")
+    return digest.hexdigest()
+
+
+def verification_key(environment, case, command, reference):
+    """The key of a verified reference: the Ruby environment, the reference
+    command (its temporary include root normalized), the case inputs and the
+    stored reference. Any change re-runs Ruby for that case."""
+    command = list(command)
+    if "--include-root" in command:
+        command[command.index("--include-root") + 1] = "<include-root>"
+    inputs = {key: case[key] for key in ("source", "attributes", "resources", "binary_resources") if key in case}
+    payload = json.dumps({"environment": environment, "command": command, "inputs": inputs,
+                          "reference": reference}, ensure_ascii=False, sort_keys=True)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def load_reference_cache(path=REFERENCE_CACHE):
+    try:
+        keys = json.loads(path.read_text(encoding="utf-8"))["verified"]
+    except (OSError, ValueError, KeyError, TypeError):
+        return set()
+    return set(keys) if isinstance(keys, list) else set()
+
+
+def store_reference_cache(keys, path=REFERENCE_CACHE):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"verified": sorted(keys)}) + "\n", encoding="utf-8")
+
+
 def load_manifest():
     manifest = json.loads((CORPUS / "cases.json").read_text(encoding="utf-8"))
     version = (CORPUS / "asciidoctor-version").read_text().strip()
@@ -510,52 +554,93 @@ def main():
     actions.add_argument("--update-reference", action="store_true")
     actions.add_argument("--record-known-differences", action="store_true",
                          help="explicitly accept current output of documented xfails; review the diff")
+    parser.add_argument("--no-reference-cache", action="store_true",
+                        help="with --verify-reference, run Ruby for every case instead of skipping "
+                             "cases already verified with the same environment, inputs and reference")
     parser.add_argument("--json-report", type=Path)
     args = parser.parse_args()
     manifest = load_manifest()
     results = []
-    for case in manifest["cases"]:
-        reference_path = CORPUS / "reference" / (case["id"] + ".html")
-        baseline_path = CORPUS / "baseline" / (case["id"] + ".json")
-        with case_commands(case, args.binary) as (reference_command, actual_command):
-            if args.verify_reference or args.update_reference:
-                reference = run(reference_command, case["source"])
-                if args.update_reference:
-                    projection(reference)  # Reject malformed fixtures before storing them.
-                    reference_path.parent.mkdir(exist_ok=True)
-                    reference_path.write_text(reference, encoding="utf-8", newline="")
-                elif reference != read_reference(reference_path):
-                    raise ValueError(f"reference drift: {case['id']}; review before --update-reference")
-            if args.update_reference:
-                continue
-            expected = projection(read_reference(reference_path))
-            actual = projection(run(actual_command, case["source"]))
-        baseline = None
-        if case["expect"] == "xfail":
-            if args.record_known_differences:
-                if actual == expected:
-                    raise ValueError(f"{case['id']} is fixed; change its expectation to pass")
-                baseline_path.parent.mkdir(exist_ok=True)
-                baseline_path.write_text(pretty(actual), encoding="utf-8")
-            baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
-        status = classify(case, actual, expected, baseline)
-        results.append({"id": case["id"], "category": case["category"], "status": status,
-                        "reason": case.get("reason")})
-        print(f"{status:5} {case['id']}" + (f" — {case['reason']}" if case.get("reason") else ""))
-        if status == "FAIL":
-            comparison = baseline if baseline is not None else expected
-            print("".join(difflib.unified_diff(pretty(comparison).splitlines(True), pretty(actual).splitlines(True),
-                                            fromfile="baseline" if baseline is not None else "asciidoctor",
-                                            tofile="adoctra")))
+    use_cache = (args.verify_reference or args.update_reference) and not args.no_reference_cache
+    environment = ruby_environment() if use_cache else None
+    cached = load_reference_cache() if use_cache and args.verify_reference else set()
+    verified, hits = set(), []
+    try:
+        for case in manifest["cases"]:
+            result = check(case, args, environment, cached, verified, hits)
+            if result is not None:
+                results.append(result)
+    except BaseException:
+        if use_cache:  # Keep what is known; stale keys never match again.
+            store_reference_cache(cached | verified)
+        raise
+    if use_cache:
+        store_reference_cache(verified)
     if args.update_reference:
         print(f"Updated {len(manifest['cases'])} references using Asciidoctor {manifest['asciidoctor']}.")
         return 0
+    if args.verify_reference and use_cache:
+        print(f"Ruby re-run for {len(manifest['cases']) - len(hits)} cases; "
+              f"{len(hits)} unchanged since their last verification.")
     counts = dict(Counter(r["status"] for r in results))
     print(json.dumps(counts, sort_keys=True))
     if args.json_report:
         args.json_report.write_text(pretty({"profile": manifest["profile"], "asciidoctor": manifest["asciidoctor"],
                                            "counts": counts, "cases": results}), encoding="utf-8")
     return int(any(r["status"] in {"FAIL", "XPASS"} for r in results))
+
+
+def check(case, args, environment, cached, verified, hits):
+    """Verify (or update) one case's reference and compare adoctra with it."""
+    reference_path = CORPUS / "reference" / (case["id"] + ".html")
+    baseline_path = CORPUS / "baseline" / (case["id"] + ".json")
+    with case_commands(case, args.binary) as (reference_command, actual_command):
+        if args.verify_reference or args.update_reference:
+            key = None
+            if args.verify_reference:
+                stored = read_reference(reference_path)
+                if environment is not None:
+                    key = verification_key(environment, case, reference_command, stored)
+            if key is not None and key in cached:
+                hits.append(case["id"])
+            else:
+                reference = run(reference_command, case["source"])
+                if args.update_reference:
+                    projection(reference)  # Reject malformed fixtures before storing them.
+                    reference_path.parent.mkdir(exist_ok=True)
+                    reference_path.write_text(reference, encoding="utf-8", newline="")
+                    stored = reference
+                elif reference != stored:
+                    raise ValueError(f"reference drift: {case['id']}; review before --update-reference")
+                if environment is not None:
+                    key = verification_key(environment, case, reference_command, stored)
+            if key is not None:
+                verified.add(key)
+        if args.update_reference:
+            return None
+        expected = projection(read_reference(reference_path))
+        actual = projection(run(actual_command, case["source"]))
+    return compare(case, args, baseline_path, expected, actual)
+
+
+def compare(case, args, baseline_path, expected, actual):
+    baseline = None
+    if case["expect"] == "xfail":
+        if args.record_known_differences:
+            if actual == expected:
+                raise ValueError(f"{case['id']} is fixed; change its expectation to pass")
+            baseline_path.parent.mkdir(exist_ok=True)
+            baseline_path.write_text(pretty(actual), encoding="utf-8")
+        baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
+    status = classify(case, actual, expected, baseline)
+    result = {"id": case["id"], "category": case["category"], "status": status, "reason": case.get("reason")}
+    print(f"{status:5} {case['id']}" + (f" — {case['reason']}" if case.get("reason") else ""))
+    if status == "FAIL":
+        comparison = baseline if baseline is not None else expected
+        print("".join(difflib.unified_diff(pretty(comparison).splitlines(True), pretty(actual).splitlines(True),
+                                        fromfile="baseline" if baseline is not None else "asciidoctor",
+                                        tofile="adoctra")))
+    return result
 
 
 if __name__ == "__main__":
