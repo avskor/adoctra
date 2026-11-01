@@ -278,6 +278,35 @@ cases = {
       end
     end
   end,
+  'image align is a compared attribute' => lambda do
+    tree = project('image::cat.png[Cat,align=center]')
+    assert(tree[:blocks][0][:attributes] == { 'align' => 'center' }, 'image align lost')
+  end,
+  'quote and verse keep credit and verse whitespace' => lambda do
+    tree = project("[quote,'*Ann*',Book]\n____\nQ.\n\nR.\n____\n\n[verse,Bob]\n____\n  one\n    two\n____\n\n[quote]\nOnly.")
+    quote, verse, simple = tree[:blocks]
+    assert(quote[:attribution][0][:kind] == 'strong' && quote[:citetitle] == [{ kind: 'text', value: 'Book' }], 'quote credit lost')
+    assert(quote[:blocks].size == 2, 'compound quote flattened')
+    assert(verse[:attribution] == [{ kind: 'text', value: 'Bob' }] && verse[:citetitle].nil?, 'verse credit lost')
+    assert(verse[:inlines] == [{ kind: 'text', value: "  one\n    two" }], 'verse whitespace folded')
+    assert(simple[:inlines] == [{ kind: 'text', value: 'Only.' }] && simple[:attribution].nil?, 'simple quote changed')
+  end,
+  'toc macro is a metadata-only block' => lambda do
+    tree = project("= T\n:toc: macro\n\n[#t.r]\n.Contents\ntoc::[]\n\n== S")
+    assert(tree[:blocks][0][:blocks][0] == { context: 'toc', id: 't', roles: ['r'], title: [{ kind: 'text', value: 'Contents' }] }, 'toc metadata changed')
+  end,
+  'server-side highlighting is compared as verbatim text and restored' => lambda do
+    converter = SemanticConverter.new 'html5'
+    document = Asciidoctor.load(":source-highlighter: rouge\n\n[source,java]\n----\nint a = 1; // <1>\nString s = \"<x>\";\n----\n<1> One.",
+                                safe: :safe, header_footer: false, converter: converter)
+    listing = document.blocks[0]
+    assert(listing.subs.include?(:highlight), 'rouge highlighting not active')
+    tree = document.convert
+    inlines = tree[:blocks][0][:inlines]
+    assert(inlines[0] == { kind: 'text', value: 'int a = 1; ' }, 'highlight markup leaked')
+    assert(inlines[1][:kind] == 'callout' && inlines[2][:value].include?('&lt;x&gt;'), 'callout or escaping lost')
+    assert(listing.subs.include?(:highlight) && !listing.subs.include?(:specialcharacters), 'block subs not restored')
+  end,
   'unbalanced handles abort' => lambda do
     converter = SemanticConverter.new 'html5'
     incomplete = converter.wrap({ kind: 'strong', id: nil, roles: [] }, 'x').sub(/<\uE000\d+\uE001>\z/, '')

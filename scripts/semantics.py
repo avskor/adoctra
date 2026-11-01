@@ -9,10 +9,11 @@ import re
 
 PROFILE = 'inline-semantics-v1'
 FORMATS = {'strong', 'emphasis', 'monospace', 'mark', 'superscript', 'subscript', 'span'}
-CONTAINERS = {'section', 'preamble', 'open', 'sidebar', 'example', 'admonition'}
+CONTAINERS = {'section', 'preamble', 'open', 'sidebar', 'example', 'admonition', 'quote'}
+QUOTES = {'quote', 'verse'}
 LISTS = {'ulist', 'olist', 'dlist', 'colist'}
 VERBATIM = {'listing', 'literal'}
-IMAGE_ATTRIBUTES = {'width', 'height', 'title', 'link', 'float'}
+IMAGE_ATTRIBUTES = {'width', 'height', 'title', 'link', 'float', 'align'}
 LINK_METADATA = {'id', 'role', 'title', 'window', 'rel'}
 CELL_STYLES = {None, 'asciidoc', 'none', 'emphasis', 'header', 'literal', 'monospaced', 'strong'}
 
@@ -244,7 +245,8 @@ def block_projection(block):
     context = block['name']
     if context == 'list':
         context = 'olist' if block['ordered'] else 'ulist'
-    require(context in CONTAINERS | LISTS | VERBATIM | {'paragraph', 'image', 'table', 'stem'}, f'unsupported semantic block: {context}')
+    require(context in CONTAINERS | LISTS | VERBATIM | {'paragraph', 'image', 'table', 'stem', 'verse', 'toc'},
+            f'unsupported semantic block: {context}')
     metadata = block
     children = block.get('blocks', [])
     if context == 'section':
@@ -258,7 +260,16 @@ def block_projection(block):
         result['level'] = block['level']
     if context == 'admonition':
         result['type'] = block['admonition-type']
-    if context in LISTS:
+    if context in QUOTES:
+        credit = block.get('attribution') or {}
+        require(set(credit) <= {'author', 'citetitle'}, 'invalid attribution')
+        for key, field in [('author', 'attribution'), ('citetitle', 'citetitle')]:
+            result[field] = canonical(inline_projection(credit[key])) if credit.get(key) is not None else None
+    if context == 'toc':
+        require(not children, 'unexpected toc content')
+    elif context == 'verse':
+        result['inlines'] = canonical(inline_projection(block['inlines']), prose=False)
+    elif context in LISTS:
         if context == 'dlist':
             result['items'] = [{'terms': [canonical(inline_projection(term)) for term in item['terms']],
                                 'description': item_projection(item['description']) if item['description'] is not None else None}
@@ -355,7 +366,10 @@ def reference_projection(result, names):
         if node['title'] is not None:
             node['title'] = inlines(node['title'])
         if 'inlines' in node:
-            node['inlines'] = inlines(node['inlines'], node['context'] not in VERBATIM | {'stem'})
+            node['inlines'] = inlines(node['inlines'], node['context'] not in VERBATIM | {'stem', 'verse'})
+        for key in ['attribution', 'citetitle']:
+            if node.get(key) is not None:
+                node[key] = inlines(node[key])
         if node['context'] == 'image':
             for key in ['target', 'src']:
                 node[key] = lexical(node[key])
@@ -590,7 +604,7 @@ def validate_block(node):
     metadata(node)
     keys = {'context', 'id', 'roles', 'title'}
     context = node.get('context')
-    require(context in CONTAINERS | LISTS | VERBATIM | {'paragraph', 'image', 'table', 'stem'})
+    require(context in CONTAINERS | LISTS | VERBATIM | {'paragraph', 'image', 'table', 'stem', 'verse', 'toc'})
     if node['title'] is not None:
         validate_inlines(node['title'])
     if context == 'section':
@@ -600,7 +614,17 @@ def validate_block(node):
     if context == 'admonition':
         keys.add('type')
         require(node.get('type') in {'note', 'tip', 'important', 'caution', 'warning'})
-    if context in LISTS:
+    if context in QUOTES:
+        keys.update({'attribution', 'citetitle'})
+        for key in ['attribution', 'citetitle']:
+            if node.get(key) is not None:
+                validate_inlines(node[key])
+    if context == 'toc':
+        pass
+    elif context == 'verse':
+        keys.add('inlines')
+        validate_inlines(node.get('inlines'))
+    elif context in LISTS:
         keys.add('items')
         require(isinstance(node.get('items'), list))
         if context != 'dlist':

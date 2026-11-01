@@ -1,0 +1,1890 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The term multitenancy, in general, is applied to software development to indicate an architecture in which a single running instance of an application simultaneously serves multiple clients (tenants). This is highly common in SaaS solutions. Isolating information (data, customizations, etc.) pertaining to the various tenants is a particular challenge in these systems. This includes the data owned by each tenant stored in the database. It is this last piece, sometimes called multitenant data, that we will focus on."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "multitenacy-intro",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "What is multitenancy?"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "There are three main approaches to isolating information in these multitenant systems which go hand-in-hand with different database schema definitions and JDBC setups."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Each multitenancy strategy has pros and cons as well as specific techniques and considerations. Such topics are beyond the scope of this documentation."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "admonition",
+                "id": null,
+                "roles": [],
+                "title": null,
+                "type": "note"
+              },
+              {
+                "blocks": [
+                  {
+                    "alt": [
+                      {
+                        "kind": "text",
+                        "value": "multitenacy database"
+                      }
+                    ],
+                    "attributes": {
+                      "align": "center"
+                    },
+                    "context": "image",
+                    "id": null,
+                    "roles": [],
+                    "src": "images/multitenancy/multitenacy_database.png",
+                    "target": "images/multitenancy/multitenacy_database.png",
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Each tenant’s data is kept in a physically separate database instance. JDBC Connections would point specifically to each database so any pooling would be per-tenant. A general application approach, here, would be to define a JDBC Connection pool per-tenant and to select the pool to use based on the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "tenant identifier"
+                          }
+                        ],
+                        "kind": "emphasis",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " associated with the currently logged in user."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "multitenacy-separate-database",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Separate database"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "alt": [
+                      {
+                        "kind": "text",
+                        "value": "multitenacy schema"
+                      }
+                    ],
+                    "attributes": {
+                      "align": "center"
+                    },
+                    "context": "image",
+                    "id": null,
+                    "roles": [],
+                    "src": "images/multitenancy/multitenacy_schema.png",
+                    "target": "images/multitenancy/multitenacy_schema.png",
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Each tenant’s data is kept in a distinct database schema on a single database instance. There are two different ways to define JDBC Connections here:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "ulist",
+                    "id": null,
+                    "items": [
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Connections could point specifically to each schema as we saw with the "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Separate database"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " approach. This is an option provided that the driver supports naming the default schema in the connection URL or if the pooling mechanism supports naming a schema to use for its Connections. Using this approach, we would have a distinct JDBC Connection pool per-tenant where the pool to use would be selected based on the \"tenant identifier\" associated with the currently logged in user."
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Connections could point to the database itself (using some default schema) but the Connections would be altered using the SQL "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "SET SCHEMA"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " (or similar) command. Using this approach, we would have a single JDBC Connection pool for use to service all tenants, but before using the Connection, it would be altered to reference the schema named by the \"tenant identifier\" associated with the currently logged in user."
+                          }
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "style": null,
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "multitenacy-separate-schema",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Separate schema"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "alt": [
+                      {
+                        "kind": "text",
+                        "value": "multitenacy discriminator"
+                      }
+                    ],
+                    "attributes": {
+                      "align": "center"
+                    },
+                    "context": "image",
+                    "id": null,
+                    "roles": [],
+                    "src": "images/multitenancy/multitenacy_discriminator.png",
+                    "target": "images/multitenancy/multitenacy_discriminator.png",
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "All data is kept in a single database schema. The data for each tenant is partitioned by the use of partition value or discriminator. The complexity of this discriminator might range from a simple column value to a complex SQL formula. Again, this approach would use a single Connection pool to service all tenants. However, in this approach, the application needs to alter each and every SQL statement sent to the database to reference the \"tenant identifier\" discriminator."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "multitenacy-discriminator",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Partitioned (discriminator) data"
+                  }
+                ]
+              }
+            ],
+            "context": "section",
+            "id": "multitenacy-approaches",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Multitenant data approaches"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Using Hibernate with multitenant data comes down to both an API and then integration piece(s). As usual, Hibernate strives to keep the API simple and isolated from any underlying integration complexities. The API is really just defined by passing the tenant identifier as part of opening any session."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "private void doInSession(String tenant, Consumer<Session> function) {\n\tSession session = null;\n\tTransaction txn = null;\n\ttry {\n\t\tsession = sessionFactory\n\t\t\t\t.withOptions()\n\t\t\t\t.tenantIdentifier( tenant )\n\t\t\t\t.openSession();\n\t\ttxn = session.getTransaction();\n\t\ttxn.begin();\n\t\tfunction.accept( session );\n\t\ttxn.commit();\n\t}\n\tcatch (Throwable e) {\n\t\tif ( txn != null ) {\n\t\t\ttxn.rollback();\n\t\t}\n\t\tthrow e;\n\t}\n\tfinally {\n\t\tif ( session != null ) {\n\t\t\tsession.close();\n\t\t}\n\t}\n}"
+                      }
+                    ],
+                    "language": "java",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": "multitenacy-hibernate-session-example",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Specifying tenant identifier from "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "SessionFactory"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "For the partitioned data approach, each entity representing partitioned data must declare a field annotated "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@TenantId"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@Entity\npublic class Account {\n\n    @Id @GeneratedValue Long id;\n\n    @TenantId String tenantId;\n\n    ...\n}"
+                          }
+                        ],
+                        "language": "java",
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": "multitenacy-hibernate-TenantId-example",
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "A "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@TenantId"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " usage example"
+                      }
+                    ]
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@TenantId"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " field is automatically populated by Hibernate when an instance is made persistent."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "multitenacy-hibernate-TenantId",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "@TenantId"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "When using either the separate database or separate schema approach, Hibernate needs to be able to obtain connections in a tenant-specific manner."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "That is the role of the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "MultiTenantConnectionProvider"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " contract. Application developers will need to provide an implementation of this contract."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Most of its methods are extremely self-explanatory. The only ones which might not be are "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "getAnyConnection"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " and "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "releaseAnyConnection"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ". It is important to note also that these methods do not accept the tenant identifier. Hibernate uses these methods during startup to perform various configuration, mainly via the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "java.sql.DatabaseMetaData"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " object."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "MultiTenantConnectionProvider"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " to use can be specified in a number of ways:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "ulist",
+                    "id": null,
+                    "items": [
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Use the "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "hibernate.multi_tenant_connection_provider"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " setting. It could name a "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "MultiTenantConnectionProvider"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " instance, a "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "MultiTenantConnectionProvider"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " implementation class reference or a "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "MultiTenantConnectionProvider"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " implementation class name."
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Provided by the configured "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "BeanContainer"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": "."
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Passed directly to the "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "org.hibernate.boot.registry.StandardServiceRegistryBuilder"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": "."
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "If none of the above options match, but the settings do specify a "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "hibernate.connection.datasource"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " value, Hibernate will assume it should use the specific "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "DataSourceBasedMultiTenantConnectionProviderImpl"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " implementation which works on a number of pretty reasonable assumptions when running inside of an app server and using one "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "javax.sql.DataSource"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " per tenant. See its "
+                          },
+                          {
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Javadocs"
+                              }
+                            ],
+                            "kind": "link",
+                            "target": "https://docs.hibernate.org/orm/7.4/javadocs/org/hibernate/engine/jdbc/connections/spi/DataSourceBasedMultiTenantConnectionProviderImpl.html"
+                          },
+                          {
+                            "kind": "text",
+                            "value": " for more details."
+                          }
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "style": null,
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The following example portrays a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "MultiTenantConnectionProvider"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " implementation that handles multiple "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "ConnectionProvider"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "s."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "public class ConfigurableMultiTenantConnectionProvider\n\t\textends AbstractMultiTenantConnectionProvider<String> {\n\n\tprivate final Map<String, ConnectionProvider> connectionProviderMap =\n\t\tnew HashMap<>();\n\n\tpublic ConfigurableMultiTenantConnectionProvider(\n\t\t\tMap<String, ConnectionProvider> connectionProviderMap) {\n\t\tthis.connectionProviderMap.putAll(connectionProviderMap);\n\t}\n\n\t@Override\n\tprotected ConnectionProvider getAnyConnectionProvider() {\n\t\treturn connectionProviderMap.values().iterator().next();\n\t}\n\n\t@Override\n\tprotected ConnectionProvider selectConnectionProvider(String tenantIdentifier) {\n\t\treturn connectionProviderMap.get(tenantIdentifier);\n\t}\n}"
+                          }
+                        ],
+                        "language": "java",
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": "multitenacy-hibernate-ConfigurableMultiTenantConnectionProvider-example",
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "A "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "MultiTenantConnectionProvider"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " implementation"
+                      }
+                    ]
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "ConfigurableMultiTenantConnectionProvider"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " can be set up as follows:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "private void init() {\n\tregisterConnectionProvider( FRONT_END_TENANT );\n\tregisterConnectionProvider( BACK_END_TENANT );\n\tsessionFactory = sessionFactory( createSettings() );\n}\n\nprotected Map<String, Object> createSettings() {\n\tMap<String, Object> settings = new HashMap<>();\n\n\tsettings.put( AvailableSettings.MULTI_TENANT_CONNECTION_PROVIDER,\n\t\t\tnew ConfigurableMultiTenantConnectionProvider( connectionProviderMap ) );\n\treturn settings;\n}\n\nprotected void registerConnectionProvider(String tenantIdentifier) {\n\tProperties properties = properties();\n\tproperties.put( Environment.URL,\n\t\t\ttenantUrl( properties.getProperty( Environment.URL ), tenantIdentifier ) );\n\n\tDriverManagerConnectionProvider connectionProvider =\n\t\t\tnew DriverManagerConnectionProvider();\n\tconnectionProvider.configure( PropertiesHelper.map( properties ) );\n\tconnectionProviderMap.put( tenantIdentifier, connectionProvider );\n}"
+                          }
+                        ],
+                        "language": "java",
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": "multitenacy-hibernate-MultiTenantConnectionProvider-example",
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "A "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "MultiTenantConnectionProvider"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " usage example"
+                      }
+                    ]
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "When using multitenancy, it’s possible to save an entity with the same identifier across different tenants:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "doInSession( FRONT_END_TENANT, session -> {\n\tPerson person = new Person();\n\tperson.setId( 1L );\n\tperson.setName( \"John Doe\" );\n\tsession.persist( person );\n} );\n\ndoInSession( BACK_END_TENANT, session -> {\n\tPerson person = new Person();\n\tperson.setId( 1L );\n\tperson.setName( \"John Doe\" );\n\tsession.persist( person );\n} );"
+                          }
+                        ],
+                        "language": "java",
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": "multitenacy-hibernate-same-entity-example",
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "An example of saving entities with the same identifier across different tenants"
+                      }
+                    ]
+                  }
+                ],
+                "context": "section",
+                "id": "multitenacy-hibernate-MultiTenantConnectionProvider",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "MultiTenantConnectionProvider"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "org.hibernate.context.spi.CurrentTenantIdentifierResolver"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " is a contract for Hibernate to be able to resolve what the application considers the current tenant identifier. The implementation to use can be either passed directly to "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Configuration"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " via its "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "setCurrentTenantIdentifierResolver"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " method, or be specified via the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "hibernate.tenant_identifier_resolver"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " setting, or be provided by the configured "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "BeanContainer"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "There are two situations where "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "CurrentTenantIdentifierResolver"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " is used:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "ulist",
+                    "id": null,
+                    "items": [
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "The first situation is when the application is using the "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "org.hibernate.context.spi.CurrentSessionContext"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " feature in conjunction with multitenancy. In the case of the current-session feature, Hibernate will need to open a session if it cannot find an existing one in scope. However, when a session is opened in a multitenant environment, the tenant identifier has to be specified. This is where the "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "CurrentTenantIdentifierResolver"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " comes into play; Hibernate will consult the implementation you provide to determine the tenant identifier to use when opening the session. In this case, it is required that a "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "CurrentTenantIdentifierResolver"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " is supplied."
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "The other situation is when you do not want to explicitly specify the tenant identifier all the time. If a "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "CurrentTenantIdentifierResolver"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " has been specified, Hibernate will use it to determine the default tenant identifier to use when opening the session."
+                          }
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "style": null,
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Additionally, if the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "CurrentTenantIdentifierResolver"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " implementation returns "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "true"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " for its "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "validateExistingCurrentSessions"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " method, Hibernate will make sure any existing sessions that are found in scope have a matching tenant identifier. This capability is only pertinent when the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "CurrentTenantIdentifierResolver"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " is used in current-session settings."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "multitenacy-hibernate-CurrentTenantIdentifierResolver",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "CurrentTenantIdentifierResolver"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Multitenancy support in Hibernate works seamlessly with the Hibernate second level cache. The key used to cache data encodes the tenant identifier."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Currently, schema export will not really work with multitenancy."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "admonition",
+                    "id": null,
+                    "roles": [],
+                    "title": null,
+                    "type": "note"
+                  }
+                ],
+                "context": "section",
+                "id": "multitenacy-hibernate-caching",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Caching"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "When using multitenancy, you might want to configure each tenant-specific "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Session"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " differently. For instance, each tenant could specify a different time zone configuration."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "registerConnectionProvider( FRONT_END_TENANT, TimeZone.getTimeZone( \"UTC\" ) );\nregisterConnectionProvider( BACK_END_TENANT, TimeZone.getTimeZone( \"CST\" ) );"
+                          }
+                        ],
+                        "language": "java",
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": "multitenacy-hibernate-timezone-configuration-registerConnectionProvider-call-example",
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "Registering the tenant-specific time zone information"
+                      }
+                    ]
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "registerConnectionProvider"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " method is used to define the tenant-specific context."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "protected void registerConnectionProvider(String tenantIdentifier, TimeZone timeZone) {\n\tProperties properties = properties();\n\tproperties.put(\n\t\t\tEnvironment.URL,\n\t\t\ttenantUrl( properties.getProperty( Environment.URL ), tenantIdentifier )\n\t);\n\n\tDriverManagerConnectionProvider connectionProvider =\n\t\t\tnew DriverManagerConnectionProvider();\n\tconnectionProvider.configure( PropertiesHelper.map( properties ) );\n\n\tconnectionProviderMap.put( tenantIdentifier, connectionProvider );\n\n\ttimeZoneTenantMap.put( tenantIdentifier, timeZone );\n}"
+                          }
+                        ],
+                        "language": "java",
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": "multitenacy-hibernate-timezone-configuration-registerConnectionProvider-example",
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "The "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "registerConnectionProvider"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " method used for defining the tenant-specific context"
+                      }
+                    ]
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "For our example, the tenant-specific context is held in the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "connectionProviderMap"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " and "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "timeZoneTenantMap"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "private Map<String, ConnectionProvider> connectionProviderMap = new HashMap<>();\n\nprivate Map<String, TimeZone> timeZoneTenantMap = new HashMap<>();"
+                      }
+                    ],
+                    "language": "java",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Now, when building the Hibernate "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Session"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", aside from passing the tenant identifier, we could also configure the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Session"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " to use the tenant-specific time zone."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "private void doInSession(String tenant, Consumer<Session> function, boolean useTenantTimeZone) {\n\tSession session = null;\n\tTransaction txn = null;\n\n\ttry {\n\t\tSessionBuilder sessionBuilder = sessionFactory\n\t\t\t\t.withOptions()\n\t\t\t\t.tenantIdentifier( tenant );\n\n\t\tif ( useTenantTimeZone ) {\n\t\t\tsessionBuilder.jdbcTimeZone( timeZoneTenantMap.get( tenant ) );\n\t\t}\n\n\t\tsession = sessionBuilder.openSession();\n\n\t\ttxn = session.getTransaction();\n\t\ttxn.begin();\n\n\t\tfunction.accept( session );\n\n\t\ttxn.commit();\n\t}\n\tcatch (Throwable e) {\n\t\tif ( txn != null ) {\n\t\t\ttxn.rollback();\n\t\t}\n\t\tthrow e;\n\t}\n\tfinally {\n\t\tif ( session != null ) {\n\t\t\tsession.close();\n\t\t}\n\t}\n}"
+                          }
+                        ],
+                        "language": "java",
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": "multitenacy-hibernate-timezone-configuration-session-example",
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "The Hibernate "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Session"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " can be configured using the tenant-specific context"
+                      }
+                    ]
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "So, if we set the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "useTenantTimeZone"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " parameter to "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "true"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", Hibernate will persist the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Timestamp"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " properties using the tenant-specific time zone. As you can see in the following example, the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Timestamp"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " is successfully retrieved even if the currently running JVM uses a different time zone."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "doInSession( FRONT_END_TENANT, session -> {\n\tPerson person = new Person();\n\tperson.setId( 1L );\n\tperson.setName( \"John Doe\" );\n\tperson.setCreatedOn( LocalDateTime.of( 2018, 11, 23, 12, 0, 0 ) );\n\n\tsession.persist( person );\n}, true );\n\ndoInSession( BACK_END_TENANT, session -> {\n\tPerson person = new Person();\n\tperson.setId( 1L );\n\tperson.setName( \"John Doe\" );\n\tperson.setCreatedOn( LocalDateTime.of( 2018, 11, 23, 12, 0, 0 ) );\n\n\tsession.persist( person );\n}, true );\n\ndoInSession( FRONT_END_TENANT, session -> {\n\tTimestamp personCreationTimestamp = session\n\t\t\t.createNativeQuery(\n\t\t\t\t\t\"select p.created_on \" +\n\t\t\t\t\t\"from Person p \" +\n\t\t\t\t\t\"where p.id = :personId\", Timestamp.class )\n\t\t\t.setParameter( \"personId\", 1L )\n\t\t\t.getSingleResult();\n\n\tassertThat( personCreationTimestamp )\n\t\t\t.isEqualTo( Timestamp.valueOf( LocalDateTime.of( 2018, 11, 23, 12, 0, 0 ) ) );\n}, true );\n\ndoInSession( BACK_END_TENANT, session -> {\n\tTimestamp personCreationTimestamp = session\n\t\t\t.createNativeQuery(\n\t\t\t\t\t\"select p.created_on \" +\n\t\t\t\t\t\"from Person p \" +\n\t\t\t\t\t\"where p.id = :personId\", Timestamp.class )\n\t\t\t.setParameter( \"personId\", 1L )\n\t\t\t.getSingleResult();\n\n\tassertThat( personCreationTimestamp )\n\t\t\t.isEqualTo( Timestamp.valueOf( LocalDateTime.of( 2018, 11, 23, 12, 0, 0 ) ) );\n}, true );"
+                          }
+                        ],
+                        "language": "java",
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": "multitenacy-hibernate-applying-timezone-configuration-example",
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "The "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "useTenantTimeZone"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " allows you to persist a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Timestamp"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " in the provided time zone"
+                      }
+                    ]
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "However, behind the scenes, we can see that Hibernate has saved the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "created_on"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " property in the tenant-specific time zone. The following example shows you that the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Timestamp"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " was saved in the UTC time zone, hence the offset displayed in the test output."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "doInSession( FRONT_END_TENANT, session -> {\n\tTimestamp personCreationTimestamp = session\n\t\t\t.createNativeQuery(\n\t\t\t\t\t\"select p.created_on \" +\n\t\t\t\t\t\"from Person p \" +\n\t\t\t\t\t\"where p.id = :personId\", Timestamp.class )\n\t\t\t.setParameter( \"personId\", 1L )\n\t\t\t.getSingleResult();\n\n\tlong timeZoneOffsetMillis =\n\t\t\tTimestamp.valueOf( LocalDateTime.of( 2018, 11, 23, 12, 0, 0 ) ).getTime() -\n\t\t\tpersonCreationTimestamp.getTime();\n\n\tassertThat( timeZoneOffsetMillis )\n\t\t\t.isEqualTo( TimeZone.getTimeZone( ZoneId.systemDefault() ).getRawOffset() );\n\n}, false );"
+                          }
+                        ],
+                        "language": "java",
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "SELECT\n    p.created_on\nFROM\n    Person p\nWHERE\n    p.id = ?\n\n-- binding parameter [1] as [BIGINT] - [1]\n-- extracted value ([CREATED_ON] : [TIMESTAMP]) - [2018-11-23 10:00:00.0]\n\n-- The created_on timestamp value is: [2018-11-23 10:00:00.0]\n-- For the current time zone: [Eastern European Time], the UTC time zone offset is: [7200000]"
+                          }
+                        ],
+                        "language": "sql",
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": "multitenacy-hibernate-not-applying-timezone-configuration-example",
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "With the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "useTenantTimeZone"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " property set to "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "false"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Timestamp"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " is fetched in the tenant-specific time zone"
+                      }
+                    ]
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Notice that for the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Eastern European Time"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " time zone, the time zone offset was 2 hours when the test was executed."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "multitenacy-hibernate-session-configuration",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Multitenancy Hibernate Session configuration"
+                  }
+                ]
+              }
+            ],
+            "context": "section",
+            "id": "multitenacy-hibernate",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Multitenancy in Hibernate"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "multitenacy",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Multitenancy"
+          }
+        ]
+      }
+    ],
+    "title": null
+  }
+}

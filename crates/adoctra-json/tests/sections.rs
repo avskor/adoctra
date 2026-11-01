@@ -62,11 +62,11 @@ fn images_serialize_target_src_alt_and_figure_caption() {
     let json =
         render(":imagesdir: img\n\n.Fig\n[[f]]\nimage::a b.png[(C) x,200]\n\nimage::my_pic.png[]");
     assert!(
-        json.contains(r#"{"name":"image","target":"a b.png","src":"img/a%20b.png","alt":"&#169; x","id":"f","roles":[],"style":null,"attributes":{"alt":"(C) x","width":"200"},"options":[],"title":[{"name":"text","value":"Fig"}],"caption":"Figure 1. "}"#),
+        json.contains(r#"{"name":"image","target":"a b.png","src":"img/a%20b.png","alt":"&#169; x","parts":[{"kind":"raw","value":"&#169;"},{"kind":"text","value":" x"}],"id":"f","roles":[],"style":null,"attributes":{"alt":"(C) x","width":"200"},"options":[],"title":[{"name":"text","value":"Fig"}],"caption":"Figure 1. "}"#),
         "{json}"
     );
     assert!(
-        json.contains(r#"{"name":"image","target":"my_pic.png","src":"img/my_pic.png","alt":"my pic","id":null"#),
+        json.contains(r#"{"name":"image","target":"my_pic.png","src":"img/my_pic.png","alt":"my pic","parts":[{"kind":"text","value":"my pic"}],"id":null"#),
         "{json}"
     );
 }

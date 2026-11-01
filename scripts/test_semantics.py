@@ -380,7 +380,7 @@ class SemanticProjectionTests(unittest.TestCase):
 
     def test_image_fields_alt_and_metadata_survive_projection_and_mutations(self):
         node = {'name': 'image', 'target': 'cat.png', 'src': 'assets/cat.png', 'alt': 'Cat &amp; friend',
-                'attributes': {'id': 'cat', 'role': 'zoom wide', 'width': '24', 'link': 'https://example.org'},
+                'attributes': {'id': 'cat', 'role': 'zoom wide', 'width': '24', 'link': 'https://example.org', 'align': 'center'},
                 'parts': [{'kind': 'open', 'format': 'strong'}, text('Cat'), {'kind': 'close', 'format': 'strong'}, {'kind': 'raw', 'value': ' &amp; friend'}]}
         projected = semantics.inline_projection([node])
         self.assertEqual(projected[0]['id'], 'cat')
@@ -434,6 +434,51 @@ class SemanticProjectionTests(unittest.TestCase):
         for invalid in [dict(simple, blocks=[]), dict(simple, blocks=[dict(simple['blocks'][0], id='hidden')])]:
             with self.assertRaises(ValueError):
                 semantics.block_projection(invalid)
+
+    def test_quote_and_verse_keep_credit_content_model_and_verse_whitespace(self):
+        credit = {'author': [{'name': 'raw', 'value': 'Ann &amp; Bob'}], 'citetitle': [{'name': 'text', 'value': 'Book'}]}
+        quote = {'name': 'quote', 'attribution': credit, 'blocks': document('One.')['blocks'] * 2}
+        projected = semantics.block_projection(quote)
+        self.assertEqual(projected['attribution'], [text('Ann & Bob')])
+        self.assertEqual(projected['citetitle'], [text('Book')])
+        self.assertEqual(len(projected['blocks']), 2)
+        semantics.validate_block(projected)
+        for changed in [dict(credit, citetitle=None), dict(credit, author=[{'name': 'text', 'value': 'Eve'}])]:
+            self.assertNotEqual(projected, semantics.block_projection(dict(quote, attribution=changed)))
+        bare = semantics.block_projection(dict(quote, attribution=None))
+        self.assertIsNone(bare['attribution'])
+        self.assertIsNone(bare['citetitle'])
+        simple = semantics.block_projection(dict(quote, simple=True, blocks=document('Only.')['blocks']))
+        self.assertEqual(simple['inlines'], [text('Only.')])
+        verse = {'name': 'verse', 'attribution': None, 'inlines': [{'name': 'text', 'value': '  one\n    two'}]}
+        projected = semantics.block_projection(verse)
+        self.assertEqual(projected['inlines'], [text('  one\n    two')])
+        semantics.validate_block(projected)
+        self.assertNotEqual(projected, semantics.block_projection(dict(verse, inlines=[{'name': 'text', 'value': 'one two'}])))
+        with self.assertRaisesRegex(ValueError, 'attribution'):
+            semantics.block_projection(dict(quote, attribution={'author': None, 'future': None}))
+
+    def test_toc_is_metadata_only_and_rejects_content(self):
+        toc = {'name': 'toc', 'id': 't', 'roles': ['r'], 'title': [{'name': 'text', 'value': 'Contents'}]}
+        projected = semantics.block_projection(toc)
+        self.assertEqual(projected, {'context': 'toc', 'id': 't', 'roles': ['r'], 'title': [text('Contents')]})
+        semantics.validate_block(projected)
+        self.assertNotEqual(projected, semantics.block_projection(dict(toc, id='other')))
+        with self.assertRaisesRegex(ValueError, 'toc'):
+            semantics.block_projection(dict(toc, blocks=document()['blocks']))
+        with self.assertRaises(ValueError):
+            semantics.validate_block(dict(projected, inlines=[]))
+
+    def test_reference_quote_credit_and_verse_are_decoded_once(self):
+        oracle = {'attributes': {'header': {}, 'final': {}}, 'title': None, 'blocks': [
+            {'context': 'quote', 'id': None, 'roles': [], 'title': None, 'attribution': [text('A &amp;amp; B')],
+             'citetitle': None, 'inlines': [text('Q')]},
+            {'context': 'verse', 'id': None, 'roles': [], 'title': None, 'attribution': None, 'citetitle': [text('T')],
+             'inlines': [text('  a &lt;\n b')]}]}
+        projected = semantics.reference_projection(oracle, [])
+        self.assertEqual(projected['blocks'][0]['attribution'], [text('A &amp; B')])
+        self.assertEqual(projected['blocks'][1]['inlines'], [text('  a <\n b')])
+        self.assertEqual(oracle['blocks'][0]['attribution'], [text('A &amp;amp; B')])
 
     def test_verbatim_whitespace_and_language_are_not_normalized_away(self):
         node = {'name': 'listing', 'text': '  x < 2\n    y', 'attributes': {'language': 'ruby'}}
@@ -492,7 +537,7 @@ class SemanticProjectionTests(unittest.TestCase):
     def test_pinned_fixture_expands_attributes_and_macros_inside_quotes(self):
         root = CORPUS / 'upstream'
         manifest, cases = acceptance.load_corpus(root / 'semantics.json')
-        self.assertEqual(len(cases), 129)
+        self.assertEqual(len(cases), 134)
         self.assertEqual(manifest['profile'], semantics.PROFILE)
         reference = json.loads((root / 'reference/semantic-attributes-macros-in-quotes.json').read_text())
         strong = reference['semantics']['blocks'][0]['inlines'][0]
@@ -505,7 +550,7 @@ class SemanticProjectionTests(unittest.TestCase):
         manifest, cases = acceptance.load_corpus(root / 'semantics.json')
         original_manifest, original = acceptance.load_corpus(root / 'cases.json')
         self.assertEqual(manifest['profile'], semantics.PROFILE)
-        self.assertEqual(len(cases), 25)
+        self.assertEqual(len(cases), 43)
         for path, provenance in manifest['files'].items():
             self.assertEqual(provenance, original_manifest['files'][path])
         for origin in manifest['origins'].values():

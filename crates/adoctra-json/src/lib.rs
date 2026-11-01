@@ -474,13 +474,15 @@ fn write_block_part<'a>(block: &'a Block, s: &mut Out<'a, Block>) {
             alt,
             svg,
         } => {
-            // The resolved image: its target, web path and flat alt text.
+            // The resolved image: its target, web path, flat alt text and
+            // the alt parts that keep literal text and generated entities apart.
             s.push_str("{\"name\":\"image\",\"target\":");
             escape_into(target, s);
             s.push_str(",\"src\":");
             escape_into(src, s);
             s.push_str(",\"alt\":");
             escape_into(&adoctra_core::attributes::parts_text(alt), s);
+            adoctra_core::json::write_attribute_parts(alt, s);
             adoctra_core::json::write_svg(svg.as_ref(), s);
             s.push(',');
             write_id(&block.id, s);
@@ -1161,11 +1163,28 @@ mod tests {
     }
 
     #[test]
+    fn block_image_alt_parts_keep_replacement_entities_apart_from_text() {
+        // Regression: the flat alt mixed generated `&#8217;` with a literal `&`.
+        let json = render("image::a.png[d'une <b> & (C)]\n\nimage::it's.png[]");
+        assert!(
+            json.contains(
+                r#""alt":"d&#8217;une <b> & &#169;","parts":[{"kind":"text","value":"d"},{"kind":"raw","value":"&#8217;"},{"kind":"text","value":"une <b> & "},{"kind":"raw","value":"&#169;"}]"#
+            ),
+            "{json}"
+        );
+        // A default alt from the target gets no replacements.
+        assert!(
+            json.contains(r#""alt":"it's","parts":[{"kind":"text","value":"it's"}]"#),
+            "{json}"
+        );
+    }
+
+    #[test]
     fn svg_images_export_their_embedding() {
         let json = render("image::a.svg[opts=interactive,fallback=f.png]\n\nT image:gone.svg[opts=inline] x\n\nimage::a.png[]");
         assert!(
             json.contains(
-                r#""src":"a.svg","alt":"a","svg":{"mode":"interactive","fallback":"f.png"},"id""#
+                r#""src":"a.svg","alt":"a","parts":[{"kind":"text","value":"a"}],"svg":{"mode":"interactive","fallback":"f.png"},"id""#
             ),
             "{json}"
         );

@@ -557,6 +557,8 @@ fn write_block_part<'a>(b: &'a Block, s: &mut Out<'a, Block>) {
             write_str(src, s);
             s.push_str(",\"alt\":");
             write_str(&adoctra_core::attributes::parts_text(alt), s);
+            // Literal and raw alt parts keep generated entities distinct.
+            adoctra_core::json::write_attribute_parts(alt, s);
             adoctra_core::json::write_svg(svg.as_ref(), s);
             s.push(',');
             write_id(&b.id, s);
@@ -1239,10 +1241,21 @@ mod tests {
     }
 
     #[test]
+    fn block_image_alt_parts_keep_replacement_entities_apart_from_text() {
+        let json = parse_json("image::a.png[d'une <b> & (C)]");
+        assert!(
+            json.contains(
+                r#""alt":"d&#8217;une <b> & &#169;","parts":[{"kind":"text","value":"d"},{"kind":"raw","value":"&#8217;"},{"kind":"text","value":"une <b> & "},{"kind":"raw","value":"&#169;"}]"#
+            ),
+            "{json}"
+        );
+    }
+
+    #[test]
     fn svg_images_export_their_embedding() {
         let json = parse_json("image::a.svg[opts=interactive]\n\nT image:gone.svg[opts=inline] x");
         assert!(
-            json.contains(r#""alt":"a","svg":{"mode":"interactive","fallback":null}"#),
+            json.contains(r#""alt":"a","parts":[{"kind":"text","value":"a"}],"svg":{"mode":"interactive","fallback":null}"#),
             "{json}"
         );
         assert!(
@@ -3029,7 +3042,7 @@ mod header_tests {
         let source = "Intro\n\n.T\nimage::a.png[A,link=l]";
         let json = super::parse_json_with_source(source, 3);
         assert!(
-            json.contains(r#"{"span":{"source_id":3,"start":10,"end":32},"name":"image","target":"a.png","src":"a.png","alt":"A","id":null,"roles":[],"style":null,"attributes":{"alt":"A","link":"l"},"options":[],"title":[{"span":{"source_id":3,"start":8,"end":9},"name":"text","value":"T"}],"caption":"Figure 1. "}"#),
+            json.contains(r#"{"span":{"source_id":3,"start":10,"end":32},"name":"image","target":"a.png","src":"a.png","alt":"A","parts":[{"kind":"text","value":"A"}],"id":null,"roles":[],"style":null,"attributes":{"alt":"A","link":"l"},"options":[],"title":[{"span":{"source_id":3,"start":8,"end":9},"name":"text","value":"T"}],"caption":"Figure 1. "}"#),
             "{json}"
         );
         let tokens = super::tokens_json_with_source(source, 3);

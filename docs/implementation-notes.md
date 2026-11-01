@@ -183,11 +183,13 @@ reader message verbatim in `report.message` (Reader::error_reported).
 else Ruby's "no inline candidate; …" warning (typo kept) and empty output;
 standalone and embedded alike. The CLI ends non-empty HTML with a LF like
 Ruby's CLI and prints backend warnings in embedded mode too.
-`compatibility/upstream/semantics.json` uses `inline-semantics-v1`: 129 PASS
+`compatibility/upstream/semantics.json` uses `inline-semantics-v1`: 134 PASS
 cover 20 attribute and four include scenarios from the upstream selection plus
-105 original semantic probes (14 tables; 27 xref/indexterm/stem/typographic quote
-probes; 33 footnote/callout probes). `compatibility/acceptance/semantics.json` adds
-12 PASS on unchanged full Asciidoctor/Spring pages, with the same sources,
+110 original semantic probes (14 tables; 27 xref/indexterm/stem/typographic quote
+probes; 33 footnote/callout probes; quote/verse, toc, image align/alt, Rouge
+listing). `compatibility/acceptance/semantics.json` adds
+43 PASS on unchanged full pages of all eight corpus projects plus the
+Asciidoctor READMEs and CHANGELOG, with the same sources,
 include resources and host attributes as the HTML corpus. The Ruby oracle has its own converter (no HTML
 converter or HTML parsing); paired synthetic boundaries leave content exposed
 to later substitution stages. The Python adapter reads the resolved JSON AST
@@ -710,7 +712,9 @@ Numbering::Caption carries that context for xrefstyle (`Figure 1, “T”`/`Figu
 with `<img src alt width height>` (inside `<a class="image" href>` with
 `link`, window/noopener/nofollow like append_link_constraint_attrs) and a
 trailing `<figcaption class="title">`; the DOM profile maps them to Ruby's divs.
-JSON/WASM `name:"image"` with target/src/flat alt; token `block-macro`.
+JSON/WASM `name:"image"` with target/src/flat alt plus alt `parts` (like
+inline images; replacement entities `raw`, typed text `text` — the flat string
+alone cannot tell a generated `&#8217;` from a literal `&`); token `block-macro`.
 **SVG** (Ruby's svg branch of convert_image/convert_inline_image, below secure
 mode, target containing `.svg` or `format=svg`): data_uri.rs Images::svg decides
 `Svg::Inline(Option<contents>)` for `%inline` (read_svg = read_contents: a URI
@@ -2315,6 +2319,15 @@ Debezium 3.7.0 pages (antora.yml attributes plus playbook `prodname`,
 `partialsdir=partials`; nested `{snippetsdir}` resolves from the partial's
 directory) in cases.json/structure.json and visual cases.json: all PASS/match
 on first run. MySQL connector is not in the visual corpus (Chrome never
-finishes its full-page screenshot); the semantic profile rejects all nine
-(image options, `toc`, Rouge markup).
+finishes its full-page screenshot). The semantic profile now accepts all
+nine (and Mutiny primer, the Asciidoctor READMEs and CHANGELOG): the schema
+gained image `align`, `quote`/`verse` with `attribution`/`citetitle` (verse
+keeps exact whitespace), a metadata-only `toc` block (whether Ruby renders the
+outline is presentation), and Rouge listings compared as text — the oracle
+swaps Ruby's `:highlight` stage back to `:specialcharacters` while reading
+`Block#content`, then restores the block's subs. README-fr exposed two
+harness defects: the oracle read the raw block `alt` instead of
+`AbstractBlock#alt` (replacements unless default-alt), and JSON/WASM flattened
+the block alt so a generated `&#8217;` was indistinguishable from a typed `&`;
+block images now export alt `parts` like inline images.
 

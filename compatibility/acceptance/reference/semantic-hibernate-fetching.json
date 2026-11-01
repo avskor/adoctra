@@ -1,0 +1,4848 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Fetching, essentially, is the process of grabbing data from the database and making it available to the application. Tuning how an application does fetching is one of the biggest factors in determining how an application will perform. Fetching too much data, in terms of width (values/columns) and/or depth (results/rows), adds unnecessary overhead in terms of both JDBC communication and ResultSet processing. Fetching too little data might cause additional fetching to be needed. Tuning how an application fetches data presents a great opportunity to influence the overall application performance."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The concept of fetching breaks down into two different questions."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "ulist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "When should the data be fetched? Now? Later?"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "How should the data be fetched?"
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": null,
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "\"Now\" is generally termed eager or immediate while \"later\" is generally termed lazy or delayed."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "admonition",
+                "id": null,
+                "roles": [],
+                "title": null,
+                "type": "note"
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "There are a number of scopes for defining fetching:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "dlist",
+                          "id": null,
+                          "items": [
+                            {
+                              "description": {
+                                "blocks": [],
+                                "checkbox": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "Performs a separate SQL select to load the data. This can either be EAGER (the second select is issued immediately) or LAZY (the second select is delayed until the data is needed). This is the strategy generally termed N+1."
+                                  }
+                                ]
+                              },
+                              "terms": [
+                                [
+                                  {
+                                    "kind": "text",
+                                    "value": "SELECT"
+                                  }
+                                ]
+                              ]
+                            },
+                            {
+                              "description": {
+                                "blocks": [],
+                                "checkbox": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "Inherently an EAGER style of fetching. The data to be fetched is obtained through the use of an SQL outer join."
+                                  }
+                                ]
+                              },
+                              "terms": [
+                                [
+                                  {
+                                    "kind": "text",
+                                    "value": "JOIN"
+                                  }
+                                ]
+                              ]
+                            },
+                            {
+                              "description": {
+                                "blocks": [],
+                                "checkbox": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "Performs a separate SQL select to load a number of related data items using an IN-restriction as part of the SQL WHERE-clause based on a batch size. Again, this can either be EAGER (the second select is issued immediately) or LAZY (the second select is delayed until the data is needed)."
+                                  }
+                                ]
+                              },
+                              "terms": [
+                                [
+                                  {
+                                    "kind": "text",
+                                    "value": "BATCH"
+                                  }
+                                ]
+                              ]
+                            },
+                            {
+                              "description": {
+                                "blocks": [],
+                                "checkbox": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "Performs a separate SQL select to load associated data based on the SQL restriction used to load the owner. Again, this can either be EAGER (the second select is issued immediately) or LAZY (the second select is delayed until the data is needed)."
+                                  }
+                                ]
+                              },
+                              "terms": [
+                                [
+                                  {
+                                    "kind": "text",
+                                    "value": "SUBSELECT"
+                                  }
+                                ]
+                              ]
+                            }
+                          ],
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Static definition of fetching strategies is done in the mappings. The statically-defined fetch strategies are used in the absence of any dynamically defined strategies."
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "static"
+                            }
+                          ],
+                          "kind": "emphasis",
+                          "roles": []
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "dlist",
+                          "id": null,
+                          "items": [
+                            {
+                              "description": {
+                                "blocks": [],
+                                "checkbox": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "defined in mappings, but can be enabled/disabled on the "
+                                  },
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "Session"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": "."
+                                  }
+                                ]
+                              },
+                              "terms": [
+                                [
+                                  {
+                                    "kind": "text",
+                                    "value": "fetch profiles"
+                                  }
+                                ]
+                              ]
+                            },
+                            {
+                              "description": {
+                                "blocks": [],
+                                "checkbox": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "both Hibernate and Jakarta Persistence Criteria queries have the ability to specify fetching, specific to said query."
+                                  }
+                                ]
+                              },
+                              "terms": [
+                                [
+                                  {
+                                    "kind": "text",
+                                    "value": "HQL / JPQL"
+                                  }
+                                ]
+                              ]
+                            },
+                            {
+                              "description": {
+                                "blocks": [],
+                                "checkbox": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "using Jakarta Persistence EntityGraphs"
+                                  }
+                                ]
+                              },
+                              "terms": [
+                                [
+                                  {
+                                    "kind": "text",
+                                    "value": "entity graphs"
+                                  }
+                                ]
+                              ]
+                            }
+                          ],
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "The dynamic definition is really use-case centric. There are multiple ways to define dynamic fetching:"
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "dynamic"
+                            }
+                          ],
+                          "kind": "emphasis",
+                          "roles": []
+                        },
+                        {
+                          "kind": "text",
+                          "value": " (sometimes referred to as runtime)"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "fetch profile"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " and "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "entity graph"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " are mutually exclusive. When both are present, "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "entity graph"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " would take effect and "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "fetch profile"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " would be ignored."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "admonition",
+                "id": null,
+                "roles": [],
+                "title": null,
+                "type": "note"
+              }
+            ],
+            "context": "section",
+            "id": "fetching-basics",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "The basics"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To see the difference between direct fetching and entity queries in regard to eagerly fetched associations, consider the following entities:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Entity(name = \"Department\")\npublic static class Department {\n\n\t@Id\n\tprivate Long id;\n\n\t//Getters and setters omitted for brevity\n}\n\n@Entity(name = \"Employee\")\npublic static class Employee {\n\n\t@Id\n\tprivate Long id;\n\n\t@NaturalId\n\tprivate String username;\n\n\t@ManyToOne(fetch = FetchType.EAGER)\n\tprivate Department department;\n\n\t//Getters and setters omitted for brevity\n}"
+                      }
+                    ],
+                    "language": "java",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": "fetching-direct-vs-query-domain-model-example",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Domain model"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Employee"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " entity has a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@ManyToOne"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " association to a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Department"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " which is fetched eagerly."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "When issuing a direct entity fetch, Hibernate executed the following SQL query:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Employee employee = entityManager.find(Employee.class, 1L);"
+                      }
+                    ],
+                    "language": "java",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "select\n    e.id as id1_1_0_,\n    e.department_id as departme3_1_0_,\n    e.username as username2_1_0_,\n    d.id as id1_0_1_ \nfrom\n    Employee e \nleft outer join\n    Department d \n        on e.department_id=d.id \nwhere\n    e.id = 1"
+                      }
+                    ],
+                    "language": "sql",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": "fetching-direct-vs-query-direct-fetching-example",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Direct fetching example"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "LEFT OUTER JOIN"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " clause is added to the generated SQL query because this association is required to be fetched eagerly."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "On the other hand, if you are using an entity query that does not contain a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "JOIN FETCH"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " directive to the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Department"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " association:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Employee employee = entityManager.createQuery(\n\t\t\"select e \" +\n\t\t\"from Employee e \" +\n\t\t\"where e.id = :id\", Employee.class)\n.setParameter(\"id\", 1L)\n.getSingleResult();"
+                      }
+                    ],
+                    "language": "java",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "select\n    e.id as id1_1_,\n    e.department_id as departme3_1_,\n    e.username as username2_1_ \nfrom\n    Employee e \nwhere\n    e.id = 1\n\nselect\n    d.id as id1_0_0_\nfrom\n    Department d\nwhere\n    d.id = 1"
+                      }
+                    ],
+                    "language": "sql",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": "fetching-direct-vs-query-entity-query-example",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Entity query fetching example"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Hibernate uses a secondary select instead. This is because the entity query fetch policy cannot be overridden, so Hibernate requires a secondary select to ensure that the EAGER association is fetched prior to returning the result to the user."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "If you forget to JOIN FETCH all EAGER associations, Hibernate is going to issue a secondary select for each and every one of those which, in turn, can lead to N + 1 query issue."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "For this reason, you should prefer LAZY associations."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "admonition",
+                "id": null,
+                "roles": [],
+                "title": null,
+                "type": "important"
+              }
+            ],
+            "context": "section",
+            "id": "fetching-direct-vs-query",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Direct fetching vs. entity queries"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Let’s consider these topics as it relates to a sample domain model and a few use cases."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Entity(name = \"Department\")\npublic static class Department {\n\n\t@Id\n\tprivate Long id;\n\n\t@OneToMany(mappedBy = \"department\")\n\tprivate List<Employee> employees = new ArrayList<>();\n\n\t//Getters and setters omitted for brevity\n}\n\n@Entity(name = \"Employee\")\npublic static class Employee {\n\n\t@Id\n\tprivate Long id;\n\n\t@NaturalId\n\tprivate String username;\n\n\t@Column(name = \"pswd\", columnDefinition = \"varbinary\")\n\t@ColumnTransformer(\n\t\tread = \"trim(trailing u&'\\\\0000' from cast(decrypt('AES', '00', pswd ) as character varying))\",\n\t\twrite = \"encrypt('AES', '00', ?)\"\n\t)\n\tprivate String password;\n\n\tprivate int accessLevel;\n\n\t@ManyToOne(fetch = FetchType.LAZY)\n\tprivate Department department;\n\n\t@ManyToMany(mappedBy = \"employees\")\n\tprivate List<Project> projects = new ArrayList<>();\n\n\t//Getters and setters omitted for brevity\n}\n\n@Entity(name = \"Project\")\npublic class Project {\n\n\t@Id\n\tprivate Long id;\n\n\t@ManyToMany\n\tprivate List<Employee> employees = new ArrayList<>();\n\n\t//Getters and setters omitted for brevity\n}"
+                      }
+                    ],
+                    "language": "java",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": "fetching-strategies-domain-model-example",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Sample domain model"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The Hibernate recommendation is to statically mark all associations lazy and to use dynamic fetching strategies for eagerness."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "This is unfortunately at odds with the Jakarta Persistence specification which defines that all one-to-one and many-to-one associations should be eagerly fetched by default."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Hibernate, as a Jakarta Persistence provider, honors that default."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "admonition",
+                "id": null,
+                "roles": [],
+                "title": null,
+                "type": "important"
+              }
+            ],
+            "context": "section",
+            "id": "fetching-strategies",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Applying fetch strategies"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "For the first use case, consider the application login process for an "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Employee"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". Let’s assume that login only requires access to the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Employee"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " information, not "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Project"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " nor "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Department"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " information."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Employee employee = entityManager.createQuery(\n\t\"select e \" +\n\t\"from Employee e \" +\n\t\"where \" +\n\t\"\te.username = :username and \" +\n\t\"\te.password = :password\",\n\tEmployee.class)\n.setParameter(\"username\", username)\n.setParameter(\"password\", password)\n.getSingleResult();"
+                      }
+                    ],
+                    "language": "java",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": "fetching-strategies-no-fetching-example",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "No fetching example"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "In this example, the application gets the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Employee"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " data. However, because all associations from "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Employee"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " are declared as LAZY (Jakarta Persistence defines the default for collections as LAZY) no other data is fetched."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If the login process does not need access to the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Employee"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " information specifically, another fetching optimization here would be to limit the width of the query results."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Integer accessLevel = entityManager.createQuery(\n\t\"select e.accessLevel \" +\n\t\"from Employee e \" +\n\t\"where \" +\n\t\"\te.username = :username and \" +\n\t\"\te.password = :password\",\n\tInteger.class)\n.setParameter(\"username\", username)\n.setParameter(\"password\", password)\n.getSingleResult();"
+                      }
+                    ],
+                    "language": "java",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": "fetching-strategies-no-fetching-scalar-example",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "No fetching (scalar) example"
+                  }
+                ]
+              }
+            ],
+            "context": "section",
+            "id": "fetching-strategies-no-fetching",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "No fetching"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "For the second use case, consider a screen displaying the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Projects"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for an "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Employee"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". Certainly access to the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Employee"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is needed, as is the collection of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Projects"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for that Employee. Information about "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Departments"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", other "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Employees"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " or other "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Projects"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is not needed."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Employee employee = entityManager.createQuery(\n\t\"select e \" +\n\t\"from Employee e \" +\n\t\"left join fetch e.projects \" +\n\t\"where \" +\n\t\"\te.username = :username and \" +\n\t\"\te.password = :password\",\n\tEmployee.class)\n.setParameter(\"username\", username)\n.setParameter(\"password\", password)\n.getSingleResult();"
+                      }
+                    ],
+                    "language": "java",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": "fetching-strategies-dynamic-fetching-jpql-example",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Dynamic JPQL fetching example"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "CriteriaBuilder builder = entityManager.getCriteriaBuilder();\nCriteriaQuery<Employee> query = builder.createQuery(Employee.class);\nRoot<Employee> root = query.from(Employee.class);\nroot.fetch(\"projects\", JoinType.LEFT);\nquery.select(root).where(\n\tbuilder.and(\n\t\tbuilder.equal(root.get(\"username\"), username),\n\t\tbuilder.equal(root.get(\"password\"), password)\n\t)\n);\nEmployee employee = entityManager.createQuery(query).getSingleResult();"
+                      }
+                    ],
+                    "language": "java",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": "fetching-strategies-dynamic-fetching-criteria-example",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Dynamic query fetching example"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "In this example we have an "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Employee"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and their "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Projects"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " loaded in a single query shown both as an HQL query and a Jakarta Persistence Criteria query. In both cases, this resolves to exactly one database query to get all that information."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "fetching-strategies-dynamic-fetching",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Dynamic fetching via queries"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Jakarta Persistence also supports a feature called EntityGraphs to provide the application developer has more control over fetch plans. It has two modes to choose from:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "In this case, all attributes specified in the entity graph will be treated as FetchType.EAGER, and all attributes not specified will "
+                        },
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "ALWAYS"
+                            }
+                          ],
+                          "kind": "strong",
+                          "roles": []
+                        },
+                        {
+                          "kind": "text",
+                          "value": " be treated as FetchType.LAZY."
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "fetch graph"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "In this case, all attributes specified in the entity graph will be treated as FetchType.EAGER, but attributes not specified use their static mapping specification."
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "load graph"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Below is a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "fetch graph"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " dynamic fetching example:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Entity(name = \"Employee\")\n@NamedEntityGraph(name = \"employee.projects\",\n\tattributeNodes = @NamedAttributeNode(\"projects\")\n)"
+                      }
+                    ],
+                    "language": "java",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Employee employee = entityManager.find(\n\tEmployee.class,\n\tuserId,\n\tCollections.singletonMap(\n\t\t\"jakarta.persistence.fetchgraph\",\n\t\tentityManager.getEntityGraph(\"employee.projects\")\n\t)\n);"
+                      }
+                    ],
+                    "language": "java",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": "fetching-strategies-dynamic-fetching-entity-graph-example",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Fetch graph example"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "When executing a JPQL query, if an EAGER association is omitted, Hibernate will issue a secondary select for every association needed to be fetched eagerly, which can lead to N+1 query issues."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "For this reason, it’s better to use LAZY associations, and only fetch them eagerly on a per-query basis."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "admonition",
+                "id": null,
+                "roles": [],
+                "title": null,
+                "type": "note"
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "An EntityGraph is the root of a \"load plan\" and must correspond to an EntityType."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "A subgraph is used to control the fetching of sub-attributes of the AttributeNode it is applied to. It is generally defined via the "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "@NamedSubgraph"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://javaee.github.io/javaee-spec/javadocs/javax/persistence/NamedSubgraph.html"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " annotation."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "If we have a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Project"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " parent entity which has an "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "employees"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " child associations, and we’d like to fetch the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "department"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " for the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Employee"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " child association."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@Entity(name = \"Project\")\n@NamedEntityGraph(name = \"project.employees\",\n\tattributeNodes = @NamedAttributeNode(\n\t\tvalue = \"employees\",\n\t\tsubgraph = \"project.employees.department\"\n\t),\n\tsubgraphs = @NamedSubgraph(\n\t\tname = \"project.employees.department\",\n\t\tattributeNodes = @NamedAttributeNode(\"department\")\n\t)\n)\npublic static class Project {\n\n\t@Id\n\tprivate Long id;\n\n\t@ManyToMany\n\tprivate List<Employee> employees = new ArrayList<>();\n\n\t//Getters and setters omitted for brevity\n}"
+                          }
+                        ],
+                        "language": "java",
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": "fetching-strategies-dynamic-fetching-entity-subgraph-mapping-example",
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "Fetch graph with a subgraph mapping"
+                      }
+                    ]
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "When fetching this entity graph, Hibernate generates the following SQL query:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Project project = factoryScope.fromTransaction(entityManager -> {\n\treturn entityManager.find(\n\t\tProject.class,\n\t\t1L,\n\t\tCollections.singletonMap(\n\t\t\t\"jakarta.persistence.fetchgraph\",\n\t\t\tentityManager.getEntityGraph(\"project.employees\")\n\t\t)\n\t);\n});"
+                          }
+                        ],
+                        "language": "java",
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "select\n    p.id as id1_2_0_, e.id as id1_1_1_, d.id as id1_0_2_,\n    e.accessLevel as accessLe2_1_1_,\n    e.department_id as departme5_1_1_,\n    decrypt( 'AES', '00', e.pswd  ) as pswd3_1_1_,\n    e.username as username4_1_1_,\n    p_e.projects_id as projects1_3_0__,\n    p_e.employees_id as employee2_3_0__\nfrom\n    Project p\ninner join\n    Project_Employee p_e\n        on p.id=p_e.projects_id\ninner join\n    Employee e\n        on p_e.employees_id=e.id\ninner join\n    Department d\n        on e.department_id=d.id\nwhere\n    p.id = ?\n\n-- binding parameter [1] as [BIGINT] - [1]"
+                          }
+                        ],
+                        "language": "sql",
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": "fetching-strategies-dynamic-fetching-entity-subgraph-example",
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "Fetch graph with a subgraph mapping"
+                      }
+                    ]
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Specifying a subgraph is only valid for an attribute (or its \"key\") whose type is a ManagedType. So while an EntityGraph must correspond to an EntityType, a Subgraph is legal for any ManagedType."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "If the attribute is a Map and the Map’s key is a ManagedType, the \"key subgraph\" is applied to the Map’s key type. In this case, the non-key subgraph applies to the Map value/element."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "fetching-strategies-dynamic-fetching-entity-subgraph",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Jakarta Persistence (key) subgraphs"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Subgraphs can also be subtype specific. Given an attribute whose value is an inheritance hierarchy, we can refer to attributes of a specific subtype using the forms of subgraph definition that accept the subtype Class."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "fetching-strategies-dynamic-fetching-entity-subgraph-subtype",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Jakarta Persistence SubGraph sub-typing"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Hibernate allows the creation of Jakarta Persistence fetch/load graphs by parsing a textual representation of the graph. Generally speaking, the textual representation of a graph is a comma-separated list of attribute names, optionally including any subgraph specifications. The starting point for such parsing operations is either "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "org.hibernate.graph.GraphParser"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " or "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "SessionFactory#parseEntityGraph"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Parsing a textual representation of a graph is not (yet) a part of the Jakarta Persistence specification. So the syntax described here is specific to Hibernate. We do hope to eventually make this syntax part of the Jakarta Persistence specification proper."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "admonition",
+                    "id": null,
+                    "roles": [],
+                    "title": null,
+                    "type": "note"
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Since Hibernate 7.3, a new configuration setting controls which syntax the "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "LegacyGraphParser"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " uses:"
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "context": "dlist",
+                        "id": null,
+                        "items": [
+                          {
+                            "description": {
+                              "blocks": [
+                                {
+                                  "context": "ulist",
+                                  "id": null,
+                                  "items": [
+                                    {
+                                      "blocks": [],
+                                      "checkbox": null,
+                                      "inlines": [
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "legacy"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        },
+                                        {
+                                          "kind": "text",
+                                          "value": " — The historical syntax used before Hibernate 7.3."
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "blocks": [],
+                                      "checkbox": null,
+                                      "inlines": [
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "modern"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        },
+                                        {
+                                          "kind": "text",
+                                          "value": " — Enables the new syntax that supports root-subtype subgraphs and improved readability."
+                                        }
+                                      ]
+                                    }
+                                  ],
+                                  "roles": [],
+                                  "style": null,
+                                  "title": null
+                                }
+                              ],
+                              "checkbox": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "Determines which parsing syntax is active."
+                                }
+                              ]
+                            },
+                            "terms": [
+                              [
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "hibernate.graph_parser_mode"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                }
+                              ]
+                            ]
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "hibernate.graph_parser_mode = legacy"
+                          }
+                        ],
+                        "language": "properties",
+                        "roles": [],
+                        "title": [
+                          {
+                            "kind": "text",
+                            "value": "Default value"
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [
+                          {
+                            "context": "listing",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "final EntityGraph<Project> graph = GraphParser.parse(\n\t\tProject.class,\n\t\t\"employees(department)\",\n\t\tentityManager\n);"
+                              }
+                            ],
+                            "language": "java",
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "context": "example",
+                        "id": null,
+                        "roles": [],
+                        "title": [
+                          {
+                            "kind": "text",
+                            "value": "Parsing a simple graph"
+                          }
+                        ]
+                      },
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "This example actually functions exactly as "
+                          },
+                          {
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Fetch graph with a subgraph mapping"
+                              }
+                            ],
+                            "kind": "xref",
+                            "target": "#fetching-strategies-dynamic-fetching-entity-subgraph-example"
+                          },
+                          {
+                            "kind": "text",
+                            "value": ", just using a parsed graph rather than a named graph."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "The syntax also supports defining \"key subgraphs\". To specify a key subgraph, "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": ".key"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " is added to the end of the attribute name."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "blocks": [
+                          {
+                            "context": "listing",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "final EntityGraph<Ticket> graph = GraphParser.parse(\n\t\tTicket.class,\n\t\t\"showing(id(movie(cast)))\",\n\t\tentityManager\n);"
+                              }
+                            ],
+                            "language": "java",
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "context": "example",
+                        "id": null,
+                        "roles": [],
+                        "title": [
+                          {
+                            "kind": "text",
+                            "value": "Parsing a map key graph"
+                          }
+                        ]
+                      }
+                    ],
+                    "context": "section",
+                    "id": "_graph_parser_mode_configuration",
+                    "level": 4,
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "Graph parser mode configuration"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Parsing can also handle subtype specific subgraphs. For example, given an entity hierarchy of "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "LegalEntity"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " ← ("
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Corporation"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " | "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Person"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " | "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "NonProfit"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": ") and an attribute named "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "responsibleParty"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " whose type is the "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "LegalEntity"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " base type we might have:"
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "context": "ulist",
+                        "id": null,
+                        "items": [
+                          {
+                            "blocks": [],
+                            "checkbox": null,
+                            "inlines": [
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "Legacy form (hibernate.graph_parser_mode = legacy)"
+                                  }
+                                ],
+                                "kind": "strong",
+                                "roles": []
+                              }
+                            ]
+                          }
+                        ],
+                        "roles": [],
+                        "style": null,
+                        "title": null
+                      },
+                      {
+                        "blocks": [
+                          {
+                            "context": "listing",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "responsibleParty(Corporation: ceo)"
+                              }
+                            ],
+                            "language": "java",
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "context": "example",
+                        "id": null,
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "context": "ulist",
+                        "id": null,
+                        "items": [
+                          {
+                            "blocks": [],
+                            "checkbox": null,
+                            "inlines": [
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "Modern form (hibernate.graph_parser_mode = modern)"
+                                  }
+                                ],
+                                "kind": "strong",
+                                "roles": []
+                              }
+                            ]
+                          }
+                        ],
+                        "roles": [],
+                        "style": null,
+                        "title": null
+                      },
+                      {
+                        "blocks": [
+                          {
+                            "context": "listing",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "responsibleParty:Corporation(ceo)"
+                              }
+                            ],
+                            "language": "java",
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "context": "example",
+                        "id": null,
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Both forms produce the same runtime EntityGraph structure."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "We can even duplicate the attribute names to apply different subtype subgraphs:"
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "context": "ulist",
+                        "id": null,
+                        "items": [
+                          {
+                            "blocks": [],
+                            "checkbox": null,
+                            "inlines": [
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "Legacy form (hibernate.graph_parser_mode = legacy)"
+                                  }
+                                ],
+                                "kind": "strong",
+                                "roles": []
+                              }
+                            ]
+                          }
+                        ],
+                        "roles": [],
+                        "style": null,
+                        "title": null
+                      },
+                      {
+                        "blocks": [
+                          {
+                            "context": "listing",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "responsibleParty(taxIdNumber), responsibleParty(Corporation: ceo), responsibleParty(NonProfit: sector)"
+                              }
+                            ],
+                            "language": "java",
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "context": "example",
+                        "id": null,
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "context": "ulist",
+                        "id": null,
+                        "items": [
+                          {
+                            "blocks": [],
+                            "checkbox": null,
+                            "inlines": [
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "Modern form (hibernate.graph_parser_mode = modern)"
+                                  }
+                                ],
+                                "kind": "strong",
+                                "roles": []
+                              }
+                            ]
+                          }
+                        ],
+                        "roles": [],
+                        "style": null,
+                        "title": null
+                      },
+                      {
+                        "blocks": [
+                          {
+                            "context": "listing",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "responsibleParty(taxIdNumber), responsibleParty:Corporation(ceo), responsibleParty:NonProfit(sector)"
+                              }
+                            ],
+                            "language": "java",
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "context": "example",
+                        "id": null,
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "The duplicated attribute names are handled according to the Jakarta Persistence specification which says that duplicate specification of the attribute node results in the originally registered AttributeNode to be re-used effectively merging the 2 AttributeNode specifications together. In other words, the above specification creates a single AttributeNode with 3 distinct SubGraphs. It is functionally the same as calling:"
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "blocks": [
+                          {
+                            "context": "listing",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Class<Invoice> invoiceClass = ...;\njakarta.persistence.EntityGraph<Invoice> invoiceGraph = entityManager.createEntityGraph( invoiceClass );\ninvoiceGraph.addAttributeNode( \"responsibleParty\" );\ninvoiceGraph.addSubgraph( \"responsibleParty\" ).addAttributeNode( \"taxIdNumber\" );\ninvoiceGraph.addSubgraph( \"responsibleParty\", Corporation.class ).addAttributeNode( \"ceo\" );\ninvoiceGraph.addSubgraph( \"responsibleParty\", NonProfit.class ).addAttributeNode( \"sector\" );"
+                              }
+                            ],
+                            "language": "java",
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "context": "example",
+                        "id": null,
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "section",
+                    "id": "_subtype_specific_subgraphs_examples_showing_both_supported_forms",
+                    "level": 4,
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "Subtype-specific subgraphs (examples showing both supported forms)"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "The modern parser mode also supports defining subgraphs that originate at a subtype of the "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "root entity"
+                              }
+                            ],
+                            "kind": "strong",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": ". This feature is "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "only available"
+                              }
+                            ],
+                            "kind": "strong",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " when "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "hibernate.graph_parser_mode=modern"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": ". Given an entity hierarchy of "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "LegalEntity"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " ← ("
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Corporation"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " | "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Person"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " | "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "NonProfit"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": ") with an attribute "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "ceo"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " that exists only on "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Corporation"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " and an attribute "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "sector"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " that exists only on "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "NonProfit"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": ", you can define such subgraphs directly in a "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "LegalEntity"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " graph definition:"
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "blocks": [
+                          {
+                            "context": "listing",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": ":Corporation(ceo), :NonProfit(sector)"
+                              }
+                            ],
+                            "language": "java",
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "context": "example",
+                        "id": null,
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "section",
+                    "id": "_root_subtype_subgraphs_modern_only_feature",
+                    "level": 4,
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "Root-subtype subgraphs (modern-only feature)"
+                      }
+                    ]
+                  }
+                ],
+                "context": "section",
+                "id": "fetching-strategies-dynamic-fetching-entity-graph-parsing",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Creating and applying Jakarta Persistence graphs from text representations"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Multiple entity graphs can be combined into a single \"super graph\" that acts as a union. Graph from the previous example can also be built by combining separate aspect graphs into one, such as:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "final EntityGraph<Project> a = GraphParser.parse(\n\t\tProject.class, \"employees(username)\", entityManager\n);\n\nfinal EntityGraph<Project> b = GraphParser.parse(\n\t\tProject.class, \"employees(password, accessLevel)\", entityManager\n);\n\nfinal EntityGraph<Project> c = GraphParser.parse(\n\t\tProject.class, \"employees(department(employees(username)))\", entityManager\n);\n\nfinal EntityGraph<Project> all = EntityGraphs.merge(entityManager, Project.class, a, b, c);"
+                          }
+                        ],
+                        "language": "java",
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": null,
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "Combining multiple graphs into one"
+                      }
+                    ]
+                  }
+                ],
+                "context": "section",
+                "id": "fetching-strategies-dynamic-fetching-entity-graph-merging",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Combining multiple Jakarta Persistence entity graphs into one"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Hibernate also offers a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@org.hibernate.annotations.NamedEntityGraph"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " annotation, as a corollary to the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@jakarta.persistence.NamedEntityGraph"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", supporting the text representation "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "discussed previously"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "#fetching-strategies-dynamic-fetching-entity-graph-parsing"
+                      },
+                      {
+                        "kind": "text",
+                        "value": ". The annotation may be placed on an entity or on a package."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@Entity\n@NamedEntityGraph( graph=\"title,isbn,author(name,phoneNumber)\" )\nclass Book {\n\t// ...\n}"
+                          }
+                        ],
+                        "language": "java",
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": null,
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "@NamedEntityGraph example"
+                      }
+                    ]
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Since Hibernate 7.3 a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "root"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " attribute is available on the Hibernate-specific "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@NamedEntityGraph"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " annotation to explicitly indicate the entity type that is the root of the graph."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "When "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@NamedEntityGraph"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " is placed on a package, the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "root"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " attribute "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "must"
+                          }
+                        ],
+                        "kind": "strong",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " be specified. If the annotation is placed on a package and the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "root"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " is omitted: * In "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "legacy"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " parser mode a deprecation warning will be emitted. * In "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "modern"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " parser mode the omission is "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "not allowed"
+                          }
+                        ],
+                        "kind": "strong",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " and results in an error."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@org.hibernate.annotations.NamedEntityGraph(\n    name = \"Book.graph\",\n    root = Book.class,\n    graph = \"title,isbn,author(name,phoneNumber)\"\n)\npackage com.example.model;"
+                          }
+                        ],
+                        "language": "java",
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": null,
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "Package-level @NamedEntityGraph example"
+                      }
+                    ]
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "This annotation works in conjunction with the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "LegacyGraphParser"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " and respects the syntax defined by "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "hibernate.graph_parser_mode"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "fetching-strategies-dynamic-fetching-entity-graph-parsing-annotation",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "@NamedEntityGraph with text representation"
+                  }
+                ]
+              }
+            ],
+            "context": "section",
+            "id": "fetching-strategies-dynamic-fetching-entity-graph",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Dynamic fetching via Jakarta Persistence entity graph"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Suppose we wanted to leverage loading by natural-id to obtain the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Employee"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " information in the \"projects for and employee\" use-case. Loading by natural-id uses the statically defined fetching strategies, but does not expose a means to define load-specific fetching. So we would leverage a fetch profile."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Entity(name = \"Employee\")\n@FetchProfile(\n\tname = \"employee.projects\",\n\tfetchOverrides = {\n\t\t@FetchProfile.FetchOverride(\n\t\t\tentity = Employee.class,\n\t\t\tassociation = \"projects\",\n\t\t\tmode = FetchMode.JOIN\n\t\t)\n\t}\n)"
+                      }
+                    ],
+                    "language": "java",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "session.enableFetchProfile(\"employee.projects\");\nEmployee employee = session.bySimpleNaturalId(Employee.class).load(username);"
+                      }
+                    ],
+                    "language": "java",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": "fetching-strategies-dynamic-fetching-profile-example",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Fetch profile example"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Here the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Employee"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is obtained by natural-id lookup and the Employee’s "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Project"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " data is fetched eagerly. If the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Employee"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " data is resolved from cache, the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Project"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " data is resolved on its own. However, if the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Employee"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " data is not resolved in cache, the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Employee"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Project"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " data is resolved in one SQL query via join as we saw above."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "fetching-strategies-dynamic-fetching-profile",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Dynamic fetching via Hibernate profiles"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Hibernate offers the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@BatchSize"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://docs.hibernate.org/orm/7.4/javadocs/org/hibernate/annotations/BatchSize.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " annotation, which can be used when fetching uninitialized entity proxies."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Considering the following entity mapping:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Entity(name = \"Department\")\npublic static class Department {\n\n\t@Id\n\tprivate Long id;\n\n\t@OneToMany(mappedBy = \"department\")\n\t@BatchSize(size = 5)\n\tprivate List<Employee> employees = new ArrayList<>();\n\n\t//Getters and setters omitted for brevity\n\n}\n\n@Entity(name = \"Employee\")\npublic static class Employee {\n\n\t@Id\n\tprivate Long id;\n\n\t@NaturalId\n\tprivate String name;\n\n\t@ManyToOne(fetch = FetchType.LAZY)\n\tprivate Department department;\n\n\t//Getters and setters omitted for brevity\n}"
+                      }
+                    ],
+                    "language": "java",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": "fetching-batch-mapping-example",
+                "roles": [],
+                "title": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@BatchSize"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " mapping example"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Considering that we have previously fetched several "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Department"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " entities, and now we need to initialize the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "employees"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " entity collection for each particular "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Department"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@BatchSize"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " annotations allows us to load multiple "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Employee"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " entities in a single database round trip."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "List<Department> departments = entityManager.createQuery(\n\t\t\t\t\"select d \" +\n\t\t\t\t\"from Department d \" +\n\t\t\t\t\"inner join d.employees e \" +\n\t\t\t\t\"where e.name like 'John%'\", Department.class)\n\t\t.getResultList();\n\nfor (Department department : departments) {\n\tlog.infof(\n\t\t\t\"Department %d has {} employees\",\n\t\t\tdepartment.getId(),\n\t\t\tdepartment.getEmployees().size()\n\t);\n}"
+                      }
+                    ],
+                    "language": "java",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "SELECT\n    d.id as id1_0_\nFROM\n    Department d\nINNER JOIN\n    Employee employees1_\n    ON d.id=employees1_.department_id\n\nSELECT\n    e.department_id as departme3_1_1_,\n    e.id as id1_1_1_,\n    e.id as id1_1_0_,\n    e.department_id as departme3_1_0_,\n    e.name as name2_1_0_\nFROM\n    Employee e\nWHERE\n    e.department_id IN (\n        0, 2, 3, 4, 5\n    )\n\nSELECT\n    e.department_id as departme3_1_1_,\n    e.id as id1_1_1_,\n    e.id as id1_1_0_,\n    e.department_id as departme3_1_0_,\n    e.name as name2_1_0_\nFROM\n    Employee e\nWHERE\n    e.department_id IN (\n        6, 7, 8, 9, 1\n    )"
+                      }
+                    ],
+                    "language": "sql",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": "fetching-batch-fetching-example",
+                "roles": [],
+                "title": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@BatchSize"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " fetching example"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "As you can see in the example above, there are only two SQL statements used to fetch the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Employee"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " entities associated with multiple "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Department"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " entities."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Without "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@BatchSize"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", you’d run into a N + 1 query issue, so, instead of 2 SQL statements, there would be 10 queries needed for fetching the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Employee"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " child entities."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "However, although "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@BatchSize"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " is better than running into an N + 1 query issue, most of the time, a DTO projection or a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "JOIN FETCH"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " is a much better alternative since it allows you to fetch all the required data with a single query."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "admonition",
+                "id": null,
+                "roles": [],
+                "title": null,
+                "type": "tip"
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "When "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "LockModeType"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " is different from "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "NONE"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " Hibernate will not execute a batch fetching so uninitialized entity proxies will not be initialized."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "This because the lock mode is different from the one of the proxies in the batch fetch queue."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "admonition",
+                "id": null,
+                "roles": [],
+                "title": null,
+                "type": "note"
+              }
+            ],
+            "context": "section",
+            "id": "fetching-batch",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Batch fetching"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Besides the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "FetchType.LAZY"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " or "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "FetchType.EAGER"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " Jakarta Persistence annotations, you can also use the Hibernate-specific "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Fetch"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " annotation that accepts one of the following "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "FetchMode"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "s:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "The association is going to be fetched using a secondary select for each individual entity, collection, or join load. This mode can be used for either "
+                        },
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "FetchType.EAGER"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        },
+                        {
+                          "kind": "text",
+                          "value": " or "
+                        },
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "FetchType.LAZY"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        },
+                        {
+                          "kind": "text",
+                          "value": "."
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "SELECT"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Use an outer join to load the related entities, collections or joins when using direct fetching. This mode can only be used for "
+                        },
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "FetchType.EAGER"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        },
+                        {
+                          "kind": "text",
+                          "value": "."
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "JOIN"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Available for collections only. When accessing a non-initialized collection, this fetch mode will trigger loading all elements of all collections of the same role for all owners associated with the persistence context using a single secondary select."
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "SUBSELECT"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "fetching-fetch-annotation",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@Fetch"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " annotation mapping"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To demonstrate how "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "FetchMode.SELECT"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " works, consider the following entity mapping:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Entity(name = \"Department\")\npublic static class Department {\n\n\t@Id\n\tprivate Long id;\n\n\t@OneToMany(mappedBy = \"department\", fetch = FetchType.LAZY)\n\t@Fetch(FetchMode.SELECT)\n\tprivate List<Employee> employees = new ArrayList<>();\n\n\t//Getters and setters omitted for brevity\n\n}\n\n@Entity(name = \"Employee\")\npublic static class Employee {\n\n\t@Id\n\t@GeneratedValue\n\tprivate Long id;\n\n\t@NaturalId\n\tprivate String username;\n\n\t@ManyToOne(fetch = FetchType.LAZY)\n\tprivate Department department;\n\n\t//Getters and setters omitted for brevity\n\n}"
+                      }
+                    ],
+                    "language": "java",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": "fetching-strategies-fetch-mode-select-mapping-example",
+                "roles": [],
+                "title": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "FetchMode.SELECT"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " mapping example"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Considering there are multiple "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Department"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " entities, each one having multiple "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Employee"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " entities, when executing the following test case, Hibernate fetches every uninitialized "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Employee"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " collection using a secondary "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "SELECT"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " statement upon accessing the child collection for the first time:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "List<Department> departments = entityManager.createQuery(\n\t\"select d from Department d\", Department.class)\n.getResultList();\n\nlog.infof(\"Fetched %d Departments\", departments.size());\n\nfor (Department department : departments) {\n\tassertEquals( 3, department.getEmployees().size() );\n}"
+                      }
+                    ],
+                    "language": "java",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "SELECT\n    d.id as id1_0_\nFROM\n    Department d\n\n-- Fetched 2 Departments\n\nSELECT\n    e.department_id as departme3_1_0_,\n    e.id as id1_1_0_,\n    e.id as id1_1_1_,\n    e.department_id as departme3_1_1_,\n    e.username as username2_1_1_\nFROM\n    Employee e\nWHERE\n    e.department_id = 1\n\nSELECT\n    e.department_id as departme3_1_0_,\n    e.id as id1_1_0_,\n    e.id as id1_1_1_,\n    e.department_id as departme3_1_1_,\n    e.username as username2_1_1_\nFROM\n    Employee e\nWHERE\n    e.department_id = 2"
+                      }
+                    ],
+                    "language": "sql",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": "fetching-strategies-fetch-mode-select-example",
+                "roles": [],
+                "title": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "FetchMode.SELECT"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " mapping example"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The more "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Department"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " entities are fetched by the first query, the more secondary "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "SELECT"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " statements are executed to initialize the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "employees"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " collections. Therefore, "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "FetchMode.SELECT"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " can lead to N + 1 query issue."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "fetching-fetchmode-select",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "FetchMode.SELECT"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To demonstrate how "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "FetchMode.SUBSELECT"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " works, we are going to modify the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "FetchMode.SELECT"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " mapping example"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "#fetching-strategies-fetch-mode-select-mapping-example"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to use "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "FetchMode.SUBSELECT"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ":"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@OneToMany(mappedBy = \"department\", fetch = FetchType.LAZY)\n@Fetch(FetchMode.SUBSELECT)\nprivate List<Employee> employees = new ArrayList<>();"
+                      }
+                    ],
+                    "language": "java",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": "fetching-strategies-fetch-mode-subselect-mapping-example",
+                "roles": [],
+                "title": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "FetchMode.SUBSELECT"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " mapping example"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Now, we are going to fetch all "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Department"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " entities that match a given filtering predicate and then navigate their "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "employees"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " collections."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Hibernate is going to avoid the N + 1 query issue by generating a single SQL statement to initialize all "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "employees"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " collections for all "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Department"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " entities that were previously fetched. Instead of passing all entity identifiers, Hibernate simply reruns the previous query that fetched the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Department"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " entities."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "List<Department> departments = entityManager.createQuery(\n\t\"select d \" +\n\t\"from Department d \" +\n\t\"where d.name like :token\", Department.class)\n.setParameter(\"token\", \"Department%\")\n.getResultList();\n\nlog.infof(\"Fetched %d Departments\", departments.size());\n\nfor (Department department : departments) {\n\tassertEquals( 3, department.getEmployees().size() );\n}"
+                      }
+                    ],
+                    "language": "java",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "SELECT\n    d.id as id1_0_\nFROM\n    Department d\nwhere\n    d.name like 'Department%'\n    \n-- Fetched 2 Departments\n\nSELECT\n    e.department_id as departme3_1_1_,\n    e.id as id1_1_1_,\n    e.id as id1_1_0_,\n    e.department_id as departme3_1_0_,\n    e.username as username2_1_0_\nFROM\n    Employee e\nWHERE\n    e.department_id in (\n        SELECT\n            fetchmodes0_.id\n        FROM\n            Department fetchmodes0_\n        WHERE\n            d.name like 'Department%'\n    )"
+                      }
+                    ],
+                    "language": "sql",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": "fetching-strategies-fetch-mode-subselect-example",
+                "roles": [],
+                "title": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "FetchMode.SUBSELECT"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " mapping example"
+                  }
+                ]
+              }
+            ],
+            "context": "section",
+            "id": "fetching-fetchmode-subselect",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "FetchMode.SUBSELECT"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To demonstrate how "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "FetchMode.JOIN"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " works, we are going to modify the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "FetchMode.SELECT"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " mapping example"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "#fetching-strategies-fetch-mode-select-mapping-example"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to use "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "FetchMode.JOIN"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " instead:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@OneToMany(mappedBy = \"department\")\n@Fetch(FetchMode.JOIN)\nprivate List<Employee> employees = new ArrayList<>();"
+                      }
+                    ],
+                    "language": "java",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": "fetching-strategies-fetch-mode-join-mapping-example",
+                "roles": [],
+                "title": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "FetchMode.JOIN"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " mapping example"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Now, we are going to fetch one "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Department"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and navigate its "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "employees"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " collections."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The reason why we are not using a JPQL query to fetch multiple "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Department"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " entities is because the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "FetchMode.JOIN"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " strategy would be overridden by the query fetching directive."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "To fetch multiple relationships with a JPQL query, the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "JOIN FETCH"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " directive must be used instead."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Therefore, "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "FetchMode.JOIN"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " is useful for when entities are fetched directly, via their identifier or natural-id."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Also, the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "FetchMode.JOIN"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " acts as a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "FetchType.EAGER"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " strategy. Even if we mark the association as "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "FetchType.LAZY"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "FetchMode.JOIN"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " will load the association eagerly."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "admonition",
+                "id": null,
+                "roles": [],
+                "title": null,
+                "type": "note"
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Hibernate is going to avoid the secondary query by issuing an OUTER JOIN for the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "employees"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " collection."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Department department = entityManager.find(Department.class, 1L);\n\nlog.infof(\"Fetched department: %s\", department.getId());\n\nassertEquals( 3, department.getEmployees().size() );"
+                      }
+                    ],
+                    "language": "java",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "SELECT\n    d.id as id1_0_0_,\n    e.department_id as departme3_1_1_,\n    e.id as id1_1_1_,\n    e.id as id1_1_2_,\n    e.department_id as departme3_1_2_,\n    e.username as username2_1_2_\nFROM\n    Department d\nLEFT OUTER JOIN\n    Employee e\n        on d.id = e.department_id\nWHERE\n    d.id = 1\n\n-- Fetched department: 1"
+                      }
+                    ],
+                    "language": "sql",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": "fetching-strategies-fetch-mode-join-example",
+                "roles": [],
+                "title": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "FetchMode.JOIN"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " mapping example"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "This time, there was no secondary query because the child collection was loaded along with the parent entity."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "fetching-fetchmode-join",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "FetchMode.JOIN"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "fetching",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Fetching"
+          }
+        ]
+      }
+    ],
+    "title": null
+  }
+}

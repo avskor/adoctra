@@ -1,0 +1,2828 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "JDBC offers support for batching together SQL statements that can be represented as a single PreparedStatement. Implementation wise this generally means that drivers will send the batched operation to the server in one call, which can save on network calls to the database. Hibernate can leverage JDBC batching. The following settings control this behavior."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Controls the maximum number of statements Hibernate will batch together before asking the driver to execute the batch. Zero or a negative number disables this feature."
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "hibernate.jdbc.batch_size"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Names the implementation class used to manage batching capabilities. It is almost never a good idea to switch from Hibernate’s default implementation. But if you wish to, this setting would name the "
+                        },
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "org.hibernate.engine.jdbc.batch.spi.BatchBuilder"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        },
+                        {
+                          "kind": "text",
+                          "value": " implementation to use."
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "hibernate.jdbc.batch.builder"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Forces Hibernate to order SQL updates by the entity type and the primary key value of the items being updated. This allows for more batching to be used. It will also result in fewer transaction deadlocks in highly concurrent systems. Comes with a performance hit, so benchmark before and after to see if this actually helps or hurts your application."
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "hibernate.order_updates"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Forces Hibernate to order inserts to allow for more batching to be used. Comes with a performance hit, so benchmark before and after to see if this actually helps or hurts your application."
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "hibernate.order_inserts"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Since version 5.2, Hibernate allows overriding the global JDBC batch size given by the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "hibernate.jdbc.batch_size"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " configuration property on a per "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Session"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " basis."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "admonition",
+                "id": null,
+                "roles": [],
+                "title": null,
+                "type": "note"
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "entityManager\n\t\t.unwrap( Session.class )\n\t\t.setJdbcBatchSize( 10 );"
+                      }
+                    ],
+                    "language": "java",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": "batch-session-jdbc-batch-size-example",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Hibernate specific JDBC batch size configuration on a per "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Session"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " basis"
+                  }
+                ]
+              }
+            ],
+            "context": "section",
+            "id": "batch-jdbcbatch",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "JDBC batching"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The following example shows an anti-pattern for batch inserts."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "scope.inTransaction(\n\t\tentityManager -> {\n\t\t\tfor ( int i = 0; i < 100_000; i++ ) {\n\t\t\t\tPerson Person = new Person( String.format( \"Person %d\", i ) );\n\t\t\t\tentityManager.persist( Person );\n\t\t\t}\n\t\t}\n);"
+                      }
+                    ],
+                    "language": "java",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": "batch-session-batch-example",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Naive way to insert 100 000 entities with Hibernate"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "There are several problems associated with this example:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "olist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Hibernate caches all the newly inserted "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Person"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " instances in the session-level cache, so, when the transaction ends, 100 000 entities are managed by the persistence context. If the maximum memory allocated to the JVM is rather low, this example could fail with an "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "OutOfMemoryException"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ". The Java 1.8 JVM allocated either 1/4 of available RAM or 1Gb, which can easily accommodate 100 000 objects on the heap."
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "long-running transactions can deplete a connection pool so other transactions don’t get a chance to proceed."
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "JDBC batching is not enabled by default, so every insert statement requires a database round trip. To enable JDBC batching, set the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "hibernate.jdbc.batch_size"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " property to an integer between 10 and 50."
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": "arabic",
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Hibernate disables insert batching at the JDBC level transparently if you use an identity identifier generator."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "admonition",
+                "id": null,
+                "roles": [],
+                "title": null,
+                "type": "important"
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "When you make new objects persistent, employ methods "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "flush()"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " and "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "clear()"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " to the session regularly, to control the size of the first-level cache."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "scope.inTransaction(\n\t\tentityManager -> {\n\t\t\tfor ( int i = 0; i < entityCount; i++ ) {\n\t\t\t\tif ( i > 0 && i % batchSize == 0 ) {\n\t\t\t\t\t//flush a batch of inserts and release memory\n\t\t\t\t\tentityManager.flush();\n\t\t\t\t\tentityManager.clear();\n\t\t\t\t}\n\n\t\t\t\tPerson Person = new Person( String.format( \"Person %d\", i ) );\n\t\t\t\tentityManager.persist( Person );\n\t\t\t}\n\t\t}\n);"
+                          }
+                        ],
+                        "language": "java",
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": "batch-session-batch-insert-example",
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "Flushing and clearing the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Session"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  }
+                ],
+                "context": "section",
+                "id": "batch-session-batch-insert",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Batch inserts"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "When you retrieve and update data, "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "flush()"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " and "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "clear()"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " the session regularly. In addition, use method "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "scroll()"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " to take advantage of server-side cursors for queries that return many rows of data."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "scope.inTransaction(\n\t\tentityManager -> {\n\t\t\tScrollableResults<Person> scrollableResults = null;\n\t\t\ttry {\n\t\t\t\tscrollableResults = entityManager.unwrap( Session.class )\n\t\t\t\t\t\t.createSelectionQuery( \"select p from Person p\", Person.class )\n\t\t\t\t\t\t.setCacheMode( CacheMode.IGNORE )\n\t\t\t\t\t\t.scroll( ScrollMode.FORWARD_ONLY );\n\n\t\t\t\tint count = 0;\n\t\t\t\twhile ( scrollableResults.next() ) {\n\t\t\t\t\tPerson Person = (Person) scrollableResults.get();\n\t\t\t\t\tprocessPerson( Person );\n\t\t\t\t\tif ( ++count % batchSize == 0 ) {\n\t\t\t\t\t\t//flush a batch of updates and release memory:\n\t\t\t\t\t\tentityManager.flush();\n\t\t\t\t\t\tentityManager.clear();\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t\tfinally {\n\t\t\t\tif ( scrollableResults != null ) {\n\t\t\t\t\tscrollableResults.close();\n\t\t\t\t}\n\t\t\t}\n\t\t}\n);"
+                          }
+                        ],
+                        "language": "java",
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": "batch-session-scroll-example",
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "Using "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "scroll()"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "If left unclosed by the application, Hibernate will automatically close the underlying resources (e.g. "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "ResultSet"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " and "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "PreparedStatement"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": ") used internally by the "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "ScrollableResults"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " when the current transaction is ended (either commit or rollback)."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "However, it is good practice to close the "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "ScrollableResults"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " explicitly."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "admonition",
+                    "id": null,
+                    "roles": [],
+                    "title": null,
+                    "type": "important"
+                  }
+                ],
+                "context": "section",
+                "id": "batch-session-scroll",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Session scroll"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "StatelessSession"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " is an alternative to "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Session"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " and provides:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "ulist",
+                    "id": null,
+                    "items": [
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "a command-oriented API"
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "with no associated persistence context."
+                          }
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "style": null,
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Thus, a stateless session is a slightly lower-level abstraction that’s closer to the underlying JDBC activity:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "ulist",
+                    "id": null,
+                    "items": [
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "there’s no first-level cache, and"
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "there’s no transactional write-behind or automatic dirty checking."
+                          }
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "style": null,
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Instead, persistence operations occur synchronously when a method of "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "StatelessSession"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " is invoked, and entities returned by a stateless session are always detached."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "A stateless session may be used to stream data to and from the database in the form of detached objects. With a stateless session, there’s no need to explicitly manage the size of the first-level cache by explicitly clearing the persistence context."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "admonition",
+                    "id": null,
+                    "roles": [],
+                    "title": null,
+                    "type": "tip"
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "StatelessSession"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " API comes with certain limitations:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "ulist",
+                    "id": null,
+                    "items": [
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "operations performed using a stateless session never cascade to associated instances,"
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "lazy loading of associations is not transparent, and is only available via an explicit operation named "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "fetch()"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": ", and"
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "operations performed via a stateless session bypass Hibernate’s event model and action queue."
+                          }
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "style": null,
+                    "title": null
+                  },
+                  {
+                    "context": "admonition",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Due to the lack of a first-level cache, stateless sessions are vulnerable to data aliasing effects."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null,
+                    "type": "important"
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "StatelessSession statelessSession = null;\nScrollableResults<?> scrollableResults = null;\ntry {\n\tstatelessSession = sessionFactory.openStatelessSession();\n\tstatelessSession.beginTransaction();\n\tscrollableResults =\n\t\t\tstatelessSession.createSelectionQuery( \"select p from Person p\", Person.class )\n\t\t\t\t\t.scroll( ScrollMode.FORWARD_ONLY );\n\n\twhile ( scrollableResults.next() ) {\n\t\tPerson Person = (Person) scrollableResults.get();\n\t\tprocessPerson( Person );\n\t\tstatelessSession.update( Person );\n\t}\n\tstatelessSession.getTransaction().commit();\n}\nfinally {\n\ttry {\n\t\tif ( scrollableResults != null ) {\n\t\t\tscrollableResults.close();\n\t\t}\n\n\t\tif ( statelessSession != null ) {\n\t\t\tif ( statelessSession.getTransaction().isActive() ) {\n\t\t\t\tstatelessSession.getTransaction().rollback();\n\t\t\t}\n\t\t}\n\t}\n\tfinally {\n\t\tif ( statelessSession != null ) {\n\t\t\tstatelessSession.close();\n\t\t}\n\t}\n}"
+                          }
+                        ],
+                        "language": "java",
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": "batch-stateless-session-example",
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "Using a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "StatelessSession"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Person"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " instances returned by the query are immediately detached. They are never associated with any persistence context."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "The "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "insert()"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": ", "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "update()"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": ", and "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "delete()"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " operations defined by the "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "StatelessSession"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " interface operate directly on database rows. They cause the corresponding SQL operations to be executed immediately. They have different semantics from the "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "save()"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": ", "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "saveOrUpdate()"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": ", and "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "delete()"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " operations defined by the "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Session"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " interface."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "admonition",
+                    "id": null,
+                    "roles": [],
+                    "title": null,
+                    "type": "note"
+                  }
+                ],
+                "context": "section",
+                "id": "_statelesssession",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "StatelessSession"
+                  }
+                ]
+              }
+            ],
+            "context": "section",
+            "id": "batch-session-batch",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Session batching"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DML, or Data Manipulation Language, refers to SQL statements such as "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "INSERT"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "UPDATE"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "DELETE"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". Hibernate provides methods for bulk SQL-style DML statement execution, in the form of Hibernate Query Language (HQL)."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Both the Hibernate native Query Language and JPQL (Java Persistence Query Language) provide support for bulk UPDATE and DELETE."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "UPDATE FROM EntityName e WHERE e.name = ?\n\nDELETE FROM EntityName e WHERE e.name = ?"
+                          }
+                        ],
+                        "language": "sql",
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": "batch-bulk-hql-update-delete-example",
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "Pseudo-syntax for UPDATE and DELETE statements using HQL"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Although the "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "FROM"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " and "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "WHERE"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " clauses are optional, it is good practice to declare them explicitly."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "admonition",
+                    "id": null,
+                    "roles": [],
+                    "title": null,
+                    "type": "note"
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "FROM"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " clause can only refer to a single entity, which can be aliased. If the entity name is aliased, any property references must be qualified using that alias. If the entity name is not aliased, then it is illegal for any property references to be qualified."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Joins, either implicit or explicit, are prohibited in a bulk HQL query. You can use sub-queries in the "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "WHERE"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " clause, and the sub-queries themselves can contain joins."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "admonition",
+                    "id": null,
+                    "roles": [],
+                    "title": null,
+                    "type": "note"
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "int updatedEntities = entityManager.createQuery(\n\t\t\t\t\"update Person p \" +\n\t\t\t\t\"set p.name = :newName \" +\n\t\t\t\t\"where p.name = :oldName\" )\n\t\t.setParameter( \"oldName\", oldName )\n\t\t.setParameter( \"newName\", newName )\n\t\t.executeUpdate();"
+                          }
+                        ],
+                        "language": "java",
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": "batch-bulk-jpql-update-example",
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "Executing a JPQL "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "UPDATE"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", using the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Query.executeUpdate()"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "int updatedEntities = session.createMutationQuery(\n\t\t\t\t\"update Person \" +\n\t\t\t\t\"set name = :newName \" +\n\t\t\t\t\"where name = :oldName\" )\n\t\t.setParameter( \"oldName\", oldName )\n\t\t.setParameter( \"newName\", newName )\n\t\t.executeUpdate();"
+                          }
+                        ],
+                        "language": "java",
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": "batch-bulk-hql-update-example",
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "Executing an HQL "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "UPDATE"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", using the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Query.executeUpdate()"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "In keeping with the EJB3 specification, HQL "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "UPDATE"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " statements, by default, do not effect the version or the timestamp property values for the affected entities. You can use a versioned update to force Hibernate to reset the version or timestamp property values, by adding the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "VERSIONED"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " keyword after the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "UPDATE"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " keyword."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "int updatedEntities = session.createMutationQuery(\n\t\t\t\t\"update versioned Person \" +\n\t\t\t\t\"set name = :newName \" +\n\t\t\t\t\"where name = :oldName\" )\n\t\t.setParameter( \"oldName\", oldName )\n\t\t.setParameter( \"newName\", newName )\n\t\t.executeUpdate();"
+                          }
+                        ],
+                        "language": "java",
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": "batch-bulk-hql-update-version-example",
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "Updating the version of timestamp"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "If you use the "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "VERSIONED"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " statement, you cannot use custom version types that implement the "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "org.hibernate.usertype.UserVersionType"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": "."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "This feature is only available in HQL since it’s not standardized by Jakarta Persistence."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "admonition",
+                    "id": null,
+                    "roles": [],
+                    "title": null,
+                    "type": "note"
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "int deletedEntities = entityManager.createQuery(\n\t\t\t\t\"delete Person p \" +\n\t\t\t\t\"where p.name = :name\" )\n\t\t.setParameter( \"name\", name )\n\t\t.executeUpdate();"
+                          }
+                        ],
+                        "language": "java",
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": "batch-bulk-jpql-delete-example",
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "A JPQL "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "DELETE"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " statement"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "int deletedEntities = session.createMutationQuery(\n\t\t\t\t\"delete Person \" +\n\t\t\t\t\"where name = :name\" )\n\t\t.setParameter( \"name\", name )\n\t\t.executeUpdate();"
+                          }
+                        ],
+                        "language": "java",
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": "batch-bulk-hql-delete-example",
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "An HQL "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "DELETE"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " statement"
+                      }
+                    ]
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Method "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Query.executeUpdate()"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " returns an "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "int"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " value, which indicates the number of entities affected by the operation. This may or may not correlate to the number of rows affected in the database. A JPQL/HQL bulk operation might result in multiple SQL statements being executed, such as for joined-subclass. In the example of joined-subclass, a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "DELETE"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " against one of the subclasses may actually result in deletes in the tables underlying the join, or further down the inheritance hierarchy."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "batch-bulk-hql-update-delete",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "HQL/JPQL for UPDATE and DELETE"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "blocks": [
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "INSERT INTO EntityName\n\tproperties_list\nSELECT select_list\nFROM ..."
+                          }
+                        ],
+                        "language": "sql",
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": null,
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "Pseudo-syntax for INSERT-SELECT statements"
+                      }
+                    ]
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Alternatively one can also declare individual values"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "INSERT INTO EntityName\n\tproperties_list\nVALUES values_list"
+                          }
+                        ],
+                        "language": "sql",
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": null,
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "Pseudo-syntax for INSERT-VALUES statements"
+                      }
+                    ]
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "properties_list"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " is analogous to the column specification in the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "SQL"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "INSERT"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " statement. Note that "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "INSERT"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " statements are inherently non-polymorphic, so it is not possible to use an "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "EntityName"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " which is abstract or refer to subclass properties."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The SELECT statement can be any valid HQL select query, but the return types must match the types expected by the INSERT. Hibernate verifies the return types during query compilation, instead of expecting the database to check it. Problems might result from Hibernate types which are equivalent, rather than equal. One such example is a mismatch between a property defined as an "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "org.hibernate.type.StandardBasicTypes.DATE"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " and a property defined as an "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "org.hibernate.type.StandardBasicTypes.TIMESTAMP"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", even though the database may not make a distinction, or may be capable of handling the conversion."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "If id property is not specified in the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "properties_list"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", Hibernate generates a value automatically. Automatic generation is only available if you use ID generators which operate on the database. Otherwise, Hibernate throws an exception during parsing. Available in-database generators implement "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "org.hibernate.id.PostInsertIdentifierGenerator"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "For properties mapped as either version or timestamp, the insert statement gives you two options. You can either specify the property in the properties_list, in which case its value is taken from the corresponding select expressions or omit it from the properties_list, in which case the seed value defined by the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "org.hibernate.type.descriptor.java.VersionJavaType"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " is used."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "int insertedEntities = session.createMutationQuery(\n\t\t\t\t\"insert into Partner (id, name) \" +\n\t\t\t\t\"select p.id, p.name \" +\n\t\t\t\t\"from Person p \" )\n\t\t.executeUpdate();"
+                          }
+                        ],
+                        "language": "java",
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": "batch-bulk-hql-insert-example",
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "HQL INSERT statement"
+                      }
+                    ]
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "This section is only a brief overview of HQL. For more information, see "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Hibernate Query Language"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "chapters/query/hql/QueryLanguage.html#query-language"
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "_hql_syntax_for_insert",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "HQL syntax for INSERT"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "When a bulk mutation involves multiple tables, Hibernate has to issue individual DML statements to the respective tables. Since the mutation itself could have an effect on the conditions used in the statement, it’s generally not possible to simply execute parts of the DML statement against the respective tables. Instead, Hibernate has to temporarily remember which rows will be affected, and execute the DML statements based on these rows."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Usually, Hibernate will make use of local or global temporary tables to remember the primary keys of the rows. For some databases, currently only PostgreSQL and DB2, a more advanced strategy ("
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "CteMutationStrategy"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ") is used, which makes use of DML in CTE support to execute the whole operation in one SQL statement."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The chosen strategy, unless overridden through the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "hibernate.query.mutation_strategy"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " setting, is based on the Dialect support through "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "org.hibernate.dialect.Dialect.getFallbackSqmMutationStrategy"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Considering we have the following entities:"
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "alt": [
+                          {
+                            "kind": "text",
+                            "value": "Entity class diagram"
+                          }
+                        ],
+                        "attributes": {
+                          "align": "center"
+                        },
+                        "context": "image",
+                        "id": null,
+                        "roles": [],
+                        "src": "images/domain/bulkid/temp_table_class_diagram.png",
+                        "target": "images/domain/bulkid/temp_table_class_diagram.png",
+                        "title": null
+                      },
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "The "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Person"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " entity is the base class of this entity inheritance model, and is mapped as follows:"
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "blocks": [
+                          {
+                            "context": "listing",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "@Entity(name = \"Person\")\n@Inheritance(strategy = InheritanceType.JOINED)\npublic static class Person implements Serializable {\n\n\t@Id\n\tprivate Integer id;\n\n\t@Id\n\tprivate String companyName;\n\n\tprivate String name;\n\n\tprivate boolean employed;\n\n\t//Getters and setters are omitted for brevity\n\n}"
+                              }
+                            ],
+                            "language": "java",
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "context": "example",
+                        "id": "batch-bulk-hql-temp-table-base-class-example",
+                        "roles": [],
+                        "title": [
+                          {
+                            "kind": "text",
+                            "value": "Bulk mutation base class entity"
+                          }
+                        ]
+                      },
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Both the "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Doctor"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " and "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Engineer"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " entity classes extend the "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Person"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " base class:"
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "blocks": [
+                          {
+                            "context": "listing",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "@Entity(name = \"Doctor\")\npublic static class Doctor extends Person {\n}\n\n@Entity(name = \"Engineer\")\npublic static class Engineer extends Person {\n\n\tprivate boolean fellow;\n\n\tpublic boolean isFellow() {\n\t\treturn fellow;\n\t}\n\n\tpublic void setFellow(boolean fellow) {\n\t\tthis.fellow = fellow;\n\t}\n}"
+                              }
+                            ],
+                            "language": "java",
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "context": "example",
+                        "id": "batch-bulk-hql-temp-table-sub-classes-example",
+                        "roles": [],
+                        "title": [
+                          {
+                            "kind": "text",
+                            "value": "Bulk mutation subclass entities"
+                          }
+                        ]
+                      }
+                    ],
+                    "context": "section",
+                    "id": "batch-bulk-hql-strategies-class-diagram",
+                    "level": 4,
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "Class diagram"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Now, when you try to execute a bulk entity delete query:"
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "blocks": [
+                          {
+                            "context": "listing",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "int updateCount = session.createMutationQuery(\n\t\t\t\t\"delete from Person where employed = :employed\" )\n\t\t.setParameter( \"employed\", false )\n\t\t.executeUpdate();"
+                              }
+                            ],
+                            "language": "java",
+                            "roles": [],
+                            "title": null
+                          },
+                          {
+                            "context": "listing",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "create temporary table\n    HT_Person\n(\n    id int4 not null,\n    companyName varchar(255) not null\n)\n\ninsert\ninto\n    HT_Person\n    select\n        p.id as id,\n        p.companyName as companyName\n    from\n        Person p\n    where\n        p.employed = ?\n\ndelete\nfrom\n    Engineer\nwhere\n    (\n        id, companyName\n    ) IN (\n        select\n            id,\n            companyName\n        from\n            HT_Person\n    )\n\ndelete\nfrom\n    Doctor\nwhere\n    (\n        id, companyName\n    ) IN (\n        select\n            id,\n            companyName\n        from\n            HT_Person\n    )\n\ndelete\nfrom\n    Person\nwhere\n    (\n        id, companyName\n    ) IN (\n        select\n            id,\n            companyName\n        from\n            HT_Person\n    )"
+                              }
+                            ],
+                            "language": "sql",
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "context": "example",
+                        "id": "batch-bulk-hql-temp-table-delete-query-example",
+                        "roles": [],
+                        "title": [
+                          {
+                            "kind": "text",
+                            "value": "Bulk mutation delete query example"
+                          }
+                        ]
+                      },
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "HT_Person"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " is a temporary table that Hibernate creates to hold all the entity identifiers that are to be updated or deleted by the bulk operation. The temporary table can be either global or local, depending on the underlying database capabilities."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "section",
+                    "id": "batch-bulk-hql-strategies-inheritance-tree",
+                    "level": 4,
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "Inheritance tree bulk processing"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "The strategies outlined above depend on the creation of temporary tables, which Hibernate creates on startup if they don’t already exist. At present this process is not integrated in the schema management tooling, and this requires that the user have the required permissions to alter the database schema."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "If the Hibernate session user lacks these permissions, you will need to either:"
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "context": "ulist",
+                        "id": null,
+                        "items": [
+                          {
+                            "blocks": [],
+                            "checkbox": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "alter your schema through a different user with more permissions, to add a global temporary table named HTE_<root entity table name>, which contains all columns of all tables involved in the entity hierarchy."
+                              },
+                              {
+                                "kind": "line-break"
+                              },
+                              {
+                                "kind": "text",
+                                "value": " This will allow insert, update and delete in HQL for multi-table entities."
+                              }
+                            ]
+                          },
+                          {
+                            "blocks": [],
+                            "checkbox": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "OR configure Hibernate ORM to use the (badly-performing) inline strategy (for "
+                              },
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "mutations"
+                                  }
+                                ],
+                                "kind": "emphasis",
+                                "roles": []
+                              },
+                              {
+                                "kind": "text",
+                                "value": " only!):"
+                              }
+                            ]
+                          }
+                        ],
+                        "roles": [],
+                        "style": null,
+                        "title": null
+                      },
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "<property name=\"hibernate.query.mutation_strategy\"\n          value=\"org.hibernate.query.sqm.mutation.internal.inline.InlineMutationStrategy\"\n/>"
+                          }
+                        ],
+                        "language": "xml",
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "We strongly recommend the use of the first option, i.e. manually adding the temporary tables, because the inline strategy is set to be removed in a future release. Also, there is no equivalent strategy for inserts."
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          },
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Additionally, automatic creation of temporary tables should be deactivated. This is done by setting the"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          },
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "hibernate.query.mutation_strategy.global_temporary.create_tables"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              },
+                              {
+                                "kind": "text",
+                                "value": " and "
+                              },
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "hibernate.query.mutation_strategy.global_temporary.drop_tables"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          },
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "or"
+                                  }
+                                ],
+                                "kind": "strong",
+                                "roles": []
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          },
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "hibernate.query.mutation_strategy.persistent.create_tables"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              },
+                              {
+                                "kind": "text",
+                                "value": " and "
+                              },
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "hibernate.query.mutation_strategy.persistent.drop_tables"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          },
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "properties (depending on the default strategy for the dialect) to "
+                              },
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "false"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "context": "admonition",
+                        "id": null,
+                        "roles": [],
+                        "title": null,
+                        "type": "important"
+                      },
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "With the inline strategy, when running the previous test case, Hibernate generates the following SQL statements:"
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "blocks": [
+                          {
+                            "context": "listing",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "select\n    p.id as id,\n    p.companyName as companyName\nfrom\n    Person p\nwhere\n    p.employed = ?\n\ndelete\nfrom\n    Engineer\nwhere\n        ( id, companyName )\n    in (\n        ( 1,'Red Hat USA' ),\n        ( 3,'Red Hat USA' ),\n        ( 1,'Red Hat Europe' ),\n        ( 3,'Red Hat Europe' )\n    )\n\ndelete\nfrom\n    Doctor\nwhere\n        ( id, companyName )\n    in (\n        ( 1,'Red Hat USA' ),\n        ( 3,'Red Hat USA' ),\n        ( 1,'Red Hat Europe' ),\n        ( 3,'Red Hat Europe' )\n    )\n\ndelete\nfrom\n    Person\nwhere\n        ( id, companyName )\n    in (\n        ( 1,'Red Hat USA' ),\n        ( 3,'Red Hat USA' ),\n        ( 1,'Red Hat Europe' ),\n        ( 3,'Red Hat Europe' )\n    )"
+                              }
+                            ],
+                            "language": "sql",
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "context": "example",
+                        "id": "batch-bulk-hql-InlineIdsInClauseBulkIdStrategy-delete-query-example",
+                        "roles": [],
+                        "title": [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "InlineIdsInClauseBulkIdStrategy"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " delete entity query example"
+                          }
+                        ]
+                      },
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "So, the entity identifiers are selected first and used for each particular update or delete statement."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "section",
+                    "id": "batch-bulk-hql-strategies-non-temporary-table",
+                    "level": 4,
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "Non-temporary table bulk mutation strategies"
+                      }
+                    ]
+                  }
+                ],
+                "context": "section",
+                "id": "batch-bulk-hql-strategies",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Bulk mutation strategies"
+                  }
+                ]
+              }
+            ],
+            "context": "section",
+            "id": "batch-bulk-hql",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Hibernate Query Language for DML"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "batch",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Batching"
+          }
+        ]
+      }
+    ],
+    "title": null
+  }
+}

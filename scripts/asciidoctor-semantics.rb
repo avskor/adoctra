@@ -76,11 +76,11 @@ class SemanticConverter < Asciidoctor::Converter::Base
   end
 
   def image_fields node
-    allowed = [:attribute_entries, *%w[alt default-alt width height title link float id role imagesdir target]]
+    allowed = [:attribute_entries, *%w[alt default-alt width height title link float align id role imagesdir target]]
     raise 'image options are outside inline-semantics-v1' unless node.attributes.keys.all? { |key| Integer === key || allowed.include?(key) }
-    attrs = node.attributes.select { |key, _| %w[width height title link float].include? key }
+    attrs = node.attributes.select { |key, _| %w[width height title link float align].include? key }
     target = node.respond_to?(:target) ? node.target : (node.attr 'target')
-    { target: target, src: node.image_uri(target), alt: inlines(node.attr 'alt'), attributes: attrs }
+    { target: target, src: node.image_uri(target), alt: inlines(node.alt), attributes: attrs }
   end
 
   def link_metadata node
@@ -167,6 +167,25 @@ class SemanticConverter < Asciidoctor::Converter::Base
     end
   end
 
+  def credit node
+    { attribution: (node.attr? 'attribution') ? inlines(node.attr 'attribution') : nil,
+      citetitle: (node.attr? 'citetitle') ? inlines(node.attr 'citetitle') : nil }
+  end
+
+  # Server-side highlighting replaces specialcharacters with :highlight inside
+  # Block#content. Token markup is presentation, so the profile compares the
+  # verbatim text, callouts and language with the stage Ruby uses without a
+  # highlighter, restoring the block's subs afterwards.
+  def verbatim_content node
+    return node.content unless (index = node.subs.index :highlight)
+    node.subs[index] = :specialcharacters
+    begin
+      node.content
+    ensure
+      node.subs[index] = :highlight
+    end
+  end
+
   def callout_icon node, number
     icons = node.document.attr 'icons'
     { icons: icons, src: icons && icons != 'font' ? node.icon_uri("callouts/#{number}") : '' }
@@ -189,9 +208,10 @@ class SemanticConverter < Asciidoctor::Converter::Base
     when 'section'
       { context: 'section', id: node.id, roles: node.roles, level: node.level,
         title: inlines(node.title), blocks: node.blocks.map { |block| block.convert } }
-    when 'preamble', 'open', 'sidebar', 'example', 'admonition'
+    when 'preamble', 'open', 'sidebar', 'example', 'admonition', 'quote'
       result = metadata node
       result[:type] = node.attr('name') if transform == 'admonition'
+      result.update(credit node) if transform == 'quote'
       if node.content_model == :simple
         result[:inlines] = inlines(node.content)
       else
@@ -200,7 +220,13 @@ class SemanticConverter < Asciidoctor::Converter::Base
       end
       result
     when 'listing', 'literal'
-      metadata(node).merge(language: node.attr('language'), inlines: inlines(node.content))
+      metadata(node).merge(language: node.attr('language'), inlines: inlines(verbatim_content node))
+    when 'verse'
+      metadata(node).merge(credit(node)).merge(inlines: inlines(node.content))
+    when 'toc'
+      # Only the block's own metadata: whether Ruby renders the outline depends
+      # on toc/toc-placement and is presentation, outside this profile.
+      metadata node
     when 'stem'
       metadata(node).merge(style: node.style, inlines: inlines(node.content))
     when 'ulist', 'olist'

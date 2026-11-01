@@ -1,0 +1,2038 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "It is useful for the application to react to certain events that occur inside Hibernate. This allows for the implementation of generic functionality and the extension of Hibernate functionality."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "org.hibernate.Interceptor"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " interface provides callbacks from the session to the application, allowing the application to inspect and/or manipulate properties of a persistent object before it is saved, updated, deleted or loaded."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "One possible use for this is to track auditing information. The following example shows an "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Interceptor"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implementation that automatically logs when an entity is updated."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "public static class LoggingInterceptor implements Interceptor {\n\t@Override\n\tpublic boolean onFlushDirty(\n\t\t\tObject entity,\n\t\t\tObject id,\n\t\t\tObject[] currentState,\n\t\t\tObject[] previousState,\n\t\t\tString[] propertyNames,\n\t\t\tType[] types) {\n\t\tLOGGER.debugv( \"Entity {0}#{1} changed from {2} to {3}\",\n\t\t\t\tentity.getClass().getSimpleName(),\n\t\t\t\tid,\n\t\t\t\tArrays.toString( previousState ),\n\t\t\t\tArrays.toString( currentState )\n\t\t);\n\t\treturn Interceptor.super.onFlushDirty( entity, id, currentState,\n\t\t\t\tpreviousState, propertyNames, types\n\t\t);\n\t}\n}"
+                      }
+                    ],
+                    "language": "java",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": "events-interceptors-example",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "An Interceptor can be either "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Session"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "-scoped or "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "SessionFactory"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "-scoped."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "A Session-scoped interceptor is specified when a session is opened."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "SessionFactory sessionFactory = entityManagerFactory.unwrap( SessionFactory.class );\nSession session = sessionFactory\n\t\t.withOptions()\n\t\t.interceptor( new LoggingInterceptor() )\n\t\t.openSession();\nsession.getTransaction().begin();\n\nCustomer customer = session.get( Customer.class, customerId );\ncustomer.setName( \"Mr. John Doe\" );\n//Entity Customer#1 changed from [John Doe, 0] to [Mr. John Doe, 0]\n\nsession.getTransaction().commit();"
+                      }
+                    ],
+                    "language": "java",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": "events-interceptors-session-scope-example",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "A "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "SessionFactory"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "-scoped interceptor is registered with the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Configuration"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " object prior to building the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "SessionFactory"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". Unless a session is opened explicitly specifying the interceptor to use, the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "SessionFactory"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "-scoped interceptor will be applied to all sessions opened from that "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "SessionFactory"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "SessionFactory"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "-scoped interceptors must be thread-safe. Ensure that you do not store session-specific states since multiple sessions will use this interceptor potentially concurrently."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "SessionFactory sessionFactory = new MetadataSources(new StandardServiceRegistryBuilder().build())\n\t.addAnnotatedClass(Customer.class)\n\t.getMetadataBuilder()\n\t.build()\n\t.getSessionFactoryBuilder()\n\t.applyInterceptor(new LoggingInterceptor())\n\t.build();"
+                      }
+                    ],
+                    "language": "java",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": "events-interceptors-session-factory-scope-example",
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "events-interceptors",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Interceptors"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If you have to react to particular events in the persistence layer, you can also use the Hibernate "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "event"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " architecture. The event system can be used in place of or in addition to interceptors."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Many methods of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Session"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " interface correlate to an event type. The full range of defined event types is declared as enum values on "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "org.hibernate.event.spi.EventType"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". When a request is made of one of these methods, the Session generates an appropriate event and passes it to the configured event listener(s) for that type."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Applications can customize the listener interfaces (i.e., the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "LoadEvent"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is processed by the registered implementation of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "LoadEventListener"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " interface), in which case their implementations would be responsible for processing the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "load()"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " requests made of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Session"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The listeners should be considered stateless. They are shared between requests, and should not save any state as instance variables."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "admonition",
+                "id": null,
+                "roles": [],
+                "title": null,
+                "type": "note"
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "A custom listener implements the appropriate interface for the event it wants to process and/or extend one of the convenience base classes (or even the default event listeners used by Hibernate out-of-the-box as these are declared non-final for this purpose)."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Here is an example of a custom load event listener:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "EntityManagerFactory entityManagerFactory = /* ... */\nentityManagerFactory.unwrap( SessionFactoryImplementor.class ).getEventListenerRegistry()\n\t\t.prependListeners( EventType.LOAD, new SecuredLoadEntityListener() );\n\nCustomer customer = entityManager.find( Customer.class, customerId );"
+                      }
+                    ],
+                    "language": "java",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "public static class SecuredLoadEntityListener implements LoadEventListener {\n\t// this is the single method defined by the LoadEventListener interface\n\tpublic void onLoad(LoadEvent event, LoadType loadType)\n\t\t\tthrows HibernateException {\n\t\tif ( !Principal.isAuthorized( event.getEntityClassName(), event.getEntityId() ) ) {\n\t\t\tthrow new SecurityException( \"Unauthorized access\" );\n\t\t}\n\t}\n}"
+                      }
+                    ],
+                    "language": "java",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": "events-interceptors-load-listener-example",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Custom "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "LoadListener"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " example"
+                  }
+                ]
+              }
+            ],
+            "context": "section",
+            "id": "events-events",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Native Event system"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "When you want to customize the entity state transition behavior, you have two options:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "olist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "you provide a custom "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Interceptor"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", which is taken into consideration by the default Hibernate event listeners. For example, the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Interceptor#onSave()"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " method is invoked by Hibernate "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "AbstractSaveEventListener"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ". Or, the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Interceptor#onLoad()"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " is called by the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "DefaultPreLoadEventListener"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "you can replace any given default event listener with your own implementation. When doing this, you should probably extend the default listeners because otherwise, you’d have to take care of all the low-level entity state transition logic. For example, if you replace the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "DefaultPreLoadEventListener"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " with your own implementation, then, only if you call the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Interceptor#onLoad()"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " method explicitly, you can mix the custom load event listener with a custom Hibernate interceptor."
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": "arabic",
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "events-mixing-events-and-interceptors",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Mixing Events and Interceptors"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Jakarta Persistence also defines a more limited set of callbacks through annotations."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "body": [
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "@PrePersist"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Executed before the entity manager persist operation is actually executed or cascaded. This call is synchronous with the persist operation."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "@PreRemove"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Executed before the entity manager remove operation is actually executed or cascaded. This call is synchronous with the remove operation."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "@PostPersist"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Executed after the entity manager persist operation is actually executed or cascaded. This call is invoked after the database INSERT is executed."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "@PostRemove"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Executed after the entity manager remove operation is actually executed or cascaded. This call is synchronous with the remove operation."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "@PreUpdate"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Executed before the database UPDATE operation."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "@PostUpdate"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Executed after the database UPDATE operation."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "@PostLoad"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Executed after an entity has been loaded into the current persistence context or an entity has been refreshed."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ]
+                ],
+                "columns": [
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": null,
+                    "valign": "top",
+                    "width": "50"
+                  },
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": null,
+                    "valign": "top",
+                    "width": "50"
+                  }
+                ],
+                "context": "table",
+                "foot": [],
+                "head": [
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Type"
+                        }
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Description"
+                        }
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ]
+                ],
+                "id": null,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Callback annotations"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "There are two available approaches defined for specifying callback handling:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "ulist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The first approach is to annotate methods on the entity itself to receive notifications of a particular entity lifecycle event(s)."
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The second is to use a separate entity listener class. An entity listener is a stateless class with a no-arg constructor. The callback annotations are placed on a method of this class instead of the entity class. The entity listener class is then associated with the entity using the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "jakarta.persistence.EntityListeners"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " annotation"
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": null,
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Entity(name = \"Person\")\n@EntityListeners(LastUpdateListener.class)\npublic static class Person {\n\n\t@Id\n\tprivate Long id;\n\n\tprivate String name;\n\n\tprivate Date dateOfBirth;\n\n\t@Transient\n\tprivate long age;\n\n\tprivate Date lastUpdate;\n\n\tpublic void setLastUpdate(Date lastUpdate) {\n\t\tthis.lastUpdate = lastUpdate;\n\t}\n\n\t/**\n\t * Set the transient property at load time based on a calculation.\n\t * Note that a native Hibernate formula mapping is better for this purpose.\n\t */\n\t@PostLoad\n\tpublic void calculateAge() {\n\t\tage = ChronoUnit.YEARS.between( LocalDateTime.ofInstant(\n\t\t\t\t\t\tInstant.ofEpochMilli( dateOfBirth.getTime() ), ZoneOffset.UTC ),\n\t\t\t\tLocalDateTime.now()\n\t\t);\n\t}\n}\n\npublic static class LastUpdateListener {\n\n\t@PreUpdate\n\t@PrePersist\n\tpublic void setLastUpdate(Person p) {\n\t\tp.setLastUpdate( new Date() );\n\t}\n}"
+                      }
+                    ],
+                    "language": "java",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": "events-jpa-callbacks-example",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Example of specifying Jakarta Persistence callbacks"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "These approaches can be mixed, meaning you can use both together."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Regardless of whether the callback method is defined on the entity or on an entity listener, it must have a void-return signature. The name of the method is irrelevant as it is the placement of the callback annotations that makes the method a callback. In the case of callback methods defined on the entity class, the method must additionally have a no-argument signature. For callback methods defined on an entity listener class, the method must have a single argument signature; the type of that argument can be either "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "java.lang.Object"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " (to facilitate attachment to multiple entities) or the specific entity type."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "A callback method can throw a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "RuntimeException"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". If the callback method does throw a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "RuntimeException"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", then the current transaction, if any, must be rolled back."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "A callback method must not invoke "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "EntityManager"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " or "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Query"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " methods!"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "It is possible that multiple callback methods are defined for a particular lifecycle event. When that is the case, the defined order of execution is well defined by the Jakarta Persistence spec (specifically section 3.5.4):"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "ulist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Any default listeners associated with the entity are invoked first, in the order they were specified in the XML. See the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "jakarta.persistence.ExcludeDefaultListeners"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " annotation."
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Next, entity listener class callbacks associated with the entity hierarchy are invoked, in the order they are defined in the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "EntityListeners"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ". If multiple classes in the entity hierarchy define entity listeners, the listeners defined for a superclass are invoked before the listeners defined for its subclasses. See the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "jakarta.persistence.ExcludeSuperclassListener"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "'s annotation."
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Lastly, callback methods defined on the entity hierarchy are invoked. If a callback type is annotated on both an entity and one or more of its superclasses without method overriding, both would be called, the most general superclass first. An entity class is also allowed to override a callback method defined in a superclass in which case the super callback would not get invoked; the overriding method would get invoked provided it is annotated."
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": null,
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "events-jpa-callbacks",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Jakarta Persistence Callbacks"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The Jakarta Persistence specification allows you to define a default entity listener which is going to be applied for every entity in that particular system. Default entity listeners can only be defined in XML mapping files."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "public class DefaultEntityListener {\n\n\tpublic void onPersist(Object entity) {\n\t\tif (entity instanceof BaseEntity) {\n\t\t\tBaseEntity baseEntity = (BaseEntity) entity;\n\t\t\tbaseEntity.setCreatedOn(now());\n\t\t}\n\t}\n\n\tpublic void onUpdate(Object entity) {\n\t\tif (entity instanceof BaseEntity) {\n\t\t\tBaseEntity baseEntity = (BaseEntity) entity;\n\t\t\tbaseEntity.setUpdatedOn(now());\n\t\t}\n\t}\n\n\tprivate Timestamp now() {\n\t\treturn Timestamp.from(\n\t\t\tLocalDateTime.now().toInstant(ZoneOffset.UTC)\n\t);\n\t}\n}"
+                      }
+                    ],
+                    "language": "java",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<entity-mappings xmlns=\"http://xmlns.jcp.org/xml/ns/persistence/orm\"\n                 xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n                 xsi:schemaLocation=\"http://xmlns.jcp.org/xml/ns/persistence/orm\n                 http://xmlns.jcp.org/xml/ns/persistence/orm_2_1.xsd\"\n                 version=\"2.1\">\n    <persistence-unit-metadata>\n        <persistence-unit-defaults>\n            <entity-listeners>\n                <entity-listener\n                    class=\"org.hibernate.orm.test.events.DefaultEntityListener\">\n                    <pre-persist method-name=\"onPersist\"/>\n                    <pre-update method-name=\"onUpdate\"/>\n                </entity-listener>\n            </entity-listeners>\n        </persistence-unit-defaults>\n    </persistence-unit-metadata>\n</entity-mappings>"
+                      }
+                    ],
+                    "language": "xml",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": "events-default-listener-mapping-example",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Default event listener mapping"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Considering that all entities extend the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BaseEntity"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " class:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@MappedSuperclass\npublic abstract class BaseEntity {\n\n\tprivate Timestamp createdOn;\n\n\tprivate Timestamp updatedOn;\n\n\t//Getters and setters are omitted for brevity\n\n}"
+                  }
+                ],
+                "language": "java",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@Entity(name = \"Person\")\npublic static class Person extends BaseEntity {\n\n\t@Id\n\tprivate Long id;\n\n\tprivate String name;\n\n\t//Getters and setters omitted for brevity\n}\n\n@Entity(name = \"Book\")\npublic static class Book extends BaseEntity {\n\n\t@Id\n\tprivate Long id;\n\n\tprivate String title;\n\n\t@ManyToOne\n\tprivate Person author;\n\n\t//Getters and setters omitted for brevity\n}"
+                  }
+                ],
+                "language": "java",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "When persisting a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Person"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " or "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Book"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " entity, the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "createdOn"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is going to be set by the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "onPersist"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " method of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "DefaultEntityListener"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Person author = new Person();\nauthor.setId( 1L );\nauthor.setName( \"Vlad Mihalcea\" );\n\nentityManager.persist( author );\n\nBook book = new Book();\nbook.setId( 1L );\nbook.setTitle( \"High-Performance Java Persistence\" );\nbook.setAuthor( author );\n\nentityManager.persist( book );"
+                      }
+                    ],
+                    "language": "java",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "insert\ninto\n    Person\n    (createdOn, updatedOn, name, id)\nvalues\n    (?, ?, ?, ?)\n\n-- binding parameter [1] as [TIMESTAMP] - [2017-06-08 19:23:48.224]\n-- binding parameter [2] as [TIMESTAMP] - [null]\n-- binding parameter [3] as [VARCHAR]   - [Vlad Mihalcea]\n-- binding parameter [4] as [BIGINT]    - [1]\n\ninsert\ninto\n    Book\n    (createdOn, updatedOn, author_id, title, id)\nvalues\n    (?, ?, ?, ?, ?)\n\n-- binding parameter [1] as [TIMESTAMP] - [2017-06-08 19:23:48.246]\n-- binding parameter [2] as [TIMESTAMP] - [null]\n-- binding parameter [3] as [BIGINT]    - [1]\n-- binding parameter [4] as [VARCHAR]   - [High-Performance Java Persistence]\n-- binding parameter [5] as [BIGINT]    - [1]"
+                      }
+                    ],
+                    "language": "sql",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": "events-default-listener-persist-example",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Default event listener persist event"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "When updating a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Person"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " or "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Book"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " entity, the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "updatedOn"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is going to be set by the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "onUpdate"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " method of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "DefaultEntityListener"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Person author = entityManager.find( Person.class, 1L );\nauthor.setName( \"Vlad-Alexandru Mihalcea\" );\n\nBook book = entityManager.find( Book.class, 1L );\nbook.setTitle( \"High-Performance Java Persistence 2nd Edition\" );"
+                      }
+                    ],
+                    "language": "java",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "update\n    Person\nset\n    createdOn=?,\n    updatedOn=?,\n    name=?\nwhere\n    id=?\n\n-- binding parameter [1] as [TIMESTAMP] - [2017-06-08 19:23:48.224]\n-- binding parameter [2] as [TIMESTAMP] - [2017-06-08 19:23:48.316]\n-- binding parameter [3] as [VARCHAR]   - [Vlad-Alexandru Mihalcea]\n-- binding parameter [4] as [BIGINT]    - [1]\n\nupdate\n    Book\nset\n    createdOn=?,\n    updatedOn=?,\n    author_id=?,\n    title=?\nwhere\n    id=?\n\n-- binding parameter [1] as [TIMESTAMP] - [2017-06-08 19:23:48.246]\n-- binding parameter [2] as [TIMESTAMP] - [2017-06-08 19:23:48.317]\n-- binding parameter [3] as [BIGINT]    - [1]\n-- binding parameter [4] as [VARCHAR]   - [High-Performance Java Persistence 2nd Edition]\n-- binding parameter [5] as [BIGINT]    - [1]"
+                      }
+                    ],
+                    "language": "sql",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": "events-default-listener-update-example",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Default event listener update event"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "If you already registered a default entity listener, but you don’t want to apply it to a particular entity, you can use the "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "@ExcludeDefaultListeners"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://javaee.github.io/javaee-spec/javadocs/javax/persistence/ExcludeDefaultListeners.html"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " and "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "@ExcludeSuperclassListeners"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://javaee.github.io/javaee-spec/javadocs/javax/persistence/ExcludeSuperclassListeners.html"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " Jakarta Persistence annotations."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ExcludeDefaultListeners"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " instructs the current class to ignore the default entity listeners for the current entity while "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ExcludeSuperclassListeners"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " is used to ignore the default entity listeners propagated to the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "BaseEntity"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " super-class."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@Entity(name = \"Publisher\")\n@ExcludeDefaultListeners\n@ExcludeSuperclassListeners\npublic static class Publisher extends BaseEntity {\n\n\t@Id\n\tprivate Long id;\n\n\tprivate String name;\n\n\t//Getters and setters omitted for brevity\n}"
+                          }
+                        ],
+                        "language": "java",
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": "events-exclude-default-listener-mapping-example",
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "Exclude default event listener mapping"
+                      }
+                    ]
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "When persisting a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Publisher"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " entity, the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "createdOn"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " is not going to be set by the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "onPersist"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " method of the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "DefaultEntityListener"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " because the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Publisher"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " entity was marked with the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ExcludeDefaultListeners"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " and "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ExcludeSuperclassListeners"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " annotations."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Publisher publisher = new Publisher();\npublisher.setId( 1L );\npublisher.setName( \"Amazon\" );\n\nentityManager.persist( publisher );"
+                          }
+                        ],
+                        "language": "java",
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "insert\ninto\n    Publisher\n    (createdOn, updatedOn, name, id)\nvalues\n    (?, ?, ?, ?)\n\n-- binding parameter [1] as [TIMESTAMP] - [null]\n-- binding parameter [2] as [TIMESTAMP] - [null]\n-- binding parameter [3] as [VARCHAR]   - [Amazon]\n-- binding parameter [4] as [BIGINT]    - [1]"
+                          }
+                        ],
+                        "language": "sql",
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": "events-exclude-default-listener-persist-example",
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "Excluding default event listener events"
+                      }
+                    ]
+                  }
+                ],
+                "context": "section",
+                "id": "events-exclude-default-listener",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Exclude default entity listeners"
+                  }
+                ]
+              }
+            ],
+            "context": "section",
+            "id": "events-default-listener",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Default entity listeners"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "events",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Interceptors and Events"
+          }
+        ]
+      }
+    ],
+    "title": null
+  }
+}
