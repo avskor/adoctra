@@ -395,6 +395,25 @@ impl<'a> Reader<'a> {
         self.ensure(index, Some(context))
     }
 
+    /// The line at `index` without preprocessing and without loading it
+    /// (Ruby's direct `peek_lines`): a later read still preprocesses it.
+    pub fn peek_raw(&self, index: usize) -> Option<Arc<str>> {
+        if index >= self.limit {
+            return None;
+        }
+        if let Some((_, line)) = self.loaded.get(index) {
+            return Some(Arc::clone(line));
+        }
+        if index != self.loaded.len() {
+            return None;
+        }
+        self.inputs
+            .iter()
+            .rev()
+            .find_map(|input| input.lines.get(input.next))
+            .map(|line| line.text.clone())
+    }
+
     pub fn raw_has(&mut self, index: usize) -> bool {
         self.ensure(index, None)
     }
@@ -1530,7 +1549,9 @@ impl<'a> Reader<'a> {
         context: &mut ParseContext,
     ) -> Vec<Inline> {
         let content = indentation.apply(&self.content(start, end));
-        context.body_subs.defer(content, None, attrs, false)
+        let nodes = context.body_subs.defer(content, None, attrs, false);
+        context.body_subs.trim_edges(&nodes);
+        nodes
     }
 
     /// Catalog inline anchors from the same comment-filtered text that the

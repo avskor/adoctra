@@ -316,6 +316,7 @@ pub(crate) fn register(
         diagnostics,
         placed,
         block_stamps,
+        manpage_name: false,
     };
     // A manual page's NAME section registers in the header, after the
     // document title; Ruby converts its title there, whatever its id.
@@ -332,7 +333,9 @@ pub(crate) fn register(
         if let (Some(_), BlockKind::Heading { inlines, .. }) = (&heading.id, &mut heading.kind) {
             ids.resolve_reading(inlines, &attributes);
         }
+        ids.manpage_name = true;
         visit::walk_block_mut(&mut ids, heading);
+        ids.manpage_name = false;
     }
     visit::walk_blocks_mut(&mut ids, body);
     ids.flush(usize::MAX);
@@ -360,6 +363,9 @@ struct Ids<'a> {
     /// Duplicate ids, reported where reading registered them in Ruby.
     placed: &'a mut Vec<crate::context::Placed>,
     block_stamps: BTreeMap<(usize, usize), crate::context::Stamp>,
+    /// Registering a manual page's NAME section from the header: Ruby's
+    /// header section has no numeral (`sectnum` is empty).
+    manpage_name: bool,
 }
 
 /// Where a quote's substituted attribution starts.
@@ -546,6 +552,9 @@ impl Ids<'_> {
                 &decoded(path, lexical),
                 span,
             ));
+        }
+        if xref.refid.as_deref().map_or(true, str::is_empty) {
+            return self.reading_top_label(span);
         }
         let id = decoded_refid(xref, lexical)?;
         if self.registry.contains_key(&id) {
@@ -756,6 +765,45 @@ impl Ids<'_> {
     /// A label while reading. The reftext uses the reading attributes without
     /// executing expressions; a deferred title is converted early; `None`
     /// leaves the reference to conversion.
+    /// A reference to the current document while reading: Ruby's `doctitle`
+    /// then has no title to show without a document title or a top-level
+    /// section reading has finished (a section joins the document after its
+    /// content), so it displays `[^top]`; otherwise conversion labels it.
+    fn reading_top_label(&self, span: Span) -> Option<Vec<Inline>> {
+        if self.doctitle.is_some() {
+            return None;
+        }
+        let nested = |start: usize| {
+            self.sections
+                .iter()
+                .any(|(&(outer, _), section)| outer < start && start < section.closed_at)
+        };
+        let first = self
+            .sections
+            .iter()
+            .find(|(&(start, _), section)| section.closed_at <= span.start && !nested(start))
+            .map(|(key, _)| *key);
+        let Some(first) = first else {
+            return Some(vec![Inline::Text {
+                value: "[^top]".into(),
+                span,
+            }]);
+        };
+        // The first section's title as reading converted it (Ruby's memo).
+        self.registry
+            .values()
+            .find_map(|target| match &target.title {
+                Some(Title::Heading(key, nodes))
+                    if *key == first && placeholder(nodes).is_none() =>
+                {
+                    let mut label = nodes.clone();
+                    strip_label(&mut label);
+                    Some(label)
+                }
+                _ => None,
+            })
+    }
+
     fn reading_label(
         &mut self,
         id: &str,
@@ -903,7 +951,29 @@ impl Ids<'_> {
         let numbering = match (&block.kind, &block.caption) {
             (BlockKind::Heading { .. }, _) => match self.sections.get(&key) {
                 Some(section) if section.is_numbered() || section.emphasized() => {
-                    Numbering::Section(section.clone())
+                    let mut section = section.clone();
+                    if self.manpage_name {
+                        section.path.clear();
+                    }
+                    Numbering::Section(section)
+                }
+                // A manual page's header NAME section, read outside the body:
+                // Ruby's `initialize_section` numbers it with `sectnums`, but
+                // it never takes a numeral.
+                None if self.manpage_name => {
+                    let section = crate::section_numbers::Section::read(
+                        None,
+                        1,
+                        false,
+                        false,
+                        &attributes,
+                        None,
+                    );
+                    if section.is_numbered() {
+                        Numbering::Section(section)
+                    } else {
+                        Numbering::None
+                    }
                 }
                 _ => Numbering::None,
             },

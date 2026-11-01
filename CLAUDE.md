@@ -220,9 +220,10 @@ source highlighters incl. the Rouge port), HTML backend (standalone and
 embedded, XML syntax, `adoctra.css`), JSON backend, WASM bindings with spans,
 tokens and diagnostics, and a CLI matching Ruby's options. **Scaffold only:**
 DOCX backend; the extension API exists but `parse`/`convert` do not invoke it.
-**Not yet implemented:** admonitions on list items, ids of individual list
-items, most block options beyond those wired, incremental/block reparse, a
-pull/event API, DocBook/manpage backends, Ruby API/extensions.
+**Not yet implemented:** most block options beyond those wired,
+incremental/block reparse, a pull/event API, DocBook/manpage backends, Ruby
+API/extensions. (Admonition labels in list items and list item anchors were
+rechecked against Ruby on 2026-11-01 and match.)
 
 When asked to "add a feature," check `docs/implementation-notes.md` first and
 say plainly whether it is new work or wiring up an existing seam.

@@ -64,24 +64,6 @@ fn is_space(c: char) -> bool {
     matches!(c, ' ' | '\t' | '\n' | '\u{b}' | '\u{c}' | '\r' | '\0')
 }
 
-/// Split normal cell text into paragraphs at blank lines (Ruby splits the
-/// converted text on `BlankLineRx` when the source has a blank line).
-pub(crate) fn paragraphs(chars: &[(usize, char)]) -> Vec<Chars> {
-    let mut out = vec![Vec::new()];
-    let mut i = 0;
-    while i < chars.len() {
-        let run = chars[i..].iter().take_while(|(_, c)| *c == '\n').count();
-        if run >= 2 {
-            out.push(Vec::new());
-            i += run;
-        } else {
-            out.last_mut().unwrap().push(chars[i]);
-            i += 1;
-        }
-    }
-    out
-}
-
 /// Ruby's `String#to_i`: optional sign and leading digits, else 0.
 pub(crate) fn to_i(value: &str) -> i64 {
     let value = value.ruby_lstrip();
@@ -1298,13 +1280,6 @@ mod tests {
             Num::Float(100.0 - 99.9999 + 33.3333).round4(),
             Num::Float(33.3334)
         );
-    }
-
-    #[test]
-    fn paragraphs_split_at_blank_lines() {
-        let chars: Chars = "a\nb\n\n\nc".char_indices().collect();
-        let parts: Vec<_> = paragraphs(&chars).iter().map(|p| text(p)).collect();
-        assert_eq!(parts, ["a\nb", "c"]);
     }
 
     #[test]

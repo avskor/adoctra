@@ -21,6 +21,9 @@ struct Pending {
     hardbreaks: bool,
     replacement_origin: Option<Span>,
     block: Option<BlockSubs>,
+    /// Verbatim content with the default substitutions (a verse): Ruby's
+    /// `Block#content` drops blank edge lines after substituting.
+    trim: bool,
 }
 
 /// Substitutions selected for a block's content instead of the normal
@@ -127,6 +130,7 @@ impl BodySubs {
                 hardbreaks: attrs.local_hardbreaks,
                 replacement_origin: None,
                 block: None,
+                trim: false,
             },
         );
         // Private placeholder; replaced before source mapping or public output.
@@ -152,6 +156,16 @@ impl BodySubs {
 
     /// Select the substitutions of already deferred content (a paragraph
     /// whose `subs` are committed on completion).
+    /// Drop blank edge lines of already deferred verbatim content after its
+    /// default substitutions (a verse; selected ones trim themselves).
+    pub fn trim_edges(&mut self, nodes: &[Inline]) {
+        if let Some(pending) =
+            crate::resolve::placeholder(nodes).and_then(|key| self.pending.get_mut(&key))
+        {
+            pending.trim = true;
+        }
+    }
+
     pub fn set_block_subs(&mut self, nodes: &[Inline], subs: BlockSubs) {
         if let Some(pending) =
             crate::resolve::placeholder(nodes).and_then(|key| self.pending.get_mut(&key))
@@ -202,6 +216,7 @@ impl BodySubs {
             hardbreaks: attrs.local_hardbreaks,
             replacement_origin: title.replacement.then_some(title.span),
             block: None,
+            trim: false,
         });
         vec![Inline::Text {
             value: String::new(),
@@ -551,17 +566,17 @@ impl Execution<'_, '_> {
     /// is cached, as Ruby memoizes `@converted_title`.
     fn convert(&mut self, key: (usize, usize), pending: Pending) -> Vec<Inline> {
         let referable = self.referable.contains(&key);
-        if referable {
-            self.converting.insert(key, pending.clone());
-        }
+        // A reference inside the title (to the document whose first section
+        // it is) converts it again.
+        self.converting.insert(key, pending.clone());
         let mut nodes = vec![Inline::Text {
             value: String::new(),
             span: Span::new(key.0, key.1),
         }];
         self.evaluate(&mut nodes, pending);
         self.resolve(&mut nodes);
+        self.converting.remove(&key);
         if referable {
-            self.converting.remove(&key);
             self.titles.insert(key, nodes.clone());
         }
         nodes
@@ -1191,6 +1206,15 @@ impl Execution<'_, '_> {
                     for nodes in paragraphs.iter_mut() {
                         self.inlines(nodes);
                     }
+                    // Ruby's `Cell#content` splits a body cell's converted
+                    // text at `BlankLineRx` (`\n{2,}`); a head or literal
+                    // cell keeps `Cell#text`.
+                    if index >= head && cell.style != Some(crate::ast::CellStyle::Literal) {
+                        *paragraphs = std::mem::take(paragraphs)
+                            .into_iter()
+                            .flat_map(split_paragraphs)
+                            .collect();
+                    }
                     // Ruby splits the converted body text, which drops
                     // trailing empty paragraphs (all of them when empty).
                     if index >= head {
@@ -1273,6 +1297,110 @@ impl Execution<'_, '_> {
 }
 
 /// Converted inlines without output.
+/// Converted cell text split at runs of two or more line feeds in its
+/// top-level text. A run inside nested markup is no boundary: Ruby splits the
+/// HTML there and produces broken markup (a comparison boundary).
+fn split_paragraphs(nodes: Vec<Inline>) -> Vec<Vec<Inline>> {
+    /// `value` in pieces between `\n{2,}` runs, with their byte ranges.
+    fn pieces(value: &str) -> Vec<std::ops::Range<usize>> {
+        let mut out = Vec::new();
+        let (mut start, mut at) = (0, 0);
+        let bytes = value.as_bytes();
+        while at < bytes.len() {
+            let run = bytes[at..].iter().take_while(|&&b| b == b'\n').count();
+            if run >= 2 {
+                out.push(start..at);
+                start = at + run;
+                at = start;
+            } else {
+                at += run.max(1);
+            }
+        }
+        out.push(start..value.len());
+        out
+    }
+    // A piece's range: exact when the value spells its source.
+    let sub = |span: Span, value: &str, range: &std::ops::Range<usize>| {
+        if span.end - span.start == value.len() {
+            Span {
+                start: span.start + range.start,
+                end: span.start + range.end,
+                ..span
+            }
+        } else {
+            span
+        }
+    };
+    let mut out = vec![Vec::new()];
+    for node in nodes {
+        let raw = matches!(node, Inline::Raw { .. });
+        match node {
+            Inline::Text { value, span } | Inline::Raw { value, span }
+                if value.contains("\n\n") =>
+            {
+                let ranges = pieces(&value);
+                for (index, range) in ranges.iter().enumerate() {
+                    if index > 0 {
+                        out.push(Vec::new());
+                    }
+                    if range.is_empty() {
+                        continue;
+                    }
+                    let piece = value[range.clone()].to_owned();
+                    let span = sub(span, &value, range);
+                    out.last_mut().unwrap().push(if raw {
+                        Inline::Raw { value: piece, span }
+                    } else {
+                        Inline::Text { value: piece, span }
+                    });
+                }
+            }
+            Inline::Substituted { parts, span, .. }
+                if parts.iter().any(|part| {
+                    matches!(part, AttributePart::Text(t) | AttributePart::Raw(t) if t.contains("\n\n"))
+                }) =>
+            {
+                let mut current = Vec::new();
+                let flush = |current: &mut Vec<AttributePart>, out: &mut Vec<Vec<Inline>>| {
+                    if !current.is_empty() {
+                        let parts = std::mem::take(current);
+                        out.last_mut().unwrap().push(Inline::Substituted {
+                            value: crate::attributes::parts_text(&parts),
+                            parts,
+                            span,
+                        });
+                    }
+                };
+                for part in parts {
+                    match &part {
+                        AttributePart::Text(t) | AttributePart::Raw(t) if t.contains("\n\n") => {
+                            let raw = matches!(part, AttributePart::Raw(_));
+                            for (index, range) in pieces(t).iter().enumerate() {
+                                if index > 0 {
+                                    flush(&mut current, &mut out);
+                                    out.push(Vec::new());
+                                }
+                                if !range.is_empty() {
+                                    let piece = t[range.clone()].to_owned();
+                                    current.push(if raw {
+                                        AttributePart::Raw(piece)
+                                    } else {
+                                        AttributePart::Text(piece)
+                                    });
+                                }
+                            }
+                        }
+                        _ => current.push(part),
+                    }
+                }
+                flush(&mut current, &mut out);
+            }
+            other => out.last_mut().unwrap().push(other),
+        }
+    }
+    out
+}
+
 fn blank(nodes: &[Inline]) -> bool {
     nodes.iter().all(|node| match node {
         Inline::Text { value, .. } | Inline::Raw { value, .. } => value.is_empty(),
@@ -1374,6 +1502,9 @@ fn run(
             Some(&mut syntax),
         )
     };
+    if pending.trim && pending.block.is_none() {
+        trim_node_edges(&mut nodes);
+    }
     if let Some(filtered) = &pending.filtered {
         filtered.restore_inlines(&mut nodes);
         for diagnostic in &mut diagnostics[before..] {
@@ -1410,6 +1541,77 @@ fn run(
         registry.restore_origins(&mut nodes, first);
     }
     nodes
+}
+
+/// Ruby's blank edge lines of verbatim content, on converted nodes: whole
+/// whitespace-only lines (spelled by text nodes and attribute values, such as
+/// `{empty}`) at either edge.
+fn trim_node_edges(nodes: &mut Vec<Inline>) {
+    let blank = |s: &str| {
+        s.chars()
+            .all(|c| matches!(c, ' ' | '\t' | '\r' | '\x0b' | '\x0c'))
+    };
+    let text = |node: &Inline| -> Option<String> {
+        match node {
+            Inline::Text { value, .. } => Some(value.clone()),
+            Inline::AttributeRef {
+                value: Some(value), ..
+            } => Some(value.clone()),
+            _ => None,
+        }
+    };
+    // Leading lines: nodes before the one holding the line feed are blank.
+    'leading: loop {
+        for k in 0..nodes.len() {
+            let Some(value) = text(&nodes[k]) else {
+                break 'leading;
+            };
+            match value.find('\n') {
+                None if blank(&value) => continue,
+                None => break 'leading,
+                Some(nl) if blank(&value[..nl]) => {
+                    let Inline::Text { value, span } = &mut nodes[k] else {
+                        break 'leading;
+                    };
+                    if span.end - span.start == value.len() {
+                        span.start += nl + 1;
+                    }
+                    value.drain(..=nl);
+                    let empty = value.is_empty();
+                    nodes.drain(..k + usize::from(empty));
+                    continue 'leading;
+                }
+                Some(_) => break 'leading,
+            }
+        }
+        break;
+    }
+    // Trailing lines, symmetrically.
+    'trailing: loop {
+        for k in (0..nodes.len()).rev() {
+            let Some(value) = text(&nodes[k]) else {
+                break 'trailing;
+            };
+            match value.rfind('\n') {
+                None if blank(&value) => continue,
+                None => break 'trailing,
+                Some(nl) if blank(&value[nl + 1..]) => {
+                    let Inline::Text { value, span } = &mut nodes[k] else {
+                        break 'trailing;
+                    };
+                    if span.end - span.start == value.len() {
+                        span.end -= value.len() - nl;
+                    }
+                    value.truncate(nl);
+                    let empty = value.is_empty();
+                    nodes.truncate(k + usize::from(!empty));
+                    continue 'trailing;
+                }
+                Some(_) => break 'trailing,
+            }
+        }
+        break;
+    }
 }
 
 fn trim_edges(parts: Vec<AttributePart>) -> Vec<AttributePart> {

@@ -150,7 +150,12 @@ impl Scanner<'_> {
         Field {
             index,
             name,
-            single_quoted: closed && quote == '\'' && !self.src[value.clone()].starts_with('\''),
+            // Ruby tests the value after removing escaped quotes, so a
+            // leading `\'` is an apostrophe too.
+            single_quoted: closed && quote == '\'' && {
+                let raw = &self.src[value.clone()];
+                !(raw.starts_with('\'') || raw.starts_with("\\'"))
+            },
             quote: closed.then_some(quote),
             value: Some(value),
             gap: None,

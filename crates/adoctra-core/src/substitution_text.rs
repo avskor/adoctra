@@ -763,6 +763,33 @@ fn repair(labels: Vec<Vec<(Range<usize>, Fragment)>>) -> Option<Repaired> {
 
 /// Restore AST nodes, retaining attribute references even if a replacement
 /// consumed their whole value. This keeps editor tokens and provenance stable.
+/// A paragraph's line breaks read as spaces. A run of two or more line feeds
+/// (a blank line, which only a table cell's text can hold) stays: Ruby's
+/// `Cell#content` splits the converted text there.
+fn fold_line_breaks(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut chars = text.chars().peekable();
+    while let Some(c) = chars.next() {
+        match c {
+            '\r' => out.push(' '),
+            '\n' => {
+                let mut run = 1;
+                while chars.peek() == Some(&'\n') {
+                    chars.next();
+                    run += 1;
+                }
+                if run >= 2 {
+                    out.extend(std::iter::repeat('\n').take(run));
+                } else {
+                    out.push(' ');
+                }
+            }
+            c => out.push(c),
+        }
+    }
+    out
+}
+
 pub(crate) fn write_back(nodes: Vec<Inline>, mut text: Text, fold_newlines: bool) -> Vec<Inline> {
     text.restore_boundaries();
     text.restore_ui();
@@ -774,7 +801,7 @@ pub(crate) fn write_back(nodes: Vec<Inline>, mut text: Text, fold_newlines: bool
             let (_, mut f) = fragments.next().unwrap();
             f.text = f.decoded.take().unwrap_or(f.text);
             if fold_newlines && !f.raw && f.text.contains(['\r', '\n']) {
-                f.text = f.text.replace(['\r', '\n'], " ");
+                f.text = fold_line_breaks(&f.text);
             }
             pieces.push(f);
         }

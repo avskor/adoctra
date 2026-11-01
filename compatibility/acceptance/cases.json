@@ -494,6 +494,22 @@
     "sources/diagnostics/header-author-missing.adoc": {
       "sha256": "14542e6554b8d8194cbcc0d3b9cedb70bb1c87baef951b400ea8991d268df001",
       "origin": "adoctra-diagnostic-probes"
+    },
+    "sources/fuzz/part-illegal-content-order.adoc": {
+      "sha256": "6e51d17dac960a20d04ca7f1bcc48c54e76d98161d458b2a0b373b799bfe3044",
+      "origin": "adoctra-fuzz-v1"
+    },
+    "sources/fuzz/link-escaped-quote-value.adoc": {
+      "sha256": "937fadb5d0689e98b0e68c4d7cdcf0828de06461a97537120253a31548b774cc",
+      "origin": "adoctra-fuzz-v1"
+    },
+    "sources/fuzz/table-separator-order-example.adoc": {
+      "sha256": "6fcff4459d9b38352bb50a4cf9e1c298de2a33297d8048cf15e874159234a3bd",
+      "origin": "adoctra-fuzz-v1"
+    },
+    "sources/fuzz/table-dropped-cell-content.adoc": {
+      "sha256": "063d2078cd34a6d8a9783d6f7ea368bb9436d7aa09fa2f96e4877d0b5509449a",
+      "origin": "adoctra-fuzz-v1"
     }
   },
   "cases": [
@@ -2471,14 +2487,39 @@
       "id": "fuzz-table-cell-attribute-order",
       "category": "diagnostics",
       "source": "sources/fuzz/table-cell-attribute-order.adoc",
-      "expect": "xfail",
-      "reason": "Ruby substitutes a table cell's text as a whole before splitting it into paragraphs, so a macro attribute's missing-attribute warning follows the later paragraphs' attribute warnings; adoctra substitutes each paragraph of the cell separately (intentional difference, user decision 2026-11-01; see compatibility.adoc)"
+      "expect": "pass"
     },
     {
       "id": "fuzz-include-dropped-directive",
       "category": "diagnostics",
       "source": "sources/fuzz/include-dropped-directive.adoc",
       "expect": "pass"
+    },
+    {
+      "id": "fuzz-part-illegal-content-order",
+      "category": "diagnostics",
+      "source": "sources/fuzz/part-illegal-content-order.adoc",
+      "expect": "pass"
+    },
+    {
+      "id": "fuzz-link-escaped-quote-value",
+      "category": "diagnostics",
+      "source": "sources/fuzz/link-escaped-quote-value.adoc",
+      "expect": "pass"
+    },
+    {
+      "id": "fuzz-table-separator-order",
+      "category": "diagnostics",
+      "source": "sources/fuzz/table-separator-order-example.adoc",
+      "expect": "xfail",
+      "reason": "Ruby reports a missing leading separator when it closes the first cell, after reading the lines that follow; adoctra reports it when the table starts"
+    },
+    {
+      "id": "fuzz-table-dropped-cell-content",
+      "category": "diagnostics",
+      "source": "sources/fuzz/table-dropped-cell-content.adoc",
+      "expect": "xfail",
+      "reason": "Ruby parses an AsciiDoc cell when it closes it, so a cell of an incomplete row it later drops still reports its content's warnings; adoctra does not parse dropped cells"
     }
   ]
 }

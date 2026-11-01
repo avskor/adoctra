@@ -767,8 +767,9 @@ impl<'s, 'c> Run<'s, 'c> {
                 // text; it must neither execute expressions nor issue inline
                 // warnings.
             }
-            // Ruby registers the id here, after converting an anchored title.
-            if block.id.is_some() {
+            // Ruby registers the id here, after converting an anchored title;
+            // in a book, a part's content is checked here too.
+            if block.id.is_some() || context.book {
                 let stamp = context.stamp();
                 context
                     .block_stamps
@@ -918,6 +919,7 @@ fn nest_sections(
     let sections = &mut context.sections;
     let diagnostics = &mut context.diagnostics;
     let placed = &mut context.placed;
+    let block_stamps = &context.block_stamps;
     let TopLevel {
         has_header,
         invalid_header,
@@ -999,7 +1001,24 @@ fn nest_sections(
                         kind: BlockKind::Section { level: 0, blocks },
                         ..
                     }) if book => {
-                        part_content(blocks, intros.last_mut().unwrap(), block, diagnostics)
+                        // Ruby reports a part's illegal content when reading
+                        // completes the block.
+                        let stamp = block_stamps
+                            .get(&(block.span.start, block.span.end))
+                            .copied();
+                        part_content(
+                            blocks,
+                            intros.last_mut().unwrap(),
+                            block,
+                            &mut |diagnostic| match stamp {
+                                Some(stamp) => placed.push(crate::context::Placed {
+                                    stamp,
+                                    diagnostic,
+                                    physical: false,
+                                }),
+                                None => diagnostics.push(diagnostic),
+                            },
+                        )
                     }
                     Some(Block {
                         kind: BlockKind::Section { blocks, .. },
@@ -1182,7 +1201,7 @@ fn part_content(
     blocks: &mut Vec<Block>,
     intro: &mut Intro,
     mut block: Block,
-    diagnostics: &mut Vec<Diagnostic>,
+    report: &mut dyn FnMut(Diagnostic),
 ) {
     let partintro = || Some("partintro".to_string());
     if blocks.len() == 1 {
@@ -1211,7 +1230,7 @@ fn part_content(
         }
     } else if blocks.len() == 2 {
         match *intro {
-            Intro::None => diagnostics.push(Diagnostic {
+            Intro::None => report(Diagnostic {
                 omitted_span: None,
                 report: Default::default(),
                 span: block.span,
@@ -2112,15 +2131,13 @@ fn read_table(
                 attributes,
             }
         } else {
-            // A header cell (and a csv/dsv literal) is one run, like Ruby's
-            // `Cell#text`; body cells split into paragraphs.
-            let single = s == 0 || cell.style == Some(crate::ast::CellStyle::Literal);
+            // The cell text substitutes as one field, like Ruby's
+            // `Cell#text`; a body cell's converted text splits into
+            // paragraphs afterwards (see body_subs.rs, `Cell#content`).
             let runs = if cell.text.is_empty() {
                 Vec::new()
-            } else if single {
-                vec![cell.text.clone()]
             } else {
-                crate::table::paragraphs(&cell.text)
+                vec![cell.text.clone()]
             };
             CellContent::Paragraphs(
                 runs.iter()
@@ -2717,13 +2734,14 @@ fn parse_block_content<'s, 'c>(
             if !sections {
                 return None;
             }
-            // Ruby peeks a comment-styled block's next line without preprocessing.
-            let has_next = if pending_style == Some("comment") {
-                lines.raw_has(*i + 1)
-            } else {
-                lines.has(*i + 1, context)
-            };
-            if !has_next {
+            // Ruby peeks a comment-styled block's next line without
+            // preprocessing it (`peek_lines` direct): unless it underlines a
+            // title, a later read still preprocesses it.
+            if pending_style == Some("comment") {
+                let underline = lines.peek_raw(*i + 1)?;
+                setext_level(line, &underline)?;
+                lines.raw_has(*i + 1);
+            } else if !lines.has(*i + 1, context) {
                 return None;
             }
             let (underline_off, underline) = lines.line(*i + 1);
@@ -3266,8 +3284,9 @@ fn parse_block_content<'s, 'c>(
     );
 
     // Paragraph: accumulate contiguous lines until this context's terminator.
-    // Only an unstyled paragraph uses Ruby's `read_paragraph_lines`.
-    let plain = matches!(pending_style, None | Some("normal"));
+    // Only an unstyled paragraph uses Ruby's `read_paragraph_lines`; Ruby
+    // resets a style it does not know for a paragraph before reading it.
+    let plain = !pending_style.is_some_and(changes_paragraph_type);
     let start = off;
     let mut end = off + line.len();
     let first = *i;

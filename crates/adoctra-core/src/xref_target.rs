@@ -62,6 +62,7 @@ fn extname(path: &str) -> bool {
 /// does. A natural reference keeps `#id` until the registry can look it up.
 pub(crate) fn resolve(
     refid: &str,
+    spelled: &str,
     macro_form: bool,
     compat: bool,
     attributes: &Attributes,
@@ -72,14 +73,21 @@ pub(crate) fn resolve(
     let mut src2src = false;
     let mut explicit = None;
     // A `#` preceded by `&` belongs to a character reference; Ruby's index
-    // -1 makes a leading `#` check the last character.
-    let hash = refid.find('#').filter(|&i| {
-        !if i == 0 {
-            refid.ends_with('&')
-        } else {
-            refid[..i].ends_with('&')
-        }
-    });
+    // -1 makes a leading `#` check the last character. Ruby tests the first
+    // `#` of the macros stage spelling (`spelled`), where a replacement is
+    // still its reference (`&#8217;`).
+    let entity = |text: &str| {
+        text.find('#').is_some_and(|i| {
+            if i == 0 {
+                text.ends_with('&')
+            } else {
+                text[..i].ends_with('&')
+            }
+        })
+    };
+    let hash = refid
+        .find('#')
+        .filter(|_| !entity(refid) && !entity(spelled));
     if compat {
         fragment = Some(refid.to_owned());
     } else if let Some(hash) = hash {
@@ -231,6 +239,7 @@ mod tests {
         let includes = Includes::from([("ch/full".into(), true), ("part".into(), false)]);
         resolve(
             refid,
+            refid,
             macro_form,
             false,
             &attributes,
@@ -290,12 +299,26 @@ mod tests {
         let mut attributes = Attributes::new();
         attributes.set("relfileprefix", "../");
         attributes.set("relfilesuffix", "/");
-        let x = resolve("other.adoc#x", false, false, &attributes, None);
+        let x = resolve(
+            "other.adoc#x",
+            "other.adoc#x",
+            false,
+            false,
+            &attributes,
+            None,
+        );
         assert_eq!(x.target, "../other/#x");
-        let x = resolve("file.pdf", true, false, &attributes, None);
+        let x = resolve("file.pdf", "file.pdf", true, false, &attributes, None);
         assert_eq!(x.target, "../file.pdf");
         // Compat mode keeps the whole refid as an id.
-        let x = resolve("other.adoc#x", false, true, &attributes, None);
+        let x = resolve(
+            "other.adoc#x",
+            "other.adoc#x",
+            false,
+            true,
+            &attributes,
+            None,
+        );
         assert_eq!(
             (x.target.as_str(), x.natural.is_some()),
             ("#other.adoc#x", false)

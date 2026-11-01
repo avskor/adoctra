@@ -24,6 +24,9 @@ pub(crate) struct Evaluation<'a> {
     images: Option<&'a crate::data_uri::Images<'a>>,
     /// Cross-reference labels while fields convert.
     labels: Option<&'a mut (dyn Labels + 'a)>,
+    /// Ruby's `Document#compat_mode` where it differs from the attribute
+    /// (reading keeps the header's; conversion plays entries back).
+    quote_mode: Option<bool>,
 }
 
 /// Ruby converts a cross-reference inside the macros stage: the target's
@@ -189,6 +192,7 @@ impl<'a> Evaluation<'a> {
             footnotes: None,
             images: None,
             labels: None,
+            quote_mode: None,
         }
     }
     pub fn definition(
@@ -207,7 +211,18 @@ impl<'a> Evaluation<'a> {
             footnotes: None,
             images: None,
             labels: None,
+            quote_mode: None,
         }
+    }
+    /// Quote and link rules in this compat mode instead of the attribute's.
+    pub fn with_quote_mode(mut self, compat: bool) -> Self {
+        self.quote_mode = Some(compat);
+        self
+    }
+    /// Ruby's `compat_mode` for quote and link rules.
+    pub fn quote_compat(&self) -> bool {
+        self.quote_mode
+            .unwrap_or_else(|| self.get("compat-mode").is_some())
     }
     /// Footnote macros register in this document's footnotes.
     pub fn with_footnotes(mut self, footnotes: &'a mut Footnotes) -> Self {

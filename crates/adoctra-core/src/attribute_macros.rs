@@ -299,7 +299,7 @@ fn flush_inlines(
             text,
             stage,
             attributes,
-            attributes.get("compat-mode").is_some(),
+            attributes.quote_compat(),
             0,
             edges.0,
             report,
@@ -1289,7 +1289,7 @@ fn macro_term(
                 value = report.passes.normal_parameter(
                     crate::attributes::reference_text(&value),
                     attributes,
-                    attributes.get("compat-mode").is_some(),
+                    attributes.quote_compat(),
                     span,
                     depth,
                 );
@@ -1405,7 +1405,7 @@ fn apply_bibliography(
             &[Specials, Quotes, Replacements],
             Default::default(),
             attributes,
-            attributes.get("compat-mode").is_some(),
+            attributes.quote_compat(),
             span,
             &mut report.passes.diagnostics,
         ));
@@ -1469,7 +1469,7 @@ fn apply_xrefs(text: Text, attributes: &mut Evaluation<'_>, report: &mut Report<
     if !src.contains("&lt;&lt;") && !src.contains("xref:") {
         return text;
     }
-    let compat = attributes.get("compat-mode").is_some();
+    let compat = attributes.quote_compat();
     let mut output = Text::default();
     let mut copied = 0;
     let mut at = 0;
@@ -1524,7 +1524,7 @@ fn apply_footnotes(text: Text, attributes: &mut Evaluation<'_>, report: &mut Rep
     if !src.contains("tnote") || !src.contains('[') || attributes.footnotes().is_none() {
         return text;
     }
-    let compat = attributes.get("compat-mode").is_some();
+    let compat = attributes.quote_compat();
     let mut output = Text::default();
     let mut copied = 0;
     let mut at = 0;
@@ -1806,8 +1806,15 @@ fn xref_parts(
     report: &mut Report<'_>,
 ) -> Vec<Part> {
     let refid = crate::attributes::reference_text(&slice(text, m.refid.clone(), None, false));
-    let mut xref =
-        crate::xref_target::resolve(&refid, m.macro_form, compat, attributes, attributes.xrefs());
+    let spelled = &text.text[m.refid.clone()];
+    let mut xref = crate::xref_target::resolve(
+        &refid,
+        spelled,
+        m.macro_form,
+        compat,
+        attributes,
+        attributes.xrefs(),
+    );
     let mut label = m
         .label
         .clone()
@@ -2236,11 +2243,18 @@ fn link_parts(
         label = first;
         attrs = parsed;
         lexical = crate::attributes::reference_text(&label);
-        if m.mailto {
-            if let Some(subject) = positional.get(&2) {
+        if m.mailto && positional.contains_key(&2) {
+            // Ruby encodes the subject and body as the macros stage spells
+            // them: replacements as their entity references (`&#8217;`).
+            let lexical = m
+                .label
+                .clone()
+                .map(|r| mailto_fields(&text.text[r]))
+                .unwrap_or_default();
+            if let Some(subject) = lexical.get(&2).or(positional.get(&2)) {
                 link.target.push_str("?subject=");
                 link.target.push_str(&encode_uri(subject));
-                if let Some(body) = positional.get(&3) {
+                if let Some(body) = lexical.get(&3).or(positional.get(&3)) {
                     link.target.push_str("&amp;body=");
                     link.target.push_str(&encode_uri(body));
                 }
@@ -2311,6 +2325,30 @@ fn strip_scheme(target: &str) -> &str {
     rest.strip_prefix("//")
         .or_else(|| rest.strip_prefix('/'))
         .unwrap_or(rest)
+}
+
+/// The positional fields of a mailto label in its lexical spelling (Ruby's
+/// AttributeList on the macros stage text): `\]` unescaped, line feeds read
+/// as spaces, a quoted value's escaped quote removed. Single-quoted values
+/// are left to the parsed fields.
+fn mailto_fields(label: &str) -> BTreeMap<usize, String> {
+    let src = label.replace("\\]", "]").replace('\n', " ");
+    let mut out = BTreeMap::new();
+    for field in crate::attribute_list::parse(&src) {
+        // A single-quoted value runs the normal substitutions again: the
+        // parsed (substituted) value applies.
+        if field.name.is_some() || field.single_quoted {
+            continue;
+        }
+        if let Some(range) = field.value {
+            let mut value = src[range].to_owned();
+            if let Some(quote) = field.quote {
+                value = value.replace(&format!("\\{quote}"), &quote.to_string());
+            }
+            out.insert(field.index + 1, value);
+        }
+    }
+    out
 }
 
 fn encode_uri(value: &str) -> String {

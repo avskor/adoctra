@@ -1204,16 +1204,19 @@ impl ParseContext<'_> {
         attributes: &Attributes,
         includes: &crate::xref_target::Includes,
     ) -> Vec<crate::Inline> {
+        // Ruby's `compat_mode` while reading is the header's: body entries
+        // change it only when conversion plays them back.
         let mut evaluation = crate::substitution_context::Evaluation::definition(
             attributes,
             &self.locked,
             &mut self.counters,
-            attributes.get("compat-mode").is_some(),
+            self.quote_compat,
         )
         .with_root(root_of(&mut self.root))
         .with_footnotes(&mut self.footnotes)
         .with_images(self.images)
-        .with_xrefs(Self::xrefs(&self.outfilesuffix, includes));
+        .with_xrefs(Self::xrefs(&self.outfilesuffix, includes))
+        .with_quote_mode(self.quote_compat);
         let inlines = crate::inline::scan_inlines_recorded(
             value,
             base,
@@ -1423,10 +1426,18 @@ impl ParseContext<'_> {
     }
 
     pub fn apply(&mut self, entry: AttributeEntry) {
-        self.apply_at(entry, crate::Span::new(0, 0));
+        self.apply_at(entry, crate::Span::new(0, 0), None);
     }
 
-    fn apply_at(&mut self, entry: AttributeEntry, span: crate::Span) {
+    /// `includes` is the catalog of included documents so far: a reference
+    /// a value converts while defining (in a `pass:` macro) resolves with it
+    /// and the current `outfilesuffix`, like Ruby's.
+    fn apply_at(
+        &mut self,
+        entry: AttributeEntry,
+        span: crate::Span,
+        includes: Option<&crate::xref_target::Includes>,
+    ) {
         let (key, value) = match entry {
             AttributeEntry::Set(key, value) => (key, Some(value)),
             AttributeEntry::Unset(key) => (key, None),
@@ -1437,7 +1448,7 @@ impl ParseContext<'_> {
                 Some(_) => AttributeEntry::Unset("notitle".to_owned()),
                 None => AttributeEntry::Set("notitle".to_owned(), String::new()),
             };
-            self.apply_at(notitle, span);
+            self.apply_at(notitle, span, includes);
         }
         if self.locked.contains(&key) {
             return;
@@ -1452,6 +1463,9 @@ impl ParseContext<'_> {
             .with_root(root_of(&mut self.root))
             .with_footnotes(&mut self.footnotes)
             .with_images(self.images);
+            if let Some(includes) = includes {
+                evaluation = evaluation.with_xrefs(Self::xrefs(&self.outfilesuffix, includes));
+            }
             let parts = attribute_entry_parts_report(
                 &v,
                 &mut evaluation,
@@ -1647,6 +1661,7 @@ pub(crate) fn consume_attribute_entry(
             lines.attribute_entries[first].0.start,
             lines.attribute_entries.last().unwrap().0.end,
         ),
+        Some(&lines.include_catalog),
     );
     true
 }

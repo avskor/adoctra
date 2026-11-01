@@ -1,7 +1,7 @@
 //! Differences from the pinned Asciidoctor found by `scripts/fuzz.py`,
 //! minimized; each asserts Ruby's behaviour (checked against 2.0.23).
 
-use adoctra_core::{parse, BlockKind, Inline, Severity, Span};
+use adoctra_core::{parse, Block, BlockKind, Inline, Severity, Span};
 
 fn literal_text(source: &str) -> (String, Span) {
     let result = parse(source);
@@ -534,4 +534,204 @@ fn a_folded_paragraph_entries_are_not_played_back() {
             ("z", Some("w".to_owned()), Span::new(at + 3, at + 6)),
         ]
     );
+}
+
+#[test]
+fn a_body_cell_substitutes_its_text_whole_then_splits_paragraphs() {
+    // Ruby's `Cell#content`: substitutions run on the whole cell text, then
+    // the result splits at `\n{2,}`; a head cell keeps `Cell#text`.
+    let paragraphs = |source: &str| -> Vec<String> {
+        let result = parse(source);
+        let BlockKind::Table(table) = &result.document.flat_blocks()[0].kind else {
+            panic!("{source:?}");
+        };
+        let cell = table.cells().next().unwrap();
+        let pieces: Vec<String> = match &cell.content {
+            adoctra_core::ast::CellContent::Paragraphs(paragraphs) => paragraphs
+                .iter()
+                .map(|nodes| format!("{nodes:?}"))
+                .collect(),
+            other => panic!("{other:?}"),
+        };
+        pieces
+    };
+    // The em dash replacement takes the blank line's second LF: one paragraph.
+    assert_eq!(paragraphs("|===\n|\"\n\n-- \n|===").len(), 1);
+    // A passthrough spanning the blank line converts to nothing.
+    assert!(paragraphs("|===\n|pass:a[\n\n]\n|===").is_empty());
+    // Plain text splits, keeping each piece's source range.
+    let source = "|===\n|ab\n\ncd\n|===";
+    let pieces = paragraphs(source);
+    let start = source.find("ab").unwrap();
+    assert_eq!(pieces.len(), 2);
+    assert!(
+        pieces[0].contains(&format!("start: {start}, end: {}", start + 2)),
+        "{pieces:?}"
+    );
+    assert!(
+        pieces[1].contains(&format!("start: {}, end: {}", start + 4, start + 6)),
+        "{pieces:?}"
+    );
+}
+
+/// The debug form of a document's blocks, for compact shape checks.
+fn tree(source: &str) -> String {
+    format!("{:?}", parse(source).document.flat_blocks())
+}
+
+#[test]
+fn an_unknown_paragraph_style_still_ends_a_list_item_paragraph_at_a_list() {
+    // Ruby resets a style it does not know before `read_paragraph_lines`.
+    let result = parse("* m\n[e]\n#\n. n");
+    let BlockKind::List { items, .. } = &result.document.flat_blocks()[0].kind else {
+        panic!();
+    };
+    assert!(
+        matches!(
+            items[0].blocks.as_slice(),
+            [Block {
+                kind: BlockKind::List { ordered: true, .. },
+                ..
+            }]
+        ),
+        "{:?}",
+        items[0]
+    );
+}
+
+#[test]
+fn a_comment_style_peek_leaves_the_next_line_to_preprocessing() {
+    // Ruby's direct peek does not consume the line: the list reads it
+    // preprocessed, so the malformed directive errs.
+    let source = "[comment]\n. m\nifdef::[]";
+    let result = parse(source);
+    let at = source.find("ifdef::[]").unwrap();
+    assert_eq!(
+        result
+            .diagnostics
+            .iter()
+            .map(|d| (d.message.as_str(), d.span))
+            .collect::<Vec<_>>(),
+        [(
+            "malformed ifdef directive: missing target",
+            Span::new(at, at + 9)
+        )]
+    );
+    assert!(!tree(source).contains("ifdef"), "{}", tree(source));
+}
+
+#[test]
+fn a_verse_drops_blank_edge_lines_after_substitutions() {
+    let verse = |source: &str| match &parse(source).document.flat_blocks()[0].kind {
+        BlockKind::Verse { inlines, .. } => format!("{inlines:?}"),
+        other => panic!("{other:?}"),
+    };
+    let source = "[verse]\n____\n\n]\n____";
+    let at = source.rfind("]\n____").unwrap();
+    assert!(
+        verse(source).contains(&format!(
+            "value: \"]\", span: Span {{ source_id: SourceId(0), start: {at}, end: {},",
+            at + 1
+        )),
+        "{}",
+        verse(source)
+    );
+    // Lines an attribute leaves blank go too.
+    assert!(!verse("[verse]\n____\n{empty}\na\n____").contains("\\n"));
+}
+
+#[test]
+fn mailto_fields_encode_their_lexical_spelling() {
+    // Ruby percent-encodes the macros stage spelling: a replacement is its
+    // character reference there.
+    assert!(tree("mailto:a@b[,b't]").contains("target: \"mailto:a@b?subject=b%26%238217%3Bt\""));
+    assert!(tree("mailto:a@b[,a&b]").contains("target: \"mailto:a@b?subject=a%26amp%3Bb\""));
+}
+
+#[test]
+fn a_hash_inside_a_replacement_reference_is_no_document_separator() {
+    // Ruby tests the first `#` of `i&#8217;c#d`, which belongs to the
+    // character reference: the whole refid names an id here.
+    let result = parse("A<<i'c#d>>");
+    let BlockKind::Paragraph { inlines } = &result.document.flat_blocks()[0].kind else {
+        panic!();
+    };
+    let Inline::CrossReference { xref, .. } = &inlines[1] else {
+        panic!("{inlines:?}");
+    };
+    assert_eq!(xref.path, None);
+    assert_eq!(xref.target, "#i\u{2019}c#d");
+}
+
+#[test]
+fn a_reference_a_body_attribute_converts_takes_the_output_suffix() {
+    // Ruby converts `pass:m` while defining the entry, with the current
+    // `outfilesuffix` (set after the header, unset within it).
+    assert!(tree("== e\n:o: pass:c,m[<<c#>>]\nA{o}").contains("target: \"c.html\""));
+    assert!(tree(":o: pass:c,m[<<c#>>]\n\nA{o}").contains("target: \"c\""));
+}
+
+#[test]
+fn reading_conversions_use_the_header_compat_mode() {
+    // Ruby's `compat_mode` changes during conversion only (playback), so a
+    // section title converted while reading keeps the header's mode.
+    let source = "== e\n:compat-mode:\n\n== +*+ `y`";
+    let shown = tree(source);
+    assert!(
+        !shown.contains("Monospace { children: [Text { value: \"*\""),
+        "{shown}"
+    );
+    assert!(tree("== e\n:compat-mode:\n= xref:o[e=]").contains("\"[o]\""));
+}
+
+#[test]
+fn a_manual_page_name_section_has_no_numeral() {
+    // Ruby's header NAME section is numbered (`sectnums`) without a numeral.
+    let source = "= t(1)\n:doctype: manpage\n:sectnums:\n:xrefstyle: full\n\n== NAME\n\nt - x\n\n== D\n\n<<_name>>";
+    let result = parse(source);
+    let blocks = result.document.flat_blocks();
+    let BlockKind::Paragraph { inlines } = &blocks.last().unwrap().kind else {
+        panic!();
+    };
+    let Inline::CrossReference { children, .. } = &inlines[0] else {
+        panic!("{inlines:?}");
+    };
+    let label: String = children
+        .iter()
+        .map(|child| match child {
+            Inline::Text { value, .. } => value.as_str(),
+            other => panic!("{other:?}"),
+        })
+        .collect();
+    assert_eq!(label, "Section , \u{201c}NAME\u{201d}");
+}
+
+#[test]
+fn illegal_part_content_is_reported_where_reading_completes_the_block() {
+    let result = parse("= B\n:doctype: book\n\n= P\n--\n--\n.");
+    let messages: Vec<_> = result
+        .diagnostics
+        .iter()
+        .map(|d| d.message.as_str())
+        .collect();
+    assert_eq!(
+        messages,
+        [
+            "illegal block content outside of partintro block",
+            "invalid part, must have at least one section (e.g., chapter, appendix, etc.)",
+        ]
+    );
+}
+
+#[test]
+fn an_escaped_quote_starting_a_single_quoted_value_skips_its_substitutions() {
+    // Ruby's AttributeList tests the unescaped value: `\'` makes it start
+    // with an apostrophe, so it is not substituted again.
+    let source = ":attribute-missing: warn\n\nlink:s['\\'{g}'=]";
+    let warnings = parse(source)
+        .diagnostics
+        .iter()
+        .filter(|d| d.message.contains("missing attribute"))
+        .count();
+    assert_eq!(warnings, 1);
 }

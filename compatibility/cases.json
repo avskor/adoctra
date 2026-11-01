@@ -37228,6 +37228,119 @@
       "category": "fuzz",
       "expect": "pass",
       "source": "m;; f\n:x: v\ny\n+\n:z: w\nz {x}{z}\n\n{x}{z}\n\nn;; g\n:q: r\n[e]\nh\n\n{q}"
+    },
+    {
+      "id": "fuzz-table-cell-text-substitutes-whole",
+      "category": "fuzz",
+      "expect": "pass",
+      "source": "|===\n|pass:a[{counter:n}]\n\n{n}\n\n|\"\n\n-- \n\n|a\n\nb\n\n\nc\n\n|link:x[y]\n\nz\n|===\n\n!===\n!--\n\n-\n\n!pass:a[\n\n]\n!==="
+    },
+    {
+      "id": "fuzz-list-item-unknown-style-breaks-at-list",
+      "category": "fuzz",
+      "expect": "pass",
+      "source": "* m\n[e]\n#\n. n\n\n* o\n[e]\nx\n- p\n\nt:: m\n[e]\nx\n. q"
+    },
+    {
+      "id": "fuzz-comment-style-list-preprocesses",
+      "category": "fuzz",
+      "expect": "pass",
+      "source": "[comment]\n. m\nifdef::x[]\ny\nendif::[]\nz"
+    },
+    {
+      "id": "fuzz-verse-blank-edge-lines",
+      "category": "fuzz",
+      "expect": "pass",
+      "source": "[verse]\n____\n\n]\n____\n\n[verse]\n--\n\ne\n--\n\n[verse]\n____\n{empty}\na\n\n____"
+    },
+    {
+      "id": "fuzz-mailto-subject-replacements",
+      "category": "fuzz",
+      "expect": "pass",
+      "source": "mailto:a@b[,b't] mailto:a@b[,a--b c] mailto:a@b[,\"it's\",b...] mailto:a@b[,(C) x]"
+    },
+    {
+      "id": "fuzz-reading-title-top-reference",
+      "category": "fuzz",
+      "expect": "pass",
+      "source": "== n<<#>>\n\n== a\n\n=== m<<#>>"
+    },
+    {
+      "id": "fuzz-top-reference-without-sectids",
+      "category": "fuzz",
+      "expect": "pass",
+      "source": ":sectids!:\n\n== n<<#>>"
+    },
+    {
+      "id": "fuzz-xref-hash-in-replacement",
+      "category": "fuzz",
+      "expect": "pass",
+      "source": "A<<i'c#d>> B<<a--b#c>> C<<a#b'c>>"
+    },
+    {
+      "id": "fuzz-pass-xref-in-body-attribute",
+      "category": "fuzz",
+      "expect": "pass",
+      "source": "== e\n:o: pass:c,m[<<c#>>]\n:p: pass:m[xref:c.adoc[]]\nA{o} {p}"
+    },
+    {
+      "id": "fuzz-reading-title-header-compat",
+      "category": "fuzz",
+      "expect": "pass",
+      "source": "== e\n:compat-mode:\n\n== +*+ `y`\n\n= xref:o[e=]"
+    },
+    {
+      "id": "fuzz-manpage-name-section-numeral",
+      "category": "fuzz",
+      "expect": "pass",
+      "source": "= t(1)\n:doctype: manpage\n:sectnums:\n:xrefstyle: full\n\n== NAME\n\nt - x\n\n== D\n\n<<_name>> <<_d>>"
+    },
+    {
+      "id": "fuzz-hdlist-title",
+      "category": "fuzz",
+      "expect": "pass",
+      "source": ".d\n[horizontal]\ne:: f"
+    },
+    {
+      "id": "fuzz-list-item-text-before-toc",
+      "category": "fuzz",
+      "expect": "pass",
+      "source": "* m\n+\ntoc::[]"
+    },
+    {
+      "id": "fuzz-top-reference-header-title-id",
+      "category": "fuzz",
+      "expect": "xfail",
+      "reason": "Ruby generates the section id from the title it converted while reading, whose reference to the document already shows the converted document title; adoctra labels that reference at conversion and generates the id without it",
+      "source": "= T\n\n== n<<#>>"
+    },
+    {
+      "id": "fuzz-mailto-single-quoted-replacement",
+      "category": "fuzz",
+      "expect": "xfail",
+      "reason": "Ruby encodes a single-quoted mailto field after its repeated normal substitutions, with replacements spelled as character references; adoctra encodes the decoded character",
+      "source": "mailto:a@b[l,'x--y z']"
+    },
+    {
+      "id": "fuzz-comment-style-setext-title",
+      "category": "fuzz",
+      "expect": "xfail",
+      "reason": "Ruby's direct peek under a comment style does not detect a setext section title, so the lines are a dropped comment paragraph; adoctra reads the section",
+      "source": "[comment]\nTitle\n=====\n\nx"
+    },
+    {
+      "id": "fuzz-unescaped-quote-in-href",
+      "category": "fuzz",
+      "expect": "xfail",
+      "reason": "Ruby writes the quote into the href unescaped, breaking the attribute (intentional difference, user decision 2026-11-01; see compatibility.adoc)",
+      "source": "<<t\">>"
+    },
+    {
+      "id": "fuzz-unescaped-quote-in-role",
+      "category": "fuzz",
+      "expect": "xfail",
+      "reason": "Ruby writes the quote into the class attribute unescaped, breaking it (intentional difference, user decision 2026-11-01; see compatibility.adoc)",
+      "source": "[.\"]\na"
     }
   ]
 }

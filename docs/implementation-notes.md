@@ -2162,3 +2162,28 @@ after the body so the tree keeps its nodes. **Folded entries**: when
 `item_blocks_end` folds a paragraph, the declarations between the item's
 first line and the paragraph leave `body_subs.entries` (Ruby never plays a
 discarded block's entries back).
+**Cell paragraphs** (Ruby's `Cell#content`): a body cell's text defers as one
+field; after conversion `body_subs::split_paragraphs` splits top-level text at
+`\n{2,}` (a run inside nested markup is no boundary). `write_back`'s fold keeps
+runs of two or more line feeds (only cell text holds them) and turns single
+ones into spaces. **Paragraph styles**: an unknown style counts as plain for
+`read_paragraph_lines` (Ruby resets it). **Comment-style peek**:
+`Reader::peek_raw` looks at the next line without loading it; it is loaded
+raw only when it underlines a setext title. **Verse edges**: a verse with the
+default subs trims blank edge lines after substitution
+(`BodySubs::trim_edges`, `trim_node_edges`, across text and attribute
+values). **mailto**: subject/body come from the label's lexical spelling
+(`mailto_fields`), single-quoted fields from the parsed value. **Top
+reference while reading**: `Ids::reading_top_label` gives `[^top]` without a
+document title or a finished top-level section (sections join after their
+content), else that section's reading title; `convert` always records the
+converting title so a reference inside it converts it again. **Hash in a
+character reference**: `xref_target::resolve` also tests the macros stage
+spelling (`spelled`). **Attribute entries** get the xref scope with the
+include catalog so far (`apply_at`). **Reading compat**: `reading_title`
+evaluates with `with_quote_mode(quote_compat)`; `inline.rs` and the macros
+read `Evaluation::quote_compat()`. **Manual page NAME** registers with a
+numbered section without numerals (`Ids::manpage_name`). **Part content**:
+`illegal block content` is placed at the block's stamp (blocks of books are
+stamped). **AttributeList**: a value starting with `\'` is not
+single-quoted.

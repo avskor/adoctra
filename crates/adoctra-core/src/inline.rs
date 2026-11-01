@@ -64,7 +64,7 @@ pub(crate) fn scan_inlines_recorded(
     diagnostics: &mut Vec<crate::Diagnostic>,
     mut tokens: Option<&mut Vec<crate::Token>>,
 ) -> Vec<Inline> {
-    let compat = evaluation.get("compat-mode").is_some();
+    let compat = evaluation.quote_compat();
     let mut quotes = Quotes::new(src, base, evaluation, compat);
     let mut out = scan_unprocessed(src, base, &quotes);
     if let Some(tokens) = tokens.as_deref_mut() {

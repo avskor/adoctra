@@ -233,7 +233,12 @@ def normalize(node, verbatim=False, block_kind=None):
     if node.tag == "div" and "hdlist" in html_classes(node.attrs.get("class", "")):
         # Ruby's horizontal description list is a layout table; adoctra's is a
         # <dl class="hdlist">. Rows become terms (split at <br>) and descriptions.
+        # Its title <div> leads the list, like the other wrappers' titles.
+        titles = [c for c in node.children if isinstance(c, Element) and c.tag == "div"
+                  and "title" in html_classes(c.attrs.get("class", ""))]
         node = hdlist(node)
+        if titles:
+            return [r for t in titles for r in normalize(t, verbatim, block_kind)] + normalize(node, verbatim, block_kind)
     if node.tag == "dl" and "hdlist" in html_classes(node.attrs.get("class", "")):
         # adoctra's entries are <div> groups (rows); widths are stylesheet variables.
         attrs = {k: v for k, v in node.attrs.items() if k != "style"}
@@ -328,9 +333,11 @@ def normalize(node, verbatim=False, block_kind=None):
     is_prose = tag in INLINE or tag in {"li", "attribution"} or "title" in classes
     children = compact(children, is_prose, verbatim)
     if tag == "li":
-        # A line break before an attached block is layout, not item text.
+        # A line break before an attached block (or a block-level comment
+        # such as `toc disabled`, outside Ruby's item <p>) is layout, not
+        # item text.
         for i, child in enumerate(children):
-            if isinstance(child, dict) and child["tag"] in LIST_BLOCKS:
+            if isinstance(child, dict) and (child["tag"] in LIST_BLOCKS or child["tag"] == "#comment"):
                 if i and isinstance(children[i - 1], str):
                     children[i - 1] = children[i - 1].rstrip(" ")
     if tag in {"p", "li", "dt", "attribution", "h1", "h2", "h3", "h4", "h5", "h6"} or "title" in classes:
