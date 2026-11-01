@@ -2187,10 +2187,21 @@ raw only when it underlines a setext title. **Verse edges**: a verse with the
 default subs trims blank edge lines after substitution
 (`BodySubs::trim_edges`, `trim_node_edges`, across text and attribute
 values). **mailto**: subject/body come from the label's lexical spelling
-(`mailto_fields`), single-quoted fields from the parsed value. **Top
-reference while reading**: `Ids::reading_top_label` gives `[^top]` without a
-document title or a finished top-level section (sections join after their
-content), else that section's reading title; `convert` always records the
+(`mailto_fields`), single-quoted fields from the parsed value. `parse_label`
+takes the label's lexical `Text` (`slice_text`), so a single-quoted value
+reruns the normal substitutions on Ruby's spelling: an earlier replacement is
+its character reference (`&#8212;&#8203;`) and stays one (mailto
+subject/body, `role`, `window`, xref fields). **Top
+reference while reading**: `Ids::reading_top_label` follows Ruby's
+`Document#xreftext`: a nonempty document reftext (header block or `reftext`
+attribute snapshot), else the `title` attribute, else the document title,
+converted now with the reading attributes (`EarlyTitle` with
+`resolve::HEADER_KEY`, memoized in the early titles under the heading range;
+`BodySubs::execute` displays that conversion instead of converting again,
+like `@converted_title`). A reference inside the title being converted shows
+`[^top]` (`header_resolving`, Ruby's `@resolving_xref`). Without a document
+title it gives `[^top]` before a finished top-level section (sections join
+after their content), else that section's reading title; `convert` always records the
 converting title so a reference inside it converts it again. **Hash in a
 character reference**: `xref_target::resolve` also tests the macros stage
 spelling (`spelled`). **Attribute entries** get the xref scope with the

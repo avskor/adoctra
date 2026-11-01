@@ -236,7 +236,11 @@ pub(crate) fn resolve_definition_parts(parts: &mut Vec<crate::AttributePart>, fi
 pub(crate) type EarlyTitle<'a> =
     dyn FnMut((usize, usize), &crate::Attributes) -> Option<Vec<Inline>> + 'a;
 
-/// Deferred block titles converted while reading, keyed by placeholder range.
+/// The [`EarlyTitle`] key of the document title.
+pub(crate) const HEADER_KEY: (usize, usize) = (usize::MAX, usize::MAX);
+
+/// Deferred block titles converted while reading, keyed by placeholder range
+/// (the document title by its heading range).
 pub(crate) type EarlyTitles = BTreeMap<(usize, usize), Vec<Inline>>;
 
 pub(crate) enum Title {
@@ -312,6 +316,7 @@ pub(crate) fn register(
         sections,
         early_title,
         early: EarlyTitles::new(),
+        header_resolving: false,
         registry: Registry::new(),
         diagnostics,
         placed,
@@ -358,6 +363,9 @@ struct Ids<'a> {
     sections: &'a BTreeMap<(usize, usize), crate::section_numbers::Section>,
     early_title: &'a mut EarlyTitle<'a>,
     early: EarlyTitles,
+    /// The document title is converting for a reference (Ruby's
+    /// `@resolving_xref`): a reference inside it shows `[^top]`.
+    header_resolving: bool,
     registry: Registry,
     diagnostics: &'a mut Vec<Diagnostic>,
     /// Duplicate ids, reported where reading registered them in Ruby.
@@ -554,7 +562,7 @@ impl Ids<'_> {
             ));
         }
         if xref.refid.as_deref().map_or(true, str::is_empty) {
-            return self.reading_top_label(span);
+            return self.reading_top_label(span, attributes);
         }
         let id = decoded_refid(xref, lexical)?;
         if self.registry.contains_key(&id) {
@@ -765,13 +773,59 @@ impl Ids<'_> {
     /// A label while reading. The reftext uses the reading attributes without
     /// executing expressions; a deferred title is converted early; `None`
     /// leaves the reference to conversion.
-    /// A reference to the current document while reading: Ruby's `doctitle`
-    /// then has no title to show without a document title or a top-level
-    /// section reading has finished (a section joins the document after its
-    /// content), so it displays `[^top]`; otherwise conversion labels it.
-    fn reading_top_label(&self, span: Span) -> Option<Vec<Inline>> {
-        if self.doctitle.is_some() {
-            return None;
+    /// A reference to the current document while reading (Ruby's
+    /// `Document#xreftext`): a nonempty reftext, else `doctitle` — the
+    /// `title` attribute, else the document title, which converts now with
+    /// the reading attributes and keeps that conversion (Ruby's
+    /// `@converted_title`). Without a document title, `doctitle` has nothing
+    /// to show before a top-level section reading has finished (a section
+    /// joins the document after its content), so it displays `[^top]`.
+    fn reading_top_label(
+        &mut self,
+        span: Span,
+        attributes: &crate::Attributes,
+    ) -> Option<Vec<Inline>> {
+        if let Some(doctitle) = self.doctitle {
+            let top = || {
+                vec![Inline::Text {
+                    value: "[^top]".into(),
+                    span,
+                }]
+            };
+            if self.header_resolving {
+                return Some(top());
+            }
+            let header_reftext = self
+                .registry
+                .values()
+                .find(|target| matches!(target.title, Some(Title::Header)))
+                .and_then(|target| target.reftext.as_ref())
+                .map(|read| read.snapshot(attributes));
+            let reftext = header_reftext.or_else(|| {
+                attributes.get("reftext").map(|value| {
+                    crate::reftext::Read::source(value, span.start).snapshot(attributes)
+                })
+            });
+            let mut label = if let Some(nodes) = reftext.filter(|n| !inline_text(n).is_empty()) {
+                nodes
+            } else if let Some(value) = attributes.get("title") {
+                crate::entity_references::reference_inlines(value, span)
+            } else {
+                let key = (doctitle.start, doctitle.end);
+                match self.early.get(&key) {
+                    Some(converted) => converted.clone(),
+                    None => {
+                        let mut converted = (self.early_title)(HEADER_KEY, attributes)?;
+                        self.header_resolving = true;
+                        self.resolve_reading(&mut converted, attributes);
+                        self.header_resolving = false;
+                        self.early.insert(key, converted.clone());
+                        converted
+                    }
+                }
+            };
+            strip_label(&mut label);
+            return Some(label);
         }
         let nested = |start: usize| {
             self.sections

@@ -1815,12 +1815,13 @@ fn xref_parts(
         attributes,
         attributes.xrefs(),
     );
-    let mut label = m
+    let label_text = m
         .label
         .clone()
-        .map_or_else(Vec::new, |r| slice(text, r, None, m.macro_form));
+        .map_or_else(Text::default, |r| slice_text(text, r, None, m.macro_form));
+    let mut label = label_text.clone().into_parts();
     if m.macro_form && !compat && crate::attributes::reference_text(&label).contains('=') {
-        let (first, mut named, _) = parse_label(&label, attributes, compat, 0, span, report);
+        let (first, mut named, _) = parse_label(&label_text, attributes, compat, 0, span, report);
         label = first;
         xref.role = named.remove("role");
         xref.xrefstyle = named.remove("xrefstyle");
@@ -2190,6 +2191,12 @@ fn email(src: &str, at: usize) -> Option<LinkMatch> {
 }
 
 fn slice(text: &Text, range: Range<usize>, unescape: Option<char>, brackets: bool) -> Vec<Part> {
+    slice_text(text, range, unescape, brackets).into_parts()
+}
+
+/// [`slice`] as lexical text: earlier replacements keep their character
+/// reference spelling (`&#8212;`), as Ruby's AttributeList sees them.
+fn slice_text(text: &Text, range: Range<usize>, unescape: Option<char>, brackets: bool) -> Text {
     let mut out = Text::default();
     let mut copied = range.start;
     let mut chars = text.text[range.clone()].char_indices().peekable();
@@ -2205,7 +2212,7 @@ fn slice(text: &Text, range: Range<usize>, unescape: Option<char>, brackets: boo
         }
     }
     text.copy(copied..range.end, &mut out);
-    out.into_parts()
+    out
 }
 
 fn link_parts(
@@ -2225,15 +2232,16 @@ fn link_parts(
         },
         ..Default::default()
     };
-    let mut label = m
+    let label_text = m
         .label
         .clone()
-        .map_or_else(Vec::new, |r| slice(text, r, None, true));
+        .map_or_else(Text::default, |r| slice_text(text, r, None, true));
+    let mut label = label_text.clone().into_parts();
     let mut lexical = crate::attributes::reference_text(&label);
     let mut attrs = BTreeMap::new();
     if !compat && ((!m.mailto && lexical.contains('=')) || (m.mailto && lexical.contains(','))) {
         let (first, parsed, positional) = parse_label(
-            &label,
+            &label_text,
             attributes,
             compat,
             depth,
@@ -2367,14 +2375,16 @@ fn encode_uri(value: &str) -> String {
 /// positional field retains the original semantic fragments instead of parsing
 /// the generated reference tags back into a tree.
 fn parse_label(
-    parts: &[Part],
+    label: &Text,
     attributes: &mut Evaluation<'_>,
     compat: bool,
     depth: usize,
     span: Span,
     report: &mut Report<'_>,
 ) -> (Vec<Part>, BTreeMap<String, String>, BTreeMap<usize, String>) {
-    let mut text = Text::from_parts(parts);
+    // The label's lexical view: earlier replacements keep their character
+    // reference spelling, which a single-quoted value substitutes again.
+    let mut text = label.clone();
     // AttributeList folds physical newlines before parsing mixed text/attrs.
     let ranges: Vec<_> = text.text.match_indices('\n').map(|(i, _)| i).collect();
     if !ranges.is_empty() {
@@ -2406,26 +2416,25 @@ fn parse_label(
         };
         // The macro label already removed one bracket escape. AttributeList
         // only removes escapes for its delimiter quote; nested pass keeps the rest.
-        let mut value = match &field.gap {
+        let sliced = match &field.gap {
             Some(gap) if src[gap.clone()].contains('\t') => {
                 let mut normalized = Text::default();
                 text.copy(range.start..gap.start, &mut normalized);
                 text.replacement(gap.clone(), &" ".repeat(gap.len()), None, &mut normalized);
                 text.copy(gap.end..range.end, &mut normalized);
-                normalized.into_parts()
+                normalized
             }
-            _ => slice(&text, range, field.quote, false),
+            _ => slice_text(&text, range, field.quote, false),
         };
+        let lexical_input = sliced.text.clone();
+        let mut value = sliced.into_parts();
         if field.single_quoted && !matches!(name, Some("title" | "reftext" | "opts" | "options")) {
             // AttributeList repeats the complete normal pipeline on the
-            // lexical value, sharing slots and the recursion budget with pass:.
-            value = report.passes.normal_parameter(
-                crate::attributes::reference_text(&value),
-                attributes,
-                compat,
-                span,
-                depth,
-            );
+            // lexical value (earlier replacements spelled as character
+            // references), sharing slots and the recursion budget with pass:.
+            value = report
+                .passes
+                .normal_parameter(lexical_input, attributes, compat, span, depth);
         }
         let lexical = crate::attributes::reference_text(&value);
         if let Some(name) = name {
@@ -2450,7 +2459,7 @@ fn parse_label(
     }
     let first = first.unwrap_or_default();
     if positional.get(&1).is_some_and(|s| s == src) {
-        return (parts.to_vec(), BTreeMap::new(), BTreeMap::new());
+        return (label.clone().into_parts(), BTreeMap::new(), BTreeMap::new());
     }
     (first, named, positional)
 }

@@ -6008,6 +6008,38 @@ mod tests {
     }
 
     #[test]
+    fn a_top_reference_in_a_section_title_renders_the_early_document_title() {
+        // The document title converts once, for the reference while reading
+        // (its counter steps there); the heading and the label show it.
+        let html = render("= T {counter:c}\n:showtitle:\n\n== n<<#>> {c}");
+        assert!(html.contains("<h1>T 2</h1>"), "{html}");
+        assert!(
+            html.contains(r##"<h2 id="_nt_2_1">n<a href="#">T 2</a> 1</h2>"##),
+            "{html}"
+        );
+        // A reference inside the title being converted shows `[^top]`.
+        let html = render("= T <<#>>\n:showtitle:\n\n== n<<#>>");
+        assert!(
+            html.contains(r##"<h1>T <a href="#">[^top]</a></h1>"##),
+            "{html}"
+        );
+        assert!(
+            html.contains(r##"<h2 id="_nt_top">n<a href="#">T [^top]</a></h2>"##),
+            "{html}"
+        );
+    }
+
+    #[test]
+    fn single_quoted_link_fields_keep_replacement_references() {
+        let html = render("mailto:a@b[l,'x--y z'] https://e.org['x--y',role='a--b']");
+        assert!(
+            html.contains(r#"href="mailto:a@b?subject=x%26%238212%3B%26%238203%3By%20z""#),
+            "{html}"
+        );
+        assert!(html.contains(r#"class="a&#8212;&#8203;b""#), "{html}");
+    }
+
+    #[test]
     fn base_typography_and_column_follow_asciidoctor_stylesheet() {
         // Ruby's fonts, colours, sizes and column; the visual-v1 profile
         // (scripts/visual.py) checks the rendered result.

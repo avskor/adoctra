@@ -237,7 +237,13 @@ impl BodySubs {
         xrefs: crate::xref_target::Scope<'_>,
         diagnostics: &mut Vec<Diagnostic>,
     ) -> Option<Vec<Inline>> {
-        let pending = self.pending.remove(&key)?;
+        // The document title stays for display; conversion takes the early
+        // result instead (Ruby's memo).
+        let pending = if key == crate::resolve::HEADER_KEY {
+            self.header.clone()?
+        } else {
+            self.pending.remove(&key)?
+        };
         let mut attributes = attributes.clone();
         attributes.local_hardbreaks = pending.hardbreaks;
         let mut counters = counters.clone();
@@ -306,8 +312,14 @@ impl BodySubs {
         let displayed = execution.attributes.get("embedded").is_none()
             || execution.attributes.get("notitle").is_none();
         if let (Some(header), Some(block)) = (self.header, blocks.first_mut()) {
+            let key = (block.span.start, block.span.end);
             if let BlockKind::Heading { inlines, .. } = &mut block.kind {
-                if displayed {
+                // A reference converted it while reading (Ruby's
+                // `@converted_title`): it does not convert again.
+                if let Some(early) = execution.titles.remove(&key) {
+                    *inlines = early.clone();
+                    execution.header_title = Some(early);
+                } else if displayed {
                     *inlines = execution.convert_header(header);
                 } else {
                     execution.header_lazy = Some(header);

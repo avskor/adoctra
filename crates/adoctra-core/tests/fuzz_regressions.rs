@@ -735,3 +735,69 @@ fn an_escaped_quote_starting_a_single_quoted_value_skips_its_substitutions() {
         .count();
     assert_eq!(warnings, 1);
 }
+
+#[test]
+fn single_quoted_link_fields_substitute_the_reference_spelling_again() {
+    // Ruby's AttributeList repeats the normal substitutions on a
+    // single-quoted value as the macros stage spells it: an earlier
+    // replacement is its character reference, and stays one.
+    let mailto = tree("mailto:a@b[l,'x--y z']");
+    assert!(
+        mailto.contains("target: \"mailto:a@b?subject=x%26%238212%3B%26%238203%3By%20z\""),
+        "{mailto}"
+    );
+    let mailto = tree("mailto:a@b[l,'*b* (C) x']");
+    assert!(mailto.contains("%20%26%23169%3B%20x\""), "{mailto}");
+    let link = tree("https://e.org[x,role='a--b',window='_b--x']");
+    assert!(link.contains("\"a&#8212;&#8203;b\""), "{link}");
+    assert!(link.contains("\"_b&#8212;&#8203;x\""), "{link}");
+    let xref = tree("xref:t[x,role='r--s']\n\n[[t]]\nT");
+    assert!(xref.contains("\"r&#8212;&#8203;s\""), "{xref}");
+}
+
+/// The id of the document's first section (after the document title).
+fn first_section_id(source: &str) -> Option<String> {
+    let result = parse(source);
+    let blocks = result.document.flat_blocks();
+    blocks
+        .iter()
+        .find(|block| matches!(block.kind, BlockKind::Heading { level: 1, .. }))
+        .and_then(|block| block.id.clone())
+}
+
+#[test]
+fn a_top_reference_in_a_section_title_reads_the_document_title() {
+    // Ruby's Document#xreftext converts the document title while the section
+    // title converts for its id, and keeps that conversion.
+    assert_eq!(first_section_id("= T\n\n== n<<#>>").as_deref(), Some("_nt"));
+    assert_eq!(
+        first_section_id("= *T* {x}\n:x: y\n\n== n<<#>>").as_deref(),
+        Some("_nt_y")
+    );
+    // A `title` attribute or the document's reftext comes first.
+    assert_eq!(
+        first_section_id("= T\n:title: Z\n\n== n<<#>>").as_deref(),
+        Some("_nz")
+    );
+    assert_eq!(
+        first_section_id("[reftext=R]\n= T\n\n== n<<#>>").as_deref(),
+        Some("_nr")
+    );
+    assert_eq!(
+        first_section_id("= T\n:reftext: *Q*\n\n== n<<#>>").as_deref(),
+        Some("_nq")
+    );
+    // A counter in the document title steps for that early conversion.
+    let source = "= T {counter:c}\n\n== n<<#>> {c}";
+    assert_eq!(first_section_id(source).as_deref(), Some("_nt_2_1"));
+}
+
+#[test]
+fn a_top_reference_inside_the_document_title_shows_top() {
+    // Ruby's `@resolving_xref`: the reference inside the title being
+    // converted for a reference shows `[^top]` (no endless conversion).
+    assert_eq!(
+        first_section_id("= T <<#>>\n\n== n<<#>>").as_deref(),
+        Some("_nt_top")
+    );
+}
