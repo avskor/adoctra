@@ -140,6 +140,14 @@ cases = {
     assert(cell[:colspan] == 2 && cell[:rowspan] == 1 && cell[:halign] == 'center' && cell[:valign] == 'middle', 'cell layout lost')
     assert(cell[:paragraphs][0][0][:kind] == 'strong' && node[:foot][0][0][:paragraphs][0][0][:value] == 'Last', 'cell contents lost')
   end,
+  'tables retain caption frame grid stripes width and float' => lambda do
+    node = project(":table-stripes: odd\n\n.T\n[%autowidth,frame=topbot,grid=rows,width=150%,float=left]\n|===\n|a\n|===")[:blocks][0]
+    assert(node[:caption] == [{ kind: 'text', value: 'Table 1. ' }], 'caption lost')
+    assert(node[:frame] == 'ends' && node[:grid] == 'rows' && node[:stripes] == 'odd', 'frame/grid/stripes lost')
+    assert(node[:width] == 100 && node[:explicit_width] && node[:autowidth] && node[:float] == 'left', 'width/float lost')
+    node = project("|===\n|a\n|===")[:blocks][0]
+    assert(node[:caption].nil? && node[:frame] == 'all' && node[:stripes].nil? && !node[:explicit_width], 'table defaults changed')
+  end,
   'cell styles remain distinct from explicit inline formatting' => lambda do
     node = project("[cols=\"s,l\",options=noheader]\n|===\n|*Bold*\n\nSecond.\nl|  *literal* < &\n    next\n|===")[:blocks][0]
     cell = node[:body][0][0]

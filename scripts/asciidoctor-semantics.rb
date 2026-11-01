@@ -245,10 +245,23 @@ class SemanticConverter < Asciidoctor::Converter::Base
     when 'image'
       metadata(node).merge(image_fields(node))
     when 'table'
-      result = metadata(node).merge(columns: node.columns.map { |column|
+      # Ruby's Table#initialize resolves tablepcwidth; frame=topbot is an
+      # alias of ends that the converter maps before using the value.
+      frame = node.attr 'frame', 'all', 'table-frame'
+      result = metadata(node).merge(
+        caption: node.caption ? inlines(node.caption) : nil,
+        frame: frame == 'topbot' ? 'ends' : frame,
+        grid: node.attr('grid', 'all', 'table-grid'),
+        stripes: node.attr('stripes', nil, 'table-stripes'),
+        width: node.attr('tablepcwidth'),
+        explicit_width: node.attr?('width'),
+        autowidth: node.option?('autowidth'),
+        float: node.attr('float')
+      )
+      result[:columns] = node.columns.map { |column|
         { style: column.style&.to_s, halign: column.attr('halign'), valign: column.attr('valign'),
           width: column.attr('colpcwidth').to_s, autowidth: column.option?('autowidth') }
-      })
+      }
       [:head, :body, :foot].each do |group|
         result[group] = node.rows.public_send(group).map { |row| row.map { |cell| table_cell cell, group } }
       end

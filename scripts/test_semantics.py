@@ -25,7 +25,9 @@ def document(value='Text.'):
 def table():
     cell = {'style': None, 'halign': 'left', 'valign': 'top', 'colspan': None, 'rowspan': None,
             'background': None, 'paragraphs': [[{'name': 'text', 'value': 'First.'}], [{'name': 'text', 'value': 'Second.'}]]}
-    return {'name': 'table', 'columns': [{'style': None, 'halign': 'left', 'valign': 'top', 'width': '100', 'autowidth': False}],
+    return {'name': 'table', 'attributes': {}, 'options': [], 'caption': None, 'width': 100, 'frame': 'all',
+            'grid': 'all', 'stripes': None,
+            'columns': [{'style': None, 'halign': 'left', 'valign': 'top', 'width': '100', 'autowidth': False}],
             'head': [], 'body': [[cell]], 'foot': []}
 
 
@@ -220,6 +222,24 @@ class SemanticProjectionTests(unittest.TestCase):
         changed['foot'], changed['body'] = changed['body'], []
         self.assertNotEqual(original, semantics.block_projection(changed))
 
+    def test_table_presentation_fields_are_compared(self):
+        node = table()
+        original = semantics.block_projection(node)
+        self.assertEqual({key: original[key] for key in semantics.TABLE_FIELDS},
+                         {'caption': None, 'frame': 'all', 'grid': 'all', 'stripes': None, 'width': 100,
+                          'explicit_width': False, 'autowidth': False, 'float': None})
+        for field, value in [('caption', 'Table 1. '), ('frame', 'ends'), ('grid', 'rows'), ('stripes', 'even'),
+                             ('width', 50), ('attributes', {'width': '100%'}), ('attributes', {'float': 'left'}),
+                             ('options', ['autowidth'])]:
+            changed = dict(copy.deepcopy(node), **{field: value})
+            projected = semantics.block_projection(changed)
+            semantics.validate_block(projected)
+            self.assertNotEqual(original, projected, field)
+        # An explicit caption keeps its parts; an empty caption differs from none.
+        parts = semantics.block_projection(dict(node, caption='X ', caption_parts=[{'kind': 'raw', 'value': 'X &amp; '}]))
+        self.assertEqual(parts['caption'], [text('X & ')])
+        self.assertEqual(semantics.block_projection(dict(node, caption=''))['caption'], [])
+
     def test_header_cells_are_single_inline_runs_including_empty_content(self):
         node = table()
         node['head'] = [[dict(node['body'][0][0], paragraphs=[])]]
@@ -266,6 +286,12 @@ class SemanticProjectionTests(unittest.TestCase):
             invalid = copy.deepcopy(valid)
             invalid['body'][0][0][field] = value
             with self.subTest(field=field), self.assertRaises(ValueError):
+                semantics.validate_block(invalid)
+        for field, value in [('caption', 'Table 1.'), ('frame', None), ('grid', 1), ('stripes', True),
+                             ('width', '100'), ('width', 101), ('explicit_width', None), ('autowidth', 1),
+                             ('float', [])]:
+            invalid = dict(copy.deepcopy(valid), **{field: value})
+            with self.subTest(table=field), self.assertRaises(ValueError):
                 semantics.validate_block(invalid)
         for field, value in [('width', 50), ('width', 'nan'), ('autowidth', 1), ('future', True)]:
             invalid = copy.deepcopy(valid)
@@ -537,7 +563,7 @@ class SemanticProjectionTests(unittest.TestCase):
     def test_pinned_fixture_expands_attributes_and_macros_inside_quotes(self):
         root = CORPUS / 'upstream'
         manifest, cases = acceptance.load_corpus(root / 'semantics.json')
-        self.assertEqual(len(cases), 134)
+        self.assertEqual(len(cases), 135)
         self.assertEqual(manifest['profile'], semantics.PROFILE)
         reference = json.loads((root / 'reference/semantic-attributes-macros-in-quotes.json').read_text())
         strong = reference['semantics']['blocks'][0]['inlines'][0]

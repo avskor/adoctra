@@ -278,6 +278,15 @@ def block_projection(block):
             result['style'] = block.get('style') or ('arabic' if context == 'olist' else None)
             result['items'] = [item_projection(item, callout=context == 'colist') for item in block['items']]
     elif context == 'table':
+        if block.get('caption_parts') is not None:
+            result['caption'] = canonical(parts_projection(block['caption_parts']), prose=False)
+        else:
+            result['caption'] = canonical([{'kind': 'text', 'value': lexical(block['caption'])}], prose=False) if block.get('caption') is not None else None
+        attrs = block.get('attributes', {})
+        result.update({key: block[key] for key in ['frame', 'grid', 'stripes', 'width']})
+        result['explicit_width'] = 'width' in attrs
+        result['autowidth'] = 'autowidth' in block.get('options', [])
+        result['float'] = lexical(attrs['float']) if 'float' in attrs else None
         result['columns'] = copy.deepcopy(block['columns'])
         for group in ['head', 'body', 'foot']:
             result[group] = [[cell_projection(cell, group) for cell in row] for row in block[group]]
@@ -376,6 +385,11 @@ def reference_projection(result, names):
             node['alt'] = inlines(node['alt'], False)
             node['attributes'] = {key: lexical(value) for key, value in node['attributes'].items()}
         if node['context'] == 'table':
+            if node['caption'] is not None:
+                node['caption'] = inlines(node['caption'], False)
+            for key in ['frame', 'grid', 'stripes', 'float']:
+                if node[key] is not None:
+                    node[key] = lexical(node[key])
             for group in ['head', 'body', 'foot']:
                 for row in node[group]:
                     for cell in row:
@@ -559,7 +573,18 @@ def validate_alignment(node):
     require(node.get('valign') in {'top', 'middle', 'bottom'})
 
 
+TABLE_FIELDS = {'caption', 'frame', 'grid', 'stripes', 'width', 'explicit_width', 'autowidth', 'float'}
+
+
 def validate_table(node):
+    if node.get('caption') is not None:
+        validate_inlines(node['caption'])
+    for key in ['frame', 'grid']:
+        require(isinstance(node.get(key), str))
+    for key in ['stripes', 'float']:
+        require(node.get(key) is None or isinstance(node[key], str))
+    require(type(node.get('width')) is int and 0 <= node['width'] <= 100)
+    require(type(node.get('explicit_width')) is bool and type(node.get('autowidth')) is bool)
     require(isinstance(node.get('columns'), list) and bool(node['columns']))
     for column in node['columns']:
         require(isinstance(column, dict) and set(column) == {'style', 'halign', 'valign', 'width', 'autowidth'})
@@ -639,7 +664,7 @@ def validate_block(node):
             else:
                 validate_item(entry, callout=context == 'colist')
     elif context == 'table':
-        keys.update({'columns', 'head', 'body', 'foot'})
+        keys.update({'columns', 'head', 'body', 'foot'} | TABLE_FIELDS)
         validate_table(node)
     elif context == 'image':
         keys.update({'target', 'src', 'alt', 'attributes'})
