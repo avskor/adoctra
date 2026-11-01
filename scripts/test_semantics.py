@@ -484,19 +484,59 @@ class SemanticProjectionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'attribution'):
             semantics.block_projection(dict(quote, attribution={'author': None, 'future': None}))
 
-    def test_toc_is_metadata_only_and_rejects_content(self):
-        toc = {'name': 'toc', 'id': 't', 'roles': ['r'], 'title': [{'name': 'text', 'value': 'Contents'}]}
-        projected = semantics.block_projection(toc)
-        self.assertEqual(projected, {'context': 'toc', 'id': 't', 'roles': ['r'], 'title': [text('Contents')]})
-        semantics.validate_block(projected)
-        self.assertNotEqual(projected, semantics.block_projection(dict(toc, id='other')))
+    def test_toc_lists_the_sections_with_the_captions_adoctra_resolved(self):
+        def section(level, ident, title, children=()):
+            return {'name': 'section', 'level': level, 'blocks': [
+                {'name': 'heading', 'level': level, 'id': ident, 'caption': None, 'inlines': title}, *children]}
+        sub = section(2, '_sub', [{'name': 'text', 'value': 'Sub'}])
+        link = {'name': 'xref', 'target': '#x', 'refid': 'x', 'inlines': [{'name': 'text', 'value': 'link'}]}
+        note = {'name': 'footnote', 'type': 'definition', 'index': '1', 'id': 'n', 'parts': [text('N')]}
+        top = section(1, '_s', [{'name': 'text', 'value': 'S '}, link, {'name': 'anchor', 'id': 'a'}, note], [sub])
+        toc = {'name': 'toc', 'id': 't', 'roles': ['r'], 'title': [{'name': 'text', 'value': 'Contents'}],
+               'toc': {'levels': 2, 'entries': [{'caption': '1. ', 'sections': [{'caption': None, 'sections': []}]}]}}
+        doc = document()
+        doc['blocks'] = [toc, top]
+        doc['attribute_snapshots']['final']['values'].update({'toc': '', 'toc-title': 'Ignored'})
+        projected = semantics.document_projection(doc, [])
+        self.assertIsNone(projected['outline'])
+        outline = projected['blocks'][0]['outline']
+        self.assertEqual(outline['title'], [text('Contents')])  # The macro's title wins.
+        self.assertEqual(outline['levels'], 2)
+        entry = outline['sections'][0]
+        self.assertEqual(entry['id'], '_s')
+        # Links and anchors lose their element; a footnote keeps its number.
+        self.assertEqual(entry['inlines'], [text('1. S link'), {'kind': 'superscript', 'id': '_footnote_n',
+                                                                 'roles': ['footnote'], 'inlines': [text('[1]')]}])
+        self.assertEqual(entry['sections'], [{'id': '_sub', 'inlines': [text('Sub')], 'sections': []}])
+        # A disabled macro, and entries that do not follow the sections.
+        disabled = copy.deepcopy(doc)
+        disabled['blocks'][0]['toc'] = None
+        self.assertIsNone(semantics.document_projection(disabled, [])['blocks'][0]['outline'])
+        broken = copy.deepcopy(doc)
+        broken['blocks'][0]['toc']['entries'].append({'caption': None, 'sections': []})
+        with self.assertRaisesRegex(ValueError, 'TOC entries'):
+            semantics.document_projection(broken, [])
+        # The automatic TOC takes toc-title, including its parts.
+        auto = copy.deepcopy(doc)
+        auto['blocks'] = [top]
+        auto['toc'] = {'levels': 1, 'entries': [{'caption': 'X ', 'caption_parts': [{'kind': 'raw', 'value': 'X &amp; '}],
+                                                 'sections': []}]}
+        auto['attribute_snapshots']['final']['attribute_parts'] = {'toc-title': [{'kind': 'raw', 'value': 'A &amp; B'}]}
+        outline = semantics.document_projection(auto, [])['outline']
+        self.assertEqual(outline['title'], [text('A & B')])
+        self.assertEqual(outline['sections'][0]['inlines'][0], text('X & S link'))
         with self.assertRaisesRegex(ValueError, 'toc'):
             semantics.block_projection(dict(toc, blocks=document()['blocks']))
+        projected = semantics.block_projection(dict(toc, toc=None))
         with self.assertRaises(ValueError):
-            semantics.validate_block(dict(projected, inlines=[]))
+            semantics.validate_block(dict(projected, outline=None, inlines=[]))
+        for invalid in [{'title': [], 'levels': '2', 'sections': []}, {'title': [], 'levels': 2},
+                        {'title': [], 'levels': 2, 'sections': [{'id': None, 'inlines': []}]}]:
+            with self.assertRaises(ValueError):
+                semantics.validate_outline(invalid)
 
     def test_reference_quote_credit_and_verse_are_decoded_once(self):
-        oracle = {'attributes': {'header': {}, 'final': {}}, 'title': None, 'blocks': [
+        oracle = {'attributes': {'header': {}, 'final': {}}, 'title': None, 'outline': None, 'blocks': [
             {'context': 'quote', 'id': None, 'roles': [], 'title': None, 'attribution': [text('A &amp;amp; B')],
              'citetitle': None, 'inlines': [text('Q')]},
             {'context': 'verse', 'id': None, 'roles': [], 'title': None, 'attribution': None, 'citetitle': [text('T')],
@@ -563,7 +603,7 @@ class SemanticProjectionTests(unittest.TestCase):
     def test_pinned_fixture_expands_attributes_and_macros_inside_quotes(self):
         root = CORPUS / 'upstream'
         manifest, cases = acceptance.load_corpus(root / 'semantics.json')
-        self.assertEqual(len(cases), 135)
+        self.assertEqual(len(cases), 141)
         self.assertEqual(manifest['profile'], semantics.PROFILE)
         reference = json.loads((root / 'reference/semantic-attributes-macros-in-quotes.json').read_text())
         strong = reference['semantics']['blocks'][0]['inlines'][0]

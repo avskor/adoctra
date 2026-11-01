@@ -59,6 +59,28 @@ class SemanticConverter < Asciidoctor::Converter::Base
     result
   end
 
+  # Ruby generates section ids from the converted HTML title, whose tags it
+  # removes. A leaf handle hides the leaf's visible text, so give the id
+  # generator the text Ruby's HTML would contain, and refuse leaves whose
+  # HTML text this oracle does not model.
+  def id_text title
+    title.gsub(/<\uE000(\d+)\uE001>/) do
+      event = @nodes.fetch($1.to_i)
+      next '' unless event[:event] == :leaf
+      node = event[:node]
+      case node[:kind]
+      when 'footnote'
+        node[:type] == 'unresolved' ? "[#{node[:id]}]" : "[#{node[:index]}]"
+      when 'anchor', 'line-break', 'image'
+        ''
+      when 'indexterm'
+        ''
+      else
+        raise "a generated id from #{node[:kind]} text is outside inline-semantics-v1"
+      end
+    end
+  end
+
   def snapshot document
     @attribute_names.to_h do |name|
       [name, document.attributes.key?(name) ? inlines(document.attributes[name].to_s) : nil]
@@ -105,6 +127,7 @@ class SemanticConverter < Asciidoctor::Converter::Base
       result[:inlines] = inlines(cell.text)
     elsif cell.style == :asciidoc
       document = cell.inner_document.convert
+      raise 'a nested document TOC is outside inline-semantics-v1' if document[:outline]
       result[:document] = document.slice(:title, :blocks, :footnotes)
     elsif cell.style == :literal
       result[:literal] = inlines(cell.text)
@@ -167,6 +190,46 @@ class SemanticConverter < Asciidoctor::Converter::Base
     end
   end
 
+  # Ruby's convert_outline without HTML: the entry text is the caption or
+  # number prefix and the converted title, evaluated when the TOC converts
+  # (sectnumlevels/signifiers at that moment), with DropAnchorRx applied.
+  def outline_entries node, toclevels, sectnumlevels
+    return [] unless node.sections?
+    doc = node.document
+    node.sections.map do |section|
+      slevel = section.level
+      prefix = if section.caption
+        section.caption
+      elsif section.numbered && slevel <= sectnumlevels
+        if slevel < 2 && doc.doctype == 'book'
+          case section.sectname
+          when 'chapter'
+            %(#{(signifier = doc.attributes['chapter-signifier']) ? "#{signifier} " : ''}#{section.sectnum} )
+          when 'part'
+            %(#{(signifier = doc.attributes['part-signifier']) ? "#{signifier} " : ''}#{section.sectnum nil, ':'} )
+          else
+            %(#{section.sectnum} )
+          end
+        else
+          %(#{section.sectnum} )
+        end
+      else
+        ''
+      end
+      label = strip_xref_anchors inlines(prefix + section.title)
+      { id: section.id, inlines: label,
+        sections: slevel < toclevels ? outline_entries(section, toclevels, sectnumlevels) : [] }
+    end
+  end
+
+  def outline doc, title, levels = nil
+    raise 'a nested document TOC is outside inline-semantics-v1' if doc.nested?
+    title = inlines(title)
+    levels ||= (doc.attributes['toclevels'] || 2).to_i
+    { title: title, levels: levels,
+      sections: outline_entries(doc, levels, (doc.attributes['sectnumlevels'] || 3).to_i) }
+  end
+
   def credit node
     { attribution: (node.attr? 'attribution') ? inlines(node.attr 'attribution') : nil,
       citetitle: (node.attr? 'citetitle') ? inlines(node.attr 'citetitle') : nil }
@@ -196,8 +259,13 @@ class SemanticConverter < Asciidoctor::Converter::Base
     when 'embedded', 'document'
       header = snapshot node
       title = node.header? ? inlines(node.doctitle) : nil
+      # Embedded and standalone output convert the automatic TOC before the
+      # body; they differ only in which placements count as automatic.
+      placement = node.attr 'toc-placement'
+      automatic = transform == 'embedded' ? placement != 'macro' && placement != 'preamble' : placement == 'auto'
+      toc = node.sections? && (node.attr? 'toc') && automatic ? outline(node, node.attr('toc-title')) : nil
       blocks = node.blocks.map { |block| block.convert }
-      result = { attributes: { header: header, final: snapshot(node) }, title: title, blocks: blocks }
+      result = { attributes: { header: header, final: snapshot(node) }, title: title, outline: toc, blocks: blocks }
       if node.footnotes?
         result[:footnotes] = node.footnotes.map { |entry| { index: entry.index.to_s, id: entry.id, inlines: inlines(entry.text) } }
       end
@@ -210,6 +278,11 @@ class SemanticConverter < Asciidoctor::Converter::Base
         title: inlines(node.title), blocks: node.blocks.map { |block| block.convert } }
     when 'preamble', 'open', 'sidebar', 'example', 'admonition', 'quote'
       result = metadata node
+      if transform == 'preamble'
+        doc = node.document
+        rendered = doc.attr?('toc-placement', 'preamble') && doc.sections? && (doc.attr? 'toc')
+        result[:outline] = rendered ? outline(doc, doc.attr('toc-title')) : nil
+      end
       result[:type] = node.attr('name') if transform == 'admonition'
       result.update(credit node) if transform == 'quote'
       if node.content_model == :simple
@@ -224,9 +297,12 @@ class SemanticConverter < Asciidoctor::Converter::Base
     when 'verse'
       metadata(node).merge(credit(node)).merge(inlines: inlines(node.content))
     when 'toc'
-      # Only the block's own metadata: whether Ruby renders the outline depends
-      # on toc/toc-placement and is presentation, outside this profile.
-      metadata node
+      doc = node.document
+      result = metadata node
+      rendered = doc.attr?('toc-placement', 'macro') && doc.sections? && (doc.attr? 'toc')
+      result[:outline] = rendered ? outline(doc, node.title? ? node.title : doc.attr('toc-title'),
+                                            (node.attr? 'levels') ? (node.attr 'levels').to_i : nil) : nil
+      result
     when 'stem'
       metadata(node).merge(style: node.style, inlines: inlines(node.content))
     when 'ulist', 'olist'
@@ -330,3 +406,12 @@ class SemanticConverter < Asciidoctor::Converter::Base
     end
   end
 end
+
+# Route Ruby's section id generation through SemanticConverter#id_text.
+module SemanticSectionIds
+  def generate_id title, document
+    converter = document.converter
+    super(SemanticConverter === converter ? converter.id_text(title) : title, document)
+  end
+end
+Asciidoctor::Section.singleton_class.prepend SemanticSectionIds

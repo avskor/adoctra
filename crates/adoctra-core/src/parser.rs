@@ -229,6 +229,7 @@ pub(crate) fn parse_reader<'a>(
         manpage: header.manpage.take(),
         htmlsyntax: context.htmlsyntax(),
         output: None,
+        toc: None,
     };
     if let Some(effective) = header.effective_title {
         let inlines = context
@@ -2181,6 +2182,7 @@ fn read_table(
                 footnotes: Vec::new(),
                 has_title,
                 attributes,
+                toc: None,
             }
         } else {
             // The cell text substitutes as one field, like Ruby's

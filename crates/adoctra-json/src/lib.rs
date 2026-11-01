@@ -75,6 +75,9 @@ impl Backend for JsonBackend {
         }
         s.push(']');
         adoctra_core::json::write_footnote_definitions(&doc.footnotes, &mut s, None);
+        if let Some(toc) = &doc.toc {
+            write_toc(Some(toc), &mut s);
+        }
         if let Some(header) = &doc.header {
             s.push_str(",\"header\":");
             write_header(header, &mut s);
@@ -258,7 +261,10 @@ fn write_cell<'a>(cell: &'a adoctra_core::ast::TableCell, s: &mut Out<'a, Block>
             s.push(']');
         }
         adoctra_core::ast::CellContent::Blocks {
-            blocks, footnotes, ..
+            blocks,
+            footnotes,
+            toc,
+            ..
         } => {
             s.push_str(",\"blocks\":[");
             for (i, block) in blocks.iter().enumerate() {
@@ -269,6 +275,9 @@ fn write_cell<'a>(cell: &'a adoctra_core::ast::TableCell, s: &mut Out<'a, Block>
             }
             s.push(']');
             adoctra_core::json::write_footnote_definitions(footnotes, s, None);
+            if let Some(toc) = toc {
+                write_toc(Some(toc), s);
+            }
         }
         adoctra_core::ast::CellContent::Literal(text) => {
             s.push_str(",\"literal\":");
@@ -457,7 +466,8 @@ fn write_block_part<'a>(block: &'a Block, s: &mut Out<'a, Block>) {
             s.push('}');
         }
         BlockKind::Toc => {
-            // The `toc::[]` macro; consumers build the outline from sections.
+            // The `toc::[]` macro and the TOC it converts with (`null` when
+            // disabled); the entries follow the sections in order.
             s.push_str("{\"name\":\"toc\",");
             write_id(&block.id, s);
             write_roles(&block.roles, s);
@@ -466,6 +476,7 @@ fn write_block_part<'a>(block: &'a Block, s: &mut Out<'a, Block>) {
             write_options(&block.attrs.options, s);
             write_title(&block.title, s);
             write_caption(block, s);
+            write_toc(block.toc.as_deref(), s);
             s.push('}');
         }
         BlockKind::Image {
@@ -719,6 +730,9 @@ fn write_block_part<'a>(block: &'a Block, s: &mut Out<'a, Block>) {
             // A book's preamble carries the header's `preface-title` source.
             s.push_str("{\"name\":\"preamble\"");
             write_title(&block.title, s);
+            if let Some(toc) = &block.toc {
+                write_toc(Some(toc), s);
+            }
             s.push_str(",\"blocks\":[");
             for (i, child) in blocks.iter().enumerate() {
                 if i > 0 {
@@ -900,6 +914,46 @@ fn write_title(title: &Option<Vec<Inline>>, s: &mut String) {
 /// Emit the leading-comma `,"caption":<string|null>` field — the block's resolved
 /// caption prefix (e.g. `"Example 1. "` on a numbered example), or `null` when the
 /// block has none (every block but a titled example block).
+/// `,"toc":` and a table of contents: its depth and, per listed section,
+/// the caption resolved when it converted and the nested entries.
+fn write_toc(toc: Option<&adoctra_core::Toc>, s: &mut String) {
+    fn write_entries(entries: &[adoctra_core::TocEntry], s: &mut String) {
+        s.push('[');
+        for (i, entry) in entries.iter().enumerate() {
+            if i > 0 {
+                s.push(',');
+            }
+            s.push_str("{\"caption\":");
+            match &entry.caption {
+                Some(parts) => {
+                    escape_into(&adoctra_core::attributes::parts_text(parts), s);
+                    if !matches!(
+                        parts.as_slice(),
+                        [] | [adoctra_core::AttributePart::Text(_)]
+                    ) {
+                        s.push_str(",\"caption_parts\":");
+                        adoctra_core::json::write_parts_array(parts, s);
+                    }
+                }
+                None => s.push_str("null"),
+            }
+            s.push_str(",\"sections\":");
+            write_entries(&entry.sections, s);
+            s.push('}');
+        }
+        s.push(']');
+    }
+    s.push_str(",\"toc\":");
+    match toc {
+        Some(toc) => {
+            s.push_str(&format!("{{\"levels\":{},\"entries\":", toc.levels));
+            write_entries(&toc.entries, s);
+            s.push('}');
+        }
+        None => s.push_str("null"),
+    }
+}
+
 fn write_caption(block: &Block, s: &mut String) {
     s.push_str(",\"caption\":");
     match &block.caption {
@@ -1062,6 +1116,44 @@ mod tests {
     fn render(src: &str) -> String {
         let doc = adoctra_core::parse(src).document;
         String::from_utf8(JsonBackend.convert(&doc).unwrap()).unwrap()
+    }
+
+    #[test]
+    fn tocs_export_their_depth_and_resolved_captions() {
+        let json = render("= D\n:toc: macro\n:sectnums:\n\ntoc::[]\n\n== One\n\n:sectnumlevels: 1\n\n=== One.One\n\ntoc::[levels=1]");
+        assert!(
+            json.contains(r#""toc":{"levels":2,"entries":[{"caption":"1. ","sections":[{"caption":"1.1. ","sections":[]}]}]}"#),
+            "{json}"
+        );
+        // The second macro converts after the change, one level deep.
+        assert!(
+            json.contains(r#""toc":{"levels":1,"entries":[{"caption":"1. ","sections":[]}]}"#),
+            "{json}"
+        );
+        // A disabled macro exports null; the automatic TOC is the document's
+        // and a preamble's is the preamble's.
+        let json = render("= D\n:toc:\n\ntoc::[]\n\n== A");
+        assert!(
+            json.contains(r#""name":"toc","#) && json.contains(r#","toc":null}"#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""toc":{"levels":2,"entries":[{"caption":null,"sections":[]}]}"#),
+            "{json}"
+        );
+        let json = render("= D\n:toc: preamble\n\nIntro.\n\n== A");
+        assert!(
+            json.contains(r#"{"name":"preamble","title":null,"toc":{"levels":2,"#),
+            "{json}"
+        );
+        // A caption with markup exports its parts.
+        let json = render(
+            "= B\n:doctype: book\n:toc:\n:sectnums:\n:chapter-signifier: pass:q[*Ch*]\n\n== C",
+        );
+        assert!(
+            json.contains(r#"{"caption":"Ch 1. ","caption_parts":["#),
+            "{json}"
+        );
     }
 
     #[test]

@@ -299,9 +299,38 @@ cases = {
     assert(verse[:inlines] == [{ kind: 'text', value: "  one\n    two" }], 'verse whitespace folded')
     assert(simple[:inlines] == [{ kind: 'text', value: 'Only.' }] && simple[:attribution].nil?, 'simple quote changed')
   end,
-  'toc macro is a metadata-only block' => lambda do
-    tree = project("= T\n:toc: macro\n\n[#t.r]\n.Contents\ntoc::[]\n\n== S")
-    assert(tree[:blocks][0][:blocks][0] == { context: 'toc', id: 't', roles: ['r'], title: [{ kind: 'text', value: 'Contents' }] }, 'toc metadata changed')
+  'toc macro keeps its metadata and lists the outline it converts with' => lambda do
+    tree = project("= T\n:toc: macro\n:sectnums:\n\n[#t.r]\n.Contents\ntoc::[levels=1]\n\n== S <<x,link>>\n\n:sectnumlevels: 0\n\n[[x]]\n=== Sub")
+    toc = tree[:blocks][0][:blocks][0]
+    assert(toc.slice(:context, :id, :roles, :title) == { context: 'toc', id: 't', roles: ['r'], title: [{ kind: 'text', value: 'Contents' }] }, 'toc metadata changed')
+    outline = toc[:outline]
+    assert(outline[:title] == [{ kind: 'text', value: 'Contents' }] && outline[:levels] == 1, 'toc title or levels lost')
+    entry = outline[:sections][0]
+    # The number uses sectnumlevels at the macro; the link loses its element.
+    assert(entry[:id] == '_s_link' && entry[:sections] == [], 'toc entry or depth changed')
+    assert(entry[:inlines] == [{ kind: 'text', value: '1. S ' }, { kind: 'text', value: 'link' }], 'toc entry text changed')
+    tree = project("= T\n:toc:\n\n== A\n\n=== B\n\n:toc-placement: macro\n\ntoc::[]")
+    assert(tree[:outline][:title] == [{ kind: 'text', value: 'Table of Contents' }], 'automatic toc lost')
+    assert(tree[:outline][:sections][0][:sections][0][:id] == '_b', 'automatic toc depth lost')
+    disabled = project("= T\n:toc:\n\ntoc::[]\n\n== A")
+    assert(disabled[:blocks][0][:outline].nil?, 'disabled macro rendered')
+  end,
+  'a preamble lists the outline before its content' => lambda do
+    tree = project("= T\n:toc: preamble\n\nIntro.\n\n== A")
+    assert(tree[:outline].nil? && tree[:blocks][0][:outline][:sections][0][:id] == '_a', 'preamble toc lost')
+  end,
+  'generated section ids see the visible footnote number' => lambda do
+    tree = project("== First footnote:[Note.]\n\n== Second footnote:n[Named.]")
+    assert(tree[:blocks].map { |block| block[:id] } == ['_first_1', '_second_2'], 'section id lost the footnote number')
+    # Leaves whose HTML text the oracle does not model fail closed.
+    failed = begin
+      project(":experimental:\n\n== Keys kbd:[Ctrl+T]")
+      false
+    rescue RuntimeError => error
+      error.message.include? 'generated id from kbd'
+    end
+    assert(failed, 'generated id from an unmodelled leaf accepted')
+    assert(project(":experimental:\n\n[#keys]\n== Keys kbd:[Ctrl+T]")[:blocks][0][:id] == 'keys', 'explicit id refused')
   end,
   'server-side highlighting is compared as verbatim text and restored' => lambda do
     converter = SemanticConverter.new 'html5'

@@ -81,6 +81,35 @@ pub struct Document {
     /// The output file and directory resolved for
     /// [`ParseOptions::output`](crate::ParseOptions::output), if any.
     pub output: Option<crate::OutputPaths>,
+    /// The automatic table of contents (`toc-placement` other than `macro`
+    /// or `preamble`; `auto` when standalone), converted before the body.
+    pub toc: Option<Toc>,
+}
+
+/// A table of contents as Ruby's converter renders it (`convert_outline`),
+/// resolved once while the document converts: which sections it lists and
+/// the number caption of each, from the attributes when the TOC converts
+/// (`sectnumlevels`, `chapter-signifier`, `part-signifier`), which can differ
+/// from those at the section's own heading.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Toc {
+    /// The depth listed: the macro's `levels` or `toclevels`, as `to_i`.
+    pub levels: i128,
+    /// One entry per section among the converting document's top-level
+    /// blocks, in order.
+    pub entries: Vec<TocEntry>,
+}
+
+/// A listed section: its entries follow the section's own child sections in
+/// order, and are empty where the outline does not descend (the section's
+/// level is not below [`Toc::levels`], or it has no child sections). Its
+/// title is the section heading's converted title.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TocEntry {
+    /// The caption or number prefix before the title, with its trailing
+    /// space (`"1.2. "`, `"Chapter 3. "`, `"Appendix A: "`), if any.
+    pub caption: Option<Vec<crate::AttributePart>>,
+    pub sections: Vec<TocEntry>,
 }
 
 /// A document dismantles its block tree without recursion: the derived drop
@@ -315,6 +344,11 @@ pub struct Block {
     ///
     /// [`caption`]: Block::caption
     pub caption_parts: Vec<crate::AttributePart>,
+    /// The table of contents this block converts with: a `toc::[]` block's
+    /// (Ruby's `convert_toc`) or a preamble's with `toc-placement=preamble`
+    /// (`convert_preamble`). `None` for other blocks and where Ruby renders
+    /// no TOC (`<!-- toc disabled -->` for the macro).
+    pub toc: Option<Box<Toc>>,
     pub attrs: BlockAttrs,
     /// Ruby's `:simple` content model: a container built from a styled
     /// paragraph (`[NOTE]`/`NOTE:`, `[example]`, `[sidebar]`, `[open]`,
@@ -343,6 +377,7 @@ impl Block {
             title: None,
             caption: None,
             caption_parts: Vec::new(),
+            toc: None,
             attrs: BlockAttrs::default(),
             simple: false,
             kind,
@@ -820,6 +855,8 @@ pub enum CellContent {
         /// The nested document's header attributes, which Ruby's
         /// `convert_embedded` reads (its automatic TOC).
         attributes: Arc<Attributes>,
+        /// The nested document's automatic TOC (see [`Document::toc`]).
+        toc: Option<Toc>,
     },
     /// A literal (`l`) cell: verbatim text (Ruby's basic substitutions are
     /// output escaping).

@@ -339,7 +339,7 @@ fn render_document(
     let toc = |out: &mut String| {
         if auto_toc {
             let class = attributes.get("toc-class").unwrap_or("toc");
-            render_toc(cx, attributes, class, None, None, out);
+            render_toc(cx, attributes, class, None, None, doc.toc.as_ref(), out);
         }
     };
     if attributes.get("noheader").is_none() {
@@ -786,7 +786,7 @@ fn render_content(cx: &Cx, embedded: bool, out: &mut String) {
     }
     for (i, block) in doc.blocks.iter().enumerate() {
         if i == title && auto_toc {
-            render_toc(cx, attributes, "toc", None, None, out);
+            render_toc(cx, attributes, "toc", None, None, doc.toc.as_ref(), out);
         }
         match &block.kind {
             BlockKind::Heading { .. } if i == 0 && doc.has_title && !embedded => {}
@@ -831,7 +831,7 @@ fn render_content(cx: &Cx, embedded: bool, out: &mut String) {
                     && attributes.get("toc-placement") == Some("preamble")
                 {
                     let class = attributes.get("toc-class").unwrap_or("toc");
-                    render_toc(cx, attributes, class, None, None, out);
+                    render_toc(cx, attributes, class, None, None, block.toc.as_deref(), out);
                 }
                 out.push_str("</section>\n");
             }
@@ -839,7 +839,7 @@ fn render_content(cx: &Cx, embedded: bool, out: &mut String) {
         }
     }
     if doc.blocks.len() == title && auto_toc {
-        render_toc(cx, attributes, "toc", None, None, out);
+        render_toc(cx, attributes, "toc", None, None, doc.toc.as_ref(), out);
     }
 }
 
@@ -1581,7 +1581,7 @@ fn render_block_part<'a>(block: &'a Block, cx: &Cx, out: &mut Out<'a, Block>) {
                 && cx.header.get("toc-placement") == Some("preamble")
             {
                 let class = cx.header.get("toc-class").unwrap_or("toc");
-                render_toc(cx, cx.header, class, None, None, out);
+                render_toc(cx, cx.header, class, None, None, block.toc.as_deref(), out);
             }
             out.push_str("</section>\n");
         }
@@ -1626,7 +1626,15 @@ fn render_block_part<'a>(block: &'a Block, cx: &Cx, out: &mut Out<'a, Block>) {
                 render_inlines(title, &mut html);
                 html
             });
-            render_toc(cx, attributes, class, Some((id, title)), levels, out);
+            render_toc(
+                cx,
+                attributes,
+                class,
+                Some((id, title)),
+                levels,
+                block.toc.as_deref(),
+                out,
+            );
         }
     }
 }
@@ -1640,6 +1648,7 @@ fn render_toc(
     class: &str,
     macro_: Option<(&str, Option<String>)>,
     levels: Option<i64>,
+    toc: Option<&adoctra_core::Toc>,
     out: &mut String,
 ) {
     let (id, title_attrs, title) = match macro_ {
@@ -1665,16 +1674,29 @@ fn render_toc(
         },
     }
     out.push_str("</div>\n");
-    let levels = levels.unwrap_or_else(|| attributes.get("toclevels").map_or(2, ruby_to_i));
-    render_outline(cx.outline, levels, out);
+    // The TOC core resolved; without one (a document parsed for the other
+    // output mode), the outline falls back to the headings' captions.
+    match toc {
+        Some(toc) => render_outline(cx.outline, toc.levels, Some(&toc.entries), out),
+        None => {
+            let levels = levels.unwrap_or_else(|| attributes.get("toclevels").map_or(2, ruby_to_i));
+            render_outline(cx.outline, i128::from(levels), None, out)
+        }
+    };
     out.push_str("</nav>\n");
 }
 
 /// Ruby's `convert_outline`: a `sectlevelN` list of links to the sections
 /// among `blocks`, nested while a section's level is below `toclevels`.
-/// Entry text is the heading's number caption and title with every `<a>` tag
-/// removed (Ruby's `DropAnchorRx`). Returns whether there were sections.
-fn render_outline(blocks: &[Block], toclevels: i64, out: &mut String) -> bool {
+/// Entry text is the number caption the TOC's `entries` resolved (else the
+/// heading's) and the title with every `<a>` tag removed (Ruby's
+/// `DropAnchorRx`). Returns whether there were sections.
+fn render_outline(
+    blocks: &[Block],
+    toclevels: i128,
+    entries: Option<&[adoctra_core::TocEntry]>,
+    out: &mut String,
+) -> bool {
     let mut sections = blocks.iter().filter_map(|block| match &block.kind {
         BlockKind::Section { level, blocks } => Some((*level, blocks)),
         _ => None,
@@ -1683,10 +1705,17 @@ fn render_outline(blocks: &[Block], toclevels: i64, out: &mut String) -> bool {
         return false;
     };
     out.push_str(&format!("<ul class=\"sectlevel{first}\">\n"));
-    for (level, blocks) in sections.by_ref() {
+    for (index, (level, blocks)) in sections.by_ref().enumerate() {
         let heading = &blocks[0];
+        let entry = entries.and_then(|entries| entries.get(index));
         let mut title = String::new();
-        if let Some(caption) = caption_html(heading) {
+        let caption = match entries {
+            Some(_) => entry
+                .and_then(|entry| entry.caption.as_deref())
+                .map(parts_html),
+            None => caption_html(heading),
+        };
+        if let Some(caption) = caption {
             title.push_str(&caption);
         }
         if let BlockKind::Heading { inlines, .. } = &heading.kind {
@@ -1698,7 +1727,10 @@ fn render_outline(blocks: &[Block], toclevels: i64, out: &mut String) -> bool {
             drop_anchors(&title)
         ));
         let mut children = String::new();
-        if i64::from(level) < toclevels && render_outline(&blocks[1..], toclevels, &mut children) {
+        let nested = entries.map(|_| entry.map_or(&[][..], |entry| &entry.sections[..]));
+        if i128::from(level) < toclevels
+            && render_outline(&blocks[1..], toclevels, nested, &mut children)
+        {
             out.push('\n');
             out.push_str(&children);
         }
@@ -2041,6 +2073,7 @@ fn render_table(block: &Block, table: &adoctra_core::ast::Table, cx: &Cx, out: &
                         footnotes,
                         has_title,
                         attributes,
+                        toc,
                     } => {
                         out.push_str("<div class=\"content\">");
                         // Ruby converts the inner document with its own
@@ -2070,7 +2103,15 @@ fn render_table(block: &Block, table: &adoctra_core::ast::Table, cx: &Cx, out: &
                             let title = usize::from(*has_title);
                             for (i, child) in blocks.iter().enumerate() {
                                 if i == title && auto_toc {
-                                    render_toc(&inner, attributes, "toc", None, None, out);
+                                    render_toc(
+                                        &inner,
+                                        attributes,
+                                        "toc",
+                                        None,
+                                        None,
+                                        toc.as_ref(),
+                                        out,
+                                    );
                                 }
                                 match &child.kind {
                                     BlockKind::Heading { level, inlines }
@@ -2376,6 +2417,20 @@ fn render_attribution(attribution: &Option<Attribution>, out: &mut String) {
 /// titles elsewhere are unaffected.
 /// A block's caption as HTML: its semantic parts (Ruby's stored markup), else
 /// the escaped plain caption.
+/// Caption parts as [`caption_html`] renders a block's: plain text escaped
+/// (see [`Block::set_caption`]), other parts rendered.
+fn parts_html(parts: &[adoctra_core::AttributePart]) -> String {
+    match parts {
+        [] => String::new(),
+        [adoctra_core::AttributePart::Text(text)] => escape(text),
+        parts => {
+            let mut html = String::new();
+            render_parts(parts, &mut html);
+            html
+        }
+    }
+}
+
 fn caption_html(block: &Block) -> Option<String> {
     let caption = block.caption.as_ref()?;
     if block.caption_parts.is_empty() {
@@ -5772,6 +5827,32 @@ mod tests {
         );
         assert!(
             html.contains("<pre class=\"highlight\"><code>&lt;b&gt;</code></pre>"),
+            "{html}"
+        );
+    }
+
+    #[test]
+    fn toc_entries_number_sections_with_the_attributes_of_the_toc() {
+        // Ruby's `convert_outline` reads `sectnumlevels` and the signifiers
+        // when the TOC converts, not at each heading.
+        let html = render("= D\n:toc: macro\n:sectnums:\n\ntoc::[]\n\n== One\n\n:sectnumlevels: 1\n\n=== One.One\n\n== Two");
+        assert!(
+            html.contains(r##"<li><a href="#_one_one">1.1. One.One</a></li>"##),
+            "{html}"
+        );
+        assert!(html.contains(r#"<h3 id="_one_one">One.One</h3>"#), "{html}");
+        let html = render("= B\n:doctype: book\n:toc: macro\n:sectnums:\n:chapter-signifier: Chapter\n\n[preface]\n== P\n\ntoc::[]\n\n:chapter-signifier: Kapitel\n\n== C");
+        assert!(
+            html.contains(r##"<li><a href="#_c">Chapter 1. C</a></li>"##),
+            "{html}"
+        );
+        assert!(html.contains(r#"<h2 id="_c">Kapitel 1. C</h2>"#), "{html}");
+        // A signifier's markup renders in the entry as in the heading.
+        let html = render(
+            "= B\n:doctype: book\n:toc:\n:sectnums:\n:chapter-signifier: pass:q[*Ch* &]\n\n== C",
+        );
+        assert!(
+            html.contains(r##"<li><a href="#_c"><strong>Ch</strong> & 1. C</a></li>"##),
             "{html}"
         );
     }

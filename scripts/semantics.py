@@ -8,6 +8,7 @@ import html
 import re
 
 PROFILE = 'inline-semantics-v1'
+PENDING_OUTLINE = '\ue000outline'
 FORMATS = {'strong', 'emphasis', 'monospace', 'mark', 'superscript', 'subscript', 'span'}
 CONTAINERS = {'section', 'preamble', 'open', 'sidebar', 'example', 'admonition', 'quote'}
 QUOTES = {'quote', 'verse'}
@@ -216,6 +217,7 @@ def verbatim_projection(block):
 def cell_projection(cell, group):
     keys = {'style', 'halign', 'valign', 'colspan', 'rowspan', 'background'}
     content = set(cell) & {'paragraphs', 'blocks', 'literal'}
+    require('toc' not in cell, 'a nested document TOC is outside inline-semantics-v1')
     require(len(content) == 1 and set(cell) <= keys | content | {'footnotes'}, 'invalid semantic cell')
     require('footnotes' not in cell or 'blocks' in cell, 'footnotes require a nested document')
     result = {key: cell[key] for key in keys}
@@ -267,6 +269,8 @@ def block_projection(block):
             result[field] = canonical(inline_projection(credit[key])) if credit.get(key) is not None else None
     if context == 'toc':
         require(not children, 'unexpected toc content')
+        # Filled by document_projection, which owns the listed sections.
+        result['outline'] = {PENDING_OUTLINE: block['toc']}
     elif context == 'verse':
         result['inlines'] = canonical(inline_projection(block['inlines']), prose=False)
     elif context in LISTS:
@@ -308,7 +312,82 @@ def block_projection(block):
         result['inlines'] = canonical(inline_projection(children[0]['inlines']))
     else:
         result['blocks'] = [block_projection(child) for child in children]
+    if context == 'preamble':
+        result['outline'] = {PENDING_OUTLINE: block.get('toc')}
     return result
+
+
+def strip_anchors(nodes):
+    """Ruby's DropAnchorRx on a converted title, applied to semantic nodes.
+
+    Links, xrefs and anchors lose their element and keep their content; a
+    footnote marker keeps its visible superscript, as in Ruby's generated
+    xref labels (see xref_label in asciidoctor-semantics.rb)."""
+    result = []
+    for node in nodes:
+        if node['kind'] == 'anchor':
+            continue
+        if node['kind'] in {'link', 'xref'}:
+            result.extend(strip_anchors(node['inlines']))
+        elif node['kind'] == 'footnote' and node['index'] is not None:
+            result.append({'kind': 'superscript', 'id': f"_footnote_{node['id']}" if node['id'] is not None else None,
+                           'roles': ['footnote' if node['type'] == 'definition' else 'footnoteref'],
+                           'inlines': [{'kind': 'text', 'value': f"[{node['index']}]"}]})
+        elif node.get('inlines') is not None:
+            result.append(dict(node, inlines=strip_anchors(node['inlines'])))
+        else:
+            result.append(node)
+    return result
+
+
+def outline_projection(blocks, entries):
+    """The sections a TOC lists: adoctra resolved each caption when the TOC
+    converted; the title is the section heading's converted title."""
+    sections = [block for block in blocks if block['name'] == 'section']
+    require(isinstance(entries, list) and len(entries) == len(sections), 'TOC entries do not follow the sections')
+    result = []
+    for block, entry in zip(sections, entries):
+        require(isinstance(entry, dict) and set(entry) <= {'caption', 'caption_parts', 'sections'}, 'invalid TOC entry')
+        heading = block['blocks'][0]
+        require(heading['name'] == 'heading' and heading['level'] == block['level'], 'invalid section heading')
+        if entry.get('caption_parts'):
+            label = parts_projection(entry['caption_parts'])
+        else:
+            label = [{'kind': 'text', 'value': lexical(entry['caption'])}] if entry['caption'] else []
+        label += inline_projection(heading['inlines'])
+        children = entry['sections']
+        result.append({'id': heading.get('id'), 'inlines': canonical(strip_anchors(canonical(label))),
+                       'sections': outline_projection(block['blocks'][1:], children) if children else []})
+    return result
+
+
+def fill_outlines(node, document, values, parts):
+    """Replace the pending TOC and preamble outlines with the TOCs adoctra
+    converted; a TOC takes the macro's title, else `toc-title`."""
+    if isinstance(node, list):
+        for child in node:
+            fill_outlines(child, document, values, parts)
+        return
+    if not isinstance(node, dict):
+        return
+    pending = node.get('outline')
+    if isinstance(pending, dict) and PENDING_OUTLINE in pending:
+        toc = pending[PENDING_OUTLINE]
+        title = node['title'] if node['context'] == 'toc' else None
+        node['outline'] = document_outline(document, toc, values, parts, title) if toc is not None else None
+    for key, value in node.items():
+        if key != 'outline':
+            fill_outlines(value, document, values, parts)
+
+
+def document_outline(document, toc, values, parts, title=None):
+    require(isinstance(toc, dict) and set(toc) == {'levels', 'entries'} and type(toc['levels']) is int, 'invalid TOC')
+    if title is None:
+        if 'toc-title' in parts:
+            title = canonical(parts_projection(parts['toc-title']))
+        else:
+            title = canonical([{'kind': 'text', 'value': values.get('toc-title', '')}])
+    return {'title': title, 'levels': toc['levels'], 'sections': outline_projection(document['blocks'], toc['entries'])}
 
 
 def document_projection(document, names):
@@ -330,7 +409,14 @@ def document_projection(document, names):
             else:
                 value = canonical([{'kind': 'text', 'value': snapshot['values'][name]}], prose=False)
             attributes[stage][name] = value
-    result = {'attributes': attributes, 'title': title, 'blocks': [block_projection(block) for block in blocks]}
+    result = {'attributes': attributes, 'title': title, 'outline': None,
+              'blocks': [block_projection(block) for block in blocks]}
+    final = document['attribute_snapshots']['final']
+    values, parts = final['values'], final.get('attribute_parts', {})
+    listed = dict(document, blocks=blocks)
+    fill_outlines(result['blocks'], listed, values, parts)
+    if document.get('toc') is not None:
+        result['outline'] = document_outline(listed, document['toc'], values, parts)
     if document.get('footnotes'):
         result['footnotes'] = footnotes_projection(document['footnotes'])
     validate(result, names)
@@ -413,8 +499,21 @@ def reference_projection(result, names):
                     item(entry['description'])
             else:
                 item(entry)
+        outline(node)
         for child in node.get('blocks', []):
             block(child)
+
+    def outline(node):
+        if node.get('outline') is None:
+            return
+        node['outline']['title'] = inlines(node['outline']['title'])
+        pending = list(node['outline']['sections'])
+        while pending:
+            entry = pending.pop()
+            if entry['id'] is not None:
+                entry['id'] = lexical(entry['id'])
+            entry['inlines'] = inlines(entry['inlines'])
+            pending.extend(entry['sections'])
 
     def item(node):
         node['inlines'] = inlines(node['inlines'])
@@ -438,6 +537,7 @@ def reference_projection(result, names):
                 stage[name] = inlines(value, prose=False)
     if result['title'] is not None:
         result['title'] = inlines(result['title'])
+    outline(result)
     for node in result['blocks']:
         block(node)
     footnotes(result)
@@ -624,6 +724,23 @@ def validate_table(node):
                 require(set(cell) == keys)
 
 
+def validate_outline(value):
+    if value is None:
+        return
+    require(isinstance(value, dict) and set(value) == {'title', 'levels', 'sections'}, 'invalid outline')
+    validate_inlines(value['title'])
+    require(type(value['levels']) is int, 'invalid outline levels')
+    pending = [value['sections']]
+    while pending:
+        entries = pending.pop()
+        require(isinstance(entries, list), 'invalid outline entries')
+        for entry in entries:
+            require(isinstance(entry, dict) and set(entry) == {'id', 'inlines', 'sections'}, 'invalid outline entry')
+            require(entry['id'] is None or isinstance(entry['id'], str))
+            validate_inlines(entry['inlines'])
+            pending.append(entry['sections'])
+
+
 def validate_block(node):
     require(isinstance(node, dict))
     metadata(node)
@@ -634,7 +751,7 @@ def validate_block(node):
         validate_inlines(node['title'])
     if context == 'section':
         keys.add('level')
-        require(type(node.get('level')) is int and node['level'] >= 1)
+        require(type(node.get('level')) is int and node['level'] >= 0)
         require(node['title'] is not None)
     if context == 'admonition':
         keys.add('type')
@@ -644,6 +761,9 @@ def validate_block(node):
         for key in ['attribution', 'citetitle']:
             if node.get(key) is not None:
                 validate_inlines(node[key])
+    if context in {'toc', 'preamble'}:
+        keys.add('outline')
+        validate_outline(node.get('outline'))
     if context == 'toc':
         pass
     elif context == 'verse':
@@ -690,7 +810,9 @@ def validate_block(node):
 
 
 def validate(result, names=None):
-    require(isinstance(result, dict) and {'attributes', 'title', 'blocks'} <= set(result) <= {'attributes', 'title', 'blocks', 'footnotes'})
+    require(isinstance(result, dict) and {'attributes', 'title', 'outline', 'blocks'} <= set(result)
+            <= {'attributes', 'title', 'outline', 'blocks', 'footnotes'})
+    validate_outline(result['outline'])
     validate_footnotes(result)
     require(isinstance(result['attributes'], dict) and set(result['attributes']) == {'header', 'final'})
     for snapshot in result['attributes'].values():

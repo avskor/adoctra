@@ -1022,7 +1022,7 @@ impl ParseContext<'_> {
             }
             document.output = Some(output);
         }
-        let (attributes, tokens, footnotes) = std::mem::take(&mut self.body_subs).execute(
+        let (attributes, tokens, footnotes, toc) = std::mem::take(&mut self.body_subs).execute(
             &mut document.blocks,
             attributes,
             crate::body_subs::Conversion {
@@ -1042,6 +1042,7 @@ impl ParseContext<'_> {
         );
         document.final_attributes = attributes;
         document.footnotes = footnotes;
+        document.toc = toc;
         tokens
     }
 

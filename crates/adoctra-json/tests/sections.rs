@@ -52,7 +52,7 @@ fn book_preamble_title_and_partintro_serialize() {
 fn toc_macro_and_normalized_toc_attributes_serialize() {
     let json = render("= D\n:toc: macro\n\n.Contents\n[[t]]\ntoc::[levels=1,role=side]\n\n== A");
     assert!(
-        json.contains(r#"{"name":"toc","id":"t","roles":["side"],"style":null,"attributes":{"levels":"1"},"options":[],"title":[{"name":"text","value":"Contents"}],"caption":null}"#),
+        json.contains(r#"{"name":"toc","id":"t","roles":["side"],"style":null,"attributes":{"levels":"1"},"options":[],"title":[{"name":"text","value":"Contents"}],"caption":null,"toc":{"levels":1,"entries":[{"caption":null,"sections":[]}]}}"#),
         "{json}"
     );
 }

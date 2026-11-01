@@ -273,6 +273,7 @@ impl BodySubs {
         Attributes,
         Vec<crate::Token>,
         Vec<crate::ast::FootnoteDefinition>,
+        Option<crate::ast::Toc>,
     ) {
         let mut execution = Execution {
             excluded: std::mem::take(&mut self.excluded),
@@ -374,10 +375,8 @@ impl BodySubs {
             true => placement == Some("auto"),
             false => !matches!(placement, Some("macro" | "preamble")),
         };
-        if toc && auto {
-            let levels = toclevels(header.get("toclevels"));
-            execution.toc(levels);
-        }
+        let levels = toclevels(header.get("toclevels"));
+        let document_toc = (toc && auto).then(|| execution.toc(levels));
         // Ruby's `Document#content` deletes `title` before the body converts.
         execution.attributes.remove("title");
         execution.first_section = blocks[body..].iter().find_map(|block| match &block.kind {
@@ -406,7 +405,7 @@ impl BodySubs {
         }
         crate::resolve::resolve_attribute_definitions(&mut execution.attributes, &execution.fixed);
         let footnotes = execution.footnotes.into_definitions(&execution.fixed);
-        (execution.attributes, self.tokens, footnotes)
+        (execution.attributes, self.tokens, footnotes, document_toc)
     }
 }
 
@@ -963,21 +962,41 @@ impl Execution<'_, '_> {
     }
 
     /// Ruby's `convert_outline`: every listed section's title, nested while
-    /// a section's level is below `toclevels`.
-    fn toc(&mut self, toclevels: i128) {
-        fn walk(execution: &mut Execution<'_, '_>, sections: &[Outline], toclevels: i128) {
-            for section in sections {
-                if crate::resolve::placeholder(&section.title).is_some() {
-                    execution.lazy_heading(section.heading, &section.title);
-                }
-                if i128::from(section.level) < toclevels {
-                    walk(execution, &section.sections, toclevels);
-                }
-            }
+    /// a section's level is below `toclevels`, and its caption or number
+    /// prefix from the attributes now (`sectnumlevels` and the signifiers
+    /// when the TOC converts, which can differ from those at the heading).
+    fn toc(&mut self, toclevels: i128) -> crate::ast::Toc {
+        fn walk(
+            execution: &mut Execution<'_, '_>,
+            sections: &[Outline],
+            toclevels: i128,
+        ) -> Vec<crate::ast::TocEntry> {
+            sections
+                .iter()
+                .map(|section| {
+                    let caption = execution
+                        .sections
+                        .get(&section.heading)
+                        .and_then(|numbers| numbers.caption(&execution.attributes));
+                    if crate::resolve::placeholder(&section.title).is_some() {
+                        execution.lazy_heading(section.heading, &section.title);
+                    }
+                    let sections = if i128::from(section.level) < toclevels {
+                        walk(execution, &section.sections, toclevels)
+                    } else {
+                        Vec::new()
+                    };
+                    crate::ast::TocEntry { caption, sections }
+                })
+                .collect()
         }
         let outline = std::mem::take(&mut self.outline);
-        walk(self, &outline, toclevels);
+        let entries = walk(self, &outline, toclevels);
         self.outline = outline;
+        crate::ast::Toc {
+            levels: toclevels,
+            entries,
+        }
     }
 
     /// Ruby's `image_uri` with the attributes at this point: `dir` names the
@@ -1190,7 +1209,7 @@ impl crate::visit::VisitorMut for Execution<'_, '_> {
             // Ruby's `convert_preamble` converts its TOC before the content.
             BlockKind::Preamble { .. } => {
                 if let Some(levels) = self.preamble_toc {
-                    self.toc(levels);
+                    block.toc = Some(Box::new(self.toc(levels)));
                 }
             }
             // Ruby's `convert_toc` with the attributes at the macro.
@@ -1203,7 +1222,7 @@ impl crate::visit::VisitorMut for Execution<'_, '_> {
                     Some(levels) => toclevels(Some(levels)),
                     None => toclevels(self.attributes.get("toclevels")),
                 };
-                self.toc(levels);
+                block.toc = Some(Box::new(self.toc(levels)));
             }
             _ => {}
         }
@@ -1286,6 +1305,7 @@ impl Execution<'_, '_> {
                     blocks,
                     has_title,
                     footnotes: catalog,
+                    toc: cell_toc,
                     ..
                 } => {
                     let key = (cell.span.start, cell.span.end);
@@ -1332,7 +1352,7 @@ impl Execution<'_, '_> {
                             match header.get("toc-placement") {
                                 Some("preamble") => self.preamble_toc = Some(levels),
                                 Some("macro") => {}
-                                _ => self.toc(levels),
+                                _ => *cell_toc = Some(self.toc(levels)),
                             }
                         }
                         self.blocks(&mut blocks[title..]);

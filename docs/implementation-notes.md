@@ -183,9 +183,9 @@ reader message verbatim in `report.message` (Reader::error_reported).
 else Ruby's "no inline candidate; …" warning (typo kept) and empty output;
 standalone and embedded alike. The CLI ends non-empty HTML with a LF like
 Ruby's CLI and prints backend warnings in embedded mode too.
-`compatibility/upstream/semantics.json` uses `inline-semantics-v1`: 135 PASS
+`compatibility/upstream/semantics.json` uses `inline-semantics-v1`: 141 PASS
 cover 20 attribute and four include scenarios from the upstream selection plus
-111 original semantic probes (15 tables, including caption/frame/grid/stripes/
+117 original semantic probes (7 TOC outline probes; 15 tables, including caption/frame/grid/stripes/
 width/autowidth/float; 27 xref/indexterm/stem/typographic quote
 probes; 33 footnote/callout probes; quote/verse, toc, image align/alt, Rouge
 listing). `compatibility/acceptance/semantics.json` adds
@@ -683,12 +683,21 @@ bypasses locks; body entries untouched). `BlockKind::Toc` is the `toc::[…]` bl
 macro (parse_toc_macro, any style, text inside a paragraph): AttributeList fields
 without subs; id/role/title replace metadata via ParseContext.block_macro, other
 named fields (levels) go to attrs.named. JSON/WASM `name:"toc"`, token
-`block-macro`. HTML builds the outline from Section blocks (Cx carries the
-document): `<nav id="toc" class="toc">` after the title (header attrs, placement
-not macro/preamble, document has sections), at the preamble end (`toc-class`), or
-at the macro (its conversion attributes; else `<!-- toc disabled -->`). Entries are
-heading caption + inlines with every `<a>` tag dropped (DropAnchorRx), nested
-while level < toclevels/levels (Ruby to_i). The DOM profile maps nav to div.
+`block-macro`. body_subs resolves each TOC once where Ruby converts it
+(`Execution::toc`): `Document.toc` (automatic, after the title: header attrs,
+placement not macro/preamble, `auto` when standalone), `Block.toc` of the preamble
+(placement preamble) and of the macro (its conversion attributes), and the
+AsciiDoc cell's `toc`. A `Toc` holds the depth (toclevels/levels, Ruby to_i) and
+per listed section a `TocEntry` whose caption is `Section::caption` with the
+attributes when the TOC converts, like convert_outline (sectnumlevels and
+signifiers there, not at the heading: `:sectnumlevels: 1` after the macro keeps
+`1.1.` in the TOC). HTML renders the stored TOC from Section blocks (Cx carries
+the document): `<nav id="toc" class="toc">` after the title, at the preamble end
+(`toc-class`), or at the macro (else `<!-- toc disabled -->`); entries are the
+stored caption + heading inlines with every `<a>` tag dropped (DropAnchorRx);
+without a stored TOC (other output mode) the heading captions. JSON exports
+`toc` {levels, entries[{caption, caption_parts?, sections}]}. The DOM profile
+maps nav to div.
 **Images**: `BlockKind::Image { target, src, alt }` is the `image::target[…]`
 block macro (image.rs match_macro = Ruby's BlockMediaMacroRx: lazy target up to
 the first `[` after a non-blank, line ends with `]`; a block start only, text

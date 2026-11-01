@@ -178,3 +178,104 @@ fn toc_macro_lines_are_block_macro_tokens() {
     assert_eq!(found, ["toc::[levels=1]"]);
     assert_eq!(TokenKind::BlockMacro.as_str(), "block-macro");
 }
+
+/// Each entry's caption text and nested entries.
+fn outline(toc: &adoctra_core::Toc) -> Vec<(Option<String>, usize)> {
+    fn walk(entries: &[adoctra_core::TocEntry], out: &mut Vec<(Option<String>, usize)>) {
+        for entry in entries {
+            out.push((
+                entry
+                    .caption
+                    .as_deref()
+                    .map(adoctra_core::attributes::parts_text),
+                entry.sections.len(),
+            ));
+            walk(&entry.sections, out);
+        }
+    }
+    let mut out = Vec::new();
+    walk(&toc.entries, &mut out);
+    out
+}
+
+fn caption(text: &str, sections: usize) -> (Option<String>, usize) {
+    (Some(text.to_owned()), sections)
+}
+
+#[test]
+fn toc_captions_use_the_attributes_when_the_toc_converts() {
+    // Like Ruby's `convert_outline`, the macro numbers sections with the
+    // `sectnumlevels` at the macro; the heading uses the value at itself.
+    let source = "= D\n:toc: macro\n:sectnums:\n\ntoc::[]\n\n== One\n\n:sectnumlevels: 1\n\n=== One.One\n\n== Two";
+    let found = blocks(source);
+    let toc = found
+        .iter()
+        .find(|block| matches!(block.kind, BlockKind::Toc))
+        .and_then(|block| block.toc.as_deref())
+        .expect("toc");
+    assert_eq!(toc.levels, 2);
+    assert_eq!(
+        outline(toc),
+        [caption("1. ", 1), caption("1.1. ", 0), caption("2. ", 0)]
+    );
+    let heading = found
+        .iter()
+        .find(|block| block.id.as_deref() == Some("_one_one"))
+        .expect("heading");
+    assert_eq!(heading.caption, None);
+    // Signifiers likewise; a removed signifier leaves the number.
+    let source = "= B\n:doctype: book\n:toc: macro\n:sectnums:\n:partnums:\n:chapter-signifier: Chapter\n:part-signifier: Part\n\n[preface]\n== Preface\n\ntoc::[levels=1]\n\n= First\n\n:chapter-signifier: Kapitel\n:part-signifier!:\n\n== Chapter";
+    let found = blocks(source);
+    let toc = found
+        .iter()
+        .find_map(|block| block.toc.as_deref())
+        .expect("toc");
+    assert_eq!(toc.levels, 1);
+    assert_eq!(
+        outline(toc),
+        [(None, 0), caption("Part I: ", 1), caption("Chapter 1. ", 0)]
+    );
+    let heading = |id: &str| {
+        found
+            .iter()
+            .find(|block| block.id.as_deref() == Some(id))
+            .and_then(|block| block.caption.clone())
+    };
+    assert_eq!(heading("_chapter").as_deref(), Some("Kapitel 1. "));
+}
+
+#[test]
+fn tocs_are_stored_only_where_ruby_renders_them() {
+    // The automatic TOC belongs to the document, converted before the body.
+    let doc = parse("= D\n:toc:\n\n== A\n\n=== B\n\n==== C").document;
+    let toc = doc.toc.as_ref().expect("automatic toc");
+    assert_eq!(
+        outline(toc),
+        [caption_none(1), caption_none(0)],
+        "toclevels 2 does not descend into level 2"
+    );
+    // A disabled macro (placement auto) and a document without sections.
+    let found = blocks("= D\n:toc:\n\ntoc::[]\n\n== A");
+    assert!(found.iter().all(|block| block.toc.is_none()));
+    let doc = parse("= D\n:toc: macro\n\ntoc::[]").document;
+    assert!(doc.toc.is_none());
+    assert!(doc
+        .into_flat_blocks()
+        .iter()
+        .all(|block| block.toc.is_none()));
+    // The preamble's TOC.
+    let doc = parse("= D\n:toc: preamble\n:toclevels: 3\n\nIntro.\n\n== A\n\n=== B").document;
+    assert!(doc.toc.is_none());
+    let preamble = doc
+        .blocks
+        .iter()
+        .find(|block| matches!(block.kind, BlockKind::Preamble { .. }))
+        .expect("preamble");
+    let toc = preamble.toc.as_deref().expect("preamble toc");
+    assert_eq!(toc.levels, 3);
+    assert_eq!(outline(toc), [caption_none(1), caption_none(0)]);
+}
+
+fn caption_none(sections: usize) -> (Option<String>, usize) {
+    (None, sections)
+}
