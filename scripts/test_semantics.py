@@ -421,6 +421,24 @@ class SemanticProjectionTests(unittest.TestCase):
             self.assertNotEqual(projected, semantics.inline_projection([changed]), field)
         self.assertNotEqual(projected, semantics.inline_projection([dict(node, parts=[text('Cat & friend')])]))
 
+    def test_icons_compare_name_mode_uri_alt_and_fields(self):
+        node = {'name': 'image', 'icon': True, 'target': 'heart', 'src': 'ic/heart.png', 'alt': 'A & B', 'icons': '',
+                'attributes': {'size': '2x', 'title': 'T', 'role': 'red', 'id': 'h'}, 'options': [],
+                'parts': [{'kind': 'raw', 'value': 'A &amp; B'}]}
+        projected = semantics.inline_projection([node])
+        semantics.validate_inlines(projected)
+        self.assertEqual(projected[0], {'kind': 'icon', 'id': 'h', 'roles': ['red'], 'target': 'heart', 'icons': '',
+                                        'src': 'ic/heart.png', 'alt': [text('A & B')],
+                                        'attributes': {'size': '2x', 'title': 'T'}})
+        for field, value in [('target', 'x'), ('src', 'x.png'), ('icons', 'font'), ('icons', None),
+                             ('attributes', {'size': '3x'}), ('parts', [text('C')])]:
+            self.assertNotEqual(projected, semantics.inline_projection([dict(node, **{field: value})]), field)
+        for invalid in [dict(node, attributes={'custom': 'x'}), dict(node, options=['inline']), dict(node, icons=1)]:
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                semantics.inline_projection([invalid])
+        with self.assertRaises(ValueError):
+            semantics.validate_inlines([dict(projected[0], attributes={'float': 'left'})])
+
     def test_complex_inline_unsupported_options_fields_and_raw_labels_fail(self):
         image = {'name': 'image', 'target': 'cat.png', 'src': 'cat.png', 'alt': 'Cat'}
         for invalid in [dict(image, icon=True), dict(image, options=['inline']), dict(image, svg={'mode': 'inline'}),
@@ -603,7 +621,7 @@ class SemanticProjectionTests(unittest.TestCase):
     def test_pinned_fixture_expands_attributes_and_macros_inside_quotes(self):
         root = CORPUS / 'upstream'
         manifest, cases = acceptance.load_corpus(root / 'semantics.json')
-        self.assertEqual(len(cases), 141)
+        self.assertEqual(len(cases), 142)
         self.assertEqual(manifest['profile'], semantics.PROFILE)
         reference = json.loads((root / 'reference/semantic-attributes-macros-in-quotes.json').read_text())
         strong = reference['semantics']['blocks'][0]['inlines'][0]

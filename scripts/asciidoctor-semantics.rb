@@ -5,6 +5,7 @@
 # leaving content available to later substitution stages in Ruby's string API.
 # The Python adapter decodes the lexical entities once and validates the schema.
 class SemanticConverter < Asciidoctor::Converter::Base
+  ICON_ATTRIBUTES = %w[size flip rotate title width height link window].freeze
   attr_accessor :attribute_names
 
   def initialize backend, opts = {}
@@ -73,6 +74,10 @@ class SemanticConverter < Asciidoctor::Converter::Base
         node[:type] == 'unresolved' ? "[#{node[:id]}]" : "[#{node[:index]}]"
       when 'anchor', 'line-break', 'image'
         ''
+      when 'icon'
+        # Only the icons-off form shows text (`[alt]`).
+        raise 'a generated id from icon text is outside inline-semantics-v1' unless node[:icons]
+        ''
       when 'indexterm'
         ''
       else
@@ -103,6 +108,17 @@ class SemanticConverter < Asciidoctor::Converter::Base
     attrs = node.attributes.select { |key, _| %w[width height title link float align].include? key }
     target = node.respond_to?(:target) ? node.target : (node.attr 'target')
     { target: target, src: node.image_uri(target), alt: inlines(node.alt), attributes: attrs }
+  end
+
+  # An inline icon (Ruby's convert_inline_image with type icon): the name,
+  # the icons mode where it converts, the image icon's URI and its fields.
+  def icon_fields node
+    allowed = [1, *%w[alt default-alt size flip rotate title width height link window id role]]
+    raise 'icon options are outside inline-semantics-v1' unless (node.attributes.keys - allowed).empty?
+    icons = node.document.attr 'icons'
+    { kind: 'icon', id: node.id || (node.attr 'id'), roles: node.roles, target: node.target, icons: icons,
+      src: icons && icons != 'font' ? node.icon_uri(node.target) : '', alt: inlines(node.alt),
+      attributes: node.attributes.select { |key, _| ICON_ATTRIBUTES.include? key } }
   end
 
   def link_metadata node
@@ -382,7 +398,7 @@ class SemanticConverter < Asciidoctor::Converter::Base
             submenus: (node.attr 'submenus').map { |label| inlines label },
             item: (node.attr 'menuitem') ? inlines(node.attr 'menuitem') : nil)
     when 'inline_image'
-      raise 'icons are outside inline-semantics-v1' if node.type == 'icon'
+      return store(icon_fields node) if node.type == 'icon'
       store({ kind: 'image', id: node.id || (node.attr 'id'), roles: node.roles }.merge(image_fields(node)))
     when 'inline_indexterm'
       raise 'indexterm metadata is outside inline-semantics-v1' unless node.attributes.keys.all? { |key| Integer === key || %w[terms see see-also].include?(key) }

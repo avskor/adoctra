@@ -276,8 +276,22 @@ cases = {
     assert(code[:language] == 'ruby', 'listing language lost')
     assert(code[:inlines][0][:value] == '  ' && code[:inlines][1][:kind] == 'strong' && code[:inlines][2][:value] == " &lt; 2\n    y", 'verbatim content changed')
   end,
+  'inline icons keep their name, mode, URI and fields' => lambda do
+    off = project('A icon:heart[2x,role=red,title=Love,link=x.html] icon:x[alt="*X*"].')[:blocks][0][:inlines]
+    heart = off[1]
+    assert(heart[:kind] == 'icon' && heart[:target] == 'heart' && heart[:icons].nil? && heart[:src] == '', 'icons-off icon changed')
+    assert(heart[:roles] == ['red'] && heart[:attributes] == { 'size' => '2x', 'title' => 'Love', 'link' => 'x.html' }, 'icon fields lost')
+    assert(off[3][:alt][0][:kind] == 'strong', 'icon alt formatting lost')
+    load = lambda do |source|
+      Asciidoctor.load(source, safe: :safe, header_footer: false, converter: SemanticConverter.new('html5')).convert
+    end
+    font = load.call(":icons: font\n\nicon:flag[rotate=90]")[:blocks][0][:inlines][0]
+    assert(font[:icons] == 'font' && font[:src] == '' && font[:attributes] == { 'rotate' => '90' }, 'font icon changed')
+    image = load.call(":icons:\n:iconsdir: ic\n\nicon:y[]")[:blocks][0][:inlines][0]
+    assert(image[:icons] == '' && image[:src] == 'ic/y.png' && image[:alt] == [{ kind: 'text', value: 'y' }], 'image icon changed')
+  end,
   'image options and icons fail closed' => lambda do
-    ['icon:heart[]', 'image:photo.svg[opts=inline]', 'image:photo.png[custom=value]'].each do |source|
+    ['icon:heart[custom=value]', 'image:photo.svg[opts=inline]', 'image:photo.png[custom=value]'].each do |source|
       begin
         project(source)
         raise 'unsupported image accepted'

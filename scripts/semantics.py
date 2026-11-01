@@ -15,6 +15,7 @@ QUOTES = {'quote', 'verse'}
 LISTS = {'ulist', 'olist', 'dlist', 'colist'}
 VERBATIM = {'listing', 'literal'}
 IMAGE_ATTRIBUTES = {'width', 'height', 'title', 'link', 'float', 'align'}
+ICON_ATTRIBUTES = {'size', 'flip', 'rotate', 'title', 'width', 'height', 'link', 'window'}
 LINK_METADATA = {'id', 'role', 'title', 'window', 'rel'}
 CELL_STYLES = {None, 'asciidoc', 'none', 'emphasis', 'header', 'literal', 'monospaced', 'strong'}
 
@@ -160,6 +161,17 @@ def complex_inline(node, kind):
                 'terms': [lexical(term) for term in node['terms']],
                 'see': lexical(node['see']) if node['see'] is not None else None,
                 'see_also': [lexical(term) for term in node['see_also']]}
+    if kind == 'image' and node.get('icon'):
+        attrs = node.get('attributes', {})
+        require(set(attrs) <= ICON_ATTRIBUTES | {'id', 'role', 'alt'} and not node.get('options') and not node.get('svg'),
+                'icon options are outside inline-semantics-v1')
+        require(isinstance(node.get('target'), str) and isinstance(node.get('src'), str) and 'icons' in node
+                and (node['icons'] is None or isinstance(node['icons'], str)), 'invalid icon fields')
+        return {'kind': 'icon', 'id': lexical(attrs['id']) if 'id' in attrs else None,
+                'roles': lexical(attrs.get('role', '')).split(), 'target': lexical(node['target']),
+                'icons': node['icons'], 'src': lexical(node['src']),
+                'alt': parts_projection(node['parts']) if 'parts' in node else [{'kind': 'text', 'value': lexical(node['alt'])}],
+                'attributes': {key: lexical(value) for key, value in attrs.items() if key in ICON_ATTRIBUTES}}
     if kind == 'image':
         fields = image_fields(node)
         attrs = node.get('attributes', {})
@@ -582,6 +594,13 @@ def validate_inlines(nodes):
             keys.update({'id', 'roles', 'target', 'src', 'alt', 'attributes'})
             metadata(node)
             validate_image(node)
+        elif kind == 'icon':
+            keys.update({'id', 'roles', 'target', 'icons', 'src', 'alt', 'attributes'})
+            metadata(node)
+            require(isinstance(node.get('target'), str))
+            validate_icon(node)
+            validate_inlines(node.get('alt'))
+            validate_strings(node.get('attributes'), ICON_ATTRIBUTES)
         elif kind == 'stem':
             keys.update({'style', 'inlines'})
             require(node.get('style') in {'asciimath', 'latexmath'})
