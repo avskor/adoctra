@@ -2765,6 +2765,12 @@ fn parse_block_content<'s, 'c>(
     // elsewhere (and within a paragraph) the lines are ordinary text.
     let discrete = matches!(pending_style, Some("discrete" | "float"));
     let sections = ctx == BlockCtx::Section || discrete;
+    // Ruby marks the block after `is_next_line_section?` peeked two
+    // preprocessed lines (a comment style peeks them raw, a discrete one
+    // not at all), so a line dropped between them moves the block's cursor.
+    if ctx == BlockCtx::Section && !discrete && pending_style != Some("comment") {
+        lines.peeked_blocks.insert(off);
+    }
     // Ruby peeks two lines for a title (`is_next_line_section?`, or
     // `is_section_title?` with `peek_line` for a discrete heading), so the
     // line after an ATX title is preprocessed before the title is read.
@@ -5818,6 +5824,58 @@ mod tests {
         match diagnostic.report.location {
             crate::DiagnosticLocation::Cursor(cursor) => Some(cursor.line),
             _ => None,
+        }
+    }
+
+    #[test]
+    fn a_block_mark_follows_the_section_peek() {
+        // Ruby marks a block after `is_next_line_section?` peeked two
+        // preprocessed lines: a line dropped between them moves the mark
+        // (and what is reported at it) down until both lines are read.
+        let report = |src: &str, prefix: &str| {
+            let r = parse(src);
+            let found = r
+                .diagnostics
+                .iter()
+                .find(|d| d.message.starts_with(prefix))
+                .unwrap_or_else(|| panic!("{src:?}: {:?}", r.diagnostics));
+            (report_line(found), found.span.start)
+        };
+        for (src, prefix, line) in [
+            ("para\n\n====\nendif::[]\n\nx", "unterminated example", 4),
+            ("----\nendif::[]\nendif::[]\nx", "unterminated listing", 3),
+            // Every line a skipped conditional drops counts.
+            (
+                "====\nifdef::x[]\na\nb\nendif::[]",
+                "unterminated example",
+                5,
+            ),
+            (
+                "[[a]]\npara\n\n[[a]]\nfoo\nendif::[]\nbar",
+                "id assigned to block already in use",
+                6,
+            ),
+            // A comment style peeks the lines raw: the unprocessed directive
+            // is pushed back and later swallowed by the paragraph, so the
+            // fence after it is peeked with the dropped `endif`.
+            (
+                "para\n\n[comment]\nTitle\nifdef::x[]\n=====\nendif::[]\n\nx",
+                "unterminated example",
+                7,
+            ),
+            // No section peek: a discrete style, a list item's block.
+            (
+                "x\n\n[discrete]\n====\nendif::[]\ny",
+                "unterminated example",
+                4,
+            ),
+            ("* a\n+\n====\nendif::[]\nx", "unterminated example", 3),
+        ] {
+            let (found, start) = report(src, prefix);
+            assert_eq!(found, Some(line), "{src:?}");
+            // The editor span stays on the block's first line.
+            let first = src[start..].lines().next().unwrap();
+            assert!(!first.starts_with("endif"), "{src:?}");
         }
     }
 

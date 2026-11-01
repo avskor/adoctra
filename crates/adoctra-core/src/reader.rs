@@ -97,6 +97,10 @@ pub(crate) struct Reader<'a> {
     /// lines: empty lines that still count as a `+` marker when a nested
     /// list reads them (Ruby keeps the marker object).
     pub placeholders: std::collections::BTreeSet<usize>,
+    /// First lines of blocks Ruby's section loop peeked two preprocessed
+    /// lines from (`is_next_line_section?`): its block mark is the cursor
+    /// after that peek, which a dropped line moves (`section_cursor`).
+    pub peeked_blocks: std::collections::BTreeSet<usize>,
     resources: Option<Resources<'a>>,
     /// Ruby's `@maxdepth` is set (a positive host `max-include-depth`) for a
     /// reader without a provider: nothing is read, but a URI target Ruby may
@@ -162,6 +166,7 @@ impl<'a> Reader<'a> {
             },
             inputs: vec![Input::new(source, crate::SourceId::default(), false, 0)],
             placeholders: Default::default(),
+            peeked_blocks: Default::default(),
             resources: None,
             unread_includes: false,
             origins: Vec::new(),
@@ -374,7 +379,13 @@ impl<'a> Reader<'a> {
 
     pub fn map_diagnostic(&self, diagnostic: &mut Diagnostic, provenance: &mut Vec<Vec<Span>>) {
         if diagnostic.report.location == crate::DiagnosticLocation::Source {
-            if let Some(cursor) = self.report_cursor(diagnostic.span.start) {
+            let start = diagnostic.span.start;
+            let cursor = if self.peeked_blocks.contains(&start) {
+                self.section_cursor(start)
+            } else {
+                self.report_cursor(start)
+            };
+            if let Some(cursor) = cursor {
                 diagnostic.report.location = crate::DiagnosticLocation::Cursor(cursor);
             }
         }

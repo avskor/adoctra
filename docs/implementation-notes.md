@@ -2263,7 +2263,13 @@ directive errors there precede the level checks; Ruby's line number for that
 level errors (`out of sequence`, `level 0 sections`, `do not support nested
 sections`) all use `Reader::section_cursor` — Ruby's `reader.cursor` after that
 peek, so a directive dropped by it moves them one line later
-(`position-title-peek-dropped-directive`, fixed).
+(`position-title-peek-dropped-directive`, fixed). **Block mark**: every block
+`parse_block` reads in `BlockCtx::Section` (style not discrete/float/comment)
+records its first line in `Reader::peeked_blocks`; `map_diagnostic` reports
+source-located diagnostics starting there at `section_cursor` — Ruby's
+`reader.mark` after `is_next_line_section?` peeked two preprocessed lines, so
+a line dropped between them moves the unterminated-block and duplicate-block-id
+lines down (`position-comment-direct-peek`, `position-block-peek-dropped-directive`).
 **Unshown titles**: `Execution::unshown` converts a hidden nested document
 title (`notitle` unless the cell sets `showtitle`) and the hidden document
 title (after the body) with footnotes,

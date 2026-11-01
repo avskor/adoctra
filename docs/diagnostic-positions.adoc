@@ -3,11 +3,16 @@
 `diagnostic-positions-v1` — отдельный профиль приёмки, закреплённый за
 Asciidoctor 2.0.23. Манифест:
 link:../compatibility/acceptance/positions.json[positions.json].
-21 собственная проба даёт *20 PASS, 1 XFAIL*. XFAIL
-`position-comment-direct-peek`: после прямого (без препроцессора) чтения
-следующей строки абзаца со стилем `comment` Ruby сообщает о незакрытом
-example-блоке, открытом после абзаца, на строку ниже его разделителя; adoctra
-указывает строку разделителя. Прежний XFAIL
+22 собственные пробы дают *22 PASS*, XFAIL нет. Прежний XFAIL
+`position-comment-direct-peek` исправлен вместе с общим случаем
+(`position-block-peek-dropped-directive`): цикл разделов Ruby перед каждым
+блоком подглядывает две предобработанные строки (`is_next_line_section?`), и
+строка, отброшенная между ними, сдвигает `mark` блока. Всё, что Ruby сообщает
+по этой метке (незакрытый блок, повторный id блока), называет строку ниже
+первой строки блока, пока обе строки не прочитаны; adoctra запоминает такие
+блоки (`Reader::peeked_blocks`) и берёт для них `section_cursor`. Стили
+`comment` (сырое подглядывание) и `discrete`/`float`, а также блоки пунктов
+списка не сдвигаются. Прежний XFAIL
 `position-title-peek-dropped-directive` исправлен: директива, отброшенная при
 подглядывании двух строк заголовка раздела, сдвигает `reader.cursor` Ruby, и
 все три проверки уровня (`section title out of sequence`, `level 0 sections …`,
@@ -74,6 +79,8 @@ PASS проверяют пропуск уровня раздела, повтор
 * Ошибки уровня 0 и вложенности специальных разделов используют курсор после
   подглядывания заголовка, как предупреждение о порядке уровней
   (`position-title-peek-dropped-directive`).
+* Метка блока после подглядывания цикла разделов учитывает отброшенные строки
+  (`position-comment-direct-peek`, `position-block-peek-dropped-directive`).
 
 `Diagnostic.span`, `severity` и `message` сохраняют физическую редакторскую
 диагностику. Новое поле `report: DiagnosticReport` задаёт представление для
