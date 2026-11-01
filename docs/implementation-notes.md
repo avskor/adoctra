@@ -791,7 +791,17 @@ lines); JSON/WASM `name:"table"` with columns, head/body/foot cells (spans in
 WASM); tokens `table-delimiter`/`cell-separator` from parser spans, cell text
 scanned between separators (the innermost table decides a line).
 **AsciiDoc cells** (`a`, Ruby's inner Document) are `CellContent::Blocks`, read
-when the cell is created (cells complete in Ruby's creation order, `Cell.order`):
+when the cell is created (cells complete in Ruby's creation order, `Cell.order`;
+`Cell.mark` records how many table diagnostics preceded the creation, and
+read_table splits the table's diagnostics off and interleaves each cell's nested
+diagnostics at its mark, so `table missing leading separator` from a later cell
+follows them). Cells Ruby creates and then drops (incomplete last row, a row
+exceeding the column count: `Parsed.dropped`) are completed too — an AsciiDoc
+cell reads its nested document and reports its warnings, a normal cell catalogs
+its anchor — but are not output; normal dropped text is never converted (Ruby's
+lazy `Cell#text`). Ids inside a dropped AsciiDoc cell are not registered: the
+registry walks the output tree (XFAIL `fuzz-table-dropped-cell-anchor`).
+Reading:
 parser.rs read_nested_document builds `Reader::nested` (the cell's lines at their
 reader offsets, no preprocessing; Reader::absorb keeps highlighting records, its
 entries never apply to the parent) and runs header, body and nest_sections inside

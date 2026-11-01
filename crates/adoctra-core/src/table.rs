@@ -486,6 +486,9 @@ pub(crate) struct Cell {
     /// document) or catalogs its leading anchor: cells are completed in this
     /// order.
     pub order: usize,
+    /// How many diagnostics were reported when Ruby created the cell (or
+    /// cataloged its deferred anchor): its own diagnostics come after them.
+    pub mark: usize,
     /// A normal psv cell whose leading inline anchor is cataloged.
     pub catalog: bool,
     /// The merged column and spec style (Ruby's `@attributes['style']`).
@@ -511,6 +514,9 @@ pub(crate) struct Parsed {
     pub head: Vec<Vec<Cell>>,
     pub body: Vec<Vec<Cell>>,
     pub foot: Vec<Vec<Cell>>,
+    /// Cells Ruby creates and then drops (an incomplete or overlong row):
+    /// their side effects still happen, they are not output.
+    pub dropped: Vec<Cell>,
     /// Cell separators (with their specs) for highlighting.
     pub separators: Vec<Span>,
 }
@@ -530,6 +536,7 @@ struct Parser<'a> {
     linenum: i64,
     columns: Vec<Column>,
     body: Vec<Vec<Cell>>,
+    dropped: Vec<Cell>,
     header: Header,
     /// The next [`Cell::order`].
     order: usize,
@@ -713,7 +720,9 @@ impl<'a> Parser<'a> {
 
     fn close_row(&mut self, drop: bool) {
         let row = std::mem::take(&mut self.current_row);
-        if !drop {
+        if drop {
+            self.dropped.extend(row);
+        } else {
             self.body.push(row);
         }
         if self.colcount == -1 {
@@ -811,6 +820,7 @@ impl<'a> Parser<'a> {
             literal,
             span: Span::new(start, end),
             order,
+            mark: self.diagnostics.len(),
             catalog: normal && header_row.is_none(),
             merged_style,
             deferred_anchor,
@@ -833,6 +843,7 @@ impl<'a> Parser<'a> {
         if std::mem::take(&mut cell.deferred_anchor) {
             cell.catalog = true;
             cell.order = self.order;
+            cell.mark = self.diagnostics.len();
             self.order += 1;
         }
         cell
@@ -914,6 +925,7 @@ pub(crate) fn parse(
         linenum: -1,
         columns,
         body: Vec::new(),
+        dropped: Vec::new(),
         header: Header::False,
         order: 0,
         separators: Vec::new(),
@@ -1061,6 +1073,8 @@ pub(crate) fn parse(
             span,
             "dropping cells from incomplete row detected end of table",
         );
+        let row = std::mem::take(&mut parser.current_row);
+        parser.dropped.extend(row);
     }
     if !parser.columns.is_empty() && !explicit {
         assign_widths(&mut parser.columns, None, &[], start, parser.diagnostics);
@@ -1104,6 +1118,7 @@ pub(crate) fn parse(
         head,
         body,
         foot,
+        dropped: parser.dropped,
         separators: parser.separators,
     }
 }

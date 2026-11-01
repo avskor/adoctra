@@ -229,9 +229,14 @@ Ruby подставляет текст ячейки таблицы целико�
 ячейки; adoctra подставляет абзацы ячейки по отдельности.
 Проба `diagnostic-header-author-missing` проверяет предупреждения подстановки
 значений строки автора и ревизии. Пробы широкого фаззинга добавили порядок диагностик части книги и значения
-`link` в одинарных кавычках (PASS) и два XFAIL порядка диагностик таблицы
-(`fuzz-table-separator-order`, `fuzz-table-dropped-cell-content`); бывший
-XFAIL `fuzz-table-cell-attribute-order` стал PASS. Итого *59 PASS, 2 XFAIL*. Прежние отличия для незакрытого listing, неизвестной xref
+`link` в одинарных кавычках и порядок диагностик таблицы
+(`fuzz-table-separator-order`, `fuzz-table-dropped-cell-content`: ячейка
+AsciiDoc разбирается при создании, в том числе отброшенная), все PASS; бывший
+XFAIL `fuzz-table-cell-attribute-order` стал PASS. XFAIL
+`fuzz-table-dropped-cell-anchor`: Ruby регистрирует id отброшенной ячейки
+AsciiDoc (повторный id у следующего раздела, подпись ссылки из отброшенного
+раздела), adoctra строит реестр по выходному дереву без отброшенных ячеек.
+Итого *61 PASS, 1 XFAIL*. Прежние отличия для незакрытого listing, неизвестной xref
 и незакрытого условия устранены в стандартном выводе CLI; эталоны Ruby и HTML
 не изменялись. Редакторские сообщения, физические spans и исходные severity/message
 сохраняются в API/WASM и режиме `--diagnostics editor`.

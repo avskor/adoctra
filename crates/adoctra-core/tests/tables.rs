@@ -590,3 +590,86 @@ fn the_first_line_of_an_asciidoc_cell_is_preprocessed_again() {
         "include::x.adoc[]"
     );
 }
+
+/// Diagnostics as (message, spanned source text).
+fn located<'a>(source: &'a str, result: &'a adoctra_core::ParseResult) -> Vec<(&'a str, &'a str)> {
+    result
+        .diagnostics
+        .iter()
+        .map(|d| (d.message.as_str(), &source[d.span.start..d.span.end]))
+        .collect()
+}
+
+#[test]
+fn asciidoc_cell_diagnostics_come_when_ruby_creates_the_cell() {
+    // The first cell takes the `a` spec of the next separator and reads its
+    // nested document at once; the last cell then lacks a separator.
+    let source = "|===\n====\na|\n";
+    let result = parse(source);
+    assert_eq!(
+        located(source, &result),
+        [
+            ("unterminated table block", "|==="),
+            (
+                "unterminated example block (missing closing `====`)",
+                "===="
+            ),
+            (
+                "table missing leading separator; recovering automatically",
+                "===="
+            ),
+        ]
+    );
+    let t = blocks(source);
+    let body = &table(&t[0]).body;
+    assert_eq!(body.len(), 2);
+    match &body[0][0].content {
+        CellContent::Blocks { blocks, .. } => {
+            assert!(matches!(blocks[0].kind, BlockKind::Example { .. }));
+            assert_eq!(&source[blocks[0].span.start..blocks[0].span.end], "====");
+        }
+        other => panic!("not an AsciiDoc cell: {other:?}"),
+    }
+}
+
+#[test]
+fn a_dropped_asciidoc_cell_still_reads_its_nested_document() {
+    // Ruby creates (and parses) the cell before it drops the incomplete row.
+    let source = "[cols=\"a,\"]\n|===\n----\n";
+    let result = parse(source);
+    assert_eq!(
+        located(source, &result),
+        [
+            ("unterminated table block", "|==="),
+            (
+                "table missing leading separator; recovering automatically",
+                "----"
+            ),
+            (
+                "unterminated listing block (missing closing `----`)",
+                "----"
+            ),
+            (
+                "dropping cells from incomplete row detected end of table",
+                "----"
+            ),
+        ]
+    );
+    let t = blocks(source);
+    let table = table(&t[0]);
+    assert!(table.body.is_empty() && table.head.is_empty());
+}
+
+#[test]
+fn a_dropped_normal_cell_is_not_converted() {
+    // A dropped cell's text is never substituted: no warning for its xref.
+    let source = "[cols=2]\n|===\n|a |b\n|<<missing>>\n|===\n";
+    let result = parse(source);
+    assert_eq!(
+        located(source, &result),
+        [(
+            "dropping cells from incomplete row detected end of table",
+            "|<<missing>>"
+        )]
+    );
+}

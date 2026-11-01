@@ -510,6 +510,10 @@
     "sources/fuzz/table-dropped-cell-content.adoc": {
       "sha256": "063d2078cd34a6d8a9783d6f7ea368bb9436d7aa09fa2f96e4877d0b5509449a",
       "origin": "adoctra-fuzz-v1"
+    },
+    "sources/fuzz/table-dropped-cell-anchor.adoc": {
+      "sha256": "fdc0781545704498da4dab8c0f5e3cfcbb457536cc07f08380e621c588f20b9c",
+      "origin": "adoctra-fuzz-v1"
     }
   },
   "cases": [
@@ -2511,15 +2515,20 @@
       "id": "fuzz-table-separator-order",
       "category": "diagnostics",
       "source": "sources/fuzz/table-separator-order-example.adoc",
-      "expect": "xfail",
-      "reason": "Ruby reports a missing leading separator when it closes the first cell, after reading the lines that follow; adoctra reports it when the table starts"
+      "expect": "pass"
     },
     {
       "id": "fuzz-table-dropped-cell-content",
       "category": "diagnostics",
       "source": "sources/fuzz/table-dropped-cell-content.adoc",
+      "expect": "pass"
+    },
+    {
+      "id": "fuzz-table-dropped-cell-anchor",
+      "category": "diagnostics",
+      "source": "sources/fuzz/table-dropped-cell-anchor.adoc",
       "expect": "xfail",
-      "reason": "Ruby parses an AsciiDoc cell when it closes it, so a cell of an incomplete row it later drops still reports its content's warnings; adoctra does not parse dropped cells"
+      "reason": "Ruby registers the ids of an AsciiDoc cell it later drops, so a later section reports the duplicate id and the reference takes the dropped section's title; adoctra registers ids from the output tree, which has no dropped cells"
     }
   ]
 }

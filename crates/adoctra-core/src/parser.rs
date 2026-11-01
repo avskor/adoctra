@@ -2075,6 +2075,7 @@ fn read_table(
         .iter()
         .map(|(off, line)| (*off, line.as_ref()))
         .collect();
+    let base = context.diagnostics.len();
     let parsed = crate::table::parse(
         &body,
         hint,
@@ -2095,8 +2096,12 @@ fn read_table(
     let columns = parsed.columns;
     // Complete the cells in Ruby's order: an AsciiDoc cell reads its nested
     // document when it is created, a leading anchor is cataloged then (or
-    // when the header row is partitioned).
-    let sections = [parsed.head, parsed.body, parsed.foot];
+    // when the header row is partitioned). Cells Ruby drops are created too
+    // (the fourth section), so their side effects remain. Each cell's
+    // diagnostics follow the table diagnostics reported before it.
+    let mut table_diagnostics = context.diagnostics.split_off(base).into_iter();
+    let mut flushed = 0;
+    let sections = [parsed.head, parsed.body, parsed.foot, vec![parsed.dropped]];
     let mut order: Vec<(usize, usize, usize, usize)> = Vec::new();
     for (s, rows) in sections.iter().enumerate() {
         for (r, row) in rows.iter().enumerate() {
@@ -2113,15 +2118,28 @@ fn read_table(
     let render = context.render_attributes();
     for (_, s, r, c) in order {
         let cell = &sections[s][r][c];
+        let mark = cell.mark.saturating_sub(base);
+        if mark > flushed {
+            context
+                .diagnostics
+                .extend(table_diagnostics.by_ref().take(mark - flushed));
+            flushed = mark;
+        }
         if cell.catalog {
             let source = crate::table::source(&cell.text);
             context.catalog_leading_anchor(&crate::table::text(&cell.text), |range| {
                 source.original_span(Span::new(range.start, range.end))
             });
         }
+        let asciidoc = !cell.literal && cell.style == Some(crate::ast::CellStyle::Asciidoc);
+        if s == 3 && !asciidoc {
+            // A dropped cell's text is never converted (Ruby's `Cell#text`
+            // is lazy); only its creation-time effects happen.
+            continue;
+        }
         let content = if cell.literal {
             CellContent::Literal(crate::table::text(&cell.text))
-        } else if cell.style == Some(crate::ast::CellStyle::Asciidoc) {
+        } else if asciidoc {
             let (blocks, has_title, attributes) =
                 read_nested_document(lines, &cell.text, (cell.span.start, cell.span.end), context);
             CellContent::Blocks {
@@ -2163,6 +2181,7 @@ fn read_table(
             span: cell.span,
         });
     }
+    context.diagnostics.extend(table_diagnostics);
     let mut done = done.into_iter().map(|rows| {
         rows.into_iter()
             .map(|row| row.into_iter().flatten().collect())
