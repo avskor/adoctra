@@ -2239,6 +2239,11 @@ leading anchor can register an empty one (`catalog_inline_anchors` skips it).
 **Checklist class**: `checklist` then the list style, then roles.
 **Directive targets**: `reader::directive` splits on Ruby's ASCII `\s` only.
 
+**Fuzz seeds 37–44** (2026-11-01): 5517 PASS, 74 RUBY_ERROR, 9 DIFF, no new
+defect; the only new form, an entity reference in a listing language
+(`class`/`data-lang`, Ruby writes it raw), is frozen as the intentional XFAIL
+`fuzz-language-entity-reference` (asserted in
+`entity_reference_in_attribute_values_stays_literal`).
 **Fuzz seeds 29–36** (2026-11-01). **Admonition label**: the `NOTE: ` prefix
 applies only when `changes_paragraph_type` is false for the paragraph's style
 (Ruby checks `AdmonitionParagraphRx` only in the plain paragraph branch:

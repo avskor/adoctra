@@ -3671,6 +3671,23 @@ mod tests {
         }
     }
 
+    /// An entity reference in a role or a listing language stays literal:
+    /// unlike Ruby, which writes it raw (so the browser decodes it), the `&`
+    /// is encoded (intentional difference, see compatibility.adoc).
+    #[test]
+    fn entity_reference_in_attribute_values_stays_literal() {
+        for (src, want) in [
+            ("[.&mp;]\n}", r#"<p class="&amp;mp;">}</p>"#),
+            (
+                "```&mp;\nx\n```",
+                r#"<code class="language-&amp;mp;" data-lang="&amp;mp;">"#,
+            ),
+        ] {
+            let html = render(src);
+            assert!(html.contains(want), "{src:?}: {html}");
+        }
+    }
+
     #[test]
     fn shorthand_id_and_role_render_on_paragraph() {
         let html = render("[#intro.lead]\nHello.");
