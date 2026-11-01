@@ -2308,3 +2308,13 @@ and callouts in STEM `subs` all match Ruby (60 body-DOM/diagnostic probes,
 **Include encoding order audit** covers 93 profiles
 (`scripts/generate_encoding_order.rb` adds every pinned-Ruby encoding with a
 UTF-8 converter): 2699 cases, 2649 PASS, 50 RUBY_ERROR, no DIFF.
+**Hibernate ORM and Debezium corpus** (2026-11-01): five Hibernate 7.4.15 User
+Guide chapters (attributes from documentation.gradle, `root-project-dir=.`, tagged
+Java tests and `extras` SQL as resources, `source-highlighter=rouge`) and four
+Debezium 3.7.0 pages (antora.yml attributes plus playbook `prodname`,
+`partialsdir=partials`; nested `{snippetsdir}` resolves from the partial's
+directory) in cases.json/structure.json and visual cases.json: all PASS/match
+on first run. MySQL connector is not in the visual corpus (Chrome never
+finishes its full-page screenshot); the semantic profile rejects all nine
+(image options, `toc`, Rouge markup).
+

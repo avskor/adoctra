@@ -66,10 +66,13 @@ HTML adoctra намеренно использует современную се
   `DejaVu`-шрифты своих стеков; страница Ruby с загруженными Google Fonts
   не воспроизводится.
 * Корпус — `examples/sample.adoc`, все golden-фикстуры
-  (`crates/adoctra-html/tests/golden/**/*.adoc`) и 35 полных документов
+  (`crates/adoctra-html/tests/golden/**/*.adoc`) и 43 полных документа
   приёмочного корпуса (README Asciidoctor на пяти языках, CHANGELOG, страницы
   руководств Asciidoctor и Spring Framework, спецификации AsciiDoc, Quarkus,
-  JUnit и Apache Groovy) с их host-атрибутами. Случай с
+  JUnit, Apache Groovy, Hibernate ORM и Debezium) с их host-атрибутами.
+  Страница Debezium MySQL connector (около 480 КБ HTML) в визуальный корпус
+  не входит: Chrome не завершает её полностраничный скриншот даже за 15 минут;
+  её проверяют основной и структурный профили приёмки. Случай с
   `resources` получает временное дерево `main.adoc` и include-файлы под
   манифестными именами (включая Antora-имена `example$…`). Четыре случая
   `embedded` (`sample`, README, safe-modes, Spring) сравнивают тело без
@@ -256,3 +259,10 @@ AsciiDoc (Eclipse), Quarkus, JUnit и Apache Groovy из приёмочного 
 
 Итог: *694 из 696 наблюдений `match`* (348 случаев), в среднем 0.02%
 пикселей; единственное отличие — по-прежнему `golden-block-subs`.
+
+Hibernate ORM и Debezium (2026-11-01): пять глав User Guide Hibernate
+(Java-примеры с подсветкой Rouge, `icons=font`) и три страницы Debezium
+совпали сразу (16 наблюдений `match`, 0.00–0.07% пикселей), правок
+`adoctra.css` не потребовалось; прежние наблюдения не изменились.
+Итог: *710 из 712 наблюдений `match`* (356 случаев), в среднем 0.02%
+пикселей; отличие — `golden-block-subs`.

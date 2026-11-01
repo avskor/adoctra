@@ -23,8 +23,11 @@ SHA-256 и ссылку на запись происхождения в мани
   справочника Spring Framework 6.2.0; версии и состав указаны ниже.
 * 14 страниц других проектов (2026-10-31): спецификация языка AsciiDoc
   (Eclipse), руководства Quarkus, JUnit и Apache Groovy; см. ниже.
+* Пять глав Hibernate ORM User Guide и четыре страницы Debezium (2026-11-01):
+  Java-примеры по тегам с подсветкой Rouge, партиалы с тегами и `leveloffset`,
+  условия `community`; см. ниже.
 
-Итого 33 исходных документа и 35 приёмочных прогонов. Корпус включает шесть
+Итого 42 исходных документа и 44 приёмочных прогона. Корпус включает восемь
 независимых upstream-проектов, но не является выборкой всего
 AsciiDoc. Пятнадцать дополнительных небольших документов (семь исходных проб и
 восемь находок фаззинга) проверяют диагностический
@@ -140,6 +143,8 @@ blob-хешами upstream, записи файлов содержат `upstream
 |Quarkus `3.40.1`, коммит `6ce9987` |Apache-2.0 |Config mappings, Virtual threads, Mutiny primer
 |JUnit `r6.1.3`, коммит `f59f60d` |EPL-2.0 (`LICENSE.md`) |Overview, Build support, Repeated tests, Test execution order
 |Apache Groovy `GROOVY_5_1_3`, коммит `26a7a43` |Apache-2.0 (`LICENSE`, `NOTICE`) |Grape, Getting started
+|Hibernate ORM `7.4.15`, коммит `b690b0c` |Apache-2.0 (`LICENSE.txt`) |User Guide: Fetching, Batching, Caching, Multitenancy, Events
+|Debezium `v3.7.0.Final`, коммит `17843f3` |Apache-2.0 (`LICENSE.txt`) |MySQL connector, Outbox event router, Signalling, Engine
 |===
 
 Antora-ресурсы своего модуля (`example$…`, `partial$…`) и общие атрибуты
@@ -151,6 +156,21 @@ Ruby считает URI, поэтому страницы с ними (напри
 ссылками; `release-branch` JUnit генерирует Gradle, он не задан, и ссылки на
 него остаются одинаковым литералом у обеих сторон.
 
+Главы Hibernate получают атрибуты сборки из `documentation.gradle`
+(`source-highlighter=rouge`, `icons=font`, `doctype=book`, версии и
+`jpaJavadocUrlPrefix`); `root-project-dir=.` раскрывает пути примеров
+относительно главы, и Java-тесты (`hibernate-core`, `hibernate-jcache`) и
+SQL из `extras` лежат во временном дереве под этими путями. Страницы
+Debezium получают атрибуты `antora.yml` и `prodname` playbook сайта;
+`partialsdir=partials` размещает партиалы рядом со страницей, а вложенные
+`{snippetsdir}` (`../snippets`) разрешаются от каталога партиала, как в
+источнике. Include `../{partialsdir}` внутри партиала у обеих сторон не
+находится (он под `ifdef::product[]` и не активен).
+
+Все 9 страниц Hibernate и Debezium сразу прошли основной и структурный профили;
+семантический профиль их не принимает (опции изображений, блок `toc`,
+разметка Rouge вне `inline-semantics-v1`).
+
 Все 14 страниц сразу прошли основной и структурный профили. Семантический
 профиль принимает 13 из них: Mutiny primer использует опции изображений вне
 `inline-semantics-v1`. Визуальный профиль выявил отличия таблицы стилей
@@ -161,9 +181,9 @@ Ruby считает URI, поэтому страницы с ними (напри
 
 `block-structure-v1` использует отдельный манифест
 link:../compatibility/acceptance/structure.json[structure.json] и эталоны с
-префиксом `structure-`. В нём повторяется 35 прогонов полных документов
+префиксом `structure-`. В нём повторяется 44 прогона полных документов
 с теми же атрибутами и include-ресурсами; пять собственных примеров проверяют
-блоки, разделы, списки, таблицы и отсутствие названия. Результат: *40 PASS*, отдельно от HTML и
+блоки, разделы, списки, таблицы и отсутствие названия. Результат: *49 PASS*, отдельно от HTML и
 диагностик. Примеры имеют SHA-256 и происхождение, но не являются upstream-тестами.
 
 Ruby launcher с `--structure` вызывает `Asciidoctor.load` / `load_file` и
@@ -241,7 +261,7 @@ seed 29–36: `fuzz-dropped-first-block-section-check` и
 `fuzz-comment-first-block-section-check` (отброшенный первый блок тела —
 уровень следующего раздела проверяется), `fuzz-section-title-peeks-next-line`
 (ошибка директивы после заголовка раздела идёт раньше проверки уровня).
-Итого *66 PASS, 0 XFAIL*. Прежние отличия для незакрытого listing, неизвестной xref
+Итого *75 PASS, 0 XFAIL*. Прежние отличия для незакрытого listing, неизвестной xref
 и незакрытого условия устранены в стандартном выводе CLI; эталоны Ruby и HTML
 не изменялись. Редакторские сообщения, физические spans и исходные severity/message
 сохраняются в API/WASM и режиме `--diagnostics editor`.
