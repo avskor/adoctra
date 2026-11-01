@@ -183,10 +183,10 @@ reader message verbatim in `report.message` (Reader::error_reported).
 else Ruby's "no inline candidate; …" warning (typo kept) and empty output;
 standalone and embedded alike. The CLI ends non-empty HTML with a LF like
 Ruby's CLI and prints backend warnings in embedded mode too.
-`compatibility/upstream/semantics.json` uses `inline-semantics-v1`: 142 PASS
+`compatibility/upstream/semantics.json` uses `inline-semantics-v1`: 143 PASS
 cover 20 attribute and four include scenarios from the upstream selection plus
 118 original semantic probes (7 TOC outline probes; one inline icon probe in
-all three icon modes; 15 tables, including caption/frame/grid/stripes/
+all three icon modes; one SVG probe comparing the read file and interactive fallback; 15 tables, including caption/frame/grid/stripes/
 width/autowidth/float; 27 xref/indexterm/stem/typographic quote
 probes; 33 footnote/callout probes; quote/verse, toc, image align/alt, Rouge
 listing). `compatibility/acceptance/semantics.json` adds

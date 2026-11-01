@@ -6,6 +6,7 @@ require 'asciidoctor'
 require 'asciidoctor/converter/html5'
 require 'open3'
 require 'rbconfig'
+require 'tmpdir'
 require_relative 'asciidoctor-semantics'
 
 # The semantic oracle must work even when the HTML converter is unavailable.
@@ -290,8 +291,24 @@ cases = {
     image = load.call(":icons:\n:iconsdir: ic\n\nicon:y[]")[:blocks][0][:inlines][0]
     assert(image[:icons] == '' && image[:src] == 'ic/y.png' && image[:alt] == [{ kind: 'text', value: 'y' }], 'image icon changed')
   end,
+  'svg images keep the file read and the interactive fallback' => lambda do
+    Dir.mktmpdir do |dir|
+      File.write File.join(dir, 'a.svg'), "<?xml version=\"1.0\"?>\n<svg width=\"1\">  \n</svg>\n"
+      source = "image::a.svg[A,opts=inline,width=5]\n\nimage:a.svg[B,opts=interactive,fallback=b.png] image:x[C,format=svg,opts=interactive]"
+      tree = Asciidoctor.load(source, safe: :safe, base_dir: dir, header_footer: false, converter: SemanticConverter.new('html5')).convert
+      block = tree[:blocks][0]
+      # The file as read: lines right-stripped, prolog and dimensions kept.
+      assert(block[:svg] == { mode: 'inline', content: "<?xml version=\"1.0\"?>\n<svg width=\"1\">\n</svg>" }, 'inline svg changed')
+      assert(block[:attributes] == { 'width' => '5' }, 'svg dimensions lost')
+      inline = tree[:blocks][1][:inlines]
+      assert(inline[0][:svg] == { mode: 'interactive', fallback: 'b.png' } && inline[2][:svg] == { mode: 'interactive', fallback: nil }, 'interactive svg changed')
+      # Secure mode embeds nothing.
+      secure = project(source)
+      assert(secure[:blocks][0][:svg].nil?, 'secure mode embedded an svg')
+    end
+  end,
   'image options and icons fail closed' => lambda do
-    ['icon:heart[custom=value]', 'image:photo.svg[opts=inline]', 'image:photo.png[custom=value]'].each do |source|
+    ['icon:heart[custom=value]', 'image:photo.svg[opts=nofollow]', 'image:photo.png[custom=value]'].each do |source|
       begin
         project(source)
         raise 'unsupported image accepted'

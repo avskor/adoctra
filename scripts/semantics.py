@@ -131,14 +131,30 @@ def inline_projection(nodes):
     return result
 
 
+def svg_projection(svg):
+    """The SVG embedding: the read file (raw markup, compared exactly) or the
+    interactive fallback's source."""
+    if svg is None:
+        return None
+    require(isinstance(svg, dict), 'invalid svg')
+    if svg.get('mode') == 'inline':
+        require(set(svg) == {'mode', 'content'} and (svg['content'] is None or isinstance(svg['content'], str)), 'invalid svg')
+        return dict(svg)
+    require(svg.get('mode') == 'interactive' and set(svg) == {'mode', 'fallback'}, 'invalid svg')
+    return {'mode': 'interactive', 'fallback': lexical(svg['fallback']) if svg['fallback'] is not None else None}
+
+
 def image_fields(node):
     require(all(isinstance(node.get(key), str) for key in ['target', 'src', 'alt']), 'invalid image fields')
-    require(not node.get('svg') and not node.get('options') and not node.get('icon'), 'image options/icons are outside inline-semantics-v1')
+    require(set(node.get('options', [])) <= {'inline', 'interactive'} and not node.get('icon'),
+            'image options/icons are outside inline-semantics-v1')
     attrs = node.get('attributes', {})
-    require(set(attrs) <= IMAGE_ATTRIBUTES | {'id', 'role', 'alt'}, 'image attributes are outside inline-semantics-v1')
+    require(set(attrs) <= IMAGE_ATTRIBUTES | {'id', 'role', 'alt', 'fallback', 'format'},
+            'image attributes are outside inline-semantics-v1')
     return {'target': lexical(node['target']), 'src': lexical(node['src']),
             'alt': parts_projection(node['parts']) if 'parts' in node else [{'kind': 'text', 'value': lexical(node['alt'])}],
-            'attributes': {key: lexical(value) for key, value in attrs.items() if key in IMAGE_ATTRIBUTES}}
+            'attributes': {key: lexical(value) for key, value in attrs.items() if key in IMAGE_ATTRIBUTES},
+            'svg': svg_projection(node.get('svg'))}
 
 
 def complex_inline(node, kind):
@@ -439,6 +455,11 @@ def reference_projection(result, names):
     """Decode Ruby's lexical substitution strings, never parse rendered HTML."""
     result = copy.deepcopy(result)
 
+    def decode_svg(node):
+        # The read file is raw markup on both sides; the fallback is a URI.
+        if node.get('svg') and node['svg']['mode'] == 'interactive' and node['svg']['fallback'] is not None:
+            node['svg']['fallback'] = lexical(node['svg']['fallback'])
+
     def inlines(nodes, prose=True):
         for node in nodes:
             if node['kind'] == 'text':
@@ -446,6 +467,7 @@ def reference_projection(result, names):
             for key in ['id', 'target', 'src']:
                 if node.get(key) is not None:
                     node[key] = lexical(node[key])
+            decode_svg(node)
             if 'roles' in node:
                 node['roles'] = [lexical(role) for role in node['roles']]
             if node.get('inlines') is not None:
@@ -482,6 +504,7 @@ def reference_projection(result, names):
                 node[key] = lexical(node[key])
             node['alt'] = inlines(node['alt'], False)
             node['attributes'] = {key: lexical(value) for key, value in node['attributes'].items()}
+            decode_svg(node)
         if node['context'] == 'table':
             if node['caption'] is not None:
                 node['caption'] = inlines(node['caption'], False)
@@ -591,7 +614,7 @@ def validate_inlines(nodes):
             if node.get('item') is not None:
                 validate_inlines(node['item'])
         elif kind == 'image':
-            keys.update({'id', 'roles', 'target', 'src', 'alt', 'attributes'})
+            keys.update({'id', 'roles', 'target', 'src', 'alt', 'attributes', 'svg'})
             metadata(node)
             validate_image(node)
         elif kind == 'icon':
@@ -655,6 +678,11 @@ def validate_image(node):
     require(all(isinstance(node.get(key), str) for key in ['target', 'src']))
     validate_inlines(node.get('alt'))
     validate_strings(node.get('attributes'), IMAGE_ATTRIBUTES)
+    svg = node.get('svg')
+    require(svg is None or (isinstance(svg, dict) and (
+        (set(svg) == {'mode', 'content'} and svg['mode'] == 'inline' and (svg['content'] is None or isinstance(svg['content'], str)))
+        or (set(svg) == {'mode', 'fallback'} and svg['mode'] == 'interactive'
+            and (svg['fallback'] is None or isinstance(svg['fallback'], str))))), 'invalid svg')
 
 
 def validate_icon(node):
@@ -806,7 +834,7 @@ def validate_block(node):
         keys.update({'columns', 'head', 'body', 'foot'} | TABLE_FIELDS)
         validate_table(node)
     elif context == 'image':
-        keys.update({'target', 'src', 'alt', 'attributes'})
+        keys.update({'target', 'src', 'alt', 'attributes', 'svg'})
         validate_image(node)
     elif context == 'stem':
         keys.update({'style', 'inlines'})

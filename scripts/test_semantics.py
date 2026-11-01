@@ -421,6 +421,25 @@ class SemanticProjectionTests(unittest.TestCase):
             self.assertNotEqual(projected, semantics.inline_projection([changed]), field)
         self.assertNotEqual(projected, semantics.inline_projection([dict(node, parts=[text('Cat & friend')])]))
 
+    def test_svg_embedding_compares_the_read_file_and_fallback(self):
+        image = {'name': 'image', 'target': 'a.svg', 'src': 'a.svg', 'alt': 'A', 'options': ['inline'],
+                 'attributes': {'fallback': 'b.png', 'format': 'svg'}, 'svg': {'mode': 'inline', 'content': '<svg>&amp;</svg>'}}
+        projected = semantics.inline_projection([image])
+        semantics.validate_inlines(projected)
+        self.assertEqual(projected[0]['svg'], {'mode': 'inline', 'content': '<svg>&amp;</svg>'})  # Raw, not decoded.
+        for svg in [None, {'mode': 'inline', 'content': None}, {'mode': 'inline', 'content': '<svg/>'},
+                    {'mode': 'interactive', 'fallback': 'b.png'}]:
+            self.assertNotEqual(projected, semantics.inline_projection([dict(image, svg=svg)]), svg)
+        live = semantics.inline_projection([dict(image, svg={'mode': 'interactive', 'fallback': 'a&amp;b.png'})])
+        self.assertEqual(live[0]['svg'], {'mode': 'interactive', 'fallback': 'a&b.png'})
+        doc = document()
+        doc['blocks'] = [dict(image, name='image', svg={'mode': 'interactive', 'fallback': 'a&amp;amp;b.png'})]
+        oracle = semantics.document_projection(doc, ['a'])
+        oracle['blocks'][0]['svg'] = {'mode': 'interactive', 'fallback': 'a&amp;b.png'}
+        self.assertEqual(semantics.reference_projection(oracle, ['a'])['blocks'][0]['svg']['fallback'], 'a&b.png')
+        with self.assertRaises(ValueError):
+            semantics.validate_image(dict(projected[0], svg={'mode': 'inline'}))
+
     def test_icons_compare_name_mode_uri_alt_and_fields(self):
         node = {'name': 'image', 'icon': True, 'target': 'heart', 'src': 'ic/heart.png', 'alt': 'A & B', 'icons': '',
                 'attributes': {'size': '2x', 'title': 'T', 'role': 'red', 'id': 'h'}, 'options': [],
@@ -441,7 +460,8 @@ class SemanticProjectionTests(unittest.TestCase):
 
     def test_complex_inline_unsupported_options_fields_and_raw_labels_fail(self):
         image = {'name': 'image', 'target': 'cat.png', 'src': 'cat.png', 'alt': 'Cat'}
-        for invalid in [dict(image, icon=True), dict(image, options=['inline']), dict(image, svg={'mode': 'inline'}),
+        for invalid in [dict(image, icon=True), dict(image, options=['nofollow']), dict(image, svg={'mode': 'inline'}),
+                        dict(image, svg={'mode': 'interactive', 'content': None}),
                         dict(image, attributes={'custom': 'x'}), dict(image, future=True),
                         {'name': 'button', 'parts': [], 'future': True},
                         {'name': 'kbd', 'keys': [[{'kind': 'raw', 'value': '<b>x</b>'}]]}]:
@@ -621,7 +641,7 @@ class SemanticProjectionTests(unittest.TestCase):
     def test_pinned_fixture_expands_attributes_and_macros_inside_quotes(self):
         root = CORPUS / 'upstream'
         manifest, cases = acceptance.load_corpus(root / 'semantics.json')
-        self.assertEqual(len(cases), 142)
+        self.assertEqual(len(cases), 143)
         self.assertEqual(manifest['profile'], semantics.PROFILE)
         reference = json.loads((root / 'reference/semantic-attributes-macros-in-quotes.json').read_text())
         strong = reference['semantics']['blocks'][0]['inlines'][0]

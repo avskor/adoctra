@@ -103,11 +103,25 @@ class SemanticConverter < Asciidoctor::Converter::Base
   end
 
   def image_fields node
-    allowed = [:attribute_entries, *%w[alt default-alt width height title link float align id role imagesdir target]]
+    allowed = [:attribute_entries, *%w[alt default-alt width height title link float align id role imagesdir target
+                                       inline-option interactive-option fallback format]]
     raise 'image options are outside inline-semantics-v1' unless node.attributes.keys.all? { |key| Integer === key || allowed.include?(key) }
     attrs = node.attributes.select { |key, _| %w[width height title link float align].include? key }
     target = node.respond_to?(:target) ? node.target : (node.attr 'target')
-    { target: target, src: node.image_uri(target), alt: inlines(node.alt), attributes: attrs }
+    { target: target, src: node.image_uri(target), alt: inlines(node.alt), attributes: attrs, svg: svg_fields(node, target) }
+  end
+
+  # The SVG embedding of convert_image/convert_inline_image: the file Ruby's
+  # read_svg_contents reads (before it drops the prolog and replaces the
+  # dimensions, which is markup) or the interactive fallback's URI.
+  def svg_fields node, target
+    return unless ((node.attr? 'format', 'svg') || (target.include? '.svg')) && node.document.safe < Asciidoctor::SafeMode::SECURE
+    if node.option? 'inline'
+      content = node.read_contents target, start: (node.document.attr 'imagesdir'), normalize: true, label: 'SVG', warn_if_empty: true
+      { mode: 'inline', content: content && !content.empty? ? content : nil }
+    elsif node.option? 'interactive'
+      { mode: 'interactive', fallback: (node.attr? 'fallback') ? node.image_uri(node.attr 'fallback') : nil }
+    end
   end
 
   # An inline icon (Ruby's convert_inline_image with type icon): the name,
