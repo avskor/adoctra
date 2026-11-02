@@ -641,13 +641,23 @@ class SemanticProjectionTests(unittest.TestCase):
     def test_pinned_fixture_expands_attributes_and_macros_inside_quotes(self):
         root = CORPUS / 'upstream'
         manifest, cases = acceptance.load_corpus(root / 'semantics.json')
-        self.assertEqual(len(cases), 143)
+        self.assertEqual(len(cases), 144)
         self.assertEqual(manifest['profile'], semantics.PROFILE)
         reference = json.loads((root / 'reference/semantic-attributes-macros-in-quotes.json').read_text())
         strong = reference['semantics']['blocks'][0]['inlines'][0]
         self.assertEqual(strong['kind'], 'strong')
         self.assertEqual(strong['inlines'][0], text('World '))
         self.assertEqual(strong['inlines'][1]['target'], 'https://example.org')
+
+    def test_incomplete_svg_start_tags_keep_the_read_file(self):
+        # Upstream blocks_test.rb:2457: the oracle reads the file as is (the
+        # start tag rewrite is HTML, checked by golden svg/incomplete).
+        reference = json.loads((CORPUS / 'upstream/reference/semantic-svg-incomplete.json').read_text())
+        blocks = reference['semantics']['blocks']
+        self.assertEqual([block['svg'] for block in blocks[:2]],
+                         [{'mode': 'inline', 'content': '<svg'}] * 2)
+        self.assertEqual(blocks[3]['svg']['content'], '<svg width="5"\n<g>x</g>')
+        self.assertEqual(blocks[3]['attributes'], {'width': '200', 'height': '100'})
 
     def test_real_pages_reuse_pinned_sources_and_host_settings(self):
         root = CORPUS / 'acceptance'

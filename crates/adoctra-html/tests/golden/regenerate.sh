@@ -58,7 +58,9 @@ done
 # SVG images under svg/, in safe mode from that directory (Ruby reads the
 # fixture's files relative to it; secure mode keeps an <img>).
 (cd svg && ruby "../$reference" --safe <svg.adoc >svg.expected.html)
+(cd svg && ruby "../$reference" --safe <incomplete.adoc >incomplete.expected.html)
 echo "  svg/svg.expected.html"
+echo "  svg/incomplete.expected.html"
 # XML syntax under xhtml/: Ruby's :backend option (a host attribute) set to
 # xhtml, standalone in safe mode (secure mode keeps image icons).
 for adoc in xhtml/*.adoc; do

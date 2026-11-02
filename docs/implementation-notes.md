@@ -167,7 +167,11 @@ The body-dom-v1 projection maps Ruby's icon colist table and adoctra's
 The reference loads the pinned Rouge (other highlighter gems stay
 stubbed); every syntax_highlighter_test.rb entry passes. The last DIFF is
 an incomplete inline SVG neither
-side can project (raw bodies differ by the intended wrapper). Single-case regressions live in
+side can project (raw bodies differ by the intended wrapper); the wrapper
+contents match byte for byte in golden svg/incomplete
+(html_incomplete_svg_start_tags_match_asciidoctor: Ruby's `<svg[^>]*>` runs to
+the next `>` of a later tag, dropping its dimensions there) and the
+semantic-svg-incomplete probe; the audit rule is unchanged. Single-case regressions live in
 crates/adoctra-core/tests/upstream_single_cases.rs (compat-mode
 `language` → `source-language` in header.rs save_compat_language, FLEXIBLE_ATTRIBUTES
 sectnums, `max-include-depth` 64 default attribute, invalid-header, fragment,
@@ -183,10 +187,10 @@ reader message verbatim in `report.message` (Reader::error_reported).
 else Ruby's "no inline candidate; …" warning (typo kept) and empty output;
 standalone and embedded alike. The CLI ends non-empty HTML with a LF like
 Ruby's CLI and prints backend warnings in embedded mode too.
-`compatibility/upstream/semantics.json` uses `inline-semantics-v1`: 143 PASS
+`compatibility/upstream/semantics.json` uses `inline-semantics-v1`: 144 PASS
 cover 20 attribute and four include scenarios from the upstream selection plus
-118 original semantic probes (7 TOC outline probes; one inline icon probe in
-all three icon modes; one SVG probe comparing the read file and interactive fallback; 15 tables, including caption/frame/grid/stripes/
+119 original semantic probes (7 TOC outline probes; one inline icon probe in
+all three icon modes; two SVG probes comparing the read file and interactive fallback (one with incomplete `<svg` start tags); 15 tables, including caption/frame/grid/stripes/
 width/autowidth/float; 27 xref/indexterm/stem/typographic quote
 probes; 33 footnote/callout probes; quote/verse, toc, image align/alt, Rouge
 listing). `compatibility/acceptance/semantics.json` adds

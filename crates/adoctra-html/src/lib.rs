@@ -3968,6 +3968,41 @@ mod tests {
     }
 
     #[test]
+    fn incomplete_svg_start_tags_embed_like_ruby() {
+        // Ruby's `read_svg_contents` with an unterminated `<svg` (upstream
+        // blocks_test.rb:2457): without a `>` the start tag is not found and
+        // the markup is kept as read; otherwise Ruby's start tag pattern
+        // (`<svg[^>]*>`) runs to the next `>`, drops the dimensions in that
+        // span and writes the explicit size before it.
+        let mut resources = memory(&[(
+            "/d/guide.adoc",
+            "image::bare.svg[,200,opts=inline]\n\nimage::child.svg[,200,100,opts=inline]\n\nT image:bare.svg[,9,opts=inline] x",
+        )]);
+        resources
+            .insert_binary("/d/bare.svg", b"<svg\n".to_vec())
+            .unwrap();
+        resources
+            .insert_binary("/d/child.svg", b"<svg width=\"5\"\n<g>x</g>\n".to_vec())
+            .unwrap();
+        let mut sources = adoctra_core::SourceMap::new();
+        let source_id = sources.load("/d/guide.adoc", None, &resources).unwrap();
+        let options = adoctra_core::ParseOptions {
+            source_id,
+            ..Default::default()
+        };
+        let result = adoctra_core::parse_resource(&mut sources, &options, &resources).unwrap();
+        assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+        let html =
+            String::from_utf8(HtmlBackend::embedded().convert(&result.document).unwrap()).unwrap();
+        assert_eq!(
+            html,
+            "<figure class=\"imageblock\">\n<svg\n</figure>\n\
+             <figure class=\"imageblock\">\n<svg\n<g width=\"200\" height=\"100\">x</g>\n</figure>\n\
+             <p>T <span class=\"image\"><svg</span> x</p>\n"
+        );
+    }
+
+    #[test]
     fn stylesheets_follow_ruby_stylesheet_and_linkcss() {
         let head = |src: &str| {
             let html = render_standalone(src);

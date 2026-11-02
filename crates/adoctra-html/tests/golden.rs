@@ -1867,6 +1867,75 @@ fn html_svg_images_match_asciidoctor() {
     );
 }
 
+/// The contents of each image container, in order and byte for byte: Ruby's
+/// `<div class="imageblock"><div class="content">`, adoctra's
+/// `<figure class="imageblock">` (the wrappers differ by design) and the
+/// inline `<span class="image">` of both.
+fn image_contents(html: &str) -> Vec<String> {
+    let markers = [
+        (
+            "<div class=\"imageblock\">\n<div class=\"content\">\n",
+            "\n</div>\n</div>",
+        ),
+        ("<figure class=\"imageblock\">\n", "\n</figure>"),
+        ("<span class=\"image\">", "</span>"),
+    ];
+    let mut out = Vec::new();
+    let mut rest = html;
+    while let Some((at, open, close)) = markers
+        .iter()
+        .filter_map(|&(open, close)| rest.find(open).map(|at| (at, open, close)))
+        .min()
+    {
+        let start = at + open.len();
+        let end = start + rest[start..].find(close).unwrap();
+        out.push(rest[start..end].to_owned());
+        rest = &rest[end + close.len()..];
+    }
+    out
+}
+
+/// Inline SVG files with an incomplete start tag (upstream blocks_test.rb:2457
+/// and variants), like Ruby's `read_svg_contents`: the markup is malformed on
+/// both sides, so the embedded contents are compared byte for byte instead of
+/// a DOM projection, including Ruby's start tag pattern (`<svg[^>]*>`)
+/// running to the next `>` of a later tag.
+#[test]
+fn html_incomplete_svg_start_tags_match_asciidoctor() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/svg");
+    let mut resources = adoctra_core::MemoryResources::new();
+    let adoc = fs::read_to_string(dir.join("incomplete.adoc")).unwrap();
+    resources
+        .insert("/g/incomplete.adoc", adoc.as_str())
+        .unwrap();
+    for name in ["bare", "eof", "preamble", "child", "junk"] {
+        let file = format!("incomplete-{name}.svg");
+        resources
+            .insert_binary(&format!("/g/{file}"), fs::read(dir.join(&file)).unwrap())
+            .unwrap();
+    }
+    let mut sources = adoctra_core::SourceMap::new();
+    let source_id = sources
+        .load("/g/incomplete.adoc", None, &resources)
+        .unwrap();
+    let options = adoctra_core::ParseOptions {
+        source_id,
+        ..Default::default()
+    };
+    let result = adoctra_core::parse_resource(&mut sources, &options, &resources).unwrap();
+    assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+    let ours =
+        String::from_utf8(HtmlBackend::embedded().convert(&result.document).unwrap()).unwrap();
+    let expected = fs::read_to_string(dir.join("incomplete.expected.html")).unwrap();
+    let contents = image_contents(&expected);
+    assert_eq!(contents.len(), 9, "{contents:?}");
+    assert_eq!(
+        image_contents(&ours),
+        contents,
+        "incomplete SVG start tags diverge from asciidoctor"
+    );
+}
+
 /// Ruby's XML syntax tokens (`htmlsyntax=xml`): every void element tag and
 /// every boolean attribute, outside the inlined stylesheet, sorted (the
 /// markup around them differs by design). Ruby's `X-UA-Compatible` and
