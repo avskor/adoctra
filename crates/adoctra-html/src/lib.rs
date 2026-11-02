@@ -3500,6 +3500,23 @@ mod tests {
     }
 
     #[test]
+    fn empty_line_comment_guards_render_nothing() {
+        // Ruby's `#{guard}<b class="conum">`: the guard "" of an empty
+        // `line-comment` adds no text, in the default and custom-subs paths;
+        // `<!--N-->` stays text.
+        let html = render(
+            "[source,line-comment=]\n----\na <1> <2>\nb <!--3-->\nc // <4>\n----\n\n[subs=+quotes,line-comment=]\n----\n*d* <5>\n----",
+        );
+        assert!(html.contains("<code>a <b class=\"conum\">(1)</b> <b class=\"conum\">(2)</b>\nb &lt;!--3--&gt;\nc // <b class=\"conum\">(4)</b></code>"), "{html}");
+        assert!(
+            html.contains(
+                "<pre class=\"listing\"><strong>d</strong> <b class=\"conum\">(5)</b></pre>"
+            ),
+            "{html}"
+        );
+    }
+
+    #[test]
     fn callouts_render_conums_and_callout_lists() {
         let html = render(
             "[source,ruby]\n----\nx # <1> <2>\ny <!--3-->\n----\n[.r]\n<1> one\n<2> two\n<3> three",
@@ -6270,7 +6287,11 @@ mod tests {
             "--adoctra-link: #2156a5;",
             "--adoctra-code-bg: #f7f7f8;",
             "  margin: 0 0 1.25rem;\n  font-size: 1.0625rem;",
-            "  max-width: 62.5em;\n  margin-inline: auto;\n  padding-inline: 0.9375em;",
+            // Ruby's layout rules select by id, unscoped, like `#header,
+            // #content,#footnotes,#footer{...margin:0 auto...}`: a section
+            // whose id is `header` or `footer` takes them too.
+            ":is(#header, #content, #footnotes, #footer) {\n  position: relative;\n  width: 100%;\n  max-width: 62.5em;\n  margin: 0 auto;\n  padding-inline: 0.9375em;",
+            "#footer {\n  max-width: none;\n  padding: 1.25em;\n  background: rgb(0 0 0 / 0.8);",
             "h1 { font-size: 2.125em; }",
             "  h1 { font-size: 2.75em; }",
             "section.sect1 + section.sect1 { border-block-start: 1px solid var(--adoctra-section-rule); }",

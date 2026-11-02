@@ -86,6 +86,52 @@ fn literal_paragraphs_and_line_comment_attribute() {
 }
 
 #[test]
+fn line_comment_marks_read_the_ids_every_mark_registered() {
+    // Ruby registers every mark while parsing (`CalloutScanRx`, no
+    // `line-comment`), so `<!--3-->` has an id and no warning; the marks
+    // `sub_callouts` converts with an empty `line-comment` (guard "") then
+    // read those ids in order, across blocks of the list.
+    let source = "[source,line-comment=]\n----\na <1> <2>\nb <!--3-->\nc // <4>\n----\n\n[source,line-comment=]\n----\nd <5>\n----\n<1> One\n<2> Two\n<3> Three\n<4> Four\n<5> Five\n";
+    let result = parse(source);
+    assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+    let blocks = result.document.into_flat_blocks();
+    let (text, marks) = callouts(&blocks[0]);
+    assert_eq!(text, "a <1> <2>\nb <!--3-->\nc // <4>");
+    let found: Vec<_> = marks
+        .iter()
+        .map(|c| {
+            (
+                c.number.as_str(),
+                c.id.as_str(),
+                c.guard.as_deref(),
+                &source[c.span.start..c.span.end],
+            )
+        })
+        .collect();
+    assert_eq!(
+        found,
+        [
+            ("1", "CO1-1", Some(""), "<1>"),
+            ("2", "CO1-2", Some(""), "<2>"),
+            ("4", "CO1-3", Some(""), "<4>"),
+        ]
+    );
+    let (_, marks) = callouts(&blocks[1]);
+    assert_eq!(
+        (marks[0].id.as_str(), marks[0].guard.as_deref()),
+        ("CO1-4", Some(""))
+    );
+    let BlockKind::CalloutList { items } = &blocks[2].kind else {
+        panic!()
+    };
+    let coids: Vec<_> = items.iter().map(|item| item.coids.clone()).collect();
+    assert_eq!(
+        coids,
+        [["CO1-1"], ["CO1-2"], ["CO1-3"], ["CO1-4"], ["CO1-5"]]
+    );
+}
+
+#[test]
 fn callout_lists_take_blocks_and_advance_the_catalog() {
     let result = parse("----\na <1>\n----\n<1> first\n+\n----\nb <1>\n----\n\n<1> next list\n");
     let messages: Vec<_> = result

@@ -37,7 +37,8 @@
   embedded-режим, все 25 тем Rouge в режимах class/inline, роли,
   значки-картинки с реальными файлами и font-значки с локальной копией
   Font Awesome, 14 страниц спецификации AsciiDoc, Quarkus, JUnit и Groovy,
-  главы Hibernate ORM, страницы Debezium и Gradle (722 из 724 наблюдений `match`). Дальше — новые проекты и конструкции,
+  главы Hibernate ORM, страницы Debezium, Gradle, Asciidoctor PDF и Antora
+  (752 из 752 наблюдений `match`). Дальше — новые проекты и конструкции,
   найденные в них. Разметка остаётся современной; отдельный режим HTML
   Ruby не делается. DOM-сравнение содержимого сохраняется отдельной проверкой.
 . Устойчивость к ошибочному вводу: фаззинг `fuzz-v1` (docs/fuzzing.adoc).
@@ -3882,6 +3883,23 @@ cache, учебник `gradle init`, multi-project builds, build services, пе�
 страниц, всего 193) и визуальный корпус (722 из 724 `match`). Все совпали
 с первого прогона; исправлений adoctra не потребовалось. Страницы с
 `include::sample[]` (расширение Gradle) не выбраны.
+
+Asciidoctor PDF и Antora (2026-11-02): страницы выбраны подсчётом конструкций,
+которых не было в корпусе (`kbd`/`menu`/`btn`, сноски с id, чек-листы,
+`frame-none`, callouts с `line-comment`); атрибуты — playbook сайта и
+`antora.yml`. 12 страниц прошли приёмку, структуру и визуальный профиль
+с первого прогона. Семантический профиль нашёл дефект каталога callouts:
+Ruby регистрирует метки общим `CalloutScanRx`, а преобразованные метки читают
+id по порядку (`read_next_id`), при пустом `line-comment` guard равен `""`.
+adoctra регистрировала с правилами `line-comment` и выдавала лишние
+`no callout found` на `<!--N-->`. Исправлено в core (тесты core/HTML/JSON/WASM,
+golden `callouts/line_comment_catalog`, проба
+`semantic-callout-line-comment-catalog`). Визуальный профиль нашёл отличие
+таблицы стилей: Ruby оформляет `#header`/`#content`/`#footnotes`/`#footer`
+глобально, задевая разделы с такими id, а `adoctra.css` ограничивала их
+`body > …`. Правила приведены к Ruby (фикстура `sections/layout_ids`), что
+закрыло и давний `golden-block-subs`. Итог: приёмка 93 PASS, структура
+67 PASS, семантика 145 + 59 = 204 PASS, визуальный профиль 752 из 752 `match`.
 
 *Следующее изменение:* очередь совместимости из начала плана; перенос Rouge
 завершён (ограничения — в compatibility.adoc).

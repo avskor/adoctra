@@ -641,7 +641,7 @@ class SemanticProjectionTests(unittest.TestCase):
     def test_pinned_fixture_expands_attributes_and_macros_inside_quotes(self):
         root = CORPUS / 'upstream'
         manifest, cases = acceptance.load_corpus(root / 'semantics.json')
-        self.assertEqual(len(cases), 144)
+        self.assertEqual(len(cases), 145)
         self.assertEqual(manifest['profile'], semantics.PROFILE)
         reference = json.loads((root / 'reference/semantic-attributes-macros-in-quotes.json').read_text())
         strong = reference['semantics']['blocks'][0]['inlines'][0]
@@ -664,7 +664,7 @@ class SemanticProjectionTests(unittest.TestCase):
         manifest, cases = acceptance.load_corpus(root / 'semantics.json')
         original_manifest, original = acceptance.load_corpus(root / 'cases.json')
         self.assertEqual(manifest['profile'], semantics.PROFILE)
-        self.assertEqual(len(cases), 49)
+        self.assertEqual(len(cases), 59)
         for path, provenance in manifest['files'].items():
             self.assertEqual(provenance, original_manifest['files'][path])
         for origin in manifest['origins'].values():

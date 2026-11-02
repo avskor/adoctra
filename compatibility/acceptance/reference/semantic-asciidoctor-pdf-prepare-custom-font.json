@@ -1,0 +1,978 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Any TTF or OTF font can be used with Prawn—​and hence Asciidoctor PDF—​without modifications (unless, of course, it’s corrupt or contains errors). However, you may discover that kerning is disabled and certain required glyphs are missing (or replaced with boxes). To address these problems, you need to prepare the font using a font program such as "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "FontForge"
+                  }
+                ],
+                "kind": "link",
+                "metadata": {
+                  "rel": "noopener",
+                  "window": "_blank"
+                },
+                "target": "https://fontforge.github.io/en-US/"
+              },
+              {
+                "kind": "text",
+                "value": ". These instructions will cover how to prepare a TTF font, but the same applies for an OTF font."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Before using the font, you may want to check that the font is valid. To do so, create the following script, which will verify that the font is free from errors."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "require 'ttfunk'\nrequire 'ttfunk/subset_collection'\n\nttf_subsets = TTFunk::SubsetCollection.new TTFunk::File.open ARGV[0]\n(0...(ttf_subsets.instance_variable_get :@subsets).size).each {|idx| ttf_subsets[idx].encode }"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "validate-font.rb"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Run the script on your font as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ ruby validate-font.rb path/to/font.ttf"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If this script fails, the font will not work with Asciidoctor PDF. To repair it, open the font in FontForge and resave it using "
+              },
+              {
+                "item": [
+                  {
+                    "kind": "text",
+                    "value": "Generate"
+                  }
+                ],
+                "kind": "menu",
+                "menu": [
+                  {
+                    "kind": "text",
+                    "value": "File"
+                  }
+                ],
+                "submenus": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Generate Fonts…​"
+                    }
+                  ]
+                ]
+              },
+              {
+                "kind": "text",
+                "value": ". Dismiss any warning dialogs."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Resaving the font in FontForge will usually resolve any errors in the font. (If not, you may need to find another font, or at least another copy of it)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "validate",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Validate the font"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To ready your font for use with Asciidoctor PDF, you’ll need to modify it using a font program. We recommend using "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "FontForge"
+                  }
+                ],
+                "kind": "link",
+                "metadata": {
+                  "rel": "noopener",
+                  "window": "_blank"
+                },
+                "target": "https://fontforge.github.io/en-US/"
+              },
+              {
+                "kind": "text",
+                "value": ". But don’t let this scare you off. FontForge essentially works like a vector-drawing tool, in which each character is a separate glyph canvas. You can find a crash course in how to use the program on the FontForge project site."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Here are the modifications you need to apply to a custom font for it to work best with Asciidoctor PDF:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Convert the font to TTF or OTF (only required if the font is a TTC or other format not supported by Prawn)."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Add the glyphs for the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "required characters"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "#required-characters"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " if missing from the font (optional if using a fallback font)."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Subset the font to exclude unused characters to reduce the file size (optional)."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Save the file using the old-style kern table to activate kerning."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Subsetting the font (i.e., removing glyphs) is not required since Prawn only embeds the glyphs from the font used in the document (i.e., it automatically subsets the font). However, if you plan to commit the font to a repository, subsetting helps keep the file size manageable."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Most fonts do not provide glyphs for all the Unicode character ranges (i.e., scripts). (A glyph is the corresponding vector image for a Unicode character). In fact, many fonts only include glyphs for Latin (Basic, Supplement, and Extended) and a few other scripts (e.g., Cyrillic, Greek). That means certain glyphs Asciidoctor PDF relies on may be missing from the font. The "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Required characters"
+                  }
+                ],
+                "kind": "xref",
+                "target": "#required-characters"
+              },
+              {
+                "kind": "text",
+                "value": " section lists all the characters that a custom font is expected to provide."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "One way to get the glyphs for these required characters is to steal them from another font (or from another character in the same font). To do so, open the other font in FontForge, select the character, press "
+              },
+              {
+                "keys": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Ctrl"
+                    }
+                  ],
+                  [
+                    {
+                      "kind": "text",
+                      "value": "c"
+                    }
+                  ]
+                ],
+                "kind": "kbd"
+              },
+              {
+                "kind": "text",
+                "value": ", switch back to your font, select the character again, and press "
+              },
+              {
+                "keys": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Ctrl"
+                    }
+                  ],
+                  [
+                    {
+                      "kind": "text",
+                      "value": "v"
+                    }
+                  ]
+                ],
+                "kind": "kbd"
+              },
+              {
+                "kind": "text",
+                "value": ". You may need to scale the glyph so it fits properly in the art box."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you’re copying a non-visible character, be sure to set the width to 0 using "
+              },
+              {
+                "item": [
+                  {
+                    "kind": "text",
+                    "value": "Set Width…​"
+                  }
+                ],
+                "kind": "menu",
+                "menu": [
+                  {
+                    "kind": "text",
+                    "value": "Metrics"
+                  }
+                ],
+                "submenus": []
+              },
+              {
+                "kind": "text",
+                "value": ", enter 0 into "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Set Width To"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", then click "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "OK"
+                  }
+                ],
+                "kind": "button"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "important"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When you’re adding any required characters, save the font with the old-style kern table enabled. To do so, select "
+              },
+              {
+                "item": [
+                  {
+                    "kind": "text",
+                    "value": "Generate Fonts…​"
+                  }
+                ],
+                "kind": "menu",
+                "menu": [
+                  {
+                    "kind": "text",
+                    "value": "File"
+                  }
+                ],
+                "submenus": []
+              },
+              {
+                "kind": "text",
+                "value": ", select "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "TrueType"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", click "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Options"
+                  }
+                ],
+                "kind": "button"
+              },
+              {
+                "kind": "text",
+                "value": ", make sure "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "only"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " the following options are checked (equivalent to the flags 0x90 + 0x08):"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [
+                  {
+                    "context": "ulist",
+                    "id": null,
+                    "items": [
+                      {
+                        "blocks": [],
+                        "checkbox": true,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Old style 'kern'"
+                          }
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "style": null,
+                    "title": null
+                  }
+                ],
+                "checkbox": true,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "OpenType"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Then click "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "OK"
+                  }
+                ],
+                "kind": "button"
+              },
+              {
+                "kind": "text",
+                "value": ", then uncheck "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Validate Before Saving"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", and finally click "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Generate"
+                  }
+                ],
+                "kind": "button"
+              },
+              {
+                "kind": "text",
+                "value": " to generate and save the font."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Your font file is now ready to be used with Asciidoctor PDF."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "modify",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Modifying the font"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Performing all this font modification manually can be tedious (not to mention hard to reproduce). Fortunately, FontForge provides a "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "scripting interface"
+                  }
+                ],
+                "kind": "link",
+                "metadata": {
+                  "rel": "noopener",
+                  "window": "_blank"
+                },
+                "target": "https://fontforge.github.io/en-US/documentation/scripting/"
+              },
+              {
+                "kind": "text",
+                "value": ", which you can use to automate the process."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In fact, that’s what we use to prepare the fonts that are bundled with Asciidoctor PDF. You can find that FontForge script, the Bash script that calls it, and the Docker image in which it is run in the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "scripts directory"
+                  }
+                ],
+                "kind": "link",
+                "metadata": {
+                  "rel": "noopener",
+                  "window": "_blank"
+                },
+                "target": "https://github.com/asciidoctor/asciidoctor-pdf/tree/{page-origin-refname}/scripts"
+              },
+              {
+                "kind": "text",
+                "value": " of this project. You can use that script as a starting point or reference for your own font preparation / modification script."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "scripting-modifications",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Scripting the font modifications"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Below are the non-Latin characters (identified by Unicode code point) on which Asciidoctor PDF relies that are often missing from fonts. You need to ensure these glyphs are present in your prepared font or configure a fallback font that provides them. The fonts used by the default theme in Asciidoctor PDF provide all of these glyphs."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "\\u00a0 - no-break space (used by converter to preserve indentation in code blocks)"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "\\u200b - zero width space (used as line placeholder and to normalize line height)"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "\\u000a - line feed character (used to indicate the location of a hard line break; has zero width)"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "\\u2009 - thin space (used for space in the button UI element)"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "\\u202f - narrow no-break space (used in the keybinding UI element)"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "\\u2011 - non-breaking hyphen (used for hyphenation; not required if hyphenation not in use)"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "\\u2022 - disc (used for first-level unordered list level)"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "\\u25e6 - circle (used for second-level unordered list level)"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "\\u25aa - square (used for third-level unordered list level)"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "\\u2611 - ballot box checked (used for checked list item)"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "\\u2610 - ballot box unchecked (used for unchecked list item)"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "\\u2014 - em-dash (used in quote attribute)"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "\\u203a - single right-pointing quotation mark (used in the menu UI element)"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "\\u25ba - right pointer (used for media play icon when icon fonts are disabled)"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "If the .notdef glyph is non-empty (i.e., contains splines), it will be used as the default glyph when the document requests a character that’s missing from the font. Unlike other glyphs, the .notdef glyph is referenced by name only, meaning it does not have a designated Unicode code point."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": ".notdef - used as the default glyph when a requested character is missing from the font (usually a box)"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The zero-width space is especially important as it ensures the line height remains intact even if the line starts with monospaced text."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The font will also need to provide glyphs for all characters used in the document content, such as substituted arrows (e.g., ⇒) and emoji (e.g., 👍)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you’re preparing a font for use in verbatim blocks (e.g., a listing block), you’ll also need this range of characters:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "\\u2460 to \\u2468 - circled numbers"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Although Asciidoctor PDF uses the \\u0000 character as a placeholder for inline anchors, the font is not required to provide this character. Asciidoctor PDF assumes that the primary font provides this character and uses the font metrics from that font as though it were there."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you don’t want to add additional glyphs to the font you’re preparing, you can configure a fallback font instead. A symbol font, such as Symbola, is a good choice as a fallback font since it’s focus is on filling in these glyphs for other fonts."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "required-characters",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Required characters"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Prepare a Custom Font"
+      }
+    ]
+  }
+}

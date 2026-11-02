@@ -92,8 +92,9 @@ fn chain_to_end(line: &str, mut at: usize, custom: bool, dashes: bool, form: For
 }
 
 /// Ruby's `sub_callouts` on one line: the trailing marks with their guards.
-/// `line_comment` is the `line-comment` attribute (its empty value allows no
-/// guard).
+/// `line_comment` is the `line-comment` attribute. Its empty value makes the
+/// guard group of `CalloutSourceRxMap` empty, so every mark has the guard
+/// `""` (not `nil`).
 pub(crate) fn scan_line(line: &str, line_comment: Option<&str>) -> Vec<Mark> {
     scan_line_in(line, line_comment, SOURCE)
 }
@@ -110,7 +111,7 @@ pub(crate) fn scan_line_in(line: &str, line_comment: Option<&str>, form: Form) -
                 let mark_start = p - usize::from(escaped);
                 let before = &line[..mark_start];
                 let guard = match line_comment {
-                    Some("") => None,
+                    Some("") => Some(String::new()),
                     Some(comment) => [format!("{comment} "), comment.to_owned()]
                         .into_iter()
                         .find(|g| before.ends_with(g.as_str())),
@@ -145,7 +146,8 @@ pub(crate) fn scan_line_in(line: &str, line_comment: Option<&str>, form: Form) -
                         start: p,
                         end,
                         number,
-                        guard: None,
+                        // `()?` of an empty `line-comment` matches every mark.
+                        guard: (line_comment == Some("")).then(String::new),
                         xml: dashes,
                         escaped,
                     });
@@ -279,10 +281,12 @@ pub(crate) fn list_item(line: &str) -> Option<crate::lists::ItemMatch> {
     })
 }
 
-/// Ruby's `Document#callouts`: the marks registered per callout list.
+/// Ruby's `Document#callouts`: the marks registered per callout list, and
+/// the read position of `read_next_id` in the current list.
 #[derive(Default)]
 pub(crate) struct Catalog {
     lists: Vec<Vec<(u64, String)>>,
+    read: usize,
 }
 
 impl Catalog {
@@ -311,9 +315,21 @@ impl Catalog {
             .collect()
     }
 
+    /// Ruby's `read_next_id`: the id of the next registered mark of the
+    /// current list, in order, for each converted mark. Registration
+    /// (`catalog_callouts`) and conversion (`sub_callouts` with any
+    /// `line-comment`) match differently, so the ids a block's converted
+    /// marks read may belong to other marks; `None` past the list.
+    pub fn read_next(&mut self) -> Option<String> {
+        let index = self.read;
+        self.read += 1;
+        self.current().get(index).map(|(_, id)| id.clone())
+    }
+
     pub fn next_list(&mut self) {
         self.current();
         self.lists.push(Vec::new());
+        self.read = 0;
     }
 }
 
@@ -353,6 +369,31 @@ mod tests {
         let custom = scan_line("x %% <1>", Some("%%"));
         assert_eq!(custom[0].guard.as_deref(), Some("%% "));
         assert!(scan_line("y <!--5-->", Some("%%")).is_empty());
+        // An empty `line-comment` gives every mark of the chain the guard "".
+        let empty = scan_line("a // <1> <2>", Some(""));
+        assert_eq!(
+            empty
+                .iter()
+                .map(|m| (m.number.as_str(), m.guard.as_deref(), m.start))
+                .collect::<Vec<_>>(),
+            [("1", Some(""), 5), ("2", Some(""), 9)]
+        );
+        assert!(scan_line("b <!--3-->", Some("")).is_empty());
+    }
+
+    #[test]
+    fn converted_marks_read_the_registered_ids_in_order() {
+        // Ruby's `read_next_id`: a cursor over the current list, reset by
+        // `next_list`, independent of which marks registered the ids.
+        let mut catalog = Catalog::default();
+        catalog.register(1);
+        catalog.register(3);
+        assert_eq!(catalog.read_next().as_deref(), Some("CO1-1"));
+        assert_eq!(catalog.read_next().as_deref(), Some("CO1-2"));
+        assert_eq!(catalog.read_next(), None);
+        catalog.next_list();
+        catalog.register(1);
+        assert_eq!(catalog.read_next().as_deref(), Some("CO2-1"));
     }
 
     #[test]

@@ -29,8 +29,12 @@ SHA-256 и ссылку на запись происхождения в мани
 * Шесть страниц User Manual Gradle 9.8.2 (2026-11-02): справочник CLI,
   configuration cache, учебник `gradle init` с callouts, multi-project builds,
   build services с Java-сниппетами и руководство перехода на 9.x; см. ниже.
+* Пять страниц документации Asciidoctor PDF 2.3.27 и семь страниц Antora 3.2.2
+  (2026-11-02), выбранных по конструкциям, которых не было в корпусе: UI-макросы
+  `kbd`/`menu`/`btn`, сноски с id, чек-листы, таблицы `frame-none`, callouts с
+  `line-comment`; см. ниже.
 
-Итого 48 исходных документов и 50 приёмочных прогонов. Корпус включает девять
+Итого 60 исходных документов и 62 приёмочных прогона. Корпус включает одиннадцать
 независимых upstream-проектов, но не является выборкой всего
 AsciiDoc. Пятнадцать дополнительных небольших документов (семь исходных проб и
 восемь находок фаззинга) проверяют диагностический
@@ -76,7 +80,7 @@ https://github.com/asciidoctor/asciidoctor/tree/2c03d22eb9fe83d04ee452939581d1b8
 Все 12 страниц дополнительно проходят независимый
 link:semantic-profile.adoc[`inline-semantics-v1`] через отдельный
 `compatibility/acceptance/semantics.json`: 12 PASS (со страницами других
-проектов, README и CHANGELOG Asciidoctor — 49 PASS). Сравниваются текст и
+проектов, README и CHANGELOG Asciidoctor — 59 PASS). Сравниваются текст и
 inline-узлы, списки, контейнеры, код, изображения и таблицы с содержимым ячеек
 без HTML converter. Исходные страницы, include-ресурсы и host-атрибуты совпадают
 с основным корпусом. Неявные xref, типографские кавычки, сноски и callouts
@@ -149,6 +153,8 @@ blob-хешами upstream, записи файлов содержат `upstream
 |Hibernate ORM `7.4.15`, коммит `b690b0c` |Apache-2.0 (`LICENSE.txt`) |User Guide: Fetching, Batching, Caching, Multitenancy, Events
 |Debezium `v3.7.0.Final`, коммит `17843f3` |Apache-2.0 (`LICENSE.txt`) |MySQL connector, Outbox event router, Signalling, Engine
 |Gradle `v9.8.2`, коммит `8de7bcf` |Apache-2.0 (`LICENSE`) |User Manual: Command-Line Interface, Configuration Cache, Part 1: Initializing the Project, Structuring Multi-Project Builds, Using Shared Build Services, Upgrading to Gradle 9.0.0
+|Asciidoctor PDF `v2.3.27`, коммит `39a9755` |MIT (`LICENSE`) |Theme: Tables, Running Content, Prepare a Custom Font, Keyboard; Autowidth Tables
+|Antora `v3.2.2`, коммит `21cebfb` |MPL-2.0 (`LICENSE`) |Source blocks, Ordered and unordered lists, Page links, Set up a playbook, Special characters and symbols, UI macros, Generator events reference
 |===
 
 Antora-ресурсы своего модуля (`example$…`, `partial$…`) и общие атрибуты
@@ -185,6 +191,22 @@ docinfo сайта не сравниваются). Сборка складыва
 Gradle (SampleIncludeProcessor); без расширения обе стороны дают только
 неразрешённый include, поэтому такие страницы не выбраны.
 
+Страницы Asciidoctor PDF и Antora выбраны подсчётом конструкций корпуса: в
+нём совсем не было `kbd`/`menu`/`btn`, сносок, счётчиков, вложенных таблиц,
+`%collapsible`, `[qanda]` и библиографии. Атрибуты — объединение playbook сайта
+(docs.asciidoctor.org, коммит `4f42498`; docs.antora.org, коммит `3da983e`:
+`experimental`, `idprefix`/`idseparator`, мягкие `table-frame=none`/
+`table-grid=rows`, `hide-uri-scheme`) и `antora.yml` компонента. Мягкие значения
+передаются с `@`, а `false` Antora — как снятие атрибута (`name!`). Без
+`experimental` UI-макросы остались бы текстом. `include::page$xref.adoc[tag=…]`
+страницы Page links разрешается файлом под этим именем. Все 12 страниц сразу
+прошли основной, структурный и визуальный профили. Семантический профиль
+(10 страниц длиннее 90 строк) нашёл дефект каталога callouts на странице
+Ordered and unordered lists: при `line-comment=` Ruby даёт guard `""` и
+регистрирует метки общим шаблоном, а id выдаёт преобразованным меткам по
+порядку; adoctra регистрировала их с правилами `line-comment` и выдавала
+лишние предупреждения `no callout found` на `<!--N-->`. Исправлено в core.
+
 Все 6 страниц Gradle сразу прошли основной, структурный и семантический
 профили (визуальный — см. link:visual.adoc[]); исправлений adoctra не
 потребовалось.
@@ -206,9 +228,9 @@ README Asciidoctor (пять языков, варианты GitHub и include) �
 
 `block-structure-v1` использует отдельный манифест
 link:../compatibility/acceptance/structure.json[structure.json] и эталоны с
-префиксом `structure-`. В нём повторяются 50 прогонов полных документов
+префиксом `structure-`. В нём повторяются 62 прогона полных документов
 с теми же атрибутами и include-ресурсами; пять собственных примеров проверяют
-блоки, разделы, списки, таблицы и отсутствие названия. Результат: *55 PASS*, отдельно от HTML и
+блоки, разделы, списки, таблицы и отсутствие названия. Результат: *67 PASS*, отдельно от HTML и
 диагностик. Примеры имеют SHA-256 и происхождение, но не являются upstream-тестами.
 
 Ruby launcher с `--structure` вызывает `Asciidoctor.load` / `load_file` и
@@ -286,7 +308,7 @@ seed 29–36: `fuzz-dropped-first-block-section-check` и
 `fuzz-comment-first-block-section-check` (отброшенный первый блок тела —
 уровень следующего раздела проверяется), `fuzz-section-title-peeks-next-line`
 (ошибка директивы после заголовка раздела идёт раньше проверки уровня).
-Итого *81 PASS, 0 XFAIL*. Прежние отличия для незакрытого listing, неизвестной xref
+Итого *93 PASS, 0 XFAIL*. Прежние отличия для незакрытого listing, неизвестной xref
 и незакрытого условия устранены в стандартном выводе CLI; эталоны Ruby и HTML
 не изменялись. Редакторские сообщения, физические spans и исходные severity/message
 сохраняются в API/WASM и режиме `--diagnostics editor`.

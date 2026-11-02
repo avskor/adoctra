@@ -2309,6 +2309,24 @@ mod tests {
     }
 
     #[test]
+    fn empty_line_comment_guards_and_read_ids_serialize() {
+        // The guard "" of an empty `line-comment` is not null, and `<3>`
+        // reads the id `<!--2-->` registered (Ruby's `read_next_id`).
+        let json = render(
+            "[source,line-comment=]\n----\na <1>\nb <!--2-->\nc <3>\n----\n<1> a\n<2> b\n<3> c",
+        );
+        assert!(
+            json.contains(r#"{"number":"1","id":"CO1-1","guard":"","xml":false"#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#"{"number":"3","id":"CO1-2","guard":"","xml":false"#),
+            "{json}"
+        );
+        assert!(json.contains(r#""coids":["CO1-3"]"#), "{json}");
+    }
+
+    #[test]
     fn callouts_and_callout_lists_serialize() {
         let json = render("----\nx // <1>\n----\n<1> one");
         assert!(json.contains(r#""text":"x // <1>","callouts":[{"number":"1","id":"CO1-1","guard":"// ","xml":false,"icons":null,"src":"","text_range":{"start":2,"end":8}}]"#), "{json}");

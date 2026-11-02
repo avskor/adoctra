@@ -3091,6 +3091,19 @@ mod header_tests {
     }
 
     #[test]
+    fn empty_line_comment_guards_and_read_ids_export() {
+        let json = super::parse_json(
+            "[source,line-comment=]\n----\na <1>\nb <!--2-->\nc <3>\n----\n<1> a\n<2> b\n<3> c",
+        );
+        assert!(
+            json.contains(r#""number":"3","id":"CO1-2","guard":"","xml":false"#),
+            "{json}"
+        );
+        assert!(json.contains(r#""coids":["CO1-3"]"#), "{json}");
+        assert!(!json.contains("no callout found"), "{json}");
+    }
+
+    #[test]
     fn callout_icons_export_the_mode_where_blocks_convert() {
         let json = super::parse_json(
             ":icons: font\n\n----\nx <1>\n----\n<1> a\n\n:icons!:\n\n----\ny <1>\n----\n<1> b",

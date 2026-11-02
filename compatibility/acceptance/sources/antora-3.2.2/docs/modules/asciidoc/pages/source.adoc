@@ -1,0 +1,344 @@
+= Source Blocks
+// URLs
+:url-highlightjs: https://highlightjs.org
+
+On this page, you'll learn:
+
+* [x] How to create an AsciiDoc source block.
+* [x] How to specify a source language for a source block.
+* [x] How to specify a global source language using `source-language`.
+* [x] How to disable syntax highlighting for source blocks.
+* [x] How to soft wrap source blocks.
+
+== What's a source block?
+
+An [.term]*AsciiDoc source code block*, or [.term]*source block* for short, displays snippets of content that are written in a given programming, data, configuration, or markup language.
+The content of a source block is colorized using a syntax highlighter when it's rendered in a site.
+A source block is created by assigning the attribute `source` and the name of a valid source language to a block.
+
+== source and source language attributes
+
+The style `source` is a positional element attribute.
+It's assigned to a block using the first position in an attribute list.
+
+.Directly assign source and a source language using an attribute list
+[#ex-direct]
+----
+[source,name-of-language] <.>
+----
+<.> An attribute list with `source` assigned to the first position and a source language name, such as `bash`, `cpp`, etc., assigned to the second position.
+
+The name of a source language is assigned to the second position in an attribute list or using the `source-language` document attribute.
+The source language is the name of a programming, data, configuration, or markup language in which the block's content is written.
+
+Specifying a source language serves two purposes.
+First, it communicates to the site visitor which language runtime or data format reader is needed to interpret the code displayed in the block.
+Second, it allows a syntax highlighter to colorize the source content properly, such as emphasizing language types and keywords.
+Finally, by assigning a language to a block, you can implicitly assign `source` to the block at the same time.
+As shown in <<ex-implicit>>, by assigning the name of a valid source language to the second position of an attribute list, you implicitly assign `source` to the first position.
+
+.Assign a source language to the second position of an attribute list
+[#ex-implicit]
+----
+[,name-of-language] <.>
+----
+<.> To assign a source language to the second position of an attribute list without assigning `source` directly to the first position, enter a comma (`,`) immediately after the opening square bracket, then enter the name of a source language.
+
+The language name is written in lowercase letters and must be a language recognized by the <<source-highlighter,syntax highlighter Antora uses>> for the content to be colorized correctly.
+If most of your source blocks use the same language, you can assign the name of the language to the <<source-language,source-language document attribute>>.
+
+When `source` is specified but a language isn't specified in the attribute list of a source block or by the `source-language` document attribute, Antora applies the language `none` at runtime.
+The block is styled like other source blocks, but no syntax highlighting will be applied to its content.
+
+== Create a source block
+
+Source blocks are most often created from delimited listing and literal blocks as well as paragraphs.
+A block becomes a source block in the following scenarios:
+
+* a language name is assigned to the second position in a block's attribute list, which implicitly assigns `source` to the first position in the attribute list
+* `source` is assigned directly to the first position in a block's attribute list, and a language name is assigned to the second position or to the `source-language` document attribute
+* the document attribute `source-language` is set, which automatically promotes all delimited listing blocks that aren't assigned another style to source blocks
+
+When `source` is assigned to a block using any of these methods, the content of the block is colorized according to the assigned source language by the syntax highlighter.
+
+=== Assign source implicitly
+
+Because `source` is assigned to a block using the first position of an attribute list, you can assign it implicitly by entering a comma (`,`) directly after the opening bracket, followed by the name of a source language.
+The comma is required, otherwise the language would be assigned to the first position of the attribute list.
+<<ex-source-position>> shows the `source` attribute being applied implicitly to a listing block.
+
+.Apply source implicitly to a listing block
+[source#ex-source-position]
+....
+[,name-of-language] <.>
+---- <.>
+Content of source block <.>
+  Content of source block
+
+Content of source block
+---- <.>
+....
+<.> Directly after the opening square bracket (`[`) of the attribute list, enter a comma (`,`), followed by the name of the source language in which the block's content is written.
+Complete the attribute list with a closing square bracket (`]`) and select kbd:[Enter] to go to the next line.
+<.> On the new line directly below the attribute list, enter the opening delimiter of a listing block (`----`) and then select kbd:[Enter] to go to the next line.
+<.> On the lines below the opening delimiter, insert your code snippet.
+<.> On a new line, enter the closing delimiter of the listing block (`----`).
+
+You can use `source` implicitly on other block types to create a source block.
+<<ex-source-paragraph>> shows the `source` attribute being applied implicitly to a paragraph.
+
+.Apply source style to a paragraph
+[#ex-source-paragraph]
+----
+A regular paragraph.
+
+[,name-of-language] <.>
+Content of source block <.>
+
+A regular paragraph.
+----
+<.> After the opening square bracket (`[`) of the attribute list, enter a comma (`,`), followed by the name of the source language in which the block's content is written.
+Complete the attribute list with a closing square bracket (`]`) and select kbd:[Enter] to go to the next line.
+<.> On the line directly below the attribute list, enter the block's content on one or more continuous lines.
+
+In <<ex-haskell>>, `source` is assigned implicitly and `haskell` is assigned as the language.
+
+.Assign source and the language haskell to a block
+[source#ex-haskell]
+....
+[,haskell]
+----
+main :: IO ()
+main = putStrLn "Hello, World!"
+----
+....
+
+<<ex-haskell-result>> shows how the source block appears when displayed in a site.
+
+.Rendered source block with syntax highlighting applied
+[source#ex-haskell-result,haskell]
+----
+main :: IO ()
+main = putStrLn "Hello, World!"
+----
+
+The content in <<ex-haskell-result>> is colorized, and when you hover over the block, the language name _HASKELL_ appears in its upper right corner.
+
+=== Assign source directly
+
+In some cases, you may prefer to assign `source` directly to a block.
+In a block's attribute list, `source` is entered in the first position in the list, followed by a comma (`,`), and then the name of a language, such as `clojure`, `json`, `xml`, etc.
+<<ex-source-direct>> shows the `source` attribute being applied directly to a delimited literal block (`+....+`).
+
+.Apply source style directly to a block
+[#ex-source-direct]
+----
+[source,name-of-language] <.>
+....
+Content of source block
+  Content of source block
+
+Content of source block
+....
+----
+<.> In the attribute list, assign `source` to the first position, followed by a comma (`,`), and then the name of the source language in which the block's content is written.
+
+In <<ex-sql>>, `source` is assigned to the first position and `sql` is assigned as the language to the second position.
+
+.Assign source and the language sql to a block
+[source#ex-sql]
+....
+[source,sql]
+----
+IF EXISTS (SELECT name FROM myobjects WHERE name = 'hello')
+----
+....
+
+<<ex-sql-result>> shows how the source block appears when displayed in a site.
+
+.Rendered source block with syntax highlighting applied
+[source#ex-sql-result,sql]
+----
+IF EXISTS (SELECT name FROM myobjects WHERE name = 'hello')
+----
+
+The content in <<ex-sql-result>> is colorized, and when you hover over the block, the language name _SQL_ appears in the upper right corner.
+
+To assign an element ID, role, or option to a source block using their applicable shorthand syntax, specify the `source` attribute and append the ID, role, or options to the attribute.
+<<ex-source-id>> shows the `source` attribute and an element ID being assigned to a listing block.
+
+.Assign an element ID to a source block
+[source#ex-source-id]
+....
+[#element-id,name-of-language] <.> <.>
+----
+Content of source block
+  Content of source block
+----
+....
+<.> In the attribute list, specify the element ID in the first position.
+An element ID is directly appended to the style (which is empty in this case) using the hash symbol (`+#+`) followed by the ID name.
+The `source` style is implied since a language is specified in the second position.
+<.> Directly after the element ID, enter a comma (`,`), and then the name of the source language in which the block's content is written.
+
+Now let's look at a source block that's created with a delimited literal block and is assigned an element ID using the shorthand hash symbol (`+#+`).
+In <<ex-diff>>, an element ID is appended to the implicit `source` style with a `+#+`.
+The line comparison syntax, `diff`, is assigned to the second position.
+
+.Assign source, an element ID, and the language diff to a block
+[#ex-diff]
+----
+[#temper-change,diff]
+....
+-   temperDestination(destination)
++   if (destination instanceof Boom) moderateDestination(destination)
+  }
+  rootLoggerHolder.set(undefined, addFailOnExitHooks(logger, failureLevel))
+....
+----
+
+<<temper-change>> shows how the source block appears when displayed in a site.
+
+.Rendered source block with syntax highlighting applied
+[source#temper-change,diff]
+....
+-   temperDestination(destination)
++   if (destination instanceof Boom) moderateDestination(destination)
+  }
+  rootLoggerHolder.set(undefined, addFailOnExitHooks(logger, failureLevel))
+....
+
+The content in <<temper-change>> is colorized, and when you hover over the block, the language name _DIFF_ appears in the upper right corner of the block.
+
+[#source-language]
+=== Promote listing blocks with source-language
+
+You can define a source language globally, either at the page, component version, or site level, by setting the `source-language` document attribute.
+When `source-language` is set, all delimited listing blocks that aren't assigned a style are automatically promoted to source blocks.
+The `source-language` attribute is set and assigned a value in the document header of a page, component version descriptor file, or playbook.
+In <<ex-source-document>>, the `source-language` attribute is set in the header of a page and assigned the name of a language.
+
+.Set source-language in the document header
+[#ex-source-document]
+----
+= Title of Page
+:source-language: name-of-language <.>
+
+A paragraph.
+
+---- <.>
+Content of source block
+---- <2>
+
+A paragraph.
+
+.... <.>
+Content of a literal block.
+.... <3>
+----
+<.> On a new line in the header of the page, set the built-in document attribute `source-language` and assign it the name of a language as a value.
+<.> Because `source-language` is set, this listing block is automatically promoted to a source block.
+<.> This literal block remains a literal block.
+Only listing blocks are automatically promoted to source blocks when `source-language` is set.
+
+When `source-language` is set, you may want some listing blocks to not be promoted to source blocks or to assign a different language to a few of them.
+<<ex-source-override>> shows how to prevent a listing block from being promoted to a source block and how to override the language assigned to the `source-language` attribute.
+
+.Override source-language on select blocks
+[source#ex-source-override]
+....
+= Title of Page
+:source-language: java <.>
+
+A paragraph.
+
+---- <.>
+Content of source block
+---- <2>
+
+A paragraph.
+
+[listing] <.>
+----
+Content of listing block
+----
+
+[,yaml] <.>
+----
+Content of source block
+----
+....
+<.> The document attribute `source-language` is set in the header of the page and assigned the value `java`.
+All of the listing blocks on this page that aren't directly assigned a style will be promoted to source blocks and all source blocks that aren't directly assigned a source language will be assigned the language `java`.
+<.> This listing block is automatically promoted to a source block and assigned the language `java`.
+It's content will be identified as _JAVA_ and colorized accordingly.
+<.> This listing block is assigned the style `listing`, therefore it isn't promoted to a source block and its contents will not be colorized.
+<.> This source block is directly assigned the language `yaml`.
+Therefore, the block's content will be identified as _YAML_ and colorized accordingly.
+
+We'll look at how colorization gets added in the <<source-highlighter,next section>>.
+
+[#source-highlighter]
+== Syntax highlighting
+
+Syntax highlighting is a technique of colorizing the code to make it easier to read by emphasizing types, keywords, and other language constructs.
+Syntax highlighting of source blocks is enabled using the `source-highlighter` attribute.
+Antora sets `source-highlighter` site-wide by default (see xref:page:intrinsic-attributes.adoc#site-and-configuration-attributes[site and configuration attributes]), therefore, you don't need to do anything to enable this feature.
+Antora uses highlight.js to automatically add syntax highlighting to source blocks that specify a source language.
+
+Syntax highlighting also requires a contribution from the UI.
+The reference Antora UI bundles the highlight.js library (both the JavaScript and the CSS) and adds it to each page.
+The names of the languages that are currently supported are listed in the https://gitlab.com/antora/antora-ui-default/-/raw/HEAD/src/js/vendor/highlight.bundle.js[highlight.bundle.js file in Antora's UI repository^].
+
+You can disable or override the `source-highlighter` attribute in the playbook or a component version descriptor.
+To disable syntax highlighting, unset the `source-highlighter` attribute in your playbook.
+
+.Disable source-highlighter attribute in antora-playbook.yml
+[,yaml]
+----
+asciidoc:
+  attributes:
+    source-highlighter: ~
+----
+
+Currently, the only `source-highlighter` value Antora supports when using the reference UI is `highlight.js`.
+If you set the value to `rouge`, `pygments`, or `coderay`, Antora will fail.
+That's because these built-in, build-time syntax highlighters are not available in the Antora environment (and specifically Asciidoctor.js).
+
+You can use other client-side (also known as browser) libraries, such as prettify or prism.
+However, to use them, you'll need to modify the UI to bundle and add the library to each page, like the reference UI does for highlight.js.
+
+In the future, it will be possible to register additional adapters to plug in other syntax highlighters.
+However, that feature is not currently available in Antora.
+
+== Soft wrap
+
+By default, long lines in listing blocks (including source blocks) are not wrapped.
+Rather, the overflow content is scrollable (left-to right) to preserve the visual positioning of line breaks.
+
+If you're using the xref:antora-ui-default::index.adoc[default UI], and you want the content to be displayed with soft wrapping enabled, you must apply the `wrap` role to the block:
+
+.Enable soft-wrap for a source block
+[source#ex-soft-wrap]
+....
+[.wrap,console]
+----
+$ find /some/long/path -type f -name '*.sh' -exec basename {} \; | sort -r | uniq -d
+$ find . -name .DS_Store -print0 | xargs -0 git rm --quiet --force --ignore-unmatch
+----
+....
+
+The source block will now be displayed as follows:
+
+[.wrap,console]
+----
+$ find /some/long/path -type f -name '*.sh' -exec basename {} \; | sort -r | uniq -d
+$ find . -name .DS_Store -print0 | xargs -0 git rm --quiet --force --ignore-unmatch
+----
+
+The `wrap` role applies the `white-space: pre-wrap` CSS rule to the source block.
+
+== Learn more
+
+The content of a source block is often inserted using an include directive.
+See xref:page:include-an-example.adoc[] to learn more.

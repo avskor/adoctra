@@ -2438,13 +2438,32 @@ fn commit_subs(
         }
     };
     use crate::pass_subs::Stage;
+    let line_comment = block
+        .attrs
+        .named
+        .get("line-comment")
+        .cloned()
+        .or_else(|| context.attributes.get("line-comment").map(str::to_owned));
     let mut callout_ids = Vec::new();
     let mut marks = Vec::new();
     if stages.contains(&Stage::Callouts) {
         let (content, _) = source(lines, context);
-        let (found, ids, ranges) = crate::callouts::catalog(&content.text, &mut context.callouts);
+        let (found, _, ranges) = crate::callouts::catalog(&content.text, &mut context.callouts);
         if found {
-            callout_ids = ids;
+            // The marks `sub_callouts` converts (with any `line-comment`)
+            // read the registered ids in order (`read_next_id`).
+            let converted: usize = crate::scanner::lines_with_offsets(&content.text)
+                .into_iter()
+                .map(|(_, line)| {
+                    crate::callouts::scan_line(line, line_comment.as_deref())
+                        .iter()
+                        .filter(|mark| !mark.escaped)
+                        .count()
+                })
+                .sum();
+            callout_ids = (0..converted)
+                .map_while(|_| context.callouts.read_next())
+                .collect();
             // Only marks protected by special characters first are converted.
             let position = |stage| stages.iter().position(|&s| s == stage);
             if matches!(
@@ -2462,12 +2481,7 @@ fn commit_subs(
     }
     let subs = crate::body_subs::BlockSubs {
         stages,
-        line_comment: block
-            .attrs
-            .named
-            .get("line-comment")
-            .cloned()
-            .or_else(|| context.attributes.get("line-comment").map(str::to_owned)),
+        line_comment,
         callout_ids,
         trim: !matches!(defaults, Defaults::Normal)
             || matches!(block.kind, BlockKind::Verse { .. }),
@@ -2535,6 +2549,10 @@ fn apply_callouts(block: &mut Block, lines: &Reader<'_>, context: &mut ParseCont
     if !text.contains('<') {
         return;
     }
+    // Ruby's `catalog_callouts` registers every mark (`CalloutScanRx`, with
+    // no `line-comment`) while parsing; the converted marks then read those
+    // ids in order.
+    crate::callouts::catalog(text, &mut context.callouts);
     // The block's source lines, to locate each mark.
     let first = lines
         .loaded
@@ -2585,9 +2603,7 @@ fn apply_callouts(block: &mut Block, lines: &Reader<'_>, context: &mut ParseCont
             } else {
                 mark.number.clone()
             };
-            let id = context
-                .callouts
-                .register(number.parse().unwrap_or(u64::MAX));
+            let id = context.callouts.read_next().unwrap_or_default();
             let span = origin.map_or(Span::new(span.start, span.start), |end| {
                 Span::new(end + mark.start - line.len(), end + mark.end - line.len())
             });

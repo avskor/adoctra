@@ -187,14 +187,14 @@ reader message verbatim in `report.message` (Reader::error_reported).
 else Ruby's "no inline candidate; …" warning (typo kept) and empty output;
 standalone and embedded alike. The CLI ends non-empty HTML with a LF like
 Ruby's CLI and prints backend warnings in embedded mode too.
-`compatibility/upstream/semantics.json` uses `inline-semantics-v1`: 144 PASS
+`compatibility/upstream/semantics.json` uses `inline-semantics-v1`: 145 PASS
 cover 20 attribute and four include scenarios from the upstream selection plus
-119 original semantic probes (7 TOC outline probes; one inline icon probe in
+120 original semantic probes (7 TOC outline probes; one inline icon probe in
 all three icon modes; two SVG probes comparing the read file and interactive fallback (one with incomplete `<svg` start tags); 15 tables, including caption/frame/grid/stripes/
 width/autowidth/float; 27 xref/indexterm/stem/typographic quote
-probes; 33 footnote/callout probes; quote/verse, toc, image align/alt, Rouge
+probes; 34 footnote/callout probes; quote/verse, toc, image align/alt, Rouge
 listing). `compatibility/acceptance/semantics.json` adds
-49 PASS on unchanged full pages of all nine corpus projects plus the
+59 PASS on unchanged full pages of all eleven corpus projects plus the
 Asciidoctor READMEs and CHANGELOG, with the same sources,
 include resources and host attributes as the HTML corpus. The Ruby oracle has its own converter (no HTML
 converter or HTML parsing); paired synthetic boundaries leave content exposed
@@ -894,11 +894,21 @@ table. JSON/WASM `dlist`, item `checkbox`; parser-recorded `list-marker` tokens
 **Callouts**: callouts.rs ports CalloutSourceRx (`sub_callouts`): marks ending a
 verbatim line (`<1>`, `<.>` numbered per block, `<!--N-->`, escaped `\<1>` losing
 its backslash), each chain head keeping a `// `/`# `/`-- `/`;; ` guard (or the
-block/document `line-comment` prefix, empty = none). parser.rs apply_callouts runs
+block/document `line-comment` prefix; an empty one makes CalloutSourceRxMap's
+`()?` group match, so every mark of the chain has the guard `""`, not none).
+parser.rs apply_callouts runs
 at block completion on `Listing`/`Literal` (`callouts: Vec<Callout>` with text
 ranges, guard, xml form, Ruby id `CO<list>-<n>` from ParseContext.callouts =
 Ruby's Callouts catalog, shared with nested documents, and the mark's source span
-matched on the line with the same ending). `BlockKind::CalloutList { items:
+matched on the line with the same ending). Like Ruby, registration and ids are
+separate: `catalog` registers every mark with CalloutScanRx (no `line-comment`,
+so `<!--N-->` registers even where a custom `line-comment` does not convert it,
+and the colist finds it without a warning), and each converted mark takes
+`Catalog::read_next` (`read_next_id`, a cursor over the current list reset by
+`next_list`), so a mark after an unconverted one reads a shifted id, also in
+the next block; custom-subs blocks read one id per mark the `line-comment`
+scan converts (found by semantic-antora-lists, probe
+semantic-callout-line-comment-catalog, golden callouts/line_comment_catalog). `BlockKind::CalloutList { items:
 Vec<CalloutListItem { item, coids }> }` is parse_callout_list (CalloutListRx, no
 indent; items read like other lists; "callout list item index" and "no callout
 found for <N>" warnings; the catalog moves to the next list). HTML renders Ruby's
@@ -2357,4 +2367,24 @@ so `{snippetsPath}` includes map to unchanged `src/snippets` files. Pages
 using Gradle's `include::sample[]` extension (184) are not selected. All six
 PASS in cases/structure/semantics and match in visual on first run, no
 adoctra change.
+**Asciidoctor PDF and Antora corpus** (2026-11-02): pages chosen by a census
+of constructs missing from the corpus (kbd/menu/btn, footnotes with ids,
+checklists, `frame-none` tables, callouts with `line-comment`): five
+Asciidoctor PDF 2.3.27 pages (theme table, running content, prepare custom
+font, autowidth tables, keyboard theme) and seven Antora 3.2.2 pages (source,
+lists, page links with `include::page$xref.adoc[tag=…]`, playbook set-up,
+special characters, UI macros, generator events). Attributes are the site
+playbook's (docs.asciidoctor.org / docs.antora.org at pinned commits:
+`experimental`, `idprefix`/`idseparator`, soft `table-frame`/`table-grid`,
+`hide-uri-scheme`) merged with antora.yml; Antora's `false` is an unset
+(`name!`), soft values keep their `@`. All 12 PASS cases/structure/visual on
+first run; the semantic profile (10 pages over 90 lines) found the callout
+catalog defect above in Antora's lists page. visual-v1 found that Ruby's
+layout rules select `#header,#content,#footnotes,#footer` unscoped (`margin:0
+auto`, the column, `#footer`'s dark band, `::before`/`::after` tables), so a
+section with id `header`/`footer` (empty `idprefix`) takes them; adoctra.css
+scoped them to `body > …`. They are now unscoped like Ruby (golden
+sections/layout_ids). This also closed golden-block-subs: Chrome reconstructs
+the unclosed raw `<i>` around adoctra's `<footer>` (`I > FOOTER`), which lost
+`body > #footer`. visual-v1: 752 of 752 match.
 

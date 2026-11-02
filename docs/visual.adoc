@@ -66,10 +66,11 @@ HTML adoctra намеренно использует современную се
   `DejaVu`-шрифты своих стеков; страница Ruby с загруженными Google Fonts
   не воспроизводится.
 * Корпус — `examples/sample.adoc`, все golden-фикстуры
-  (`crates/adoctra-html/tests/golden/**/*.adoc`) и 49 полных документов
+  (`crates/adoctra-html/tests/golden/**/*.adoc`) и 61 полный документ
   приёмочного корпуса (README Asciidoctor на пяти языках, CHANGELOG, страницы
   руководств Asciidoctor и Spring Framework, спецификации AsciiDoc, Quarkus,
-  JUnit, Apache Groovy, Hibernate ORM, Debezium и Gradle) с их host-атрибутами.
+  JUnit, Apache Groovy, Hibernate ORM, Debezium, Gradle, Asciidoctor PDF и
+  Antora) с их host-атрибутами.
   Страница Debezium MySQL connector (около 480 КБ HTML) в визуальный корпус
   не входит: Chrome не завершает её полностраничный скриншот даже за 15 минут;
   её проверяют основной и структурный профили приёмки. Случай с
@@ -178,7 +179,9 @@ viewport и описан как отличие, а не принятое сов�
 * `golden-block-subs` (5.0%/4.74%): исходник оставляет незакрытый сырой
   `<i>`; браузер восстанавливает его в следующих элементах, а подвал Ruby
   (`div`) и adoctra (`footer`) различаются разметкой, поэтому подвал
-  смещается. Это следствие некорректного HTML документа, не таблицы стилей.
+  смещается. (2026-11-02: объяснение оказалось неверным, см. ниже — подвал
+  попадал внутрь восстановленного `<i>` и терял правило `body > #footer`;
+  отличие закрыто.)
 
 Значки-картинки admonition (`golden-admonition-icons-image`) теперь совпадают,
 но только в виде битой картинки с alt-текстом: файлов значков в фикстуре нет.
@@ -273,3 +276,21 @@ Gradle (2026-11-02): шесть страниц User Manual Gradle 9.8.2 (`icons=
 `adoctra.css` не потребовалось; прежние 712 наблюдений не изменились.
 Итог: *722 из 724 наблюдений `match`* (362 случая), в среднем 0.02%
 пикселей; отличие — `golden-block-subs`.
+
+Asciidoctor PDF и Antora (2026-11-02): 12 страниц (UI-макросы, сноски,
+чек-листы, таблицы `frame-none`). Десять совпали сразу. Theme Table и Running
+Content отличались: при пустом `idprefix` разделы получают id `header` и
+`footer`, а стандартная таблица стилей Ruby оформляет `#header`, `#content`,
+`#footnotes`, `#footer` глобальными селекторами по id (`margin: 0 auto`,
+колонка, у `#footer` тёмный фон), то есть задевает и такие разделы. В
+`adoctra.css` эти правила были ограничены `body > …`. Теперь они, как у Ruby,
+без ограничения, с `width: 100%`, `margin: 0 auto` и псевдо-таблицами
+`::before`/`::after`; новая фикстура `sections/layout_ids.adoc` (разделы
+`header`, `content`, `footnotes`, `footer`) на старой таблице стилей даёт
+`differs` (17% пикселей), на новой — `match`. Та же правка закрыла
+`golden-block-subs`: Chrome помещает подвал adoctra внутрь восстановленного
+`<i>` (`I > FOOTER`), и правило `body > #footer` к нему не применялось, а
+`#footer` Ruby применялось. Это улучшение проверено до записи baseline.
+Прочие 722 наблюдения не изменились; добавлена и фикстура
+`callouts/line_comment_catalog.adoc`.
+Итог: *752 из 752 наблюдений `match`* (376 случаев), отличий нет.

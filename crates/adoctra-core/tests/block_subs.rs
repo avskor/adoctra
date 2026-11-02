@@ -180,6 +180,32 @@ fn callouts_need_protected_source_marks() {
 }
 
 #[test]
+fn converted_callouts_read_the_ids_every_mark_registered() {
+    // Ruby's `catalog_callouts` registers `<!--2-->` too; the marks the
+    // empty `line-comment` converts read the ids in order (`read_next_id`),
+    // so the next block's mark reads the id `<!--2-->` registered.
+    let result = parse(
+        "[subs=\"+quotes\",line-comment=]\n----\n*e* <1> \\<2>\nf <!--2-->\n----\n\n[subs=\"+quotes\"]\n----\ng <3>\n----\n<1> One\n<2> Two\n<3> Three",
+    );
+    assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+    let blocks = &result.document.blocks;
+    let (value, parts, _) = substituted(content(&blocks[0]).unwrap());
+    assert_eq!(value, "e  <2>\nf <!--2-->");
+    let marks = callouts(parts);
+    assert_eq!(marks.len(), 1);
+    assert_eq!(
+        (marks[0].id.as_deref(), marks[0].guard.as_deref()),
+        (Some("CO1-1"), Some(""))
+    );
+    let (_, parts, _) = substituted(content(&blocks[1]).unwrap());
+    let marks = callouts(parts);
+    assert_eq!(
+        (marks[0].id.as_deref(), marks[0].guard.as_deref()),
+        (Some("CO1-2"), None)
+    );
+}
+
+#[test]
 fn callouts_capture_line_comments_and_icons() {
     let result =
         parse(":icons: font\n\n[subs=\"+quotes\",line-comment=%]\n----\nx % <1>\ny <!--2-->\n----");

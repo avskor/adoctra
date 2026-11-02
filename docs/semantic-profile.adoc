@@ -5,18 +5,18 @@
 атрибуты независимо от HTML backend. Это не официальный ASG/TCK и не полный
 контракт всех узлов AsciiDoc.
 
-Выборка `compatibility/upstream/semantics.json` содержит 144 PASS:
+Выборка `compatibility/upstream/semantics.json` содержит 145 PASS:
 20 атрибутных и 4 include-сценария из существующего upstream-корпуса, плюс
-119 собственных семантических проб, включая 15 табличных, 7 для оглавлений,
+120 собственных семантических проб, включая 15 табличных, 7 для оглавлений,
 одну для inline-значков, две для SVG (одна — с незакрытым `<svg`) и 27 для неявных xref,
-indexterm, формул и типографских кавычек, 33 для сносок и callouts, а также
+indexterm, формул и типографских кавычек, 34 для сносок и callouts, а также
 пробы цитат/стихов, `toc::[]`, `align` и replacements в alt изображений и
 листинга с подсветкой Rouge. Upstream-входы, ресурсы и сведения о
 происхождении используются без изменения; собственные пробы помечены отдельным
 origin. Новые входы и ресурсы имеют SHA-256. Эталоны хранятся отдельно от HTML
 под именами `reference/semantic-*.json`.
 
-Отдельный `compatibility/acceptance/semantics.json` добавляет 49 PASS на полных
+Отдельный `compatibility/acceptance/semantics.json` добавляет 59 PASS на полных
 страницах реального корпуса: README Asciidoctor на пяти языках, его варианты
 GitHub и include и полный CHANGELOG (2210 строк); страницы руководства
 Asciidoctor Safe Modes (99 строк), API Options (158), Custom Syntax
@@ -24,12 +24,14 @@ Highlighter (106), Localization Support (180), Custom Stylesheet (205), Custom C
 Spring Framework AOP Proxying (294), Resources (1073),
 Bean Validation (486), Operators (611), Bean Scopes (779), WebTestClient (719);
 14 страниц спецификации AsciiDoc, Quarkus (включая Mutiny primer), JUnit и
-Groovy; пять глав Hibernate ORM, четыре страницы Debezium и шесть страниц
-Gradle. Он переиспользует
+Groovy; пять глав Hibernate ORM, четыре страницы Debezium, шесть страниц
+Gradle, пять страниц Asciidoctor PDF и пять страниц Antora (страницы короче
+90 строк, UI macros и Generator events, проверяются только HTML, структурой
+и визуально). Он переиспользует
 неизменённые исходники, include-ресурсы, лицензии и host-атрибуты
 link:acceptance.adoc[реального корпуса]. Вне выборки остаются диагностические
 случаи (warnings останавливают профиль) и README adoctra (35 строк).
-Вместе это 193 PASS, без XFAIL.
+Вместе это 204 PASS, без XFAIL.
 Для страниц пока выбран пустой список сравниваемых атрибутов: проверяются
 разрешённые деревья текста и блоков, а не весь набор настроек Antora.
 
@@ -173,7 +175,9 @@ HTML converter и разбор его тегов в этом пути также
 * Callouts: положение в точном тексте listing/literal, номер, id, guard/XML,
   режим icons и разрешённый src; colist хранит упорядоченные coids, режим иконок,
   текст и присоединённые блоки. Проверяются автонумерация, повторения, несколько
-  списков, экранирование, custom subs, Unicode/CRLF, include и вложенные документы.
+  списков, экранирование, custom subs, Unicode/CRLF, include и вложенные документы,
+  а также пустой `line-comment` (guard `""`) и сдвиг id: Ruby регистрирует все
+  метки общим шаблоном, а преобразованные читают id по порядку (`read_next_id`).
   Это данные меток и привязок; графическое оформление иконок не сравнивается.
 * Атрибуты, перечисленные в `semantic_attributes` каждого сценария: снимок
   после чтения header и после обхода тела с replay записей и substitutions.

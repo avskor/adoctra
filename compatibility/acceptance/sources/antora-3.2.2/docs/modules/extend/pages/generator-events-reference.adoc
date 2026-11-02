@@ -1,0 +1,83 @@
+= Generator Lifecycle Events Reference
+:navtitle: Generator Events Reference
+
+Antora extensions listen for events emitted by the generator when Antora runs.
+Each listener can access variables that are in scope at the time the event is emitted.
+The following table lists the generator events in the order they're emitted and the context (in-scope) variables that correspond to each event.
+If the variable is locked, meaning it cannot be replaced, it's italicized.
+
+.Antora extension events and in-scope variables
+[cols="1,2"]
+|===
+|Event name | In-scope variables
+
+|register(){empty}footnote:register[The register function isn't an event, but rather the function Antora calls on an extension so it can register listeners.]
+|playbook, config
+
+|contextStarted{empty}footnote:functions[The built-in generator functions are not available until this event is emitted.]
+|playbook
+
+|playbookBuilt
+|playbook
+
+|beforeProcess
+|_playbook_, siteAsciiDocConfig, siteCatalog
+
+|contentAggregated{empty}footnote:event-sequence[The `uiLoaded` event may be emitted before, between, or after the `contentAggregated` and `componentsRegistered` events.]
+|_playbook_, _siteAsciiDocConfig_, siteCatalog, contentAggregate
+
+|componentsRegistered{empty}footnote:event-sequence[]
+|_playbook_, _siteAsciiDocConfig_, siteCatalog, contentCatalogfootnote:[The contentCatalog only provides access to the component versions at this phase, which are still in the process of being constructed.]
+
+|uiLoaded{empty}footnote:event-sequence[]
+|_playbook_, _siteAsciiDocConfig_, siteCatalog, uiCatalog
+
+|contentClassified
+|_playbook_, _siteAsciiDocConfig_, siteCatalog, uiCatalog, contentCatalog
+
+|documentsConverted
+|_playbook_, _siteAsciiDocConfig_, siteCatalog, _uiCatalog_, _contentCatalog_
+
+|navigationBuilt
+|_playbook_, _siteAsciiDocConfig_, siteCatalog, _uiCatalog_, _contentCatalog_, navigationCatalog
+
+|pagesComposed
+|_playbook_, _siteAsciiDocConfig_, siteCatalog, _uiCatalog_, _contentCatalog_
+
+|redirectsProduced
+|_playbook_, _siteAsciiDocConfig_, siteCatalog, _uiCatalog_, _contentCatalog_
+
+|siteMapped{empty}footnote:[The `siteMapped` event is only emitted if the site URL is specified in the playbook.]
+|_playbook_, _siteAsciiDocConfig_, siteCatalog, _uiCatalog_, _contentCatalog_
+
+|beforePublish
+|_playbook_, _siteAsciiDocConfig_, siteCatalog, _uiCatalog_, _contentCatalog_
+
+|sitePublished
+|_playbook_, _siteAsciiDocConfig_, _siteCatalog_, _uiCatalog_, _contentCatalog_, publications
+
+|contextStopped
+|(any variable still in scope at the time the context is stopped)
+
+|contextClosed{empty}footnote:[Listeners of the `contextClosed` event are expected to catch their own errors so all listeners are notified.]
+|(any variable still in scope at the time the context is closed)
+|===
+
+The playbook object (i.e., the parsed data from the playbook file) is available at the time the `register` function is called (which acts like the `register` event).
+However, at this stage, the playbook is still just a raw data model.
+The Antora extensions have yet to be registered.
+When the `contextStarted` is emitted, all the initialization of the playbook, including registering Antora extensions and generator functions, is complete.
+
+When modifying the content sources in an Antora extension, it's customary to use the `playbookBuilt` event.
+After that, the playbook object cannot be modified or updated.
+
+Antora creates the component version objects from the component version buckets in the content aggregate.
+Then Antora emits the `componentsRegistered` event.
+At that point, additional files can be added to `files` property on a given component version object.
+After the `componentsRegistered` event, Antora adds the files attached to each component version to the content catalog.
+After the files are added for each component version, Antora registers the component version start page.
+Once the files are added for all component versions, Antora registers the site start page.
+
+Once Antora has published the site, it provides the locations of all output destinations (also called [.term]_publications_) in the form of an array of objects via the `publications` variable passed to (and only to) the `sitePublished` event.
+
+In addition to the built-in context variables listed in this table, your extension can also access context variables documented and promoted by other extensions.

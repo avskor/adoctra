@@ -87,16 +87,18 @@ strong strong { font-weight: 400; }
    centred column (`max-width` overrides it), the header shows the title
    above a line of author/revision details, and the footer is a full-width
    dark band. */
-body > :is(#header, #content, #footnotes) {
+:is(#header, #content, #footnotes, #footer) {
   position: relative;
+  width: 100%;
   max-width: 62.5em;
-  margin-inline: auto;
+  margin: 0 auto;
   padding-inline: 0.9375em;
 }
-body > :is(#header, #content, #footnotes)::after { content: ""; display: table; clear: both; }
-body > #content { margin-block: 1.25em 0.625em; }
+:is(#header, #footnotes, #footer)::before { content: " "; display: table; }
+:is(#header, #content, #footnotes, #footer)::after { content: " "; display: table; clear: both; }
+#content { margin-block: 1.25em 0.625em; }
 @media screen and (min-width: 768px) {
-  body > #content { margin-block-end: 1.25em; }
+  #content { margin-block-end: 1.25em; }
 }
 #header > h1:first-child {
   color: rgb(0 0 0 / 0.85);
@@ -129,8 +131,8 @@ body.toc2 #header > h1:nth-last-child(2) {
 #header > h1:first-child + #toc { margin-block-start: 8px; }
 /* Full width unless `max-width` (an inline style) narrows it: then it is
    centred like the column, as in Ruby. */
-body > #footer {
-  margin-inline: auto;
+#footer {
+  max-width: none;
   padding: 1.25em;
   background: rgb(0 0 0 / 0.8);
 }
