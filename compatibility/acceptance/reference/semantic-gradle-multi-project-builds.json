@@ -1,0 +1,2380 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "As your codebase grows, organizing it into multiple subprojects becomes essential for maintainability, performance, and reuse. Gradle supports this with multi-project builds."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "alt": [
+              {
+                "kind": "text",
+                "value": "gradle basic 9"
+              }
+            ],
+            "attributes": {},
+            "context": "image",
+            "id": null,
+            "roles": [],
+            "src": "img/gradle-basic-9.png",
+            "svg": null,
+            "target": "gradle-basic-9.png",
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "While some small projects and monolithic applications may contain a single build file and source tree, it is often more common for a project to have been split into smaller, interdependent modules. The word \"interdependent\" is vital, as you typically want to link the many modules together through a single build."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Gradle supports this scenario through "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "multi-project"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " builds. This is sometimes referred to as a multi-module project. Gradle refers to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "modules"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " as "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "subprojects"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A multi-project build consists of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "one root project and one or more subprojects"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following represents the structure of a sample multi-project build that contains three subprojects:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "alt": [
+              {
+                "kind": "text",
+                "value": "multi project structure"
+              }
+            ],
+            "attributes": {},
+            "context": "image",
+            "id": null,
+            "roles": [],
+            "src": "img/multi-project-structure.png",
+            "svg": null,
+            "target": "multi-project-structure.png",
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The directory structure should look as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": ".\n├── gradlew\n├── gradlew.bat\n├── settings.gradle(.kts)   "
+              },
+              {
+                "guard": "// ",
+                "icons": "font",
+                "id": "CO1-1",
+                "kind": "callout",
+                "number": "1",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n├── sub-project-1\n│   └── build.gradle(.kts)      "
+              },
+              {
+                "guard": "// ",
+                "icons": "font",
+                "id": "CO1-2",
+                "kind": "callout",
+                "number": "2",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n├── sub-project-2\n│   └── build.gradle(.kts)      "
+              },
+              {
+                "guard": "// ",
+                "icons": "font",
+                "id": "CO1-3",
+                "kind": "callout",
+                "number": "2",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n└── sub-project-3\n    └── build.gradle(.kts)      "
+              },
+              {
+                "guard": "// ",
+                "icons": "font",
+                "id": "CO1-4",
+                "kind": "callout",
+                "number": "2",
+                "src": "",
+                "xml": false
+              }
+            ],
+            "language": "text",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "colist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-1"
+                ],
+                "icons": "font",
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "settings.gradle(.kts)"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " file should include all subprojects."
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-2",
+                  "CO1-3",
+                  "CO1-4"
+                ],
+                "icons": "font",
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Each subproject should have its own "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "build.gradle(.kts)"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " file."
+                  }
+                ],
+                "src": ""
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In this example, the root settings file will look as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "blocks": [
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "include(\"sub-project-1\", \"sub-project-2\", \"sub-project-3\")"
+                      }
+                    ],
+                    "language": "kotlin",
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "settings.gradle.kts"
+                      }
+                    ]
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [
+                  "multi-language-sample"
+                ],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "include('sub-project-1', 'sub-project-2', 'sub-project-3')"
+                      }
+                    ],
+                    "language": "groovy",
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "settings.gradle"
+                      }
+                    ]
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [
+                  "multi-language-sample"
+                ],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The order in which the subprojects (modules) are included does not matter."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "note"
+          },
+          {
+            "context": "paragraph",
+            "id": "sec:project_standard",
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The Gradle community has two standards for multi-project build structures:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "olist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Multi-Project Builds using "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "buildSrc"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "sharing_build_logic_between_subprojects.html#sec:using_buildsrc"
+                      }
+                    ],
+                    "kind": "strong",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " - where "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "buildSrc"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is a subproject-like directory at the Gradle project root containing shared build logic."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Composite Builds including "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "build-logic"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "composite_builds.html#composite_builds"
+                      }
+                    ],
+                    "kind": "strong",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " - a build that includes other builds where "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "build-logic"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is a build directory at the Gradle project root containing reusable build logic."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          },
+          {
+            "alt": [
+              {
+                "kind": "text",
+                "value": "multi project standards"
+              }
+            ],
+            "attributes": {},
+            "context": "image",
+            "id": null,
+            "roles": [],
+            "src": "img/multi-project-standards.png",
+            "svg": null,
+            "target": "multi-project-standards.png",
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In either case, the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "build-logic"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "buildSrc"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " folders are used to organize build logic."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Each approach has trade-offs. "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "buildSrc"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is easier to get started with but less flexible. Composite builds require a bit more setup but scale better and align with Gradle’s long-term best practices for sharing build logic."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "sec:project_structure",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Multi-Project Structure"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A project path has the following pattern: it starts with an optional colon, which denotes the root project."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The root project, "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": ":"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", is the only project in a path not specified by its name. The rest of a project path is a colon-separated sequence of project names, where the next project is a subproject of the previous project:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": ":sub-project-1"
+              }
+            ],
+            "language": "text",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can see the project paths when running "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "gradle projects"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ":"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "------------------------------------------------------------\nRoot project 'project'\n------------------------------------------------------------\n\nRoot project 'project'\n+--- Project ':sub-project-1'\n\\--- Project ':sub-project-2'"
+              }
+            ],
+            "language": "text",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Project paths usually reflect the filesystem layout, but there are exceptions. Most notably for "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "composite builds"
+                  }
+                ],
+                "kind": "xref",
+                "target": "composite_builds.html#defining_composite_builds"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The command "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "gradle test"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " will execute the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "test"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " task in any subprojects relative to the current working directory that has that task."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If you run the command from the root project directory, you will run "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "test"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " in "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "sub-project-1"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "sub-project-2"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "sub-project-3"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The basic rule behind Gradle’s behavior is to "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "execute all tasks down the hierarchy with "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "this"
+                          }
+                        ],
+                        "kind": "emphasis",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " name"
+                      }
+                    ],
+                    "kind": "strong",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". And "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "complain if there is "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "no"
+                          }
+                        ],
+                        "kind": "emphasis",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " such task found"
+                      }
+                    ],
+                    "kind": "strong",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " in any of the subprojects traversed."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "admonition",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Some task selectors, like "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "help"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " or "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "dependencies"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", will only run the task on the project they are invoked on and not on all the subprojects to reduce the amount of information printed on the screen."
+                  }
+                ],
+                "roles": [],
+                "title": null,
+                "type": "note"
+              }
+            ],
+            "context": "section",
+            "id": "sec:executing_tasks_by_name",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Executing tasks by name"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "In a multi-project build, you can run tasks for a specific subproject by using the task’s fully qualified name. This name combines the project path and the task name."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "For example, to run the build task in "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "sub-project-1"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", use "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "./gradlew :sub-project-1:build"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". This ensures that only "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "sub-project-1’s `build"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " task is executed, rather than running build across the entire build."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You can use this pattern for any task. For example, to list all tasks available in "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "sub-project-3"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", run "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "./gradlew :sub-project-3:tasks"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "sec:executing_tasks_by_fully_qualified_name",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Executing tasks by fully qualified name"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "sec:project_path",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Multi-Project Paths"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Multi-project builds allow you to organize projects with many modules, wire dependencies between those modules, and easily share common build logic amongst them."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For example, if the project above had common build logic between "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "sub-project-1"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "sub-project-2"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "sub-project-3"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", it could be structured as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": ".\n├── gradlew\n├── gradlew.bat\n├── settings.gradle(.kts)\n├── buildSrc        "
+              },
+              {
+                "guard": "// ",
+                "icons": "font",
+                "id": "CO2-1",
+                "kind": "callout",
+                "number": "1",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n│   ├── build.gradle.kts\n│   └── src/main/*/shared-build-conventions.gradle(.kts)    "
+              },
+              {
+                "guard": "// ",
+                "icons": "font",
+                "id": "CO2-2",
+                "kind": "callout",
+                "number": "2",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n├── sub-project-1\n│   └── build.gradle(.kts)              "
+              },
+              {
+                "guard": "// ",
+                "icons": "font",
+                "id": "CO2-3",
+                "kind": "callout",
+                "number": "3",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n├── sub-project-2\n│   └── build.gradle(.kts)              "
+              },
+              {
+                "guard": "// ",
+                "icons": "font",
+                "id": "CO2-4",
+                "kind": "callout",
+                "number": "3",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n└── sub-project-3\n    └── build.gradle(.kts)              "
+              },
+              {
+                "guard": "// ",
+                "icons": "font",
+                "id": "CO2-5",
+                "kind": "callout",
+                "number": "3",
+                "src": "",
+                "xml": false
+              }
+            ],
+            "language": "text",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "colist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO2-1"
+                ],
+                "icons": "font",
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Gradle recognized "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "buildSrc"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " folder"
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO2-2"
+                ],
+                "icons": "font",
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Contains common build logic from "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "sub-project-1"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "sub-project-2"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "sub-project-3"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO2-3",
+                  "CO2-4",
+                  "CO2-5"
+                ],
+                "icons": "font",
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Applies "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "shared-build-conventions.gradle(.kts)"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "src": ""
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "buildSrc"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " directory is automatically recognized by Gradle. It is a good place to define and maintain shared configuration or imperative build logic, such as custom tasks or plugins."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "buildSrc"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is automatically included in your build as a special subproject if a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "build.gradle(.kts)"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " file is found under "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "buildSrc"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Consult the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Sharing Build Logic using "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "buildSrc"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "xref",
+                "target": "sharing_build_logic_between_subprojects.html#sharing_build_logic_between_subprojects"
+              },
+              {
+                "kind": "text",
+                "value": " chapter to learn more."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "sec:multi_project_buildsrc",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Multi-Project Builds using "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "buildSrc"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Composite Builds, also referred to as "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "included builds"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", are best for sharing logic between builds ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "not subprojects"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") or isolating access to shared build logic."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Let’s take the previous example. The logic in "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "buildSrc"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " has been turned into a project that contains plugins and can be published and worked on independently of the root project build."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The plugin is moved to its own build called "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "build-logic"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " with its own build script and settings file:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": ".\n├── gradlew\n├── gradlew.bat\n├── settings.gradle(.kts)\n├── build-logic         "
+              },
+              {
+                "guard": "// ",
+                "icons": "font",
+                "id": "CO3-1",
+                "kind": "callout",
+                "number": "1",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n│   ├── settings.gradle.kts\n│   └── conventions\n│       ├── build.gradle.kts\n│       └── src/main/kotlin/shared-build-conventions.gradle.kts "
+              },
+              {
+                "guard": "// ",
+                "icons": "font",
+                "id": "CO3-2",
+                "kind": "callout",
+                "number": "2",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n├── sub-project-1\n│   └── build.gradle(.kts)              "
+              },
+              {
+                "guard": "// ",
+                "icons": "font",
+                "id": "CO3-3",
+                "kind": "callout",
+                "number": "3",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n├── sub-project-2\n│   └── build.gradle(.kts)              "
+              },
+              {
+                "guard": "// ",
+                "icons": "font",
+                "id": "CO3-4",
+                "kind": "callout",
+                "number": "3",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n└── sub-project-3\n    └── build.gradle(.kts)              "
+              },
+              {
+                "guard": "// ",
+                "icons": "font",
+                "id": "CO3-5",
+                "kind": "callout",
+                "number": "3",
+                "src": "",
+                "xml": false
+              }
+            ],
+            "language": "text",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "colist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO3-1"
+                ],
+                "icons": "font",
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Separate Gradle build called "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "build-logic"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO3-2"
+                ],
+                "icons": "font",
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Contains common build logic from "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "sub-project-1"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "sub-project-2"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "sub-project-3"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO3-3",
+                  "CO3-4",
+                  "CO3-5"
+                ],
+                "icons": "font",
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Applies "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "shared-build-conventions.gradle(.kts)"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "src": ""
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The fact that "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "build-logic"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is located in a subdirectory of the root project is irrelevant. The folder could be located outside the root project if desired."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "note"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The root settings file includes the entire "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "build-logic"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "build"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ":"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "blocks": [
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "include(\"sub-project-1\", \"sub-project-2\", \"sub-project-3\")\nincludeBuild(\"build-logic\")"
+                      }
+                    ],
+                    "language": "kotlin",
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "settings.gradle.kts"
+                      }
+                    ]
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [
+                  "multi-language-sample"
+                ],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "include('sub-project-1', 'sub-project-2', 'sub-project-3')\nincludeBuild('build-logic')"
+                      }
+                    ],
+                    "language": "groovy",
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "settings.gradle"
+                      }
+                    ]
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [
+                  "multi-language-sample"
+                ],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "There’s no reason that any of the subprojects in a multi-project build couldn’t themselves be composite builds. This allows teams to independently develop and test build logic or components, then include them in a larger build as needed. For example:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": ".\n├── gradlew\n├── gradlew.bat\n├── settings.gradle(.kts)\n├── build-logic             "
+              },
+              {
+                "guard": "// ",
+                "icons": "font",
+                "id": "CO4-1",
+                "kind": "callout",
+                "number": "1",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n│   ├── settings.gradle(.kts)\n│   └── conventions\n│       └── build.gradle(.kts)\n├── project-1                   "
+              },
+              {
+                "guard": "// ",
+                "icons": "font",
+                "id": "CO4-2",
+                "kind": "callout",
+                "number": "2",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n│   ├── settings.gradle(.kts)\n│   ├── client\n│   │   └── build.gradle(.kts)\n│   └── server\n│       └── build.gradle(.kts)\n├── project-2                   "
+              },
+              {
+                "guard": "// ",
+                "icons": "font",
+                "id": "CO4-3",
+                "kind": "callout",
+                "number": "3",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n│   ├── settings.gradle(.kts)\n│   └── lib\n│       └── build.gradle(.kts)\n└── project-3                   "
+              },
+              {
+                "guard": "// ",
+                "icons": "font",
+                "id": "CO4-4",
+                "kind": "callout",
+                "number": "4",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n    ├── settings.gradle(.kts)\n    ├── app-plugin\n    │   └── build.gradle(.kts)\n    ├── client-plugin\n    │   └── build.gradle(.kts)\n    └── server-plugin\n        └── build.gradle(.kts)"
+              }
+            ],
+            "language": "text",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "colist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO4-1"
+                ],
+                "icons": "font",
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Separate Gradle build called "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "build-logic"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO4-2"
+                ],
+                "icons": "font",
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Separate Gradle build called "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "project-1"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " with 2 of its own subproject"
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO4-3"
+                ],
+                "icons": "font",
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Separate Gradle build called "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "project-2"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " with 1 of its own subproject"
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO4-4"
+                ],
+                "icons": "font",
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Separate Gradle build called "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "project-3"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " with 3 of its own subprojects"
+                  }
+                ],
+                "src": ""
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In this setup, a team could work on "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "project-3"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " as an entirely independent build. Once their changes are complete, another team could test and validate those changes by integrating `project-3’s changes into the full root build."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Consult the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Composite Builds"
+                  }
+                ],
+                "kind": "xref",
+                "target": "composite_builds.html#composite_builds"
+              },
+              {
+                "kind": "text",
+                "value": " chapter to learn more."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Next Step:"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Learn about the Gradle Build Lifecycle"
+                  }
+                ],
+                "kind": "xref",
+                "target": "build_lifecycle_intermediate.html#build_lifecycle"
+              },
+              {
+                "kind": "text",
+                "value": " >>"
+              }
+            ],
+            "roles": [
+              "text-right"
+            ],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "sec:composite_builds_build_logic",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Composite Builds including "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "build-logic"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          }
+        ]
+      }
+    ],
+    "outline": {
+      "levels": 2,
+      "sections": [
+        {
+          "id": "sec:project_structure",
+          "inlines": [
+            {
+              "kind": "text",
+              "value": "Multi-Project Structure"
+            }
+          ],
+          "sections": []
+        },
+        {
+          "id": "sec:project_path",
+          "inlines": [
+            {
+              "kind": "text",
+              "value": "Multi-Project Paths"
+            }
+          ],
+          "sections": [
+            {
+              "id": "sec:executing_tasks_by_name",
+              "inlines": [
+                {
+                  "kind": "text",
+                  "value": "Executing tasks by name"
+                }
+              ],
+              "sections": []
+            },
+            {
+              "id": "sec:executing_tasks_by_fully_qualified_name",
+              "inlines": [
+                {
+                  "kind": "text",
+                  "value": "Executing tasks by fully qualified name"
+                }
+              ],
+              "sections": []
+            }
+          ]
+        },
+        {
+          "id": "sec:multi_project_buildsrc",
+          "inlines": [
+            {
+              "kind": "text",
+              "value": "Multi-Project Builds using "
+            },
+            {
+              "id": null,
+              "inlines": [
+                {
+                  "kind": "text",
+                  "value": "buildSrc"
+                }
+              ],
+              "kind": "monospace",
+              "roles": []
+            }
+          ],
+          "sections": []
+        },
+        {
+          "id": "sec:composite_builds_build_logic",
+          "inlines": [
+            {
+              "kind": "text",
+              "value": "Composite Builds including "
+            },
+            {
+              "id": null,
+              "inlines": [
+                {
+                  "kind": "text",
+                  "value": "build-logic"
+                }
+              ],
+              "kind": "monospace",
+              "roles": []
+            }
+          ],
+          "sections": []
+        }
+      ],
+      "title": [
+        {
+          "kind": "text",
+          "value": "On this Page"
+        }
+      ]
+    },
+    "title": [
+      {
+        "kind": "text",
+        "value": "Structuring Multi-Project Builds"
+      }
+    ]
+  }
+}

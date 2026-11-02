@@ -194,7 +194,7 @@ all three icon modes; two SVG probes comparing the read file and interactive fal
 width/autowidth/float; 27 xref/indexterm/stem/typographic quote
 probes; 33 footnote/callout probes; quote/verse, toc, image align/alt, Rouge
 listing). `compatibility/acceptance/semantics.json` adds
-43 PASS on unchanged full pages of all eight corpus projects plus the
+49 PASS on unchanged full pages of all nine corpus projects plus the
 Asciidoctor READMEs and CHANGELOG, with the same sources,
 include resources and host attributes as the HTML corpus. The Ruby oracle has its own converter (no HTML
 converter or HTML parsing); paired synthetic boundaries leave content exposed
@@ -2345,4 +2345,16 @@ harness defects: the oracle read the raw block `alt` instead of
 `AbstractBlock#alt` (replacements unless default-alt), and JSON/WASM flattened
 the block alt so a generated `&#8217;` was indistinguishable from a typed `&`;
 block images now export alt `parts` like inline images.
+**Gradle corpus** (2026-11-02): six Gradle 9.8.2 User Manual pages
+(command-line interface, configuration cache, `gradle init` tutorial with
+callouts, multi-project builds, build services, upgrading to 9.x) with the
+`userguideMultiPage` attributes of GradleUserManualPlugin.java (book, font
+icons, `toc=auto`, `toclevels=2`, `toc-title`, empty `idprefix`,
+sectanchors/sectlinks); computed values pinned (`gradleVersion` 9.8.2,
+`gradleVersion8` 8.14.6, JDK 17 javadoc URLs); stylesheet/docinfo/samples-dir
+not passed. The build flattens pages and stages snippets under `snippets/`,
+so `{snippetsPath}` includes map to unchanged `src/snippets` files. Pages
+using Gradle's `include::sample[]` extension (184) are not selected. All six
+PASS in cases/structure/semantics and match in visual on first run, no
+adoctra change.
 

@@ -1,0 +1,1855 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Shared build services allow tasks to share state or resources. For example, tasks might share a cache of pre-computed values or use a web service or database instance."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A build service is an object that holds the state for tasks to use. It provides an alternative mechanism for hooking into a Gradle build and receiving information about task execution and operation completion."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Build services are configuration cacheable."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Gradle manages the service lifecycle, creating the service instance only when required and cleaning it up when no longer needed. Gradle can also coordinate access to the build service, ensuring that no more than a specified number of tasks use the service concurrently."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To implement a build service, create an abstract class that implements "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BuildService"
+                  }
+                ],
+                "kind": "link",
+                "target": "../javadoc/org/gradle/api/services/BuildService.html"
+              },
+              {
+                "kind": "text",
+                "value": ". Then, define methods you want the tasks to use on this type."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "abstract class BaseCountingService implements BuildService<CountingParams>, AutoCloseable {\n\n}"
+              }
+            ],
+            "language": "groovy",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A build service implementation is treated as a "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "custom Gradle type"
+                  }
+                ],
+                "kind": "xref",
+                "target": "properties_providers.html#properties_and_providers"
+              },
+              {
+                "kind": "text",
+                "value": " and can use any of the features available to custom Gradle types."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A build service can optionally take parameters, which Gradle injects into the service instance when creating it. To provide parameters, you define an abstract class (or interface) that holds the parameters. The parameters type must implement (or extend) "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BuildServiceParameters"
+                  }
+                ],
+                "kind": "link",
+                "target": "../javadoc/org/gradle/api/services/BuildServiceParameters.html"
+              },
+              {
+                "kind": "text",
+                "value": ". The service implementation can access the parameters using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "this.getParameters()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". The parameters type is also a "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "custom Gradle type"
+                  }
+                ],
+                "kind": "xref",
+                "target": "properties_providers.html#properties_and_providers"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This means parameter methods must follow the JavaBeans getter naming convention: declare "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Property<String> getName()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", not "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Property<String> name()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". See "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Using Gradle Managed Properties"
+                  }
+                ],
+                "kind": "xref",
+                "target": "properties_providers.html#managed_properties"
+              },
+              {
+                "kind": "text",
+                "value": " for the full conventions."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When the build service does not require any parameters, you can use "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BuildServiceParameters.None"
+                  }
+                ],
+                "kind": "link",
+                "target": "../javadoc/org/gradle/api/services/BuildServiceParameters.None.html"
+              },
+              {
+                "kind": "text",
+                "value": " as the type of parameter."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "interface CountingParams extends BuildServiceParameters {\n    Property<Integer> getInitial()\n}"
+              }
+            ],
+            "language": "groovy",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A build service implementation can also optionally implement "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AutoCloseable"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", in which case Gradle will call the build service instance’s "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "close()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method when it discards the service instance. This happens sometime between the completion of the last task that uses the build service and the end of the build."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Here is an example of a service that takes parameters and is closeable:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "import org.gradle.api.file.DirectoryProperty;\nimport org.gradle.api.provider.Property;\nimport org.gradle.api.services.BuildService;\nimport org.gradle.api.services.BuildServiceParameters;\n\nimport java.net.URI;\nimport java.net.URISyntaxException;\n\npublic abstract class WebServer implements BuildService<WebServer.Params>, AutoCloseable {\n\n    // Some parameters for the web server\n    interface Params extends BuildServiceParameters {\n        Property<Integer> getPort();\n\n        DirectoryProperty getResources();\n    }\n\n    private final URI uri;\n\n    public WebServer() throws URISyntaxException {\n        // Use the parameters\n        int port = getParameters().getPort().get();\n        uri = new URI(String.format(\"https://localhost:%d/\", port));\n\n        // Start the server ...\n\n        System.out.println(String.format(\"Server is running at %s\", uri));\n    }\n\n    // A public method for tasks to use\n    public URI getUri() {\n        return uri;\n    }\n\n    @Override\n    public void close() {\n        // Stop the server ...\n    }\n}"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "WebServer.java"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Note that you should "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "not"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " implement the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BuildService.getParameters()"
+                  }
+                ],
+                "kind": "link",
+                "target": "../javadoc/org/gradle/api/services/BuildService.html#getParameters--"
+              },
+              {
+                "kind": "text",
+                "value": " method, as Gradle will provide an implementation of this."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A build service implementation must be thread-safe, as it will potentially be used by multiple tasks concurrently."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "sec:implementing_a_build_service",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Implementing a build service"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To create a build service, you register the service instance using the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BuildServiceRegistry.registerIfAbsent()"
+                  }
+                ],
+                "kind": "link",
+                "target": "../javadoc/org/gradle/api/services/BuildServiceRegistry.html#registerIfAbsent-java.lang.String-java.lang.Class-org.gradle.api.Action-"
+              },
+              {
+                "kind": "text",
+                "value": " method."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Registering the service does not create the service instance. This happens on demand when a task first uses the service. The service instance will not be created if no task uses the service during a build."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Currently, build services are scoped to a build, rather than a project, and these services are available to be shared by the tasks of all projects. You can access the registry of shared build services via "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Project.getGradle().getSharedServices()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Isolated Projects"
+                  }
+                ],
+                "kind": "xref",
+                "target": "isolated_projects.html#sec:shared_build_services"
+              },
+              {
+                "kind": "text",
+                "value": " is enabled, most methods on the set returned by "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "getRegistrations()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " are restricted. Use "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "registerIfAbsent()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to obtain a service provider directly."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "tip"
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Here is an example of a plugin that registers the previous service when the task property consuming the service is annotated with "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@ServiceReference"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ":"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "import org.gradle.api.Plugin;\nimport org.gradle.api.Project;\nimport org.gradle.api.provider.Provider;\n\npublic class DownloadPlugin implements Plugin<Project> {\n    public void apply(Project project) {\n        // Register the service\n        project.getGradle().getSharedServices().registerIfAbsent(\"web\", WebServer.class, spec -> {\n            // Provide some parameters\n            spec.getParameters().getPort().set(5005);\n        });\n\n        project.getTasks().register(\"download\", Download.class, task -> {\n            task.getOutputFile().set(project.getLayout().getBuildDirectory().file(\"result.zip\"));\n        });\n    }\n}"
+                  }
+                ],
+                "language": "java",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "DownloadPlugin.java"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "As you can see, there is no need to assign the build service provider returned by "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "registerIfAbsent()"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to the task, the service is automatically injected into all matching properties that were annotated with "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@ServiceReference"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Here is an example of a task that consumes the previous service via a property annotated with "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@ServiceReference"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ":"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "import org.gradle.api.DefaultTask;\nimport org.gradle.api.file.RegularFileProperty;\nimport org.gradle.api.provider.Property;\nimport org.gradle.api.services.ServiceReference;\nimport org.gradle.api.tasks.OutputFile;\nimport org.gradle.api.tasks.TaskAction;\n\nimport java.net.URI;\n\npublic abstract class Download extends DefaultTask {\n    // This property provides access to the service instance\n    @ServiceReference(\"web\")\n    abstract Property<WebServer> getServer();\n\n    @OutputFile\n    abstract RegularFileProperty getOutputFile();\n\n    @TaskAction\n    public void download() {\n        // Use the server to download a file\n        WebServer server = getServer().get();\n        URI uri = server.getUri().resolve(\"somefile.zip\");\n        System.out.println(String.format(\"Downloading %s\", uri));\n    }\n}"
+                  }
+                ],
+                "language": "java",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Download.java"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Automatic matching of registered build services with service reference properties is done by type and (optionally) by name (for properties that declare the name of the service they expect). In case multiple services would match the requested service type (i.e. multiple services were registered for the same type, and a service name was not provided in the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@ServiceReference"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " annotation), you will need also to assign the shared build service provider manually to the task property."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Read on to compare that to when the task property consuming the service is instead annotated with "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Internal"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "sec:service_references",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Registering a build service to be consumed via "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ServiceReference"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " task properties"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "import org.gradle.api.Plugin;\nimport org.gradle.api.Project;\nimport org.gradle.api.provider.Provider;\n\npublic class DownloadPlugin implements Plugin<Project> {\n    public void apply(Project project) {\n        // Register the service\n        Provider<WebServer> serviceProvider = project.getGradle().getSharedServices().registerIfAbsent(\"web\", WebServer.class, spec -> {\n            // Provide some parameters\n            spec.getParameters().getPort().set(5005);\n        });\n\n        project.getTasks().register(\"download\", Download.class, task -> {\n            // Connect the service provider to the task\n            task.getServer().set(serviceProvider);\n            // Declare the association between the task and the service\n            task.usesService(serviceProvider);\n            task.getOutputFile().set(project.getLayout().getBuildDirectory().file(\"result.zip\"));\n        });\n    }\n}"
+                  }
+                ],
+                "language": "java",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "DownloadPlugin.java"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "In this case, the plugin registers the service and receives a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Provider<WebService>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " back. This provider can be connected to task properties to pass the service to the task. Note that for a task property annotated with "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Internal"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", the task property needs to (1) be explicitly assigned with the provider obtained during registation, and (2) you must tell Gradle the task uses the service via "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Task.usesService"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "../dsl/org.gradle.api.Task.html#org.gradle.api.Task:usesService(org.gradle.api.provider.Provider)"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". None of that is needed when the task property consuming the service is annotated with "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@ServiceReference"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Here is an example of a task that consumes the previous service via a property annotated with "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Internal"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ":"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "import org.gradle.api.DefaultTask;\nimport org.gradle.api.file.RegularFileProperty;\nimport org.gradle.api.provider.Property;\nimport org.gradle.api.tasks.Internal;\nimport org.gradle.api.tasks.OutputFile;\nimport org.gradle.api.tasks.TaskAction;\n\nimport java.net.URI;\n\npublic abstract class Download extends DefaultTask {\n    // This property provides access to the service instance\n    @Internal\n    abstract Property<WebServer> getServer();\n\n    @OutputFile\n    abstract RegularFileProperty getOutputFile();\n\n    @TaskAction\n    public void download() {\n        // Use the server to download a file\n        WebServer server = getServer().get();\n        URI uri = server.getUri().resolve(\"somefile.zip\");\n        System.out.println(String.format(\"Downloading %s\", uri));\n    }\n}"
+                  }
+                ],
+                "language": "java",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Download.java"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Note that using a service with any annotation other than "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@ServiceReference"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " or "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Internal"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is currently not supported. For example, it is currently impossible to mark a service as an input to a task."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "registering_a_build_service_via_internal_task_properties",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Registering a build service to be consumed via "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@Internal"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " task properties"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Generally, build services are intended to be used by tasks, and as they usually represent some potentially expensive state to create, you should avoid using them at configuration time. However, sometimes, using the service at configuration time can make sense. This is possible; call "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "get()"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " on the provider."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "using_shared_build_services_from_configuration_actions",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Using shared build services from configuration actions"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "using_a_build_service_from_a_task",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Registering a build service and connecting it to a task"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In addition to using a build service from a task, you can use a build service from a "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Worker API action"
+                  }
+                ],
+                "kind": "xref",
+                "target": "worker_api.html#converting_to_worker_api"
+              },
+              {
+                "kind": "text",
+                "value": ", an "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "artifact transform"
+                  }
+                ],
+                "kind": "xref",
+                "target": "artifact_transforms.html#sec:implementing-artifact-transforms"
+              },
+              {
+                "kind": "text",
+                "value": " or another build service. To do this, pass the build service "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Provider"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " as a parameter of the consuming action or service, in the same way you pass other parameters to the action or service."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For example, to pass a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MyServiceType"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " service to Worker API action, you might add a property of type "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Property<MyServiceType>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to the action’s parameters object and then connect the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Provider<MyServiceType>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " that you receive when registering the service to this property:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "import org.gradle.api.DefaultTask;\nimport org.gradle.api.provider.Property;\nimport org.gradle.api.services.ServiceReference;\nimport org.gradle.api.tasks.TaskAction;\nimport org.gradle.workers.WorkAction;\nimport org.gradle.workers.WorkParameters;\nimport org.gradle.workers.WorkQueue;\nimport org.gradle.workers.WorkerExecutor;\n\nimport javax.inject.Inject;\nimport java.net.URI;\n\npublic abstract class Download extends DefaultTask {\n\n    public static abstract class DownloadWorkAction implements WorkAction<DownloadWorkAction.Parameters> {\n        interface Parameters extends WorkParameters {\n            // This property provides access to the service instance from the work action\n            abstract Property<WebServer> getServer();\n        }\n\n        @Override\n        public void execute() {\n            // Use the server to download a file\n            WebServer server = getParameters().getServer().get();\n            URI uri = server.getUri().resolve(\"somefile.zip\");\n            System.out.println(String.format(\"Downloading %s\", uri));\n        }\n    }\n\n    @Inject\n    abstract public WorkerExecutor getWorkerExecutor();\n\n    // This property provides access to the service instance from the task\n    @ServiceReference(\"web\")\n    abstract Property<WebServer> getServer();\n\n    @TaskAction\n    public void download() {\n        WorkQueue workQueue = getWorkerExecutor().noIsolation();\n        workQueue.submit(DownloadWorkAction.class, parameter -> {\n            parameter.getServer().set(getServer());\n        });\n    }\n}"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Download.java"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Currently, it is impossible to use a build service with a worker API action that uses ClassLoader or process isolation modes."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "sec:using_a_build_service_with_the_worker_api",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Using a build service with the Worker API"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can constrain concurrent execution when you register the service, by using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Property"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " object returned from "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BuildServiceSpec.getMaxParallelUsages()"
+                  }
+                ],
+                "kind": "link",
+                "target": "../javadoc/org/gradle/api/services/BuildServiceSpec.html#getMaxParallelUsages--"
+              },
+              {
+                "kind": "text",
+                "value": ". When this property has no value, which is the default, Gradle does not constrain access to the service. When this property has a value > 0, Gradle will allow no more than the specified number of tasks to use the service concurrently."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When the consuming task property is annotated with "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@Internal"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", for the constraint to take effect, the build service "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "must"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " be registered with the consuming task via "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Task.usesService"
+                  }
+                ],
+                "kind": "link",
+                "target": "../dsl/org.gradle.api.Task.html#org.gradle.api.Task:usesService(org.gradle.api.provider.Provider)"
+              },
+              {
+                "kind": "text",
+                "value": ". NOTE: at this time, Gradle cannot discover indirect usage of services (for instance, if an additional service is used only by a service that the task uses directly). As a workaround, indirect usage may be declared explicitly to Gradle by either adding a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ServiceReference"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property to the task and assigning the service that is only used indirectly to it (making it a direct reference), or invoking "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Task.usesService"
+                  }
+                ],
+                "kind": "link",
+                "target": "../dsl/org.gradle.api.Task.html#org.gradle.api.Task:usesService(org.gradle.api.provider.Provider)"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "important"
+          }
+        ],
+        "context": "section",
+        "id": "sec:accessing_the_build_service_concurrently",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Accessing the build service concurrently"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A build service can be used to receive events as tasks are executed. To do this, create and register a build service that implements "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "OperationCompletionListener"
+                  }
+                ],
+                "kind": "link",
+                "target": "../javadoc/org/gradle/tooling/events/OperationCompletionListener.html"
+              },
+              {
+                "kind": "text",
+                "value": ":"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "import org.gradle.api.services.BuildService;\nimport org.gradle.api.services.BuildServiceParameters;\nimport org.gradle.tooling.events.FinishEvent;\nimport org.gradle.tooling.events.OperationCompletionListener;\nimport org.gradle.tooling.events.task.TaskFinishEvent;\n\npublic abstract class TaskEventsService implements BuildService<BuildServiceParameters.None>,\n    OperationCompletionListener { "
+              },
+              {
+                "guard": "// ",
+                "icons": "font",
+                "id": "CO1-1",
+                "kind": "callout",
+                "number": "1",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n\n    @Override\n    public void onFinish(FinishEvent finishEvent) {\n        if (finishEvent instanceof TaskFinishEvent) { "
+              },
+              {
+                "guard": "// ",
+                "icons": "font",
+                "id": "CO1-2",
+                "kind": "callout",
+                "number": "2",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n            // Handle task finish event...\n        }\n    }\n}"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "TaskEventsService.java"
+              }
+            ]
+          },
+          {
+            "context": "colist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-1"
+                ],
+                "icons": "font",
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Implement the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "OperationCompletionListener"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " interface and the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BuildService"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " interface."
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-2"
+                ],
+                "icons": "font",
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Check if the finish event is a "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "TaskFinishEvent"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "../javadoc/org/gradle/tooling/events/task/TaskFinishEvent.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "src": ""
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Then, in the plugin, you can use the methods on the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BuildEventsListenerRegistry"
+                  }
+                ],
+                "kind": "link",
+                "target": "../javadoc/org/gradle/build/event/BuildEventsListenerRegistry.html"
+              },
+              {
+                "kind": "text",
+                "value": " service to start receiving events:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "import org.gradle.api.Plugin;\nimport org.gradle.api.Project;\nimport org.gradle.api.provider.Provider;\nimport org.gradle.build.event.BuildEventsListenerRegistry;\n\nimport javax.inject.Inject;\n\npublic abstract class TaskEventsPlugin implements Plugin<Project> {\n    @Inject\n    public abstract BuildEventsListenerRegistry getEventsListenerRegistry(); "
+              },
+              {
+                "guard": "// ",
+                "icons": "font",
+                "id": "CO2-1",
+                "kind": "callout",
+                "number": "1",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n\n    @Override\n    public void apply(Project project) {\n        Provider<TaskEventsService> serviceProvider =\n            project.getGradle().getSharedServices().registerIfAbsent(\n                \"taskEvents\", TaskEventsService.class, spec -> {}); "
+              },
+              {
+                "guard": "// ",
+                "icons": "font",
+                "id": "CO2-2",
+                "kind": "callout",
+                "number": "2",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n\n        getEventsListenerRegistry().onTaskCompletion(serviceProvider); "
+              },
+              {
+                "guard": "// ",
+                "icons": "font",
+                "id": "CO2-3",
+                "kind": "callout",
+                "number": "3",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n    }\n}"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "TaskEventsPlugin.java"
+              }
+            ]
+          },
+          {
+            "context": "colist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO2-1"
+                ],
+                "icons": "font",
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Use "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "service injection"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "service_injection.html#service_injection"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to obtain an instance of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BuildEventsListenerRegistry"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO2-2"
+                ],
+                "icons": "font",
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Register the build service as usual."
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO2-3"
+                ],
+                "icons": "font",
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Use the service "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Provider"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to subscribe to the build service to build events."
+                  }
+                ],
+                "src": ""
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "operation_listener",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Receiving information about task execution"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Configuration Cache"
+                  }
+                ],
+                "kind": "xref",
+                "target": "configuration_cache.html#config_cache"
+              },
+              {
+                "kind": "text",
+                "value": " is enabled, build service parameters are serialized into the cache entry, and the service instance is recreated on every build. Several caveats apply. See "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Using Build Services"
+                  }
+                ],
+                "kind": "xref",
+                "target": "configuration_cache_requirements.html#config_cache:requirements:build_services"
+              },
+              {
+                "kind": "text",
+                "value": " in the Configuration Cache requirements for the full treatment."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "sec:configuration_cache_interaction",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Build Services and the Configuration Cache"
+          }
+        ]
+      }
+    ],
+    "outline": {
+      "levels": 2,
+      "sections": [
+        {
+          "id": "sec:implementing_a_build_service",
+          "inlines": [
+            {
+              "kind": "text",
+              "value": "Implementing a build service"
+            }
+          ],
+          "sections": []
+        },
+        {
+          "id": "using_a_build_service_from_a_task",
+          "inlines": [
+            {
+              "kind": "text",
+              "value": "Registering a build service and connecting it to a task"
+            }
+          ],
+          "sections": [
+            {
+              "id": "sec:service_references",
+              "inlines": [
+                {
+                  "kind": "text",
+                  "value": "Registering a build service to be consumed via "
+                },
+                {
+                  "id": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "@ServiceReference"
+                    }
+                  ],
+                  "kind": "monospace",
+                  "roles": []
+                },
+                {
+                  "kind": "text",
+                  "value": " task properties"
+                }
+              ],
+              "sections": []
+            },
+            {
+              "id": "registering_a_build_service_via_internal_task_properties",
+              "inlines": [
+                {
+                  "kind": "text",
+                  "value": "Registering a build service to be consumed via "
+                },
+                {
+                  "id": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "@Internal"
+                    }
+                  ],
+                  "kind": "monospace",
+                  "roles": []
+                },
+                {
+                  "kind": "text",
+                  "value": " task properties"
+                }
+              ],
+              "sections": []
+            },
+            {
+              "id": "using_shared_build_services_from_configuration_actions",
+              "inlines": [
+                {
+                  "kind": "text",
+                  "value": "Using shared build services from configuration actions"
+                }
+              ],
+              "sections": []
+            }
+          ]
+        },
+        {
+          "id": "sec:using_a_build_service_with_the_worker_api",
+          "inlines": [
+            {
+              "kind": "text",
+              "value": "Using a build service with the Worker API"
+            }
+          ],
+          "sections": []
+        },
+        {
+          "id": "sec:accessing_the_build_service_concurrently",
+          "inlines": [
+            {
+              "kind": "text",
+              "value": "Accessing the build service concurrently"
+            }
+          ],
+          "sections": []
+        },
+        {
+          "id": "operation_listener",
+          "inlines": [
+            {
+              "kind": "text",
+              "value": "Receiving information about task execution"
+            }
+          ],
+          "sections": []
+        },
+        {
+          "id": "sec:configuration_cache_interaction",
+          "inlines": [
+            {
+              "kind": "text",
+              "value": "Build Services and the Configuration Cache"
+            }
+          ],
+          "sections": []
+        }
+      ],
+      "title": [
+        {
+          "kind": "text",
+          "value": "On this Page"
+        }
+      ]
+    },
+    "title": [
+      {
+        "kind": "text",
+        "value": "Using Shared Build Services"
+      }
+    ]
+  }
+}

@@ -664,7 +664,7 @@ class SemanticProjectionTests(unittest.TestCase):
         manifest, cases = acceptance.load_corpus(root / 'semantics.json')
         original_manifest, original = acceptance.load_corpus(root / 'cases.json')
         self.assertEqual(manifest['profile'], semantics.PROFILE)
-        self.assertEqual(len(cases), 43)
+        self.assertEqual(len(cases), 49)
         for path, provenance in manifest['files'].items():
             self.assertEqual(provenance, original_manifest['files'][path])
         for origin in manifest['origins'].values():

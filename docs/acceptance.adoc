@@ -26,8 +26,11 @@ SHA-256 и ссылку на запись происхождения в мани
 * Пять глав Hibernate ORM User Guide и четыре страницы Debezium (2026-11-01):
   Java-примеры по тегам с подсветкой Rouge, партиалы с тегами и `leveloffset`,
   условия `community`; см. ниже.
+* Шесть страниц User Manual Gradle 9.8.2 (2026-11-02): справочник CLI,
+  configuration cache, учебник `gradle init` с callouts, multi-project builds,
+  build services с Java-сниппетами и руководство перехода на 9.x; см. ниже.
 
-Итого 42 исходных документа и 44 приёмочных прогона. Корпус включает восемь
+Итого 48 исходных документов и 50 приёмочных прогонов. Корпус включает девять
 независимых upstream-проектов, но не является выборкой всего
 AsciiDoc. Пятнадцать дополнительных небольших документов (семь исходных проб и
 восемь находок фаззинга) проверяют диагностический
@@ -73,7 +76,7 @@ https://github.com/asciidoctor/asciidoctor/tree/2c03d22eb9fe83d04ee452939581d1b8
 Все 12 страниц дополнительно проходят независимый
 link:semantic-profile.adoc[`inline-semantics-v1`] через отдельный
 `compatibility/acceptance/semantics.json`: 12 PASS (со страницами других
-проектов, README и CHANGELOG Asciidoctor — 43 PASS). Сравниваются текст и
+проектов, README и CHANGELOG Asciidoctor — 49 PASS). Сравниваются текст и
 inline-узлы, списки, контейнеры, код, изображения и таблицы с содержимым ячеек
 без HTML converter. Исходные страницы, include-ресурсы и host-атрибуты совпадают
 с основным корпусом. Неявные xref, типографские кавычки, сноски и callouts
@@ -145,6 +148,7 @@ blob-хешами upstream, записи файлов содержат `upstream
 |Apache Groovy `GROOVY_5_1_3`, коммит `26a7a43` |Apache-2.0 (`LICENSE`, `NOTICE`) |Grape, Getting started
 |Hibernate ORM `7.4.15`, коммит `b690b0c` |Apache-2.0 (`LICENSE.txt`) |User Guide: Fetching, Batching, Caching, Multitenancy, Events
 |Debezium `v3.7.0.Final`, коммит `17843f3` |Apache-2.0 (`LICENSE.txt`) |MySQL connector, Outbox event router, Signalling, Engine
+|Gradle `v9.8.2`, коммит `8de7bcf` |Apache-2.0 (`LICENSE`) |User Manual: Command-Line Interface, Configuration Cache, Part 1: Initializing the Project, Structuring Multi-Project Builds, Using Shared Build Services, Upgrading to Gradle 9.0.0
 |===
 
 Antora-ресурсы своего модуля (`example$…`, `partial$…`) и общие атрибуты
@@ -167,6 +171,24 @@ Debezium получают атрибуты `antora.yml` и `prodname` playbook �
 источнике. Include `../{partialsdir}` внутри партиала у обеих сторон не
 находится (он под `ifdef::product[]` и не активен).
 
+Страницы Gradle получают атрибуты задачи `userguideMultiPage` из
+`GradleUserManualPlugin.java` (`doctype=book`, `icons=font`, `toc=auto`,
+`toclevels=2`, `toc-title=On this Page`, `idprefix` пустой, `sectanchors`,
+`sectlinks`, пути DSL и javadoc). Значения, которые сборка вычисляет
+(`gradleVersion` 9.8.2, последняя 8.x `gradleVersion8` 8.14.6, JDK 17 для
+`javaApi`/`minJdkVersion`/`javadocReferenceUrl`), закреплены явно;
+`stylesheet`, `stylesdir`, `docinfo` и `samples-dir` не передаются (стили и
+docinfo сайта не сравниваются). Сборка складывает страницы в один каталог, а
+сниппеты — в `snippets/`, поэтому `include::{snippetsPath}/…[]` находят
+неизменённые файлы `src/snippets` под этими именами. Большинство страниц
+руководства (184) подключают примеры через `include::sample[…]` расширения
+Gradle (SampleIncludeProcessor); без расширения обе стороны дают только
+неразрешённый include, поэтому такие страницы не выбраны.
+
+Все 6 страниц Gradle сразу прошли основной, структурный и семантический
+профили (визуальный — см. link:visual.adoc[]); исправлений adoctra не
+потребовалось.
+
 Все 9 страниц Hibernate и Debezium сразу прошли основной и структурный профили.
 Семантический профиль принял их после расширения схемы (`align` изображений,
 цитаты и стихи с `attribution`/`citetitle`, блок `toc::[]`, листинги с
@@ -184,9 +206,9 @@ README Asciidoctor (пять языков, варианты GitHub и include) �
 
 `block-structure-v1` использует отдельный манифест
 link:../compatibility/acceptance/structure.json[structure.json] и эталоны с
-префиксом `structure-`. В нём повторяется 44 прогона полных документов
+префиксом `structure-`. В нём повторяются 50 прогонов полных документов
 с теми же атрибутами и include-ресурсами; пять собственных примеров проверяют
-блоки, разделы, списки, таблицы и отсутствие названия. Результат: *49 PASS*, отдельно от HTML и
+блоки, разделы, списки, таблицы и отсутствие названия. Результат: *55 PASS*, отдельно от HTML и
 диагностик. Примеры имеют SHA-256 и происхождение, но не являются upstream-тестами.
 
 Ruby launcher с `--structure` вызывает `Asciidoctor.load` / `load_file` и
@@ -264,7 +286,7 @@ seed 29–36: `fuzz-dropped-first-block-section-check` и
 `fuzz-comment-first-block-section-check` (отброшенный первый блок тела —
 уровень следующего раздела проверяется), `fuzz-section-title-peeks-next-line`
 (ошибка директивы после заголовка раздела идёт раньше проверки уровня).
-Итого *75 PASS, 0 XFAIL*. Прежние отличия для незакрытого listing, неизвестной xref
+Итого *81 PASS, 0 XFAIL*. Прежние отличия для незакрытого listing, неизвестной xref
 и незакрытого условия устранены в стандартном выводе CLI; эталоны Ruby и HTML
 не изменялись. Редакторские сообщения, физические spans и исходные severity/message
 сохраняются в API/WASM и режиме `--diagnostics editor`.
