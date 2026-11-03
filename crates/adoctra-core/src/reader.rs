@@ -1389,7 +1389,13 @@ impl<'a> Reader<'a> {
         input.start_line = selected.keep.iter().position(|keep| *keep).unwrap_or(0) as isize + 1;
         let mut keep = selected.keep.into_iter();
         input.lines.retain(|_| keep.next().unwrap_or(false));
-        if let Some(first) = input.lines.first_mut().filter(|_| !bom_normalized) {
+        // Ruby removes one BOM, from the first selected line. The snapshot
+        // already removed line 1's, so a following U+FEFF there is content.
+        if let Some(first) = input
+            .lines
+            .first_mut()
+            .filter(|_| !bom_normalized && input.start_line > 1)
+        {
             first.strip_bom();
         }
         if let Some(indent) = attrs.get("indent") {

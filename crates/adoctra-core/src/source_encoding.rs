@@ -182,8 +182,6 @@ pub(crate) struct RawCodec {
     pub(crate) single_byte: bool,
     /// The encoded LF that `each_line` searches for.
     pub(crate) separator: &'static [u8],
-    /// The dummy UTF-16/UTF-32 converters consume a leading BOM.
-    pub(crate) consumes_bom: bool,
 }
 
 pub(crate) fn raw_codec(encoding: Option<&str>) -> RawCodec {
@@ -193,7 +191,6 @@ pub(crate) fn raw_codec(encoding: Option<&str>) -> RawCodec {
         ascii_compatible,
         single_byte,
         separator,
-        consumes_bom: false,
     };
     match tables::lookup(&name).unwrap_or(Encoding::Utf8) {
         Encoding::Utf8 | Encoding::Binary => RawCodec {
@@ -206,10 +203,7 @@ pub(crate) fn raw_codec(encoding: Option<&str>) -> RawCodec {
         Encoding::Utf16(Some(false)) => codec(false, false, b"\0\n"),
         Encoding::Utf32(Some(true)) => codec(false, false, b"\n\0\0\0"),
         Encoding::Utf32(Some(false)) => codec(false, false, b"\0\0\0\n"),
-        Encoding::Utf16(None) | Encoding::Utf32(None) => RawCodec {
-            consumes_bom: true,
-            ..codec(false, false, b"\n")
-        },
+        Encoding::Utf16(None) | Encoding::Utf32(None) => codec(false, false, b"\n"),
         Encoding::Iso2022Jp { .. } => codec(false, false, b"\n"),
         // EBCDIC (IBM037) is a dummy encoding in Ruby.
         Encoding::Single(table) => codec(table.len() < 256 || table[0x41] == 0x41, true, b"\n"),
@@ -668,6 +662,13 @@ impl BinaryResource {
                         _ => None,
                     })
                     .ok_or_else(invalid)?;
+                // Ruby's dummy UTF-16 converter consumes the BOM it reads the
+                // byte order from; a following U+FEFF is text (which the
+                // first-selected-line BOM check then removes).
+                let bytes = match endian {
+                    None => bytes.get(2..).unwrap_or_default(),
+                    Some(_) => bytes,
+                };
                 let units = bytes.chunks_exact(2).map(|b| {
                     if little {
                         u16::from_le_bytes([b[0], b[1]])
@@ -691,6 +692,11 @@ impl BinaryResource {
                         _ => None,
                     })
                     .ok_or_else(invalid)?;
+                // Like UTF-16, the dummy UTF-32 converter consumes its BOM.
+                let bytes = match endian {
+                    None => bytes.get(4..).unwrap_or_default(),
+                    Some(_) => bytes,
+                };
                 let mut text = String::with_capacity(bytes.len());
                 for b in bytes.chunks_exact(4) {
                     let word = [b[0], b[1], b[2], b[3]];
@@ -854,15 +860,22 @@ mod tests {
             for label in [
                 None,
                 Some("UTF-8"),
-                Some("UTF-16"),
                 Some("BINARY"),
                 Some(if little { "UTF-16LE" } else { "UCS-2BE" }),
             ] {
                 assert_eq!(decode(&utf16, label).unwrap().text, text);
             }
-            for label in ["UTF-32", if little { "UCS-4LE" } else { "UTF-32BE" }] {
-                assert_eq!(decode(&utf32, Some(label)).unwrap().text, text);
-            }
+            let label = if little { "UCS-4LE" } else { "UTF-32BE" };
+            assert_eq!(decode(&utf32, Some(label)).unwrap().text, text);
+            // The dummy converters consume the BOM they read the order from,
+            // and only that one: a second BOM stays U+FEFF.
+            let content = text.strip_prefix('\u{feff}').unwrap();
+            assert_eq!(decode(&utf16, Some("UTF-16")).unwrap().text, content);
+            assert_eq!(decode(&utf32, Some("UTF-32")).unwrap().text, content);
+            let twice = [&utf16[..2], &utf16[..]].concat();
+            assert_eq!(decode(&twice, Some("UTF-16")).unwrap().text, text);
+            let twice = [&utf32[..4], &utf32[..]].concat();
+            assert_eq!(decode(&twice, Some("UTF-32")).unwrap().text, text);
         }
         for label in [
             None,

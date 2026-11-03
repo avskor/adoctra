@@ -7,6 +7,12 @@ With --uri the same bytes are served over local HTTP to a URI include, which
 the pinned Ruby reads through OpenURI without transcoding (lines split in the
 external encoding, only selected lines converted):
   python3 scripts/audit_include_order.py --uri --report /tmp/include-order-uri.json
+With --cache miss the document enables `cache-uri` first: open-uri-cached
+stores the body and hands back the original OpenURI response, so the read
+must match the uncached one. With --cache hit a `lines=0` include primes the
+cache and the probed include reads the cached copy, a binary StringIO in Ruby
+(`encoding` no longer applies):
+  python3 scripts/audit_include_order.py --uri --cache hit --report /tmp/include-order-hit.json
 The input byte fragments were encoded by the pinned Ruby environment. Results
 compare normalized HTML and ordered diagnostics; they do not establish exact HTML
 compatibility. An uncaught Ruby exception is never counted as a compatible case.
@@ -73,7 +79,27 @@ def build_cases():
         for selection in ['lines=2', 'lines=3', 'lines=2;3']:
             cases.append(make_case(f'bom-{explicit.lower()}-explicit-{selection}',
                                    data, explicit, selection))
-    return cases + bom_tag_cases()
+    return cases + bom_tag_cases() + double_bom_cases()
+
+
+def double_bom_cases():
+    """Ruby removes one BOM: a second one is U+FEFF content. Dummy UTF-16 and
+    UTF-32 converters consume the BOM they read the byte order from, and the
+    BOM check of the first selected line then removes the following one."""
+    cases = []
+    for label, data, encodings in [
+            ('utf-8', b'\xef\xbb\xbf' * 2 + b'a\nb\n',
+             [None, 'UTF-8', 'BINARY', 'CESU-8', 'UTF8-MAC', 'Windows-1251']),
+            ('utf-16le', b'\xff\xfe' * 2 + 'a\nb\n'.encode('utf-16le'), [None, 'BINARY', 'UTF-16LE', 'UTF-16']),
+            ('utf-16be', b'\xfe\xff' * 2 + 'a\nb\n'.encode('utf-16be'), [None, 'BINARY', 'UTF-16BE', 'UTF-16']),
+            ('utf-32be', b'\0\0\xfe\xff' * 2 + 'a\nb\n'.encode('utf-32be'), ['UTF-32BE', 'UTF-32']),
+            # A BOM on the second line is the first selected line's BOM.
+            ('later-utf-8', b'x\n' + b'\xef\xbb\xbf' * 2 + b'a\n', [None, 'UTF-8', 'BINARY'])]:
+        for encoding in encodings:
+            for selection in ['', 'lines=1', 'lines=2', 'lines=1;2']:
+                identifier = f'double-bom-{label}-{(encoding or "default").lower()}-{selection or "all"}'
+                cases.append(make_case(identifier, data, encoding, selection, listing=True))
+    return cases
 
 
 def bom_tag_cases():
@@ -139,10 +165,19 @@ def invoke(command, source):
                                        raw.stderr.decode('utf-8'))
 
 
-def uri_case(case):
-    """The same include as a URI target; the response carries the bytes."""
-    return dict(id=case['id'], requests=['/part.adoc'],
-                source=case['source'].replace('include::part.adoc', 'include::{uri}/part.adoc'),
+# A `lines=0` include reads (and caches) the body but selects nothing, so no
+# line is converted and no encoding can fail before the probed include.
+PRIMERS = {None: '', 'miss': ':cache-uri:\n\n',
+           'hit': ':cache-uri:\n\ninclude::{uri}/part.adoc[lines=0]\n\n'}
+
+
+def uri_case(case, cache=None):
+    """The same include as a URI target; the response carries the bytes.
+
+    Only one response is served: a second request would repeat it, and the
+    request trace shows whether the cache answered instead."""
+    source = case['source'].replace('include::part.adoc', 'include::{uri}/part.adoc')
+    return dict(id=case['id'], requests=['/part.adoc'], source=PRIMERS[cache] + source,
                 responses={'/part.adoc': [{'hex': case['binary_resources']['part.adoc']}]})
 
 
@@ -159,8 +194,8 @@ def compare_uri(case, expected, actual):
     return dict(status='PASS')
 
 
-def run_uri_case(case, binary):
-    case = uri_case(case)
+def run_uri_case(case, binary, cache=None):
+    case = uri_case(case, cache)
     expected = u.run_side(case, binary.resolve(), True)
     actual = u.run_side(case, binary.resolve(), False)
     return dict(id=case['id'], **compare_uri(case, expected, actual))
@@ -181,16 +216,21 @@ def main():
     parser.add_argument('--jobs', type=int, default=3)
     parser.add_argument('--uri', action='store_true',
                         help='serve each include over local HTTP (OpenURI without transcoding)')
+    parser.add_argument('--cache', choices=['miss', 'hit'],
+                        help='with --uri, enable cache-uri and probe the first or a cached read')
     args = parser.parse_args()
     if args.jobs < 1:
         parser.error('--jobs must be positive')
+    if args.cache and not args.uri:
+        parser.error('--cache requires --uri')
     with ThreadPoolExecutor(max_workers=args.jobs) as pool:
-        run = run_uri_case if args.uri else run_case
+        run = (lambda case, binary: run_uri_case(case, binary, args.cache)) if args.uri else run_case
         results = list(pool.map(lambda case: run(case, args.binary), build_cases()))
     counts = dict(Counter(result['status'] for result in results))
     report = dict(asciidoctor_version=(ROOT / 'compatibility/asciidoctor-version').read_text().strip(),
                   profile=('include-body-dom-v1 + ordered diagnostics'
-                           + (' + HTTP requests (URI include)' if args.uri else '')),
+                           + (' + HTTP requests (URI include)' if args.uri else '')
+                           + (f' + cache-uri {args.cache}' if args.cache else '')),
                   counts=counts, cases=results)
     if args.report:
         args.report.write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n')

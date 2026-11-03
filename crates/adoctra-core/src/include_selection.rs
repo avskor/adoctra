@@ -157,10 +157,7 @@ impl Selection {
             }
             .decode(Some(encoding))
             .ok()
-            .map(|decoded| match decoded.text.strip_prefix('\u{feff}') {
-                Some(text) if codec.consumes_bom && encoding == external => text.to_owned(),
-                _ => decoded.text,
-            })
+            .map(|decoded| decoded.text)
         };
         // A UTF-16 BOM wins over the external encoding; a UTF-8 BOM is
         // removed before converting from it. Only this BOM is removed: the

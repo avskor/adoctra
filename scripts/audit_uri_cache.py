@@ -182,6 +182,20 @@ def cases():
         for lines in ['1', '2', '1;2']:
             raw(f'large-{codec}-lines={lines}', (text + padding).encode(codec),
                 f'encoding={name},lines={lines}')
+    # open-uri-cached patches OpenURI for the whole Ruby process: once a
+    # document enables `cache-uri`, later inputs of the same run read through
+    # the cache too, even without (or with an unset) `cache-uri`.
+    add('run-later-input-hits', ':cache-uri:\n\n' + include,
+        documents=[include, ':cache-uri!:\n\n' + include])
+    add('run-later-input-enables', include, requests=['/part.adoc'] * 2,
+        documents=[':cache-uri:\n\n' + include, include])
+    add('run-uncached-inputs', include, requests=['/part.adoc'] * 2, documents=[include])
+    add('run-hit-is-binary-in-later-input', ':cache-uri:\n\n' + include,
+        {'/part.adoc': [{'hex': (b'\xfe\xff\xfe\xff' + '*a*\n'.encode('utf-16be')).hex()}]},
+        documents=['include::{uri}/part.adoc[encoding=UTF-16BE]\n'])
+    # A cache hit reads as BINARY, so a second UTF-16 BOM stays U+FEFF.
+    add('double-bom-hit', ':cache-uri:\n\n' + repeated,
+        {'/part.adoc': [{'hex': (b'\xfe\xff\xfe\xff' + '*a*\n'.encode('utf-16be')).hex()}]})
     # Every safe mode for uncached and cached URI includes; secure never reads.
     for safe in ['safe', 'server', 'unsafe', 'secure']:
         reads = safe != 'secure'
@@ -288,6 +302,9 @@ def asset_cases():
             standalone=True, safe=safe)
         add(f'mode-{safe}-stylesheet-missing', ':stylesheet: {uri}/missing.css\n\nx\n', css,
             ['/missing.css'] if reads else [], standalone=True, safe=safe)
+    # The process-wide cache serves a later input's image too.
+    add('run-later-input-image', ':cache-uri:\n:data-uri:\n\n' + image, png, ['/a.png'],
+        documents=[':data-uri:\n\n' + image, ':data-uri:\n:cache-uri!:\n\n' + image])
     add('stylesheet-warning-order', sheet + ':data-uri:\n\n' + image,
         {'/a.css': [{'status': 500}], '/a.png': [{'status': 404}]},
         ['/a.css', '/a.png'], standalone=True)
@@ -365,6 +382,11 @@ def run_side(case, cli, reference):
         root = Path(directory)
         source = case['source'].replace('{uri}', uri)
         (root / 'main.adoc').write_text(source, encoding='utf-8')
+        # Further inputs of the same run (one Ruby process, one CLI call).
+        later = []
+        for index, text in enumerate(case.get('documents', []), 2):
+            later.append(str(root / f'main{index}.adoc'))
+            Path(later[-1]).write_text(text.replace('{uri}', uri), encoding='utf-8')
         for name, text in case.get('files', {}).items():
             (root / name).write_text(text, encoding='utf-8')
         attributes = {'showtitle': ''}
@@ -376,11 +398,12 @@ def run_side(case, cli, reference):
             attributes['reproducible'] = ''
             attributes['webfonts!'] = ''
         safe = case.get('safe', 'safe')
-        config = dict(file=str(root / 'main.adoc'), safe=safe, attributes=attributes, standalone=standalone)
+        config = dict(file=str(root / 'main.adoc'), safe=safe, attributes=attributes, standalone=standalone,
+                      **({'then': later} if later else {}))
         if reference:
             command = ['ruby', str(ROOT / 'scripts/asciidoctor-uri-reference.rb')]
         else:
-            command = [str(cli), config['file'], '--stdout', '-S', safe]
+            command = [str(cli), config['file'], *later, '--stdout', '-S', safe]
             if not standalone:
                 command.append('--embedded')
             for name, value in attributes.items():

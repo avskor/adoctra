@@ -3,7 +3,7 @@
   "asciidoctor": "2.0.23",
   "open_uri_cached": "2.0.0",
   "counts": {
-    "PASS": 71
+    "PASS": 72
   },
   "cases": [
     {
@@ -3504,6 +3504,55 @@
         "styles": [],
         "stylesheet_links": [
           "<link rel=\"stylesheet\" href=\"http://fixture.test/missing.css\">"
+        ]
+      }
+    },
+    {
+      "id": "run-later-input-image",
+      "status": "PASS",
+      "input": {
+        "id": "run-later-input-image",
+        "source": ":cache-uri:\n:data-uri:\n\nimage::{uri}/a.png[Pic]\n",
+        "responses": {
+          "/a.png": [
+            {
+              "hex": "89504e4700ff",
+              "content_type": "image/png"
+            },
+            {
+              "body": "changed",
+              "content_type": "image/jpeg"
+            }
+          ]
+        },
+        "requests": [
+          "/a.png"
+        ],
+        "documents": [
+          ":data-uri:\n\nimage::{uri}/a.png[Pic]\n",
+          ":data-uri:\n:cache-uri!:\n\nimage::{uri}/a.png[Pic]\n"
+        ]
+      },
+      "reference": {
+        "html": "<div class=\"imageblock\">\n<div class=\"content\">\n<img src=\"data:image/png;base64,iVBORwD/\" alt=\"Pic\">\n</div>\n</div>\n<div class=\"imageblock\">\n<div class=\"content\">\n<img src=\"data:image/png;base64,iVBORwD/\" alt=\"Pic\">\n</div>\n</div>\n<div class=\"imageblock\">\n<div class=\"content\">\n<img src=\"data:image/png;base64,iVBORwD/\" alt=\"Pic\">\n</div>\n</div>",
+        "diagnostics": [],
+        "requests": [
+          {
+            "path": "/a.png",
+            "status": 200,
+            "sha256": "ffdb519b788f33bddc8647611c3a24cc5e1a9ef5780c1f6f828a637c309ad8f1"
+          }
+        ]
+      },
+      "actual": {
+        "html": "<figure class=\"imageblock\">\n<img src=\"data:image/png;base64,iVBORwD/\" alt=\"Pic\">\n</figure>\n<figure class=\"imageblock\">\n<img src=\"data:image/png;base64,iVBORwD/\" alt=\"Pic\">\n</figure>\n<figure class=\"imageblock\">\n<img src=\"data:image/png;base64,iVBORwD/\" alt=\"Pic\">\n</figure>\n",
+        "diagnostics": [],
+        "requests": [
+          {
+            "path": "/a.png",
+            "status": 200,
+            "sha256": "ffdb519b788f33bddc8647611c3a24cc5e1a9ef5780c1f6f828a637c309ad8f1"
+          }
         ]
       }
     },

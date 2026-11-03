@@ -4,7 +4,23 @@ use adoctra::{
     ResourceProvider, ResourceRequest, ResourceResult,
 };
 use std::path::{Path, PathBuf};
-use std::{collections::BTreeMap, sync::Mutex};
+use std::{
+    collections::BTreeMap,
+    sync::{Arc, Mutex},
+};
+
+/// The OpenURI cache of one CLI run. open-uri-cached patches OpenURI for the
+/// whole Ruby process, so once a document enables `cache-uri` every later
+/// URI read of the run (other inputs too) goes through it. `None` until
+/// enabled; HTTP responses are never shared beyond the handle's holders.
+#[derive(Clone, Default)]
+pub(crate) struct UriCache(Arc<Mutex<Option<BTreeMap<String, BinaryResource>>>>);
+
+impl UriCache {
+    fn lock(&self) -> std::sync::MutexGuard<'_, Option<BTreeMap<String, BinaryResource>>> {
+        self.0.lock().unwrap_or_else(|error| error.into_inner())
+    }
+}
 
 pub(crate) struct FileResources {
     root: PathBuf,
@@ -14,9 +30,9 @@ pub(crate) struct FileResources {
     /// The primary input, which Ruby reads by its path even outside the base
     /// directory (`-B`); every other path stays confined to the root.
     input: Option<PathBuf>,
-    /// OpenURI caching is sticky once enabled. Keep it within the explicitly
-    /// supplied provider; never share HTTP responses across host sessions.
-    uri_cache: Mutex<Option<BTreeMap<String, BinaryResource>>>,
+    /// OpenURI caching is sticky once enabled. Shared only with providers
+    /// given the same handle ([`Self::with_uri_cache`]).
+    uri_cache: UriCache,
 }
 
 /// Ruby's `uriish?`: a scheme of two or more characters and a colon.
@@ -98,7 +114,7 @@ impl FileResources {
             root,
             jail: true,
             input: None,
-            uri_cache: Mutex::new(None),
+            uri_cache: UriCache::default(),
         })
     }
 
@@ -110,8 +126,14 @@ impl FileResources {
             root: root.canonicalize().unwrap_or_else(|_| root.to_path_buf()),
             jail: true,
             input: None,
-            uri_cache: Mutex::new(None),
+            uri_cache: UriCache::default(),
         }
+    }
+
+    /// Read URIs through the run's shared OpenURI cache.
+    pub fn with_uri_cache(mut self, cache: UriCache) -> Self {
+        self.uri_cache = cache;
+        self
     }
 
     /// Also allow the explicitly requested primary file (canonical path).
@@ -141,22 +163,11 @@ impl FileResources {
     /// Errors are retried. Keys retain the requested URI, including query and
     /// fragment; redirects do not replace the source identity.
     fn fetch(&self, uri: &str) -> ResourceResult<(BinaryResource, bool)> {
-        if let Some(resource) = self
-            .uri_cache
-            .lock()
-            .unwrap_or_else(|error| error.into_inner())
-            .as_ref()
-            .and_then(|c| c.get(uri))
-        {
+        if let Some(resource) = self.uri_cache.lock().as_ref().and_then(|c| c.get(uri)) {
             return Ok((resource.clone(), true));
         }
         let resource = fetch(uri)?;
-        if let Some(cache) = self
-            .uri_cache
-            .lock()
-            .unwrap_or_else(|error| error.into_inner())
-            .as_mut()
-        {
+        if let Some(cache) = self.uri_cache.lock().as_mut() {
             cache.insert(uri.to_owned(), resource.clone());
         }
         Ok((resource, false))
@@ -179,10 +190,7 @@ impl ResourceProvider for FileResources {
     }
 
     fn enable_uri_cache(&self) {
-        self.uri_cache
-            .lock()
-            .unwrap_or_else(|error| error.into_inner())
-            .get_or_insert_with(BTreeMap::new);
+        self.uri_cache.lock().get_or_insert_with(BTreeMap::new);
     }
 
     fn prepare_include(
@@ -407,6 +415,18 @@ mod tests {
         other.enable_uri_cache();
         other.load_binary(request).unwrap();
         assert_eq!(server.count.load(Ordering::SeqCst), 3);
+        // Providers given one run's handle share it, enabled or not.
+        let cache = UriCache::default();
+        let first = FileResources::new(tree.0.join("docs"))
+            .unwrap()
+            .with_uri_cache(cache.clone());
+        let second = FileResources::new(tree.0.join("docs"))
+            .unwrap()
+            .with_uri_cache(cache);
+        first.enable_uri_cache();
+        first.load_binary(request).unwrap();
+        assert_eq!(second.load_binary(request).unwrap().bytes, b"second");
+        assert_eq!(server.count.load(Ordering::SeqCst), 4);
         std::fs::write(tree.0.join("docs/local.adoc"), "old").unwrap();
         let local = ResourceRequest {
             target: "local.adoc",

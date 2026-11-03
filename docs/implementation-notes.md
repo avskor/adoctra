@@ -2069,7 +2069,11 @@ and fetches http/https with `ureq`; the bench runs it with `-S secure`
 (include fixtures `-S safe`). URI includes with `cache-uri` now call the optional
 `ResourceProvider::enable_uri_cache` hook after permission/depth checks. The
 default is a no-op for host providers/WASM; native FileResources keeps a sticky
-in-memory cache for its lifetime. Cache full successful responses before
+in-memory cache in a `UriCache` handle. open-uri-cached patches OpenURI for
+the whole Ruby process, so the CLI creates one handle per run and gives it to
+every input's provider (`with_uri_cache`): a cache enabled by one input serves
+later inputs, even without `cache-uri` (audit cases `run-*`; the Ruby
+reference converts `then` documents in the same process). Cache full successful responses before
 decoding/selection, retain Content-Type, retry HTTP errors, and never cache local
 files. Hits decode as BINARY, ignoring new encoding, like open-uri-cached 2.0.0;
 Ruby exceptions remain separate from successful comparisons. Byte budgets and
@@ -2078,7 +2082,7 @@ their report uses the resolved URI and directive cursor. document_path must
 return None for URLs so unresolved nested includes retain their URL.
 The pinned optional gem version is in compatibility/open-uri-cached-version.
 scripts/audit_uri_cache.py compares HTML projection, positioned diagnostics and
-request traces against local HTTP servers: 76 PASS / 5 RUBY_ERROR / 1 XFAIL
+request traces against local HTTP servers: 81 PASS / 5 RUBY_ERROR / 1 XFAIL
 (uncached URI includes with explicit encodings, BOM, selection and bad UTF-8,
 the unconverted OpenURI reading probes `raw-*`;
 every safe mode for uncached/cached/missing includes; the XFAIL is Ruby's
@@ -2090,7 +2094,7 @@ checks. SVG uses ResourceProvider::load_asset_text (default strict binary decode
 with BOM detection); native cache hits preserve BINARY decoding. Do not replace
 bad SVG bytes with U+FFFD. Asset warnings keep editor spans but have Unlocated
 conversion reports. The separate --assets audit compares exact styles/links as
-well as body DOM, diagnostics and requests: 71 PASS in assets.json (images,
+well as body DOM, diagnostics and requests: 72 PASS in assets.json (images,
 inline SVG and stylesheets in every safe mode: read, cached, missing).
 Only the three known standalone shell tags are mapped to their Ruby divs.
 Like Ruby's `convert_document` (head after `<title>`, before the header outline
@@ -2349,7 +2353,7 @@ and callouts in STEM `subs` all match Ruby (60 body-DOM/diagnostic probes,
 2026-11-01); the remaining options are DocBook-only.
 **Include encoding order audit** covers 93 profiles
 (`scripts/generate_encoding_order.rb` adds every pinned-Ruby encoding with a
-UTF-8 converter): 3104 cases, 3054 PASS, 50 RUBY_ERROR, no DIFF; 405 of them
+UTF-8 converter): 3180 cases, 3120 PASS, 60 RUBY_ERROR, no DIFF; 405 of them
 (`control-*`) put decoded CR/NEL/LS inside a listing line (Ruby splits at LF
 only; IBM037 LF is byte 25, NEL 15). Harnesses must read adoctra's output as
 bytes: text mode turned a lone CR into LF (fixed here, in audit_uri_cache.py
@@ -2379,9 +2383,23 @@ BOM. `SourceLineFrames::normalized` records that exactly one BOM was already
 removed, so the reader does not strip a following U+FEFF (content in Ruby).
 Content-Type `charset` never applies (the mode's encoding overrides it);
 cache hits remain BINARY. `audit_include_order.py --uri` serves the whole
-93-profile matrix over HTTP: 3104 cases, 2389 PASS, 715 RUBY_ERROR, no DIFF
+93-profile matrix over HTTP: 3180 cases, 2449 PASS, 731 RUBY_ERROR, no DIFF
 (compatibility/encoding-order/uri-report.json; before: 755 DIFF). The CI URI
-audit pins the mechanisms (`raw-*` cases).
+audit pins the mechanisms (`raw-*` cases). `--cache miss` enables `cache-uri`
+first (open-uri-cached stores the body and returns the original OpenURI IO:
+same results); `--cache hit` primes the cache with a `lines=0` include (reads,
+converts nothing) so the probe reads the binary StringIO copy: 2397 PASS,
+783 RUBY_ERROR, no DIFF (uri-cache-{miss,hit}-report.json).
+**Double BOM** (2026-11-03): Ruby removes one BOM, by bytes, from the first
+selected line (`prepare_source_array`/`prepare_source_string`); a second BOM
+right after it is U+FEFF content. The snapshot already strips line 1's BOM
+(`Line::from_source_with_bom`), so the reader strips the first kept line only
+when it is a later line (`start_line > 1`). Dummy UTF-16/UTF-32 decoding
+consumes the BOM it reads the byte order from (Ruby's converter does), so a
+transcoded `encoding=UTF-16` read still loses two (converter + BOM check),
+explicit UTF-16LE/BE/UTF-32 one. Before: 29 DIFF in UTF-8/CESU-8/UTF8-MAC/
+UTF-16LE/BE/UTF-32BE/BINARY probes (files and URI); `double-bom-*` cases in
+the order audit pin them.
 **Primary input and docinfo encoding** (2026-11-03): Ruby runs
 `Helpers.prepare_source_string` on the primary document (file and stdin),
 docinfo and inline SVG: a UTF-16LE/BE BOM decodes the whole string (UTF-32 is

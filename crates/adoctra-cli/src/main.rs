@@ -88,6 +88,9 @@ fn invoke(args: Args) -> ExitCode {
             }
             _ => false,
         };
+        // Like open-uri-cached in one Ruby process, a cache enabled by one
+        // input serves every later URI read of the run.
+        let uri_cache = resources::UriCache::default();
         for input in &args.inputs {
             let mut job = args.clone();
             job.input = input.clone();
@@ -104,7 +107,7 @@ fn invoke(args: Args) -> ExitCode {
                     job.to_dir = Some(format!("{to_dir}/{rest}"));
                 }
             }
-            convert(&job)?;
+            convert(&job, &uri_cache)?;
         }
         Ok(())
     })();
@@ -225,7 +228,7 @@ fn print_timings(input: &str, parsed: std::time::Duration, converting: std::time
 }
 
 /// One input: Ruby's `Asciidoctor.convert` (or `convert_file`).
-fn convert(args: &Args) -> Result<(), Failure> {
+fn convert(args: &Args, uri_cache: &resources::UriCache) -> Result<(), Failure> {
     let started = std::time::Instant::now();
     let mut sources = adoctra::SourceMap::new();
     let mut attributes = args.attributes.clone();
@@ -255,7 +258,7 @@ fn convert(args: &Args) -> Result<(), Failure> {
         }
         attributes.set("outfilesuffix", extname(file));
     }
-    let (source_id, provider) = load_source(args, &mut sources, &mut attributes)?;
+    let (source_id, provider) = load_source(args, uri_cache, &mut sources, &mut attributes)?;
     // Like Ruby below server mode, the document sees the user's home.
     if args.safe < adoctra::SafeMode::Server
         && !attributes
@@ -841,6 +844,7 @@ fn expand_path(path: &Path) -> std::io::Result<PathBuf> {
 /// the absolute input path (`docfile`) or `<stdin>`.
 fn load_source(
     args: &Args,
+    uri_cache: &resources::UriCache,
     sources: &mut adoctra::SourceMap,
     attributes: &mut adoctra::Attributes,
 ) -> Result<(adoctra::SourceId, Option<Arc<resources::FileResources>>), Failure> {
@@ -850,9 +854,12 @@ fn load_source(
              source is either binary or contains invalid Unicode data"
         ))
     };
-    let jail = |provider: resources::FileResources| match args.safe {
-        adoctra::SafeMode::Unsafe => provider.unjailed(),
-        _ => provider,
+    let jail = |provider: resources::FileResources| {
+        let provider = provider.with_uri_cache(uri_cache.clone());
+        match args.safe {
+            adoctra::SafeMode::Unsafe => provider.unjailed(),
+            _ => provider,
+        }
     };
     if args.input == "-" {
         let mut bytes = Vec::new();

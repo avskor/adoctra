@@ -12,10 +12,13 @@ logger = Asciidoctor::MemoryLogger.new
 Asciidoctor::LoggerManager.logger = logger
 result = {}
 begin
-  document = Asciidoctor.load_file(config.fetch('file'), safe: config.fetch('safe').to_sym,
-                                 header_footer: config.fetch('standalone', false),
-                                 attributes: config.fetch('attributes'))
-  result[:html] = document.convert
+  # Later documents convert in the same process, as the CLI does with
+  # several inputs: an enabled open-uri-cached patch stays for all of them.
+  result[:html] = [config.fetch('file'), *config.fetch('then', [])].map do |file|
+    Asciidoctor.load_file(file, safe: config.fetch('safe').to_sym,
+                                header_footer: config.fetch('standalone', false),
+                                attributes: config.fetch('attributes').dup).convert
+  end.join("\n")
 rescue StandardError => e
   # Expose exceptions separately; the audit must never count these as PASS.
   result[:error] = { class: e.class.name, message: e.message }

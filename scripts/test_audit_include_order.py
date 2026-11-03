@@ -59,6 +59,14 @@ class IncludeOrderAuditTests(unittest.TestCase):
             self.assertTrue(data.startswith(bom))
             self.assertEqual(data.count(bom), 1)
 
+    def test_double_bom_probes_hold_two_boms_in_verbatim_content(self):
+        cases = audit.double_bom_cases()
+        self.assertEqual(len(cases), len({case['id'] for case in cases}))
+        for prefix, bom in [('double-bom-utf-8-', b'\xef\xbb\xbf'), ('double-bom-utf-16le-', b'\xff\xfe'),
+                            ('double-bom-utf-16be-', b'\xfe\xff'), ('double-bom-utf-32be-', b'\0\0\xfe\xff')]:
+            case = next(case for case in cases if case['id'].startswith(prefix))
+            self.assertTrue(bytes.fromhex(case['binary_resources']['part.adoc']).startswith(bom * 2))
+            self.assertTrue(case['source'].startswith('----\n'))
 
     def test_uri_mode_serves_the_same_bytes_to_a_uri_include(self):
         case = audit.make_case('id', b'\xff\n', 'Windows-1251', 'lines=1')
@@ -66,6 +74,17 @@ class IncludeOrderAuditTests(unittest.TestCase):
         self.assertEqual(uri['source'], 'include::{uri}/part.adoc[encoding=Windows-1251,lines=1,opts=optional]')
         self.assertEqual(uri['responses'], {'/part.adoc': [{'hex': 'ff0a'}]})
         self.assertEqual(uri['requests'], ['/part.adoc'])
+
+    def test_cache_modes_enable_cache_uri_and_prime_a_hit_without_converting(self):
+        case = audit.make_case('id', b'\xff\n', 'Windows-1251', 'lines=1')
+        miss = audit.uri_case(case, 'miss')
+        self.assertEqual(miss['source'], ':cache-uri:\n\n' + audit.uri_case(case)['source'])
+        hit = audit.uri_case(case, 'hit')
+        self.assertEqual(hit['source'], ':cache-uri:\n\ninclude::{uri}/part.adoc[lines=0]\n\n'
+                         + audit.uri_case(case)['source'])
+        # One request: the probed include of a hit must not reach the server.
+        self.assertEqual(hit['requests'], ['/part.adoc'])
+        self.assertEqual(hit['responses'], {'/part.adoc': [{'hex': 'ff0a'}]})
 
     def test_uri_mode_quarantines_ruby_errors_and_compares_requests(self):
         case = dict(requests=['/part.adoc'])

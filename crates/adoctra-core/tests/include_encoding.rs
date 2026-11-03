@@ -2736,3 +2736,59 @@ fn nested_includes_select_their_own_encoding_and_keep_relative_paths() {
         "/docs/sub/inner.adoc"
     );
 }
+
+#[test]
+fn a_second_bom_after_the_removed_one_is_content_like_ruby() {
+    // `bom_bytes` prepends the first BOM; the text holds the second.
+    let utf16 = |little: bool| bom_bytes("\u{feff}*a*\n", little);
+    let utf32be: Vec<u8> = "\u{feff}\u{feff}*a*\n"
+        .chars()
+        .flat_map(|c| (c as u32).to_be_bytes())
+        .collect();
+    let utf8 = b"\xef\xbb\xbf\xef\xbb\xbf*a*\n".to_vec();
+    // Ruby fails on a selection of a default/BINARY UTF-16 read (the raw
+    // lines are converted one by one), so those only read whole.
+    let kept = "\u{feff}*a*";
+    for (bytes, encoding, select, expected) in [
+        (utf8.clone(), None, true, kept),
+        (utf8.clone(), Some("CESU-8"), true, kept),
+        (utf8, Some("UTF8-MAC"), true, kept),
+        (utf16(true), None, false, kept),
+        (utf16(true), Some("UTF-16LE"), true, kept),
+        (utf16(false), Some("BINARY"), false, kept),
+        (utf16(false), Some("UTF-16BE"), true, kept),
+        // The dummy converters consume the BOM they read the order from;
+        // the BOM check then removes the second one, like a transcoded read.
+        (utf16(false), Some("UTF-16"), true, "*a*"),
+        (utf32be.clone(), Some("UTF-32BE"), true, kept),
+        (utf32be, Some("UTF-32"), true, "*a*"),
+    ] {
+        for selection in ["", "lines=1"].into_iter().take(1 + usize::from(select)) {
+            let attrs = encoding
+                .map(|name| format!("encoding={name}"))
+                .into_iter()
+                .chain((!selection.is_empty()).then(|| selection.to_owned()))
+                .collect::<Vec<_>>()
+                .join(",");
+            let (mut resources, mut sources, options) =
+                setup(&format!("include::part.adoc[{attrs}]"));
+            resources
+                .insert_binary("/docs/part.adoc", bytes.clone())
+                .unwrap();
+            let result = parse_resource(&mut sources, &options, &resources).unwrap();
+            let context = format!("{encoding:?}{selection}");
+            assert!(
+                result.diagnostics.is_empty(),
+                "{context} {:?}",
+                result.diagnostics
+            );
+            let block = &result.document.flat_blocks()[0];
+            assert!(
+                matches!(block.kind, BlockKind::Paragraph { .. }),
+                "{context}"
+            );
+            assert_eq!(block.span.source_id, SourceId(1), "{context}");
+            assert_eq!(sources.slice(block.span), Some(expected), "{context}");
+        }
+    }
+}
