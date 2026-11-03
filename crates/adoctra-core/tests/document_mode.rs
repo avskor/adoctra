@@ -170,6 +170,8 @@ fn docinfo_selects_files_and_substitutes_attributes_like_ruby() {
             ".html",
             &resources,
             Some("/d/guide.adoc"),
+            None,
+            &mut Vec::new(),
         ))
     };
     // `docinfo` alone is private; files are normalized and substituted.
@@ -203,7 +205,9 @@ fn docinfo_selects_files_and_substitutes_attributes_like_ruby() {
         DocinfoLocation::Header,
         ".html",
         &resources,
-        Some("/d/guide.adoc")
+        Some("/d/guide.adoc"),
+        None,
+        &mut Vec::new(),
     )
     .iter()
     .any(|part| matches!(part, AttributePart::Open(_))));
@@ -239,6 +243,8 @@ fn docinfo_decodes_utf16_boms_and_right_strips_lines_like_ruby() {
             ".html",
             resources,
             Some("/d/guide.adoc"),
+            None,
+            &mut Vec::new(),
         ))
     };
     // `prepare_source_string`: a UTF-16 BOM decodes the file; `rstrip` keeps
@@ -294,5 +300,46 @@ fn docinfo_decodes_utf16_boms_and_right_strips_lines_like_ruby() {
     assert_eq!(
         load(&TextOnly),
         "<docinfo.html>\u{a0}\n<guide-docinfo.html>\u{a0}"
+    );
+}
+
+#[test]
+fn docinfo_resolves_from_the_base_directory_like_ruby() {
+    // Ruby's `normalize_system_path(file, docinfodir)` starts at `base_dir`:
+    // the provider is asked relative to the document's directory.
+    let mut resources = MemoryResources::new();
+    resources.insert("/r/d/guide.adoc", "x").unwrap();
+    resources.insert("/r/docinfo.html", "<root>").unwrap();
+    resources.insert("/r/d/docinfo.html", "<docs>").unwrap();
+    resources
+        .insert("/r/shared/docinfo.html", "<shared>")
+        .unwrap();
+    let mut attributes = Attributes::default();
+    attributes.set("docinfo", "shared");
+    attributes.set("docname", "guide");
+    let load = |attributes: &Attributes, base_dir: Option<&str>, warnings: &mut Vec<String>| {
+        let parts = docinfo(
+            attributes,
+            DocinfoLocation::Head,
+            ".html",
+            &resources,
+            Some("/r/d/guide.adoc"),
+            base_dir,
+            warnings,
+        );
+        text(&parts)
+    };
+    let mut warnings = Vec::new();
+    assert_eq!(load(&attributes, Some("/r"), &mut warnings), "<root>");
+    assert_eq!(load(&attributes, None, &mut warnings), "<docs>");
+    attributes.set("docinfodir", "shared");
+    assert_eq!(load(&attributes, Some("/r"), &mut warnings), "<shared>");
+    assert!(warnings.is_empty(), "{warnings:?}");
+    // From safe mode up a start outside the jail recovers inside it.
+    attributes.set("docinfodir", "../..");
+    assert_eq!(load(&attributes, Some("/r"), &mut warnings), "<root>");
+    assert_eq!(
+        warnings,
+        ["path has illegal reference to ancestor of jail; recovering automatically"]
     );
 }

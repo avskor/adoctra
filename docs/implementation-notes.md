@@ -2056,6 +2056,16 @@ with `render_with_start`), fixes highlighted pass slots and splits the HTML
 into Raw tags and decoded Text, so later stages see Ruby's string; marks
 return as Callout parts. Without the hook it is Ruby's `sub_source`. The CLI
 passes the hook in embedded mode too; `golden/rouge/` parses with it.
+**CLI shell and base_dir assets** (2026-11-03): cli_matrix.py compares a
+standalone document's shell (upstream_audit.shell) in stdout and written
+files. It exposed that the stylesheet and docinfo were read from the
+document's directory, not Ruby's base_dir (`-B`): core now records
+`Document::base_dir` (Reader::base_dir: ParseOptions.base_dir or docdir) and
+calls `ConversionStart::base_dir` before `start`; `adoctra_core::asset_path`
+(system_path.rs, shared with data-uri images) resolves
+`normalize_system_path(target, start)` from it, requested relative to the
+primary document's directory, with jail recovery warnings; `docinfo` takes
+`base_dir` and a warnings sink. Four CLI cases (160: 159 PASS, 1 RUBY_ERROR).
 **CI reference cache** (2026-11-03): `actions/cache` keeps
 `target/reference-cache/` between CI runs (key per run id, restored from the
 latest); its self-validating keys (Ruby environment, command, inputs, stored

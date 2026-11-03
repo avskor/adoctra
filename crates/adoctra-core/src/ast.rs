@@ -84,6 +84,11 @@ pub struct Document {
     /// The automatic table of contents (`toc-placement` other than `macro`
     /// or `preamble`; `auto` when standalone), converted before the body.
     pub toc: Option<Toc>,
+    /// Ruby's `Document#base_dir` (absolute) when the document was read
+    /// through a resource provider: [`ParseOptions::base_dir`](crate::ParseOptions::base_dir),
+    /// else `docdir`. A converter resolves its assets (docinfo, stylesheet)
+    /// from it with [`asset_path`](crate::asset_path).
+    pub base_dir: Option<String>,
 }
 
 /// A table of contents as Ruby's converter renders it (`convert_outline`),

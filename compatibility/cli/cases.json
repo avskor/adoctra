@@ -2996,6 +2996,116 @@
     "out",
     "a.adoc"
    ]
+  },
+  {
+   "id": "base-dir-stylesheet",
+   "description": "-B resolves the stylesheet, docinfo and data-uri images from the base directory.",
+   "files": {
+    "docs/info.adoc": "= Info\n:docinfo: shared\n:stylesheet: my.css\n:stylesdir: css\n\ntext\n\n:data-uri:\n\nimage::pic.png[]\n",
+    "docs/miss.adoc": "= M\n:stylesheet: nope.css\n:stylesdir: css\n\nx\n",
+    "docs/jail.adoc": "= J\n:stylesheet: my.css\n:stylesdir: ../../css\n:docinfo: shared\n:docinfodir: ../..\n\nx\n",
+    "css/my.css": "p.root{}\n",
+    "docs/css/my.css": "p.docs{}\n",
+    "docinfo.html": "<meta name=\"root\" content=\"1\">\n",
+    "docs/docinfo.html": "<meta name=\"docs\" content=\"1\">\n"
+   },
+   "binary_files": {
+    "pic.png": "524f4f54504e47",
+    "docs/pic.png": "444f4353504e47"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-B",
+    ".",
+    "-a",
+    "reproducible",
+    "-o",
+    "-",
+    "docs/info.adoc"
+   ]
+  },
+  {
+   "id": "base-dir-stylesheet-missing",
+   "description": "A missing stylesheet names its path under -B.",
+   "files": {
+    "docs/info.adoc": "= Info\n:docinfo: shared\n:stylesheet: my.css\n:stylesdir: css\n\ntext\n\n:data-uri:\n\nimage::pic.png[]\n",
+    "docs/miss.adoc": "= M\n:stylesheet: nope.css\n:stylesdir: css\n\nx\n",
+    "docs/jail.adoc": "= J\n:stylesheet: my.css\n:stylesdir: ../../css\n:docinfo: shared\n:docinfodir: ../..\n\nx\n",
+    "css/my.css": "p.root{}\n",
+    "docs/css/my.css": "p.docs{}\n",
+    "docinfo.html": "<meta name=\"root\" content=\"1\">\n",
+    "docs/docinfo.html": "<meta name=\"docs\" content=\"1\">\n"
+   },
+   "binary_files": {
+    "pic.png": "524f4f54504e47",
+    "docs/pic.png": "444f4353504e47"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-B",
+    ".",
+    "-a",
+    "reproducible",
+    "-o",
+    "-",
+    "docs/miss.adoc"
+   ]
+  },
+  {
+   "id": "stylesheet-docinfo-jail",
+   "description": "stylesdir and docinfodir outside the jail recover with Ruby's warnings.",
+   "files": {
+    "docs/info.adoc": "= Info\n:docinfo: shared\n:stylesheet: my.css\n:stylesdir: css\n\ntext\n\n:data-uri:\n\nimage::pic.png[]\n",
+    "docs/miss.adoc": "= M\n:stylesheet: nope.css\n:stylesdir: css\n\nx\n",
+    "docs/jail.adoc": "= J\n:stylesheet: my.css\n:stylesdir: ../../css\n:docinfo: shared\n:docinfodir: ../..\n\nx\n",
+    "css/my.css": "p.root{}\n",
+    "docs/css/my.css": "p.docs{}\n",
+    "docinfo.html": "<meta name=\"root\" content=\"1\">\n",
+    "docs/docinfo.html": "<meta name=\"docs\" content=\"1\">\n"
+   },
+   "binary_files": {
+    "pic.png": "524f4f54504e47",
+    "docs/pic.png": "444f4353504e47"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-B",
+    ".",
+    "-a",
+    "reproducible",
+    "-o",
+    "-",
+    "docs/jail.adoc"
+   ]
+  },
+  {
+   "id": "stylesheet-docinfo-docdir",
+   "description": "Without -B the stylesheet and docinfo come from the document's directory.",
+   "files": {
+    "docs/info.adoc": "= Info\n:docinfo: shared\n:stylesheet: my.css\n:stylesdir: css\n\ntext\n\n:data-uri:\n\nimage::pic.png[]\n",
+    "docs/miss.adoc": "= M\n:stylesheet: nope.css\n:stylesdir: css\n\nx\n",
+    "docs/jail.adoc": "= J\n:stylesheet: my.css\n:stylesdir: ../../css\n:docinfo: shared\n:docinfodir: ../..\n\nx\n",
+    "css/my.css": "p.root{}\n",
+    "docs/css/my.css": "p.docs{}\n",
+    "docinfo.html": "<meta name=\"root\" content=\"1\">\n",
+    "docs/docinfo.html": "<meta name=\"docs\" content=\"1\">\n"
+   },
+   "binary_files": {
+    "pic.png": "524f4f54504e47",
+    "docs/pic.png": "444f4353504e47"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-a",
+    "reproducible",
+    "-o",
+    "-",
+    "docs/info.adoc"
+   ]
   }
  ]
 }

@@ -138,6 +138,7 @@ impl HtmlBackend {
             stylesheet: None,
             rouge: false,
             rouge_state: std::rc::Rc::default(),
+            base_dir: None,
         }
     }
 
@@ -290,14 +291,28 @@ fn render_document(
         ));
     }
     out.push_str(&format!("<title>{}</title>\n", document_title(doc)));
-    stylesheet(attributes, resources, prepared, warnings, out);
+    stylesheet(
+        attributes,
+        resources,
+        doc.base_dir.as_deref(),
+        prepared,
+        warnings,
+        out,
+    );
     icon_font(attributes, out);
     if let Some(highlighter) = cx.highlighter {
         highlighter.head(&doc.final_attributes, attributes, out);
     }
     // Ruby fills the highlighter's head docinfo in after the body.
     let highlighter_head_at = out.len();
-    docinfo(attributes, DocinfoLocation::Head, resources, out);
+    docinfo(
+        attributes,
+        DocinfoLocation::Head,
+        resources,
+        doc.base_dir.as_deref(),
+        warnings,
+        out,
+    );
     out.push_str("</head>\n");
 
     let sectioned = cx.has_sections();
@@ -326,7 +341,14 @@ fn render_document(
         "<body{id} class=\"{}\">\n",
         attr_value(&classes.join(" "))
     ));
-    docinfo(attributes, DocinfoLocation::Header, resources, out);
+    docinfo(
+        attributes,
+        DocinfoLocation::Header,
+        resources,
+        doc.base_dir.as_deref(),
+        warnings,
+        out,
+    );
     let max_width = attributes
         .get("max-width")
         .filter(|value| !value.is_empty())
@@ -382,6 +404,8 @@ fn render_document(
         &doc.final_attributes,
         DocinfoLocation::Footer,
         resources,
+        doc.base_dir.as_deref(),
+        warnings,
         out,
     );
     out.push_str("</body>\n</html>\n");
@@ -400,6 +424,7 @@ fn render_document(
 fn stylesheet(
     attributes: &adoctra_core::Attributes,
     resources: Option<&Resources>,
+    base_dir: Option<&str>,
     prepared: Option<&Option<String>>,
     warnings: &mut Vec<String>,
     out: &mut String,
@@ -447,7 +472,9 @@ fn stylesheet(
         Some(sheet) => {
             let contents = match prepared {
                 Some(contents) => contents.clone(),
-                None => read_stylesheet(sheet, stylesdir, attributes, resources, warnings),
+                None => {
+                    read_stylesheet(sheet, stylesdir, attributes, resources, base_dir, warnings)
+                }
             };
             out.push_str(&format!(
                 "<style>\n{}\n</style>\n",
@@ -481,6 +508,8 @@ pub struct HtmlStart {
     rouge: bool,
     /// The rouge adapter's state, shared with the render.
     rouge_state: std::rc::Rc<std::cell::RefCell<rouge::RougeState>>,
+    /// Ruby's base directory of the document, from core before `start`.
+    base_dir: Option<String>,
 }
 
 impl fmt::Debug for HtmlStart {
@@ -503,6 +532,10 @@ impl ConversionStart for HtmlStart {
         Some(rouge::highlight_request(request, &self.rouge_state))
     }
 
+    fn base_dir(&mut self, dir: Option<&str>) {
+        self.base_dir = dir.map(str::to_owned);
+    }
+
     fn start(&mut self, attributes: &adoctra_core::Attributes) -> Vec<String> {
         // Ruby's syntax highlighter is the header's.
         self.rouge = highlight::Highlighter::of(attributes) == Some(highlight::Highlighter::Rouge);
@@ -514,6 +547,7 @@ impl ConversionStart for HtmlStart {
                 stylesdir,
                 attributes,
                 self.resources.as_ref(),
+                self.base_dir.as_deref(),
                 &mut warnings,
             ));
         }
@@ -533,6 +567,7 @@ fn read_stylesheet(
     stylesdir: Option<&str>,
     attributes: &adoctra_core::Attributes,
     resources: Option<&Resources>,
+    base_dir: Option<&str>,
     warnings: &mut Vec<String>,
 ) -> Option<String> {
     let uri = |value: &str| {
@@ -572,15 +607,27 @@ fn read_stylesheet(
         }
         return loaded.map(|resource| resource.text);
     }
-    let target = match stylesdir.filter(|dir| !dir.is_empty() && !sheet.starts_with('/')) {
-        Some(dir) => format!("{}/{sheet}", dir.trim_end_matches('/')),
-        None => sheet.to_owned(),
-    };
+    // Ruby's `normalize_system_path(sheet, stylesdir)` from the document's
+    // base directory; without one, under the document's directory.
+    let referrer_dir = resources
+        .and_then(|resources| resources.referrer.as_deref().map(|name| (resources, name)))
+        .and_then(|(resources, name)| resources.provider.document_path(name))
+        .and_then(|path| path.rsplit_once('/').map(|(dir, _)| dir.to_owned()))
+        .map(|dir| if dir.is_empty() { "/".to_owned() } else { dir });
+    let resolved = adoctra_core::asset_path(
+        sheet,
+        stylesdir,
+        base_dir,
+        referrer_dir.as_deref(),
+        adoctra_core::SafeMode::of(attributes),
+        "stylesheet",
+    );
+    warnings.extend(resolved.warnings);
     let loaded = resources.and_then(|resources| {
         resources
             .provider
             .load(ResourceRequest {
-                target: &target,
+                target: &resolved.request,
                 referrer: resources.referrer.as_deref(),
             })
             .ok()
@@ -588,15 +635,22 @@ fn read_stylesheet(
     match loaded {
         Some(resource) => Some(resource.text),
         None => {
-            // Ruby names the system path under the document's directory.
-            let path = target
-                .split('/')
-                .filter(|segment| *segment != ".")
-                .collect::<Vec<_>>()
-                .join("/");
-            let path = match attributes.get("docdir").filter(|_| !path.starts_with('/')) {
-                Some(docdir) => format!("{}/{path}", docdir.trim_end_matches('/')),
-                None => path,
+            // Ruby names the system path: under the base directory, else
+            // under the document's directory.
+            let path = match base_dir {
+                Some(_) => resolved.path,
+                None => {
+                    let path = resolved
+                        .path
+                        .split('/')
+                        .filter(|segment| *segment != ".")
+                        .collect::<Vec<_>>()
+                        .join("/");
+                    match attributes.get("docdir").filter(|_| !path.starts_with('/')) {
+                        Some(docdir) => format!("{}/{path}", docdir.trim_end_matches('/')),
+                        None => path,
+                    }
+                }
             };
             let docfile = attributes.get("docfile").unwrap_or("<stdin>");
             warnings.push(format!(
@@ -613,6 +667,8 @@ fn docinfo(
     attributes: &adoctra_core::Attributes,
     location: DocinfoLocation,
     resources: Option<&Resources>,
+    base_dir: Option<&str>,
+    warnings: &mut Vec<String>,
     out: &mut String,
 ) {
     // Secure mode reads no docinfo.
@@ -628,6 +684,8 @@ fn docinfo(
         suffix,
         resources.provider.as_ref(),
         resources.referrer.as_deref(),
+        base_dir,
+        warnings,
     );
     if !parts.is_empty() {
         render_parts(&parts, out);
@@ -3969,6 +4027,93 @@ mod tests {
         HtmlBackend::new()
             .with_resources(Arc::new(resources), Some("/d/guide.adoc".into()))
             .render(&doc)
+    }
+
+    #[test]
+    fn stylesheet_and_docinfo_resolve_from_the_base_directory_like_ruby() {
+        // Ruby's `normalize_system_path(…, stylesdir/docinfodir)` starts at
+        // `base_dir` (`-B`), not at the document's directory; the start hook
+        // (the CLI) and a plain render read the same files.
+        let files = [
+            (
+                "/r/d/guide.adoc",
+                "= T\n:stylesheet: my.css\n:stylesdir: css\n:docinfo: shared\n\nx",
+            ),
+            ("/r/css/my.css", "p.root {}"),
+            ("/r/d/css/my.css", "p.docs {}"),
+            ("/r/docinfo.html", "<meta name=\"root\">"),
+            ("/r/d/docinfo.html", "<meta name=\"docs\">"),
+        ];
+        let render = |base_dir: Option<&str>, with_start: bool| {
+            let resources = memory(&files);
+            let mut sources = adoctra_core::SourceMap::new();
+            let source_id = sources.load("/r/d/guide.adoc", None, &resources).unwrap();
+            let mut options = adoctra_core::ParseOptions {
+                source_id,
+                base_dir: base_dir.map(str::to_owned),
+                ..Default::default()
+            };
+            options.attributes.set("docdir", "/r/d");
+            let backend = HtmlBackend::new()
+                .with_resources(Arc::new(memory(&files)), Some("/r/d/guide.adoc".into()));
+            if with_start {
+                let mut start = backend.start();
+                let doc = adoctra_core::parse_resource_with_start(
+                    &mut sources,
+                    &options,
+                    &resources,
+                    &mut start,
+                )
+                .unwrap()
+                .document;
+                backend.render_with_start(&doc, &start)
+            } else {
+                let doc = adoctra_core::parse_resource(&mut sources, &options, &resources)
+                    .unwrap()
+                    .document;
+                assert_eq!(doc.base_dir.as_deref(), Some(base_dir.unwrap_or("/r/d")));
+                backend.render(&doc)
+            }
+        };
+        for with_start in [false, true] {
+            let html = render(Some("/r"), with_start).html;
+            assert!(
+                html.contains("p.root {}") && html.contains("<meta name=\"root\">"),
+                "{html}"
+            );
+            let html = render(None, with_start).html;
+            assert!(
+                html.contains("p.docs {}") && html.contains("<meta name=\"docs\">"),
+                "{html}"
+            );
+        }
+        // A start outside the jail recovers inside it with Ruby's warning.
+        let jailed = [
+            (
+                "/r/d/guide.adoc",
+                "= T\n:stylesheet: my.css\n:stylesdir: ../../css\n\nx",
+            ),
+            files[1],
+        ];
+        let resources = memory(&jailed);
+        let mut sources = adoctra_core::SourceMap::new();
+        let source_id = sources.load("/r/d/guide.adoc", None, &resources).unwrap();
+        let options = adoctra_core::ParseOptions {
+            source_id,
+            base_dir: Some("/r".into()),
+            ..Default::default()
+        };
+        let doc = adoctra_core::parse_resource(&mut sources, &options, &resources)
+            .unwrap()
+            .document;
+        let output = HtmlBackend::new()
+            .with_resources(Arc::new(memory(&jailed)), Some("/r/d/guide.adoc".into()))
+            .render(&doc);
+        assert!(output.html.contains("p.root {}"), "{}", output.html);
+        assert!(output.warnings.contains(
+            &"stylesheet has illegal reference to ancestor of jail; recovering automatically"
+                .to_owned()
+        ));
     }
 
     fn memory(files: &[(&str, &str)]) -> adoctra_core::MemoryResources {

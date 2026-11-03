@@ -9,7 +9,9 @@ there with the same arguments (and standard input). Compared, in profile
 
 * the exit status;
 * standard output: HTML in the body-dom-v1 projection (standalone shells
-  mapped), Ruby's usage/version text and adoctra's own by kind only;
+  mapped) and, for a standalone document, its shell (`<html>`/`<body>`
+  attributes and `<head>` children, see upstream_audit.shell), Ruby's
+  usage/version text and adoctra's own by kind only;
 * standard error as (kind, file basename, line, text) entries: logged
   messages by severity, other lines by text, without the program name and
   Ruby's `Use --trace` hint, and the timings report without its numbers;
@@ -34,7 +36,7 @@ import sys
 import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from upstream_audit import ENVIRONMENT, body, raw_body, recording_writes, DEFAULT_STYLESHEETS  # noqa: E402
+from upstream_audit import ENVIRONMENT, body, raw_body, recording_writes, shell, DEFAULT_STYLESHEETS  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 CASES = ROOT / "compatibility" / "cli" / "cases.json"
@@ -92,8 +94,12 @@ def stdout_view(text, ruby):
         return "<usage>"
     if (ruby and re.match(r"Asciidoctor \d", text)) or (not ruby and re.match(r"adoctra \d", text)):
         return "<version>"
+    standalone = "<html" in text
     try:
-        return body(text, "<html" in text)
+        projected = body(text, standalone)
+        # A standalone document also compares its shell: the <html> and
+        # <body> attributes and the <head> children (upstream_audit.shell).
+        return {"body": projected, "shell": shell(text)} if standalone else projected
     except ValueError:
         return raw_body(text)
 

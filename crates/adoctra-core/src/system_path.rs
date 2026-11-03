@@ -221,6 +221,54 @@ fn resolve(
     })
 }
 
+/// Where a converter reads an asset (docinfo, a stylesheet, an embedded
+/// image): `path` is Ruby's system path (its messages name it), `request` the
+/// same path for the resource provider, relative to the primary document's
+/// directory, and `warnings` Ruby's jail recovery messages.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AssetPath {
+    pub path: String,
+    pub request: String,
+    pub warnings: Vec<String>,
+}
+
+/// Ruby's `normalize_system_path(target, start)` for an asset a converter
+/// reads: resolved from `base_dir` (the document's, jailed from safe mode
+/// up) when it is known, requested relative to `referrer_dir` (the primary
+/// document's directory, else `base_dir`). Without a base directory,
+/// `target` joined to a relative `start` for both.
+pub fn asset_path(
+    target: &str,
+    start: Option<&str>,
+    base_dir: Option<&str>,
+    referrer_dir: Option<&str>,
+    safe: SafeMode,
+    target_name: &str,
+) -> AssetPath {
+    if let Some(base_dir) = base_dir {
+        let resolved = normalize_system_path(target, start, base_dir, safe, target_name);
+        let from = referrer_dir.unwrap_or(base_dir);
+        let request = crate::xref_target::relative_path(
+            &format!("{}/_", from.trim_end_matches('/')),
+            &resolved.path,
+        );
+        return AssetPath {
+            path: resolved.path,
+            request,
+            warnings: resolved.warnings,
+        };
+    }
+    let path = match start.filter(|dir| !dir.is_empty() && !target.starts_with('/')) {
+        Some(dir) => format!("{}/{target}", dir.trim_end_matches('/')),
+        None => target.to_owned(),
+    };
+    AssetPath {
+        request: path.clone(),
+        path,
+        warnings: Vec::new(),
+    }
+}
+
 /// Ruby's `normalize_system_path(target, start, nil, target_name:)` for a
 /// document whose base directory is `base_dir`: below safe mode a relative
 /// start joins the base directory and there is no jail; from safe mode up

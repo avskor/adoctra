@@ -34,6 +34,13 @@ pub trait ConversionStart {
     /// header attributes, like Ruby's converter sees them). Returns warnings.
     fn start(&mut self, attributes: &Attributes) -> Vec<String>;
 
+    /// Called before [`start`](Self::start) with Ruby's base directory of the
+    /// document ([`crate::Document::base_dir`]), from which a converter
+    /// resolves the assets it reads as conversion starts (a stylesheet).
+    fn base_dir(&mut self, dir: Option<&str>) {
+        let _ = dir;
+    }
+
     /// Ruby's `highlight` substitution: a `source` listing whose custom
     /// `subs` keep `specialcharacters` is highlighted by a server-side syntax
     /// highlighter in their place, and the later stages run over its HTML

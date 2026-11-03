@@ -39,30 +39,20 @@ impl<'a> Images<'a> {
         span: Span,
         diagnostics: &mut Vec<Diagnostic>,
     ) -> (String, String) {
-        if let Some(ImageSource {
-            base_dir: Some(base_dir),
-            referrer_dir,
-            safe,
-            ..
-        }) = &self.source
-        {
-            let resolved =
-                crate::system_path::normalize_system_path(target, start, base_dir, *safe, label);
-            for warning in resolved.warnings {
-                warn(diagnostics, span, warning);
-            }
-            let from = referrer_dir.as_deref().unwrap_or(base_dir);
-            let request = crate::xref_target::relative_path(
-                &format!("{}/_", from.trim_end_matches('/')),
-                &resolved.path,
-            );
-            return (resolved.path, request);
-        }
-        let path = match start.filter(|dir| !dir.is_empty() && !target.starts_with('/')) {
-            Some(dir) => format!("{}/{target}", dir.trim_end_matches('/')),
-            None => target.to_owned(),
+        let (base_dir, referrer_dir, safe) = match &self.source {
+            Some(source) => (
+                source.base_dir.as_deref(),
+                source.referrer_dir.as_deref(),
+                source.safe,
+            ),
+            None => (None, None, crate::SafeMode::default()),
         };
-        (path.clone(), path)
+        let resolved =
+            crate::system_path::asset_path(target, start, base_dir, referrer_dir, safe, label);
+        for warning in resolved.warnings {
+            warn(diagnostics, span, warning);
+        }
+        (resolved.path, resolved.request)
     }
 
     /// Ruby's `image_uri target, asset_dir_key` with the document attributes

@@ -68,6 +68,7 @@ pub use attributes::{
     AttributeFormat, AttributeLink, AttributePart, Attributes, Footnote, FootnoteKind, IndexTerm,
     InlineCallout, InlineImage, Stem, StemStyle, Svg, UiMacro, Xref,
 };
+pub use system_path::{asset_path, AssetPath};
 mod anchor_catalog;
 mod attribute_list;
 mod attribute_macros;

@@ -231,6 +231,7 @@ pub(crate) fn parse_reader<'a>(
         htmlsyntax: context.htmlsyntax(),
         output: None,
         toc: None,
+        base_dir: lines.base_dir().map(str::to_owned),
     };
     if let Some(effective) = header.effective_title {
         let inlines = context

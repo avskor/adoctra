@@ -1019,6 +1019,12 @@ impl ParseContext<'_> {
         start: Option<&mut dyn crate::ConversionStart>,
     ) -> Vec<crate::Token> {
         crate::resolve::resolve_attribute_definitions(&mut document.attributes, &fixed);
+        // The converter resolves its start assets (a stylesheet) from Ruby's
+        // base directory.
+        let start = start.map(|start| {
+            start.base_dir(document.base_dir.as_deref());
+            start
+        });
         // Ruby's Asciidoctor.convert resolves the output file after loading
         // (with the attributes reading left) and Document#convert assigns
         // `outfile`/`outdir` before converting, below server mode.

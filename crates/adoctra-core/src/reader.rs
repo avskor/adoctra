@@ -311,6 +311,11 @@ impl<'a> Reader<'a> {
         Ok(reader)
     }
 
+    /// Ruby's base directory of the document (see [`crate::Document::base_dir`]).
+    pub fn base_dir(&self) -> Option<&str> {
+        self.resources.as_ref()?.base_dir.as_deref()
+    }
+
     /// The provider and the primary document's canonical name, for image
     /// reads while converting (`data-uri`).
     pub fn image_source(&self) -> Option<crate::data_uri::ImageSource<'a>> {

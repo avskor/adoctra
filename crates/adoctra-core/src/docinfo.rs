@@ -1,8 +1,9 @@
 //! Ruby's `Document#docinfo`: the shared (`docinfo<-location><suffix>`) and
 //! private (`<docname>-docinfo<-location><suffix>`) files a document selects
 //! with `docinfo`/`docinfo1`/`docinfo2`, read through the host's provider
-//! from `docinfodir` (default: the document's directory), normalized and
-//! substituted with `docinfosubs` (default: attributes).
+//! from `docinfodir` (resolved from the document's base directory, which is
+//! also the default), normalized and substituted with `docinfosubs`
+//! (default: attributes).
 use crate::pass_subs::{Defaults, Stage};
 use crate::ruby_strip::RubyStrip;
 use crate::{AttributePart, Attributes, ResourceProvider, ResourceRequest, Span};
@@ -29,15 +30,20 @@ impl DocinfoLocation {
 }
 
 /// The docinfo content for `location` with the given attributes and output
-/// file suffix (`.html`), loaded relative to `referrer` (the primary
-/// document's canonical name). Files are joined by line feeds; missing ones
-/// are skipped silently, like Ruby's `read_asset`.
+/// file suffix (`.html`), each file at Ruby's
+/// `normalize_system_path(file, docinfodir)` from `base_dir`
+/// ([`crate::Document::base_dir`]) and requested relative to `referrer` (the
+/// primary document's canonical name). Files are joined by line feeds;
+/// missing ones are skipped silently, like Ruby's `read_asset`. Ruby's jail
+/// recovery messages are added to `warnings`.
 pub fn docinfo(
     attributes: &Attributes,
     location: DocinfoLocation,
     suffix: &str,
     provider: &dyn ResourceProvider,
     referrer: Option<&str>,
+    base_dir: Option<&str>,
+    warnings: &mut Vec<String>,
 ) -> Vec<AttributePart> {
     let selected: Vec<String> = match attributes.get("docinfo") {
         Some(value) if !value.is_empty() => value
@@ -70,9 +76,23 @@ pub fn docinfo(
         _ => format!("-{}", location.name()),
     };
     let file = format!("docinfo{qualifier}{suffix}");
-    let path = |name: &str| match attributes.get("docinfodir").filter(|dir| !dir.is_empty()) {
-        Some(dir) => format!("{}/{name}", dir.trim_end_matches('/')),
-        None => name.to_owned(),
+    let referrer_dir = referrer
+        .and_then(|name| provider.document_path(name))
+        .and_then(|path| path.rsplit_once('/').map(|(dir, _)| dir.to_owned()))
+        .map(|dir| if dir.is_empty() { "/".to_owned() } else { dir });
+    let safe = crate::SafeMode::of(attributes);
+    let docinfodir = attributes.get("docinfodir").filter(|dir| !dir.is_empty());
+    let mut path = |name: &str| {
+        let resolved = crate::system_path::asset_path(
+            name,
+            docinfodir,
+            base_dir,
+            referrer_dir.as_deref(),
+            safe,
+            "path",
+        );
+        warnings.extend(resolved.warnings);
+        resolved.request
     };
     let mut targets = Vec::new();
     if has("shared") {

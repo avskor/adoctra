@@ -88,12 +88,16 @@ stdin. Эталон — `scripts/ruby-cli.rb` (`Invoker` закреплённо�
 Rouge и заглушки подсветчиков, что в остальных эталонах). Сравниваются:
 
 * код выхода;
-* stdout: HTML в проекции body-dom-v1, справка и версия — по виду;
+* stdout: HTML в проекции body-dom-v1 и, для standalone-документа, его
+  оболочка (атрибуты `<html>`/`<body>` и дети `<head>`, с исключением трёх
+  намеренных отличий: `meta` generator/http-equiv, содержимое таблицы стилей
+  по умолчанию и ссылка Google Fonts пустого `webfonts`, см.
+  link:upstream-tests.adoc[]), справка и версия — по виду;
 * stderr: записи (уровень, имя файла, строка, текст) без имени программы и
   подсказки `Use --trace`, справка — по виду, отчёт `-t` без чисел;
 * созданные и изменённые файлы, как в upstream-аудите.
 
-Падение Ruby (необработанное исключение) — RUBY_ERROR. Результат: 155 PASS,
+Падение Ruby (необработанное исключение) — RUBY_ERROR. Результат: 159 PASS,
 1 RUBY_ERROR (неоднозначный длинный префикс `--s`: Ruby не перехватывает
 `OptionParser::AmbiguousOption`). CI запускает
 `python3 scripts/cli_matrix.py --baseline compatibility/cli/report.json`;
@@ -107,7 +111,7 @@ Rouge и заглушки подсветчиков, что в остальных
 document - source is either binary or contains invalid Unicode data` с кодом 1
 до записи вывода; docinfo с BOM UTF-16 декодируется, строки docinfo
 обрезаются справа по `rstrip` Ruby (U+00A0 остаётся, NUL/TAB/CR удаляются).
-Docinfo проверяется в `docinfo-footer`: проекция stdout не включает `<head>`.
+Docinfo проверяется во всех местах (`<head>` — через оболочку документа).
 Записанный файл проецируется как HTML по расширению `.html`/`.htm`/`.xhtml`
 или по содержимому (UTF-8, начинается с `<`: `-o dir/`, `outfilesuffix=.xml`);
 остальные файлы сравниваются побайтно.
@@ -124,6 +128,15 @@ Docinfo проверяется в `docinfo-footer`: проекция stdout не
 Найденные расхождения (`-B` вне входа или отсутствующий, путь `Unresolved
 directive` от base_dir, срез `docfile` в режиме server, тексты ошибок
 записи, «Not a directory» как отсутствующий файл) исправлены.
+
+Сравнение оболочки standalone-документа (2026-11-03) нашло, что таблица стилей
+и docinfo читались от каталога документа, а не от `base_dir`: Ruby разрешает их
+`normalize_system_path(…, stylesdir/docinfodir)` от `-B`. Ядро записывает
+`Document::base_dir` и передаёт его хуку `ConversionStart::base_dir`, HTML-бэкенд
+разрешает пути через `adoctra_core::asset_path` (с предупреждениями о jail, как
+Ruby). Сценарии `base-dir-stylesheet`, `base-dir-stylesheet-missing`,
+`stylesheet-docinfo-jail`, `stylesheet-docinfo-docdir`; прежний
+`base-dir-docinfo` проходил только потому, что `<head>` не сравнивался.
 
 Известные отличия, не входящие в PASS: умолчание safe-режима (намеренно,
 см. выше) и файл курсора диагностик в режиме server — CLI печатает полный
