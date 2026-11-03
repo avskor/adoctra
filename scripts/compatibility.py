@@ -514,18 +514,25 @@ def case_commands(case, binary):
         yield reference, actual
 
 
-def ruby_environment():
+# The Ruby script these references run (scripts/asciidoctor-reference.rb in
+# its body mode: the `--semantics`/`--structure` modes, which load the other
+# asciidoctor-*.rb scripts, are never used here).
+REFERENCE_SCRIPTS = ("asciidoctor-reference.rb",)
+
+
+def ruby_environment(scripts=REFERENCE_SCRIPTS):
     """A fingerprint of everything outside the case that shapes Ruby's
     output: the Ruby build, every installed gem version (Asciidoctor, Rouge,
-    ...) and the reference scripts."""
+    ...) and the reference scripts the run loads (only those: a change to
+    another harness's script keeps these references verified)."""
     result = subprocess.run(
         ["ruby", "-e", "puts RUBY_DESCRIPTION; puts Gem::Specification.map(&:full_name).sort"],
         capture_output=True, timeout=60)
     if result.returncode:
         raise RuntimeError(f"ruby: {result.stderr.decode('utf-8', 'replace').strip()}")
     digest = hashlib.sha256(result.stdout)
-    for script in sorted((ROOT / "scripts").glob("asciidoctor-*.rb")):
-        digest.update(script.name.encode("utf-8") + b"\0" + script.read_bytes() + b"\0")
+    for name in sorted(scripts):
+        digest.update(name.encode("utf-8") + b"\0" + (ROOT / "scripts" / name).read_bytes() + b"\0")
     return digest.hexdigest()
 
 

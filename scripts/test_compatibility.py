@@ -393,6 +393,32 @@ class ReferenceCacheTests(unittest.TestCase):
         *_, calls = self.verify({"anything"}, environment=None)
         self.assertIn("ruby", calls)
 
+    def test_the_environment_covers_only_the_scripts_the_reference_loads(self):
+        import compatibility
+        # The body mode loads no other script: the reference script requires
+        # its helpers only in the modes this harness never passes.
+        script = (compatibility.ROOT / "scripts/asciidoctor-reference.rb").read_text(encoding="utf-8")
+        guarded = {"asciidoctor-semantics": "if semantics", "asciidoctor-structure": "if structure"}
+        lines = script.split("\n")
+        for index, line in enumerate(lines):
+            if "require_relative" in line:
+                name = line.split("'")[1]
+                self.assertIn(name, guarded, line)
+                self.assertEqual(lines[index - 1].strip(), guarded[name])
+        with compatibility.case_commands(self.CASE, Path("adoctra")) as (reference, _):
+            pass
+        self.assertFalse({"--semantics", "--structure"} & set(reference))
+        self.assertIn(str(compatibility.ROOT / "scripts" / compatibility.REFERENCE_SCRIPTS[0]), reference)
+        with patch.object(compatibility, "ROOT", self.root):
+            (self.root / "scripts").mkdir()
+            for name in ("asciidoctor-reference.rb", "asciidoctor-structure.rb"):
+                (self.root / "scripts" / name).write_text("a", encoding="utf-8")
+            before = compatibility.ruby_environment()
+            (self.root / "scripts/asciidoctor-structure.rb").write_text("b", encoding="utf-8")
+            self.assertEqual(compatibility.ruby_environment(), before)
+            (self.root / "scripts/asciidoctor-reference.rb").write_text("b", encoding="utf-8")
+            self.assertNotEqual(compatibility.ruby_environment(), before)
+
     def test_the_key_ignores_the_temporary_include_root_only(self):
         case = {**self.CASE, "resources": {"a.adoc": "x"}}
         key = lambda command, reference="r": verification_key("env", case, command, reference)

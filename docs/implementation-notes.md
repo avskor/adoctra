@@ -2094,6 +2094,16 @@ reference) make any restored cache safe. rouge_listings.py `--verify-reference`
 gained the same cache (`rouge-listings.json`, partial runs keep other keys).
 Weekly schedule and `workflow_dispatch` pass `--no-reference-cache`
 (`REFERENCE_CACHE_FLAG`).
+**CI split and narrower fingerprint** (2026-11-03): the CI runs four
+parallel jobs — `rust` (fmt, clippy, tests, WASM), `offline` (harness unit
+tests, smoke runs, offline corpora), `ruby-corpus` (compatibility.py
+`--verify-reference`, the longest) and `ruby` (Rouge generation, audits,
+CLI matrix, URI cache, acceptance and Rouge listing references); each Ruby
+job caches its own key file (`reference-cache-<name>-…`). The Ruby
+environment fingerprint now covers only `REFERENCE_SCRIPTS`
+(asciidoctor-reference.rb in body mode, which loads no other script):
+before, a change to asciidoctor-structure.rb invalidated all 4883 corpus
+keys and the step re-ran Ruby for ~20 minutes.
 **Minimal corpus diagnostics** (2026-11-03): compatibility.py compares every
 case's diagnostics as a second check (`compare_diagnostics`, `result
 ["diagnostics"]`): Ruby's `--diagnostic-positions` report stored in

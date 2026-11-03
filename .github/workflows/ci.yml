@@ -9,11 +9,12 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+# Four independent jobs run in parallel: the Rust checks, the offline
+# harnesses, the Ruby references of the minimal corpus (the longest: every
+# case not yet verified runs Ruby) and the other Ruby comparisons.
 jobs:
-  test:
+  rust:
     runs-on: ubuntu-latest
-    env:
-      REFERENCE_CACHE_FLAG: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '--no-reference-cache' || '' }}
     steps:
       - uses: actions/checkout@v4
       - name: Rust toolchain
@@ -28,6 +29,13 @@ jobs:
         run: rustup target add wasm32-unknown-unknown
       - name: Check WASM bindings
         run: cargo check --locked -p adoctra-wasm --target wasm32-unknown-unknown
+
+  offline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rust toolchain
+        run: rustup show
       - name: Build CLI
         run: cargo build -p adoctra-cli
       - name: Test compatibility harness
@@ -55,22 +63,62 @@ jobs:
         run: python3 scripts/acceptance.py --manifest compatibility/acceptance/positions.json --json-report target/positions-report.json
       - name: Offline Rouge highlighting of real documents
         run: python3 scripts/rouge_listings.py --json-report target/rouge-listings-report.json
+
+  ruby-corpus:
+    runs-on: ubuntu-latest
+    env:
+      REFERENCE_CACHE_FLAG: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '--no-reference-cache' || '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rust toolchain
+        run: rustup show
+      - name: Build CLI
+        run: cargo build -p adoctra-cli
       - name: Install pinned Ruby reference
         run: gem install --user-install asciidoctor --version "$(cat compatibility/asciidoctor-version)" --no-document
       - name: Install pinned URI cache reference
         run: gem install --user-install open-uri-cached --version "$(cat compatibility/open-uri-cached-version)" --no-document
-      # Keys of references already verified with Ruby (scripts/compatibility.py,
-      # scripts/rouge_listings.py). Each key covers the Ruby environment, the
-      # case's inputs and its stored reference, so any earlier cache is safe
-      # to restore: entries that no longer match simply run Ruby again.
+      - name: Install pinned Rouge reference
+        run: gem install --user-install rouge --version "$(cat compatibility/rouge-version)" --no-document
+      # Keys of references already verified with Ruby. Each key covers the
+      # Ruby environment, the case's inputs and its stored reference, so any
+      # earlier cache is safe to restore: entries that no longer match simply
+      # run Ruby again.
       - name: Restore verified Ruby references
         uses: actions/cache@v4
         with:
-          path: target/reference-cache
-          key: reference-cache-${{ runner.os }}-${{ github.run_id }}
-          restore-keys: reference-cache-${{ runner.os }}-
+          path: target/reference-cache/compatibility.json
+          key: reference-cache-compatibility-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: reference-cache-compatibility-${{ runner.os }}-
+      - name: Verify reference fixtures and compatibility
+        run: python3 scripts/compatibility.py --verify-reference $REFERENCE_CACHE_FLAG
+
+  ruby:
+    runs-on: ubuntu-latest
+    env:
+      REFERENCE_CACHE_FLAG: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '--no-reference-cache' || '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rust toolchain
+        run: rustup show
+      - name: Build CLI
+        run: cargo build -p adoctra-cli
+      - name: Install pinned Ruby reference
+        run: gem install --user-install asciidoctor --version "$(cat compatibility/asciidoctor-version)" --no-document
+      - name: Install pinned URI cache reference
+        run: gem install --user-install open-uri-cached --version "$(cat compatibility/open-uri-cached-version)" --no-document
       - name: Install pinned Rouge reference
         run: gem install --user-install rouge --version "$(cat compatibility/rouge-version)" --no-document
+      # Keys of references already verified with Ruby. Each key covers the
+      # Ruby environment, the case's inputs and its stored reference, so any
+      # earlier cache is safe to restore: entries that no longer match simply
+      # run Ruby again.
+      - name: Restore verified Ruby references
+        uses: actions/cache@v4
+        with:
+          path: target/reference-cache/rouge-listings.json
+          key: reference-cache-rouge-listings-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: reference-cache-rouge-listings-${{ runner.os }}-
       - name: Verify generated Rouge tables, lexers and conformance corpora
         run: |
           ruby --version
@@ -92,8 +140,6 @@ jobs:
         run: ruby scripts/test_asciidoctor_semantics.rb
       - name: Test diagnostic position reference
         run: ruby scripts/test_asciidoctor_positions.rb
-      - name: Verify reference fixtures and compatibility
-        run: python3 scripts/compatibility.py --verify-reference $REFERENCE_CACHE_FLAG
       - name: Verify acceptance references and diagnostics
         run: python3 scripts/acceptance.py --verify-reference
       - name: Verify document structure references
