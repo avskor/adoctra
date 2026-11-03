@@ -872,9 +872,14 @@ pub(crate) fn write_back(nodes: Vec<Inline>, mut text: Text, fold_newlines: bool
                 }
                 if !pieces.is_empty() && pieces.iter().all(|f| !f.raw) {
                     let end = pieces.iter().map(|f| f.span.end).max().unwrap();
+                    // A macro that ends inside this node consumed its start
+                    // (e.g. the `]` after a reference in the macro's text):
+                    // the rest starts at its first remaining fragment.
+                    let start = pieces.iter().map(|f| f.span.start).min().unwrap();
                     result.push(Inline::Text {
                         value: pieces.into_iter().map(|f| f.text).collect(),
                         span: Span {
+                            start: original_span.start.max(start),
                             end: original_span.end.max(end),
                             ..*original_span
                         },

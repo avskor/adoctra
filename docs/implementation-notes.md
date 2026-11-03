@@ -372,6 +372,10 @@ Text/Raw/resolved AttributeRef nodes after replacements. Generated content start
 in source text uses Inline::Substituted { value, parts, span }; parts retain neutral
 boundaries, and JSON/WASM use name:"substituted". Attribute-owned results stay in
 AttributeRef; consumed references remain empty with their original spans/tokens.
+(2026-11-03) When a macro ends inside a later text node (its `]` after a
+consumed reference: `footnote:[n {x}] z`), `substitution_text::write_back`
+starts that node's rest at its first remaining fragment, so it no longer
+overlaps the macro (tests/post_macros.rs, WASM).
 Source-owned results cover consumed constructs, including source provenance across
 includes. Definitions/snapshots do not change. Direct links now use this same late
 matcher, including target/parameter substitutions, escapes and formatted labels.
@@ -2048,6 +2052,11 @@ with `render_with_start`), fixes highlighted pass slots and splits the HTML
 into Raw tags and decoded Text, so later stages see Ruby's string; marks
 return as Callout parts. Without the hook it is Ruby's `sub_source`. The CLI
 passes the hook in embedded mode too; `golden/rouge/` parses with it.
+**Matrix recheck** (2026-11-03): every "ahead"/"partial" entry of the initial
+matrix in compatibility.adoc was rechecked against Ruby; 54 probes became
+`matrix-*` cases of compatibility/cases.json (body-dom-v1; diagnostics were
+compared once by hand), standalone header metadata and include safe modes
+(8 combinations) were compared by hand; the only finding was the span above.
 **Rouge blank edge lines** (2026-11-03): Ruby's `Block#content` trims blank
 edge lines only *after* substitution, so Rouge sees the untrimmed body: a
 line number table counts (and shows) leading/trailing blank lines, a

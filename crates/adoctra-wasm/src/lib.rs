@@ -2313,6 +2313,23 @@ mod tests {
     }
 
     #[test]
+    fn text_after_a_macro_with_a_reference_starts_after_the_macro() {
+        // The editor's spans after `footnote:[n {x}]`: the consumed reference
+        // keeps its own span, the following text starts after the `]`.
+        let source = ":x: XYZ\n\na footnote:[n {x}] z";
+        let json = parse_json(source);
+        let start = source.find("footnote").unwrap();
+        let end = source.find("] z").unwrap() + 1;
+        let footnote = format!("\"span\":{{\"source_id\":0,\"start\":{start},\"end\":{end}}}");
+        assert!(json.contains(&footnote), "got: {json}");
+        let text = format!(
+            "{{\"span\":{{\"source_id\":0,\"start\":{end},\"end\":{}}},\"name\":\"text\",\"value\":\" z\"}}",
+            source.len()
+        );
+        assert!(json.contains(&text), "got: {json}");
+    }
+
+    #[test]
     fn literal_style_on_open_is_exposed_as_literal() {
         let json = parse_json("[literal]\n--\nverbatim *x*\n--");
         assert!(json.contains("\"name\":\"literal\""), "got: {json}");

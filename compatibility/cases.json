@@ -37864,6 +37864,385 @@
       "profile": "include-body-dom-v1",
       "resources": {},
       "source": "----\ninclude::part.adoc[encoding=UTF-16LE]\n----\n"
+    },
+    {
+      "id": "matrix-hdr-title-markup",
+      "category": "header",
+      "expect": "pass",
+      "source": "= Doc *bold* {x} pass:q[_e_] +lit+ & <b> (C) --\n:x: val\n\nbody {doctitle}"
+    },
+    {
+      "id": "matrix-hdr-title-footnote",
+      "category": "header",
+      "expect": "pass",
+      "source": "= T footnote:[note] and <<s,ref>>\n\n[[s]]\n== S\n\n{doctitle}"
+    },
+    {
+      "id": "matrix-hdr-author-refs",
+      "category": "header",
+      "expect": "pass",
+      "source": "= T\nJane *Middle* Doe <jane@x.org>; Bob {x} Smith\nv1.0 *rev*, 2026-01-01: remark _with_ {x} & <b>\n:x: X\n\n{author} | {firstname} | {middlename} | {lastname} | {email} | {authorinitials} | {author_2} | {lastname_2} | {revnumber} | {revdate} | {revremark} | {authors}"
+    },
+    {
+      "id": "matrix-hdr-author-attr-entry",
+      "category": "header",
+      "expect": "pass",
+      "source": "= T\n:author: A {x} B\n:x: X\n:email: a@b.co\n\n{author} {firstname} {lastname} {email}"
+    },
+    {
+      "id": "matrix-hdr-description",
+      "category": "header",
+      "expect": "pass",
+      "source": "= T\n:description: d *b* {x} & <i>\n:keywords: a, b\n:x: X\n\n{description} {keywords}"
+    },
+    {
+      "id": "matrix-hdr-title-attr",
+      "category": "header",
+      "expect": "pass",
+      "source": "= Doc\n:title: Other *T*\n\n{doctitle} / {title}"
+    },
+    {
+      "id": "matrix-hdr-title-only-attr",
+      "category": "header",
+      "expect": "pass",
+      "source": ":title: Only *T*\n\npara {doctitle} {title}"
+    },
+    {
+      "id": "matrix-hdr-doctitle-override",
+      "category": "header",
+      "expect": "pass",
+      "source": "= Doc\n:doctitle: New _T_\n\n{doctitle}"
+    },
+    {
+      "id": "matrix-hdr-subtitle",
+      "category": "header",
+      "expect": "pass",
+      "source": "= Main: Sub *x*\n:x: y\n\n{doctitle}"
+    },
+    {
+      "id": "matrix-hdr-title-passthrough",
+      "category": "header",
+      "expect": "pass",
+      "source": "= +{x}+ pass:[<u>u</u>] `m`\n:x: y\n\n{doctitle}"
+    },
+    {
+      "id": "matrix-hdr-revremark-only",
+      "category": "header",
+      "expect": "pass",
+      "source": "= T\nv2.1, 2026: rem *x*\n\n{revremark} {revnumber}"
+    },
+    {
+      "id": "matrix-hdr-showtitle-xref",
+      "category": "header",
+      "expect": "pass",
+      "source": "= Doc <<a>>\n\n[[a]]\nPara."
+    },
+    {
+      "id": "matrix-sub-sequence-all",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "*a _b `c` #d#_* ^sup^ ~sub~ \"`q`\" '`s`' x's (C) (R) (TM) -- ... -> => <- <= {x} &amp; &#169; +pass *x*+ \\*esc* [.r]#role# `+{x}+` +\nnext\n:x: X",
+      "attributes": {
+        "x": "X"
+      }
+    },
+    {
+      "id": "matrix-sub-constrained-edges",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "a*b*c **u**n *a* b_c_d __e__f `a`b ``c``d #m#x ##n##y\n\n*a\nb*\n\n_*nested*_ *_n2_*"
+    },
+    {
+      "id": "matrix-sub-custom-orders",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "[subs=\"macros,quotes\"]\n*https://x.org[l]* _a_\n\n[subs=\"quotes,macros\"]\n*https://x.org[l]* _a_\n\n[subs=\"-replacements\"]\n(C) *b*\n\n[subs=\"+post_replacements\"]\nbreak +\nline\n\n[subs=\"normal\"]\n{x} *n*\n\n[subs=\"none\"]\n*n* {x}\n\n[subs=\"attributes+\"]\n{x} *a*\n\n[subs=\"specialchars,quotes\"]\n<b>b</b> *x*",
+      "attributes": {
+        "x": "X"
+      }
+    },
+    {
+      "id": "matrix-sub-hardbreaks",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "[%hardbreaks]\na\nb\n\n:hardbreaks-option:\n\nc\nd"
+    },
+    {
+      "id": "matrix-sub-attribute-missing",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "{nope} a\n\n:attribute-missing: warn\n\n{nope2} b\n\n:attribute-missing: drop-line\n\n{nope3} c\nkept"
+    },
+    {
+      "id": "matrix-sub-escapes",
+      "category": "substitutions",
+      "expect": "pass",
+      "source": "\\{x} \\*b* \\_e_ \\`m` \\#h# \\^s^ \\~t~ \\(C) \\-- \\<<a>> \\link:x[] \\https://x.org \\footnote:[n] \\kbd:[a] \\image:a.png[] \\[[id]]",
+      "attributes": {
+        "x": "X",
+        "experimental": ""
+      }
+    },
+    {
+      "id": "matrix-mac-links",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "https://x.org https://x.org[t] <https://y.org> link:p.html[T,window=_blank] link:++a b.html++[q] mailto:a@b.co[Mail,Subj,Body] a@b.co irc://irc.x.org[irc] https://x.org[t^] link:x[t,role=r,id=i,title=tt] (https://p.org) https://x.org/a_b_c *https://b.org*"
+    },
+    {
+      "id": "matrix-mac-link-attrs",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "link:x[\"a, b\",role=r] https://x.org[*bold* _t_] link:x[] https://x.org[] link:x[t,opts=nofollow] link:x[t,window=w,opts=noopener]",
+      "attributes": {
+        "linkattrs": ""
+      }
+    },
+    {
+      "id": "matrix-mac-xref",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "[[a]]Anchor text.\n\n[#b,reftext=Bee]\n== B\n\n<<a>> <<a,txt>> <<b>> xref:b[] xref:b[X *y*] <<doc.adoc#c,D>> xref:doc.adoc[] <<missing>> anchor:z[Zed] <<z>> [[q,Q text]]q <<q>>"
+    },
+    {
+      "id": "matrix-mac-footnotes",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "a footnote:[one *b*] b footnote:id[two] c footnote:id[] d footnoteref:[r,three] e footnoteref:[r] f footnote:[x\\] y]"
+    },
+    {
+      "id": "matrix-mac-index",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "((visible)) (((hidden,sec,ter))) indexterm:[a,b] indexterm2:[vis] ((*fmt*)) (((x, see=y)))"
+    },
+    {
+      "id": "matrix-mac-ui",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "kbd:[Ctrl+C] kbd:[Ctrl,+] btn:[OK] menu:File[Save] menu:A[B>C] \"File > Open\"",
+      "attributes": {
+        "experimental": ""
+      }
+    },
+    {
+      "id": "matrix-mac-image-icon",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "image:a.png[Alt,10,20,title=T,link=https://x.org,role=r,float=left] icon:heart[2x] icon:x[title=t,link=y] image:b.svg[]"
+    },
+    {
+      "id": "matrix-mac-icon-font",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "icon:heart[2x,flip=vertical] icon:x[]",
+      "attributes": {
+        "icons": "font"
+      }
+    },
+    {
+      "id": "matrix-mac-stem",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "stem:[sqrt(4)] latexmath:[\\alpha] asciimath:[x^2] stem:[a\\]b]",
+      "attributes": {
+        "stem": ""
+      }
+    },
+    {
+      "id": "matrix-mac-pass",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "pass:[<u>u</u>] pass:q[*b* <i>i</i>] pass:c,q[<x> *y*] +++<s>s</s>+++ ++a *b*++ $$c$$ pass:a[{x}]",
+      "attributes": {
+        "x": "X"
+      }
+    },
+    {
+      "id": "matrix-mac-pass-compat",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "$$c *d*$$ +x *y*+ `z`",
+      "attributes": {
+        "compat-mode": ""
+      }
+    },
+    {
+      "id": "matrix-mac-bibliography",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "[bibliography]\n* [[[b1]]] Book.\n* [[[b2,Two]]] Other.\n\nSee <<b1>> and <<b2>>."
+    },
+    {
+      "id": "matrix-mac-anchor-forms",
+      "category": "inlines",
+      "expect": "pass",
+      "source": "[[a1]]x [[a2, Label]]y anchor:a3[L3] [#a4]#z# <<a1>> <<a2>> <<a3>> <<a4>>"
+    },
+    {
+      "id": "matrix-mac-in-title",
+      "category": "inlines",
+      "expect": "pass",
+      "source": ".Title https://x.org[l] footnote:[t] kbd:[A]\n----\nx\n----",
+      "attributes": {
+        "experimental": ""
+      }
+    },
+    {
+      "id": "matrix-pre-ifeval-counter",
+      "category": "preprocessing",
+      "expect": "pass",
+      "source": "ifeval::[{counter:n} == 1]\nfirst {n}\nendif::[]\nifeval::[{counter:n} == 2]\nsecond {n}\nendif::[]\n{n}"
+    },
+    {
+      "id": "matrix-pre-ifeval-set",
+      "category": "preprocessing",
+      "expect": "pass",
+      "source": "ifeval::[\"{set:s:v}\" == \"\"]\nset {s}\nendif::[]\nifdef::s[]\ns defined\nendif::[]"
+    },
+    {
+      "id": "matrix-pre-include-counter",
+      "category": "preprocessing",
+      "expect": "pass",
+      "source": "include::{counter:i}.adoc[]\n\ninclude::{counter:i}.adoc[]",
+      "profile": "include-body-dom-v1",
+      "resources": {
+        "1.adoc": "one {i}",
+        "2.adoc": "two {i}"
+      }
+    },
+    {
+      "id": "matrix-pre-include-set-list",
+      "category": "preprocessing",
+      "expect": "pass",
+      "source": "include::a.adoc[lines={set:l:1}]\n\n{l}",
+      "profile": "include-body-dom-v1",
+      "resources": {
+        "a.adoc": "L1\nL2"
+      }
+    },
+    {
+      "id": "matrix-pre-include-missing-counter",
+      "category": "preprocessing",
+      "expect": "pass",
+      "source": "include::{counter:m}-{nope}.adoc[]\n\n{m}",
+      "profile": "include-body-dom-v1",
+      "resources": {
+        "x.adoc": "x"
+      }
+    },
+    {
+      "id": "matrix-para-forms",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "[.lead]\nLead *p*.\n\n [indented literal\n  second\n\n[normal]\n  normal indented\n\n.Title\nTitled para.\n\nline +\nbreak\n\n[%hardbreaks.r#pid]\na\nb\n\nNOTE: adm *x*\n\n[TIP]\ntip para"
+    },
+    {
+      "id": "matrix-para-comments",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "a\n// comment\nb\n\n////\nblock\n////\nc\n\n[comment]\nhidden\n\nd"
+    },
+    {
+      "id": "matrix-attr-forms",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":a: one\n:b: {a} two\n:c!:\n:!d:\n:e: multi \\\nline \\\nvalue\n:f: hard + \\\nbreak\n:a: changed\n:Mixed-Case: m\n\n{a} {b} {e} {f} {mixed-case} {c} {d}\n\n:a: body\n\n{a}\n\n:a!:\n\n{a}"
+    },
+    {
+      "id": "matrix-attr-soft-host",
+      "category": "attributes",
+      "expect": "pass",
+      "source": ":a: doc\n:b: doc\n\n{a} {b} {c}",
+      "attributes": {
+        "a": "host",
+        "b@": "soft",
+        "c": "c"
+      }
+    },
+    {
+      "id": "matrix-attr-in-list",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "* item\n+\n:x: set-in-list\n\n{x}\n\n* {x}"
+    },
+    {
+      "id": "matrix-attr-counters",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "{counter:n} {counter:n} {n} {counter2:m} {m} {counter:l:A} {counter:l} {counter:z:9}"
+    },
+    {
+      "id": "matrix-attr-intrinsics",
+      "category": "attributes",
+      "expect": "pass",
+      "source": "{empty}|{sp}|{nbsp}|{zwsp}|{wj}|{apos}|{quot}|{lsquo}|{rsquo}|{ldquo}|{rdquo}|{deg}|{plus}|{brvbar}|{vbar}|{amp}|{lt}|{gt}|{startsb}|{endsb}|{caret}|{asterisk}|{tilde}|{backslash}|{backtick}|{two-colons}|{two-semicolons}|{cpp}|{pp}"
+    },
+    {
+      "id": "matrix-sec-forms",
+      "category": "sections",
+      "expect": "pass",
+      "source": ":sectnums:\n:sectnumlevels: 2\n:idprefix: p_\n:idseparator: -\n\n== One Two\n\n=== Sub *x*\n\n==== Deep\n\n[discrete]\n== Discrete\n\n[#custom,reftext=CR]\n== Custom\n\n== One Two\n\n[appendix]\n== App\n\n=== App sub\n\n:sectnums!:\n\n== Unnumbered\n\n<<custom>> <<p_one-two>> <<p_one-two-2>>"
+    },
+    {
+      "id": "matrix-sec-book",
+      "category": "sections",
+      "expect": "pass",
+      "source": "= Book\n:doctype: book\n:sectnums:\n:partnums:\n\n= Part I\n\nintro\n\n== Ch 1\n\n=== S\n\n[preface]\n== Pre\n\n[glossary]\n== Gloss\n\n[appendix]\n== A\n\n[index]\n== Index"
+    },
+    {
+      "id": "matrix-sec-levels",
+      "category": "sections",
+      "expect": "pass",
+      "source": "== A\n\n==== Skip\n\n= Level0\n\n== B\n\n## MD\n\n### MD3\n\nSetext\n------\n"
+    },
+    {
+      "id": "matrix-sec-ids-unicode",
+      "category": "sections",
+      "expect": "pass",
+      "source": ":idprefix:\n\n== \u041f\u0440\u0438\u0432\u0435\u0442 \u043c\u0438\u0440\n\n== 1 Number &amp; <b>x</b>\n\n== `code` *b* _e_\n\n== \u00dcn\u00efc\u00f6d\u00e9 \u2014 dash\n\n<<_\u043f\u0440\u0438\u0432\u0435\u0442_\u043c\u0438\u0440>>"
+    },
+    {
+      "id": "matrix-verb-forms",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "[source,ruby,indent=2]\n----\n    deep\n  less\n----\n\n[literal]\n....\n\ttab\n....\n\n```js\nx\n```\n\n[listing,tabsize=4]\n----\na\tb\n----\n\n....\n  lit *x*\n....\n\n[source%linenums,python,start=3]\n----\nprint(1)\n----\n\n----\ntrail   \n----",
+      "attributes": {
+        "source-language": "text"
+      }
+    },
+    {
+      "id": "matrix-verb-masquerade",
+      "category": "blocks",
+      "expect": "pass",
+      "source": "[source]\n....\nlit as source\n....\n\n[literal]\n----\nlisting as literal\n----\n\n[listing]\n--\nopen as listing\n--\n\n[source,sh]\n$ paragraph source\n\n[subs=+quotes]\n----\n*b*\n----"
+    },
+    {
+      "id": "matrix-ref-meta",
+      "category": "references",
+      "expect": "pass",
+      "source": "[[a,Ref, with comma]]\n.Title {x}\n[#b.r1.r2%opt,title=\"T2\",reftext=\"R *2*\"]\nPara.\n\n<<a>> <<b>> <<b,X>> xref:b[] <<a,>>\n\n[[c]]\n.Block title\n====\nex\n====\n\n<<c>>",
+      "attributes": {
+        "x": "X"
+      }
+    },
+    {
+      "id": "matrix-ref-natural",
+      "category": "references",
+      "expect": "pass",
+      "source": "== Section One\n\n<<Section One>> <<Section One,txt>> xref:Section One[]"
+    },
+    {
+      "id": "matrix-ref-xrefstyle",
+      "category": "references",
+      "expect": "pass",
+      "source": ":xrefstyle: full\n:sectnums:\n\n[#s]\n== Sec\n\n.Cap\n[#e]\n====\nx\n====\n\n.Tab\n[#t]\n|===\n|a\n|===\n\n<<s>> <<e>> <<t>> <<s,xrefstyle=short>> xref:e[xrefstyle=basic]"
+    },
+    {
+      "id": "matrix-cap-forms",
+      "category": "captions",
+      "expect": "pass",
+      "source": ".E1\n====\na\n====\n\n:example-caption: \u041f\u0440\u0438\u043c\u0435\u0440\n\n.E2\n====\nb\n====\n\n[caption=\"Custom: \"]\n.E3\n====\nc\n====\n\n:example-caption!:\n\n.E4\n====\nd\n====\n\n.Fig\nimage::a.png[]\n\n:figure-caption!:\n\n.Fig2\nimage::b.png[]\n\n.Tab\n|===\n|x\n|===\n\n:listing-caption: Listing\n\n.L\n----\nl\n----"
     }
   ]
 }

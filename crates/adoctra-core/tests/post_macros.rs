@@ -250,3 +250,52 @@ fn plain_email_and_borrowed_section_titles_use_neutral_semantics() {
     assert!(matches!(&children[0], Inline::Substituted { parts, .. }
         if parts.iter().all(|p| !matches!(p, P::OpenLink(_) | P::CloseLink))));
 }
+
+#[test]
+fn text_after_a_macro_with_a_consumed_reference_starts_after_the_macro() {
+    // A macro whose text holds a reference ends inside the next text node
+    // (its `]`); that node's rest starts where the macro ends, not at the
+    // consumed reference, so no inline span overlaps the macro.
+    for (src, construct) in [
+        ("a footnote:[n {x}] (C) z", "footnote:[n {x}]"),
+        ("a kbd:[{x}] z", "kbd:[{x}]"),
+        ("a https://x.org[{x}] z", "https://x.org[{x}]"),
+        ("a image:i.png[{x}] z", "image:i.png[{x}]"),
+        ("[[s]]a <<s,{x}>> z", "<<s,{x}>>"),
+    ] {
+        let source = format!(":x: XYZ\n:experimental:\n\n{src}");
+        let nodes = paragraph(&source);
+        let start = source.find(construct).unwrap();
+        let end = start + construct.len();
+        let macro_node = nodes
+            .iter()
+            .find(|n| n.span() == adoctra_core::Span::new(start, end))
+            .unwrap_or_else(|| panic!("{src}: {nodes:?}"));
+        assert!(!matches!(macro_node, Inline::Text { .. }), "{src}");
+        // The consumed reference stays empty with its own span inside.
+        let reference = start + construct.find("{x}").unwrap();
+        assert!(nodes.iter().any(|n| matches!(n,
+            Inline::AttributeRef { value: Some(v), span, .. }
+                if v.is_empty() && *span == adoctra_core::Span::new(reference, reference + 3))));
+        let Some(Inline::Text { value, span }) = nodes.last() else {
+            panic!("{src}: {nodes:?}")
+        };
+        assert_eq!(span.start, end, "{src}: {nodes:?}");
+        assert_eq!(
+            &source[span.start..span.end],
+            &src[src.find(construct).unwrap() + construct.len()..]
+        );
+        assert!(value.ends_with(" z"), "{src}");
+        let mut previous_end = 0;
+        for node in nodes
+            .iter()
+            .filter(|n| !matches!(n, Inline::AttributeRef { .. }))
+        {
+            assert!(
+                node.span().start >= previous_end,
+                "{src}: overlap at {node:?}"
+            );
+            previous_end = node.span().end;
+        }
+    }
+}
