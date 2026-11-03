@@ -77,6 +77,9 @@ struct Resources<'a> {
     /// `normalize_system_path`.
     base_dir: Option<String>,
     safe: crate::SafeMode,
+    /// Ruby's primary `@path`: the basename of the `docfile` attribute the
+    /// reader's cursor starts from (trimmed to `docdir` from server mode up).
+    primary_path: Option<String>,
 }
 
 struct Origin {
@@ -294,6 +297,16 @@ impl<'a> Reader<'a> {
                 .filter(|dir| dir.starts_with('/'))
                 .map(str::to_owned),
             safe: options.safe,
+            primary_path: options.attributes.get("docfile").and_then(|file| {
+                let file = match (
+                    options.safe >= crate::SafeMode::Server,
+                    options.attributes.get("docdir"),
+                ) {
+                    (true, Some(dir)) => crate::context::server_docfile(file, dir)?,
+                    _ => file.to_owned(),
+                };
+                Some(file.rsplit('/').next().unwrap_or_default().to_owned())
+            }),
         });
         Ok(reader)
     }
@@ -936,8 +949,9 @@ impl<'a> Reader<'a> {
     /// Ruby's `replace_next_line %(Unresolved directive in #{@path} -
     /// include::#{target}[#{attrlist}])` for an include that cannot be read:
     /// a generated line with the directive as its origin. `@path` is the
-    /// primary document's file name (`<stdin>` without one) or an include's
-    /// path relative to the document directory.
+    /// basename of the primary document's `docfile` (`<stdin>` without one)
+    /// or an include's path relative to the base directory
+    /// (`relative_path inc_path, doc.base_dir`).
     fn unresolved_include(&mut self, target: &str, attrlist: &str, span: Span) -> bool {
         let current = self.inputs.last().expect("current input").source_id;
         let primary = self.inputs[0].source_id;
@@ -948,13 +962,17 @@ impl<'a> Reader<'a> {
                     .get(id)
                     .and_then(|source| resources.provider.document_path(source.name()))
             };
-            let document = document_path(primary);
             if current == primary {
-                document.map(|path| path.rsplit('/').next().unwrap_or_default().to_owned())
+                resources.primary_path.clone()
             } else {
-                match (document, document_path(current)) {
-                    (Some(document), Some(include)) => {
-                        Some(crate::xref_target::relative_path(&document, &include))
+                let base = resources
+                    .base_dir
+                    .as_ref()
+                    .map(|dir| format!("{}/_", dir.trim_end_matches('/')))
+                    .or_else(|| document_path(primary));
+                match (base, document_path(current)) {
+                    (Some(base), Some(include)) => {
+                        Some(crate::xref_target::relative_path(&base, &include))
                     }
                     _ => resources
                         .sources

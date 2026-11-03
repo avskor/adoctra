@@ -11,6 +11,9 @@ pub(crate) struct FileResources {
     /// Confine paths to the root (safe mode and above); unsafe mode reads
     /// any path, like Ruby without a jail.
     jail: bool,
+    /// The primary input, which Ruby reads by its path even outside the base
+    /// directory (`-B`); every other path stays confined to the root.
+    input: Option<PathBuf>,
     /// OpenURI caching is sticky once enabled. Keep it within the explicitly
     /// supplied provider; never share HTTP responses across host sessions.
     uri_cache: Mutex<Option<BTreeMap<String, BinaryResource>>>,
@@ -77,6 +80,8 @@ fn text(resource: BinaryResource) -> ResourceResult<Resource> {
 }
 
 impl FileResources {
+    /// An existing directory as the root (tests).
+    #[cfg(test)]
     pub fn new(root: impl AsRef<Path>) -> ResourceResult<Self> {
         let input = root.as_ref();
         let root = input
@@ -92,8 +97,27 @@ impl FileResources {
         Ok(Self {
             root,
             jail: true,
+            input: None,
             uri_cache: Mutex::new(None),
         })
+    }
+
+    /// Ruby's `base_dir` as the root: like `File.expand_path`, it need not
+    /// exist or be a directory (nothing then resolves under it). An existing
+    /// root is canonical, as reads compare canonical paths.
+    pub fn base_dir(root: &Path) -> Self {
+        Self {
+            root: root.canonicalize().unwrap_or_else(|_| root.to_path_buf()),
+            jail: true,
+            input: None,
+            uri_cache: Mutex::new(None),
+        }
+    }
+
+    /// Also allow the explicitly requested primary file (canonical path).
+    pub fn with_input(mut self, input: PathBuf) -> Self {
+        self.input = Some(input);
+        self
     }
 
     /// Read paths outside the root too (unsafe mode).
@@ -236,7 +260,7 @@ impl ResourceProvider for FileResources {
             .unwrap_or(&self.root);
         let path = self.root.join(parent).join(target);
         let path = path.canonicalize().map_err(|e| io_error(target, e))?;
-        if self.jail && !path.starts_with(&self.root) {
+        if self.jail && !path.starts_with(&self.root) && self.input.as_ref() != Some(&path) {
             return Err(ResourceError::new(
                 ResourceErrorKind::AccessDenied,
                 target,
@@ -268,7 +292,11 @@ impl ResourceProvider for FileResources {
 
 fn io_error(target: &str, error: std::io::Error) -> ResourceError {
     let kind = match error.kind() {
-        std::io::ErrorKind::NotFound => ResourceErrorKind::NotFound,
+        // A path through a file (`-B` naming a file) does not exist either,
+        // as Ruby's `File.file?` sees it.
+        std::io::ErrorKind::NotFound | std::io::ErrorKind::NotADirectory => {
+            ResourceErrorKind::NotFound
+        }
         std::io::ErrorKind::PermissionDenied => ResourceErrorKind::AccessDenied,
         _ => ResourceErrorKind::Io,
     };
@@ -842,5 +870,60 @@ mod tests {
                 .kind,
             ResourceErrorKind::AccessDenied
         );
+    }
+
+    #[test]
+    fn a_base_dir_root_need_not_exist_and_admits_only_the_named_input_outside_it() {
+        let tree = Tree::new();
+        std::fs::write(tree.0.join("main.adoc"), "main").unwrap();
+        std::fs::write(tree.0.join("other.adoc"), "other").unwrap();
+        std::fs::write(tree.0.join("docs/inside.adoc"), "inside").unwrap();
+        let input = tree.0.join("main.adoc").canonicalize().unwrap();
+        fn request(target: &str) -> ResourceRequest<'_> {
+            ResourceRequest {
+                target,
+                referrer: None,
+            }
+        }
+        // `-B docs` while the input lies beside it (Ruby reads it by path).
+        let provider = FileResources::base_dir(&tree.0.join("docs")).with_input(input.clone());
+        let main = provider.load(request(input.to_str().unwrap())).unwrap();
+        assert_eq!(main.text, "main");
+        assert_eq!(
+            provider.load(request("inside.adoc")).unwrap().text,
+            "inside"
+        );
+        let other = tree.0.join("other.adoc");
+        assert_eq!(
+            provider
+                .load(request(other.to_str().unwrap()))
+                .unwrap_err()
+                .kind,
+            ResourceErrorKind::AccessDenied
+        );
+        assert_eq!(
+            provider
+                .unjailed()
+                .load(request(other.to_str().unwrap()))
+                .unwrap()
+                .text,
+            "other"
+        );
+        // A missing root resolves nothing under it, and a root that is a
+        // file reports a path through it as missing (Ruby's `File.file?`).
+        for root in [tree.0.join("nope"), tree.0.join("other.adoc")] {
+            let provider = FileResources::base_dir(&root).with_input(input.clone());
+            assert_eq!(
+                provider
+                    .load(request(input.to_str().unwrap()))
+                    .unwrap()
+                    .text,
+                "main"
+            );
+            assert_eq!(
+                provider.load(request("x.adoc")).unwrap_err().kind,
+                ResourceErrorKind::NotFound
+            );
+        }
     }
 }

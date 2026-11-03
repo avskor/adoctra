@@ -453,14 +453,14 @@ fn convert(args: &Args) -> Result<(), Failure> {
         .filter(|dir| !dir.as_os_str().is_empty())
         .unwrap_or(Path::new("."))
         .to_path_buf();
-    std::fs::create_dir_all(&outdir)?;
+    mkdir_p(&outdir)?;
     // Ruby's Document#write writes the converted string as it is (only a
     // stream gets `output.chomp` and a LF).
     let mut bytes = bytes;
     if args.format == "html" && bytes.last() == Some(&b'\n') {
         bytes.pop();
     }
-    std::fs::write(&outfile, &bytes)?;
+    write_file(Path::new(&outfile), &bytes)?;
     timings();
     if args.format == "html" && args.safe < adoctra::SafeMode::Secure {
         let highlighter = HIGHLIGHTER_STYLESHEET.with(|cell| cell.borrow_mut().take());
@@ -722,11 +722,11 @@ fn copy_stylesheet(
     }
     let jail = (cx.safe >= adoctra::SafeMode::Safe).then_some(cx.outdir);
     let stylesoutdir = cx.normalize(stylesdir.unwrap_or(""), Some(cx.outdir), jail);
-    std::fs::create_dir_all(&stylesoutdir)?;
+    mkdir_p(Path::new(&stylesoutdir))?;
     if copy_default {
-        std::fs::write(
-            Path::new(&stylesoutdir).join(adoctra::html::DEFAULT_STYLESHEET_NAME),
-            adoctra::html::STYLESHEET,
+        write_file(
+            &Path::new(&stylesoutdir).join(adoctra::html::DEFAULT_STYLESHEET_NAME),
+            adoctra::html::STYLESHEET.as_bytes(),
         )?;
     } else if let Some(stylesheet) = stylesheet.filter(|_| copy_user) {
         let source = match attributes.get("copycss") {
@@ -738,9 +738,9 @@ fn copy_stylesheet(
             match std::fs::read(&source) {
                 Ok(data) => {
                     if let Some(dir) = Path::new(&dest).parent() {
-                        std::fs::create_dir_all(dir)?;
+                        mkdir_p(dir)?;
                     }
-                    std::fs::write(&dest, data)?;
+                    write_file(Path::new(&dest), &data)?;
                 }
                 // Like Ruby, an existing copy silences the warning.
                 Err(_) if Path::new(&dest).is_file() => {}
@@ -752,9 +752,45 @@ fn copy_stylesheet(
         }
     }
     if let Some((name, css)) = highlighter {
-        std::fs::write(Path::new(&stylesoutdir).join(name), css)?;
+        write_file(&Path::new(&stylesoutdir).join(name), css.as_bytes())?;
     }
     Ok(())
+}
+
+/// Ruby's `SystemCallError` text for a failed call on `path`:
+/// `<strerror> @ <function> - <path>` (e.g. `Is a directory @ rb_sysopen`).
+fn system_call_error(error: &std::io::Error, function: &str, path: &Path) -> Failure {
+    let text = error.to_string();
+    let text = match text.rfind(" (os error ") {
+        Some(index) if text.ends_with(')') => text[..index].to_owned(),
+        _ => text,
+    };
+    Failure::Message(format!("{text} @ {function} - {}", path.display()))
+}
+
+/// Ruby's `Helpers.mkdir_p`: create missing ancestors first; `Dir.mkdir`
+/// fails (`dir_s_mkdir`) on the first path that exists but is not a
+/// directory.
+fn mkdir_p(dir: &Path) -> Result<(), Failure> {
+    if dir.is_dir() {
+        return Ok(());
+    }
+    if let Some(parent) = dir
+        .parent()
+        .filter(|p| !p.as_os_str().is_empty() && *p != Path::new("."))
+    {
+        mkdir_p(parent)?;
+    }
+    match std::fs::create_dir(dir) {
+        Err(_) if dir.is_dir() => Ok(()),
+        Err(error) => Err(system_call_error(&error, "dir_s_mkdir", dir)),
+        Ok(()) => Ok(()),
+    }
+}
+
+/// Ruby's `File.write` (`rb_sysopen` names a failure to open the file).
+fn write_file(path: &Path, bytes: &[u8]) -> Result<(), Failure> {
+    std::fs::write(path, bytes).map_err(|error| system_call_error(&error, "rb_sysopen", path))
 }
 
 /// Ruby's `base_dir` for standard input (Document#initialize): `-B`
@@ -834,33 +870,33 @@ fn load_source(
         let base_dir = stdin_base_dir(args.base_dir.as_deref(), attributes)?;
         // Like Ruby, relative paths resolve against the base directory; a
         // missing one simply finds nothing.
-        let provider = resources::FileResources::new(&base_dir).ok().map(jail);
-        Ok((sources.add("-", s), provider.map(Arc::new)))
+        let provider = jail(resources::FileResources::base_dir(&base_dir));
+        Ok((sources.add("-", s), Some(Arc::new(provider))))
     } else {
-        // The explicitly requested primary file establishes the resource
-        // root, or `-B` does when it contains the file.
+        // Ruby reads the requested file by its path; `-B` (which need not
+        // exist) is the root and jail of everything else, else the file's
+        // directory.
         let path = std::fs::canonicalize(&args.input).map_err(adoctra::Error::from)?;
-        let parent = path.parent().ok_or_else(|| {
-            std::io::Error::new(
-                std::io::ErrorKind::InvalidInput,
-                "input has no parent directory",
-            )
-        })?;
         let root = match &args.base_dir {
-            Some(dir) => std::fs::canonicalize(dir).map_err(adoctra::Error::from)?,
-            None => parent.to_path_buf(),
+            Some(dir) => expand_path(dir).map_err(adoctra::Error::from)?,
+            None => path.parent().map(Path::to_path_buf).ok_or_else(|| {
+                adoctra::Error::from(std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    "input has no parent directory",
+                ))
+            })?,
         };
         let name = path
-            .strip_prefix(&root)
-            .ok()
-            .and_then(|name| name.to_str())
+            .to_str()
             .ok_or_else(|| {
-                std::io::Error::new(
+                adoctra::Error::from(std::io::Error::new(
                     std::io::ErrorKind::InvalidInput,
-                    "input is outside the base directory or its name is not UTF-8",
-                )
-            })?;
-        let provider = jail(resources::FileResources::new(&root)?);
+                    "input name is not UTF-8",
+                ))
+            })?
+            .to_owned();
+        let provider = jail(resources::FileResources::base_dir(&root).with_input(path.clone()));
+        let name = name.as_str();
         let id = match sources.load_document(name, None, &provider) {
             Err(error) if error.kind == adoctra::ResourceErrorKind::InvalidEncoding => {
                 let docfile = expand_path(Path::new(&args.input)).map_err(adoctra::Error::from)?;

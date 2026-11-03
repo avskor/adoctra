@@ -88,9 +88,10 @@ Asciidoctor PDF, Antora); все наблюдения `match` или явно
 |CLI и диагностики
 |Полный набор опций, умолчаний, кодов завершения и файловых эффектов не
 сопоставлен; safe-умолчания намеренно отличаются. Матрица CLI
-(link:cli.adoc[`cli-v1`], 72 сценария: опции OptionParser, ошибки, справка,
+(link:cli.adoc[`cli-v1`], 156 сценариев: опции OptionParser, ошибки, справка,
 несколько входов и glob, `-R`, `--failure-level`/`-q`/`-v`/`-t`, `-B`) —
-71 PASS, 1 RUBY_ERROR (в том числе кодировка входа и docinfo). `-o /dev/null` только загружает документ, как Ruby
+155 PASS, 1 RUBY_ERROR (в том числе кодировка входа и docinfo, все режимы `-B`,
+сочетания `-o`/`-D`/`-R` и ошибки записи). `-o /dev/null` только загружает документ, как Ruby
 (диагностики чтения, без конвертации, записи и jail). Файловый вывод (`-D`,
 `-o`, имя `<docname><outfilesuffix>`, jail выходного пути с safe mode,
 `outfile`/`outdir`, ошибки Ruby, `copycss`) сравнивается в upstream-аудите
@@ -415,8 +416,8 @@ Safe mode, URI-включения и строка `Unresolved directive` при 
 позднее (см. «Safe mode»). С абсолютным `docdir` цель разрешается как
 `normalize_system_path` Ruby (с jail и его восстановлением с safe mode,
 см. «Safe mode»). CLI сохраняет ограничение корнем основного файла или `-B`
-(кроме unsafe); stdin читает от `-B`, иначе `docdir`, иначе текущего каталога,
-как Ruby. Строковый parser не выполняет
+(кроме unsafe; сам входной файл читается по пути, даже вне `-B`, как в Ruby);
+stdin читает от `-B`, иначе `docdir`, иначе текущего каталога, как Ruby. Строковый parser не выполняет
 I/O. API составных позиций и лимиты описаны в link:parser-api.adoc[Parser API].
 
 Ещё 25 PASS проверяют нормализацию reader без indent: конечные ASCII-пробелы

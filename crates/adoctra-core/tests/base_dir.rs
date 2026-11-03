@@ -119,3 +119,97 @@ fn unresolved_references_report_ruby_info_for_verbose_logs() {
     );
     assert_eq!(report.location, adoctra_core::DiagnosticLocation::Unlocated);
 }
+
+fn run_in(base_dir: Option<&str>, safe: SafeMode, main: &str) -> ParseResult {
+    let mut resources = MemoryResources::new();
+    resources.insert("/r/docs/main.adoc", main).unwrap();
+    resources
+        .insert("/r/docs/sub.adoc", "include::missing.adoc[]\n")
+        .unwrap();
+    resources.insert("/r/local.adoc", "root local").unwrap();
+    let mut sources = SourceMap::new();
+    let source_id = sources.load("/r/docs/main.adoc", None, &resources).unwrap();
+    let options = ParseOptions {
+        source_id,
+        safe,
+        base_dir: base_dir.map(str::to_owned),
+        ..Default::default()
+    };
+    parse_resource(&mut sources, &options, &resources).unwrap()
+}
+
+fn attribute(result: &ParseResult, name: &str) -> Option<String> {
+    result.document.attributes.get(name).map(str::to_owned)
+}
+
+#[test]
+fn the_base_directory_replaces_docdir_even_outside_the_document() {
+    // Ruby's Document#initialize: `attr_overrides['docdir'] = base_dir`; the
+    // directory need not contain the document or exist at all.
+    let source = "include::local.adoc[]\n";
+    let result = run_in(Some("/r"), SafeMode::Unsafe, source);
+    assert_eq!(attribute(&result, "docdir").as_deref(), Some("/r"));
+    assert_eq!(
+        attribute(&result, "docfile").as_deref(),
+        Some("/r/docs/main.adoc")
+    );
+    assert_eq!(texts(&result), ["root local"]);
+    let result = run_in(Some("/elsewhere"), SafeMode::Safe, source);
+    assert_eq!(attribute(&result, "docdir").as_deref(), Some("/elsewhere"));
+    assert!(messages(&result).contains(&"include file not found: /elsewhere/local.adoc".to_owned()));
+    let result = run_in(None, SafeMode::Unsafe, source);
+    assert_eq!(attribute(&result, "docdir").as_deref(), Some("/r/docs"));
+}
+
+#[test]
+fn server_mode_trims_docfile_by_the_length_of_docdir_like_ruby() {
+    // `docfile[(docdir.length + 1)..-1]` whether or not docfile is inside;
+    // the cursor (`Unresolved directive in`) is its basename.
+    let source = "include::nope.adoc[]\n";
+    for (base_dir, docfile, path) in [
+        (None, Some("main.adoc"), "main.adoc"),
+        (Some("/r"), Some("docs/main.adoc"), "main.adoc"),
+        (Some("/q/z"), Some("cs/main.adoc"), "main.adoc"),
+        (Some("/abcdefghijk"), Some("adoc"), "adoc"),
+        // Longer than docfile: Ruby's nil unsets it; the cursor is `<stdin>`.
+        (Some("/a-very-long-base-directory"), None, "<stdin>"),
+    ] {
+        let result = run_in(base_dir, SafeMode::Server, source);
+        assert_eq!(
+            attribute(&result, "docfile").as_deref(),
+            docfile,
+            "{base_dir:?}"
+        );
+        assert_eq!(attribute(&result, "docdir").as_deref(), Some(""));
+        assert_eq!(
+            texts(&result),
+            [format!(
+                "Unresolved directive in {path} - include::nope.adoc[]"
+            )],
+            "{base_dir:?}"
+        );
+    }
+}
+
+#[test]
+fn unresolved_include_paths_are_relative_to_the_base_directory() {
+    // Ruby's `relpath = relative_path inc_path, doc.base_dir`.
+    for (base_dir, target, expected) in [
+        (None, "sub.adoc", "sub.adoc"),
+        (Some("/r"), "docs/sub.adoc", "docs/sub.adoc"),
+        (Some("/r/docs/deeper"), "../sub.adoc", "../sub.adoc"),
+    ] {
+        let result = run_in(
+            base_dir,
+            SafeMode::Unsafe,
+            &format!("include::{target}[]\n"),
+        );
+        assert_eq!(
+            texts(&result),
+            [format!(
+                "Unresolved directive in {expected} - include::missing.adoc[]"
+            )],
+            "{base_dir:?}"
+        );
+    }
+}

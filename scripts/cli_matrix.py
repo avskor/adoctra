@@ -98,13 +98,23 @@ def stdout_view(text, ruby):
         return raw_body(text)
 
 
+def html_content(data):
+    """Converted output under a name without an HTML extension (`-o dir/`,
+    `outfilesuffix=.xml`): UTF-8 text starting with markup. Other files
+    (stylesheets, images) still compare byte for byte."""
+    try:
+        return data.decode("utf-8").lstrip().startswith("<")
+    except UnicodeDecodeError:
+        return False
+
+
 def files_view(files):
     view = {}
     for name, data in files.items():
         directory, _, base = name.rpartition("/")
         if base in DEFAULT_STYLESHEETS:
             view[f"{directory}/<default stylesheet>"] = None
-        elif base.endswith((".html", ".htm", ".xhtml")):
+        elif base.endswith((".html", ".htm", ".xhtml")) or html_content(data):
             text = data.decode("utf-8", "replace")
             view[name] = [stdout_view(text, False) if not text.startswith("Usage") else text,
                           text.endswith("\n")]

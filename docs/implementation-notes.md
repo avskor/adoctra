@@ -140,11 +140,12 @@ OutputPaths; `docname` after reading, header-pinned outfilesuffix) and
 conversion-only `outfile`/`outdir` below server; `resolve_system_path`
 is public.
 **CLI matrix** (docs/cli.adoc, `scripts/cli_matrix.py`, profile cli-v1,
-compatibility/cli/cases.json + report.json in CI): 72 scenarios run by
+compatibility/cli/cases.json + report.json in CI): 156 scenarios run by
 adoctra and Ruby's `asciidoctor` (scripts/ruby-cli.rb = Cli::Invoker) in one
 temp dir; compares exit code, stdout (HTML projected, usage/version by
 kind), normalized stderr and written files (`binary_files`/`stdin_hex` for
-non-UTF-8 inputs); 71 PASS, 1 RUBY_ERROR (Ruby's
+non-UTF-8 inputs; written files project as HTML by name or by content starting
+with `<`); 155 PASS, 1 RUBY_ERROR (Ruby's
 uncaught AmbiguousOption). crates/adoctra-cli/src/args.rs ports
 OptionParser (long-option/value prefixes, clusters, Ruby error texts; usage
 on stdout for errors); glob.rs is Dir.glob; main.rs logs through LOG
@@ -1103,7 +1104,17 @@ for ranges spanning source occurrences; ordinary coordinates identify the first
 physical fragment. Preserve this table with the AST for editor positions. WASM
 exports provenance/include_directives; tokens use individual physical spans.
 Includes have depth/byte limits and cycle diagnostics. CLI file input expands
-includes within its existing root (or `-B/--base-dir`); stdin reads from
+includes under `-B/--base-dir` (else the file's directory) through
+`FileResources::base_dir(root).with_input(file)`: like Ruby the input is read
+by its path even outside `-B`, and `-B` need not exist (`File.expand_path`;
+nothing resolves under it; ENOTDIR maps to NotFound). `ParseOptions.base_dir`
+replaces `docdir` (Ruby's `attr_overrides['docdir'] = base_dir`); server mode
+trims `docfile` with Ruby's `docfile[(docdir.length + 1)..-1]`
+(`context::server_docfile`, nil unsets it) and the primary cursor `@path` is
+that docfile's basename (`Resources::primary_path`); an include's
+`Unresolved directive in` path is `relative_path inc_path, doc.base_dir`.
+Output errors use Ruby's SystemCallError text (`mkdir_p`/`write_file` in
+main.rs: `… @ dir_s_mkdir - path`, `… @ rb_sysopen - path`). stdin reads from
 `-B`, else a `docdir` attribute, else the cwd (which becomes docdir), like
 Ruby's base_dir; string APIs have no provider. With an absolute `docdir`
 (Ruby's base_dir) system_path.rs ports `normalize_system_path`: include and

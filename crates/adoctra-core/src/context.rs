@@ -290,8 +290,21 @@ impl ParseOptions {
                 options.attributes.set("docfile", path);
             }
         }
+        // Ruby's `:base_dir` overrides `docdir` (Document#initialize).
+        if let Some(base_dir) = &self.base_dir {
+            options.attributes.set("docdir", base_dir.as_str());
+        }
         options
     }
+}
+
+/// Ruby's server-mode `docfile[(docdir.length + 1)..-1]`: the characters
+/// after the length of `docdir` plus a separator, whether or not `docfile`
+/// lies in `docdir` (`-B` may name another directory); `None` (Ruby's nil,
+/// an unset attribute) when `docdir` is longer than `docfile`.
+pub(crate) fn server_docfile(file: &str, dir: &str) -> Option<String> {
+    let start = dir.chars().count() + 1;
+    (start <= file.chars().count()).then(|| file.chars().skip(start).collect())
 }
 
 /// The caption context of a numbered block kind (Ruby's
@@ -641,12 +654,11 @@ impl ParseContext<'_> {
             );
             // The document cannot see its directory; its file is relative.
             if let (Some(file), Some(dir)) = (attributes.get("docfile"), attributes.get("docdir")) {
-                if let Some(relative) = file
-                    .strip_prefix(dir)
-                    .and_then(|rest| rest.strip_prefix('/'))
-                    .map(str::to_owned)
-                {
-                    attributes.set("docfile", relative);
+                match server_docfile(file, dir) {
+                    Some(relative) => attributes.set("docfile", relative),
+                    None => {
+                        attributes.remove("docfile");
+                    }
                 }
             }
             attributes.set("docdir", "");

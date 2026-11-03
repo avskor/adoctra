@@ -1813,3 +1813,70 @@ fn cli_decodes_a_utf16_bom_input_and_fails_on_malformed_input_like_ruby() {
     assert_eq!(stderr, format!("adoctra: FAILED: <stdin>: {message}\n"));
     std::fs::remove_dir_all(root).unwrap();
 }
+
+#[test]
+fn cli_base_dir_need_not_contain_the_input_and_write_errors_read_like_ruby() {
+    use std::process::Command;
+    let root = std::env::temp_dir().join(format!("adoctra-cli-base-dir-{}", std::process::id()));
+    std::fs::create_dir_all(root.join("sub")).unwrap();
+    std::fs::write(
+        root.join("a.adoc"),
+        "{docdir}\n\ninclude::other.adoc[]\n\ninclude::sub/b.adoc[]\n",
+    )
+    .unwrap();
+    std::fs::write(root.join("other.adoc"), "root other").unwrap();
+    std::fs::write(root.join("sub/other.adoc"), "sub other").unwrap();
+    let canonical = std::fs::canonicalize(&root).unwrap();
+    let run = |args: &[&str]| {
+        let output = Command::new(env!("CARGO_BIN_EXE_adoctra"))
+            .current_dir(&root)
+            .args(args)
+            .output()
+            .unwrap();
+        (
+            output.status.code(),
+            String::from_utf8(output.stdout).unwrap(),
+            String::from_utf8(output.stderr).unwrap(),
+        )
+    };
+    // Ruby reads the input by its path; `-B` becomes docdir, the include
+    // base and the jail, whether it is a sibling or does not exist.
+    for safe in ["safe", "unsafe"] {
+        let (code, html, stderr) = run(&["-S", safe, "-B", "sub", "-s", "-o", "-", "a.adoc"]);
+        assert_eq!(code, Some(0), "{stderr}");
+        assert!(html.contains("sub other"), "{html}");
+        assert!(!html.contains("root other"), "{html}");
+        assert!(
+            stderr.contains(&format!(
+                "include file not found: {}/sub/sub/b.adoc",
+                canonical.display()
+            )) || stderr.contains(&format!(
+                "include file not found: {}/sub/sub/b.adoc",
+                root.display()
+            )),
+            "{stderr}"
+        );
+        let (code, html, _) = run(&["-S", safe, "-B", "nope", "-s", "-o", "-", "a.adoc"]);
+        assert_eq!(code, Some(0));
+        assert!(html.contains("/nope</p>"), "{html}");
+        assert!(html.contains("Unresolved directive in a.adoc - include::other.adoc[]"));
+    }
+    // Errors creating the output read like Ruby's SystemCallError.
+    let (code, _, stderr) = run(&["-S", "safe", "-s", "-o", "sub", "a.adoc"]);
+    assert_eq!(code, Some(1));
+    let failure = stderr.lines().last().unwrap_or_default();
+    assert!(
+        failure.starts_with("adoctra: Is a directory @ rb_sysopen - "),
+        "{stderr}"
+    );
+    assert!(failure.ends_with("/sub"), "{stderr}");
+    let (code, _, stderr) = run(&["-S", "safe", "-s", "-D", "other.adoc/x", "a.adoc"]);
+    assert_eq!(code, Some(1));
+    let failure = stderr.lines().last().unwrap_or_default();
+    assert!(
+        failure.starts_with("adoctra: File exists @ dir_s_mkdir - "),
+        "{stderr}"
+    );
+    assert!(failure.ends_with("/other.adoc"), "{stderr}");
+    std::fs::remove_dir_all(root).unwrap();
+}
