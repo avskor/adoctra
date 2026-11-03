@@ -12,6 +12,7 @@ mod builtin;
 pub mod contract;
 mod fallback;
 mod inline;
+mod numbering;
 mod package;
 mod props;
 mod styles;
@@ -73,10 +74,14 @@ impl DocxBackend {
             .flatten()
             .filter(|sect_pr| sect_pr.contains("<w:titlePg/>") || sect_pr.contains("<w:titlePg "))
             .map(ChapterSections::new);
-        let (styles, rels) = template.parts_mut();
+        let text_width = template
+            .body_sect_pr()
+            .map_or(writer::DEFAULT_TEXT_WIDTH, |s| writer::text_width(&s));
+        let (styles, rels, numbering) = template.parts_mut();
         let mut cx = Cx {
             styles,
             rels,
+            numbering,
             bookmarks: Default::default(),
             warnings: Default::default(),
         };
@@ -94,7 +99,7 @@ impl DocxBackend {
             }
             _ => None,
         };
-        let body = Writer::new(&mut cx, doc, chapters.as_mut()).body(lead);
+        let body = Writer::new(&mut cx, doc, chapters.as_mut(), text_width).body(lead);
         let mut warnings = std::mem::take(&mut cx.warnings.list);
         warnings.extend(template.styles.warnings.iter().cloned());
         template.set_core_properties(&core_properties(doc, title.as_ref()).to_xml());

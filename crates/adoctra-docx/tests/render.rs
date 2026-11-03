@@ -387,7 +387,6 @@ fn unconverted_blocks_are_reported_once_per_kind() {
     assert_eq!(
         out.warnings,
         [
-            "docx backend does not convert lists yet",
             "docx backend does not convert tables yet",
             "docx backend does not convert block images yet",
             "docx backend drops passthrough blocks (raw output has no DOCX form)",
@@ -493,4 +492,207 @@ fn checks_a_template_against_the_style_contract() {
         .iter()
         .all(|w| !w.ends_with(": Heading 1") && !w.ends_with(": Code")));
     assert!(!warnings.iter().any(|w| w.ends_with("style: Hyperlink")));
+}
+
+/// The `w:numId` of each numbered paragraph, in order.
+fn num_ids(xml: &str) -> Vec<String> {
+    xml.split(r#"<w:numId w:val=""#)
+        .skip(1)
+        .map(|s| s.split('"').next().unwrap().to_string())
+        .collect()
+}
+
+#[test]
+fn unordered_lists_nest_with_their_own_bullets_and_indents() {
+    let out = render("* one\n** nested\n* two\n+\ncontinued\n\n[square]\n* sq\n");
+    let doc = part(&out.bytes, "word/document.xml");
+    let numbering = part(&out.bytes, "word/numbering.xml");
+    assert_eq!(
+        paragraphs(&doc),
+        pairs(&[
+            ("ListParagraph", "one"),
+            ("ListParagraph", "nested"),
+            ("ListParagraph", "two"),
+            ("Normal", "continued"),
+            ("ListParagraph", "sq"),
+        ])
+    );
+    // Each list has its own definition; the nested one indents further.
+    assert_eq!(num_ids(&doc), ["1", "2", "1", "3"]);
+    assert!(numbering.contains(r#"<w:numFmt w:val="bullet"/><w:lvlText w:val="•"/><w:lvlJc w:val="left"/><w:pPr><w:ind w:left="720" w:hanging="360"/>"#), "{numbering}");
+    assert!(numbering
+        .contains(r#"<w:lvlText w:val="◦"/><w:lvlJc w:val="left"/><w:pPr><w:ind w:left="1440""#));
+    assert!(numbering.contains(r#"<w:lvlText w:val="▪"/>"#));
+    // An attached block aligns with the item text.
+    assert!(doc.contains(r#"<w:pStyle w:val="Normal"/><w:ind w:left="720"/>"#));
+    assert!(out.warnings.is_empty(), "{:?}", out.warnings);
+}
+
+#[test]
+fn ordered_lists_follow_ruby_styles_and_start() {
+    let out = render(
+        ". a\n.. b\n\n[upperroman, start=4]\n. c\n\n[lowergreek%reversed]\n. d\n\n[unstyled]\n. e\n",
+    );
+    let numbering = part(&out.bytes, "word/numbering.xml");
+    for (start, format) in [
+        (1, "decimal"),
+        (1, "lowerLetter"),
+        (4, "upperRoman"),
+        (1, "lowerLetter"),
+    ] {
+        assert!(
+            numbering.contains(&format!(
+                r#"<w:start w:val="{start}"/><w:numFmt w:val="{format}"/><w:lvlText w:val="%1."/>"#
+            )),
+            "{start} {format}: {numbering}"
+        );
+    }
+    assert!(numbering
+        .contains(r#"<w:numFmt w:val="none"/><w:suff w:val="nothing"/><w:lvlText w:val=""/>"#));
+    assert_eq!(
+        out.warnings,
+        [
+            "docx backend numbers lowergreek lists with latin letters",
+            "docx backend does not support reversed lists",
+        ]
+    );
+}
+
+#[test]
+fn checklists_show_ruby_check_marks_without_bullets() {
+    let out = render("* [x] done\n* [ ] todo\n* plain\n\n:icons: font\n\n* [x] font\n");
+    let doc = part(&out.bytes, "word/document.xml");
+    assert_eq!(
+        paragraphs(&doc),
+        pairs(&[
+            ("ListParagraph", "\u{2713} done"),
+            ("ListParagraph", "\u{274f} todo"),
+            ("ListParagraph", "plain"),
+            ("ListParagraph", "\u{2611} font"),
+        ])
+    );
+    let numbering = part(&out.bytes, "word/numbering.xml");
+    assert_eq!(numbering.matches(r#"<w:numFmt w:val="none"/>"#).count(), 2);
+}
+
+#[test]
+fn description_lists_use_term_and_description_styles() {
+    let doc =
+        document("CPU:: The brain.\n+\nMore.\nRAM::\nDisk:: Storage.\n* in list\nterm::: nested\n");
+    assert_eq!(
+        paragraphs(&doc),
+        pairs(&[
+            ("Term", "CPU"),
+            ("Description", "The brain."),
+            ("Normal", "More."),
+            ("Term", "RAM"),
+            ("Term", "Disk"),
+            ("Description", "Storage."),
+            ("ListParagraph", "in list"),
+            ("Term", "term"),
+            ("Description", "nested"),
+        ])
+    );
+    // Blocks of a description align with its text; the top-level
+    // description text is indented by its style.
+    assert!(
+        doc.contains(r#"<w:pStyle w:val="Normal"/><w:ind w:left="360"/>"#),
+        "{doc}"
+    );
+    assert!(doc.contains(r#"<w:pStyle w:val="Description"/></w:pPr>"#));
+    // A nested list's terms and descriptions indent with their container.
+    assert!(
+        doc.contains(r#"<w:pStyle w:val="Term"/><w:ind w:left="1080"/>"#),
+        "{doc}"
+    );
+    assert!(doc.contains(r#"<w:pStyle w:val="Description"/><w:ind w:left="1440"/>"#));
+}
+
+#[test]
+fn qanda_lists_number_the_questions() {
+    let out = render("[qanda]\nWhat?:: This.\nWhy?:: Because.\n");
+    let doc = part(&out.bytes, "word/document.xml");
+    assert_eq!(
+        paragraphs(&doc),
+        pairs(&[
+            ("Question", "What?"),
+            ("Answer", "This."),
+            ("Question", "Why?"),
+            ("Answer", "Because."),
+        ])
+    );
+    assert_eq!(num_ids(&doc), ["1", "1"]);
+    assert!(doc.contains(r#"<w:pStyle w:val="Answer"/><w:ind w:left="720"/>"#));
+    assert!(part(&out.bytes, "word/numbering.xml").contains(r#"<w:numFmt w:val="decimal"/>"#));
+}
+
+#[test]
+fn horizontal_lists_are_borderless_tables() {
+    let doc = document("[horizontal, labelwidth=20]\nCPU:: The brain.\nRAM::\n");
+    assert!(
+        doc.contains(r#"<w:tblGrid><w:gridCol w:w="1927"/><w:gridCol w:w="7710"/></w:tblGrid>"#),
+        "{doc}"
+    );
+    assert!(doc.contains(r#"<w:tblLayout w:type="fixed"/>"#));
+    assert!(doc.contains(r#"<w:insideV w:val="nil"/>"#));
+    assert_eq!(doc.matches("<w:tr>").count(), 2);
+    // An empty description cell still ends with a paragraph.
+    assert!(doc.contains(r#"<w:tcW w:w="7710" w:type="dxa"/></w:tcPr><w:p/></w:tc>"#));
+    assert_eq!(
+        paragraphs(&doc),
+        pairs(&[("Term", "CPU"), ("Normal", "The brain."), ("Term", "RAM")])
+    );
+    let auto = document("[horizontal]\nA:: b\n");
+    assert!(auto.contains(r#"<w:tblLayout w:type="autofit"/>"#));
+}
+
+#[test]
+fn callout_lists_number_items_in_the_callout_style() {
+    let doc = document("----\nx <1>\ny <2>\n----\n<1> First\n<2> Second\n");
+    assert!(doc.contains(
+        r#"<w:pStyle w:val="ListParagraph"/><w:ind w:left="720" w:hanging="360"/></w:pPr><w:r><w:rPr><w:rStyle w:val="Callout"/></w:rPr><w:t xml:space="preserve">1</w:t></w:r><w:r><w:tab/></w:r>"#
+    ), "{doc}");
+    let ps = paragraphs(&doc);
+    assert_eq!(
+        ps[ps.len() - 2..],
+        pairs(&[
+            ("ListParagraph", "1\tFirst"),
+            ("ListParagraph", "2\tSecond")
+        ])
+    );
+}
+
+#[test]
+fn lists_inside_a_custom_template_create_its_numbering_part() {
+    let doc = parse("* a\n").document;
+    let out = DocxBackend::new()
+        .with_template(word_template())
+        .render(&doc)
+        .unwrap();
+    let rels = part(&out.bytes, "word/_rels/document.xml.rels");
+    assert!(
+        rels.contains(r#"relationships/numbering" Target="numbering.xml""#),
+        "{rels}"
+    );
+    assert!(part(&out.bytes, "[Content_Types].xml").contains(r#"PartName="/word/numbering.xml""#));
+    assert!(part(&out.bytes, "word/numbering.xml").contains(r#"<w:num w:numId="1">"#));
+    // Word's built-in List Paragraph is added to the template.
+    assert!(part(&out.bytes, "word/styles.xml").contains(r#"w:styleId="ListParagraph""#));
+}
+
+#[test]
+fn callout_marks_in_verbatim_blocks_use_the_callout_style() {
+    let doc = document("----\nx = 1 # <1>\ny <2> <3>\n<!--4-->\n----\n");
+    assert_eq!(
+        paragraphs(&doc),
+        pairs(&[
+            ("Code", "x = 1 # 1"),
+            ("Code", "y 2 3"),
+            ("Code", "<!--4-->")
+        ])
+    );
+    assert_eq!(doc.matches(r#"<w:rStyle w:val="Callout"/>"#).count(), 4);
+    assert!(doc.contains(
+        r#"<w:t xml:space="preserve">x = 1 </w:t></w:r><w:r><w:t xml:space="preserve"># </w:t></w:r><w:r><w:rPr><w:rStyle w:val="Callout"/></w:rPr><w:t xml:space="preserve">1</w:t>"#
+    ), "{doc}");
 }

@@ -1762,9 +1762,27 @@ header/footer parts too; `finish` can replace the final `w:sectPr` and adds
 (`ChapterSections`; only the first keeps `w:pgNumType w:start`). The
 built-in book has `header1.xml` (title marker + `STYLEREF "heading 1"`) and
 an empty `header2.xml` (first page), rId6/rId7 added in `builtin.rs`.
-Template mono font is Consolas. Not yet: lists, tables, images,
-video/audio, TOC (one warning per kind); footnotes as `[n]`, inline images
-as `[alt]`; containers unframed.
+Template mono font is Consolas.
+Stage 3 done 2026-11-04: `numbering.rs` adds one single-level
+`w:abstractNum`/`w:num` per list (ids after the template's; abstracts
+inserted before the first `w:num`, nums before `w:numIdMacAtCleanup` or at
+the end; the part is created with rel/override when a template lacks it).
+The level's `w:ind left` = enclosing indent + 720, hanging 360, paragraphs
+use `ilvl` 0. Writer `Ctx` carries `indent` (direct `w:ind` of nested
+content when > 0) and `bullets` (unordered depth for the default bullet);
+tasks `Item`, `Terms`, `Description`, `Callout`, `Markup`, `CloseCell`
+(cells end with a paragraph). Bullets: Ruby styles or `•◦▪` by depth;
+ordered formats from the core style, `start`; lowergreek -> lowerLetter and
+reversed unsupported, both warned. Checklist: format `none` + `suff
+nothing`, text prefixed with Ruby's marks (✓/❏, ☑/☐ with font icons).
+Dlist: `Term`/`Description` (style indent at top level, direct +360
+nested); qanda numbered `Question` + `Answer` at +720; horizontal is a
+borderless 2-column table (`labelwidth`/`itemwidth` fixed, else 25/75
+autofit; width from the template section, `writer::text_width`). Colist
+items: `Callout` number + tab + text with hanging indent; listing callout
+marks: guard text + `Callout` number (`<!--n-->` keeps the comment). Not
+yet: tables, images, video/audio, TOC (one warning per kind); footnotes as
+`[n]`, inline images as `[alt]`; containers unframed.
 
 Index terms (`((…))` / `indexterm2:[…]` visible, `(((…)))` /
 `indexterm:[…]` concealed) run after images and before links, as Ruby's

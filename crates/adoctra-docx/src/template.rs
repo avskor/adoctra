@@ -15,9 +15,17 @@
 
 use std::ops::Range;
 
+use crate::numbering::Numbering;
 use crate::package::{self, Package, Relationships};
 use crate::styles::Styles;
 use crate::xml;
+
+const EMPTY_NUMBERING: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"></w:numbering>"#;
+const REL_NUMBERING: &str =
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering";
+const NUMBERING_CONTENT_TYPE: &str =
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml";
 
 const EMPTY_STYLES: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"></w:styles>"#;
@@ -45,6 +53,9 @@ pub struct Template {
     styles_text: String,
     pub styles: Styles,
     pub rels: Relationships,
+    /// The template's numbering part and its text, if it has one.
+    numbering_part: Option<(String, String)>,
+    pub numbering: Numbering,
 }
 
 /// What a marker is replaced by.
@@ -93,7 +104,17 @@ impl Template {
         };
         // A `.dotx` main part becomes a document.
         package.set_override_type(&main, package::MAIN_CONTENT_TYPE);
+        let numbering_part = rels.target_of(REL_NUMBERING).map(|target| {
+            let part = package::resolve_target(&main, &target);
+            let text = package
+                .text(&part)
+                .unwrap_or_else(|| EMPTY_NUMBERING.to_string());
+            (part, text)
+        });
+        let numbering = Numbering::parse(numbering_part.as_ref().map_or("", |(_, t)| t));
         Ok(Self {
+            numbering_part,
+            numbering,
             styles: Styles::parse(&styles_text),
             package,
             main,
@@ -114,8 +135,8 @@ impl Template {
     /// Whether the main document has the marker of `field` (`title`…).
     /// The style registry and the main part's relationships, to write the
     /// body with.
-    pub fn parts_mut(&mut self) -> (&mut Styles, &mut Relationships) {
-        (&mut self.styles, &mut self.rels)
+    pub fn parts_mut(&mut self) -> (&mut Styles, &mut Relationships, &mut Numbering) {
+        (&mut self.styles, &mut self.rels, &mut self.numbering)
     }
 
     pub fn has_marker(&self, field: &str) -> bool {
@@ -177,6 +198,19 @@ impl Template {
         }
         self.package
             .put(&self.styles_part, self.styles.apply(&self.styles_text));
+        if !self.numbering.is_empty() {
+            let (part, text) = match self.numbering_part.take() {
+                Some(existing) => existing,
+                None => {
+                    let part = package::resolve_target(&self.main, "numbering.xml");
+                    self.rels.add(REL_NUMBERING, "numbering.xml", false);
+                    self.package
+                        .set_override_type(&part, NUMBERING_CONTENT_TYPE);
+                    (part, EMPTY_NUMBERING.to_string())
+                }
+            };
+            self.package.put(&part, self.numbering.apply(&text));
+        }
         self.package
             .put(&package::rels_name(&self.main), self.rels.to_xml());
         self.package.write()

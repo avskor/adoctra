@@ -1,10 +1,14 @@
 //! Body markup from the document's blocks, walked on an explicit stack (no
 //! recursion over block nesting, like the parser and the other backends).
 
-use adoctra_core::ast::{Attribution, Block, BlockKind};
+use adoctra_core::ast::{
+    Attribution, Block, BlockKind, Callout, CalloutListItem, DescriptionListItem, ListItem,
+    ListTerm,
+};
 use adoctra_core::{AttributePart, Document, Inline};
 
 use crate::inline::{Cx, Newlines, Runs};
+use crate::numbering::{self, Level, LIST_INDENT};
 use crate::styles::StyleKind;
 use crate::xml;
 
@@ -17,6 +21,40 @@ struct Ctx {
     quote: bool,
     /// Inside an abstract.
     abstract_: bool,
+    /// Left indent of the enclosing content (twips): list items and
+    /// descriptions indent their blocks.
+    indent: u32,
+    /// Unordered lists this block is nested in (the default bullet).
+    bullets: u8,
+}
+
+/// A description's indent from its term (twips).
+const DESCRIPTION_INDENT: u32 = 360;
+
+/// The text width of a page when the template's section does not say (A4
+/// with 2 cm margins, twips).
+pub const DEFAULT_TEXT_WIDTH: u32 = 9638;
+
+/// The text width (twips) of section properties: page width minus margins
+/// and gutter.
+pub fn text_width(sect_pr: &str) -> u32 {
+    let attr = |tag: &str, name: &str| {
+        xml::tags(sect_pr, 0)
+            .find(|t| t.name == tag && t.opens())
+            .and_then(|t| t.attr(name))
+            .and_then(|v| v.parse::<i64>().ok())
+    };
+    let Some(page) = attr("w:pgSz", "w:w") else {
+        return DEFAULT_TEXT_WIDTH;
+    };
+    let margins = ["w:left", "w:right", "w:gutter"]
+        .iter()
+        .map(|m| attr("w:pgMar", m).unwrap_or(0))
+        .sum::<i64>();
+    u32::try_from(page - margins)
+        .ok()
+        .filter(|w| *w > 0)
+        .unwrap_or(DEFAULT_TEXT_WIDTH)
 }
 
 /// Section breaks of a book whose body section has a distinct first page
@@ -76,7 +114,39 @@ pub fn continue_numbering(sect_pr: &str) -> String {
 enum Task<'c> {
     Block(&'c Block, Ctx),
     /// A quote's attribution, after its blocks.
-    Attribution(&'c Attribution, &'static str),
+    Attribution(&'c Attribution, &'static str, Ctx),
+    /// A list item: its numbered paragraph, then its blocks.
+    Item {
+        item: &'c ListItem,
+        num: u32,
+        check: Option<&'static str>,
+        ctx: Ctx,
+    },
+    /// Description list terms; the first carries the list number (qanda).
+    Terms {
+        terms: &'c [ListTerm],
+        style: &'static str,
+        num: Option<u32>,
+        ctx: Ctx,
+    },
+    /// A description: its text in `style` (indented by `para_indent`), then
+    /// its blocks (indented by `ctx`).
+    Description {
+        item: &'c ListItem,
+        style: &'static str,
+        para_indent: u32,
+        ctx: Ctx,
+    },
+    /// A callout list item with its number.
+    Callout {
+        item: &'c CalloutListItem,
+        number: usize,
+        ctx: Ctx,
+    },
+    /// Literal markup (table structure around nested content).
+    Markup(String),
+    /// The end of a table cell, which must end with a paragraph.
+    CloseCell,
 }
 
 pub struct Writer<'c, 't> {
@@ -87,6 +157,9 @@ pub struct Writer<'c, 't> {
     pending: Vec<String>,
     chapters: Option<&'c mut ChapterSections>,
     book: bool,
+    /// The indent of the paragraphs being written (twips).
+    indent: u32,
+    text_width: u32,
 }
 
 impl<'c, 't> Writer<'c, 't> {
@@ -94,6 +167,7 @@ impl<'c, 't> Writer<'c, 't> {
         cx: &'c mut Cx<'t>,
         doc: &'c Document,
         chapters: Option<&'c mut ChapterSections>,
+        text_width: u32,
     ) -> Self {
         Self {
             cx,
@@ -102,6 +176,8 @@ impl<'c, 't> Writer<'c, 't> {
             pending: Vec::new(),
             chapters,
             book: doc.attributes.get("doctype") == Some("book"),
+            indent: 0,
+            text_width,
         }
     }
 
@@ -119,9 +195,62 @@ impl<'c, 't> Writer<'c, 't> {
             .collect();
         while let Some(task) = stack.pop() {
             let next = match task {
-                Task::Block(block, ctx) => self.block(block, ctx),
-                Task::Attribution(attribution, style) => {
+                Task::Block(block, ctx) => {
+                    self.indent = ctx.indent;
+                    self.block(block, ctx)
+                }
+                Task::Attribution(attribution, style, ctx) => {
+                    self.indent = ctx.indent;
                     self.attribution(attribution, style);
+                    Vec::new()
+                }
+                Task::Item {
+                    item,
+                    num,
+                    check,
+                    ctx,
+                } => self.item(item, num, check, ctx),
+                Task::Terms {
+                    terms,
+                    style,
+                    num,
+                    ctx,
+                } => {
+                    self.indent = ctx.indent;
+                    for (i, term) in terms.iter().enumerate() {
+                        let mut runs = Runs::new(self.cx, Newlines::Space);
+                        runs.inlines(&term.inlines);
+                        let runs = runs.finish();
+                        let number = num.filter(|_| i == 0).map(list_number);
+                        self.paragraph_with(style, number.as_deref(), "", &runs);
+                    }
+                    Vec::new()
+                }
+                Task::Description {
+                    item,
+                    style,
+                    para_indent,
+                    ctx,
+                } => {
+                    if !item.inlines.is_empty() {
+                        self.indent = para_indent;
+                        let mut runs = Runs::new(self.cx, Newlines::Space);
+                        runs.inlines(&item.inlines);
+                        let runs = runs.finish();
+                        self.paragraph(style, "", &runs);
+                    }
+                    item.blocks.iter().map(|b| Task::Block(b, ctx)).collect()
+                }
+                Task::Callout { item, number, ctx } => self.callout(item, number, ctx),
+                Task::Markup(markup) => {
+                    self.out.push_str(&markup);
+                    Vec::new()
+                }
+                Task::CloseCell => {
+                    if !self.out.ends_with("</w:p>") {
+                        self.out.push_str("<w:p/>");
+                    }
+                    self.out.push_str("</w:tc>");
                     Vec::new()
                 }
             };
@@ -212,7 +341,7 @@ impl<'c, 't> Writer<'c, 't> {
                 // The attribution follows the quoted blocks.
                 let mut children = inherit(blocks, Ctx { quote: true, ..ctx });
                 if let Some(attribution) = attribution {
-                    children.push(Task::Attribution(attribution, "Quote Attribution"));
+                    children.push(Task::Attribution(attribution, "Quote Attribution", ctx));
                 }
                 children
             }
@@ -227,14 +356,23 @@ impl<'c, 't> Writer<'c, 't> {
                 }
                 Vec::new()
             }
-            BlockKind::Listing { text, inlines, .. } => {
+            BlockKind::Listing {
+                text,
+                callouts,
+                inlines,
+                ..
+            } => {
                 self.title(block, "Block Title");
-                self.verbatim(block, "Code", text, inlines.as_deref());
+                self.verbatim(block, "Code", text, callouts, inlines.as_deref());
                 Vec::new()
             }
-            BlockKind::Literal { text, inlines, .. } => {
+            BlockKind::Literal {
+                text,
+                callouts,
+                inlines,
+            } => {
                 self.title(block, "Block Title");
-                self.verbatim(block, "Literal", text, inlines.as_deref());
+                self.verbatim(block, "Literal", text, callouts, inlines.as_deref());
                 Vec::new()
             }
             BlockKind::Stem { inlines, .. } => {
@@ -257,14 +395,318 @@ impl<'c, 't> Writer<'c, 't> {
                     .push_str(r#"<w:p><w:r><w:br w:type="page"/></w:r></w:p>"#);
                 Vec::new()
             }
-            BlockKind::List { .. } => self.not_yet("lists"),
-            BlockKind::CalloutList { .. } => self.not_yet("callout lists"),
-            BlockKind::DescriptionList { .. } => self.not_yet("description lists"),
+            BlockKind::List {
+                ordered,
+                items,
+                icons,
+            } => {
+                self.title(block, "Block Title");
+                self.anchor(block);
+                self.list(block, *ordered, items, icons.as_deref(), ctx)
+            }
+            BlockKind::CalloutList { items } => {
+                self.title(block, "Block Title");
+                self.anchor(block);
+                items
+                    .iter()
+                    .enumerate()
+                    .map(|(i, item)| Task::Callout {
+                        item,
+                        number: i + 1,
+                        ctx,
+                    })
+                    .collect()
+            }
+            BlockKind::DescriptionList { items } => {
+                self.title(block, "Block Title");
+                self.anchor(block);
+                match block.attrs.style.as_deref() {
+                    Some("horizontal") => self.horizontal_list(block, items, ctx),
+                    Some("qanda") => self.qanda(items, ctx),
+                    _ => {
+                        let mut tasks = Vec::new();
+                        for item in items {
+                            tasks.push(Task::Terms {
+                                terms: &item.terms,
+                                style: "Term",
+                                num: None,
+                                ctx,
+                            });
+                            if let Some(description) = &item.description {
+                                let inner = ctx.indent + DESCRIPTION_INDENT;
+                                tasks.push(Task::Description {
+                                    item: description,
+                                    style: "Description",
+                                    // At the top level the style indents.
+                                    para_indent: if ctx.indent == 0 { 0 } else { inner },
+                                    ctx: Ctx {
+                                        indent: inner,
+                                        ..ctx
+                                    },
+                                });
+                            }
+                        }
+                        tasks
+                    }
+                }
+            }
             BlockKind::Table(_) => self.not_yet("tables"),
             BlockKind::Image { .. } => self.not_yet("block images"),
             BlockKind::Video { .. } | BlockKind::Audio { .. } => self.not_yet("video and audio"),
             BlockKind::Toc => self.not_yet("the table of contents"),
         }
+    }
+
+    /// An ordered or unordered list (or checklist): one numbering
+    /// definition, a task per item.
+    fn list(
+        &mut self,
+        block: &Block,
+        ordered: bool,
+        items: &'c [ListItem],
+        icons: Option<&str>,
+        ctx: Ctx,
+    ) -> Vec<Task<'c>> {
+        let option = |name: &str| {
+            block.attrs.options.iter().any(|o| o == name)
+                || block.attrs.named.contains_key(&format!("{name}-option"))
+        };
+        let style = block.attrs.style.as_deref();
+        let checklist = !ordered && option("checklist");
+        let left = ctx.indent + LIST_INDENT;
+        let level = if checklist {
+            Level {
+                format: "none",
+                text: String::new(),
+                start: 1,
+                left,
+                no_suffix: true,
+            }
+        } else if ordered {
+            if style == Some("lowergreek") {
+                self.cx
+                    .warnings
+                    .once("docx backend numbers lowergreek lists with latin letters");
+            }
+            if option("reversed") {
+                self.cx
+                    .warnings
+                    .once("docx backend does not support reversed lists");
+            }
+            let start = block
+                .attrs
+                .named
+                .get("start")
+                .and_then(|s| s.trim().parse::<i64>().ok())
+                .map_or(1, |n| u32::try_from(n.max(0)).unwrap_or(1));
+            match numbering::number_format(style) {
+                Some(format) => Level {
+                    format,
+                    text: "%1.".into(),
+                    start,
+                    left,
+                    no_suffix: false,
+                },
+                None => Level {
+                    format: "none",
+                    text: String::new(),
+                    start,
+                    left,
+                    no_suffix: true,
+                },
+            }
+        } else {
+            match numbering::bullet(style, ctx.bullets) {
+                Some(bullet) => Level {
+                    format: "bullet",
+                    text: bullet.into(),
+                    start: 1,
+                    left,
+                    no_suffix: false,
+                },
+                None => Level {
+                    format: "none",
+                    text: String::new(),
+                    start: 1,
+                    left,
+                    no_suffix: true,
+                },
+            }
+        };
+        let num = self.cx.numbering.add(&level);
+        // Ruby's checkbox glyphs: text marks, or icon-font squares.
+        let (checked, unchecked) = if icons == Some("font") {
+            ("\u{2611} ", "\u{2610} ")
+        } else {
+            ("\u{2713} ", "\u{274f} ")
+        };
+        let inner = Ctx {
+            indent: left,
+            bullets: ctx.bullets + u8::from(!ordered),
+            lead: false,
+            ..ctx
+        };
+        items
+            .iter()
+            .map(|item| Task::Item {
+                item,
+                num,
+                check: match item.checkbox.filter(|_| checklist) {
+                    Some(true) => Some(checked),
+                    Some(false) => Some(unchecked),
+                    None => None,
+                },
+                ctx: inner,
+            })
+            .collect()
+    }
+
+    /// A list item's numbered paragraph; its blocks follow, indented.
+    fn item(
+        &mut self,
+        item: &'c ListItem,
+        num: u32,
+        check: Option<&'static str>,
+        ctx: Ctx,
+    ) -> Vec<Task<'c>> {
+        let mut runs = Runs::new(self.cx, Newlines::Space);
+        if let Some(check) = check {
+            runs.text(check);
+        }
+        runs.inlines(&item.inlines);
+        let runs = runs.finish();
+        self.indent = 0;
+        self.paragraph_with("List Paragraph", Some(&list_number(num)), "", &runs);
+        item.blocks.iter().map(|b| Task::Block(b, ctx)).collect()
+    }
+
+    /// A callout list item: the number in the `Callout` style, a tab to the
+    /// hanging indent, the text; its blocks follow, indented.
+    fn callout(&mut self, item: &'c CalloutListItem, number: usize, ctx: Ctx) -> Vec<Task<'c>> {
+        let left = ctx.indent + LIST_INDENT;
+        let mut runs = Runs::new(self.cx, Newlines::Space);
+        runs.styled("Callout", &number.to_string());
+        runs.text("\t");
+        runs.inlines(&item.item.inlines);
+        let runs = runs.finish();
+        self.indent = 0;
+        let ind = format!(
+            r#"<w:ind w:left="{left}" w:hanging="{}"/>"#,
+            numbering::HANGING
+        );
+        self.paragraph_with("List Paragraph", None, &ind, &runs);
+        let inner = Ctx {
+            indent: left,
+            ..ctx
+        };
+        item.item
+            .blocks
+            .iter()
+            .map(|b| Task::Block(b, inner))
+            .collect()
+    }
+
+    /// A question and answer list (Ruby's `qanda`): numbered questions in
+    /// `Question`, answers in `Answer`, aligned with the question text.
+    fn qanda(&mut self, items: &'c [DescriptionListItem], ctx: Ctx) -> Vec<Task<'c>> {
+        let left = ctx.indent + LIST_INDENT;
+        let num = self.cx.numbering.add(&Level {
+            format: "decimal",
+            text: "%1.".into(),
+            start: 1,
+            left,
+            no_suffix: false,
+        });
+        let inner = Ctx {
+            indent: left,
+            ..ctx
+        };
+        let mut tasks = Vec::new();
+        for item in items {
+            tasks.push(Task::Terms {
+                terms: &item.terms,
+                style: "Question",
+                num: Some(num),
+                ctx: inner,
+            });
+            if let Some(description) = &item.description {
+                tasks.push(Task::Description {
+                    item: description,
+                    style: "Answer",
+                    para_indent: left,
+                    ctx: inner,
+                });
+            }
+        }
+        tasks
+    }
+
+    /// A horizontal description list: Ruby's two-column table, borderless,
+    /// with `labelwidth`/`itemwidth` percentages.
+    fn horizontal_list(
+        &mut self,
+        block: &Block,
+        items: &'c [DescriptionListItem],
+        ctx: Ctx,
+    ) -> Vec<Task<'c>> {
+        let available = self.text_width.saturating_sub(ctx.indent);
+        let percent = |key: &str| {
+            block
+                .attrs
+                .named
+                .get(key)
+                .and_then(|w| w.trim().trim_end_matches('%').parse::<u32>().ok())
+                .filter(|w| (1..100).contains(w))
+        };
+        let (label, item, fixed) = match (percent("labelwidth"), percent("itemwidth")) {
+            (Some(l), Some(i)) => (l, i, true),
+            (Some(l), None) => (l, 100 - l, true),
+            (None, Some(i)) => (100 - i, i, true),
+            (None, None) => (25, 75, false),
+        };
+        let label_w = available * label / 100;
+        let item_w = available * item / 100;
+        let none = ["top", "left", "bottom", "right", "insideH", "insideV"]
+            .iter()
+            .map(|side| format!(r#"<w:{side} w:val="nil"/>"#))
+            .collect::<String>();
+        let layout = if fixed { "fixed" } else { "autofit" };
+        let mut tasks = vec![Task::Markup(format!(
+            r#"<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/><w:tblInd w:w="{}" w:type="dxa"/><w:tblBorders>{none}</w:tblBorders><w:tblLayout w:type="{layout}"/><w:tblCellMar><w:left w:w="0" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tblCellMar><w:tblLook w:val="0000" w:firstRow="0" w:lastRow="0" w:firstColumn="0" w:lastColumn="0" w:noHBand="1" w:noVBand="1"/></w:tblPr><w:tblGrid><w:gridCol w:w="{label_w}"/><w:gridCol w:w="{item_w}"/></w:tblGrid>"#,
+            ctx.indent
+        ))];
+        let cell = Ctx {
+            indent: 0,
+            lead: false,
+            ..ctx
+        };
+        for entry in items {
+            tasks.push(Task::Markup(format!(
+                r#"<w:tr><w:tc><w:tcPr><w:tcW w:w="{label_w}" w:type="dxa"/></w:tcPr>"#
+            )));
+            tasks.push(Task::Terms {
+                terms: &entry.terms,
+                style: "Term",
+                num: None,
+                ctx: cell,
+            });
+            tasks.push(Task::CloseCell);
+            tasks.push(Task::Markup(format!(
+                r#"<w:tc><w:tcPr><w:tcW w:w="{item_w}" w:type="dxa"/></w:tcPr>"#
+            )));
+            if let Some(description) = &entry.description {
+                tasks.push(Task::Description {
+                    item: description,
+                    style: "Normal",
+                    para_indent: 0,
+                    ctx: cell,
+                });
+            }
+            tasks.push(Task::CloseCell);
+            tasks.push(Task::Markup("</w:tr>".into()));
+        }
+        tasks.push(Task::Markup("</w:tbl>".into()));
+        tasks
     }
 
     fn not_yet(&mut self, what: &str) -> Vec<Task<'c>> {
@@ -325,7 +767,16 @@ impl<'c, 't> Writer<'c, 't> {
 
     /// A verbatim block, one paragraph per line (custom substitutions give
     /// an inline tree, written as one paragraph with line breaks).
-    fn verbatim(&mut self, block: &Block, style: &str, text: &str, inlines: Option<&[Inline]>) {
+    /// Callout marks (`callouts`, byte ranges of `text`) keep their line
+    /// comment guard and show the number in the `Callout` style.
+    fn verbatim(
+        &mut self,
+        block: &Block,
+        style: &str,
+        text: &str,
+        callouts: &[Callout],
+        inlines: Option<&[Inline]>,
+    ) {
         self.anchor(block);
         if let Some(inlines) = inlines {
             let mut runs = Runs::new(self.cx, Newlines::Break);
@@ -334,11 +785,29 @@ impl<'c, 't> Writer<'c, 't> {
             self.paragraph(style, "", &runs);
             return;
         }
+        let mut marks = callouts.iter().peekable();
+        let mut start = 0;
         for line in text.split('\n') {
+            let end = start + line.len();
             let mut runs = Runs::new(self.cx, Newlines::Break);
-            runs.text(line);
+            let mut copied = start;
+            while let Some(mark) = marks.next_if(|m| m.start >= start && m.end <= end) {
+                runs.text(&text[copied..mark.start]);
+                if mark.xml {
+                    runs.text("<!--");
+                } else if let Some(guard) = &mark.guard {
+                    runs.text(guard);
+                }
+                runs.styled("Callout", &mark.number);
+                if mark.xml {
+                    runs.text("-->");
+                }
+                copied = mark.end;
+            }
+            runs.text(&text[copied..end]);
             let runs = runs.finish();
             self.paragraph(style, "", &runs);
+            start = end + 1;
         }
     }
 
@@ -362,17 +831,34 @@ impl<'c, 't> Writer<'c, 't> {
     }
 
     /// A paragraph in style `name` (a missing custom style falls back to
-    /// the template's default paragraph style), with the pending bookmarks.
+    /// the template's default paragraph style), indented like its
+    /// container, with the pending bookmarks.
     fn paragraph(&mut self, name: &str, extra_ppr: &str, runs: &str) {
+        self.paragraph_with(name, None, extra_ppr, runs);
+    }
+
+    /// A paragraph with list numbering `num` (`w:numPr`) or the container's
+    /// indent. `extra_ppr` follows in schema order (`w:ind`, `w:jc`).
+    fn paragraph_with(&mut self, name: &str, num: Option<&str>, extra_ppr: &str, runs: &str) {
         let id = self.cx.style(StyleKind::Paragraph, name);
         let mut ppr = String::new();
         if let Some(id) = &id {
             ppr.push_str(&format!(r#"<w:pStyle w:val="{}"/>"#, xml::escape_attr(id)));
-            // A heading style numbered by the template: core already wrote
-            // the number (Ruby's), so Word's must not add another.
-            if self.cx.styles.num_id(id).is_some() {
+        }
+        match num {
+            Some(num) => ppr.push_str(num),
+            // A style numbered by the template (a heading): core already
+            // wrote the number (Ruby's), so Word's must not add another.
+            None if id
+                .as_deref()
+                .is_some_and(|id| self.cx.styles.num_id(id).is_some()) =>
+            {
                 ppr.push_str(r#"<w:numPr><w:ilvl w:val="0"/><w:numId w:val="0"/></w:numPr>"#);
             }
+            None => {}
+        }
+        if num.is_none() && self.indent > 0 && !extra_ppr.contains("<w:ind ") {
+            ppr.push_str(&format!(r#"<w:ind w:left="{}"/>"#, self.indent));
         }
         ppr.push_str(extra_ppr);
         self.out.push_str("<w:p>");
@@ -386,6 +872,11 @@ impl<'c, 't> Writer<'c, 't> {
         self.out.push_str(runs);
         self.out.push_str("</w:p>");
     }
+}
+
+/// The `w:numPr` of a list's paragraph.
+fn list_number(num: u32) -> String {
+    format!(r#"<w:numPr><w:ilvl w:val="0"/><w:numId w:val="{num}"/></w:numPr>"#)
 }
 
 /// A paragraph in style `name` outside the body flow (the title when the
@@ -483,6 +974,21 @@ mod tests {
         assert!(!chapters.next().contains("w:start"));
         assert!(!chapters.final_sect_pr().unwrap().contains("w:start"));
         assert_eq!(continue_numbering("<w:sectPr/>"), "<w:sectPr/>");
+    }
+
+    #[test]
+    fn text_width_is_the_page_minus_margins() {
+        assert_eq!(
+            text_width(
+                r#"<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:left="1134" w:right="1134" w:gutter="100"/></w:sectPr>"#
+            ),
+            9538
+        );
+        assert_eq!(text_width("<w:sectPr/>"), DEFAULT_TEXT_WIDTH);
+        assert_eq!(
+            text_width(r#"<w:sectPr><w:pgSz w:w="100"/><w:pgMar w:left="200"/></w:sectPr>"#),
+            DEFAULT_TEXT_WIDTH
+        );
     }
 
     #[test]

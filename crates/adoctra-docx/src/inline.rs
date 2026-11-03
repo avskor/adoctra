@@ -106,6 +106,7 @@ impl Bookmarks {
 pub struct Cx<'t> {
     pub styles: &'t mut Styles,
     pub rels: &'t mut Relationships,
+    pub numbering: &'t mut crate::numbering::Numbering,
     pub bookmarks: Bookmarks,
     pub warnings: Warnings,
 }
