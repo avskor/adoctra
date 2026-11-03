@@ -437,6 +437,7 @@ fn asciidoc_cells_are_nested_documents_with_source_spans() {
             text: "code".into(),
             callouts: Vec::new(),
             inlines: None,
+            blank_edges: adoctra_core::BlankEdges::default(),
         }
     );
 }

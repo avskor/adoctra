@@ -13,7 +13,7 @@
 //! class-mode style (`@style ||=`), inline mode sets it per listing, and a
 //! class-mode listing makes the head embed (or link) the theme stylesheet.
 
-use adoctra_core::ast::{Block, Callout};
+use adoctra_core::ast::{BlankEdges, Block, Callout};
 use adoctra_core::Attributes;
 use adoctra_highlight::format::{self, Style};
 use adoctra_highlight::guess::{self, Guess};
@@ -44,15 +44,69 @@ fn theme(attrs: &Attributes) -> &'static ThemeData {
 pub(super) fn listing(
     block: &Block,
     text: &str,
+    blank_edges: BlankEdges,
     callouts: &[Callout],
     nowrap: &str,
     state: &RefCell<RougeState>,
     out: &mut String,
 ) {
     let class_mode = open(block, nowrap, state, out);
-    let lang = block.attrs.named.get("language").map(String::as_str);
-    out.push_str(&highlight(block, text, callouts, lang, class_mode, state));
+    out.push_str(&highlighted(
+        block,
+        text,
+        blank_edges,
+        callouts,
+        class_mode,
+        state,
+    ));
     out.push_str("</code></pre>\n");
+}
+
+/// A source listing's `Block#content` with Rouge (the `inline` doctype
+/// converts it without the adapter's `format` markup).
+pub(super) fn content(
+    block: &Block,
+    text: &str,
+    blank_edges: BlankEdges,
+    callouts: &[Callout],
+    state: &RefCell<RougeState>,
+) -> String {
+    let class_mode = block
+        .conversion_attributes()
+        .get("rouge-css")
+        .unwrap_or("class")
+        == "class";
+    highlighted(block, text, blank_edges, callouts, class_mode, state)
+}
+
+/// `Block#content` with the `highlight` substitution. Ruby highlights the
+/// untrimmed body (blank edge lines are trimmed only after substitution),
+/// so the line number table and `highlight` lines count `blank_edges`; a
+/// body without lines is not highlighted (`apply_subs` returns an empty
+/// `lines` as is).
+fn highlighted(
+    block: &Block,
+    text: &str,
+    blank_edges: BlankEdges,
+    callouts: &[Callout],
+    class_mode: bool,
+    state: &RefCell<RougeState>,
+) -> String {
+    let Some(source) = blank_edges.source(text) else {
+        return String::new();
+    };
+    // Marks sit in non-empty text, after one LF per leading blank line.
+    let shift = blank_edges.leading;
+    let callouts: Vec<Callout> = callouts
+        .iter()
+        .map(|callout| Callout {
+            start: callout.start + shift,
+            end: callout.end + shift,
+            ..callout.clone()
+        })
+        .collect();
+    let lang = block.attrs.named.get("language").map(String::as_str);
+    highlight(block, &source, &callouts, lang, class_mode, state)
 }
 
 /// A source listing whose substitutions do not highlight (custom `subs`):

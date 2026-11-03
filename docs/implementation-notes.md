@@ -2048,6 +2048,25 @@ with `render_with_start`), fixes highlighted pass slots and splits the HTML
 into Raw tags and decoded Text, so later stages see Ruby's string; marks
 return as Callout parts. Without the hook it is Ruby's `sub_source`. The CLI
 passes the hook in embedded mode too; `golden/rouge/` parses with it.
+**Rouge blank edge lines** (2026-11-03): Ruby's `Block#content` trims blank
+edge lines only *after* substitution, so Rouge sees the untrimmed body: a
+line number table counts (and shows) leading/trailing blank lines, a
+`highlight` line may be a blank one (`<span class="hll">\n</span>` keeps
+it), and an empty body (`lines == []`, `apply_subs` returns early) is not
+highlighted while one blank line gives a one-line table. Core keeps `text`
+trimmed (Ruby's content without a highlighter, JSON/WASM) and records
+`BlockKind::Listing.blank_edges` (`BlankEdges { leading, trailing, empty }`,
+`source(text)` rebuilds the body); the `----` reader no longer drops leading
+blank lines before the trim, and `capture_verbatim_body` reports an empty
+body. The rouge adapter highlights `blank_edges.source(text)` with callouts
+shifted by `leading` and trims after highlighting as before. The `inline`
+doctype converts a rouge source listing's highlighted `content` (also in an
+AsciiDoc cell); highlight.js stays text. `golden/rouge/blank_edges`.
+Audit: all 93 acceptance documents with `source-highlighter=rouge` added
+(943 listings, `<code>` content compared byte for byte with Ruby) — default,
+`rouge-css=style` + monokai, `source-linenums-option`, and
+`rouge-linenums-mode=inline`: 943/943 identical in each after the fix
+(9 linenums differences before). A manual run, not a CI harness.
 highlight.js/prettify are available today. adoctra.css
 carries Ruby's `pre.highlightjs`/`pre.prettyprint` rules (checked with
 screenshots). `golden/highlight/` runs the reference `--standalone --safe`.

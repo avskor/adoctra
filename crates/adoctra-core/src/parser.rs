@@ -6,7 +6,8 @@
 //! the buffer is half-written.
 
 use crate::ast::{
-    AdmonitionKind, Attribution, Block, BlockAttrs, BlockKind, Document, Inline, ListItem, Span,
+    AdmonitionKind, Attribution, BlankEdges, Block, BlockAttrs, BlockKind, Document, Inline,
+    ListItem, Span,
 };
 use crate::attributes::Attributes;
 use crate::block_attributes::parse_block_attr_list;
@@ -1537,6 +1538,7 @@ fn apply_style_fixup(
                     text,
                     callouts: Vec::new(),
                     inlines: None,
+                    blank_edges: BlankEdges::default(),
                 };
             }
             // `[pass]` on a paragraph: the raw source slice, like `[literal]` but
@@ -1831,11 +1833,12 @@ fn adjust_verbatim(block: &mut Block, context: &mut ParseContext) {
 /// Ruby's `Block#content` for verbatim and raw blocks: blank lines at either
 /// edge of a multi-line body are dropped (a single line is kept as is).
 fn trim_verbatim_edges(block: &mut Block) {
-    let (BlockKind::Listing { text, .. }
-    | BlockKind::Literal { text, .. }
-    | BlockKind::Passthrough { text, .. }) = &mut block.kind
-    else {
-        return;
+    let (text, edges) = match &mut block.kind {
+        BlockKind::Listing {
+            text, blank_edges, ..
+        } => (text, Some(blank_edges)),
+        BlockKind::Literal { text, .. } | BlockKind::Passthrough { text, .. } => (text, None),
+        _ => return,
     };
     if !text.contains('\n') {
         return;
@@ -1853,6 +1856,10 @@ fn trim_verbatim_edges(block: &mut Block) {
         .iter()
         .rposition(|line| !blank(line))
         .map_or(start, |i| i + 1);
+    if let Some(edges) = edges {
+        edges.leading = start;
+        edges.trailing = lines.len() - end;
+    }
     *text = lines[start..end].join("\n");
 }
 
@@ -1990,7 +1997,8 @@ fn unterminated_context(delimiter: &'static str, style: Option<&str>) -> &'stati
 /// Capture the verbatim body of a delimited block whose opening `fence` has just
 /// been consumed (so `*i` points at the first body line). Scans lines until the
 /// identical closing `fence`, returning `(body_start, body_end, block_end)` as byte
-/// offsets into the source and the closing fence's span. The body slice is taken verbatim — the caller decides
+/// offsets into the source, the closing fence's span and whether the body has
+/// no line at all (Ruby's empty `lines`). The body slice is taken verbatim — the caller decides
 /// whether to inline-scan it (verse) or keep it raw (literal/source). An
 /// unterminated block pushes a `block_name` diagnostic but is never a failure.
 /// Shared by the `____` verse branch and the `--` verbatim masquerades.
@@ -2001,7 +2009,7 @@ fn capture_verbatim_body(
     fence: &str,
     block_name: &str,
     context: &mut ParseContext,
-) -> (usize, usize, usize, Option<Span>) {
+) -> (usize, usize, usize, Option<Span>, bool) {
     let body_start = if lines.has(*i, context) {
         lines[*i].0
     } else {
@@ -2010,6 +2018,7 @@ fn capture_verbatim_body(
     let mut body_end = body_start;
     let mut end = opening.end;
     let mut closed = false;
+    let mut empty = true;
     while lines.has(*i, context) {
         let (loff, lline_buffer) = lines.line(*i);
         let lline = lline_buffer.as_ref();
@@ -2021,6 +2030,7 @@ fn capture_verbatim_body(
         }
         body_end = loff + lline.len();
         end = body_end;
+        empty = false;
         *i += 1;
     }
     if !closed {
@@ -2033,7 +2043,7 @@ fn capture_verbatim_body(
         });
     }
     let closing = closed.then(|| Span::new(end - fence.len(), end));
-    (body_start, body_end, end, closing)
+    (body_start, body_end, end, closing, empty)
 }
 
 /// Whether a block has an option (`%name`, `options=name` or `name-option`).
@@ -2537,6 +2547,7 @@ fn apply_callouts(block: &mut Block, lines: &Reader<'_>, context: &mut ParseCont
         text,
         callouts,
         inlines: None,
+        ..
     }
     | BlockKind::Literal {
         text,
@@ -2973,7 +2984,7 @@ fn parse_block_content<'s, 'c>(
     if let Some(fence) = fence("```") {
         let opening = Span::new(off, off + line.len());
         *i += 1;
-        let (body_start, body_end, end, closing) =
+        let (body_start, body_end, end, closing, empty) =
             capture_verbatim_body(lines, i, opening, &fence, "listing", context);
         context
             .verbatim_bodies
@@ -2997,6 +3008,10 @@ fn parse_block_content<'s, 'c>(
                 text,
                 callouts: Vec::new(),
                 inlines: None,
+                blank_edges: BlankEdges {
+                    empty,
+                    ..BlankEdges::default()
+                },
             },
         ));
     }
@@ -3026,7 +3041,9 @@ fn parse_block_content<'s, 'c>(
                 closed = true;
                 break;
             }
-            if !text.is_empty() {
+            // Every line after the first starts a new one, blank lines too:
+            // leading blank lines are trimmed only after substitution.
+            if body.is_some() {
                 text.push('\n');
             }
             text.push_str(lline);
@@ -3079,6 +3096,10 @@ fn parse_block_content<'s, 'c>(
                 text,
                 callouts,
                 inlines: None,
+                blank_edges: BlankEdges {
+                    empty: body.is_none(),
+                    ..BlankEdges::default()
+                },
             }
         };
         return Some(Block::new(Span::new(start, end), kind));
@@ -3093,7 +3114,7 @@ fn parse_block_content<'s, 'c>(
         let start = off;
         *i += 1;
         let opening = Span::new(start, off + line.len());
-        let (body_start, body_end, end, closing) = capture_verbatim_body(
+        let (body_start, body_end, end, closing, _) = capture_verbatim_body(
             lines,
             i,
             opening,
@@ -3170,7 +3191,7 @@ fn parse_block_content<'s, 'c>(
         if pending_style == Some("verse") {
             *i += 1;
             let opening = Span::new(start, off + line.len());
-            let (body_start, body_end, end, closing) =
+            let (body_start, body_end, end, closing, _) =
                 capture_verbatim_body(lines, i, opening, &fence, "verse", context);
             lines.record_fences(opening, closing, TokenKind::QuoteDelimiter);
             // Verse keeps its line breaks — scan without folding newlines.
@@ -3249,7 +3270,7 @@ fn parse_block_content<'s, 'c>(
         ) {
             *i += 1;
             let opening = Span::new(start, off + line.len());
-            let (body_start, body_end, end, closing) = capture_verbatim_body(
+            let (body_start, body_end, end, closing, empty) = capture_verbatim_body(
                 lines,
                 i,
                 opening,
@@ -3303,6 +3324,10 @@ fn parse_block_content<'s, 'c>(
                     text: body.text,
                     callouts: Vec::new(),
                     inlines: None,
+                    blank_edges: BlankEdges {
+                        empty,
+                        ..BlankEdges::default()
+                    },
                 },
                 // `[pass]` on `--`: raw passthrough, emitted unescaped and
                 // unwrapped by the backend (no inline subs), like the `++++` fence.
@@ -5541,6 +5566,73 @@ mod tests {
             b.span,
             Span::new("[source,ruby]\n".len(), "[source,ruby]\nx = 1".len())
         );
+    }
+
+    #[test]
+    fn listing_records_the_blank_edge_lines_it_trims() {
+        // Like Ruby's `Block#content`, `text` drops blank edge lines; the
+        // counts keep what a highlighter numbers (`lines` before the trim),
+        // and `empty` marks a body without any line.
+        let edges = |src: &str| {
+            let doc = parse(src).document;
+            let b = &doc.flat_blocks()[0];
+            let BlockKind::Listing {
+                text, blank_edges, ..
+            } = &b.kind
+            else {
+                panic!("{src:?} is no listing")
+            };
+            (text.clone(), *blank_edges, b.span)
+        };
+        let blank = |leading, trailing, empty| BlankEdges {
+            leading,
+            trailing,
+            empty,
+        };
+        let src = "----\n\n\nint a; // <1>\n\n----";
+        assert_eq!(
+            edges(src),
+            (
+                "int a; // <1>".into(),
+                blank(2, 1, false),
+                Span::new(0, src.len())
+            )
+        );
+        let src = "```\n\nint b;\n```";
+        assert_eq!(
+            edges(src),
+            ("int b;".into(), blank(1, 0, false), Span::new(0, src.len()))
+        );
+        let src = "[source]\n--\n\nint c;\n\n--";
+        assert_eq!(
+            edges(src),
+            (
+                "int c;".into(),
+                blank(1, 1, false),
+                Span::new("[source]\n".len(), src.len())
+            )
+        );
+        // No line, one blank line and two (all trimmed into `leading`).
+        assert_eq!(edges("----\n----").1, blank(0, 0, true));
+        assert_eq!(edges("[source]\n--\n--").1, blank(0, 0, true));
+        assert_eq!(edges("```\n```").1, blank(0, 0, true));
+        assert_eq!(edges("----\n\n----").1, blank(0, 0, false));
+        assert_eq!(edges("----\n\n\n----").1, blank(2, 0, false));
+        let (text, two, _) = edges("----\n\n\n----");
+        assert_eq!(two.source(&text).as_deref(), Some("\n"));
+        // The untrimmed body Ruby highlights.
+        let (text, edges, _) = edges("----\n\n\nint a;\n\n----");
+        assert_eq!(edges.source(&text).as_deref(), Some("\n\nint a;\n"));
+        assert_eq!(blank(0, 0, true).source(""), None);
+        assert_eq!(blank(0, 0, false).source("").as_deref(), Some(""));
+        // Leading blank lines of a `----` body are lines of their own: the
+        // callout keeps its offset into the trimmed text.
+        let doc = parse("----\n\nx // <1>\n----\n<1> y").document;
+        let BlockKind::Listing { text, callouts, .. } = &doc.flat_blocks()[0].kind else {
+            panic!()
+        };
+        assert_eq!(text, "x // <1>");
+        assert_eq!(&text[callouts[0].start..callouts[0].end], "// <1>");
     }
 
     #[test]

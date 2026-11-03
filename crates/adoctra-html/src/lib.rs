@@ -1027,6 +1027,7 @@ fn render_block_part<'a>(block: &'a Block, cx: &Cx, out: &mut Out<'a, Block>) {
             text,
             callouts,
             inlines,
+            blank_edges,
         } => {
             render_title(&block.title, &caption_html(block), out);
             // A `[source]`-style listing renders as asciidoctor's highlight form:
@@ -1045,7 +1046,15 @@ fn render_block_part<'a>(block: &'a Block, cx: &Cx, out: &mut Out<'a, Block>) {
                 // highlighted it through `HtmlStart` when they keep
                 // `specialcharacters` and the document was parsed with it.
                 match inlines {
-                    None => rouge::listing(block, text, callouts, nowrap(block), cx.rouge, out),
+                    None => rouge::listing(
+                        block,
+                        text,
+                        *blank_edges,
+                        callouts,
+                        nowrap(block),
+                        cx.rouge,
+                        out,
+                    ),
                     Some(_) => rouge::listing_with(block, nowrap(block), cx.rouge, out, |out| {
                         render_verbatim(text, callouts, inlines, out)
                     }),
@@ -2080,7 +2089,7 @@ fn render_table(block: &Block, table: &adoctra_core::ast::Table, cx: &Cx, out: &
                         // doctype: `inline` gives the first block's content
                         // (its warning has no channel here).
                         if attributes.get("doctype") == Some("inline") {
-                            render_inline_blocks(blocks, *has_title, &mut Vec::new(), out);
+                            render_inline_blocks(cx, blocks, *has_title, &mut Vec::new(), out);
                             out.push_str("</div>");
                         } else {
                             let inner = Cx {
@@ -2246,12 +2255,13 @@ fn render_open<'a>(block: &'a Block, blocks: &'a [Block], out: &mut Out<'a, Bloc
 /// preamble, a list, a table, an image, a break, …) is no candidate: Ruby
 /// warns and converts nothing. A document without blocks is empty.
 fn render_inline_doctype(cx: &Cx, warnings: &mut Vec<String>, out: &mut String) {
-    render_inline_blocks(&cx.doc.blocks, cx.doc.has_title, warnings, out);
+    render_inline_blocks(cx, &cx.doc.blocks, cx.doc.has_title, warnings, out);
 }
 
 /// The inline doctype's output for a document's (or an AsciiDoc cell's)
 /// blocks, the first being its title when `has_title`.
 fn render_inline_blocks(
+    cx: &Cx,
     blocks: &[Block],
     has_title: bool,
     warnings: &mut Vec<String>,
@@ -2267,10 +2277,29 @@ fn render_inline_blocks(
         BlockKind::Paragraph { inlines }
         | BlockKind::Stem { inlines, .. }
         | BlockKind::Verse { inlines, .. } => render_inlines(inlines, out),
+        // Rouge highlights a source listing's content (its default
+        // substitutions); other highlighters work in the client.
+        BlockKind::Listing {
+            text,
+            callouts,
+            inlines: None,
+            blank_edges,
+        } if block.attrs.style.as_deref() == Some("source")
+            && cx.highlighter == Some(highlight::Highlighter::Rouge) =>
+        {
+            out.push_str(&rouge::content(
+                block,
+                text,
+                *blank_edges,
+                callouts,
+                cx.rouge,
+            ))
+        }
         BlockKind::Listing {
             text,
             callouts,
             inlines,
+            ..
         }
         | BlockKind::Literal {
             text,
@@ -6373,6 +6402,55 @@ mod tests {
                 "{source}"
             );
         }
+    }
+
+    #[test]
+    fn inline_doctype_highlights_a_source_listing_with_rouge_like_ruby() {
+        // `Block#content` of a source listing applies Rouge's `highlight`
+        // (line numbers count the blank edge lines); highlight.js works in
+        // the client, so its content stays text. An empty body is not
+        // highlighted.
+        let inline = |source: &str, highlighter: &str| {
+            let mut options = adoctra_core::ParseOptions::default();
+            options.attributes.set("doctype", "inline");
+            options.attributes.set("source-highlighter", highlighter);
+            let doc = adoctra_core::parse_with_options(source, &options).document;
+            HtmlBackend::new().render(&doc).html
+        };
+        for (source, highlighter, html) in [
+            (
+                "[source%linenums,java]\n----\n\nint a; // <1>\n----",
+                "rouge",
+                "<table class=\"linenotable\"><tbody><tr><td class=\"linenos gl\"><pre class=\"lineno\">1\n2\n</pre></td><td class=\"code\"><pre>\n<span class=\"kt\">int</span> <span class=\"n\">a</span><span class=\"o\">;</span> // <b class=\"conum\">(1)</b>\n</pre></td></tr></tbody></table>",
+            ),
+            (
+                "[source,java]\n----\nint b;\n----",
+                "rouge",
+                "<span class=\"kt\">int</span> <span class=\"n\">b</span><span class=\"o\">;</span>",
+            ),
+            ("[source,java]\n----\n----", "rouge", ""),
+            ("[source,java]\n----\nint c;\n----", "highlightjs", "int c;"),
+            (
+                "[source,java]\nint d;",
+                "rouge",
+                "<span class=\"kt\">int</span> <span class=\"n\">d</span><span class=\"o\">;</span>",
+            ),
+        ] {
+            assert_eq!(inline(source, highlighter), html, "{source}");
+        }
+        // An AsciiDoc cell's inner document uses the same highlighter.
+        let mut options = adoctra_core::ParseOptions::default();
+        options.attributes.set("source-highlighter", "rouge");
+        let doc = adoctra_core::parse_with_options(
+            "|===\na|\n:doctype: inline\n\n[source,java]\n----\nint e;\n----\n|===",
+            &options,
+        )
+        .document;
+        let html = HtmlBackend::embedded().render(&doc).html;
+        assert!(
+            html.contains("<div class=\"content\"><span class=\"kt\">int</span> <span class=\"n\">e</span><span class=\"o\">;</span></div></td>"),
+            "{html}"
+        );
     }
 
     #[test]

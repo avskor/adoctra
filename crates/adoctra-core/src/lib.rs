@@ -61,7 +61,7 @@ mod unicode_word;
 pub mod visit;
 
 pub use ast::{
-    Author, AuthorDetails, Block, BlockKind, Document, DocumentHeader, Inline, Manpage,
+    Author, AuthorDetails, BlankEdges, Block, BlockKind, Document, DocumentHeader, Inline, Manpage,
     NameSection, Revision, Span, Toc, TocEntry,
 };
 pub use attributes::{

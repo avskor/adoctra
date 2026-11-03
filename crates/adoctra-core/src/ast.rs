@@ -559,6 +559,9 @@ pub enum BlockKind {
         /// than the verbatim defaults (one [`Inline::Substituted`] node);
         /// backends then render it instead of `text`.
         inlines: Option<Vec<Inline>>,
+        /// The blank edge lines trimmed from `text`, which a highlighter of
+        /// the default substitutions still sees (see [`BlankEdges`]).
+        blank_edges: BlankEdges,
     },
     /// A literal block: verbatim, no inline substitutions, either fenced by
     /// `....` or produced by a `[literal]` style on a paragraph. Same verbatim
@@ -952,6 +955,40 @@ pub struct ListItem {
     /// first marker of the ordered series (`.`, `..`, `1.`, `a.`, `i)`, …);
     /// none for a description.
     pub marker: Option<String>,
+}
+
+/// The blank leading and trailing lines of a listing's body. Ruby's
+/// `Block#content` trims them only *after* substitution, so a source
+/// highlighter (Rouge's line number table, `highlight` lines) numbers them
+/// while [`BlockKind::Listing`]'s `text` is already trimmed. Ruby's reader
+/// strips trailing whitespace, so each such line is empty. `empty` marks a
+/// body without any line (Ruby's `[]`), which is not highlighted at all,
+/// unlike one blank line.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct BlankEdges {
+    pub leading: usize,
+    pub trailing: usize,
+    pub empty: bool,
+}
+
+impl BlankEdges {
+    /// The untrimmed body Ruby passes to the highlighter, `None` for a body
+    /// without lines.
+    pub fn source(&self, text: &str) -> Option<String> {
+        if self.empty {
+            return None;
+        }
+        if self.leading == 0 && self.trailing == 0 {
+            return Some(text.to_owned());
+        }
+        let mut lines = vec![""; self.leading];
+        // An all-blank body trims every line into `leading`.
+        if !(text.is_empty() && self.leading > 0) {
+            lines.push(text);
+        }
+        lines.resize(lines.len() + self.trailing, "");
+        Some(lines.join("\n"))
+    }
 }
 
 /// A callout mark at the end of a verbatim line (`<1>`, `<.>`, `<!--1-->`),

@@ -461,6 +461,7 @@ fn write_block_part<'a>(b: &'a Block, s: &mut Out<'a, Block>) {
             text,
             callouts,
             inlines,
+            ..
         } => {
             s.push_str("\"name\":\"listing\",");
             write_id(&b.id, s);
@@ -2294,6 +2295,21 @@ mod tests {
             "got: {json}"
         );
         assert!(json.contains("\"text\":\"puts *x*\""), "got: {json}");
+    }
+
+    #[test]
+    fn listing_text_omits_blank_edge_lines_like_ruby_content() {
+        // The editor sees Ruby's `content` and the whole body span.
+        let source = "[source,java]\n----\n\nint a;\n\n----";
+        let json = parse_json(source);
+        assert!(json.contains("\"text\":\"int a;\""), "got: {json}");
+        assert!(!json.contains("blank"), "got: {json}");
+        let span = format!(
+            "\"span\":{{\"source_id\":0,\"start\":{},\"end\":{}}}",
+            "[source,java]\n".len(),
+            source.len()
+        );
+        assert!(json.contains(&span), "got: {json}");
     }
 
     #[test]

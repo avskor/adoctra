@@ -388,6 +388,7 @@ fn write_block_part<'a>(block: &'a Block, s: &mut Out<'a, Block>) {
             text,
             callouts,
             inlines,
+            ..
         } => {
             s.push_str("{\"name\":\"listing\",");
             write_id(&block.id, s);
@@ -2739,6 +2740,15 @@ mod tests {
             "got: {json}"
         );
         assert!(json.contains("\"text\":\"puts *x*\""), "got: {json}");
+    }
+
+    #[test]
+    fn listing_text_omits_blank_edge_lines_like_ruby_content() {
+        // The trimmed blank edge lines only matter to a highlighter; the
+        // listing's text is Ruby's `content` without them.
+        let json = render("[source,java]\n----\n\nint a;\n\n----");
+        assert!(json.contains("\"text\":\"int a;\""), "got: {json}");
+        assert!(!json.contains("blank"), "got: {json}");
     }
 
     #[test]

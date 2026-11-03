@@ -125,6 +125,7 @@ fn verbatim_blocks_convert_with_callouts_and_trim_edges_after_expansion() {
         text,
         callouts: catalog,
         inlines: Some(nodes),
+        ..
     } = &block.kind
     else {
         panic!("{block:?}")
