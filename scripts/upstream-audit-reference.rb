@@ -56,22 +56,6 @@ def logged logger
   end
 end
 
-# `--invoke ARGS...`: one run of Ruby's CLI (Asciidoctor::Cli::Invoker) in
-# the current directory, standard input as the document for `-`, with the
-# same highlighter environment as the batch mode. Prints one JSON object:
-# exit code, standard output, the error text and the logged diagnostics
-# (the harness collects the files the run wrote).
-if ARGV[0] == '--invoke'
-  require 'asciidoctor/cli'
-  require 'stringio'
-  logger = Asciidoctor::MemoryLogger.new
-  Asciidoctor::LoggerManager.logger = logger
-  invoker = Asciidoctor::Cli::Invoker.new ARGV.drop 1
-  invoker.redirect_streams (out = StringIO.new), (err = StringIO.new)
-  invoker.invoke! { $stdin.read }
-  puts JSON.generate(code: invoker.code, stdout: out.string, error: err.string, diagnostics: (logged logger))
-  exit
-end
 SAFE = { 'unsafe' => :unsafe, 'safe' => :safe, 'server' => :server, 'secure' => :secure }.freeze
 
 def options_of recorded
@@ -125,6 +109,37 @@ def attribute_strings attributes
   (attributes || {}).to_h {|name, value| [name.to_s, value.nil? ? nil : value.to_s] }
 end
 
+# The document model the upstream assertions read through the API: the
+# block structure (block-structure-v1), the attributes when the header was
+# saved (Document#save_attributes) and after conversion, catalog[:refs] in
+# registration order and the footnotes.
+def document_model document
+  { structure: (structure_document(document) {|block| block_metadata block }),
+    attributes: { header: (attribute_strings document.instance_variable_get :@header_attributes),
+                  final: (attribute_strings document.attributes) },
+    references: document.catalog[:refs].map {|id, node| { id: id, inline: (Asciidoctor::Inline === node) } },
+    footnotes: document.footnotes.map {|entry| { index: entry.index.to_s, id: entry.id, text: entry.text.to_s } } }
+end
+
+# `--invoke ARGS...`: one run of Ruby's CLI (Asciidoctor::Cli::Invoker) in
+# the current directory, standard input as the document for `-`, with the
+# same highlighter environment as the batch mode. Prints one JSON object:
+# exit code, standard output, the error text and the logged diagnostics
+# (the harness collects the files the run wrote) and the model of each
+# converted document.
+if ARGV[0] == '--invoke'
+  require 'asciidoctor/cli'
+  require 'stringio'
+  logger = Asciidoctor::MemoryLogger.new
+  Asciidoctor::LoggerManager.logger = logger
+  invoker = Asciidoctor::Cli::Invoker.new ARGV.drop 1
+  invoker.redirect_streams (out = StringIO.new), (err = StringIO.new)
+  invoker.invoke! { $stdin.read }
+  puts JSON.generate({ code: invoker.code, stdout: out.string, error: err.string, diagnostics: (logged logger),
+                    models: invoker.documents.map {|document| document_model document } }, max_nesting: false)
+  exit
+end
+
 entries = JSON.parse(File.read(ARGV.fetch(0)))
 entries.each do |entry|
   reset_highlighter_status
@@ -142,12 +157,7 @@ entries.each do |entry|
     # plus a LF, nothing for nil (the inline doctype without a candidate).
     html = output.nil? ? '' : %(#{output.chomp}\n)
     diagnostics = logged logger
-    # The document model the upstream assertions read through the API: the
-    # block structure (block-structure-v1) and the attributes when the header
-    # was saved (Document#save_attributes) and after conversion.
-    model = { structure: (structure_document(document) {|block| block_metadata block }),
-              attributes: { header: (attribute_strings document.instance_variable_get :@header_attributes),
-                            final: (attribute_strings document.attributes) } }
+    model = document_model document
     # Deeply nested lists exceed JSON's default nesting limit.
     puts JSON.generate({ id: entry['id'], html: html, diagnostics: diagnostics, model: model }, max_nesting: false)
   rescue StandardError, SystemStackError => e

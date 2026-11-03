@@ -27,6 +27,9 @@ pub struct JsonOptions {
     /// table cell then has `"location":{"file":…,"line":…}`, the line its
     /// span starts on (1-based) in the file that holds it.
     pub locations: Option<SourceMap>,
+    /// Ruby's `catalog[:refs]` (`"references":[{"id","inline"}]`, in
+    /// registration order).
+    pub references: bool,
 }
 
 /// Restores the location slot when the conversion ends (also on panic).
@@ -72,7 +75,7 @@ impl JsonBackend {
             doc,
             JsonOptions {
                 attributes: true,
-                locations: None,
+                ..JsonOptions::default()
             },
         )
     }
@@ -82,6 +85,21 @@ impl JsonBackend {
         let _scope = LocationScope;
         LOCATIONS.with(|slot| *slot.borrow_mut() = options.locations);
         let mut bytes = self.convert(doc)?;
+        if options.references {
+            let closing = bytes.pop();
+            debug_assert_eq!(closing, Some(b'}'));
+            let mut suffix = String::from(",\"references\":[");
+            for (index, reference) in doc.references.iter().enumerate() {
+                if index > 0 {
+                    suffix.push(',');
+                }
+                suffix.push_str("{\"id\":");
+                escape_into(&reference.id, &mut suffix);
+                suffix.push_str(&format!(",\"inline\":{}}}", reference.inline));
+            }
+            suffix.push_str("]}");
+            bytes.extend_from_slice(suffix.as_bytes());
+        }
         if !options.attributes {
             return Ok(bytes);
         }
@@ -2789,6 +2807,39 @@ mod tests {
     }
 
     #[test]
+    fn references_are_opt_in_and_list_the_catalog_in_order() {
+        let doc = adoctra_core::parse("[[a]]\n== A\n\nsee [[inl]]here\n").document;
+        let plain = String::from_utf8(JsonBackend::new().convert(&doc).unwrap()).unwrap();
+        assert!(!plain.contains("\"references\""), "{plain}");
+        let json = JsonBackend::new()
+            .convert_with(
+                &doc,
+                JsonOptions {
+                    references: true,
+                    ..JsonOptions::default()
+                },
+            )
+            .unwrap();
+        let json = String::from_utf8(json).unwrap();
+        assert!(
+            json.contains(r#""references":[{"id":"a","inline":false},{"id":"inl","inline":true}]"#),
+            "{json}"
+        );
+        let empty = JsonBackend::new()
+            .convert_with(
+                &adoctra_core::parse("x\n").document,
+                JsonOptions {
+                    references: true,
+                    ..JsonOptions::default()
+                },
+            )
+            .unwrap();
+        assert!(String::from_utf8(empty)
+            .unwrap()
+            .contains(r#""references":[]"#));
+    }
+
+    #[test]
     fn locations_are_opt_in_and_name_the_file_that_holds_each_node() {
         let mut sources = adoctra_core::SourceMap::new();
         let mut resources = adoctra_core::MemoryResources::new();
@@ -2813,8 +2864,8 @@ mod tests {
             .convert_with(
                 &doc,
                 JsonOptions {
-                    attributes: false,
                     locations: Some(sources.clone()),
+                    ..JsonOptions::default()
                 },
             )
             .unwrap();

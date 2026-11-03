@@ -62,7 +62,7 @@ pub mod visit;
 
 pub use ast::{
     Author, AuthorDetails, BlankEdges, Block, BlockKind, Document, DocumentHeader, Inline, Manpage,
-    NameSection, Revision, Span, Toc, TocEntry,
+    NameSection, Reference, Revision, Span, Toc, TocEntry,
 };
 pub use attributes::{
     AttributeFormat, AttributeLink, AttributePart, Attributes, Footnote, FootnoteKind, IndexTerm,

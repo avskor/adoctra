@@ -19,6 +19,19 @@ use crate::visit::{self, InlineContext, VisitorMut};
 /// stays deterministic (like [`Attributes`]).
 pub(crate) type Registry = BTreeMap<String, Target>;
 
+/// The registry as Ruby's `catalog[:refs]` lists it: by registration order.
+pub(crate) fn catalog(registry: &Registry) -> Vec<crate::ast::Reference> {
+    let mut entries: Vec<_> = registry.iter().collect();
+    entries.sort_by_key(|(_, target)| target.order);
+    entries
+        .into_iter()
+        .map(|(id, target)| crate::ast::Reference {
+            id: id.clone(),
+            inline: target.inline,
+        })
+        .collect()
+}
+
 /// A referable node: its explicit reftext (formatted per reference) and, for a
 /// block, its title. Neither ⇒ a known id that displays `[id]` *without* a
 /// diagnostic (e.g. a plain paragraph anchor).

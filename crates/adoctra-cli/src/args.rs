@@ -3,8 +3,8 @@
 //! clustered short flags (`-sn`) and attached values (`-Ssafe`), enumerated
 //! values by unique case-sensitive prefix (`-d b`), and Ruby's messages for
 //! invalid, ambiguous and missing arguments. `-h` and `-V` act when parsed.
-//! adoctra adds `--to`, `--stdout`, `--json-attributes`, `--json-locations`
-//! and `--diagnostics`.
+//! adoctra adds `--to`, `--stdout`, `--json-attributes`, `--json-locations`,
+//! `--json-references` and `--diagnostics`.
 
 use std::path::PathBuf;
 
@@ -45,6 +45,7 @@ pub struct Args {
     pub safe: adoctra::SafeMode,
     pub json_attributes: bool,
     pub json_locations: bool,
+    pub json_references: bool,
     pub editor_diagnostics: bool,
     pub base_dir: Option<PathBuf>,
     pub failure_level: Level,
@@ -128,6 +129,7 @@ const SPECS: &[Spec] = &[
     spec(None, "stdout", Value::None),
     spec(None, "json-attributes", Value::None),
     spec(None, "json-locations", Value::None),
+    spec(None, "json-references", Value::None),
     spec(None, "diagnostics", Value::Choice(&["compat", "editor"])),
 ];
 
@@ -234,6 +236,7 @@ fn apply(state: &mut State, spec: &Spec, switch: &str, value: Option<String>) ->
         "stdout" => args.to_stdout = true,
         "json-attributes" => args.json_attributes = true,
         "json-locations" => args.json_locations = true,
+        "json-references" => args.json_references = true,
         "diagnostics" => args.editor_diagnostics = value == "editor",
         other => unreachable!("unhandled option {other}"),
     }
@@ -279,6 +282,7 @@ pub fn parse(arguments: impl IntoIterator<Item = String>) -> Command {
             safe: adoctra::SafeMode::Safe,
             json_attributes: false,
             json_locations: false,
+            json_references: false,
             editor_diagnostics: false,
             base_dir: None,
             failure_level: Level::Fatal,

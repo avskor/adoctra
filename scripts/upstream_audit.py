@@ -73,7 +73,7 @@ PLACEHOLDER = "<UPSTREAM>"
 SAFE = {"unsafe": "unsafe", "safe": "safe", "server": "server", "secure": "secure",
         0: "unsafe", 1: "safe", 10: "server", 20: "secure"}
 ENVIRONMENT = {"SOURCE_DATE_EPOCH": "1700000000", "TZ": "UTC"}
-PROFILE = "upstream-audit-body-shell-positions-model-v6"
+PROFILE = "upstream-audit-body-shell-positions-model-v7"
 # Ruby's default `webfonts` (an empty value) links these Google fonts; the
 # adoctra theme uses system fonts (an explicit `webfonts` value is compared).
 # The opening comments of Ruby's default stylesheet and adoctra.css.
@@ -310,6 +310,12 @@ def compare_locations(expected, actual):
     return "DIFF" if differences else "PASS"
 
 
+def parts_text(parts):
+    """The text of semantic parts (raw markup dropped, references decoded)."""
+    return "".join(attribute_text(part["value"]) if part.get("kind") == "raw" else part.get("value", "")
+                   for part in parts if "value" in part)
+
+
 def model_attributes(snapshot, root):
     """adoctra's attribute snapshot (`--json-attributes`) as text values."""
     result = {}
@@ -335,7 +341,9 @@ def reference_model(model, root, docfile=None):
     attributes = {snapshot: {name: None if value is None else localize_back(attribute_text(value), root)
                              for name, value in values.items()}
                   for snapshot, values in model["attributes"].items()}
-    return {"structure": model["structure"], "attributes": attributes}
+    footnotes = [dict(entry, text=attribute_text(entry["text"])) for entry in model.get("footnotes", [])]
+    return {"structure": model["structure"], "attributes": attributes,
+            "references": model.get("references", []), "footnotes": footnotes}
 
 
 def localize_back(value, root):
@@ -674,19 +682,32 @@ def adoctra(binary, entry, args, root=None):
     except ValueError as error:
         return {"error": str(error)}
     # The same conversion as JSON: block structure and attribute snapshots.
-    model = decoded(subprocess.run([str(binary), "-", "--to", "json", "--json-attributes", "--json-locations",
-                                    "--stdout", *args],
+    model = decoded(subprocess.run([str(binary), "-", *MODEL_OPTIONS, "--stdout", *args],
                                    input=entry["source"].encode("utf-8"), capture_output=True, timeout=60,
                                    env={**os.environ, **ENVIRONMENT}))
-    try:
-        document = json.loads(model.stdout)
-        result["model"] = {"structure": structure.document_projection(
-                               document, lambda block: adoctra_metadata(block, root)[1]),
-                           "attributes": {snapshot: model_attributes(values, root)
-                                          for snapshot, values in document["attribute_snapshots"].items()}}
-    except (ValueError, KeyError) as error:
-        result["model"] = {"error": f"{type(error).__name__}: {error}"[:300]}
+    result["model"] = adoctra_model(model.stdout, root)
     return result
+
+
+# The JSON options that export the model (with the `--to json` conversion).
+MODEL_OPTIONS = ("--to", "json", "--json-attributes", "--json-locations", "--json-references")
+
+
+def adoctra_model(text, root=None):
+    """The model from adoctra's JSON: the block structure, the attribute
+    snapshots, the registered ids and the footnotes; an error entry when the
+    JSON is missing or incomplete."""
+    try:
+        document = json.loads(text)
+        return {"structure": structure.document_projection(
+                    document, lambda block: adoctra_metadata(block, root)[1]),
+                "references": document["references"],
+                "footnotes": [{"index": entry["index"], "id": entry["id"], "text": parts_text(entry["parts"])}
+                              for entry in document.get("footnotes", [])],
+                "attributes": {snapshot: model_attributes(values, root)
+                               for snapshot, values in document["attribute_snapshots"].items()}}
+    except (ValueError, KeyError, TypeError) as error:
+        return {"error": f"{type(error).__name__}: {error}"[:300]}
 
 
 def tree_state(root):
@@ -737,7 +758,9 @@ def run_cli(binary, entry, args, root):
         result = json.loads(run.stdout)
         expected = {"code": result["code"], "stdout": result["stdout"],
                     "failure": result["error"].split("\n")[0],
-                    "diagnostics": reference_diagnostics(result["diagnostics"], root), "files": files}
+                    "diagnostics": reference_diagnostics(result["diagnostics"], root), "files": files,
+                    "models": [reference_model(model, root, input_file and localize(input_file, root))
+                               for model in result["models"]]}
     with recording_writes(root) as files:
         run = decoded(subprocess.run([str(binary), target, "--to", "html", *args],
                                      input=(stdin or "").encode("utf-8"), cwd=root,
@@ -753,8 +776,26 @@ def run_cli(binary, entry, args, root):
     except ValueError as error:
         return expected, {"error": str(error)}
     actual = {"code": run.returncode, "stdout": run.stdout, "failure": failure,
-              "diagnostics": diagnostics, "files": files}
+              "diagnostics": diagnostics, "files": files,
+              # The HTML run converted nothing (it failed before writing, as
+              # Ruby's invoker then keeps no document): no model either.
+              "models": written_models(binary, target, stdin, args, root, env)
+              if run.stdout or files else []}
     return expected, actual
+
+
+def written_models(binary, target, stdin, args, root, env):
+    """The model of the converted document: the same run as JSON (written to
+    the same place, so `outfile` and `outdir` stay the same), read from
+    standard output or the JSON file it wrote; none when the run wrote
+    nothing."""
+    with recording_writes(root) as files:
+        run = decoded(subprocess.run([str(binary), target, *MODEL_OPTIONS, *args],
+                                     input=(stdin or "").encode("utf-8"), cwd=root,
+                                     capture_output=True, env=env, timeout=60))
+    candidates = [run.stdout] if run.stdout else [
+        data.decode("utf-8", "replace") for name, data in sorted(files.items()) if not name.endswith(".css")]
+    return [adoctra_model(text, root) for text in candidates]
 
 
 # Ruby's default stylesheet and adoctra's own, written by `copycss`: the
@@ -772,6 +813,10 @@ def compare_files(entry, args, expected, actual):
     for key in ("code", "failure", "diagnostics"):
         if expected[key] != actual[key]:
             reasons.append(key)
+    if len(expected["models"]) != len(actual["models"]):
+        reasons.append(f"models:{len(expected['models'])} in Ruby, {len(actual['models'])} in adoctra")
+    for theirs, ours in zip(expected["models"], actual["models"]):
+        reasons += compare_model(theirs, ours)
 
     def page(html):
         try:
@@ -859,6 +904,10 @@ def compare_model(expected, actual):
         differences = metadata_differences(expected["structure"], actual["structure"])
         if differences:
             reasons.append("metadata:" + ";".join(differences[:3]) + ("…" if len(differences) > 3 else ""))
+    if expected.get("references") != actual.get("references"):
+        reasons.append("references")
+    if expected.get("footnotes") != actual.get("footnotes"):
+        reasons.append("footnotes")
     for snapshot in ("header", "final"):
         ours, theirs = actual["attributes"].get(snapshot, {}), expected["attributes"].get(snapshot, {})
         changed = sorted(name for name in set(ours) | set(theirs) if ours.get(name) != theirs.get(name))

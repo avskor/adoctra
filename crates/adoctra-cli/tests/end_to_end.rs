@@ -1225,6 +1225,44 @@ fn cli_json_locations_add_each_nodes_start_line() {
 }
 
 #[test]
+fn cli_json_references_export_the_catalog() {
+    use std::io::Write;
+    use std::process::{Command, Stdio};
+    let run = |args: &[&str]| {
+        let mut child = Command::new(env!("CARGO_BIN_EXE_adoctra"))
+            .args(["-", "--stdout"])
+            .args(args)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap();
+        child
+            .stdin
+            .take()
+            .unwrap()
+            .write_all(b"[[a]]\n== A\n\nsee [[inl]]here\n")
+            .unwrap();
+        child.wait_with_output().unwrap()
+    };
+    let output = run(&["--to", "json", "--json-references"]);
+    assert!(output.status.success());
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    assert!(
+        stdout.contains(r#""references":[{"id":"a","inline":false},{"id":"inl","inline":true}]"#),
+        "{stdout}"
+    );
+    assert!(!String::from_utf8(run(&["--to", "json"]).stdout)
+        .unwrap()
+        .contains("\"references\""));
+    let html = run(&["--to", "html", "--json-references"]);
+    assert!(!html.status.success());
+    assert!(String::from_utf8(html.stderr)
+        .unwrap()
+        .contains("--json-references requires --to json"));
+}
+
+#[test]
 fn cli_inline_doctype_writes_a_newline_and_embedded_warnings() {
     use std::io::Write;
     use std::process::{Command, Stdio};

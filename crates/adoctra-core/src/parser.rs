@@ -232,6 +232,7 @@ pub(crate) fn parse_reader<'a>(
         output: None,
         toc: None,
         base_dir: lines.base_dir().map(str::to_owned),
+        references: Vec::new(),
     };
     if let Some(effective) = header.effective_title {
         let inlines = context
@@ -288,6 +289,7 @@ pub(crate) fn parse_reader<'a>(
 
     let mut references = Vec::new();
     let registry = context.register_references(&mut doc, &lines.include_catalog, &mut references);
+    doc.references = crate::resolve::catalog(&registry.0);
     name_attributes(&mut doc);
     // Everything reported so far (placed by an earlier stamp, or a duplicate
     // id registration reported without one) is Ruby's load; the rest is
@@ -7197,5 +7199,25 @@ mod tests {
         };
         assert_eq!(*kind, AdmonitionKind::Note);
         assert!(blocks[0].title.is_none(), "child must not carry the title");
+    }
+
+    #[test]
+    fn references_catalog_ids_in_registration_order() {
+        // Ruby's catalog[:refs]: a section, an inline anchor, a block id
+        // and an anchor in a table cell, in the order they register.
+        let doc = parse(
+            "[[a]]\n== A\n\nsee [[inl]]here\n\n[#blk]\n----\nx\n----\n\n|===\n|[[cell]]c\n|===\n",
+        )
+        .document;
+        let catalog: Vec<_> = doc
+            .references
+            .iter()
+            .map(|r| (r.id.as_str(), r.inline))
+            .collect();
+        assert_eq!(
+            catalog,
+            [("a", false), ("inl", true), ("blk", false), ("cell", true)]
+        );
+        assert!(parse("plain\n").document.references.is_empty());
     }
 }

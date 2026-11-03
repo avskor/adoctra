@@ -2067,6 +2067,16 @@ per-entry channel (`locations`, `location_totals`, profile `…-model-v6`):
 2092 PASS, 213 DIFF frozen — Ruby's reader cursor vs adoctra's physical
 start (intentional difference, user decision 2026-11-03); a primary
 document Ruby names by `docfile` is the CLI's `<stdin>`.
+**References catalog and file-output models** (2026-11-03): core fills
+`Document::references` (`ast::Reference { id, inline }`) from the reference
+registry sorted by registration order (`resolve::catalog`), Ruby's
+`catalog[:refs]`; `JsonOptions::references` / CLI `--json-references` export
+it. The upstream audit (profile `…-model-v7`) compares it and
+`Document#footnotes` (index, id, text compared as text) in the model; for
+file-output entries the reference script's `--invoke` prints
+`Invoker#documents` models and the harness reruns adoctra's CLI with
+`--to json` and the model options to the same destination (no model when
+the HTML run wrote nothing). No differences (34 models in 38 entries).
 **CLI shell and base_dir assets** (2026-11-03): cli_matrix.py compares a
 standalone document's shell (upstream_audit.shell) in stdout and written
 files. It exposed that the stylesheet and docinfo were read from the

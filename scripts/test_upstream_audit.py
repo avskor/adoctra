@@ -234,7 +234,7 @@ class CompareTests(unittest.TestCase):
                                                   {"kind": "raw", "value": "<em>"},
                                                   {"kind": "text", "value": "b"},
                                                   {"kind": "raw", "value": "</em>"}]}}, Path("/root")),
-            "final": {"doctitle": "<Foo> + b", "gone": None}}}
+            "final": {"doctitle": "<Foo> + b", "gone": None}}, "references": [], "footnotes": []}
         # Markup and character references compare as text; checkout paths
         # as the placeholder.
         self.assertEqual(ruby["attributes"]["header"]["docdir"], "<UPSTREAM>/x")
@@ -311,6 +311,46 @@ class CompareTests(unittest.TestCase):
         heading = upstream_audit.adoctra_metadata({"name": "heading", "inlines": [{"name": "text", "value": "S"}],
                                                    "caption": "1. "})[1]
         self.assertEqual((heading["title"], heading.get("caption")), ("S", None))
+
+
+    def test_reference_and_footnote_catalogs_are_compared(self):
+        tree = {"context": "document", "has_title": False, "blocks": []}
+        ruby = upstream_audit.reference_model(
+            {"structure": tree, "attributes": {},
+             "references": [{"id": "a", "inline": False}, {"id": "x", "inline": True}],
+             "footnotes": [{"index": "1", "id": None, "text": "one <strong>b</strong> &#8217;"},
+                           {"index": "2", "id": "n", "text": "two"}]}, None)
+        document = {"name": "document", "blocks": [], "attribute_snapshots": {},
+                    "references": [{"id": "a", "inline": False}, {"id": "x", "inline": True}],
+                    "footnotes": [{"index": "1", "id": None, "parts": [
+                                      {"kind": "text", "value": "one "}, {"kind": "raw", "value": "<strong>"},
+                                      {"kind": "text", "value": "b"}, {"kind": "raw", "value": "</strong>"},
+                                      {"kind": "raw", "value": " &#8217;"}]},
+                                  {"index": "2", "id": "n", "parts": [{"kind": "text", "value": "two"}]}]}
+        ours = upstream_audit.adoctra_model(json.dumps(document))
+        # Footnote markup and character references compare as text.
+        self.assertEqual(ours["footnotes"][0]["text"], "one b \u2019")
+        self.assertEqual(upstream_audit.compare_model(ruby, ours), [])
+        swapped = dict(ours, references=list(reversed(ours["references"])))
+        self.assertEqual(upstream_audit.compare_model(ruby, swapped), ["references"])
+        renumbered = dict(ours, footnotes=[dict(ours["footnotes"][0], index="3"), ours["footnotes"][1]])
+        self.assertEqual(upstream_audit.compare_model(ruby, renumbered), ["footnotes"])
+        self.assertIn("error", upstream_audit.adoctra_model("not json"))
+        self.assertIn("error", upstream_audit.adoctra_model('{"name": "document", "blocks": []}'))
+
+
+    def test_file_output_entries_compare_each_documents_model(self):
+        tree = {"context": "document", "has_title": False, "blocks": []}
+        model = {"structure": tree, "attributes": {}, "references": [], "footnotes": []}
+        side = {"code": 0, "stdout": "", "failure": "", "diagnostics": [], "files": {}, "models": [model]}
+        entry = {"options": {}}
+        self.assertEqual(upstream_audit.compare_files(entry, ["-s"], side, side), ("PASS", []))
+        changed = dict(side, models=[dict(model, references=[{"id": "a", "inline": False}])])
+        self.assertEqual(upstream_audit.compare_files(entry, ["-s"], side, changed), ("DIFF", ["references"]))
+        # A run that converted nothing has no document on either side.
+        none = dict(side, models=[])
+        self.assertEqual(upstream_audit.compare_files(entry, ["-s"], none, side),
+                         ("DIFF", ["models:0 in Ruby, 1 in adoctra"]))
 
 
     def test_locations_are_a_separate_channel(self):

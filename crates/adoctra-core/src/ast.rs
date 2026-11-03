@@ -89,6 +89,17 @@ pub struct Document {
     /// else `docdir`. A converter resolves its assets (docinfo, stylesheet)
     /// from it with [`asset_path`](crate::asset_path).
     pub base_dir: Option<String>,
+    /// Ruby's `catalog[:refs]`: every registered id in registration order,
+    /// with whether it names an inline anchor (an `Inline`, not a block or
+    /// section). Ids Ruby rejects as duplicates are not listed.
+    pub references: Vec<Reference>,
+}
+
+/// One entry of [`Document::references`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Reference {
+    pub id: String,
+    pub inline: bool,
 }
 
 /// A table of contents as Ruby's converter renders it (`convert_outline`),

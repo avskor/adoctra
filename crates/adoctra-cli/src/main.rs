@@ -415,12 +415,14 @@ fn convert(args: &Args, uri_cache: &resources::UriCache) -> Result<(), Failure> 
         referrer,
         html_start,
     )?;
-    let bytes = if args.json_attributes || args.json_locations {
+    let bytes = if args.json_attributes || args.json_locations || args.json_references {
         if args.format != "json" {
             let flag = if args.json_attributes {
                 "--json-attributes"
-            } else {
+            } else if args.json_locations {
                 "--json-locations"
+            } else {
+                "--json-references"
             };
             return Err(adoctra::Error::Unsupported(format!("{flag} requires --to json")).into());
         }
@@ -429,6 +431,7 @@ fn convert(args: &Args, uri_cache: &resources::UriCache) -> Result<(), Failure> 
             adoctra::json::JsonOptions {
                 attributes: args.json_attributes,
                 locations: args.json_locations.then(|| sources.clone()),
+                references: args.json_references,
             },
         )?
     } else {
@@ -1032,6 +1035,7 @@ fn print_usage(out: &mut dyn Write) {
          \x20     --stdout               write to stdout (like -o -)\n\
          \x20     --json-attributes      include header/final attributes with --to json\n\
          \x20     --json-locations       include each block's file and line with --to json\n\
+         \x20     --json-references      include the registered ids with --to json\n\
          \x20     --diagnostics MODE     compat (default) or editor with physical byte spans\n\
          \x20 -h, --help                 print this help\n\
          \x20 -V, --version              print the version"
