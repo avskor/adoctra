@@ -19,10 +19,10 @@ Cargo workspace (`crates/*`), virtual manifest at the root.
 - `adoctra-core` — parser and document model. **Backend-agnostic.** Owns the
   `Backend` and extension (`TreeProcessor`/`Registry`) traits.
 - `adoctra-html` — HTML5 backend.
-- `adoctra-docx` — template-based DOCX backend **in progress** (stage 7 of 8:
-  body, cover, headers, lists, tables, frames, images, footnotes, TOC, index,
-  Rouge, page orientation; next: custom templates via `docx-template`). Own OOXML
-  writer over `zip`; contract in `docs/docx.adoc`.
+- `adoctra-docx` — template-based DOCX backend (all 8 planned stages done
+  2026-11-04; `docx-template` attribute, roles as template styles). Own OOXML
+  writer over `zip`; contract in `docs/docx.adoc`; text differential with
+  HTML in `crates/adoctra/tests/docx_text.rs`.
 - `adoctra-json` — JSON/ASG backend; intended TCK adapter.
 - `adoctra` — umbrella crate. Re-exports core; backends behind feature flags
   (`html` default, plus `docx`, `json`, `all-backends`).
@@ -222,8 +222,8 @@ callouts, tables incl. AsciiDoc cells, images/SVG/data-uri/video/audio,
 xrefs/anchors/footnotes/index terms/UI macros/STEM, TOC, block `subs`,
 source highlighters incl. the Rouge port), HTML backend (standalone and
 embedded, XML syntax, `adoctra.css`), JSON backend, WASM bindings with spans,
-tokens and diagnostics, and a CLI matching Ruby's options. **In progress:**
-the template-based DOCX backend (`docs/docx.adoc`). **Scaffold only:** the
+tokens and diagnostics, a CLI matching Ruby's options, and the template-based
+DOCX backend (`docs/docx.adoc`). **Scaffold only:** the
 extension API exists but `parse`/`convert` do not invoke it.
 **Not yet implemented:** incremental/block reparse, a pull/event API, DocBook/manpage backends, Ruby
 API/extensions. (Admonition labels in list items and list item anchors were

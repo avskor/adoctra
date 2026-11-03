@@ -1843,6 +1843,23 @@ changing `page-layout` -> section break instead of `w:br`; `%rotate` table
 on portrait -> turn before, `Task::Turn(false)` after. No body sectPr ->
 warning, orientation ignored. Book header uses `w:ptab` (margin-relative
 right tab; LibreOffice imports it as a normal tab).
+Stage 8 done 2026-11-04 (all DOCX stages): `docx-template` attribute
+(`DocxBackend::load_template`: provider required, `asset_path` from
+`doc.base_dir` with the safe-mode jail, `book`/`article` select built-ins;
+unreadable/invalid -> warning + built-in; `with_template` wins). Roles:
+`Writer::role_style` (first role naming a template style of the kind:
+paragraph style for paragraphs, table style for tables and frames via
+`framed_style`), phrase roles -> character style (`Runs::role_style`,
+restored on close; rStyle priority special > role > …). Text differential:
+`adoctra_docx::extract_text` (document + footnotes text) and
+`crates/adoctra/tests/docx_text.rs` over the HTML golden corpus, word
+multisets, frozen `docx_text.baseline` (55 inputs), regenerate with
+`ADOCTRA_DOCX_TEXT_REGENERATE=1`. Fixes it found: callout marks `(n)` bold
+without icons, colist `n.` without icons (Callout style only with icons),
+custom-subs callout guards, manpage title `… Manual Page` (first section
+when untitled) and NAME section, collapsible example `Details`, decoded AV
+link text, legacy `&gt`/`&lt`/`&amp`/`&quot` at a Raw value's end, Rouge
+line table drops trailing blank lines (Ruby's `split`).
 
 Index terms (`((…))` / `indexterm2:[…]` visible, `(((…)))` /
 `indexterm:[…]` concealed) run after images and before links, as Ruby's

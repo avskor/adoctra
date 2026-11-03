@@ -4,8 +4,9 @@
 //!
 //! Like Ruby's adapter, callout marks are taken out of the source before
 //! lexing and put back at the end of their lines; the lexer sees the body
-//! with its blank edge lines, which are dropped from the output unless
-//! `linenums` numbers the lines (from `start`), as in Ruby's table. Ruby's `hll` class for `highlight` lines
+//! with its blank edge lines, which are dropped from the output; with
+//! `linenums` (numbered from `start`) the leading ones stay, as in Ruby's
+//! line table. Ruby's `hll` class for `highlight` lines
 //! has no style in its stylesheets, so those lines look the same.
 
 use adoctra_core::ast::{BlankEdges, Block, Callout};
@@ -95,16 +96,26 @@ pub fn highlight<'a>(
         }
     }
     // Ruby trims blank edge lines after highlighting, except in its line
-    // number table, where they stay numbered.
+    // number table, where the leading ones stay numbered.
     let (leading, trailing) = match start {
         Some(_) => (0, 0),
         None => (blank_edges.leading, blank_edges.trailing),
     };
     let visible = full.split('\n').count().saturating_sub(leading + trailing);
-    let mut out: Vec<Line<'a>> = lines
+    let mut lines: Vec<String> = lines
         .into_iter()
         .skip(leading)
         .take(visible.max(1))
+        .collect();
+    // Rouge's line table splits like Ruby's `String#split`: trailing blank
+    // lines have no number (one line stays).
+    if start.is_some() {
+        while lines.len() > 1 && lines.last().is_some_and(String::is_empty) {
+            lines.pop();
+        }
+    }
+    let mut out: Vec<Line<'a>> = lines
+        .into_iter()
         .enumerate()
         .map(|(i, runs)| Line {
             number: start.map(|s| s + i as i64),

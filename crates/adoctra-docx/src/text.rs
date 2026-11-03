@@ -97,8 +97,15 @@ fn reference(name: &str) -> Option<char> {
     })
 }
 
-/// The text of a raw HTML value: tags dropped, references decoded.
+/// The text of a raw HTML value: tags dropped, references decoded. Like a
+/// browser, `&amp`, `&lt`, `&gt` and `&quot` read without their semicolon
+/// at the end of the value (Ruby leaves `&gt` before a URL's `;`).
 pub fn raw_text(value: &str) -> String {
+    for (legacy, ch) in [("&amp", '&'), ("&lt", '<'), ("&gt", '>'), ("&quot", '"')] {
+        if let Some(head) = value.strip_suffix(legacy) {
+            return format!("{}{ch}", raw_text(head));
+        }
+    }
     let mut text = String::with_capacity(value.len());
     let mut rest = value;
     while let Some(open) = rest.find('<') {
@@ -136,5 +143,7 @@ mod tests {
             "bold & it"
         );
         assert_eq!(raw_text("a < b"), "a < b");
+        assert_eq!(raw_text("&gt"), ">");
+        assert_eq!(raw_text("x&amp"), "x&");
     }
 }

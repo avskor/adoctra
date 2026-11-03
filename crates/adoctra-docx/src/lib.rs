@@ -85,14 +85,69 @@ impl DocxBackend {
         self
     }
 
+    /// The template named by the `docx-template` attribute, read through the
+    /// resource provider from the document's base directory (jailed by the
+    /// safe mode, like Ruby's stylesheet). The error is a warning; the
+    /// built-in template is used instead.
+    fn load_template(
+        &self,
+        doc: &Document,
+        path: &str,
+        warnings: &mut Vec<String>,
+    ) -> std::result::Result<Template, String> {
+        let Some((provider, referrer)) = &self.resources else {
+            return Err(format!(
+                "docx template cannot be read without a resource provider: {path}"
+            ));
+        };
+        let referrer_dir = referrer
+            .as_deref()
+            .and_then(|name| provider.document_path(name))
+            .and_then(|p| p.rsplit_once('/').map(|(dir, _)| dir.to_string()))
+            .map(|dir| if dir.is_empty() { "/".to_string() } else { dir });
+        let resolved = adoctra_core::asset_path(
+            path,
+            None,
+            doc.base_dir.as_deref(),
+            referrer_dir.as_deref(),
+            adoctra_core::SafeMode::of(&doc.attributes),
+            "docx template",
+        );
+        warnings.extend(resolved.warnings);
+        let bytes = provider
+            .load_binary(adoctra_core::ResourceRequest {
+                target: &resolved.request,
+                referrer: referrer.as_deref(),
+            })
+            .map_err(|_| format!("docx template not found or unreadable: {path}"))?
+            .bytes;
+        Template::read(&bytes).map_err(|reason| format!("invalid docx template {path}: {reason}"))
+    }
+
     /// Convert and report the warnings.
     pub fn render(&self, doc: &Document) -> Result<Output> {
-        let mut template = match &self.template {
-            Some(bytes) => Template::read(bytes).map_err(invalid_template)?,
-            None => Template::from_package(
-                Builtin::for_doctype(doc.attributes.get("doctype")).package(),
-            )
-            .expect("built-in templates are valid"),
+        let mut early_warnings = Vec::new();
+        let builtin =
+            |b: Builtin| Template::from_package(b.package()).expect("built-in templates are valid");
+        let by_doctype = Builtin::for_doctype(doc.attributes.get("doctype"));
+        let mut template = match (
+            &self.template,
+            doc.attributes
+                .get("docx-template")
+                .filter(|v| !v.is_empty()),
+        ) {
+            // A template given to the backend wins over the attribute.
+            (Some(bytes), _) => Template::read(bytes).map_err(invalid_template)?,
+            (None, Some("book")) => builtin(Builtin::Book),
+            (None, Some("article")) => builtin(Builtin::Article),
+            (None, Some(path)) => match self.load_template(doc, path, &mut early_warnings) {
+                Ok(template) => template,
+                Err(warning) => {
+                    early_warnings.push(warning);
+                    builtin(by_doctype)
+                }
+            },
+            (None, None) => builtin(by_doctype),
         };
         let title = header_title(doc);
         let title_marker = template.has_marker("title");
@@ -140,7 +195,8 @@ impl DocxBackend {
             _ => None,
         };
         let body = Writer::new(&mut cx, doc, sections.as_mut()).body(lead);
-        let mut warnings = std::mem::take(&mut cx.warnings.list);
+        let mut warnings = early_warnings;
+        warnings.append(&mut cx.warnings.list);
         let media = std::mem::take(&mut cx.media.parts);
         let footnotes = std::mem::take(&mut cx.notes.xml);
         warnings.extend(template.styles.warnings.iter().cloned());
@@ -165,14 +221,39 @@ struct Title {
 }
 
 fn header_title(doc: &Document) -> Option<Title> {
-    if !doc.has_title || doc.attributes.get("notitle").is_some() {
+    let manpage = doc.attributes.get("doctype") == Some("manpage");
+    if doc.attributes.get("notitle").is_some() || !(doc.has_title || manpage) {
         return None;
     }
-    let BlockKind::Heading { inlines, .. } = &doc.blocks.first()?.kind else {
+    // A manual page without a title is named after its first section, like
+    // Ruby's `doctitle`.
+    let heading = if doc.has_title {
+        doc.blocks.first()
+    } else {
+        doc.blocks.iter().find_map(|b| match &b.kind {
+            BlockKind::Section { blocks, .. } => blocks.first(),
+            _ => None,
+        })
+    };
+    let BlockKind::Heading { inlines, .. } = &heading?.kind else {
         return None;
     };
     let separator = doc.attributes.get("title-separator").unwrap_or(":");
-    let (main, subtitle) = writer::partition_title(inlines, separator);
+    let (mut main, subtitle) = writer::partition_title(inlines, separator);
+    // A manual page's title, like Ruby's: `<title> Manual Page`.
+    if manpage {
+        let span = heading.map(|h| h.span).expect("a heading");
+        if let Some(title) = doc.attributes.get("title") {
+            main = vec![Inline::Text {
+                value: title.to_string(),
+                span,
+            }];
+        }
+        main.push(Inline::Text {
+            value: " Manual Page".into(),
+            span,
+        });
+    }
     Some(Title {
         full: inlines.clone(),
         main,
@@ -312,4 +393,46 @@ impl Backend for DocxBackend {
     fn convert(&self, doc: &Document) -> Result<Vec<u8>> {
         self.render(doc).map(|output| output.bytes)
     }
+}
+
+/// The text of a converted `.docx`: the main document's paragraphs (one per
+/// line, tabs and line breaks kept) followed by its footnotes. Fields show
+/// their results. For comparing a conversion's content with other outputs.
+pub fn extract_text(bytes: &[u8]) -> Result<String> {
+    let package = package::Package::read(bytes).map_err(invalid_template)?;
+    let main = package
+        .root_target(package::REL_OFFICE_DOCUMENT)
+        .ok_or_else(|| invalid_template("no main document part".into()))?;
+    let mut parts = vec![main.clone()];
+    let rels = package::Relationships::parse(
+        &package.text(&package::rels_name(&main)).unwrap_or_default(),
+    );
+    if let Some(target) = rels
+        .target_of("http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes")
+    {
+        parts.push(package::resolve_target(&main, &target));
+    }
+    let mut out = String::new();
+    for part in parts {
+        let Some(text) = package.text(&part) else {
+            continue;
+        };
+        let mut pos = 0;
+        while let Some(tag) = xml::tags(&text, pos).next() {
+            pos = tag.range.end;
+            match (tag.name, tag.kind) {
+                ("w:t", xml::TagKind::Start) => {
+                    if let Some((range, content)) = xml::element(&text, &tag) {
+                        out.push_str(&xml::unescape(&text[content]));
+                        pos = range.end;
+                    }
+                }
+                ("w:tab", xml::TagKind::Empty) => out.push('\t'),
+                ("w:br", xml::TagKind::Empty) => out.push('\n'),
+                ("w:p", xml::TagKind::End) => out.push('\n'),
+                _ => {}
+            }
+        }
+    }
+    Ok(out)
 }

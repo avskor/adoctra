@@ -133,6 +133,7 @@ impl<'c, 't> Writer<'c, 't> {
         if let Some(toc) = &self.doc.toc {
             self.toc(toc, None);
         }
+        self.manname_section();
         let blocks = &self.doc.blocks[usize::from(self.doc.has_title)..];
         let mut stack: Vec<Task<'c>> = blocks
             .iter()
@@ -270,7 +271,10 @@ impl<'c, 't> Writer<'c, 't> {
             }
             BlockKind::Paragraph { inlines } => {
                 self.title(block, "Block Title");
-                let style = if block.roles.iter().any(|r| r == "lead") || ctx.lead {
+                let role = self.role_style(block, StyleKind::Paragraph);
+                let style = if let Some(role) = role.as_deref() {
+                    role
+                } else if block.roles.iter().any(|r| r == "lead") || ctx.lead {
                     "Lead"
                 } else if ctx.abstract_ {
                     "Abstract"
@@ -295,16 +299,25 @@ impl<'c, 't> Writer<'c, 't> {
                 )
             }
             BlockKind::Example { blocks } => {
-                // Ruby's caption and title stand above the box.
+                // Ruby's caption and title stand above the box; a collapsible
+                // example without one shows Ruby's `Details` summary.
+                let collapsible = block.attrs.options.iter().any(|o| o == "collapsible")
+                    || block.attrs.named.contains_key("collapsible-option");
+                if collapsible && block.title.is_none() {
+                    let mut runs = Runs::new(self.cx, Newlines::Space);
+                    runs.text("Details");
+                    let runs = runs.finish();
+                    self.paragraph("Block Title", "", &runs);
+                }
                 self.title(block, "Block Title");
                 self.anchor(block);
-                let open = self.frame("Example Table", ctx, None);
+                let open = self.framed_style(block, "Example Table", ctx);
                 self.out.push_str(&open);
                 self.framed(inherit(blocks, cell_ctx(ctx)))
             }
             BlockKind::Sidebar { blocks } => {
                 self.anchor(block);
-                let open = self.frame("Sidebar Table", ctx, None);
+                let open = self.framed_style(block, "Sidebar Table", ctx);
                 self.out.push_str(&open);
                 self.indent = 0;
                 self.title(block, "Sidebar Title");
@@ -325,6 +338,7 @@ impl<'c, 't> Writer<'c, 't> {
                 };
                 let available = self.text_width.saturating_sub(ctx.indent);
                 let label_width = available / 6;
+                let style = self.role_style(block, StyleKind::Table).unwrap_or(style);
                 let open = self.frame(&style, ctx, Some(label_width));
                 self.out.push_str(&open);
                 self.indent = 0;
@@ -346,7 +360,7 @@ impl<'c, 't> Writer<'c, 't> {
             } => {
                 self.title(block, "Block Title");
                 self.anchor(block);
-                let open = self.frame("Quote Table", ctx, None);
+                let open = self.framed_style(block, "Quote Table", ctx);
                 self.out.push_str(&open);
                 // The attribution follows the quoted blocks.
                 let inner = Ctx {
@@ -364,7 +378,7 @@ impl<'c, 't> Writer<'c, 't> {
                 inlines,
             } => {
                 self.title(block, "Block Title");
-                let open = self.frame("Verse Table", ctx, None);
+                let open = self.framed_style(block, "Verse Table", ctx);
                 self.out.push_str(&open);
                 self.indent = 0;
                 self.inline_paragraph(block, "Verse", inlines, Newlines::Break);
@@ -380,7 +394,7 @@ impl<'c, 't> Writer<'c, 't> {
                 blank_edges,
             } => {
                 self.title(block, "Block Title");
-                let mut open = self.frame("Code Table", ctx, None);
+                let mut open = self.framed_style(block, "Code Table", ctx);
                 if inlines.is_none() && crate::highlight::applies(block) {
                     let highlighted =
                         crate::highlight::highlight(block, text, *blank_edges, callouts);
@@ -410,7 +424,7 @@ impl<'c, 't> Writer<'c, 't> {
                 inlines,
             } => {
                 self.title(block, "Block Title");
-                let open = self.frame("Literal Table", ctx, None);
+                let open = self.framed_style(block, "Literal Table", ctx);
                 self.out.push_str(&open);
                 self.indent = 0;
                 self.verbatim(block, "Literal", text, callouts, inlines.as_deref());
@@ -513,7 +527,8 @@ impl<'c, 't> Writer<'c, 't> {
                 self.title(block, "Block Title");
                 self.anchor(block);
                 let mut runs = Runs::new(self.cx, Newlines::Space);
-                runs.link(src, |r| r.text(target));
+                let target = crate::text::decode_references(target);
+                runs.link(&crate::text::decode_references(src), |r| r.text(&target));
                 let runs = runs.finish();
                 self.paragraph("Normal", "", &runs);
                 Vec::new()
@@ -656,7 +671,11 @@ impl<'c, 't> Writer<'c, 't> {
     fn callout(&mut self, item: &'c CalloutListItem, number: usize, ctx: Ctx) -> Vec<Task<'c>> {
         let left = ctx.indent + LIST_INDENT;
         let mut runs = Runs::new(self.cx, Newlines::Space);
-        runs.styled("Callout", &number.to_string());
+        // Ruby numbers a callout list with its icons, else as an ordered list.
+        match &item.icons {
+            Some(_) => runs.styled("Callout", &number.to_string()),
+            None => runs.text(&format!("{number}.")),
+        }
         runs.text("\t");
         runs.inlines(&item.item.inlines);
         let runs = runs.finish();
@@ -820,6 +839,25 @@ impl<'c, 't> Writer<'c, 't> {
         open
     }
 
+    /// The frame of a delimited block: its role's table style when the
+    /// template has one, else `style`.
+    fn framed_style(&mut self, block: &Block, style: &str, ctx: Ctx) -> String {
+        let style = self
+            .role_style(block, StyleKind::Table)
+            .unwrap_or_else(|| style.to_string());
+        self.frame(&style, ctx, None)
+    }
+
+    /// The first of a block's roles that names a template style of `kind`
+    /// (Ruby's roles become the template's styles: `[.warning]`).
+    fn role_style(&self, block: &Block, kind: StyleKind) -> Option<String> {
+        block
+            .roles
+            .iter()
+            .find(|role| self.cx.styles.has(kind, role))
+            .cloned()
+    }
+
     /// The tasks of a frame's content, then the end of its table.
     fn framed(&mut self, mut content: Vec<Task<'c>>) -> Vec<Task<'c>> {
         content.push(Task::CloseCell);
@@ -879,7 +917,10 @@ impl<'c, 't> Writer<'c, 't> {
         };
         let widths = table::column_widths(table, width);
         let mut open = String::from("<w:tbl><w:tblPr>");
-        if let Some(id) = self.cx.style(StyleKind::Table, "Table") {
+        let table_style = self
+            .role_style(block, StyleKind::Table)
+            .unwrap_or_else(|| "Table".to_string());
+        if let Some(id) = self.cx.style(StyleKind::Table, &table_style) {
             open.push_str(&format!(
                 r#"<w:tblStyle w:val="{}"/>"#,
                 xml::escape_attr(&id)
@@ -979,6 +1020,62 @@ impl<'c, 't> Writer<'c, 't> {
         }
         tasks.push(Task::Markup(format!("</w:tbl>{SPACER}")));
         tasks
+    }
+
+    /// A manual page's NAME section (Ruby's `generate_manname_section`):
+    /// its title (the source section's, else `manname-title`, uppercase when
+    /// the first section's title is) and `names - purpose`.
+    fn manname_section(&mut self) {
+        let doc = self.doc;
+        let attributes = &doc.attributes;
+        let (Some(manpage), Some(purpose)) = (&doc.manpage, attributes.get("manpurpose")) else {
+            return;
+        };
+        let first_section = doc.blocks.iter().find_map(|b| match &b.kind {
+            BlockKind::Section { blocks, .. } => match blocks.first().map(|h| &h.kind) {
+                Some(BlockKind::Heading { inlines, .. }) => Some(inlines),
+                _ => None,
+            },
+            _ => None,
+        });
+        let upper = first_section.is_some_and(|inlines| {
+            let text = crate::inline::plain_text(inlines);
+            text == text.to_uppercase()
+        });
+        let heading = manpage
+            .name_section
+            .as_ref()
+            .filter(|_| manpage.section_title)
+            .and_then(|section| match &section.heading.kind {
+                BlockKind::Heading { inlines, .. } => Some(inlines),
+                _ => None,
+            });
+        let mut runs = Runs::new(self.cx, Newlines::Space);
+        match (heading, upper) {
+            (Some(inlines), false) => runs.inlines(inlines),
+            (Some(inlines), true) => runs.text(&crate::inline::plain_text(inlines).to_uppercase()),
+            (None, _) => {
+                let label = attributes.get("manname-title").unwrap_or("Name");
+                runs.text(&if upper {
+                    label.to_uppercase()
+                } else {
+                    label.to_string()
+                });
+            }
+        }
+        let title = runs.finish();
+        if let Some(id) = attributes.get("manname-id") {
+            self.pending.push(id.to_string());
+        }
+        self.paragraph("Heading 1", "", &title);
+        let mut runs = Runs::new(self.cx, Newlines::Space);
+        runs.text(&format!("{} - ", manpage.names.join(", ")));
+        match attributes.raw_parts("manpurpose") {
+            Some(parts) => runs.parts(parts),
+            None => runs.text(purpose),
+        }
+        let body = runs.finish();
+        self.paragraph("Normal", "", &body);
     }
 
     /// A block image: a paragraph holding the picture (aligned by `align`,
@@ -1197,7 +1294,7 @@ impl<'c, 't> Writer<'c, 't> {
                 } else if let Some(guard) = &mark.guard {
                     runs.text(guard);
                 }
-                runs.styled("Callout", &mark.number);
+                runs.conum(&mark.number, mark.icons.as_deref());
                 if mark.xml {
                     runs.text("-->");
                 }
@@ -1238,7 +1335,7 @@ impl<'c, 't> Writer<'c, 't> {
                 } else if let Some(guard) = &mark.guard {
                     runs.text(guard);
                 }
-                runs.styled("Callout", &mark.number);
+                runs.conum(&mark.number, mark.icons.as_deref());
                 if mark.xml {
                     runs.text("-->");
                 }

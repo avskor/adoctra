@@ -651,19 +651,25 @@ fn horizontal_lists_are_borderless_tables() {
 }
 
 #[test]
-fn callout_lists_number_items_in_the_callout_style() {
+fn callout_lists_number_items_like_ruby() {
+    // Without icons Ruby's callout list is an ordered list.
     let doc = document("----\nx <1>\ny <2>\n----\n<1> First\n<2> Second\n");
-    assert!(doc.contains(
-        r#"<w:pStyle w:val="ListParagraph"/><w:ind w:left="720" w:hanging="360"/></w:pPr><w:r><w:rPr><w:rStyle w:val="Callout"/></w:rPr><w:t xml:space="preserve">1</w:t></w:r><w:r><w:tab/></w:r>"#
-    ), "{doc}");
     let ps = paragraphs(&doc);
     assert_eq!(
         ps[ps.len() - 2..],
         pairs(&[
-            ("ListParagraph", "1\tFirst"),
-            ("ListParagraph", "2\tSecond")
+            ("ListParagraph", "1.\tFirst"),
+            ("ListParagraph", "2.\tSecond")
         ])
     );
+    assert!(
+        doc.contains(r#"<w:pStyle w:val="ListParagraph"/><w:ind w:left="720" w:hanging="360"/>"#)
+    );
+    // With icons the number is the Callout style's circle.
+    let icons = document(":icons: font\n\n----\nx <1>\n----\n<1> First\n");
+    assert!(icons.contains(
+        r#"<w:r><w:rPr><w:rStyle w:val="Callout"/></w:rPr><w:t xml:space="preserve">1</w:t></w:r><w:r><w:tab/></w:r><w:r><w:t xml:space="preserve">First</w:t>"#
+    ), "{icons}");
 }
 
 #[test]
@@ -685,20 +691,25 @@ fn lists_inside_a_custom_template_create_its_numbering_part() {
 }
 
 #[test]
-fn callout_marks_in_verbatim_blocks_use_the_callout_style() {
+fn callout_marks_in_verbatim_blocks_follow_ruby() {
+    // Text marks are Ruby's bold `(n)`, keeping the comment guard.
     let doc = document("----\nx = 1 # <1>\ny <2> <3>\n<!--4-->\n----\n");
     assert_eq!(
         paragraphs(&doc),
         pairs(&[
-            ("Code", "x = 1 # 1"),
-            ("Code", "y 2 3"),
-            ("Code", "<!--4-->")
+            ("Code", "x = 1 # (1)"),
+            ("Code", "y (2) (3)"),
+            ("Code", "<!--(4)-->")
         ])
     );
-    assert_eq!(doc.matches(r#"<w:rStyle w:val="Callout"/>"#).count(), 4);
     assert!(doc.contains(
-        r#"<w:t xml:space="preserve">x = 1 </w:t></w:r><w:r><w:t xml:space="preserve"># </w:t></w:r><w:r><w:rPr><w:rStyle w:val="Callout"/></w:rPr><w:t xml:space="preserve">1</w:t>"#
+        r#"<w:t xml:space="preserve"># </w:t></w:r><w:r><w:rPr><w:rStyle w:val="Strong"/></w:rPr><w:t xml:space="preserve">(1)</w:t>"#
     ), "{doc}");
+    // With icons, the number in the Callout style.
+    let icons = document(":icons: font\n\n----\nx <1>\n----\n");
+    assert!(
+        icons.contains(r#"<w:rStyle w:val="Callout"/></w:rPr><w:t xml:space="preserve">1</w:t>"#)
+    );
 }
 
 #[test]
@@ -1057,13 +1068,15 @@ fn rouge_colors_source_listings_with_the_theme() {
         ":source-highlighter: rouge\n\n[source,ruby]\n----\nputs \"hi\" # <1>\n----\n<1> Greets\n";
     let doc = document(src);
     let ps = paragraphs(&doc);
-    assert_eq!(ps[0], ("Code".into(), "puts \"hi\" # 1".into()), "{ps:?}");
+    assert_eq!(ps[0], ("Code".into(), "puts \"hi\" # (1)".into()), "{ps:?}");
     // github's string color, and the mark after the code in the Callout style.
     assert!(
         doc.contains(r#"<w:color w:val="0A3069"/></w:rPr><w:t xml:space="preserve">"hi"</w:t>"#),
         "{doc}"
     );
-    assert!(doc.contains(r#"<w:rStyle w:val="Callout"/></w:rPr><w:t xml:space="preserve">1</w:t>"#));
+    assert!(
+        doc.contains(r#"<w:rStyle w:val="Strong"/></w:rPr><w:t xml:space="preserve">(1)</w:t>"#)
+    );
     // Without the highlighter the listing is plain.
     assert!(!document("[source,ruby]\n----\nputs 1\n----\n").contains("<w:color"));
 }
@@ -1090,14 +1103,14 @@ fn rouge_line_numbers_and_dark_themes() {
 }
 
 #[test]
-fn rouge_keeps_blank_edge_lines_only_when_numbered() {
+fn rouge_numbers_leading_blank_lines_like_ruby() {
     let src = |opts: &str| {
         format!(":source-highlighter: rouge\n\n[source,text{opts}]\n----\n\nx\n\n----\n")
     };
     assert_eq!(paragraphs(&document(&src(""))), pairs(&[("Code", "x")]));
     assert_eq!(
         paragraphs(&document(&src(",linenums"))),
-        pairs(&[("Code", "1  "), ("Code", "2  x"), ("Code", "3  ")])
+        pairs(&[("Code", "1  "), ("Code", "2  x")])
     );
 }
 
@@ -1211,4 +1224,101 @@ fn a_template_without_sections_ignores_orientation() {
         ["docx template has no section properties: page orientation is ignored"]
     );
     assert!(part(&rendered.bytes, "word/document.xml").contains(r#"<w:br w:type="page"/>"#));
+}
+
+#[test]
+fn extracts_the_text_of_a_conversion() {
+    let out = render("= T\n\nOne *two*.footnote:[Note.]\n\n* item\n\n|===\n|a |b\n|===\n");
+    let text = adoctra_docx::extract_text(&out.bytes).unwrap();
+    // The table's spacer, the footnote separators, then the footnote.
+    assert_eq!(text, "T\nOne two.\nitem\na\nb\n\n\n\n Note.\n");
+}
+
+#[test]
+fn manual_pages_get_their_title_and_name_section() {
+    let doc = document("= git-foo(1)\n:doctype: manpage\n:manmanual: Git\n:mansource: Git\n\n== NAME\n\ngit-foo - does foo things\n\n== SYNOPSIS\n\n*git foo*\n");
+    let ps = paragraphs(&doc);
+    assert_eq!(
+        ps[0],
+        ("Title".into(), "git-foo(1) Manual Page".into()),
+        "{ps:?}"
+    );
+    assert!(ps.contains(&("Heading1".into(), "NAME".into())));
+    assert!(ps.contains(&("Normal".into(), "git-foo - does foo things".into())));
+}
+
+#[test]
+fn collapsible_examples_show_ruby_details_summary() {
+    let ps = paragraphs(&document("[%collapsible]\n====\nHidden.\n====\n"));
+    assert_eq!(
+        ps,
+        pairs(&[("BlockTitle", "Details"), ("Normal", "Hidden.")])
+    );
+}
+
+#[test]
+fn roles_name_template_styles() {
+    // The built-in templates name `lead`, `Quote`… as styles; a role that
+    // names one applies it to paragraphs, tables and phrases.
+    let doc = document(concat!(
+        "[.Abstract]\nA paragraph.\n\n",
+        "[.sidebar-table]\n|===\n|x\n|===\n\n",
+        "[.Code-Table]\n----\nc\n----\n\n",
+        "A [.Keyboard]#phrase# here.\n",
+    ));
+    assert!(doc.contains(r#"<w:pStyle w:val="Abstract"/></w:pPr><w:r><w:t xml:space="preserve">A paragraph.</w:t>"#), "{doc}");
+    // `Code-Table` names no style (the name is `Code Table`), so the
+    // listing keeps its frame style.
+    assert!(doc.contains(r#"<w:tblStyle w:val="CodeTable"/>"#));
+    assert!(doc
+        .contains(r#"<w:rStyle w:val="Keyboard"/></w:rPr><w:t xml:space="preserve">phrase</w:t>"#));
+    // A role without a template style changes nothing.
+    assert!(document("[.unknown]\nText.\n").contains(r#"<w:pStyle w:val="Normal"/>"#));
+}
+
+#[test]
+fn the_docx_template_attribute_selects_a_template() {
+    let mut resources = adoctra_core::MemoryResources::new();
+    resources
+        .insert_binary("corp.dotx", word_template())
+        .unwrap();
+    resources
+        .insert_binary("bad.docx", b"not a zip".to_vec())
+        .unwrap();
+    let backend = DocxBackend::new().with_resources(std::sync::Arc::new(resources), None);
+    let render = |src: &str| backend.render(&parse(src).document).unwrap();
+    let out = render(":docx-template: corp.dotx\n\ntext\n");
+    assert!(part(&out.bytes, "word/theme/theme1.xml").contains("kept"));
+    let out = render(":docx-template: missing.docx\n\ntext\n");
+    assert_eq!(
+        out.warnings,
+        ["docx template not found or unreadable: missing.docx"]
+    );
+    assert!(part(&out.bytes, "word/footer1.xml").contains("PAGE"));
+    let out = render(":docx-template: bad.docx\n\ntext\n");
+    assert!(
+        out.warnings[0].starts_with("invalid docx template bad.docx: not a zip file"),
+        "{:?}",
+        out.warnings
+    );
+    // The built-in templates by name.
+    let book = render(":docx-template: book\n\n= T\n");
+    assert!(parts(&book.bytes)
+        .iter()
+        .any(|(n, _)| n == "word/header1.xml"));
+    // Without a provider the attribute cannot be read.
+    let plain = DocxBackend::new()
+        .render(&parse(":docx-template: x.docx\n").document)
+        .unwrap();
+    assert_eq!(
+        plain.warnings,
+        ["docx template cannot be read without a resource provider: x.docx"]
+    );
+}
+
+#[test]
+fn av_link_text_and_partial_entities_decode() {
+    let doc = document("video::s&amp;t.mp4[]\n\nhttp://example.org&gt;\n");
+    assert!(doc.contains(">s&amp;t.mp4<"), "{doc}");
+    assert_eq!(paragraphs(&doc)[1].1, "http://example.org>;");
 }

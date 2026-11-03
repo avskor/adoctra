@@ -197,11 +197,13 @@ struct Fmt {
 }
 
 /// Effects of an opened format, undone by its close.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 struct Opened {
     format: AttributeFormat,
     underline: bool,
     strike: bool,
+    /// The role style this format replaced (restored on close).
+    role_style: Option<Option<String>>,
 }
 
 /// Writes runs for inline content into one paragraph.
@@ -215,6 +217,8 @@ pub struct Runs<'c, 't> {
     /// Writing a copy of a title (a TOC entry): no anchors, footnotes or
     /// index entries, which belong to the original.
     outline: bool,
+    /// The template's character style named by an enclosing phrase role.
+    role_style: Option<String>,
     /// A hard line break was just written: the source line end after it
     /// (a newline or the space core keeps for it) is not text.
     after_break: bool,
@@ -230,6 +234,7 @@ impl<'c, 't> Runs<'c, 't> {
             link_depth: 0,
             opened: Vec::new(),
             outline: false,
+            role_style: None,
             after_break: false,
         }
     }
@@ -298,6 +303,15 @@ impl<'c, 't> Runs<'c, 't> {
         self.fmt.special = saved;
     }
 
+    /// A callout mark like Ruby's: with icons the number in the `Callout`
+    /// style (Ruby's numbered circle), as text `(n)` in bold.
+    pub fn conum(&mut self, number: &str, icons: Option<&str>) {
+        match icons {
+            Some(_) => self.styled("Callout", number),
+            None => self.with(AttributeFormat::Strong, |r| r.text(&format!("({number})"))),
+        }
+    }
+
     /// Raw run markup (a drawing).
     pub fn markup(&mut self, markup: &str) {
         self.out.push_str(markup);
@@ -324,8 +338,12 @@ impl<'c, 't> Runs<'c, 't> {
 
     fn rpr(&mut self) -> String {
         let f = self.fmt;
+        // A role's style (the template has it) comes right after the
+        // macro styles.
+        let role = self.role_style.clone();
         let candidates = [
             f.special,
+            role.as_deref(),
             (f.mono > 0).then_some("Monospace"),
             (f.mark > 0).then_some("Mark"),
             f.link,
@@ -336,12 +354,12 @@ impl<'c, 't> Runs<'c, 't> {
         let mut style_id = None;
         for name in candidates.into_iter().flatten() {
             if let Some(id) = self.cx.style(StyleKind::Character, name) {
-                chosen = Some(name);
+                chosen = Some(name.to_string());
                 style_id = Some(id);
                 break;
             }
         }
-        let is = |name: &str| chosen == Some(name);
+        let is = |name: &str| chosen.as_deref() == Some(name);
         let mut props = String::new();
         if let Some(id) = &style_id {
             props.push_str(&format!(
@@ -554,7 +572,17 @@ impl<'c, 't> Runs<'c, 't> {
                 AttributePart::Ui(ui) => self.ui(ui),
                 AttributePart::IndexTerm(term) => self.index_term(term),
                 AttributePart::Stem(stem) => self.parts(&stem.parts),
-                AttributePart::Callout(callout) => self.styled("Callout", &callout.number),
+                AttributePart::Callout(callout) => {
+                    if callout.xml {
+                        self.text("<!--");
+                    } else if let Some(guard) = &callout.guard {
+                        self.text(&raw_text(guard));
+                    }
+                    self.conum(&callout.number, callout.icons.as_deref());
+                    if callout.xml {
+                        self.text("-->");
+                    }
+                }
             }
         }
     }
@@ -564,10 +592,17 @@ impl<'c, 't> Runs<'c, 't> {
             *c += 1;
         }
         let roles: Vec<&str> = role.unwrap_or_default().split_whitespace().collect();
+        // A role naming a character style of the template applies it.
+        let styled = roles
+            .iter()
+            .map(|r| decode_references(r))
+            .find(|r| self.cx.styles.has(StyleKind::Character, r));
+        let role_style = styled.map(|style| self.role_style.replace(style));
         let opened = Opened {
             format,
             underline: roles.contains(&"underline"),
             strike: roles.contains(&"line-through"),
+            role_style,
         };
         self.fmt.underline += u16::from(opened.underline);
         self.fmt.strike += u16::from(opened.strike);
@@ -584,6 +619,9 @@ impl<'c, 't> Runs<'c, 't> {
         }
         if let Some(at) = self.opened.iter().rposition(|o| o.format == format) {
             let opened = self.opened.remove(at);
+            if let Some(previous) = opened.role_style {
+                self.role_style = previous;
+            }
             self.fmt.underline = self
                 .fmt
                 .underline
