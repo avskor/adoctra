@@ -11,6 +11,7 @@
 mod builtin;
 pub mod contract;
 mod fallback;
+mod highlight;
 mod inline;
 mod media;
 mod numbering;

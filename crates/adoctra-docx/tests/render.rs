@@ -1050,3 +1050,53 @@ fn video_and_audio_are_links() {
     assert!(part(&out.bytes, "word/_rels/document.xml.rels").contains(r#"Target="clip.mp4""#));
     assert!(doc.contains(">clip.mp4<"));
 }
+
+#[test]
+fn rouge_colors_source_listings_with_the_theme() {
+    let src =
+        ":source-highlighter: rouge\n\n[source,ruby]\n----\nputs \"hi\" # <1>\n----\n<1> Greets\n";
+    let doc = document(src);
+    let ps = paragraphs(&doc);
+    assert_eq!(ps[0], ("Code".into(), "puts \"hi\" # 1".into()), "{ps:?}");
+    // github's string color, and the mark after the code in the Callout style.
+    assert!(
+        doc.contains(r#"<w:color w:val="0A3069"/></w:rPr><w:t xml:space="preserve">"hi"</w:t>"#),
+        "{doc}"
+    );
+    assert!(doc.contains(r#"<w:rStyle w:val="Callout"/></w:rPr><w:t xml:space="preserve">1</w:t>"#));
+    // Without the highlighter the listing is plain.
+    assert!(!document("[source,ruby]\n----\nputs 1\n----\n").contains("<w:color"));
+}
+
+#[test]
+fn rouge_line_numbers_and_dark_themes() {
+    let doc = document(concat!(
+        ":source-highlighter: rouge\n:rouge-style: monokai\n\n",
+        "[source,ruby,linenums,start=9]\n----\na = 1\nb = 2\n----\n",
+    ));
+    assert_eq!(
+        paragraphs(&doc),
+        pairs(&[("Code", " 9  a = 1"), ("Code", "10  b = 2")])
+    );
+    assert!(
+        doc.contains(
+            r#"<w:rStyle w:val="LineNumber"/></w:rPr><w:t xml:space="preserve"> 9  </w:t>"#
+        ),
+        "{doc}"
+    );
+    // The theme's background and base color.
+    assert!(doc.contains(r#"<w:shd w:val="clear" w:color="auto" w:fill="49483E"/></w:tcPr>"#));
+    assert!(doc.contains(r#"<w:color w:val="F8F8F2"/>"#));
+}
+
+#[test]
+fn rouge_keeps_blank_edge_lines_only_when_numbered() {
+    let src = |opts: &str| {
+        format!(":source-highlighter: rouge\n\n[source,text{opts}]\n----\n\nx\n\n----\n")
+    };
+    assert_eq!(paragraphs(&document(&src(""))), pairs(&[("Code", "x")]));
+    assert_eq!(
+        paragraphs(&document(&src(",linenums"))),
+        pairs(&[("Code", "1  "), ("Code", "2  x"), ("Code", "3  ")])
+    );
+}

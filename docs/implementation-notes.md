@@ -1819,6 +1819,18 @@ footnotes, XE); auto at body start, preamble/macro placements. Index:
 `XE` fields (terms joined by `:`, `\t "See …"`), `[index]` section ->
 dirty `INDEX \c "2"`. Video/audio: link paragraph + warning. Template
 declares `wp`/`r` namespaces on the root when used.
+Stage 6 done 2026-11-04: the rouge adapter's backend-neutral parts moved
+from `adoctra-html/src/rouge.rs` to `adoctra_highlight::adapter` (`lex`
+with `find_fancy`/php `start_inline`/plaintext fallback, `ruby_to_i`,
+`lines_to_highlight`); HTML calls them unchanged. `adoctra-docx` depends on
+`adoctra-highlight`; `highlight.rs` applies to `source` listings with
+`source-highlighter=rouge` and no custom subs: marks removed before lexing
+(re-added at line ends: guard + `Callout`), `BlankEdges::source` lexed,
+blank edge lines dropped unless `linenums` (Ruby's table keeps them),
+theme rules (`ThemeData::inline_style`) parsed into rPr (color, b, i, u,
+token background differing from the base), base color as default, base
+background as the frame cell's `w:shd`; `Line Number` runs right-aligned.
+`highlight` lines are not shaded (Ruby has no `hll` style).
 
 Index terms (`((…))` / `indexterm2:[…]` visible, `(((…)))` /
 `indexterm:[…]` concealed) run after images and before links, as Ruby's

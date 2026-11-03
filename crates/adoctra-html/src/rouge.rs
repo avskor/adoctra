@@ -15,9 +15,8 @@
 
 use adoctra_core::ast::{BlankEdges, Block, Callout};
 use adoctra_core::Attributes;
+use adoctra_highlight::adapter;
 use adoctra_highlight::format::{self, Style};
-use adoctra_highlight::guess::{self, Guess};
-use adoctra_highlight::lexer::{self, Lexer, OptionValue, Options};
 use adoctra_highlight::theme::{ThemeData, DEFAULT_THEME};
 use adoctra_highlight::token::Token;
 use std::cell::RefCell;
@@ -190,12 +189,14 @@ pub(super) fn highlight_text(
 ) -> (String, Option<usize>) {
     let named = listing.named;
     let start = named.get("linenums").map(|_| {
-        let start = named.get("start").map_or(1, |start| ruby_to_i(start));
+        let start = named
+            .get("start")
+            .map_or(1, |start| adapter::ruby_to_i(start));
         start.max(1)
     });
     let highlight_lines = named
         .get("highlight")
-        .map(|spec| resolve_lines_to_highlight(source, spec, start));
+        .map(|spec| adapter::lines_to_highlight(source, spec, start));
 
     let style = {
         let mut state = state.borrow_mut();
@@ -273,36 +274,7 @@ fn trim_blank_edge_lines(text: String) -> String {
 fn lex(listing: &Source<'_>, source: &str, lang: Option<&str>) -> Vec<(Token, String)> {
     let mixed =
         listing.options.iter().any(|o| o == "mixed") || listing.named.contains_key("mixed-option");
-    let lexer = lang.and_then(|lang| {
-        if lang.contains('?') {
-            // `find_fancy` without code: the query string becomes the
-            // lexer's options; `guess?mimetype=…` guesses by mimetype (an
-            // ambiguous guess raises in Ruby: plain text here).
-            let (found, mut options) = guess::lookup_fancy(lang, None, &Options::new());
-            let def = match found? {
-                Guess::Found(def) => def,
-                Guess::Ambiguous(_) => return None,
-            };
-            let def = Some(def).filter(|def| def.missing.is_empty())?;
-            if def.tag == "php" && !mixed && !options.contains_key("start_inline") {
-                options.insert("start_inline".into(), OptionValue::Bool(true));
-            }
-            Lexer::new(def, options).ok()
-        } else {
-            let def = lexer::find_def(lang).filter(|def| def.missing.is_empty())?;
-            let mut options = Options::new();
-            if def.tag == "php" && !mixed {
-                options.insert("start_inline".into(), OptionValue::Bool(true));
-            }
-            Lexer::new(def, options).ok()
-        }
-    });
-    if let Some(tokens) = lexer.and_then(|mut lexer| lexer.lex(source).ok()) {
-        return tokens;
-    }
-    Lexer::new(lexer::plaintext(), Options::new())
-        .and_then(|mut lexer| lexer.lex(source))
-        .unwrap_or_default()
+    adapter::lex(lang, mixed, source)
 }
 
 /// A callout mark taken out of the source: its 1-based line and markup.
@@ -364,93 +336,6 @@ fn restore_callouts(highlighted: &str, marks: &[Mark], source_offset: Option<usi
     out
 }
 
-/// Ruby's `String#to_i`: leading whitespace, a sign and digits (with
-/// single underscores between them); 0 without digits.
-fn ruby_to_i(text: &str) -> i64 {
-    let text = text.trim_start();
-    let (negative, digits) = match text.as_bytes().first() {
-        Some(b'-') => (true, &text[1..]),
-        Some(b'+') => (false, &text[1..]),
-        _ => (false, text),
-    };
-    let mut value: i64 = 0;
-    let mut previous_underscore = false;
-    for (i, c) in digits.char_indices() {
-        match c {
-            '0'..='9' => {
-                value = value
-                    .saturating_mul(10)
-                    .saturating_add(i64::from(c as u8 - b'0'));
-                previous_underscore = false;
-            }
-            '_' if i > 0 && !previous_underscore => previous_underscore = true,
-            _ => break,
-        }
-    }
-    if negative {
-        -value
-    } else {
-        value
-    }
-}
-
-/// `resolve_lines_to_highlight`: a `1-5, !2, 10` (or `1..5;!2;10`) spec as
-/// sorted 1-based lines, relative to `start` when lines are numbered.
-fn resolve_lines_to_highlight(source: &str, spec: &str, start: Option<i64>) -> Vec<i64> {
-    let spec: String = spec.chars().filter(|&c| c != ' ').collect();
-    let separator = if spec.contains(',') { ',' } else { ';' };
-    // Ruby's split drops trailing empty fields.
-    let mut entries: Vec<&str> = spec.split(separator).collect();
-    while entries.last() == Some(&"") {
-        entries.pop();
-    }
-    let line_count = source.matches('\n').count() as i64 + 1;
-    let mut lines: Vec<i64> = Vec::new();
-    for entry in entries {
-        let (negate, entry) = match entry.strip_prefix('!') {
-            Some(rest) => (true, rest),
-            None => (false, entry),
-        };
-        let delimiter = if entry.contains("..") {
-            Some("..")
-        } else if entry.contains('-') {
-            Some("-")
-        } else {
-            None
-        };
-        if let Some(delimiter) = delimiter {
-            let (from, to) = entry.split_once(delimiter).unwrap_or((entry, ""));
-            let to = if to.is_empty() || ruby_to_i(to) < 0 {
-                line_count
-            } else {
-                ruby_to_i(to)
-            };
-            let range = ruby_to_i(from)..=to;
-            if negate {
-                lines.retain(|line| !range.contains(line));
-            } else {
-                for line in range {
-                    if !lines.contains(&line) {
-                        lines.push(line);
-                    }
-                }
-            }
-        } else if negate {
-            let line = ruby_to_i(entry);
-            lines.retain(|&l| l != line);
-        } else {
-            let line = ruby_to_i(entry);
-            if !lines.contains(&line) {
-                lines.push(line);
-            }
-        }
-    }
-    let shift = start.map_or(0, |start| start - 1);
-    let mut lines: Vec<i64> = lines.into_iter().map(|line| line - shift).collect();
-    lines.sort_unstable();
-    lines
-}
-
 /// The adapter's head docinfo after a class-mode listing: the theme
 /// stylesheet embedded, or linked under `stylesdir` with `linkcss`.
 pub(super) fn head(
@@ -507,28 +392,20 @@ mod tests {
     fn resolves_lines_like_ruby() {
         let source = "a\nb\nc\nd\ne";
         assert_eq!(
-            resolve_lines_to_highlight(source, "1-3, !2, 5", None),
+            adapter::lines_to_highlight(source, "1-3, !2, 5", None),
             vec![1, 3, 5]
         );
         assert_eq!(
-            resolve_lines_to_highlight(source, "2..;!4", None),
+            adapter::lines_to_highlight(source, "2..;!4", None),
             vec![2, 3, 5]
         );
         assert_eq!(
-            resolve_lines_to_highlight(source, "3,1,3", Some(2)),
+            adapter::lines_to_highlight(source, "3,1,3", Some(2)),
             vec![0, 2]
         );
         assert_eq!(
-            resolve_lines_to_highlight(source, "4-x", None),
+            adapter::lines_to_highlight(source, "4-x", None),
             Vec::<i64>::new()
         );
-    }
-
-    #[test]
-    fn ruby_integer_parsing() {
-        assert_eq!(ruby_to_i(" 12abc"), 12);
-        assert_eq!(ruby_to_i("-3"), -3);
-        assert_eq!(ruby_to_i("1_000"), 1000);
-        assert_eq!(ruby_to_i("x"), 0);
     }
 }

@@ -452,13 +452,31 @@ impl<'c, 't> Writer<'c, 't> {
                 text,
                 callouts,
                 inlines,
-                ..
+                blank_edges,
             } => {
                 self.title(block, "Block Title");
-                let open = self.frame("Code Table", ctx, None);
-                self.out.push_str(&open);
-                self.indent = 0;
-                self.verbatim(block, "Code", text, callouts, inlines.as_deref());
+                let mut open = self.frame("Code Table", ctx, None);
+                if inlines.is_none() && crate::highlight::applies(block) {
+                    let highlighted =
+                        crate::highlight::highlight(block, text, *blank_edges, callouts);
+                    // The theme's background, so its colors stay readable.
+                    if let Some(fill) = &highlighted.background {
+                        open = open.replacen(
+                            "</w:tcPr>",
+                            &format!(
+                                r#"<w:shd w:val="clear" w:color="auto" w:fill="{fill}"/></w:tcPr>"#
+                            ),
+                            1,
+                        );
+                    }
+                    self.out.push_str(&open);
+                    self.indent = 0;
+                    self.highlighted(block, highlighted);
+                } else {
+                    self.out.push_str(&open);
+                    self.indent = 0;
+                    self.verbatim(block, "Code", text, callouts, inlines.as_deref());
+                }
                 self.framed(Vec::new())
             }
             BlockKind::Literal {
@@ -1190,6 +1208,38 @@ impl<'c, 't> Writer<'c, 't> {
 
     /// A verbatim block, one paragraph per line (custom substitutions give
     /// an inline tree, written as one paragraph with line breaks).
+    /// A Rouge-highlighted listing: one `Code` paragraph per line, with
+    /// its number (`Line Number`, right-aligned) and its callout marks.
+    fn highlighted(&mut self, block: &Block, highlighted: crate::highlight::Highlighted<'_>) {
+        self.anchor(block);
+        let width = highlighted.number_width;
+        for line in highlighted.lines {
+            let mut runs = Runs::new(self.cx, Newlines::Break);
+            if let Some(number) = line.number {
+                runs.styled("Line Number", &format!("{number:>width$}  "));
+            }
+            let mut prefix = runs.finish();
+            prefix.push_str(&line.runs);
+            let mut runs = Runs::new(self.cx, Newlines::Break);
+            for (i, mark) in line.marks.iter().enumerate() {
+                if i > 0 {
+                    runs.text(" ");
+                }
+                if mark.xml {
+                    runs.text("<!--");
+                } else if let Some(guard) = &mark.guard {
+                    runs.text(guard);
+                }
+                runs.styled("Callout", &mark.number);
+                if mark.xml {
+                    runs.text("-->");
+                }
+            }
+            prefix.push_str(&runs.finish());
+            self.paragraph("Code", "", &prefix);
+        }
+    }
+
     /// Callout marks (`callouts`, byte ranges of `text`) keep their line
     /// comment guard and show the number in the `Callout` style.
     fn verbatim(
