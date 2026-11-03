@@ -2066,7 +2066,11 @@ Audit: all 93 acceptance documents with `source-highlighter=rouge` added
 (943 listings, `<code>` content compared byte for byte with Ruby) — default,
 `rouge-css=style` + monokai, `source-linenums-option`, and
 `rouge-linenums-mode=inline`: 943/943 identical in each after the fix
-(9 linenums differences before). A manual run, not a CI harness.
+(9 linenums differences before). Now the CI harness `scripts/rouge_listings.py`
+(`rouge-listings-v1`): Ruby's `<code>` contents per configuration under
+`compatibility/rouge-listings/` with each case's input digest (`STALE` on a
+changed or new document), offline compare, `--verify-reference` with Ruby,
+`--update-reference`; `test_rouge_listings.py`. No XFAIL mechanism yet.
 highlight.js/prettify are available today. adoctra.css
 carries Ruby's `pre.highlightjs`/`pre.prettyprint` rules (checked with
 screenshots). `golden/highlight/` runs the reference `--standalone --safe`.

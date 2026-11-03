@@ -44,6 +44,8 @@ jobs:
         run: python3 scripts/acceptance.py --manifest compatibility/acceptance/semantics.json --json-report target/document-semantics-report.json
       - name: Offline diagnostic positions
         run: python3 scripts/acceptance.py --manifest compatibility/acceptance/positions.json --json-report target/positions-report.json
+      - name: Offline Rouge highlighting of real documents
+        run: python3 scripts/rouge_listings.py --json-report target/rouge-listings-report.json
       - name: Install pinned Ruby reference
         run: gem install --user-install asciidoctor --version "$(cat compatibility/asciidoctor-version)" --no-document
       - name: Install pinned URI cache reference
@@ -85,3 +87,5 @@ jobs:
         run: python3 scripts/acceptance.py --manifest compatibility/acceptance/semantics.json --verify-reference
       - name: Verify diagnostic position references
         run: python3 scripts/acceptance.py --manifest compatibility/acceptance/positions.json --verify-reference
+      - name: Verify Rouge listing references
+        run: python3 scripts/rouge_listings.py --verify-reference

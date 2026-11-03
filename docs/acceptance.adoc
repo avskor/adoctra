@@ -340,6 +340,41 @@ fixture, неизвестный stderr и дрейф эталона остают
 latexmath:[$]
 ----
 
+== Профиль подсветки Rouge
+
+`rouge-listings-v1` (link:../scripts/rouge_listings.py[rouge_listings.py])
+конвертирует все документы этого корпуса с добавленным
+`source-highlighter=rouge` в четырёх конфигурациях: по умолчанию,
+`rouge-css=style` с темой `monokai`, `source-linenums-option` и
+`source-linenums-option` с `rouge-linenums-mode=inline`. Содержимое `<code>`
+каждого листинга `<pre class="rouge …">` сравнивается с закреплённым Ruby
+побайтно и по порядку; число листингов должно совпадать. Атрибуты `<pre>`
+(adoctra переносит туда id и роли блока), таблица стилей темы в заголовке
+(golden-тесты `rouge/`), окружающий DOM и диагностики в профиль не входят:
+DOM и диагностики сравнивает основной профиль с собственными атрибутами
+документов.
+
+Эталоны Ruby лежат в link:../compatibility/rouge-listings/[compatibility/rouge-listings/]
+по файлу на конфигурацию, с SHA-256 входов каждого документа: изменённый
+или новый документ без обновлённого эталона — ошибка `STALE`, а не PASS.
+Сейчас 943 листинга в каждой конфигурации, 93 из 93 документов PASS.
+Профиль нашёл пустые крайние строки листингов, которые Ruby обрезает только
+после подсветки (2026-11-03, исправлено; старый CLI даёт 5 DIFF в каждой
+конфигурации с номерами строк). Известных отличий нет; механизма XFAIL в
+этом профиле пока нет, и новое отличие останавливает проверку.
+
+[source,sh]
+----
+python3 scripts/rouge_listings.py
+python3 scripts/rouge_listings.py --verify-reference
+python3 scripts/rouge_listings.py --configuration linenums --case hibernate-fetching
+python3 scripts/rouge_listings.py --update-reference
+----
+
+Offline-сравнение и проверка эталонов настоящим Ruby входят в CI. После
+добавления документа в корпус эталоны обновляются целиком
+(`--update-reference`) и проверяются по diff.
+
 == Запуск и обновление
 
 [source,sh]

@@ -198,6 +198,7 @@ update that file (and `docs/implementation-plan.adoc`/`docs/compatibility.adoc`)
 | `scripts/structure.py` (`block-structure-v1`) | `compatibility/acceptance/structure.json` | `docs/acceptance.adoc` |
 | `inline-semantics-v1` | `compatibility/{upstream,acceptance}/semantics.json` | `docs/semantic-profile.adoc` |
 | `diagnostic-positions-v1` | `compatibility/acceptance/positions.json` | `docs/diagnostic-positions.adoc` |
+| `scripts/rouge_listings.py` (`rouge-listings-v1`) | `compatibility/rouge-listings/` | `docs/acceptance.adoc` |
 | `scripts/upstream_audit.py` (whole pinned upstream suite) | inventory under `compatibility/upstream/` | `docs/implementation-notes.md` |
 | `scripts/cli_matrix.py` (`cli-v1`) | `compatibility/cli/cases.json`, `report.json` | `docs/cli.adoc` |
 | `scripts/visual.py` (`visual-v1`) | `compatibility/visual/report.json` | `docs/visual.adoc` |
