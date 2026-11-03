@@ -189,9 +189,13 @@ reader message verbatim in `report.message` (Reader::error_reported).
 else Ruby's "no inline candidate; …" warning (typo kept) and empty output;
 standalone and embedded alike. The CLI ends non-empty HTML with a LF like
 Ruby's CLI and prints backend warnings in embedded mode too.
-`compatibility/upstream/semantics.json` uses `inline-semantics-v1`: 145 PASS
+`compatibility/upstream/semantics.json` uses `inline-semantics-v1`: 151 PASS
 cover 20 attribute and four include scenarios from the upstream selection plus
-120 original semantic probes (7 TOC outline probes; one inline icon probe in
+126 original semantic probes (2026-11-03 additions: xref `metadata.role`
+from text and attribute values, menu `font`, table `options`, outline
+`class` — the macro's role, else `toc-class` or `toc` — and nested document
+outlines (levels and sections; title/class left to the DOM profile); the
+oracle accepts positional xref keys and ignores an xref's `window`) (7 TOC outline probes; one inline icon probe in
 all three icon modes; two SVG probes comparing the read file and interactive fallback (one with incomplete `<svg` start tags); 15 tables, including caption/frame/grid/stripes/
 width/autowidth/float; 27 xref/indexterm/stem/typographic quote
 probes; 34 footnote/callout probes; quote/verse, toc, image align/alt, Rouge

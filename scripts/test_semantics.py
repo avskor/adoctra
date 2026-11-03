@@ -141,8 +141,18 @@ class SemanticProjectionTests(unittest.TestCase):
         changed = copy.deepcopy(parts)
         changed[1]['value'] = 'Section 2, “'
         self.assertNotEqual(projected, semantics.parts_projection(changed))
-        with self.assertRaisesRegex(ValueError, 'xref metadata'):
-            semantics.parts_projection([dict(parts[0], role='custom'), *parts[1:]])
+        # An xref keeps its role (the html5 converter writes it) as metadata.
+        with_role = semantics.parts_projection([dict(parts[0], role='custom'), *parts[1:]])
+        self.assertEqual(with_role[0]['metadata'], {'role': 'custom'})
+        semantics.validate_inlines(with_role)
+        self.assertNotEqual(with_role, projected)
+        with self.assertRaisesRegex(ValueError, 'link metadata'):
+            semantics.parts_projection([dict(parts[0], window='_blank'), *parts[1:]])
+        native = semantics.inline_projection([{'name': 'xref', 'target': '#s', 'refid': 's', 'role': 'r',
+                                               'inlines': [{'name': 'text', 'value': 'T'}]}])
+        self.assertEqual(native[0]['metadata'], {'role': 'r'})
+        with self.assertRaises(ValueError):
+            semantics.validate_inlines([dict(native[0], metadata={'window': '_blank'})])
 
     def test_indexterms_preserve_visibility_hierarchy_and_cross_references(self):
         node = {'name': 'indexterm', 'parts': None, 'terms': ['A &amp; B', 'Leaf'], 'see': 'Other', 'see_also': ['First', 'Second']}
@@ -222,15 +232,37 @@ class SemanticProjectionTests(unittest.TestCase):
         changed['foot'], changed['body'] = changed['body'], []
         self.assertNotEqual(original, semantics.block_projection(changed))
 
+    def test_outline_class_and_nested_document_tocs_are_compared(self):
+        heading = {'name': 'heading', 'level': 1, 'id': '_a', 'roles': [], 'title': None, 'inlines': [{'name': 'text', 'value': 'A'}]}
+        section = {'name': 'section', 'level': 1, 'blocks': [heading]}
+        toc = {'levels': 2, 'entries': [{'caption': None, 'sections': []}]}
+        outline = semantics.document_outline({'blocks': [section]}, toc, {'toc-class': 'mine'}, {})
+        self.assertEqual(outline['class'], 'mine')
+        self.assertEqual(semantics.document_outline({'blocks': [section]}, toc, {}, {}, role='side')['class'], 'side')
+        self.assertEqual(semantics.document_outline({'blocks': [section]}, toc, {}, {})['class'], 'toc')
+        semantics.validate_outline(outline)
+        with self.assertRaises(ValueError):
+            semantics.validate_outline({k: v for k, v in outline.items() if k != 'class'})
+        # An AsciiDoc cell's automatic TOC lists the nested sections.
+        cell = {'style': 'asciidoc', 'halign': 'left', 'valign': 'top', 'colspan': None, 'rowspan': None,
+                'background': None, 'blocks': [section], 'toc': toc}
+        projected = semantics.cell_projection(cell, 'body')
+        self.assertEqual(projected['document']['outline'],
+                         {'levels': 2, 'sections': [{'id': '_a', 'inlines': [text('A')], 'sections': []}]})
+        deeper = semantics.cell_projection(dict(cell, toc=dict(toc, levels=1)), 'body')
+        self.assertNotEqual(deeper, projected)
+        with self.assertRaises(ValueError):
+            semantics.cell_projection(dict(cell, blocks=None, paragraphs=[], toc=toc), 'body')
+
     def test_table_presentation_fields_are_compared(self):
         node = table()
         original = semantics.block_projection(node)
         self.assertEqual({key: original[key] for key in semantics.TABLE_FIELDS},
                          {'caption': None, 'frame': 'all', 'grid': 'all', 'stripes': None, 'width': 100,
-                          'explicit_width': False, 'autowidth': False, 'float': None})
+                          'explicit_width': False, 'autowidth': False, 'float': None, 'options': []})
         for field, value in [('caption', 'Table 1. '), ('frame', 'ends'), ('grid', 'rows'), ('stripes', 'even'),
                              ('width', 50), ('attributes', {'width': '100%'}), ('attributes', {'float': 'left'}),
-                             ('options', ['autowidth'])]:
+                             ('options', ['autowidth']), ('options', ['rotate']), ('options', ['unbreakable'])]:
             changed = dict(copy.deepcopy(node), **{field: value})
             projected = semantics.block_projection(changed)
             semantics.validate_block(projected)
@@ -396,7 +428,9 @@ class SemanticProjectionTests(unittest.TestCase):
         projected = semantics.parts_projection([button, keyboard, menu])
         self.assertEqual(projected[0]['inlines'][0]['kind'], 'strong')
         self.assertEqual(projected[1], {'kind': 'kbd', 'keys': [[text('Ctrl')], [text('S')]]})
-        self.assertEqual(projected[2], {k: v for k, v in menu.items() if k != 'font'})
+        self.assertEqual(projected[2], menu)
+        # Font Awesome carets (`icons=font`) are a separate field.
+        self.assertNotEqual(semantics.parts_projection([dict(menu, font=True)]), [projected[2]])
         native = [{'name': node['kind'], **{k: v for k, v in node.items() if k != 'kind'}} for node in [button, keyboard, menu]]
         self.assertEqual(semantics.inline_projection(native), projected)
         self.assertNotEqual(semantics.parts_projection([dict(keyboard, keys=list(reversed(keyboard['keys'])))]), [projected[1]])
@@ -599,7 +633,7 @@ class SemanticProjectionTests(unittest.TestCase):
         doc['blocks'] = [{'name': 'listing', 'text': '  x &lt; 2\n    y'},
                          {'name': 'image', 'target': 'cat.png', 'src': 'cat.png', 'alt': 'A &amp; B'}]
         oracle = semantics.document_projection(doc, ['a'])
-        oracle['title'] = [{'kind': 'menu', 'menu': [text('A  &amp; B')], 'submenus': [], 'item': None}]
+        oracle['title'] = [{'kind': 'menu', 'menu': [text('A  &amp; B')], 'submenus': [], 'item': None, 'font': False}]
         result = semantics.reference_projection(oracle, ['a'])
         self.assertEqual(result['title'][0]['menu'], [text('A  & B')])
         self.assertEqual(result['blocks'][0]['inlines'], [text('  x < 2\n    y')])
@@ -641,7 +675,7 @@ class SemanticProjectionTests(unittest.TestCase):
     def test_pinned_fixture_expands_attributes_and_macros_inside_quotes(self):
         root = CORPUS / 'upstream'
         manifest, cases = acceptance.load_corpus(root / 'semantics.json')
-        self.assertEqual(len(cases), 145)
+        self.assertEqual(len(cases), 151)
         self.assertEqual(manifest['profile'], semantics.PROFILE)
         reference = json.loads((root / 'reference/semantic-attributes-macros-in-quotes.json').read_text())
         strong = reference['semantics']['blocks'][0]['inlines'][0]

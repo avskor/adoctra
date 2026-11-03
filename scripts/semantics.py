@@ -82,10 +82,12 @@ def append_parts(parts, stack):
                 allowed = {'kind', 'target', *LINK_METADATA}
                 if kind == 'open-xref':
                     allowed = {'kind', 'target', 'refid', 'path', 'fragment', 'role', 'xrefstyle'}
-                    require(part.get('role') in {None, 'bare'}, 'xref metadata is outside inline-semantics-v1')
                 require(set(part) <= allowed, 'link metadata is outside inline-semantics-v1')
                 node = {'kind': 'xref' if kind == 'open-xref' else 'link', 'target': lexical(part['target']), 'inlines': []}
-                fields = {key: lexical(part[key]) for key in LINK_METADATA if key in part and not (key == 'role' and part[key] == 'bare')}
+                # An xref has only a role (the html5 converter writes no
+                # window or rel for it).
+                names = {'role'} if kind == 'open-xref' else LINK_METADATA
+                fields = {key: lexical(part[key]) for key in names if key in part and not (key == 'role' and part[key] == 'bare')}
                 if fields:
                     node['metadata'] = fields
                 closing = ('close-xref' if kind == 'open-xref' else 'close-link', None)
@@ -119,8 +121,11 @@ def inline_projection(nodes):
         elif name in FORMATS:
             stack[-1][1].append({'kind': name, 'id': None, 'roles': [], 'inlines': inline_projection(node['inlines'])})
         elif name in {'link', 'xref'}:
-            require(not node.get('role'), 'xref role is outside inline-semantics-v1')
-            stack[-1][1].append({'kind': name, 'target': node['target'], 'inlines': inline_projection(node['inlines'])})
+            require(name == 'xref' or not node.get('role'), 'link role is outside inline-semantics-v1')
+            projected = {'kind': name, 'target': node['target'], 'inlines': inline_projection(node['inlines'])}
+            if node.get('role'):
+                projected['metadata'] = {'role': lexical(node['role'])}
+            stack[-1][1].append(projected)
         elif name == 'anchor':
             stack[-1][1].append({'kind': name, 'id': node['id']})
         elif name in {'kbd', 'button', 'menu', 'image', 'indexterm', 'stem', 'footnote', 'callout'}:
@@ -199,7 +204,8 @@ def complex_inline(node, kind):
         return {'kind': kind, 'keys': [parts_projection(label) for label in node['keys']]}
     return {'kind': kind, 'menu': parts_projection(node['menu']),
             'submenus': [parts_projection(label) for label in node['submenus']],
-            'item': parts_projection(node['item']) if node['item'] is not None else None}
+            'item': parts_projection(node['item']) if node['item'] is not None else None,
+            'font': node.get('font') is True}
 
 
 def item_projection(item, callout=False):
@@ -245,8 +251,8 @@ def verbatim_projection(block):
 def cell_projection(cell, group):
     keys = {'style', 'halign', 'valign', 'colspan', 'rowspan', 'background'}
     content = set(cell) & {'paragraphs', 'blocks', 'literal'}
-    require('toc' not in cell, 'a nested document TOC is outside inline-semantics-v1')
-    require(len(content) == 1 and set(cell) <= keys | content | {'footnotes'}, 'invalid semantic cell')
+    require(len(content) == 1 and set(cell) <= keys | content | {'footnotes', 'toc'}, 'invalid semantic cell')
+    require('toc' not in cell or 'blocks' in cell, 'a TOC requires a nested document')
     require('footnotes' not in cell or 'blocks' in cell, 'footnotes require a nested document')
     result = {key: cell[key] for key in keys}
     for key in ['colspan', 'rowspan']:
@@ -260,6 +266,14 @@ def cell_projection(cell, group):
         result['document'] = {key: nested[key] for key in ['title', 'blocks']}
         if 'footnotes' in nested:
             result['document']['footnotes'] = nested['footnotes']
+        if cell.get('toc') is not None:
+            # A nested automatic TOC: depth and listed sections (its title
+            # and class are compared by the DOM profile).
+            toc = cell['toc']
+            require(isinstance(toc, dict) and set(toc) == {'levels', 'entries'}, 'invalid nested TOC')
+            listed = cell['blocks'][1:] if nested['title'] is not None else cell['blocks']
+            result['document']['outline'] = {'levels': toc['levels'],
+                                             'sections': outline_projection(listed, toc['entries'])}
     elif 'literal' in cell:
         result['literal'] = canonical([{'kind': 'text', 'value': cell['literal']}], prose=False)
     elif cell['style'] == 'literal':
@@ -318,6 +332,7 @@ def block_projection(block):
         result.update({key: block[key] for key in ['frame', 'grid', 'stripes', 'width']})
         result['explicit_width'] = 'width' in attrs
         result['autowidth'] = 'autowidth' in block.get('options', [])
+        result['options'] = sorted(set(block.get('options', [])))
         result['float'] = lexical(attrs['float']) if 'float' in attrs else None
         result['columns'] = copy.deepcopy(block['columns'])
         for group in ['head', 'body', 'foot']:
@@ -402,20 +417,24 @@ def fill_outlines(node, document, values, parts):
     if isinstance(pending, dict) and PENDING_OUTLINE in pending:
         toc = pending[PENDING_OUTLINE]
         title = node['title'] if node['context'] == 'toc' else None
-        node['outline'] = document_outline(document, toc, values, parts, title) if toc is not None else None
+        role = ' '.join(node['roles']) if node['context'] == 'toc' and node['roles'] else None
+        node['outline'] = document_outline(document, toc, values, parts, title, role) if toc is not None else None
     for key, value in node.items():
         if key != 'outline':
             fill_outlines(value, document, values, parts)
 
 
-def document_outline(document, toc, values, parts, title=None):
+def document_outline(document, toc, values, parts, title=None, role=None):
     require(isinstance(toc, dict) and set(toc) == {'levels', 'entries'} and type(toc['levels']) is int, 'invalid TOC')
     if title is None:
         if 'toc-title' in parts:
             title = canonical(parts_projection(parts['toc-title']))
         else:
             title = canonical([{'kind': 'text', 'value': values.get('toc-title', '')}])
-    return {'title': title, 'levels': toc['levels'], 'sections': outline_projection(document['blocks'], toc['entries'])}
+    # The html5 converter's class: the macro's role, else `toc-class` or `toc`.
+    toc_class = role or lexical(values.get('toc-class', 'toc'))
+    return {'title': title, 'levels': toc['levels'], 'class': toc_class,
+            'sections': outline_projection(document['blocks'], toc['entries'])}
 
 
 def document_projection(document, names):
@@ -527,6 +546,14 @@ def reference_projection(result, names):
                             for child in nested['blocks']:
                                 block(child)
                             footnotes(nested)
+                            if nested.get('outline') is not None:
+                                entries = list(nested['outline']['sections'])
+                                while entries:
+                                    entry = entries.pop()
+                                    if entry['id'] is not None:
+                                        entry['id'] = lexical(entry['id'])
+                                    entry['inlines'] = inlines(entry['inlines'])
+                                    entries.extend(entry['sections'])
         for entry in node.get('items', []):
             if node['context'] == 'dlist':
                 entry['terms'] = [inlines(term) for term in entry['terms']]
@@ -542,6 +569,7 @@ def reference_projection(result, names):
         if node.get('outline') is None:
             return
         node['outline']['title'] = inlines(node['outline']['title'])
+        node['outline']['class'] = lexical(node['outline']['class'])
         pending = list(node['outline']['sections'])
         while pending:
             entry = pending.pop()
@@ -596,9 +624,8 @@ def validate_inlines(nodes):
             keys.update({'target', 'inlines'})
             require(isinstance(node.get('target'), str))
             if 'metadata' in node:
-                require(kind == 'link')
                 keys.add('metadata')
-                validate_strings(node['metadata'], LINK_METADATA)
+                validate_strings(node['metadata'], LINK_METADATA if kind == 'link' else {'role'})
         elif kind == 'anchor':
             keys.add('id')
             require(isinstance(node.get('id'), str))
@@ -608,7 +635,8 @@ def validate_inlines(nodes):
             keys.add('keys')
             validate_labels(node.get('keys'))
         elif kind == 'menu':
-            keys.update({'menu', 'submenus', 'item'})
+            keys.update({'menu', 'submenus', 'item', 'font'})
+            require(type(node.get('font')) is bool)
             validate_inlines(node.get('menu'))
             validate_labels(node.get('submenus'))
             if node.get('item') is not None:
@@ -720,7 +748,7 @@ def validate_alignment(node):
     require(node.get('valign') in {'top', 'middle', 'bottom'})
 
 
-TABLE_FIELDS = {'caption', 'frame', 'grid', 'stripes', 'width', 'explicit_width', 'autowidth', 'float'}
+TABLE_FIELDS = {'caption', 'frame', 'grid', 'stripes', 'width', 'explicit_width', 'autowidth', 'float', 'options'}
 
 
 def validate_table(node):
@@ -732,6 +760,7 @@ def validate_table(node):
         require(node.get(key) is None or isinstance(node[key], str))
     require(type(node.get('width')) is int and 0 <= node['width'] <= 100)
     require(type(node.get('explicit_width')) is bool and type(node.get('autowidth')) is bool)
+    require(isinstance(node.get('options'), list) and all(isinstance(o, str) for o in node['options']))
     require(isinstance(node.get('columns'), list) and bool(node['columns']))
     for column in node['columns']:
         require(isinstance(column, dict) and set(column) == {'style', 'halign', 'valign', 'width', 'autowidth'})
@@ -755,7 +784,11 @@ def validate_table(node):
                 elif cell['style'] == 'asciidoc':
                     keys.add('document')
                     nested = cell.get('document')
-                    require(isinstance(nested, dict) and {'title', 'blocks'} <= set(nested) <= {'title', 'blocks', 'footnotes'})
+                    require(isinstance(nested, dict) and {'title', 'blocks'} <= set(nested) <= {'title', 'blocks', 'footnotes', 'outline'})
+                    if 'outline' in nested:
+                        outline = nested['outline']
+                        require(isinstance(outline, dict) and set(outline) == {'levels', 'sections'}, 'invalid nested outline')
+                        validate_outline({'title': [], 'levels': outline['levels'], 'class': '', 'sections': outline['sections']})
                     validate_footnotes(nested)
                     if nested['title'] is not None:
                         validate_inlines(nested['title'])
@@ -774,7 +807,8 @@ def validate_table(node):
 def validate_outline(value):
     if value is None:
         return
-    require(isinstance(value, dict) and set(value) == {'title', 'levels', 'sections'}, 'invalid outline')
+    require(isinstance(value, dict) and set(value) == {'title', 'levels', 'class', 'sections'}, 'invalid outline')
+    require(isinstance(value['class'], str), 'invalid outline class')
     validate_inlines(value['title'])
     require(type(value['levels']) is int, 'invalid outline levels')
     pending = [value['sections']]

@@ -157,8 +157,10 @@ class SemanticConverter < Asciidoctor::Converter::Base
       result[:inlines] = inlines(cell.text)
     elsif cell.style == :asciidoc
       document = cell.inner_document.convert
-      raise 'a nested document TOC is outside inline-semantics-v1' if document[:outline]
       result[:document] = document.slice(:title, :blocks, :footnotes)
+      # A nested document's automatic TOC: its depth and listed sections
+      # (its title and class are compared by the DOM profile).
+      result[:document][:outline] = document[:outline].slice(:levels, :sections) if document[:outline]
     elsif cell.style == :literal
       result[:literal] = inlines(cell.text)
     else
@@ -252,11 +254,13 @@ class SemanticConverter < Asciidoctor::Converter::Base
     end
   end
 
-  def outline doc, title, levels = nil
-    raise 'a nested document TOC is outside inline-semantics-v1' if doc.nested?
+  # A TOC: its title, depth, class (the macro's role, else `toc-class` or
+  # `toc`, as the html5 converter writes it) and the sections it lists; a
+  # nested document (an AsciiDoc cell) lists its own sections.
+  def outline doc, title, levels = nil, role = nil
     title = inlines(title)
     levels ||= (doc.attributes['toclevels'] || 2).to_i
-    { title: title, levels: levels,
+    { title: title, levels: levels, class: role || (doc.attr 'toc-class', 'toc'),
       sections: outline_entries(doc, levels, (doc.attributes['sectnumlevels'] || 3).to_i) }
   end
 
@@ -331,7 +335,8 @@ class SemanticConverter < Asciidoctor::Converter::Base
       result = metadata node
       rendered = doc.attr?('toc-placement', 'macro') && doc.sections? && (doc.attr? 'toc')
       result[:outline] = rendered ? outline(doc, node.title? ? node.title : doc.attr('toc-title'),
-                                            (node.attr? 'levels') ? (node.attr 'levels').to_i : nil) : nil
+                                            (node.attr? 'levels') ? (node.attr 'levels').to_i : nil,
+                                            (node.role? ? node.role : nil)) : nil
       result
     when 'stem'
       metadata(node).merge(style: node.style, inlines: inlines(node.content))
@@ -362,6 +367,9 @@ class SemanticConverter < Asciidoctor::Converter::Base
         width: node.attr('tablepcwidth'),
         explicit_width: node.attr?('width'),
         autowidth: node.option?('autowidth'),
+        # Every table option, including those without HTML (rotate,
+        # unbreakable, breakable).
+        options: node.attributes.keys.grep(String).select { |key| key.end_with? '-option' }.map { |key| key.delete_suffix '-option' }.sort,
         float: node.attr('float')
       )
       result[:columns] = node.columns.map { |column|
@@ -395,8 +403,12 @@ class SemanticConverter < Asciidoctor::Converter::Base
       when :ref
         store(kind: 'anchor', id: node.id)
       when :xref
-        raise 'xref metadata is outside inline-semantics-v1' unless (node.attributes.keys - ['path', 'fragment', 'refid', 'xrefstyle']).empty?
-        node.text ? wrap({ kind: 'xref', target: node.target }, node.text) : store(kind: 'xref', target: node.target, inlines: xref_label(node))
+        # The html5 converter writes an xref's role; `window` has no effect.
+        # Positional keys hold the text the macro already parsed.
+        raise 'xref metadata is outside inline-semantics-v1' unless (node.attributes.keys.grep(String) - ['path', 'fragment', 'refid', 'xrefstyle', 'role', 'window']).empty?
+        fields = { kind: 'xref', target: node.target }
+        fields[:metadata] = { role: node.role } if node.role
+        node.text ? wrap(fields, node.text) : store(fields.merge(inlines: xref_label(node)))
       else
         raise "unsupported semantic anchor: #{node.type}"
       end
@@ -408,9 +420,12 @@ class SemanticConverter < Asciidoctor::Converter::Base
     when 'inline_kbd'
       store(kind: 'kbd', keys: (node.attr 'keys').map { |key| inlines key })
     when 'inline_menu'
+      # `font`: the html5 converter draws the separators as Font Awesome
+      # carets when the document converts with `icons=font`.
       store(kind: 'menu', menu: inlines(node.attr 'menu'),
             submenus: (node.attr 'submenus').map { |label| inlines label },
-            item: (node.attr 'menuitem') ? inlines(node.attr 'menuitem') : nil)
+            item: (node.attr 'menuitem') ? inlines(node.attr 'menuitem') : nil,
+            font: (node.document.attr? 'icons', 'font'))
     when 'inline_image'
       return store(icon_fields node) if node.type == 'icon'
       store({ kind: 'image', id: node.id || (node.attr 'id'), roles: node.roles }.merge(image_fields(node)))
