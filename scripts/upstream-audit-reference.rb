@@ -3,7 +3,8 @@
 # Reference side of scripts/upstream_audit.py: convert every inventory entry
 # with the pinned Asciidoctor in one process, using the options its upstream
 # test passed (as recorded), and print one JSON line per entry:
-#   {"id", "html", "diagnostics": [{"severity", "message", "location"}]} or {"id", "error"}.
+#   {"id", "html", "diagnostics": [{"severity", "message", "location"}],
+#    "model": {"structure", "attributes": {"header", "final"}}} or {"id", "error"}.
 # Usage: ruby scripts/upstream-audit-reference.rb ENTRIES.json
 require 'json'
 
@@ -96,6 +97,12 @@ def reset_highlighter_status
   end
 end
 
+require_relative 'asciidoctor-structure'
+
+def attribute_strings attributes
+  (attributes || {}).to_h {|name, value| [name.to_s, value.nil? ? nil : value.to_s] }
+end
+
 entries = JSON.parse(File.read(ARGV.fetch(0)))
 entries.each do |entry|
   reset_highlighter_status
@@ -106,12 +113,20 @@ entries.each do |entry|
   logger = Asciidoctor::MemoryLogger.new
   Asciidoctor::LoggerManager.logger = logger
   begin
-    output = (Asciidoctor::Document.new entry['source'], (options_of entry['options'])).convert
+    document = Asciidoctor::Document.new entry['source'], (options_of entry['options'])
+    output = document.convert
     # What Ruby's CLI writes (the other side is the CLI): the output chomped
     # plus a LF, nothing for nil (the inline doctype without a candidate).
     html = output.nil? ? '' : %(#{output.chomp}\n)
     diagnostics = logged logger
-    puts JSON.generate(id: entry['id'], html: html, diagnostics: diagnostics)
+    # The document model the upstream assertions read through the API: the
+    # block structure (block-structure-v1) and the attributes when the header
+    # was saved (Document#save_attributes) and after conversion.
+    model = { structure: (structure_document document),
+              attributes: { header: (attribute_strings document.instance_variable_get :@header_attributes),
+                            final: (attribute_strings document.attributes) } }
+    # Deeply nested lists exceed JSON's default nesting limit.
+    puts JSON.generate({ id: entry['id'], html: html, diagnostics: diagnostics, model: model }, max_nesting: false)
   rescue StandardError, SystemStackError => e
     puts JSON.generate(id: entry['id'], error: "#{e.class}: #{e.message.lines.first&.chomp}")
   ensure

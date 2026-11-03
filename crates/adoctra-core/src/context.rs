@@ -1140,6 +1140,12 @@ impl ParseContext<'_> {
     }
 
     /// Keep the read reftext for references; the model gets a snapshot.
+    /// Ruby's `attribute_locked?`: a host (API/CLI) value the document
+    /// cannot change.
+    pub fn is_locked(&self, name: &str) -> bool {
+        self.locked.contains(name)
+    }
+
     pub fn attach_reftext(&mut self, block: &mut crate::Block, value: crate::reftext::Read) {
         block.reftext = Some(value.snapshot(&self.attributes));
         self.reftexts

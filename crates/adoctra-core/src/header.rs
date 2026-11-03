@@ -162,6 +162,13 @@ pub(crate) fn collect_header(lines: &mut Reader<'_>, context: &mut ParseContext)
             title_span.end = lines[i].0 + lines[i].1.len();
             context.apply(AttributeEntry::Set("compat-mode".to_owned(), String::new()));
         }
+        // Ruby's `parse_document_header`: a `separator` block attribute on
+        // the document title becomes `title-separator`, unless locked.
+        if let Some(separator) = result.pending.attrs.named.get("separator") {
+            if !context.is_locked("title-separator") {
+                Arc::make_mut(&mut context.attributes).set("title-separator", separator.clone());
+            }
+        }
         // Ruby installs document metadata after the implicit doctitle a-stage.
         if !result.pending.roles.is_empty() {
             Arc::make_mut(&mut context.attributes).set("role", result.pending.roles.join(" "));

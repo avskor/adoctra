@@ -14,7 +14,9 @@ scripts/upstream-audit-reference.rb, the recorded options) and with the CLI
 compares the existing body-dom-v1 projection (standalone shells mapped like
 the asset audit), the standalone document shell (`<html>`/`<body>` attributes
 and the `<head>` children, see `shell`) and the ordered warning/error texts
-with their logger cursor (file and line, or none). Both sides get the same
+with their logger cursor (file and line, or none), and the document model
+(block structure and header/final attribute snapshots against the CLI's
+JSON). Both sides get the same
 SOURCE_DATE_EPOCH and TZ. Statuses: PASS, DIFF (body and/or diagnostics),
 RUBY_ERROR, ADOCTRA_ERROR. Entries whose options this CLI contract cannot
 express (non-HTML backends, extensions, base_dir/to_file, …) are UNSUPPORTED
@@ -27,6 +29,7 @@ error) fails, so improvements are re-recorded deliberately.
 """
 
 import argparse
+import html as html_module
 from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor
 import hashlib
@@ -42,6 +45,7 @@ import threading
 from contextlib import contextmanager
 
 from compatibility import BodyParser, Element, projection
+import structure
 
 ROOT = Path(__file__).resolve().parent.parent
 AUDIT = ROOT / "compatibility" / "upstream" / "audit"
@@ -69,7 +73,7 @@ PLACEHOLDER = "<UPSTREAM>"
 SAFE = {"unsafe": "unsafe", "safe": "safe", "server": "server", "secure": "secure",
         0: "unsafe", 1: "safe", 10: "server", 20: "secure"}
 ENVIRONMENT = {"SOURCE_DATE_EPOCH": "1700000000", "TZ": "UTC"}
-PROFILE = "upstream-audit-body-shell-positions-v2"
+PROFILE = "upstream-audit-body-shell-positions-model-v3"
 # Ruby's default `webfonts` (an empty value) links these Google fonts; the
 # adoctra theme uses system fonts (an explicit `webfonts` value is compared).
 # The opening comments of Ruby's default stylesheet and adoctra.css.
@@ -125,6 +129,47 @@ def reference_diagnostics(diagnostics, root=None):
         result.append({"severity": diagnostic["severity"], "message": diagnostic["message"],
                        "location": location})
     return result
+
+
+TAGS = re.compile(r"<[^>]*>")
+
+
+def attribute_text(value):
+    """An attribute value as text: Ruby stores it after the header
+    substitutions (markup and character references), adoctra in its source
+    spelling with formatted parts beside it; both compare without markup."""
+    return html_module.unescape(TAGS.sub("", value))
+
+
+def model_attributes(snapshot, root):
+    """adoctra's attribute snapshot (`--json-attributes`) as text values."""
+    result = {}
+    for name, value in snapshot["values"].items():
+        parts = snapshot.get("attribute_parts", {}).get(name)
+        if parts:
+            value = "".join(attribute_text(part["value"]) if part["kind"] == "raw" else part.get("value", "")
+                            for part in parts)
+        else:
+            value = html_module.unescape(value)
+        result[name] = localize_back(value, root)
+    return result
+
+
+def reference_model(model, root):
+    """Ruby's model with the same attribute text and checkout paths; a
+    structure outside the block-structure-v1 schema is an error, not a pass."""
+    try:
+        structure.validate_structure(model["structure"])
+    except ValueError as error:
+        return {"error": f"ValueError: {error}"}
+    attributes = {snapshot: {name: None if value is None else localize_back(attribute_text(value), root)
+                             for name, value in values.items()}
+                  for snapshot, values in model["attributes"].items()}
+    return {"structure": model["structure"], "attributes": attributes}
+
+
+def localize_back(value, root):
+    return value.replace(str(root), PLACEHOLDER) if root is not None else value
 
 
 def shell(html):
@@ -244,17 +289,18 @@ def classify(source, options):
     if any(b.removesuffix("@") not in HTML_BACKENDS for b in backends):
         return None, f"backend:{backends[-1]}"
     args = ["-S", safe]
-    if backend:
-        # Ruby's :backend option is a locked attribute override.
-        args += ["-a", f"backend={backend}"]
     if options.get("base_dir"):
         args += ["-B", str(options["base_dir"])]
     if not (options.get("standalone") or options.get("header_footer")):
         args.append("-s")
-    if options.get("doctype"):
-        args += ["-a", f"doctype={options['doctype']}"]
     for attribute in attributes:
         args += ["-a", attribute]
+    # Ruby's :backend and :doctype options are attribute overrides set after
+    # the :attributes (Document#initialize), so they win: the CLI's last `-a`.
+    if backend:
+        args += ["-a", f"backend={backend}"]
+    if options.get("doctype"):
+        args += ["-a", f"doctype={options['doctype']}"]
     return args + output, None
 
 
@@ -454,9 +500,21 @@ def adoctra(binary, entry, args, root=None):
     if run.returncode:
         return {"error": f"exit {run.returncode}: {run.stderr.strip()[-300:]}"}
     try:
-        return {"html": run.stdout, "diagnostics": cli_diagnostics(run.stderr, root)}
+        result = {"html": run.stdout, "diagnostics": cli_diagnostics(run.stderr, root)}
     except ValueError as error:
         return {"error": str(error)}
+    # The same conversion as JSON: block structure and attribute snapshots.
+    model = decoded(subprocess.run([str(binary), "-", "--to", "json", "--json-attributes", "--stdout", *args],
+                                   input=entry["source"].encode("utf-8"), capture_output=True, timeout=60,
+                                   env={**os.environ, **ENVIRONMENT}))
+    try:
+        document = json.loads(model.stdout)
+        result["model"] = {"structure": structure.document_projection(document),
+                           "attributes": {snapshot: model_attributes(values, root)
+                                          for snapshot, values in document["attribute_snapshots"].items()}}
+    except (ValueError, KeyError) as error:
+        result["model"] = {"error": f"{type(error).__name__}: {error}"[:300]}
+    return result
 
 
 def tree_state(root):
@@ -610,7 +668,27 @@ def compare(entry, expected, actual):
         reasons.append("shell")
     if expected["diagnostics"] != actual["diagnostics"]:
         reasons.append("diagnostics")
+    reasons += compare_model(expected.get("model"), actual.get("model"))
     return ("DIFF" if reasons else "PASS"), reasons
+
+
+def compare_model(expected, actual):
+    """The block structure and the header/final attribute snapshots."""
+    if expected is None and actual is None:
+        return []
+    if expected is None or actual is None or "error" in expected or "error" in actual:
+        side = "reference" if expected is None or "error" in expected else "adoctra"
+        detail = (expected if side == "reference" else actual) or {}
+        return [f"model:{side}:{detail.get('error', 'missing')}"]
+    reasons = []
+    if expected["structure"] != actual["structure"]:
+        reasons.append("structure")
+    for snapshot in ("header", "final"):
+        ours, theirs = actual["attributes"].get(snapshot, {}), expected["attributes"].get(snapshot, {})
+        changed = sorted(name for name in set(ours) | set(theirs) if ours.get(name) != theirs.get(name))
+        if changed:
+            reasons.append(f"attributes:{snapshot}:" + ",".join(changed[:5]) + ("…" if len(changed) > 5 else ""))
+    return reasons
 
 
 def load_inventory(path=INVENTORY, sources=SOURCES):
@@ -667,6 +745,8 @@ def audit(binary, only, jobs):
             for reference in references.values():
                 if "diagnostics" in reference:
                     reference["diagnostics"] = reference_diagnostics(reference["diagnostics"], root)
+                if "model" in reference:
+                    reference["model"] = reference_model(reference["model"], root)
             with ThreadPoolExecutor(jobs) as pool:
                 actuals = dict(zip((e["id"] for e in local), pool.map(
                     lambda e: adoctra(binary, e, localize(classify(e["source"], e["options"])[0], root), root),
@@ -717,6 +797,8 @@ def show(entry, binary):
             expected = json.loads(run.stdout.split("\n")[0])
             if "diagnostics" in expected:
                 expected["diagnostics"] = reference_diagnostics(expected["diagnostics"], root)
+            if "model" in expected:
+                expected["model"] = reference_model(expected["model"], root)
             actual = adoctra(binary, local, args, root)
     for occurrence in entry["occurrences"]:
         print(f"{occurrence['file']}:{occurrence['test_line']} {occurrence['test']}")

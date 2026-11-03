@@ -2069,8 +2069,18 @@ substitution type` are Unlocated; `invalid part` reports `reader.cursor`
 after the part (closing title's `report_cursor`, or `Reader::eof_cursor`);
 style-attribute warnings use `DiagnosticLocation::PreviousLine`
 (`cursor_at_prev_line`, line 0 on a first line; harness parsers accept 0).
-Four new positions probes, `upstream_single_cases.rs` tests. Still not
-compared: Ruby API attribute/model assertions beyond their HTML effect.
+Four new positions probes, `upstream_single_cases.rs` tests. Then the
+audit (profile `upstream-audit-body-shell-positions-model-v3`) also compares
+the document model of 2305 batch entries: the reference emits
+`structure_document` and `@header_attributes`/final `attributes` as strings
+(`max_nesting: false` for deep lists); adoctra runs again with
+`--to json --json-attributes`; values compare as text (`attribute_text`:
+tags dropped, references decoded; adoctra parts joined), checkout paths as
+`<UPSTREAM>`. Findings: `title-separator` from a doctitle's `separator`
+block attribute (header.rs, `ParseContext::is_locked`), and the audit passed
+the `:doctype`/`:backend` options before the attributes (Ruby's overrides
+win: now the last `-a`). Not compared: per-block text/metadata through the
+API, node line numbers, catalogs beyond HTML, file-output entries' model.
 **Matrix recheck** (2026-11-03): every "ahead"/"partial" entry of the initial
 matrix in compatibility.adoc was rechecked against Ruby; 54 probes became
 `matrix-*` cases of compatibility/cases.json (body-dom-v1; diagnostics were

@@ -376,3 +376,21 @@ fn style_attribute_warnings_use_the_previous_line_like_ruby() {
         ]
     );
 }
+
+#[test]
+fn a_document_title_separator_sets_title_separator_like_ruby() {
+    // document_test.rb: `[separator=::]` on the document title is stored as
+    // the `title-separator` attribute, unless the host locked it.
+    let source = "[separator=::]\n= Main Title:: *Subtitle*\nAuthor Name\n\ncontent";
+    let doc = parse(source).document;
+    assert_eq!(doc.attributes.get("title-separator"), Some("::"));
+    let doc = parse_with_options(source, &with(&[("title-separator", "|")])).document;
+    assert_eq!(doc.attributes.get("title-separator"), Some("|"));
+    assert_eq!(
+        parse("= Main Title: Sub\n\ncontent")
+            .document
+            .attributes
+            .get("title-separator"),
+        None
+    );
+}

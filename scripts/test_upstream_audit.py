@@ -35,7 +35,11 @@ class ClassifyTests(unittest.TestCase):
         args, reason = classify("x", {"standalone": False, "safe": "safe", "doctype": "book",
                                       "attributes": {"a": "1"}})
         self.assertIsNone(reason)
-        self.assertEqual(args, ["-S", "safe", "-s", "-a", "doctype=book", "-a", "a=1"])
+        self.assertEqual(args, ["-S", "safe", "-s", "-a", "a=1", "-a", "doctype=book"])
+        # The :doctype and :backend options override the attributes (last -a).
+        args = classify("x", {"doctype": "book", "backend": "html5",
+                              "attributes": {"doctype": "article", "backend": "xhtml"}})[0]
+        self.assertEqual(args[-4:], ["-a", "backend=html5", "-a", "doctype=book"])
         # Document.new defaults to secure mode; a standalone document has no -s.
         self.assertEqual(classify("x", {"standalone": True})[0], ["-S", "secure"])
         self.assertEqual(classify("x", {"safe": 10})[0][:2], ["-S", "server"])
@@ -214,6 +218,40 @@ class CompareTests(unittest.TestCase):
                                  {"html": "<p>a</p>", "diagnostics": moved}), ("DIFF", ["diagnostics"]))
         with self.assertRaises(ValueError):
             upstream_audit.cli_diagnostics("noise\n")
+
+
+    def test_model_structure_and_attribute_snapshots_are_compared(self):
+        tree = {"context": "document", "has_title": False,
+                "blocks": [{"context": "paragraph", "id": None, "roles": []}]}
+        ruby = upstream_audit.reference_model(
+            {"structure": tree, "attributes": {
+                "header": {"doctitle": "&lt;Foo&gt; &#43; <em>b</em>", "docdir": "/root/x"},
+                "final": {"doctitle": "&lt;Foo&gt; &#43; <em>b</em>", "gone": None}}}, Path("/root"))
+        ours = {"structure": tree, "attributes": {
+            "header": upstream_audit.model_attributes(
+                {"values": {"doctitle": "<Foo> &#43; _b_", "docdir": "/root/x"},
+                 "attribute_parts": {"doctitle": [{"kind": "text", "value": "<Foo> + "},
+                                                  {"kind": "raw", "value": "<em>"},
+                                                  {"kind": "text", "value": "b"},
+                                                  {"kind": "raw", "value": "</em>"}]}}, Path("/root")),
+            "final": {"doctitle": "<Foo> + b", "gone": None}}}
+        # Markup and character references compare as text; checkout paths
+        # as the placeholder.
+        self.assertEqual(ruby["attributes"]["header"]["docdir"], "<UPSTREAM>/x")
+        self.assertEqual(upstream_audit.compare_model(ruby, ours), [])
+        changed = {**ours, "attributes": {**ours["attributes"], "final": {"doctitle": "<Foo> + c"}}}
+        # A nil value (rare in Ruby) compares like an absent attribute.
+        self.assertEqual(upstream_audit.compare_model(ruby, changed), ["attributes:final:doctitle"])
+        moved = {**ours, "structure": {**tree, "has_title": True}}
+        self.assertEqual(upstream_audit.compare_model(ruby, moved), ["structure"])
+        self.assertEqual(upstream_audit.compare_model(ruby, {"error": "E"}), ["model:adoctra:E"])
+        self.assertEqual(upstream_audit.compare_model(None, ours), ["model:reference:missing"])
+        self.assertEqual(upstream_audit.compare_model(None, None), [])
+        bad = upstream_audit.reference_model({"structure": {"context": "nope"}, "attributes": {}}, None)
+        self.assertIn("error", bad)
+        entry = {"options": {"standalone": False}}
+        side = {"html": "<p>a</p>", "diagnostics": []}
+        self.assertEqual(compare(entry, dict(side, model=ruby), dict(side, model=moved)), ("DIFF", ["structure"]))
 
 
 class InventoryTests(unittest.TestCase):
