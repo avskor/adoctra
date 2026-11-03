@@ -254,6 +254,38 @@ class CompareTests(unittest.TestCase):
         self.assertEqual(compare(entry, dict(side, model=ruby), dict(side, model=moved)), ("DIFF", ["structure"]))
 
 
+    def test_block_metadata_is_normalized_and_compared(self):
+        ruby = {"context": "document", "has_title": False, "blocks": [
+            {"context": "listing", "id": None, "roles": [], "meta": {
+                "style": "listing", "options": ["linenums"], "alt": None,
+                "attributes": {"style": "listing", "linenums-option": "", "language": "<r>",
+                               "cloaked-context": "paragraph", "start": "3"}}},
+            {"context": "image", "id": None, "roles": [], "meta": {
+                "style": None, "options": [], "alt": "A tiger&#8217;s",
+                "attributes": {"target": "t.png", "alt": "A tiger's", "default-alt": "t", "width": "10"}}}]}
+        upstream_audit.reference_metadata(ruby)
+        # Default styles, parser-state attributes and `*-option` keys drop;
+        # the image keeps its target and its substituted alt.
+        self.assertEqual(ruby["blocks"][0]["meta"], {"style": None, "options": ["linenums"],
+                                                     "attributes": {"language": "<r>", "start": "3"}})
+        self.assertEqual(ruby["blocks"][1]["meta"], {"style": None, "options": [], "attributes": {"width": "10"},
+                                                     "target": "t.png", "alt": "A tiger\u2019s"})
+        listing = {"name": "listing", "style": None, "options": ["linenums"],
+                   "attributes": {"language": "<r>", "start": "3"}}
+        image = {"name": "image", "target": "t.png", "alt": "A tiger&#8217;s", "style": None, "options": [],
+                 "attributes": {"alt": "A tiger&#8217;s", "width": "10"}}
+        self.assertEqual(upstream_audit.adoctra_metadata(listing)[1], ruby["blocks"][0]["meta"])
+        self.assertEqual(upstream_audit.adoctra_metadata(image)[1], ruby["blocks"][1]["meta"])
+        self.assertEqual(upstream_audit.adoctra_metadata({"name": "heading", "style": "discrete"})[0],
+                         "floating_title")
+        ours = {**ruby, "blocks": [dict(ruby["blocks"][0], meta=dict(ruby["blocks"][0]["meta"], style="source")),
+                                   ruby["blocks"][1]]}
+        self.assertEqual(upstream_audit.metadata_differences(ruby, ours), ["blocks[0]:listing:style"])
+        model = {"structure": ruby, "attributes": {}}
+        self.assertEqual(upstream_audit.compare_model(model, {"structure": ours, "attributes": {}}),
+                         ["metadata:blocks[0]:listing:style"])
+
+
 class InventoryTests(unittest.TestCase):
     def test_committed_inventory_provenance_and_baseline(self):
         inventory = load_inventory()

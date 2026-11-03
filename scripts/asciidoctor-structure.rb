@@ -1,31 +1,33 @@
 # frozen_string_literal: true
 
 # Read the parser tree without invoking a converter or lazy inline substitutions.
-# Shared schema and the adoctra adapter live in structure.py.
-def structure_document(document)
+# Shared schema and the adoctra adapter live in structure.py. A `meta` block,
+# when given, adds its result for each block as `meta` (the upstream audit's
+# block metadata, outside the block-structure-v1 schema).
+def structure_document(document, &meta)
   { context: 'document', has_title: document.header?,
-    blocks: document.blocks.map { |block| structure_block block } }
+    blocks: document.blocks.map { |block| structure_block block, &meta } }
 end
 
-def structure_item(item)
+def structure_item(item, &meta)
   { checkbox: item.attr?('checkbox') ? item.attr?('checked') : nil,
-    blocks: item.blocks.map { |block| structure_block block } }
+    blocks: item.blocks.map { |block| structure_block block, &meta } }
 end
 
-def structure_block(block)
+def structure_block(block, &meta)
   context = block.context
   result = { context: context.to_s, id: block.id, roles: block.roles }
   result[:level] = block.level if [:section, :floating_title].include? context
   if [:preamble, :open, :example, :sidebar, :quote, :admonition, :section].include? context
-    result[:blocks] = block.blocks.map { |child| structure_block child }
+    result[:blocks] = block.blocks.map { |child| structure_block child, &meta }
     result[:content_model] = block.content_model.to_s unless [:preamble, :section].include? context
   end
   result[:admonition] = block.attr('name') if context == :admonition
   if [:ulist, :olist, :colist].include? context
-    result[:items] = block.items.map { |item| structure_item item }
+    result[:items] = block.items.map { |item| structure_item item, &meta }
   elsif context == :dlist
     result[:items] = block.items.map do |terms, description|
-      { terms: terms.size, description: description && structure_item(description) }
+      { terms: terms.size, description: description && structure_item(description, &meta) }
     end
   elsif context == :table
     result[:columns] = block.columns.size
@@ -33,10 +35,11 @@ def structure_block(block)
       result[group] = block.rows.public_send(group).map do |row|
         row.map do |cell|
           { style: cell.style&.to_s, colspan: cell.colspan || 1, rowspan: cell.rowspan || 1,
-            document: cell.inner_document && structure_document(cell.inner_document) }
+            document: cell.inner_document && structure_document(cell.inner_document, &meta) }
         end
       end
     end
   end
+  result[:meta] = meta.call block if meta
   result
 end

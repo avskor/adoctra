@@ -99,6 +99,17 @@ end
 
 require_relative 'asciidoctor-structure'
 
+# A block's metadata as the API exposes it (the harness normalizes it): the
+# style (a section's from its attributes), the `*-option` names, the named
+# attributes and an image's `AbstractBlock#alt` (after its substitutions).
+def block_metadata block
+  attributes = block.attributes
+  { style: (block.style || (block.context == :section ? attributes['style'] : nil))&.to_s,
+    options: attributes.keys.grep(String).select {|name| name.end_with? '-option' }.map {|name| name.delete_suffix '-option' }.sort,
+    attributes: (attribute_strings attributes.reject {|name, _| Integer === name }),
+    alt: (block.context == :image ? block.alt : nil) }
+end
+
 def attribute_strings attributes
   (attributes || {}).to_h {|name, value| [name.to_s, value.nil? ? nil : value.to_s] }
 end
@@ -122,7 +133,7 @@ entries.each do |entry|
     # The document model the upstream assertions read through the API: the
     # block structure (block-structure-v1) and the attributes when the header
     # was saved (Document#save_attributes) and after conversion.
-    model = { structure: (structure_document document),
+    model = { structure: (structure_document(document) {|block| block_metadata block }),
               attributes: { header: (attribute_strings document.instance_variable_get :@header_attributes),
                             final: (attribute_strings document.attributes) } }
     # Deeply nested lists exceed JSON's default nesting limit.

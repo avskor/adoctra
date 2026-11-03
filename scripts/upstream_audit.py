@@ -15,8 +15,8 @@ compares the existing body-dom-v1 projection (standalone shells mapped like
 the asset audit), the standalone document shell (`<html>`/`<body>` attributes
 and the `<head>` children, see `shell`) and the ordered warning/error texts
 with their logger cursor (file and line, or none), and the document model
-(block structure and header/final attribute snapshots against the CLI's
-JSON). Both sides get the same
+(block structure with each block's metadata, and header/final attribute
+snapshots, against the CLI's JSON). Both sides get the same
 SOURCE_DATE_EPOCH and TZ. Statuses: PASS, DIFF (body and/or diagnostics),
 RUBY_ERROR, ADOCTRA_ERROR. Entries whose options this CLI contract cannot
 express (non-HTML backends, extensions, base_dir/to_file, …) are UNSUPPORTED
@@ -73,7 +73,7 @@ PLACEHOLDER = "<UPSTREAM>"
 SAFE = {"unsafe": "unsafe", "safe": "safe", "server": "server", "secure": "secure",
         0: "unsafe", 1: "safe", 10: "server", 20: "secure"}
 ENVIRONMENT = {"SOURCE_DATE_EPOCH": "1700000000", "TZ": "UTC"}
-PROFILE = "upstream-audit-body-shell-positions-model-v3"
+PROFILE = "upstream-audit-body-shell-positions-model-v4"
 # Ruby's default `webfonts` (an empty value) links these Google fonts; the
 # adoctra theme uses system fonts (an explicit `webfonts` value is compared).
 # The opening comments of Ruby's default stylesheet and adoctra.css.
@@ -141,6 +141,112 @@ def attribute_text(value):
     return html_module.unescape(TAGS.sub("", value))
 
 
+# Block metadata (`meta` on structure nodes): a context's default style is
+# no explicit one (Ruby stores it, adoctra leaves it unset); an admonition's
+# style is its type, already in the structure. Ruby's attributes that only
+# hold parser state or repeat other fields are not compared; the media
+# target and alt and a quote's attribution compare as their own fields.
+DEFAULT_STYLES = {"listing": {"listing"}, "literal": {"literal"}, "example": {"example"}, "open": {"open"},
+                  "sidebar": {"sidebar"}, "quote": {"quote"}, "verse": {"verse"}, "pass": {"pass"},
+                  "table": {"table"}, "olist": {"arabic"}, "colist": {"arabic"}, "paragraph": {"normal"},
+                  "floating_title": {"discrete", "float"}}
+INTERNAL_ATTRIBUTES = {"style", "id", "role", "title", "reftext", "options", "attribute_entries",
+                       "cloaked-context", "textlabel", "name", "tablepcwidth", "rowcount", "colcount",
+                       "default-alt", "caption", "attribution", "citetitle", "target", "alt", "imagesdir"}
+MEDIA = ("image", "video", "audio")
+
+
+def inline_text(nodes):
+    """The text of a JSON inline list (raw markup dropped, references decoded)."""
+    out = []
+    for node in nodes or []:
+        if node.get("inlines") is not None:
+            out.append(inline_text(node["inlines"]))
+        elif node.get("parts"):
+            out.append("".join(attribute_text(p["value"]) if p.get("kind") == "raw" else p.get("value", "")
+                               for p in node["parts"] if "value" in p))
+        elif node.get("name") == "raw":
+            out.append(attribute_text(node.get("value", "")))
+        elif isinstance(node.get("value"), str):
+            out.append(node["value"])
+    return "".join(out)
+
+
+def normal_metadata(context, style, options, attributes, fields):
+    if context == "admonition" or style in DEFAULT_STYLES.get(context, set()):
+        style = None
+    # Block attribute values are source text on both sides (an attribute
+    # list only substitutes attribute references), so they compare as is.
+    named = {name: value for name, value in attributes.items()
+             if value is not None and name not in INTERNAL_ATTRIBUTES and not name.endswith("-option")}
+    return {"style": style, "options": sorted(set(options)), "attributes": named,
+            **{name: value for name, value in fields.items() if value is not None}}
+
+
+def adoctra_metadata(block):
+    """structure.py's `meta` hook for adoctra's JSON (a section's heading)."""
+    # A section passes its heading; a standalone heading is a floating title.
+    floating = block.get("style") in ("discrete", "float")
+    context = {"heading": "floating_title" if floating else "section",
+               "list": "olist" if block.get("ordered") else "ulist"}.get(block["name"], block["name"])
+    fields = {}
+    if block["name"] in MEDIA:
+        fields["target"] = block.get("target")
+        if block["name"] == "image":
+            fields["alt"] = attribute_text(block.get("alt") or "")
+    attribution = block.get("attribution") or {}
+    if attribution.get("author"):
+        fields["attribution"] = inline_text(attribution["author"])
+    if attribution.get("citetitle"):
+        fields["citetitle"] = inline_text(attribution["citetitle"])
+    return context, normal_metadata(context, block.get("style"), block.get("options", []),
+                                    block.get("attributes", {}), fields)
+
+
+def reference_metadata(node):
+    """Ruby's `meta` of each structure node, normalized like adoctra's."""
+    if isinstance(node, list):
+        for child in node:
+            reference_metadata(child)
+        return
+    if not isinstance(node, dict):
+        return
+    for key, value in node.items():
+        if key != "meta":
+            reference_metadata(value)
+    meta = node.get("meta")
+    if meta is None or "context" not in node:
+        return
+    context = node["context"]
+    attributes = meta["attributes"]
+    fields = {}
+    if context in MEDIA:
+        fields["target"] = attributes.get("target")
+        if context == "image":
+            fields["alt"] = attribute_text(meta.get("alt") or "")
+    for name in ("attribution", "citetitle"):
+        if context in ("quote", "verse") and attributes.get(name) is not None:
+            fields[name] = attribute_text(attributes[name])
+    node["meta"] = normal_metadata(context, meta["style"], meta["options"], attributes, fields)
+
+
+def metadata_differences(expected, actual, path="", found=None):
+    """The fields whose metadata differ, by node path."""
+    found = [] if found is None else found
+    if isinstance(expected, dict) and isinstance(actual, dict):
+        if "meta" in expected and "meta" in actual and expected["meta"] != actual["meta"]:
+            fields = sorted(k for k in set(expected["meta"]) | set(actual["meta"])
+                            if expected["meta"].get(k) != actual["meta"].get(k))
+            found.append(f"{path or 'document'}:{expected.get('context')}:{','.join(fields)}")
+        for key in expected:
+            if key != "meta" and key in actual:
+                metadata_differences(expected[key], actual[key], f"{path}.{key}" if path else key, found)
+    elif isinstance(expected, list) and isinstance(actual, list):
+        for index, (x, y) in enumerate(zip(expected, actual)):
+            metadata_differences(x, y, f"{path}[{index}]", found)
+    return found
+
+
 def model_attributes(snapshot, root):
     """adoctra's attribute snapshot (`--json-attributes`) as text values."""
     result = {}
@@ -159,9 +265,10 @@ def reference_model(model, root):
     """Ruby's model with the same attribute text and checkout paths; a
     structure outside the block-structure-v1 schema is an error, not a pass."""
     try:
-        structure.validate_structure(model["structure"])
+        structure.validate_structure(structure.strip_meta(model["structure"]))
     except ValueError as error:
         return {"error": f"ValueError: {error}"}
+    reference_metadata(model["structure"])
     attributes = {snapshot: {name: None if value is None else localize_back(attribute_text(value), root)
                              for name, value in values.items()}
                   for snapshot, values in model["attributes"].items()}
@@ -509,7 +616,8 @@ def adoctra(binary, entry, args, root=None):
                                    env={**os.environ, **ENVIRONMENT}))
     try:
         document = json.loads(model.stdout)
-        result["model"] = {"structure": structure.document_projection(document),
+        result["model"] = {"structure": structure.document_projection(
+                               document, lambda block: adoctra_metadata(block)[1]),
                            "attributes": {snapshot: model_attributes(values, root)
                                           for snapshot, values in document["attribute_snapshots"].items()}}
     except (ValueError, KeyError) as error:
@@ -681,8 +789,12 @@ def compare_model(expected, actual):
         detail = (expected if side == "reference" else actual) or {}
         return [f"model:{side}:{detail.get('error', 'missing')}"]
     reasons = []
-    if expected["structure"] != actual["structure"]:
+    if structure.strip_meta(expected["structure"]) != structure.strip_meta(actual["structure"]):
         reasons.append("structure")
+    else:
+        differences = metadata_differences(expected["structure"], actual["structure"])
+        if differences:
+            reasons.append("metadata:" + ";".join(differences[:3]) + ("…" if len(differences) > 3 else ""))
     for snapshot in ("header", "final"):
         ours, theirs = actual["attributes"].get(snapshot, {}), expected["attributes"].get(snapshot, {})
         changed = sorted(name for name in set(ours) | set(theirs) if ours.get(name) != theirs.get(name))

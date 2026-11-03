@@ -2079,8 +2079,16 @@ tags dropped, references decoded; adoctra parts joined), checkout paths as
 `<UPSTREAM>`. Findings: `title-separator` from a doctitle's `separator`
 block attribute (header.rs, `ParseContext::is_locked`), and the audit passed
 the `:doctype`/`:backend` options before the attributes (Ruby's overrides
-win: now the last `-a`). Not compared: per-block text/metadata through the
-API, node line numbers, catalogs beyond HTML, file-output entries' model.
+win: now the last `-a`). Block metadata (profile `…-model-v4`): structure.py
+and asciidoctor-structure.rb take an optional `meta` hook adding `meta` to
+each node (`strip_meta` before schema checks); the audit compares style
+(context defaults and admonition styles dropped, a section's `style`
+attribute), options, named attributes as raw text minus Ruby's parser-state
+keys (`INTERNAL_ATTRIBUTES`), media target and `AbstractBlock#alt`, quote
+attribution. Finding: `,===`/`:===` fences set `format` (parser.rs, own named
+attributes yield to pending ones like `||=`). Not compared: block titles and
+captions (HTML), reftext (not in JSON), node line numbers, catalogs beyond
+HTML, file-output entries' model.
 **Matrix recheck** (2026-11-03): every "ahead"/"partial" entry of the initial
 matrix in compatibility.adoc was rechecked against Ruby; 54 probes became
 `matrix-*` cases of compatibility/cases.json (body-dom-v1; diagnostics were

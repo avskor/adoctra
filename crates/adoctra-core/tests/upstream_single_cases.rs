@@ -394,3 +394,26 @@ fn a_document_title_separator_sets_title_separator_like_ruby() {
         None
     );
 }
+
+#[test]
+fn a_csv_or_dsv_table_fence_sets_format_like_ruby() {
+    // tables_test.rb: `next_block` sets `format ||= csv|dsv` for a `,===` or
+    // `:===` fence; an explicit format wins, a `|===` fence sets none.
+    let formats: Vec<_> = parse(
+        ",===\na,b\n,===\n\n:===\na:b\n:===\n\n[format=psv]\n,===\na|b\n,===\n\n|===\n|a\n|===",
+    )
+    .document
+    .blocks
+    .iter()
+    .map(|block| block.attrs.named.get("format").cloned())
+    .collect();
+    assert_eq!(
+        formats,
+        [
+            Some("csv".to_owned()),
+            Some("dsv".to_owned()),
+            Some("psv".to_owned()),
+            None
+        ]
+    );
+}

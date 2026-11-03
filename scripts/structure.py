@@ -11,7 +11,10 @@ CONTAINERS = {"preamble", "open", "example", "sidebar", "quote", "admonition"}
 LISTS = {"ulist", "olist", "colist"}
 
 
-def document_projection(document):
+def document_projection(document, meta=None):
+    """`meta`, when given, maps each block's JSON (a section's heading) to a
+    `meta` field of its node (the upstream audit's block metadata); the
+    block-structure-v1 schema itself has no such field."""
     if not isinstance(document, dict) or document.get("name") != "document":
         raise ValueError("expected JSON document")
     blocks = document["blocks"]
@@ -19,17 +22,26 @@ def document_projection(document):
     has_title = bool(blocks and blocks[0]["name"] == "heading" and blocks[0]["level"] == 0
                      and blocks[0].get("style") not in {"discrete", "float"})
     result = {"context": "document", "has_title": has_title,
-              "blocks": [block_projection(b) for b in blocks[int(has_title):]]}
-    validate_structure(result)
+              "blocks": [block_projection(b, meta) for b in blocks[int(has_title):]]}
+    validate_structure(strip_meta(result))
     return result
 
 
-def item_projection(item):
+def strip_meta(node):
+    """The node without the optional `meta` fields."""
+    if isinstance(node, dict):
+        return {key: strip_meta(value) for key, value in node.items() if key != "meta"}
+    if isinstance(node, list):
+        return [strip_meta(value) for value in node]
+    return node
+
+
+def item_projection(item, meta=None):
     return {"checkbox": item.get("checkbox"),
-            "blocks": [block_projection(b) for b in item["blocks"]]}
+            "blocks": [block_projection(b, meta) for b in item["blocks"]]}
 
 
-def block_projection(block):
+def block_projection(block, meta=None):
     name = block["name"]
     children = block.get("blocks", [])
     metadata = block
@@ -60,29 +72,32 @@ def block_projection(block):
             children = []
         if name in CONTAINERS - {"preamble"}:
             result["content_model"] = "simple" if simple else "compound"
-        result["blocks"] = [block_projection(b) for b in children]
+        result["blocks"] = [block_projection(b, meta) for b in children]
     if name == "admonition":
         result["admonition"] = block["admonition-type"]
     if name in LISTS:
-        result["items"] = [item_projection(item) for item in block["items"]]
+        result["items"] = [item_projection(item, meta) for item in block["items"]]
     elif name == "dlist":
         result["items"] = [
             {"terms": len(item["terms"]),
-             "description": item_projection(item["description"]) if item["description"] is not None else None}
+             "description": item_projection(item["description"], meta) if item["description"] is not None else None}
             for item in block["items"]
         ]
     elif name == "table":
         result["columns"] = len(block["columns"])
         for group in ("head", "body", "foot"):
-            result[group] = [[cell_projection(cell) for cell in row] for row in block[group]]
+            result[group] = [[cell_projection(cell, meta) for cell in row] for row in block[group]]
+    if meta is not None:
+        result["meta"] = meta(metadata)
     return result
 
 
-def cell_projection(cell):
+def cell_projection(cell, meta=None):
     result = {"style": cell["style"],
               "colspan": 1 if cell["colspan"] is None else cell["colspan"],
               "rowspan": 1 if cell["rowspan"] is None else cell["rowspan"]}
-    result["document"] = document_projection({"name": "document", "blocks": cell["blocks"]}) if "blocks" in cell else None
+    result["document"] = (document_projection({"name": "document", "blocks": cell["blocks"]}, meta)
+                          if "blocks" in cell else None)
     return result
 
 

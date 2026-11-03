@@ -695,9 +695,15 @@ impl<'s, 'c> Run<'s, 'c> {
             // A list keeps its implicit (ordered) style without an explicit one.
             let own_style = block.attrs.style.take();
             let own_options = std::mem::take(&mut block.attrs.options);
+            let own_named = std::mem::take(&mut block.attrs.named);
             block.attrs = pending.attrs;
             if block.attrs.style.is_none() {
                 block.attrs.style = own_style;
+            }
+            // Attributes the block derived itself (a table's `format` from
+            // its fence) yield to explicit ones, like Ruby's `||=`.
+            for (name, value) in own_named {
+                block.attrs.named.entry(name).or_insert(value);
             }
             for option in own_options {
                 if !block.attrs.options.contains(&option) {
@@ -2266,10 +2272,23 @@ fn read_table(
         grid: "all".into(),
         stripes: None,
     };
-    Block::new(
+    let mut block = Block::new(
         Span::new(opening.start, end),
         BlockKind::Table(Box::new(table)),
-    )
+    );
+    // Ruby's `next_block`: a `,===` or `:===` fence sets `format` (csv or
+    // dsv) unless the block has one.
+    if let Some(format) = match hint {
+        ',' => Some("csv"),
+        ':' => Some("dsv"),
+        _ => None,
+    } {
+        block
+            .attrs
+            .named
+            .insert("format".to_owned(), format.to_owned());
+    }
+    block
 }
 
 /// A lazy title may convert while another document (an AsciiDoc cell) is
