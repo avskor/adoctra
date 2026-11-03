@@ -30,6 +30,61 @@ fn render(src: &str) -> adoctra_docx::Output {
     DocxBackend::new().render(&parse(src).document).unwrap()
 }
 
+fn document(src: &str) -> String {
+    part(&render(src).bytes, "word/document.xml")
+}
+
+/// The paragraphs of WordprocessingML markup: style id and text (`\t` for
+/// tabs, `\n` for breaks).
+fn paragraphs(xml: &str) -> Vec<(String, String)> {
+    let mut out = Vec::new();
+    let mut rest = xml;
+    while let Some(at) = rest.find("<w:p") {
+        let after = &rest[at + 4..];
+        if !(after.starts_with('>') || after.starts_with(' ')) {
+            rest = after;
+            continue;
+        }
+        let end = after.find("</w:p>").unwrap_or(after.len());
+        let p = &after[..end];
+        rest = &after[end..];
+        let style = p
+            .split_once(r#"<w:pStyle w:val=""#)
+            .and_then(|(_, s)| s.split_once('"'))
+            .map_or(String::new(), |(s, _)| s.to_string());
+        let mut text = String::new();
+        let mut q = p;
+        while let Some(i) = q.find('<') {
+            let tag_end = q[i..].find('>').map_or(q.len(), |e| i + e + 1);
+            let tag = &q[i..tag_end];
+            if tag.starts_with("<w:t>") || tag.starts_with("<w:t ") {
+                let close = q[tag_end..].find("</w:t>").unwrap() + tag_end;
+                text.push_str(&q[tag_end..close]);
+                q = &q[close..];
+                continue;
+            }
+            match tag {
+                "<w:tab/>" => text.push('\t'),
+                "<w:br/>" => text.push('\n'),
+                _ => {}
+            }
+            q = &q[tag_end..];
+        }
+        let text = text
+            .replace("&lt;", "<")
+            .replace("&gt;", ">")
+            .replace("&amp;", "&");
+        out.push((style, text));
+    }
+    out
+}
+
+fn pairs(list: &[(&str, &str)]) -> Vec<(String, String)> {
+    list.iter()
+        .map(|(a, b)| (a.to_string(), b.to_string()))
+        .collect()
+}
+
 #[test]
 fn an_empty_document_is_a_complete_package() {
     let out = render("");
@@ -40,6 +95,7 @@ fn an_empty_document_is_a_complete_package() {
         [
             "[Content_Types].xml",
             "_rels/.rels",
+            "docProps/core.xml",
             "word/_rels/document.xml.rels",
             "word/document.xml",
             "word/fontTable.xml",
@@ -58,57 +114,286 @@ fn an_empty_document_is_a_complete_package() {
 
 #[test]
 fn output_is_deterministic() {
-    let src = "= Title\nAnn Lee\n\ntext\n";
+    let src = "= Title\nAnn Lee\n\ntext <<a>> https://example.org[x]\n\n[[a]]\n== A\n";
     assert_eq!(render(src).bytes, render(src).bytes);
 }
 
 #[test]
 fn fills_the_header_markers_of_the_article_template() {
-    let out = render("= Main Title\nJane Doe <j@x.org>; Bob Roe\nv1.2, 2026-01-02: Draft & more\n");
-    let document = part(&out.bytes, "word/document.xml");
-    assert!(document.contains(
-        r#"<w:p><w:pPr><w:pStyle w:val="Title"/></w:pPr><w:r><w:t xml:space="preserve">Main Title</w:t></w:r></w:p>"#
+    let doc = document(
+        "= Main *Title*: The Sub\nJane Doe <j@x.org>; Bob Roe\nv1.2, 2026-01-02: Draft & more\n",
+    );
+    assert_eq!(
+        paragraphs(&doc),
+        pairs(&[
+            ("Title", "Main Title"),
+            ("Subtitle", "The Sub"),
+            ("DocumentDetails", "Jane Doe, Bob Roe"),
+            ("DocumentDetails", "version 1.2, 2026-01-02: Draft & more"),
+        ])
+    );
+    // The title keeps its formatting.
+    assert!(doc.contains(
+        r#"<w:r><w:rPr><w:rStyle w:val="Strong"/></w:rPr><w:t xml:space="preserve">Title</w:t></w:r>"#
     ));
-    assert!(document.contains(r#"<w:t xml:space="preserve">Jane Doe, Bob Roe</w:t>"#));
-    assert!(document
-        .contains(r#"<w:t xml:space="preserve">version 1.2, 2026-01-02: Draft &amp; more</w:t>"#));
-    // The template's subtitle marker has no value yet.
-    assert!(!document.contains(r#"w:val="Subtitle""#));
-    assert!(!document.contains("<w:sdt>"));
+    assert!(!doc.contains("<w:sdt>"));
+}
+
+#[test]
+fn the_title_separator_and_notitle_attributes_apply() {
+    let ps = paragraphs(&document("= A | B: C\n:title-separator: |\n"));
+    assert_eq!(ps, pairs(&[("Title", "A"), ("Subtitle", "B: C")]));
+    assert!(paragraphs(&document("= A\n:notitle:\n\ntext\n"))
+        .iter()
+        .all(|(style, _)| style != "Title"));
 }
 
 #[test]
 fn the_version_label_attribute_localizes_the_revision_line() {
-    let out = render("= T\nA B\nv2, 2026-03-04\n:version-label: Версия\n");
-    let document = part(&out.bytes, "word/document.xml");
-    assert!(document.contains(r#"<w:t xml:space="preserve">версия 2, 2026-03-04</w:t>"#));
+    let doc = document("= T\nA B\nv2, 2026-03-04\n:version-label: Версия\n");
+    assert!(doc.contains(r#"<w:t xml:space="preserve">версия 2, 2026-03-04</w:t>"#));
 }
 
 #[test]
-fn book_documents_get_the_book_template() {
-    let book = render("= A Book\n:doctype: book\n");
-    let article = render("= An Article\n");
-    let book_doc = part(&book.bytes, "word/document.xml");
-    // The cover is its own section.
-    assert_eq!(book_doc.matches("<w:sectPr>").count(), 2);
-    assert_eq!(
-        part(&article.bytes, "word/document.xml")
-            .matches("<w:sectPr>")
-            .count(),
-        1
+fn writes_core_properties_from_the_header() {
+    let out = render(
+        "= Main & *Co*: Sub\nJane Doe; Bob Roe\n:description: About it\n:keywords: a, b\n:docdatetime: 2026-11-04 10:20:30 +0300\n",
     );
-    assert!(part(&book.bytes, "word/styles.xml").contains("<w:pageBreakBefore/>"));
-    assert!(!part(&article.bytes, "word/styles.xml").contains("<w:pageBreakBefore/>"));
+    let core = part(&out.bytes, "docProps/core.xml");
+    assert!(
+        core.contains("<dc:title>Main &amp; Co: Sub</dc:title>"),
+        "{core}"
+    );
+    assert!(core.contains("<dc:creator>Jane Doe; Bob Roe</dc:creator>"));
+    assert!(core.contains("<dc:description>About it</dc:description>"));
+    assert!(core.contains("<cp:keywords>a, b</cp:keywords>"));
+    assert!(core.contains(">2026-11-04T10:20:30+03:00</dcterms:created>"));
+    let reproducible = render("= T\n:docdatetime: 2026-11-04 10:20:30 +0300\n:reproducible:\n");
+    assert!(!part(&reproducible.bytes, "docProps/core.xml").contains("dcterms:created"));
 }
 
 #[test]
-fn content_is_reported_until_blocks_are_converted() {
-    let out = render("= T\n\nparagraph\n");
+fn sections_get_heading_styles_numbers_and_bookmarks() {
+    let doc = document(
+        "= Doc\n:sectnums:\n\n[[intro-1]]\n== Intro\n\n=== Deeper\n\n[appendix]\n== Extra\n\n[discrete]\n=== Loose\n",
+    );
+    let ps = paragraphs(&doc);
+    assert_eq!(
+        ps[1..],
+        pairs(&[
+            ("Heading1", "1. Intro"),
+            ("Heading2", "1.1. Deeper"),
+            ("AppendixHeading1", "Appendix A: Extra"),
+            ("FloatingTitle2", "Loose"),
+        ])
+    );
+    assert!(
+        doc.contains(r#"<w:bookmarkStart w:id="0" w:name="intro_1"/><w:bookmarkEnd w:id="0"/>"#)
+    );
+    assert!(doc.contains(r#"w:name="_deeper""#));
+}
+
+#[test]
+fn book_parts_and_chapters_start_sections_with_a_first_page_header() {
+    let out = render(
+        "= A Book\n:doctype: book\n\nPreface text.\n\n= Part One\n\n== Chapter\n\ntext\n\n== Two\n\ntext\n",
+    );
+    let doc = part(&out.bytes, "word/document.xml");
+    let ps = paragraphs(&doc);
+    assert!(
+        ps.contains(&("PartTitle".into(), "Part One".into())),
+        "{ps:?}"
+    );
+    // The cover, the preface, the part and the first chapter end sections;
+    // the last chapter's section is the template's final one.
+    assert_eq!(doc.matches("<w:sectPr>").count(), 5);
+    // Only the first body section restarts page numbers.
+    assert_eq!(doc.matches(r#"w:start="1""#).count(), 1);
+    assert_eq!(doc.matches("<w:titlePg/>").count(), 4);
+    // The running header shows the title.
+    let header = part(&out.bytes, "word/header1.xml");
+    assert!(
+        header.contains(r#"<w:t xml:space="preserve">A Book</w:t>"#),
+        "{header}"
+    );
+    assert!(!header.contains("<w:sdt>"));
+}
+
+#[test]
+fn articles_keep_one_section() {
+    let doc = document("= An Article\n\n== A\n\ntext\n\n== B\n");
+    assert_eq!(doc.matches("<w:sectPr>").count(), 1);
+}
+
+#[test]
+fn paragraphs_get_lead_roles_alignment_and_titles() {
+    let doc = document(
+        "= T\n\nFirst.\n\nSecond.\n\n== S\n\n[.lead]\nLed.\n\n[.text-center]\n.Named\nCentered.\n",
+    );
+    assert_eq!(
+        paragraphs(&doc)[1..],
+        pairs(&[
+            ("Lead", "First."),
+            ("Normal", "Second."),
+            ("Heading1", "S"),
+            ("Lead", "Led."),
+            ("BlockTitle", "Named"),
+            ("Normal", "Centered."),
+        ])
+    );
+    assert!(doc.contains(r#"<w:pStyle w:val="Normal"/><w:jc w:val="center"/>"#));
+}
+
+#[test]
+fn inline_formatting_nests_styles_and_direct_properties() {
+    let doc = document("*bold _both_* `code` #mark# x^2^ H~2~O line +\nbreak\nnext");
+    assert!(
+        doc.contains(
+            r#"<w:r><w:rPr><w:rStyle w:val="Strong"/><w:i/><w:iCs/></w:rPr><w:t xml:space="preserve">both</w:t></w:r>"#
+        ),
+        "{doc}"
+    );
+    assert!(doc
+        .contains(r#"<w:rStyle w:val="Monospace"/></w:rPr><w:t xml:space="preserve">code</w:t>"#));
+    assert!(doc.contains(r#"<w:rStyle w:val="Mark"/></w:rPr><w:t xml:space="preserve">mark</w:t>"#));
+    assert!(doc.contains(
+        r#"<w:vertAlign w:val="superscript"/></w:rPr><w:t xml:space="preserve">2</w:t>"#
+    ));
+    assert!(doc
+        .contains(r#"<w:vertAlign w:val="subscript"/></w:rPr><w:t xml:space="preserve">2</w:t>"#));
+    assert_eq!(
+        paragraphs(&doc),
+        pairs(&[("Normal", "bold both code mark x2 H2O line\nbreak next")])
+    );
+}
+
+#[test]
+fn replacements_and_raw_values_become_text() {
+    let doc = document("(C) A -- B... pass:[<b>raw</b> &amp;] it's");
+    assert_eq!(
+        paragraphs(&doc),
+        pairs(&[("Normal", "© A\u{2009}—\u{2009}B…\u{200b} raw & it\u{2019}s")])
+    );
+}
+
+#[test]
+fn links_and_cross_references() {
+    let out = render(
+        "See https://example.org/?a&b[the site], https://example.org/?a&b and <<target,there>> or <<target>>.\n\n[[target]]\n== Target\n",
+    );
+    let doc = part(&out.bytes, "word/document.xml");
+    let rels = part(&out.bytes, "word/_rels/document.xml.rels");
+    // One relationship per URL.
+    assert_eq!(
+        rels.matches("https://example.org/?a&amp;b").count(),
+        1,
+        "{rels}"
+    );
+    assert_eq!(doc.matches(r#"<w:hyperlink r:id="rId"#).count(), 2);
+    assert!(doc.contains(
+        r#"<w:hyperlink w:anchor="target" w:history="1"><w:r><w:rPr><w:rStyle w:val="Xref"/></w:rPr><w:t xml:space="preserve">there</w:t></w:r></w:hyperlink>"#
+    ));
+    // A textless reference shows the section title core resolved.
+    assert!(doc.contains(r#"<w:t xml:space="preserve">Target</w:t></w:r></w:hyperlink>"#));
+    assert!(doc.contains(
+        r#"<w:rStyle w:val="Hyperlink"/></w:rPr><w:t xml:space="preserve">the site</w:t>"#
+    ));
+    assert!(doc.contains(r#"w:name="target""#));
+    // Interdocument references link to the other file.
+    let other = render("See <<other.adoc#sec,elsewhere>>.");
+    assert!(part(&other.bytes, "word/_rels/document.xml.rels")
+        .contains(r#"Target="other.html#sec" TargetMode="External""#));
+}
+
+#[test]
+fn inline_anchors_and_monospace_links_keep_both_meanings() {
+    let doc = document("[[here]]Text with `https://example.org[code link]`.");
+    assert!(
+        doc.contains(r#"<w:bookmarkStart w:id="0" w:name="here"/>"#),
+        "{doc}"
+    );
+    // The link inside monospace keeps the code style and is underlined.
+    assert!(
+        doc.contains(r#"<w:rStyle w:val="Monospace"/><w:u w:val="single"/>"#),
+        "{doc}"
+    );
+}
+
+#[test]
+fn ui_macros_use_their_character_styles() {
+    let doc = document(":experimental:\n\nkbd:[Ctrl+T] btn:[Save] menu:File[Open]");
+    assert!(
+        doc.contains(r#"<w:rStyle w:val="Keyboard"/></w:rPr><w:t xml:space="preserve">Ctrl</w:t>"#),
+        "{doc}"
+    );
+    assert!(doc.contains(r#"<w:rStyle w:val="Button"/></w:rPr><w:t xml:space="preserve">[</w:t>"#));
+    assert!(doc.contains(r#"<w:rStyle w:val="Menu"/></w:rPr><w:t xml:space="preserve">Open</w:t>"#));
+    assert_eq!(
+        paragraphs(&doc),
+        pairs(&[("Normal", "Ctrl+T [Save] File\u{a0}\u{203a} Open")])
+    );
+}
+
+#[test]
+fn verbatim_verse_and_quote_blocks() {
+    let doc = document(concat!(
+        "[source]\n----\nfn main() {\n\tx < 1\n}\n----\n\n",
+        "[verse, Poet, Poem]\n____\nline one\nline two\n____\n\n",
+        "[quote, Author]\n____\nQuoted.\n\nMore.\n____\n",
+    ));
+    assert_eq!(
+        paragraphs(&doc),
+        pairs(&[
+            ("Code", "fn main() {"),
+            ("Code", "\tx < 1"),
+            ("Code", "}"),
+            ("Verse", "line one\nline two"),
+            ("VerseAttribution", "\u{2014} Poet\nPoem"),
+            ("Quote", "Quoted."),
+            ("Quote", "More."),
+            ("QuoteAttribution", "\u{2014} Author"),
+        ])
+    );
+}
+
+#[test]
+fn breaks_and_containers() {
+    let doc = document(concat!(
+        "a\n\n",
+        "'''\n\n",
+        "<<<\n\n",
+        ".Ex\n====\ninside\n====\n\n",
+        "NOTE: careful\n",
+    ));
+    assert!(doc.contains(r#"<w:p><w:r><w:br w:type="page"/></w:r></w:p>"#));
+    assert_eq!(
+        paragraphs(&doc),
+        pairs(&[
+            ("Normal", "a"),
+            ("HorizontalRule", ""),
+            ("", ""),
+            ("BlockTitle", "Example 1. Ex"),
+            ("Normal", "inside"),
+            ("AdmonitionLabel", "Note"),
+            ("Normal", "careful"),
+        ])
+    );
+}
+
+#[test]
+fn unconverted_blocks_are_reported_once_per_kind() {
+    let out =
+        render("* a\n* b\n\n* c\n\n|===\n|x\n|===\n\nimage::a.png[]\n\n++++\n<p>raw</p>\n++++\n");
     assert_eq!(
         out.warnings,
-        ["docx backend does not convert block content yet"]
+        [
+            "docx backend does not convert lists yet",
+            "docx backend does not convert tables yet",
+            "docx backend does not convert block images yet",
+            "docx backend drops passthrough blocks (raw output has no DOCX form)",
+        ]
     );
-    assert!(render("= T\n").warnings.is_empty());
+    assert!(render("= T\n\nparagraph\n").warnings.is_empty());
 }
 
 /// A minimal template as Word saves it: no `adoctra:body` marker, a specimen
@@ -162,11 +447,15 @@ fn renders_into_a_custom_template_keeping_its_parts() {
         part(&out.bytes, "word/theme/theme1.xml"),
         "<a:theme xmlns:a=\"x\">kept</a:theme>"
     );
-    // No marker: the specimen body is replaced, the section stays.
+    // No marker: the specimen body is replaced, the section stays, and the
+    // title opens the body in Word's built-in Title style (added).
     assert_eq!(
         part(&out.bytes, "word/document.xml"),
-        r#"<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>"#
+        r#"<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:pPr><w:pStyle w:val="Title"/></w:pPr><w:r><w:t xml:space="preserve">T</w:t></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>"#
     );
+    assert!(part(&out.bytes, "word/styles.xml").contains(
+        r#"<w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:basedOn w:val="a"/>"#
+    ));
     // A .dotx main part is declared a document.
     let types = part(&out.bytes, "[Content_Types].xml");
     assert!(types.contains("wordprocessingml.document.main+xml"));

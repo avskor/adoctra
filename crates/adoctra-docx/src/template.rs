@@ -26,6 +26,14 @@ const EMPTY_STYLES: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="y
 pub const MARKER_PREFIX: &str = "adoctra:";
 /// The marker of the body's place.
 pub const BODY_MARKER: &str = "adoctra:body";
+/// Relationship type of the core properties part.
+pub const REL_CORE_PROPERTIES: &str =
+    "http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties";
+const CORE_PROPERTIES_TYPE: &str = "application/vnd.openxmlformats-package.core-properties+xml";
+const REL_HEADER: &str =
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/header";
+const REL_FOOTER: &str =
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer";
 
 /// A template ready to receive a converted document.
 #[derive(Debug, Clone)]
@@ -103,11 +111,70 @@ impl Template {
         markers(&self.document).into_iter().map(|m| m.tag).collect()
     }
 
-    /// Put `body` (block-level markup) in place, fill the other markers and
-    /// write the package.
-    pub fn finish(mut self, body: &str, mut fill: impl FnMut(&str) -> Fill) -> Vec<u8> {
-        let document = place(&self.document, body, &mut fill);
+    /// Whether the main document has the marker of `field` (`title`…).
+    /// The style registry and the main part's relationships, to write the
+    /// body with.
+    pub fn parts_mut(&mut self) -> (&mut Styles, &mut Relationships) {
+        (&mut self.styles, &mut self.rels)
+    }
+
+    pub fn has_marker(&self, field: &str) -> bool {
+        let tag = format!("{MARKER_PREFIX}{field}");
+        markers(&self.document).iter().any(|m| m.tag == tag)
+    }
+
+    /// The body's final section properties (`w:sectPr`), if any.
+    pub fn body_sect_pr(&self) -> Option<String> {
+        final_sect_pr(&self.document).map(|range| self.document[range].to_string())
+    }
+
+    /// Replace the package's core properties (`docProps/core.xml`).
+    pub fn set_core_properties(&mut self, xml_text: &str) {
+        let mut rels = Relationships::parse(&self.package.text("_rels/.rels").unwrap_or_default());
+        let part = match rels.target_of(REL_CORE_PROPERTIES) {
+            Some(target) => package::resolve_target("", &target),
+            None => {
+                rels.add(REL_CORE_PROPERTIES, "docProps/core.xml", false);
+                self.package.put("_rels/.rels", rels.to_xml());
+                "docProps/core.xml".to_string()
+            }
+        };
+        self.package.put(&part, xml_text);
+        self.package.set_override_type(&part, CORE_PROPERTIES_TYPE);
+    }
+
+    /// Put `body` (block-level markup) in place, fill the other markers of
+    /// the document and its headers and footers, replace the final section
+    /// properties with `sect_pr_override` if given, and write the package.
+    pub fn finish(
+        mut self,
+        body: &str,
+        sect_pr_override: Option<String>,
+        mut fill: impl FnMut(&str) -> Fill,
+    ) -> Vec<u8> {
+        let mut document = place(&self.document, Some(body), &mut fill);
+        if let (Some(sect_pr), Some(range)) = (sect_pr_override, final_sect_pr(&document)) {
+            document.replace_range(range, &sect_pr);
+        }
+        if document.contains("r:id=\"") {
+            document = declare_relationships_namespace(&document);
+        }
         self.package.put(&self.main, document);
+        let parts: Vec<String> = self
+            .rels
+            .entries
+            .iter()
+            .filter(|r| !r.external && (r.rel_type == REL_HEADER || r.rel_type == REL_FOOTER))
+            .map(|r| package::resolve_target(&self.main, &r.target))
+            .collect();
+        for part in parts {
+            if let Some(text) = self.package.text(&part) {
+                if !markers(&text).is_empty() {
+                    let filled = place(&text, None, &mut fill);
+                    self.package.put(&part, filled);
+                }
+            }
+        }
         self.package
             .put(&self.styles_part, self.styles.apply(&self.styles_text));
         self.package
@@ -155,9 +222,38 @@ fn markers(doc: &str) -> Vec<Marker> {
     found
 }
 
-fn place(doc: &str, body: &str, fill: &mut dyn FnMut(&str) -> Fill) -> String {
+/// The range of the final `w:sectPr` of the body.
+fn final_sect_pr(doc: &str) -> Option<Range<usize>> {
+    let (_, content) = xml::find_element(doc, 0, "w:body")?;
+    xml::children(doc, content)
+        .into_iter()
+        .next_back()
+        .filter(|(tag, _)| tag.name == "w:sectPr")
+        .map(|(_, range)| range)
+}
+
+/// Declare the relationships namespace on the root element (a template
+/// whose document had no relationships may lack it).
+fn declare_relationships_namespace(doc: &str) -> String {
+    let Some(root) = xml::tags(doc, 0).next() else {
+        return doc.to_string();
+    };
+    if root.attr("xmlns:r").is_some() {
+        return doc.to_string();
+    }
+    let at = root.range.start + 1 + root.name.len();
+    format!(
+        r#"{} xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"{}"#,
+        &doc[..at],
+        &doc[at..]
+    )
+}
+
+/// Fill the markers of `doc`: the body marker with `body` (a header or
+/// footer has none to give and drops it), the others with `fill`.
+fn place(doc: &str, body: Option<&str>, fill: &mut dyn FnMut(&str) -> Fill) -> String {
     let found = markers(doc);
-    if !found.iter().any(|m| m.tag == BODY_MARKER) {
+    if let (Some(body), false) = (body, found.iter().any(|m| m.tag == BODY_MARKER)) {
         // No marker: replace the whole body except the final section
         // properties.
         let (_, content) = xml::find_element(doc, 0, "w:body").expect("checked on read");
@@ -168,13 +264,13 @@ fn place(doc: &str, body: &str, fill: &mut dyn FnMut(&str) -> Fill) -> String {
             .map_or(content.end, |(_, range)| range.start);
         return format!("{}{body}{}", &doc[..content.start], &doc[end..]);
     }
-    let mut out = String::with_capacity(doc.len() + body.len());
+    let mut out = String::with_capacity(doc.len() + body.map_or(0, str::len));
     let mut pos = 0;
     for marker in &found {
         out.push_str(&doc[pos..marker.range.start]);
         pos = marker.range.end;
         if marker.tag == BODY_MARKER {
-            out.push_str(body);
+            out.push_str(body.unwrap_or_default());
             continue;
         }
         let Fill::Runs(runs) = fill(&marker.tag[MARKER_PREFIX.len()..]) else {
@@ -248,7 +344,7 @@ mod tests {
 
     fn finish(document: &str, fill: impl FnMut(&str) -> Fill) -> Package {
         let template = Template::from_package(package(document, true)).unwrap();
-        Package::read(&template.finish("<w:p>BODY</w:p>", fill)).unwrap()
+        Package::read(&template.finish("<w:p>BODY</w:p>", None, fill)).unwrap()
     }
 
     #[test]
@@ -337,7 +433,7 @@ mod tests {
                 .as_deref(),
             Some("Heading1")
         );
-        let out = Package::read(&template.finish("<w:p/>", |_| Fill::Remove)).unwrap();
+        let out = Package::read(&template.finish("<w:p/>", None, |_| Fill::Remove)).unwrap();
         let styles = out.text("word/styles.xml").unwrap();
         assert!(styles.contains(r#"w:styleId="Heading1""#));
         assert!(styles.contains(r#"w:styleId="Normal""#));
@@ -350,6 +446,89 @@ mod tests {
         // The `.dotx` main part is declared a document.
         assert!(types.contains(package::MAIN_CONTENT_TYPE));
         assert!(!types.contains("template.main"));
+    }
+
+    #[test]
+    fn fills_markers_in_headers_and_replaces_the_final_section() {
+        let doc = format!(
+            r#"<w:document {W}><w:body>{}<w:sectPr><w:headerReference r:id="rId9"/><w:pgNumType w:start="1"/></w:sectPr></w:body></w:document>"#,
+            sdt("adoctra:body", "<w:p/>")
+        );
+        let mut p = package(&doc, true);
+        p.put(
+            "word/_rels/document.xml.rels",
+            r#"<Relationships xmlns="r"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId9" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/></Relationships>"#,
+        );
+        p.put(
+            "word/header1.xml",
+            format!(
+                r#"<w:hdr {W}><w:p>{}<w:r><w:t>x</w:t></w:r>{}</w:p></w:hdr>"#,
+                sdt("adoctra:title", "<w:r><w:t>T</w:t></w:r>"),
+                sdt("adoctra:body", "<w:p/>")
+            ),
+        );
+        let template = Template::from_package(p).unwrap();
+        assert!(template.has_marker("body"));
+        assert!(!template.has_marker("title"));
+        assert_eq!(
+            template.body_sect_pr().unwrap(),
+            r#"<w:sectPr><w:headerReference r:id="rId9"/><w:pgNumType w:start="1"/></w:sectPr>"#
+        );
+        let out = Package::read(&template.finish(
+            "<w:p>BODY</w:p>",
+            Some("<w:sectPr/>".into()),
+            |field| match field {
+                "title" => Fill::Runs("<w:r><w:t>Doc</w:t></w:r>".into()),
+                _ => Fill::Remove,
+            },
+        ))
+        .unwrap();
+        assert_eq!(
+            out.text("word/header1.xml").unwrap(),
+            format!(
+                r#"<w:hdr {W}><w:p><w:r><w:t>Doc</w:t></w:r><w:r><w:t>x</w:t></w:r></w:p></w:hdr>"#
+            )
+        );
+        let document = out.text("word/document.xml").unwrap();
+        assert!(
+            document.ends_with("<w:p>BODY</w:p><w:sectPr/></w:body></w:document>"),
+            "{document}"
+        );
+    }
+
+    #[test]
+    fn declares_the_relationships_namespace_for_links() {
+        let doc = format!(r#"<w:document {W}><w:body/></w:document>"#);
+        let template = Template::from_package(package(&doc, true)).unwrap();
+        let out = Package::read(&template.finish(
+            r#"<w:p><w:hyperlink r:id="rId5"/></w:p>"#,
+            None,
+            |_| Fill::Remove,
+        ))
+        .unwrap();
+        assert!(out
+            .text("word/document.xml")
+            .unwrap()
+            .starts_with(r#"<w:document xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:w="#));
+    }
+
+    #[test]
+    fn writes_core_properties_once() {
+        let doc = format!(r#"<w:document {W}><w:body/></w:document>"#);
+        let mut template = Template::from_package(package(&doc, true)).unwrap();
+        template.set_core_properties("<cp:coreProperties/>");
+        template.set_core_properties("<cp:coreProperties>2</cp:coreProperties>");
+        let out = Package::read(&template.finish("", None, |_| Fill::Remove)).unwrap();
+        assert_eq!(
+            out.text("docProps/core.xml").unwrap(),
+            "<cp:coreProperties>2</cp:coreProperties>"
+        );
+        let rels = out.text("_rels/.rels").unwrap();
+        assert_eq!(rels.matches("core-properties").count(), 1);
+        assert!(out
+            .text("[Content_Types].xml")
+            .unwrap()
+            .contains(r#"PartName="/docProps/core.xml""#));
     }
 
     #[test]

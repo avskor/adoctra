@@ -133,6 +133,27 @@ impl Styles {
             .or_else(|| of_kind().find(|d| d.id.eq_ignore_ascii_case(name)))
     }
 
+    /// The numbering style `id` applies itself (a numbered heading).
+    pub fn num_id(&self, id: &str) -> Option<u32> {
+        let def = self.defs.iter().find(|d| d.id == id)?;
+        match def.num_id {
+            Some(0) => None,
+            Some(n) => Some(n),
+            // Inherited from the base style.
+            None => {
+                let mut base = def.based_on.as_deref();
+                for _ in 0..16 {
+                    let parent = self.defs.iter().find(|d| Some(d.id.as_str()) == base)?;
+                    if let Some(n) = parent.num_id {
+                        return (n != 0).then_some(n);
+                    }
+                    base = parent.based_on.as_deref();
+                }
+                None
+            }
+        }
+    }
+
     /// The id of style `name` for the output. A missing Word built-in is
     /// added with Word's defaults; a missing custom style is reported once
     /// and gives `None` (the element falls back to its base formatting).
@@ -285,6 +306,17 @@ mod tests {
         assert_eq!(out.matches(r#"w:styleId="Heading2""#).count(), 1);
         assert!(out.ends_with("</w:style></w:styles>"));
         assert!(styles.warnings.is_empty());
+    }
+
+    #[test]
+    fn numbering_is_inherited_from_base_styles() {
+        let styles = Styles::parse(
+            r#"<w:styles><w:style w:type="paragraph" w:styleId="H1"><w:name w:val="heading 1"/><w:pPr><w:numPr><w:numId w:val="7"/></w:numPr></w:pPr></w:style><w:style w:type="paragraph" w:styleId="A1"><w:name w:val="Appendix"/><w:basedOn w:val="H1"/></w:style><w:style w:type="paragraph" w:styleId="F1"><w:name w:val="Floating"/><w:basedOn w:val="H1"/><w:pPr><w:numPr><w:numId w:val="0"/></w:numPr></w:pPr></w:style></w:styles>"#,
+        );
+        assert_eq!(styles.num_id("H1"), Some(7));
+        assert_eq!(styles.num_id("A1"), Some(7));
+        assert_eq!(styles.num_id("F1"), None);
+        assert_eq!(styles.num_id("missing"), None);
     }
 
     #[test]

@@ -1966,7 +1966,7 @@ fn cli_writes_docx_next_to_the_input_and_prints_its_warnings() {
     let root = std::env::temp_dir().join(format!("adoctra-cli-docx-{}", std::process::id()));
     std::fs::create_dir_all(&root).unwrap();
     let source = root.join("doc.adoc");
-    std::fs::write(&source, "= Title\n\ntext\n").unwrap();
+    std::fs::write(&source, "= Title\n\ntext\n\n|===\n|cell\n|===\n").unwrap();
     let output = Command::new(env!("CARGO_BIN_EXE_adoctra"))
         .arg(&source)
         .args(["--to", "docx"])
@@ -1975,7 +1975,7 @@ fn cli_writes_docx_next_to_the_input_and_prints_its_warnings() {
     assert!(output.status.success());
     assert_eq!(
         String::from_utf8(output.stderr).unwrap(),
-        "adoctra: warning: docx backend does not convert block content yet\n"
+        "adoctra: warning: docx backend does not convert tables yet\n"
     );
     let bytes = std::fs::read(root.join("doc.docx")).unwrap();
     // A zip whose first entry is the OPC content types, unmodified by the

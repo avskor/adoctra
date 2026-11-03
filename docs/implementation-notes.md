@@ -1738,6 +1738,33 @@ split) until stage 2; `revision` is Ruby's HTML details line (`version-label`
 lowercased). The CLI wraps the backend (`Docx` in `main.rs`) to print its
 warnings; binary output and `<docname>.docx` already worked. Validation:
 `scripts/docx_check.py` (stdlib; `--render` via LibreOffice).
+Stage 2 done 2026-11-04: `writer.rs` walks blocks on an explicit stack of
+`Task`s (a quote's attribution is a deferred task after its blocks);
+`inline.rs` writes runs recursively over inline nesting (syntax-bounded,
+like HTML) and flat `AttributePart` streams with format counters, one
+`w:rStyle` (priority special > Monospace > Mark > Xref/Hyperlink > Strong >
+Emphasis) and the rest as direct properties; `Bookmarks` maps ids to valid
+unique names (40 chars, alphanumerics and `_`, leading letter or `_`),
+placed once; `Warnings::once`. Section numbers come from `Block::caption`
+text; a template heading `numPr` (also inherited, `Styles::num_id`) is
+suppressed with `numId=0`. The first plain preamble paragraph is `Lead`
+(Ruby's stylesheet). After a `LineBreak` part the following line-end
+whitespace (core keeps a `" "` Text) is skipped. `text.rs` decodes character
+references (numeric + common HTML names) and drops tags of `Raw` values.
+Cover fields are runs of the title partitioned at the last
+`title-separator` + space (Ruby's `doctitle partition`, main trimmed),
+authors, email, rev*; without an `adoctra:title` marker the title opens the
+body. `props.rs` writes `docProps/core.xml` (dates from `docdatetime`/
+`docdate`, none with `reproducible`). Template markers are filled in
+header/footer parts too; `finish` can replace the final `w:sectPr` and adds
+`xmlns:r` when the body uses `r:id`. Book: a body `w:sectPr` with
+`w:titlePg` makes each part/chapter (level <= 1, not first) start a section
+(`ChapterSections`; only the first keeps `w:pgNumType w:start`). The
+built-in book has `header1.xml` (title marker + `STYLEREF "heading 1"`) and
+an empty `header2.xml` (first page), rId6/rId7 added in `builtin.rs`.
+Template mono font is Consolas. Not yet: lists, tables, images,
+video/audio, TOC (one warning per kind); footnotes as `[n]`, inline images
+as `[alt]`; containers unframed.
 
 Index terms (`((…))` / `indexterm2:[…]` visible, `(((…)))` /
 `indexterm:[…]` concealed) run after images and before links, as Ruby's

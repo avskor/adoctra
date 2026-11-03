@@ -1,7 +1,12 @@
 //! adoctra's built-in templates, assembled from the text sources under
 //! `templates/` (no binary `.docx` is kept in the repository).
 
-use crate::package::Package;
+use crate::package::{Package, Relationships};
+
+const REL_HEADER: &str =
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/header";
+const HEADER_CONTENT_TYPE: &str =
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml";
 
 /// A built-in template.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -76,6 +81,25 @@ impl Builtin {
             package.put(name, text);
         }
         package.put("word/styles.xml", styles);
+        if self == Self::Book {
+            // The body's running header (title and chapter) and the empty
+            // first-page header of each part and chapter; `document.xml`
+            // refers to them as rId6 and rId7.
+            let mut rels = Relationships::parse(
+                &package
+                    .text("word/_rels/document.xml.rels")
+                    .unwrap_or_default(),
+            );
+            for (part, text) in [
+                ("header1.xml", include_str!("../templates/book/header1.xml")),
+                ("header2.xml", include_str!("../templates/book/header2.xml")),
+            ] {
+                rels.add(REL_HEADER, part, false);
+                package.put(&format!("word/{part}"), text);
+                package.set_override_type(&format!("word/{part}"), HEADER_CONTENT_TYPE);
+            }
+            package.put("word/_rels/document.xml.rels", rels.to_xml());
+        }
         package
     }
 }
@@ -122,6 +146,30 @@ mod tests {
                 assert!(!text.contains("@book:"), "{name}");
             }
         }
+    }
+
+    #[test]
+    fn the_book_body_has_running_and_first_page_headers() {
+        let package = Builtin::Book.package();
+        let rels = Relationships::parse(&package.text("word/_rels/document.xml.rels").unwrap());
+        let target = |id: &str| {
+            rels.entries
+                .iter()
+                .find(|r| r.id == id)
+                .map(|r| (r.rel_type.as_str(), r.target.as_str()))
+        };
+        assert_eq!(target("rId6"), Some((REL_HEADER, "header1.xml")));
+        assert_eq!(target("rId7"), Some((REL_HEADER, "header2.xml")));
+        let header = package.text("word/header1.xml").unwrap();
+        assert!(header.contains("adoctra:title") && header.contains(r#"STYLEREF "heading 1""#));
+        let template = Template::from_package(package).unwrap();
+        let body = template.body_sect_pr().unwrap();
+        assert!(body.contains("<w:titlePg/>") && body.contains(r#"r:id="rId7""#));
+        // The article has no header.
+        assert!(Builtin::Article
+            .package()
+            .text("word/header1.xml")
+            .is_none());
     }
 
     #[test]
