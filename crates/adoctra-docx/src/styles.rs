@@ -177,7 +177,6 @@ impl Styles {
 
     /// Whether the template defines style `name` itself (roles map to
     /// template styles only when they exist; that is not an error).
-    #[cfg(test)]
     pub fn has(&self, kind: StyleKind, name: &str) -> bool {
         self.find(kind, name).is_some()
     }

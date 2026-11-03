@@ -307,7 +307,8 @@ impl<'c, 't> Runs<'c, 't> {
         })
     }
 
-    fn with(&mut self, format: AttributeFormat, f: impl FnOnce(&mut Self)) {
+    /// Write `f`'s content with `format` added.
+    pub fn with(&mut self, format: AttributeFormat, f: impl FnOnce(&mut Self)) {
         if let Some(c) = self.counter(format) {
             *c += 1;
         }

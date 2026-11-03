@@ -16,6 +16,7 @@ mod numbering;
 mod package;
 mod props;
 mod styles;
+mod table;
 mod template;
 mod text;
 mod writer;

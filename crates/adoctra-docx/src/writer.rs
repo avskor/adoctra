@@ -2,15 +2,22 @@
 //! recursion over block nesting, like the parser and the other backends).
 
 use adoctra_core::ast::{
-    Attribution, Block, BlockKind, Callout, CalloutListItem, DescriptionListItem, ListItem,
-    ListTerm,
+    AdmonitionKind, Attribution, Block, BlockKind, Callout, CalloutListItem, CellContent,
+    CellStyle, DescriptionListItem, HAlign, ListItem, ListTerm, Table, TableCell, VAlign,
 };
-use adoctra_core::{AttributePart, Document, Inline};
+use adoctra_core::{AttributeFormat, AttributePart, Document, Inline};
 
 use crate::inline::{Cx, Newlines, Runs};
 use crate::numbering::{self, Level, LIST_INDENT};
 use crate::styles::StyleKind;
+use crate::table::{self, Slot};
 use crate::xml;
+
+/// The paragraph after a block's table: it keeps adjacent tables apart (Word
+/// would join them) and stands for Ruby's block margin.
+const SPACER: &str = r#"<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="160" w:lineRule="exact"/></w:pPr></w:p>"#;
+/// Ruby's stripe background.
+const STRIPE: &str = "F8F8F7";
 
 /// Context a block inherits from its container.
 #[derive(Debug, Clone, Copy, Default)]
@@ -145,6 +152,14 @@ enum Task<'c> {
     },
     /// Literal markup (table structure around nested content).
     Markup(String),
+    /// A table cell's paragraph.
+    Inlines {
+        inlines: &'c [Inline],
+        format: Option<AttributeFormat>,
+        jc: &'static str,
+    },
+    /// A literal table cell.
+    Literal(&'c str, &'static str),
     /// The end of a table cell, which must end with a paragraph.
     CloseCell,
 }
@@ -246,6 +261,29 @@ impl<'c, 't> Writer<'c, 't> {
                     self.out.push_str(&markup);
                     Vec::new()
                 }
+                Task::Inlines {
+                    inlines,
+                    format,
+                    jc,
+                } => {
+                    self.indent = 0;
+                    let mut runs = Runs::new(self.cx, Newlines::Space);
+                    match format {
+                        Some(format) => runs.with(format, |r| r.inlines(inlines)),
+                        None => runs.inlines(inlines),
+                    }
+                    let runs = runs.finish();
+                    self.paragraph("Normal", jc, &runs);
+                    Vec::new()
+                }
+                Task::Literal(text, jc) => {
+                    self.indent = 0;
+                    let mut runs = Runs::new(self.cx, Newlines::Break);
+                    runs.text(text);
+                    let runs = runs.finish();
+                    self.paragraph("Literal", jc, &runs);
+                    Vec::new()
+                }
                 Task::CloseCell => {
                     if !self.out.ends_with("</w:p>") {
                         self.out.push_str("<w:p/>");
@@ -314,23 +352,50 @@ impl<'c, 't> Writer<'c, 't> {
                 )
             }
             BlockKind::Example { blocks } => {
+                // Ruby's caption and title stand above the box.
                 self.title(block, "Block Title");
                 self.anchor(block);
-                inherit(blocks, ctx)
+                let open = self.frame("Example Table", ctx, None);
+                self.out.push_str(&open);
+                self.framed(inherit(blocks, cell_ctx(ctx)))
             }
             BlockKind::Sidebar { blocks } => {
+                self.anchor(block);
+                let open = self.frame("Sidebar Table", ctx, None);
+                self.out.push_str(&open);
+                self.indent = 0;
                 self.title(block, "Sidebar Title");
-                self.anchor(block);
-                inherit(blocks, ctx)
+                self.framed(inherit(blocks, cell_ctx(ctx)))
             }
-            BlockKind::Admonition { label, blocks, .. } => {
-                self.title(block, "Block Title");
+            BlockKind::Admonition {
+                kind,
+                label,
+                blocks,
+                ..
+            } => {
                 self.anchor(block);
+                let specific = format!("Admonition {} Table", admonition_name(*kind));
+                let style = if self.cx.styles.has(StyleKind::Table, &specific) {
+                    specific
+                } else {
+                    "Admonition Table".to_string()
+                };
+                let available = self.text_width.saturating_sub(ctx.indent);
+                let label_width = available / 6;
+                let open = self.frame(&style, ctx, Some(label_width));
+                self.out.push_str(&open);
+                self.indent = 0;
                 let mut runs = Runs::new(self.cx, Newlines::Space);
                 runs.parts(label);
                 let runs = runs.finish();
                 self.paragraph("Admonition Label", "", &runs);
-                inherit(blocks, ctx)
+                self.out.push_str(&format!(
+                    r#"</w:tc><w:tc><w:tcPr><w:tcW w:w="{}" w:type="dxa"/></w:tcPr>"#,
+                    available - label_width
+                ));
+                // Ruby puts the title in the content cell.
+                self.title(block, "Block Title");
+                self.framed(inherit(blocks, cell_ctx(ctx)))
             }
             BlockKind::Quote {
                 attribution,
@@ -338,23 +403,32 @@ impl<'c, 't> Writer<'c, 't> {
             } => {
                 self.title(block, "Block Title");
                 self.anchor(block);
+                let open = self.frame("Quote Table", ctx, None);
+                self.out.push_str(&open);
                 // The attribution follows the quoted blocks.
-                let mut children = inherit(blocks, Ctx { quote: true, ..ctx });
+                let inner = Ctx {
+                    quote: true,
+                    ..cell_ctx(ctx)
+                };
+                let mut children = inherit(blocks, inner);
                 if let Some(attribution) = attribution {
-                    children.push(Task::Attribution(attribution, "Quote Attribution", ctx));
+                    children.push(Task::Attribution(attribution, "Quote Attribution", inner));
                 }
-                children
+                self.framed(children)
             }
             BlockKind::Verse {
                 attribution,
                 inlines,
             } => {
                 self.title(block, "Block Title");
+                let open = self.frame("Verse Table", ctx, None);
+                self.out.push_str(&open);
+                self.indent = 0;
                 self.inline_paragraph(block, "Verse", inlines, Newlines::Break);
                 if let Some(attribution) = attribution {
                     self.attribution(attribution, "Verse Attribution");
                 }
-                Vec::new()
+                self.framed(Vec::new())
             }
             BlockKind::Listing {
                 text,
@@ -363,8 +437,11 @@ impl<'c, 't> Writer<'c, 't> {
                 ..
             } => {
                 self.title(block, "Block Title");
+                let open = self.frame("Code Table", ctx, None);
+                self.out.push_str(&open);
+                self.indent = 0;
                 self.verbatim(block, "Code", text, callouts, inlines.as_deref());
-                Vec::new()
+                self.framed(Vec::new())
             }
             BlockKind::Literal {
                 text,
@@ -372,8 +449,11 @@ impl<'c, 't> Writer<'c, 't> {
                 inlines,
             } => {
                 self.title(block, "Block Title");
+                let open = self.frame("Literal Table", ctx, None);
+                self.out.push_str(&open);
+                self.indent = 0;
                 self.verbatim(block, "Literal", text, callouts, inlines.as_deref());
-                Vec::new()
+                self.framed(Vec::new())
             }
             BlockKind::Stem { inlines, .. } => {
                 self.title(block, "Block Title");
@@ -450,7 +530,7 @@ impl<'c, 't> Writer<'c, 't> {
                     }
                 }
             }
-            BlockKind::Table(_) => self.not_yet("tables"),
+            BlockKind::Table(table) => self.table(block, table, ctx),
             BlockKind::Image { .. } => self.not_yet("block images"),
             BlockKind::Video { .. } | BlockKind::Audio { .. } => self.not_yet("video and audio"),
             BlockKind::Toc => self.not_yet("the table of contents"),
@@ -709,6 +789,175 @@ impl<'c, 't> Writer<'c, 't> {
         tasks
     }
 
+    /// Open the one-row frame table of a delimited block in table style
+    /// `style`: one cell, or a label cell `label` twips wide and a content
+    /// cell (an admonition). Returns the markup up to the (first) cell's
+    /// content.
+    fn frame(&mut self, style: &str, ctx: Ctx, label: Option<u32>) -> String {
+        let mut available = self.text_width.saturating_sub(ctx.indent);
+        // Quotes are inset by their style.
+        if style == "Quote Table" || style == "Verse Table" {
+            available = available.saturating_sub(360);
+        }
+        let style_id = self.cx.style(StyleKind::Table, style);
+        let mut open = String::from("<w:tbl><w:tblPr>");
+        if let Some(id) = style_id {
+            open.push_str(&format!(
+                r#"<w:tblStyle w:val="{}"/>"#,
+                xml::escape_attr(&id)
+            ));
+        }
+        open.push_str(&format!(r#"<w:tblW w:w="{available}" w:type="dxa"/>"#));
+        if ctx.indent > 0 {
+            open.push_str(&format!(r#"<w:tblInd w:w="{}" w:type="dxa"/>"#, ctx.indent));
+        }
+        let first_column = u8::from(label.is_some());
+        open.push_str(&format!(
+            r#"<w:tblLayout w:type="fixed"/><w:tblLook w:val="0000" w:firstRow="0" w:lastRow="0" w:firstColumn="{first_column}" w:lastColumn="0" w:noHBand="1" w:noVBand="1"/></w:tblPr><w:tblGrid>"#
+        ));
+        let first = label.unwrap_or(available);
+        match label {
+            Some(label) => open.push_str(&format!(
+                r#"<w:gridCol w:w="{label}"/><w:gridCol w:w="{}"/>"#,
+                available - label
+            )),
+            None => open.push_str(&format!(r#"<w:gridCol w:w="{available}"/>"#)),
+        }
+        open.push_str(&format!(
+            r#"</w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:w="{first}" w:type="dxa"/></w:tcPr>"#
+        ));
+        open
+    }
+
+    /// The tasks of a frame's content, then the end of its table.
+    fn framed(&mut self, mut content: Vec<Task<'c>>) -> Vec<Task<'c>> {
+        content.push(Task::CloseCell);
+        content.push(Task::Markup(format!("</w:tr></w:tbl>{SPACER}")));
+        content
+    }
+
+    /// A table: Ruby's columns, spans, frame, grid, stripes, header and
+    /// footer rows, cell styles and alignment, on the `Table` style.
+    fn table(&mut self, block: &'c Block, table: &'c Table, ctx: Ctx) -> Vec<Task<'c>> {
+        // Ruby's caption stands above the table.
+        self.title(block, "Caption");
+        self.anchor(block);
+        let available = self.text_width.saturating_sub(ctx.indent);
+        let option = |name: &str| {
+            block.attrs.options.iter().any(|o| o == name)
+                || block.attrs.named.contains_key(&format!("{name}-option"))
+        };
+        let autowidth = (option("autowidth") && !block.attrs.named.contains_key("width"))
+            || table.columns.iter().any(|c| c.autowidth);
+        let width = if autowidth {
+            available
+        } else {
+            available * table.width.clamp(1, 100) / 100
+        };
+        let widths = table::column_widths(table, width);
+        let mut open = String::from("<w:tbl><w:tblPr>");
+        if let Some(id) = self.cx.style(StyleKind::Table, "Table") {
+            open.push_str(&format!(
+                r#"<w:tblStyle w:val="{}"/>"#,
+                xml::escape_attr(&id)
+            ));
+        }
+        if autowidth {
+            open.push_str(r#"<w:tblW w:w="0" w:type="auto"/>"#);
+        } else {
+            open.push_str(&format!(r#"<w:tblW w:w="{width}" w:type="dxa"/>"#));
+        }
+        if ctx.indent > 0 {
+            open.push_str(&format!(r#"<w:tblInd w:w="{}" w:type="dxa"/>"#, ctx.indent));
+        }
+        if let Some(borders) = table::borders(&table.frame, &table.grid) {
+            open.push_str(&borders);
+        }
+        open.push_str(&format!(
+            r#"<w:tblLayout w:type="{}"/><w:tblLook w:val="0000" w:firstRow="{}" w:lastRow="{}" w:firstColumn="0" w:lastColumn="0" w:noHBand="1" w:noVBand="1"/></w:tblPr><w:tblGrid>"#,
+            if autowidth { "autofit" } else { "fixed" },
+            u8::from(!table.head.is_empty()),
+            u8::from(!table.foot.is_empty()),
+        ));
+        for w in &widths {
+            open.push_str(&format!(r#"<w:gridCol w:w="{w}"/>"#));
+        }
+        open.push_str("</w:tblGrid>");
+        let mut tasks = vec![Task::Markup(open)];
+        let rows: Vec<(&[TableCell], Section)> = table
+            .head
+            .iter()
+            .map(|r| (r.as_slice(), Section::Head))
+            .chain(table.body.iter().map(|r| (r.as_slice(), Section::Body)))
+            .chain(table.foot.iter().map(|r| (r.as_slice(), Section::Foot)))
+            .collect();
+        let slots = table::place(
+            &rows.iter().map(|(r, _)| *r).collect::<Vec<_>>(),
+            table.columns.len(),
+        );
+        let mut body_index = 0;
+        for ((_, section), row) in rows.iter().zip(slots) {
+            let striped = *section == Section::Body
+                && match table.stripes.as_deref() {
+                    Some("all") => true,
+                    Some("even") => body_index % 2 == 1,
+                    Some("odd") => body_index % 2 == 0,
+                    _ => false,
+                };
+            if *section == Section::Body {
+                body_index += 1;
+            }
+            let mut tr = String::from("<w:tr>");
+            if *section == Section::Head {
+                tr.push_str("<w:trPr><w:tblHeader/></w:trPr>");
+            }
+            tasks.push(Task::Markup(tr));
+            for slot in row {
+                let span_width: u32 = widths[slot.column()..slot.column() + slot.span()]
+                    .iter()
+                    .sum();
+                let mut tc_pr = format!(r#"<w:tcW w:w="{span_width}" w:type="dxa"/>"#);
+                if slot.span() > 1 {
+                    tc_pr.push_str(&format!(r#"<w:gridSpan w:val="{}"/>"#, slot.span()));
+                }
+                match slot {
+                    Slot::Cell { cell, merge, .. } => {
+                        if merge {
+                            tc_pr.push_str(r#"<w:vMerge w:val="restart"/>"#);
+                        }
+                        let fill = cell
+                            .background
+                            .as_deref()
+                            .and_then(table::fill)
+                            .or_else(|| striped.then(|| STRIPE.to_string()));
+                        if let Some(fill) = fill {
+                            tc_pr.push_str(&format!(
+                                r#"<w:shd w:val="clear" w:color="auto" w:fill="{fill}"/>"#
+                            ));
+                        }
+                        match cell.valign {
+                            VAlign::Top => {}
+                            VAlign::Middle => tc_pr.push_str(r#"<w:vAlign w:val="center"/>"#),
+                            VAlign::Bottom => tc_pr.push_str(r#"<w:vAlign w:val="bottom"/>"#),
+                        }
+                        tasks.push(Task::Markup(format!("<w:tc><w:tcPr>{tc_pr}</w:tcPr>")));
+                        tasks.extend(cell_content(cell, *section == Section::Head, ctx));
+                        tasks.push(Task::CloseCell);
+                    }
+                    Slot::Continue { .. } => tasks.push(Task::Markup(format!(
+                        r#"<w:tc><w:tcPr>{tc_pr}<w:vMerge/></w:tcPr><w:p/></w:tc>"#
+                    ))),
+                    Slot::Empty { .. } => tasks.push(Task::Markup(format!(
+                        "<w:tc><w:tcPr>{tc_pr}</w:tcPr><w:p/></w:tc>"
+                    ))),
+                }
+            }
+            tasks.push(Task::Markup("</w:tr>".into()));
+        }
+        tasks.push(Task::Markup(format!("</w:tbl>{SPACER}")));
+        tasks
+    }
+
     fn not_yet(&mut self, what: &str) -> Vec<Task<'c>> {
         self.cx
             .warnings
@@ -871,6 +1120,74 @@ impl<'c, 't> Writer<'c, 't> {
         }
         self.out.push_str(runs);
         self.out.push_str("</w:p>");
+    }
+}
+
+/// A table row's section.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Section {
+    Head,
+    Body,
+    Foot,
+}
+
+/// The context of a frame's or cell's content: no outer indent.
+fn cell_ctx(ctx: Ctx) -> Ctx {
+    Ctx {
+        indent: 0,
+        lead: false,
+        ..ctx
+    }
+}
+
+fn admonition_name(kind: AdmonitionKind) -> &'static str {
+    match kind {
+        AdmonitionKind::Note => "Note",
+        AdmonitionKind::Tip => "Tip",
+        AdmonitionKind::Important => "Important",
+        AdmonitionKind::Warning => "Warning",
+        AdmonitionKind::Caution => "Caution",
+    }
+}
+
+/// The tasks of a table cell's content: paragraphs with the cell style's
+/// formatting and alignment, a literal cell, or an AsciiDoc cell's blocks.
+fn cell_content<'c>(cell: &'c TableCell, head: bool, ctx: Ctx) -> Vec<Task<'c>> {
+    let jc = match cell.halign {
+        HAlign::Left => "",
+        HAlign::Center => r#"<w:jc w:val="center"/>"#,
+        HAlign::Right => r#"<w:jc w:val="right"/>"#,
+    };
+    let format = match cell.style {
+        _ if head => None,
+        Some(CellStyle::Strong | CellStyle::Header) => Some(AttributeFormat::Strong),
+        Some(CellStyle::Emphasis) => Some(AttributeFormat::Emphasis),
+        Some(CellStyle::Monospaced) => Some(AttributeFormat::Monospace),
+        _ => None,
+    };
+    match &cell.content {
+        CellContent::Paragraphs(paragraphs) => paragraphs
+            .iter()
+            .map(|inlines| Task::Inlines {
+                inlines,
+                format,
+                jc,
+            })
+            .collect(),
+        CellContent::Literal(text) => vec![Task::Literal(text, jc)],
+        CellContent::Blocks {
+            blocks,
+            has_title,
+            attributes,
+            ..
+        } => {
+            // The nested document's title shows unless `notitle` (its default).
+            let skip = usize::from(*has_title && attributes.get("notitle").is_some());
+            blocks[skip.min(blocks.len())..]
+                .iter()
+                .map(|b| Task::Block(b, cell_ctx(ctx)))
+                .collect()
+        }
     }
 }
 

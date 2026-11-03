@@ -1780,9 +1780,24 @@ nested); qanda numbered `Question` + `Answer` at +720; horizontal is a
 borderless 2-column table (`labelwidth`/`itemwidth` fixed, else 25/75
 autofit; width from the template section, `writer::text_width`). Colist
 items: `Callout` number + tab + text with hanging indent; listing callout
-marks: guard text + `Callout` number (`<!--n-->` keeps the comment). Not
-yet: tables, images, video/audio, TOC (one warning per kind); footnotes as
-`[n]`, inline images as `[alt]`; containers unframed.
+marks: guard text + `Callout` number (`<!--n-->` keeps the comment).
+Stage 4 done 2026-11-04: `table.rs` (`place` puts cells on the grid with
+`Slot::{Cell, Continue, Empty}`: colspans clipped, rowspans continued as
+`w:vMerge`, short rows padded; `column_widths` from `colpcwidth`; `borders`
+for frame/grid other than all; `fill` from `cellbgcolor`). Writer: tables on
+the `Table` style (fixed width = `width`% of the text width, autofit with
+`%autowidth`/`~`), `w:tblHeader` head rows, tblLook firstRow/lastRow,
+`noHBand` with direct F8F8F7 stripes, cell jc/vAlign/style formats, `l`
+cells as `Literal`, `a` cells as nested blocks (`Task::Inlines`,
+`Task::Literal`); caption as `Caption` above. Frames: `Writer::frame` opens
+a one-row table in the block's table style (admonition: label cell 1/6 +
+content cell, `firstColumn` look, kind style if the template has it, else
+`Admonition Table`); `framed` closes it plus `SPACER` (8 pt exact empty
+paragraph: keeps tables apart, stands for Ruby's block margin). Frame
+content has no outer indent (`cell_ctx`); nested tables get `w:tblInd` and
+a narrower width. Quote/verse widths minus 360 (the style's inset). Not
+yet: images, video/audio, TOC (one warning per kind); footnotes as `[n]`,
+inline images as `[alt]`.
 
 Index terms (`((…))` / `indexterm2:[…]` visible, `(((…)))` /
 `indexterm:[…]` concealed) run after images and before links, as Ruby's

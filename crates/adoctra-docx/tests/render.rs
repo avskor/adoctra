@@ -74,6 +74,10 @@ fn paragraphs(xml: &str) -> Vec<(String, String)> {
             .replace("&lt;", "<")
             .replace("&gt;", ">")
             .replace("&amp;", "&");
+        // The spacer after a block's table.
+        if text.is_empty() && p.contains(r#"w:line="160" w:lineRule="exact""#) {
+            continue;
+        }
         out.push((style, text));
     }
     out
@@ -387,7 +391,6 @@ fn unconverted_blocks_are_reported_once_per_kind() {
     assert_eq!(
         out.warnings,
         [
-            "docx backend does not convert tables yet",
             "docx backend does not convert block images yet",
             "docx backend drops passthrough blocks (raw output has no DOCX form)",
         ]
@@ -695,4 +698,161 @@ fn callout_marks_in_verbatim_blocks_use_the_callout_style() {
     assert!(doc.contains(
         r#"<w:t xml:space="preserve">x = 1 </w:t></w:r><w:r><w:t xml:space="preserve"># </w:t></w:r><w:r><w:rPr><w:rStyle w:val="Callout"/></w:rPr><w:t xml:space="preserve">1</w:t>"#
     ), "{doc}");
+}
+
+#[test]
+fn delimited_blocks_are_framed_by_their_table_styles() {
+    let doc = document(concat!(
+        "----\ncode\n----\n\n....\nlit\n....\n\n",
+        ".Ex\n====\ninside\n====\n\n",
+        ".Side\n****\naside\n****\n\n",
+        "[quote, A]\n____\nq\n____\n\n",
+        "[verse]\n____\nv\n____\n\n",
+        "TIP: hint\n",
+    ));
+    for style in [
+        "CodeTable",
+        "LiteralTable",
+        "ExampleTable",
+        "SidebarTable",
+        "QuoteTable",
+        "VerseTable",
+        "AdmonitionTipTable",
+    ] {
+        assert!(
+            doc.contains(&format!(r#"<w:tblStyle w:val="{style}"/>"#)),
+            "{style}: {doc}"
+        );
+    }
+    assert_eq!(
+        paragraphs(&doc),
+        pairs(&[
+            ("Code", "code"),
+            ("Literal", "lit"),
+            ("BlockTitle", "Example 1. Ex"),
+            ("Normal", "inside"),
+            ("SidebarTitle", "Side"),
+            ("Normal", "aside"),
+            ("Quote", "q"),
+            ("QuoteAttribution", "\u{2014} A"),
+            ("Verse", "v"),
+            ("AdmonitionLabel", "Tip"),
+            ("Normal", "hint"),
+        ])
+    );
+    // The example's title stands above its box, the sidebar's inside.
+    let example = doc.find(r#"w:val="ExampleTable""#).unwrap();
+    assert!(doc.find("Example 1. ").unwrap() < example);
+    let sidebar = doc.find(r#"w:val="SidebarTable""#).unwrap();
+    assert!(doc.find(">Side<").unwrap() > sidebar);
+    // An admonition is a label cell and a content cell; its label column
+    // takes the style's first-column formatting.
+    assert!(doc.contains(r#"w:firstColumn="1""#));
+    assert!(
+        doc.contains(r#"<w:gridCol w:w="1606"/><w:gridCol w:w="8032"/>"#),
+        "{doc}"
+    );
+    // Adjacent tables are kept apart.
+    assert!(!doc.contains("</w:tbl><w:tbl>"));
+}
+
+#[test]
+fn a_template_without_a_specific_admonition_style_uses_the_generic_one() {
+    let doc = parse("WARNING: careful\n").document;
+    let out = DocxBackend::new()
+        .with_template(word_template())
+        .render(&doc)
+        .unwrap();
+    // The generic style is reported once; the specific one is not looked up.
+    assert_eq!(
+        out.warnings,
+        [
+            "docx template is missing table style: Admonition Table",
+            "docx template is missing paragraph style: Admonition Label",
+        ]
+    );
+    assert!(!part(&out.bytes, "word/document.xml").contains("<w:tblStyle"));
+}
+
+#[test]
+fn nested_frames_and_lists_indent_their_tables() {
+    let doc = document("* item\n+\n----\ncode\n----\n");
+    assert!(
+        doc.contains(r#"<w:tblW w:w="8918" w:type="dxa"/><w:tblInd w:w="720" w:type="dxa"/>"#),
+        "{doc}"
+    );
+    // Content inside a frame is not indented again.
+    assert!(!doc.contains(r#"<w:pStyle w:val="Code"/><w:ind"#));
+}
+
+#[test]
+fn tables_map_columns_spans_header_footer_and_alignment() {
+    let doc = document(concat!(
+        "[cols=\"1,2,1\", options=\"header,footer\", stripes=even]\n",
+        "|===\n",
+        "|H1 |H2 |H3\n",
+        "\n",
+        ".2+^.^s|tall 2+>|wide\n",
+        "e|it m|mono\n",
+        "|f1 |f2 |f3\n",
+        "|===\n",
+    ));
+    assert!(
+        doc.contains(r#"<w:tblStyle w:val="Table"/><w:tblW w:w="9638" w:type="dxa"/>"#),
+        "{doc}"
+    );
+    assert!(
+        doc.contains(r#"<w:gridCol w:w="2410"/><w:gridCol w:w="4819"/><w:gridCol w:w="2410"/>"#)
+    );
+    assert!(doc.contains(r#"w:firstRow="1" w:lastRow="1""#));
+    assert!(doc.contains(r#"<w:tr><w:trPr><w:tblHeader/></w:trPr>"#));
+    // Row and column spans.
+    assert!(doc.contains(r#"<w:tcW w:w="2410" w:type="dxa"/><w:vMerge w:val="restart"/><w:vAlign w:val="center"/>"#), "{doc}");
+    assert!(doc.contains(r#"<w:tcW w:w="7229" w:type="dxa"/><w:gridSpan w:val="2"/>"#));
+    assert!(doc.contains(r#"<w:tcW w:w="2410" w:type="dxa"/><w:vMerge/></w:tcPr><w:p/></w:tc>"#));
+    // Cell styles and alignment.
+    assert!(doc.contains(r#"<w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:rStyle w:val="Strong"/></w:rPr><w:t xml:space="preserve">tall</w:t>"#));
+    assert!(
+        doc.contains(r#"<w:jc w:val="right"/></w:pPr><w:r><w:t xml:space="preserve">wide</w:t>"#)
+    );
+    assert!(
+        doc.contains(r#"<w:rStyle w:val="Emphasis"/></w:rPr><w:t xml:space="preserve">it</w:t>"#)
+    );
+    assert!(doc
+        .contains(r#"<w:rStyle w:val="Monospace"/></w:rPr><w:t xml:space="preserve">mono</w:t>"#));
+    // `stripes=even` shades the second body row.
+    assert_eq!(doc.matches(r#"w:fill="F8F8F7""#).count(), 2, "{doc}");
+}
+
+#[test]
+fn table_frame_grid_width_caption_and_cell_kinds() {
+    let doc = document(concat!(
+        ".Data\n",
+        "[frame=ends, grid=rows, width=50%, cols=\"a,l\"]\n",
+        "|===\n",
+        "|* in cell\n| verbatim\n  text\n",
+        "|===\n",
+    ));
+    assert!(
+        doc.contains(r#"<w:tblW w:w="4819" w:type="dxa"/>"#),
+        "{doc}"
+    );
+    assert!(doc.contains(r#"<w:left w:val="nil"/>"#));
+    assert!(doc.contains(r#"<w:insideH w:val="single""#));
+    let ps = paragraphs(&doc);
+    assert_eq!(ps[0], ("Caption".into(), "Table 1. Data".into()));
+    assert!(ps.contains(&("ListParagraph".into(), "in cell".into())));
+    assert!(
+        ps.contains(&("Literal".into(), " verbatim\n  text".into())),
+        "{ps:?}"
+    );
+    let auto = document("[%autowidth]\n|===\n|a |b\n|===\n");
+    assert!(auto.contains(r#"<w:tblW w:w="0" w:type="auto"/>"#));
+    assert!(auto.contains(r#"<w:tblLayout w:type="autofit"/>"#));
+}
+
+#[test]
+fn cell_backgrounds_come_from_cellbgcolor() {
+    let doc = document("|===\n|{set:cellbgcolor:#ff0000}red |plain\n|===\n");
+    assert!(doc.contains(r#"w:fill="FF0000""#), "{doc}");
 }
