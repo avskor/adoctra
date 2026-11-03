@@ -63,6 +63,12 @@ impl SourceFile {
         self.frames.is_some()
     }
 
+    /// Whether the include path already removed Ruby's BOM (see
+    /// [`crate::resource::SourceLineFrames::normalized`]).
+    pub(crate) fn bom_normalized(&self) -> bool {
+        self.frames.as_ref().is_some_and(|frames| frames.normalized)
+    }
+
     pub(crate) fn stored_bytes(&self) -> usize {
         self.omissions.iter().fold(self.text.len(), |size, line| {
             size.saturating_add(line.bytes.len())
@@ -223,6 +229,12 @@ impl SourceMap {
                         prepared = selected;
                         snapshot
                     }),
+                crate::IncludeInput::Unconverted { resource, encoding } => selection
+                    .recover_unconverted(resource, encoding.as_deref())
+                    .map(|(snapshot, selected)| {
+                        prepared = selected;
+                        snapshot
+                    }),
             }
         })?;
         if let Some(selected) = &mut prepared {
@@ -297,6 +309,7 @@ mod tests {
                 frames: Some(crate::resource::SourceLineFrames {
                     ranges,
                     trailing_lf,
+                    normalized: false,
                 }),
             }
         }

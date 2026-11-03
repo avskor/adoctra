@@ -168,7 +168,69 @@ fn append_mapping(
     Some(())
 }
 
+/// How the pinned OpenURI reader sees a resource it tags with an external
+/// encoding without transcoding (see [`BinaryResource::prepare_uri_include`]).
+pub(crate) struct RawCodec {
+    /// UTF-8 (also an unknown name) and BINARY: no transcoding happens for a
+    /// file either, so the file's deferred UTF-8/BINARY path applies as is.
+    pub(crate) deferred: Option<bool>,
+    /// `String#include?('::')` raises for an ASCII-incompatible (or dummy)
+    /// encoding, so the tag scan fails on the first line.
+    pub(crate) ascii_compatible: bool,
+    /// Every byte is a valid character, so a regexp never raises on a line
+    /// even where no Unicode mapping exists.
+    pub(crate) single_byte: bool,
+    /// The encoded LF that `each_line` searches for.
+    pub(crate) separator: &'static [u8],
+    /// The dummy UTF-16/UTF-32 converters consume a leading BOM.
+    pub(crate) consumes_bom: bool,
+}
+
+pub(crate) fn raw_codec(encoding: Option<&str>) -> RawCodec {
+    let name = encoding.unwrap_or_default().to_ascii_lowercase();
+    let codec = |ascii_compatible, single_byte, separator| RawCodec {
+        deferred: None,
+        ascii_compatible,
+        single_byte,
+        separator,
+        consumes_bom: false,
+    };
+    match tables::lookup(&name).unwrap_or(Encoding::Utf8) {
+        Encoding::Utf8 | Encoding::Binary => RawCodec {
+            deferred: Some(matches!(tables::lookup(&name), Some(Encoding::Binary))),
+            ..codec(true, false, b"\n")
+        },
+        // Ruby's non-dummy UTF-16/32 split at their encoded LF; the BOM-led
+        // dummy UTF-16/UTF-32 split at the LF byte like every other encoding.
+        Encoding::Utf16(Some(true)) => codec(false, false, b"\n\0"),
+        Encoding::Utf16(Some(false)) => codec(false, false, b"\0\n"),
+        Encoding::Utf32(Some(true)) => codec(false, false, b"\n\0\0\0"),
+        Encoding::Utf32(Some(false)) => codec(false, false, b"\0\0\0\n"),
+        Encoding::Utf16(None) | Encoding::Utf32(None) => RawCodec {
+            consumes_bom: true,
+            ..codec(false, false, b"\n")
+        },
+        Encoding::Iso2022Jp { .. } => codec(false, false, b"\n"),
+        // EBCDIC (IBM037) is a dummy encoding in Ruby.
+        Encoding::Single(table) => codec(table.len() < 256 || table[0x41] == 0x41, true, b"\n"),
+        _ => codec(true, false, b"\n"),
+    }
+}
+
 impl BinaryResource {
+    /// Prepare a URI include like the pinned Ruby's OpenURI reader: the
+    /// response is tagged with the external encoding but not transcoded, so
+    /// lines are split in that encoding and selection runs before only the
+    /// selected lines are converted (`prepare_source_array`, whose BOM check
+    /// looks at the first selected line). A whole read converts at once
+    /// (`prepare_source_string`). Unselected undecodable lines never fail.
+    pub fn prepare_uri_include(self, encoding: Option<&str>) -> IncludeInput {
+        IncludeInput::Unconverted {
+            resource: self,
+            encoding: encoding.map(str::to_owned),
+        }
+    }
+
     /// Defer malformed UTF-8/BINARY to reader selection, without decoding or
     /// replacing its bytes. Other codecs retain strict consumed-prefix checks.
     pub fn prepare_include(

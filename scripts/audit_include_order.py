@@ -3,6 +3,10 @@
 
 Run after building the CLI:
   python3 scripts/audit_include_order.py --report /tmp/include-order.json
+With --uri the same bytes are served over local HTTP to a URI include, which
+the pinned Ruby reads through OpenURI without transcoding (lines split in the
+external encoding, only selected lines converted):
+  python3 scripts/audit_include_order.py --uri --report /tmp/include-order-uri.json
 The input byte fragments were encoded by the pinned Ruby environment. Results
 compare normalized HTML and ordered diagnostics; they do not establish exact HTML
 compatibility. An uncaught Ruby exception is never counted as a compatible case.
@@ -15,6 +19,7 @@ from pathlib import Path
 import subprocess
 
 import acceptance as a
+import audit_uri_cache as u
 import compatibility as c
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -134,6 +139,33 @@ def invoke(command, source):
                                        raw.stderr.decode('utf-8'))
 
 
+def uri_case(case):
+    """The same include as a URI target; the response carries the bytes."""
+    return dict(id=case['id'], requests=['/part.adoc'],
+                source=case['source'].replace('include::part.adoc', 'include::{uri}/part.adoc'),
+                responses={'/part.adoc': [{'hex': case['binary_resources']['part.adoc']}]})
+
+
+def compare_uri(case, expected, actual):
+    if [item['path'] for item in expected['requests']] != case['requests'] \
+            or expected['requests'] != actual['requests']:
+        return dict(status='DIFF', expected=expected, actual=actual)
+    if 'error' in expected:
+        return dict(status='RUBY_ERROR', reference_error=expected['error'],
+                    adoctra_diagnostics=actual['diagnostics'])
+    if (c.projection(expected['html']) != c.projection(actual['html'])
+            or expected['diagnostics'] != actual['diagnostics']):
+        return dict(status='DIFF', expected=expected, actual=actual)
+    return dict(status='PASS')
+
+
+def run_uri_case(case, binary):
+    case = uri_case(case)
+    expected = u.run_side(case, binary.resolve(), True)
+    actual = u.run_side(case, binary.resolve(), False)
+    return dict(id=case['id'], **compare_uri(case, expected, actual))
+
+
 def run_case(case, binary):
     with c.case_commands(case, binary) as (reference, actual):
         expected = invoke(reference + ['--report'], case['source'])
@@ -147,14 +179,19 @@ def main():
     parser.add_argument('--binary', type=Path, default=ROOT / 'target/debug/adoctra')
     parser.add_argument('--report', type=Path)
     parser.add_argument('--jobs', type=int, default=3)
+    parser.add_argument('--uri', action='store_true',
+                        help='serve each include over local HTTP (OpenURI without transcoding)')
     args = parser.parse_args()
     if args.jobs < 1:
         parser.error('--jobs must be positive')
     with ThreadPoolExecutor(max_workers=args.jobs) as pool:
-        results = list(pool.map(lambda case: run_case(case, args.binary), build_cases()))
+        run = run_uri_case if args.uri else run_case
+        results = list(pool.map(lambda case: run(case, args.binary), build_cases()))
     counts = dict(Counter(result['status'] for result in results))
     report = dict(asciidoctor_version=(ROOT / 'compatibility/asciidoctor-version').read_text().strip(),
-                  profile='include-body-dom-v1 + ordered diagnostics', counts=counts, cases=results)
+                  profile=('include-body-dom-v1 + ordered diagnostics'
+                           + (' + HTTP requests (URI include)' if args.uri else '')),
+                  counts=counts, cases=results)
     if args.report:
         args.report.write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n')
     print(json.dumps(counts, sort_keys=True))

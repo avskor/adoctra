@@ -118,6 +118,70 @@ def cases():
     # Like a file include, a selected undecodable line aborts Ruby's load.
     add('uncached-encoding-invalid-utf8', 'include::{uri}/part.adoc[]\n',
         {'/part.adoc': [{'hex': b'one\n\xff\nthree\n'.hex()}]}, ruby_error='ArgumentError')
+    # OpenURI tags the response with `encoding` without transcoding it: lines
+    # split in that encoding and only selected lines are converted, so an
+    # unselected undecodable line never fails (a file read would).
+    def raw(identifier, data, attrs, **kwargs):
+        add(f'raw-{identifier}', f'include::{{uri}}/part.adoc[{attrs}]\n',
+            {'/part.adoc': [{'hex': data.hex(), **kwargs.pop('response', {})}]}, **kwargs)
+    raw('unselected-invalid-us-ascii', b'one\n\xff\n', 'encoding=US-ASCII,lines=1')
+    raw('unselected-unmapped-windows-1251', b'*one*\n\x98\n*three*\n', 'encoding=Windows-1251,lines=1;3')
+    raw('unselected-invalid-shift-jis-tags', b'// tag::t[]\n*\x93\xfa*\n// end::t[]\n\x81\n',
+        'encoding=Shift_JIS,tag=t')
+    # A single-byte line is always valid for the marker regexp, even unmapped.
+    raw('unmapped-marker-line-windows-1251', b'// tag::t[] \x98\n*in*\n// end::t[]\nout\n',
+        'encoding=Windows-1251,tag=t')
+    # The marker regexp raises on a malformed multibyte line: not readable.
+    raw('malformed-marker-line-shift-jis', b'// tag::t[] \x81\n*in*\n// end::t[]\n',
+        'encoding=Shift_JIS,tag=t')
+    # `include? '::'` raises for an ASCII-incompatible encoding.
+    raw('tags-utf-16le-not-readable', '// tag::t[]\n*in*\n// end::t[]\n'.encode('utf-16le'),
+        'encoding=UTF-16LE,tag=t')
+    raw('tags-iso-2022-jp-not-readable', '// tag::t[]\n*日本*\n// end::t[]\n'.encode('iso2022_jp'),
+        'encoding=ISO-2022-JP,tag=t')
+    # A non-ASCII tag name in another encoding never equals the UTF-8 name.
+    raw('non-ascii-tag-name-windows-1251', '// tag::тег[]\n*in*\n// end::тег[]\n'.encode('cp1251'),
+        'encoding=Windows-1251,tag=тег')
+    raw('non-ascii-tag-name-utf-8', '// tag::тег[]\n*in*\n// end::тег[]\n'.encode(), 'tag=тег')
+    # The BOM check applies to the first selected line only.
+    later_bom = b'skip\n\xef\xbb\xbf' + '*Привет*\n'.encode('cp1251')
+    raw('utf-8-bom-first-selected-windows-1251', later_bom, 'encoding=Windows-1251,lines=2')
+    raw('utf-8-bom-later-selected-windows-1251', later_bom, 'encoding=Windows-1251,lines=1;2')
+    raw('utf-16le-bom-first-selected-windows-1251', b'skip\n\xff\xfe' + '*Привет*'.encode('utf-16le'),
+        'encoding=Windows-1251,lines=2')
+    raw('utf-16be-bom-whole-windows-1251', b'\xfe\xff' + '*Привет*\n'.encode('utf-16be'),
+        'encoding=Windows-1251')
+    # Stateful ISO-2022-JP converts each selected line on its own.
+    raw('iso-2022-jp-lines', '*日本*\n*語*\n'.encode('iso2022_jp'), 'encoding=ISO-2022-JP,lines=2')
+    # The dummy UTF-16 converter consumes its BOM; a second one is content.
+    raw('utf-16-double-bom', b'\xfe\xff\xfe\xff' + '*a*\n'.encode('utf-16be'), 'encoding=UTF-16')
+    # IBM037 splits at byte 0x0A, so its encoded LF (0x25) stays in the line.
+    raw('ibm037-line-keeps-lf', '*a*\nb\n'.encode('cp037') + b'\x0a' + 'c'.encode('cp037'),
+        'encoding=IBM037,lines=1')
+    raw('unknown-encoding-is-utf-8', '*Привет*\n'.encode(), 'encoding=bogus,lines=1')
+    # The Content-Type charset never applies: `encoding` (default UTF-8) is set.
+    raw('charset-ignored', '*Привет*\n'.encode(),
+        '', response={'content_type': 'text/plain; charset=windows-1251'})
+    raw('charset-not-used-for-decoding', b'one\n' + '*Привет*\n'.encode('cp1251'),
+        'lines=1', response={'content_type': 'text/plain; charset=windows-1251'})
+    # Up to 10240 bytes OpenURI keeps a StringIO, whose `each_line` finds a
+    # multi-byte LF at any byte offset; a larger body is a Tempfile, whose IO
+    # matches whole code units only. U+0100 U+0A41 U+4100 U+0A42 U+000A holds
+    # `00 0A` at bytes 1 and 5 in UTF-16BE: the StringIO's second line is the
+    # valid shifted pair `41 41 00 0A`, its odd first line fails conversion.
+    shifted = ''.join(map(chr, [0x100, 0xa41, 0x4100, 0xa42, 0xa])).encode('utf-16be')
+    raw('small-utf-16be-unaligned-line', shifted, 'encoding=UTF-16BE,lines=2')
+    raw('small-utf-16be-unaligned-odd-line', shifted, 'encoding=UTF-16BE,lines=1',
+        ruby_error='ArgumentError')
+    # U+0A41 U+4E00 holds `0A 00 00 00` at byte 1 in UTF-32LE.
+    raw('small-utf-32le-unaligned-odd-line', '*\u0a41\u4e00*\n'.encode('utf-32le'),
+        'encoding=UTF-32LE,lines=1', ruby_error='ArgumentError')
+    padding = 'x\n' * 2600
+    for codec, name, text in [('utf-16be', 'UTF-16BE', '*\u0100\u0a41*\n*two*\n'),
+                              ('utf-32le', 'UTF-32LE', '*\u0a41\u4e00*\n*two*\n')]:
+        for lines in ['1', '2', '1;2']:
+            raw(f'large-{codec}-lines={lines}', (text + padding).encode(codec),
+                f'encoding={name},lines={lines}')
     # Every safe mode for uncached and cached URI includes; secure never reads.
     for safe in ['safe', 'server', 'unsafe', 'secure']:
         reads = safe != 'secure'

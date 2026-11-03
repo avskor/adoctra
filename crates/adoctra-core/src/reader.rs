@@ -1292,6 +1292,7 @@ impl<'a> Reader<'a> {
         if !file.omitted_lines().is_empty() || file.has_line_frames() {
             input.lines = file.include_lines();
         }
+        let bom_normalized = file.bom_normalized();
         // Like Ruby's push_include: a positive relative depth beyond the
         // absolute maximum is replaced by it, otherwise nothing nests.
         (input.max_depth, input.depth_label) =
@@ -1388,7 +1389,7 @@ impl<'a> Reader<'a> {
         input.start_line = selected.keep.iter().position(|keep| *keep).unwrap_or(0) as isize + 1;
         let mut keep = selected.keep.into_iter();
         input.lines.retain(|_| keep.next().unwrap_or(false));
-        if let Some(first) = input.lines.first_mut() {
+        if let Some(first) = input.lines.first_mut().filter(|_| !bom_normalized) {
             first.strip_bom();
         }
         if let Some(indent) = attrs.get("indent") {

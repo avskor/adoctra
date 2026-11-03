@@ -91,5 +91,23 @@ class UriCacheAuditTests(unittest.TestCase):
         self.assertEqual(result[0]['severity'], 'warning')
 
 
+    def test_unconverted_probes_hold_the_bytes_they_claim(self):
+        cases = {case['id']: case for case in audit.cases()}
+        body = lambda name: bytes.fromhex(cases[name]['responses']['/part.adoc'][0]['hex'])
+        # StringIO probes stay at most 10240 bytes; Tempfile probes exceed it.
+        shifted = body('raw-small-utf-16be-unaligned-line')
+        self.assertLessEqual(len(shifted), 10240)
+        self.assertEqual([i for i in range(len(shifted) - 1) if shifted[i:i + 2] == b'\0\n'], [1, 5, 8])
+        for name in ['raw-large-utf-16be-lines=1', 'raw-large-utf-32le-lines=1']:
+            self.assertGreater(len(body(name)), 10240)
+        # An unaligned UTF-32LE LF only a StringIO would split at.
+        self.assertEqual(body('raw-large-utf-32le-lines=1').find(b'\n\0\0\0'), 5)
+        # The unselected line really is undecodable in its encoding.
+        with self.assertRaises(UnicodeDecodeError):
+            body('raw-unselected-unmapped-windows-1251').split(b'\n')[1].decode('cp1251')
+        # The charset probe declares a charset the body does not use.
+        self.assertIn('charset=windows-1251',
+                      cases['raw-charset-ignored']['responses']['/part.adoc'][0]['content_type'])
+
 if __name__ == '__main__':
     unittest.main()

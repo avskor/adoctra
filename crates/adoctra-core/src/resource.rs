@@ -67,6 +67,10 @@ pub(crate) struct IncludeSnapshot {
 pub(crate) struct SourceLineFrames {
     pub ranges: Vec<(usize, usize)>,
     pub trailing_lf: bool,
+    /// The provider path already removed the BOM Ruby removes (an OpenURI
+    /// response converted by `prepare_source_*`); a U+FEFF left in the text
+    /// is content and the reader must not strip it again.
+    pub normalized: bool,
 }
 
 impl From<IncludeResource> for IncludeSnapshot {
@@ -101,7 +105,8 @@ pub(crate) fn framed_snapshot_lines(
     frames: Option<&SourceLineFrames>,
 ) -> Vec<crate::include_indent::Line> {
     use crate::include_indent::Line;
-    let strip_bom = omissions.first().map_or(true, |line| line.line != 1);
+    let strip_bom = omissions.first().map_or(true, |line| line.line != 1)
+        && !frames.is_some_and(|frames| frames.normalized);
     let lines = if let Some(frames) = frames {
         frames
             .ranges
@@ -142,6 +147,13 @@ pub enum IncludeInput {
     Deferred {
         resource: BinaryResource,
         binary: bool,
+    },
+    /// Bytes read without transcoding, tagged with an external encoding,
+    /// like the pinned Ruby's OpenURI responses: see
+    /// [`BinaryResource::prepare_uri_include`].
+    Unconverted {
+        resource: BinaryResource,
+        encoding: Option<String>,
     },
 }
 

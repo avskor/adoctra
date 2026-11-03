@@ -2078,8 +2078,9 @@ their report uses the resolved URI and directive cursor. document_path must
 return None for URLs so unresolved nested includes retain their URL.
 The pinned optional gem version is in compatibility/open-uri-cached-version.
 scripts/audit_uri_cache.py compares HTML projection, positioned diagnostics and
-request traces against local HTTP servers: 50 PASS / 3 RUBY_ERROR / 1 XFAIL
-(uncached URI includes with explicit encodings, BOM, selection and bad UTF-8;
+request traces against local HTTP servers: 76 PASS / 5 RUBY_ERROR / 1 XFAIL
+(uncached URI includes with explicit encodings, BOM, selection and bad UTF-8,
+the unconverted OpenURI reading probes `raw-*`;
 every safe mode for uncached/cached/missing includes; the XFAIL is Ruby's
 relative `cursor.file` from server mode up, where `docfile` is trimmed to
 `docdir` — adoctra's CLI prints the full path). CI verifies
@@ -2353,6 +2354,34 @@ UTF-8 converter): 3104 cases, 3054 PASS, 50 RUBY_ERROR, no DIFF; 405 of them
 only; IBM037 LF is byte 25, NEL 15). Harnesses must read adoctra's output as
 bytes: text mode turned a lone CR into LF (fixed here, in audit_uri_cache.py
 and upstream_audit.py; the Ruby side arrives as JSON).
+**URI include encoding** (2026-11-03): Ruby reads a URI include through
+`OpenURI.open_uri(uri, 'rb:<enc>:UTF-8')`, which only `set_encoding`s the
+response to the external encoding: nothing is transcoded while reading (a
+file read transcodes). Lines split in that encoding, `lines`/`tag` select raw
+lines, and `push_include` converts only the selected lines
+(`prepare_source_array`: the UTF-16/UTF-8 BOM check applies to the *first
+selected* line; a whole read goes through `prepare_source_string`). So an
+unselected undecodable line never fails, a selected one crashes Ruby
+(RUBY_ERROR). `BinaryResource::prepare_uri_include` returns
+`IncludeInput::Unconverted`; `Selection::recover_unconverted`
+(include_selection.rs) ports it: UTF-8/unknown names and BINARY keep the
+deferred file path (no transcoding there either); others split per
+`raw_codec` (source_encoding.rs): the LF byte for ASCII-compatible and dummy
+encodings (UTF-16/UTF-32 with BOM, ISO-2022-JP family, IBM037, whose encoded
+LF 0x25 then stays inside a line), the encoded LF for UTF-16LE/BE and
+UTF-32LE/BE — at any byte offset up to 10240 bytes (OpenURI's StringIO),
+whole code units only beyond (Tempfile IO). A tag scan in an
+ASCII-incompatible encoding is `not readable` (`include? '::'` raises), a
+malformed multibyte marker line too (the regexp raises; single-byte lines are
+always valid), and a non-ASCII tag name never equals the UTF-8 attribute
+(`select_names(.., foreign)`). Dummy UTF-16/UTF-32 converters consume their
+BOM. `SourceLineFrames::normalized` records that exactly one BOM was already
+removed, so the reader does not strip a following U+FEFF (content in Ruby).
+Content-Type `charset` never applies (the mode's encoding overrides it);
+cache hits remain BINARY. `audit_include_order.py --uri` serves the whole
+93-profile matrix over HTTP: 3104 cases, 2389 PASS, 715 RUBY_ERROR, no DIFF
+(compatibility/encoding-order/uri-report.json; before: 755 DIFF). The CI URI
+audit pins the mechanisms (`raw-*` cases).
 **Primary input and docinfo encoding** (2026-11-03): Ruby runs
 `Helpers.prepare_source_string` on the primary document (file and stdin),
 docinfo and inline SVG: a UTF-16LE/BE BOM decodes the whole string (UTF-32 is

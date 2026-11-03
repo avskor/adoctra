@@ -191,10 +191,19 @@ impl ResourceProvider for FileResources {
         encoding: Option<&str>,
         line_limit: Option<usize>,
     ) -> ResourceResult<IncludeInput> {
-        let (resource, cached) = self.include_bytes(request)?;
-        // open-uri-cached returns a fresh binary StringIO on hits and ignores
-        // the caller's encoding. Preserve this observable distinction.
-        resource.prepare_include(if cached { Some("BINARY") } else { encoding }, line_limit)
+        if Self::uri(request).is_some() {
+            let (resource, cached) = self.include_bytes(request)?;
+            // OpenURI tags the response with the external encoding but does
+            // not transcode it. open-uri-cached returns a fresh binary
+            // StringIO on hits and ignores the caller's encoding.
+            return Ok(resource.prepare_uri_include(if cached {
+                Some("BINARY")
+            } else {
+                encoding
+            }));
+        }
+        let (resource, _) = self.include_bytes(request)?;
+        resource.prepare_include(encoding, line_limit)
     }
 
     fn load_include(
@@ -562,6 +571,89 @@ mod tests {
             "*one*\n*three*\n"
         );
         assert_eq!(server.count.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn uri_includes_convert_only_selected_lines_like_open_uri() {
+        // Windows-1251 has no mapping for 0x98. OpenURI does not transcode,
+        // so the unselected line never fails; a file read transcodes it.
+        let body = b"*one*\n\x98\n\xcf\xf0\xe8\xe2\xe5\xf2\n".to_vec();
+        let server = Http::new(vec![(200, body.clone())]);
+        let tree = Tree::new();
+        let root = tree.0.join("docs");
+        std::fs::write(root.join("part.adoc"), &body).unwrap();
+        let provider = FileResources::new(&root).unwrap();
+        let uri = format!("{}/part.adoc", server.uri);
+        let request = ResourceRequest {
+            target: &uri,
+            referrer: None,
+        };
+        assert!(matches!(
+            provider.prepare_include(request, Some("Windows-1251"), Some(3)),
+            Ok(adoctra::IncludeInput::Unconverted { encoding: Some(name), .. }) if name == "Windows-1251"
+        ));
+        let parse = |sources: &mut SourceMap, target: &str| {
+            let id = sources.add(
+                root.join("main.adoc").to_str().unwrap(),
+                format!("include::{target}[encoding=Windows-1251,lines=1;3]\n"),
+            );
+            let mut options = adoctra::ParseOptions {
+                source_id: id,
+                ..Default::default()
+            };
+            options.attributes.set("allow-uri-read", "");
+            adoctra::parse_resource(sources, &options, &provider).unwrap()
+        };
+        let mut sources = SourceMap::new();
+        let result = parse(&mut sources, &uri);
+        assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+        let source = sources.get(adoctra::SourceId(1)).unwrap();
+        assert_eq!(source.name(), uri);
+        assert_eq!(source.text(), "*one*\nПривет\n");
+        assert_eq!(source.omitted_lines()[0].bytes, b"\x98\n");
+        assert_eq!(source.position(6).unwrap().line, 3);
+        // The selected lines form one paragraph across the omitted line.
+        let spans: Vec<_> = result.document.blocks.iter().map(|b| b.span).collect();
+        assert_eq!(
+            spans,
+            [adoctra::Span::in_source(adoctra::SourceId(1), 0, 18)]
+        );
+        let mut sources = SourceMap::new();
+        let result = parse(&mut sources, "part.adoc");
+        assert_eq!(result.diagnostics.len(), 1);
+        assert!(result.document.blocks.len() == 1);
+        assert_eq!(server.count.load(Ordering::SeqCst), 2);
+    }
+
+    #[test]
+    fn uri_includes_remove_one_bom_and_keep_a_following_one_as_content() {
+        // `prepare_source_string` slices off the UTF-16 BOM; the second one
+        // is a U+FEFF character, which the reader must not strip again.
+        let mut body = b"\xfe\xff\xfe\xff".to_vec();
+        body.extend("a\n".encode_utf16().flat_map(u16::to_be_bytes));
+        let server = Http::new(vec![(200, body)]);
+        let tree = Tree::new();
+        let provider = FileResources::new(tree.0.join("docs")).unwrap();
+        let mut sources = SourceMap::new();
+        let id = sources.add(
+            "/main.adoc",
+            format!("include::{}/part.adoc[encoding=Windows-1251]\n", server.uri),
+        );
+        let mut options = adoctra::ParseOptions {
+            source_id: id,
+            ..Default::default()
+        };
+        options.attributes.set("allow-uri-read", "");
+        let result = adoctra::parse_resource(&mut sources, &options, &provider).unwrap();
+        assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+        assert_eq!(
+            sources.get(adoctra::SourceId(1)).unwrap().text(),
+            "\u{feff}a\n"
+        );
+        assert_eq!(
+            result.document.blocks[0].span,
+            adoctra::Span::in_source(adoctra::SourceId(1), 0, 4)
+        );
     }
 
     struct Tree(PathBuf);

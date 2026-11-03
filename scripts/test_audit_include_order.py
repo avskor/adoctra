@@ -60,5 +60,24 @@ class IncludeOrderAuditTests(unittest.TestCase):
             self.assertEqual(data.count(bom), 1)
 
 
+    def test_uri_mode_serves_the_same_bytes_to_a_uri_include(self):
+        case = audit.make_case('id', b'\xff\n', 'Windows-1251', 'lines=1')
+        uri = audit.uri_case(case)
+        self.assertEqual(uri['source'], 'include::{uri}/part.adoc[encoding=Windows-1251,lines=1,opts=optional]')
+        self.assertEqual(uri['responses'], {'/part.adoc': [{'hex': 'ff0a'}]})
+        self.assertEqual(uri['requests'], ['/part.adoc'])
+
+    def test_uri_mode_quarantines_ruby_errors_and_compares_requests(self):
+        case = dict(requests=['/part.adoc'])
+        request = [{'path': '/part.adoc', 'status': 200, 'sha256': 'abc'}]
+        report = dict(html='<p>a</p>', diagnostics=[], requests=request)
+        self.assertEqual(audit.compare_uri(case, report, report)['status'], 'PASS')
+        error = dict(report, error={'class': 'ArgumentError', 'message': 'invalid'})
+        self.assertEqual(audit.compare_uri(case, error, report)['status'], 'RUBY_ERROR')
+        self.assertEqual(audit.compare_uri(case, error, dict(report, requests=[]))['status'], 'DIFF')
+        self.assertEqual(audit.compare_uri(case, report, dict(report, html='<p>b</p>'))['status'], 'DIFF')
+        self.assertEqual(audit.compare_uri(case, report, dict(report, diagnostics=[{}]))['status'], 'DIFF')
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -125,6 +125,205 @@ impl Selection {
         ))
     }
 
+    /// Select an unconverted (OpenURI) resource like the pinned reader: lines
+    /// split in the external encoding, tag markers scanned in it, and only
+    /// the selected lines converted to UTF-8 by `prepare_source_array` (whose
+    /// UTF-16 or UTF-8 BOM check applies to the first selected line). A whole
+    /// read is converted at once by `prepare_source_string`. Unselected lines
+    /// are kept decoded where possible, otherwise as explicit omissions.
+    pub(crate) fn recover_unconverted(
+        &self,
+        resource: crate::BinaryResource,
+        encoding: Option<&str>,
+    ) -> crate::ResourceResult<(crate::resource::IncludeSnapshot, Option<Selected>)> {
+        const UTF8_BOM: &[u8] = &[0xef, 0xbb, 0xbf];
+        let codec = crate::source_encoding::raw_codec(encoding);
+        if let Some(binary) = codec.deferred {
+            return self.recover_bytes(resource, binary);
+        }
+        let external = encoding.expect("a non-default external encoding");
+        let invalid = || {
+            crate::ResourceError::new(
+                crate::ResourceErrorKind::InvalidEncoding,
+                &resource.name,
+                format!("invalid source encoding: {external}"),
+            )
+        };
+        let decode = |bytes: &[u8], encoding: &str| {
+            crate::BinaryResource {
+                name: resource.name.clone(),
+                bytes: bytes.to_vec(),
+                content_type: None,
+            }
+            .decode(Some(encoding))
+            .ok()
+            .map(|decoded| match decoded.text.strip_prefix('\u{feff}') {
+                Some(text) if codec.consumes_bom && encoding == external => text.to_owned(),
+                _ => decoded.text,
+            })
+        };
+        // A UTF-16 BOM wins over the external encoding; a UTF-8 BOM is
+        // removed before converting from it. Only this BOM is removed: the
+        // frames tell the reader not to strip a following U+FEFF.
+        let normalize = |raw: &[u8]| {
+            if let Some(rest) = raw.strip_prefix(&[0xff, 0xfe]) {
+                decode(rest, "UTF-16LE")
+            } else if let Some(rest) = raw.strip_prefix(&[0xfe, 0xff]) {
+                decode(rest, "UTF-16BE")
+            } else if let Some(rest) = raw.strip_prefix(UTF8_BOM) {
+                decode(rest, external)
+            } else {
+                decode(raw, external)
+            }
+        };
+        if matches!(self, Self::All) {
+            let text = normalize(&resource.bytes).ok_or_else(invalid)?;
+            let mut ranges = Vec::new();
+            let mut start = 0;
+            for (index, _) in text.match_indices('\n') {
+                ranges.push((start, index + 1));
+                start = index + 1;
+            }
+            if start < text.len() {
+                ranges.push((start, text.len()));
+            }
+            let frames = crate::resource::SourceLineFrames {
+                ranges,
+                trailing_lf: text.ends_with('\n'),
+                normalized: true,
+            };
+            return Ok((
+                crate::resource::IncludeSnapshot {
+                    decoded: crate::IncludeResource {
+                        resource: crate::Resource {
+                            name: resource.name,
+                            text,
+                        },
+                        complete: true,
+                    },
+                    omissions: Vec::new(),
+                    frames: Some(frames),
+                },
+                None,
+            ));
+        }
+        // OpenURI buffers up to 10240 bytes in a StringIO, whose `each_line`
+        // finds a multi-byte separator at any byte offset; a larger response
+        // is a Tempfile, whose IO matches whole code units only.
+        let separator = codec.separator;
+        let aligned = resource.bytes.len() > 10240;
+        let mut raw_lines = Vec::new();
+        let (mut start, mut index) = (0, 0);
+        let limit = self.line_limit().unwrap_or(usize::MAX);
+        while index + separator.len() <= resource.bytes.len() && raw_lines.len() < limit {
+            if resource.bytes[index..].starts_with(separator) {
+                index += separator.len();
+                raw_lines.push(&resource.bytes[start..index]);
+                start = index;
+            } else {
+                index += if aligned { separator.len() } else { 1 };
+            }
+        }
+        if start < resource.bytes.len() && raw_lines.len() < limit {
+            raw_lines.push(&resource.bytes[start..]);
+        }
+        let tags = matches!(self, Self::Tags(_));
+        if tags && !codec.ascii_compatible && !raw_lines.is_empty() {
+            // `l.include? '::'` raises Encoding::CompatibilityError.
+            return Err(invalid());
+        }
+        // Each line is converted on its own, as `prepare_source_array` does.
+        let decoded: Vec<_> = raw_lines.iter().map(|raw| decode(raw, external)).collect();
+        let layout = |texts: &dyn Fn(usize) -> Option<String>| {
+            let mut text = String::new();
+            let mut omissions = Vec::new();
+            let mut ranges = Vec::new();
+            let mut offsets = Vec::new();
+            let mut trailing_lf = false;
+            for (index, raw) in raw_lines.iter().enumerate() {
+                offsets.push(text.len());
+                if let Some(line) = texts(index) {
+                    let start = text.len();
+                    text.push_str(&line);
+                    ranges.push((start, text.len()));
+                    trailing_lf = raw.ends_with(separator);
+                } else {
+                    omissions.push(crate::OmittedSourceLine {
+                        offset: text.len(),
+                        line: index + 1,
+                        bytes: raw.to_vec(),
+                    });
+                }
+            }
+            let frames = crate::resource::SourceLineFrames {
+                ranges,
+                trailing_lf,
+                normalized: true,
+            };
+            (text, omissions, frames, offsets)
+        };
+        let (text, omissions, frames, raw_offsets) = layout(&|index| decoded[index].clone());
+        for line in &omissions {
+            // The marker regexp raises on a malformed multibyte line.
+            if tags
+                && !codec.single_byte
+                && line.bytes.windows(2).any(|s| s == b"::")
+                && line.bytes.windows(2).any(|s| s == b"[]")
+            {
+                return Err(invalid());
+            }
+        }
+        let views = crate::resource::framed_snapshot_lines(&text, &omissions, Some(&frames));
+        let selected = self
+            .clone()
+            .select_names(&views, &omissions, SourceId::default(), true);
+        let first = selected.keep.iter().position(|&keep| keep);
+        let utf16 = first.and_then(|index| match raw_lines[index].get(..2) {
+            Some([0xff, 0xfe]) => Some("UTF-16LE"),
+            Some([0xfe, 0xff]) => Some("UTF-16BE"),
+            _ => None,
+        });
+        let mut converted = Vec::with_capacity(raw_lines.len());
+        for (index, raw) in raw_lines.iter().enumerate() {
+            converted.push(if !selected.keep[index] {
+                decoded[index].clone()
+            } else if utf16.is_some() && Some(index) == first {
+                Some(normalize(raw).ok_or_else(invalid)?)
+            } else if let Some(encoding) = utf16 {
+                Some(decode(raw, encoding).ok_or_else(invalid)?)
+            } else if Some(index) == first {
+                Some(normalize(raw).ok_or_else(invalid)?)
+            } else {
+                Some(decoded[index].clone().ok_or_else(invalid)?)
+            });
+        }
+        let (text, omissions, frames, offsets) = layout(&|index| converted[index].clone());
+        // Remap the raw selection's diagnostics into the registered layout;
+        // converted lines must never run through the tag filter again.
+        let mut views = views;
+        for (index, line) in views.iter_mut().enumerate() {
+            let shift = line.original.expect("physical line") - raw_offsets[index];
+            line.original = Some(offsets[index] + shift);
+        }
+        let selected = self
+            .clone()
+            .select_names(&views, &omissions, SourceId::default(), true);
+        Ok((
+            crate::resource::IncludeSnapshot {
+                decoded: crate::IncludeResource {
+                    resource: crate::Resource {
+                        name: resource.name.clone(),
+                        text,
+                    },
+                    complete: false,
+                },
+                omissions,
+                frames: Some(frames),
+            },
+            Some(selected),
+        ))
+    }
+
     /// The reader's array normalization uses the BOM of its first kept raw
     /// line. Tags have already been filtered; decoded marker-like text must
     /// never run through that filter a second time.
@@ -204,6 +403,7 @@ impl Selection {
         let frames = (!complete).then_some(crate::resource::SourceLineFrames {
             ranges,
             trailing_lf,
+            normalized: false,
         });
         Ok((
             crate::resource::IncludeSnapshot {
@@ -322,6 +522,18 @@ impl Selection {
         omissions: &[crate::OmittedSourceLine],
         source_id: SourceId,
     ) -> Selected {
+        self.select_names(lines, omissions, source_id, false)
+    }
+
+    /// `foreign`: lines are in another Ruby encoding than UTF-8, whose
+    /// non-ASCII tag names never equal a UTF-8 attribute name.
+    fn select_names(
+        self,
+        lines: &[crate::include_indent::Line],
+        omissions: &[crate::OmittedSourceLine],
+        source_id: SourceId,
+        foreign: bool,
+    ) -> Selected {
         let mut omitted = omissions.iter().peekable();
         let lines = lines.iter().enumerate().map(|(index, line)| {
             let raw = if omitted.peek().is_some_and(|raw| raw.line == index + 1) {
@@ -404,7 +616,7 @@ impl Selection {
                         })
                     } else {
                         tag_directive(line)
-                            .map(|(end, name)| (end, TagName::new(name.as_bytes(), false), None))
+                            .map(|(end, name)| (end, TagName::new(name.as_bytes(), foreign), None))
                     };
                     if let Some((end, name, omitted_span)) = directive {
                         result.keep.push(false);
@@ -661,5 +873,158 @@ mod tests {
             Selection::parse(&BTreeMap::from([("tag".into(), "body".into())])).line_limit(),
             None
         );
+    }
+
+    fn unconverted(
+        bytes: &[u8],
+        encoding: Option<&str>,
+        attrs: &[(&str, &str)],
+    ) -> crate::ResourceResult<(crate::resource::IncludeSnapshot, Option<Selected>)> {
+        let attrs = attrs
+            .iter()
+            .map(|&(key, value)| (key.to_owned(), value.to_owned()))
+            .collect();
+        Selection::parse(&attrs).recover_unconverted(
+            crate::BinaryResource {
+                name: "http://host/part.adoc".into(),
+                bytes: bytes.to_vec(),
+                content_type: None,
+            },
+            encoding,
+        )
+    }
+
+    #[test]
+    fn unconverted_lines_split_in_the_external_encoding_and_convert_only_selected_lines() {
+        // 0x98 has no Windows-1251 mapping: unselected, it is an omission.
+        let (snapshot, selected) = unconverted(
+            b"*one*\n\x98\n\xcf\xf0\xe8\xe2\xe5\xf2\n",
+            Some("Windows-1251"),
+            &[("lines", "1;3")],
+        )
+        .unwrap();
+        assert_eq!(snapshot.decoded.resource.text, "*one*\nПривет\n");
+        assert!(!snapshot.decoded.complete);
+        assert_eq!(snapshot.omissions.len(), 1);
+        assert_eq!(snapshot.omissions[0].line, 2);
+        assert_eq!(snapshot.omissions[0].offset, 6);
+        assert_eq!(snapshot.omissions[0].bytes, b"\x98\n");
+        let frames = snapshot.frames.unwrap();
+        assert_eq!(frames.ranges, [(0, 6), (6, 19)]);
+        assert!(frames.trailing_lf && frames.normalized);
+        assert_eq!(selected.unwrap().keep, [true, false, true]);
+        // Selecting it fails like Ruby's conversion of that line.
+        let error = unconverted(b"*one*\n\x98\n", Some("Windows-1251"), &[("lines", "2")])
+            .err()
+            .unwrap();
+        assert_eq!(error.kind, crate::ResourceErrorKind::InvalidEncoding);
+        // IBM037 splits at byte 0x0A: its encoded LF (0x25) stays in line 1.
+        let (snapshot, selected) =
+            unconverted(b"\x81\x25\x82\x0a\x83", Some("IBM037"), &[("lines", "1;2")]).unwrap();
+        assert_eq!(selected.unwrap().keep, [true, true]);
+        assert_eq!(snapshot.decoded.resource.text, "a\nb\u{8e}c");
+        assert_eq!(snapshot.frames.unwrap().ranges, [(0, 5), (5, 6)]);
+        // Like Ruby's `break`, a finite selection reads no further lines.
+        let (snapshot, _) =
+            unconverted(b"\x81\x0a\x98\x0a", Some("IBM037"), &[("lines", "1")]).unwrap();
+        assert_eq!(snapshot.decoded.resource.text, "a\u{8e}");
+    }
+
+    #[test]
+    fn unconverted_utf16_splits_like_stringio_up_to_10240_bytes_and_like_io_beyond() {
+        // `00 0A` at bytes 1 and 5: the StringIO's line 2 is `41 41 00 0A`.
+        let text: String = [0x100, 0xa41, 0x4100, 0xa42, 0xa]
+            .into_iter()
+            .map(|c| char::from_u32(c).unwrap())
+            .collect();
+        let bytes: Vec<u8> = text.encode_utf16().flat_map(u16::to_be_bytes).collect();
+        let (snapshot, selected) =
+            unconverted(&bytes, Some("UTF-16BE"), &[("lines", "2")]).unwrap();
+        assert_eq!(selected.unwrap().keep, [false, true]);
+        // Line 1 has an odd length: kept only as an omission.
+        assert_eq!(snapshot.decoded.resource.text, "\u{4141}\n");
+        assert_eq!(snapshot.omissions.len(), 1);
+        assert_eq!(snapshot.omissions[0].bytes, [0x01, 0x00, 0x0a]);
+        assert_eq!(snapshot.frames.unwrap().ranges, [(0, 4)]);
+        assert!(unconverted(&bytes, Some("UTF-16BE"), &[("lines", "1")]).is_err());
+        // A Tempfile body matches whole code units only.
+        let mut large = bytes.clone();
+        large.extend("x\n".repeat(2600).encode_utf16().flat_map(u16::to_be_bytes));
+        let (snapshot, selected) =
+            unconverted(&large, Some("UTF-16BE"), &[("lines", "1")]).unwrap();
+        assert_eq!(selected.unwrap().keep, [true]);
+        assert_eq!(snapshot.decoded.resource.text, text);
+    }
+
+    #[test]
+    fn unconverted_tag_scans_follow_the_external_encoding() {
+        let tagged = "// tag::t[]\n*in*\n// end::t[]\n";
+        let utf16: Vec<u8> = tagged.encode_utf16().flat_map(u16::to_le_bytes).collect();
+        // `include? '::'` raises for an ASCII-incompatible encoding.
+        let error = unconverted(&utf16, Some("UTF-16LE"), &[("tag", "t")])
+            .err()
+            .unwrap();
+        assert_eq!(error.kind, crate::ResourceErrorKind::InvalidEncoding);
+        // A malformed multibyte marker line breaks the regexp; a single-byte
+        // unmapped one does not.
+        assert!(unconverted(b"// tag::t[] \x81\n", Some("Shift_JIS"), &[("tag", "t")]).is_err());
+        let (snapshot, selected) = unconverted(
+            b"// tag::t[] \x98\n*in*\n// end::t[]\n",
+            Some("Windows-1251"),
+            &[("tag", "t")],
+        )
+        .unwrap();
+        let selected = selected.unwrap();
+        assert_eq!(selected.keep, [false, true, false]);
+        assert!(selected.missing.is_empty());
+        assert_eq!(snapshot.omissions[0].line, 1);
+        // A non-ASCII name in another encoding never equals the UTF-8 name.
+        let cyrillic = b"// tag::\xf2\xe5\xe3[]\n*in*\n// end::\xf2\xe5\xe3[]\n";
+        let (_, selected) = unconverted(cyrillic, Some("Windows-1251"), &[("tag", "тег")]).unwrap();
+        let selected = selected.unwrap();
+        assert_eq!(selected.keep, [false, false, false]);
+        assert_eq!(selected.missing, ["тег"]);
+    }
+
+    #[test]
+    fn unconverted_bom_applies_to_the_first_selected_line_and_is_removed_once() {
+        let data = b"skip\n\xef\xbb\xbf\xcf\xf0\n";
+        let (snapshot, _) = unconverted(data, Some("Windows-1251"), &[("lines", "2")]).unwrap();
+        assert_eq!(snapshot.decoded.resource.text, "skip\nПр\n");
+        // Not first: the BOM bytes are Windows-1251 text.
+        let (snapshot, _) = unconverted(data, Some("Windows-1251"), &[("lines", "1;2")]).unwrap();
+        assert_eq!(snapshot.decoded.resource.text, "skip\nп»їПр\n");
+        // A UTF-16 BOM on the first selected line wins over the encoding.
+        let mut data = b"skip\n\xff\xfe".to_vec();
+        data.extend("Пр".encode_utf16().flat_map(u16::to_le_bytes));
+        let (snapshot, _) = unconverted(&data, Some("Windows-1251"), &[("lines", "2")]).unwrap();
+        assert_eq!(snapshot.decoded.resource.text, "skip\nПр");
+        // A whole read: one BOM removed, a second U+FEFF stays content.
+        let mut data = b"\xfe\xff\xfe\xff".to_vec();
+        data.extend("a\nb".encode_utf16().flat_map(u16::to_be_bytes));
+        let (snapshot, selected) = unconverted(&data, Some("Windows-1251"), &[]).unwrap();
+        assert!(selected.is_none());
+        assert!(snapshot.decoded.complete);
+        assert_eq!(snapshot.decoded.resource.text, "\u{feff}a\nb");
+        let frames = snapshot.frames.unwrap();
+        assert_eq!(frames.ranges, [(0, 5), (5, 6)]);
+        assert!(!frames.trailing_lf && frames.normalized);
+        // The dummy UTF-16 converter consumes its own BOM per line.
+        let (snapshot, _) = unconverted(&data, Some("UTF-16"), &[("lines", "1")]).unwrap();
+        assert_eq!(snapshot.decoded.resource.text, "\u{feff}a\n");
+    }
+
+    #[test]
+    fn unconverted_utf8_and_binary_keep_the_deferred_file_path() {
+        let (snapshot, selected) =
+            unconverted(b"one\n\xff\nthree\n", None, &[("lines", "1;3")]).unwrap();
+        assert!(selected.is_none());
+        assert!(snapshot.frames.is_none());
+        assert_eq!(snapshot.decoded.resource.text, "one\nthree\n");
+        assert_eq!(snapshot.omissions[0].bytes, b"\xff\n");
+        let (snapshot, _) =
+            unconverted(b"one\n\xff\nthree\n", Some("bogus"), &[("lines", "1;3")]).unwrap();
+        assert_eq!(snapshot.decoded.resource.text, "one\nthree\n");
+        assert!(unconverted(b"\xff\n", Some("BINARY"), &[("lines", "1")]).is_err());
     }
 }
