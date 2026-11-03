@@ -81,11 +81,21 @@ Rouge и заглушки подсветчиков, что в остальных
   подсказки `Use --trace`, справка — по виду, отчёт `-t` без чисел;
 * созданные и изменённые файлы, как в upstream-аудите.
 
-Падение Ruby (необработанное исключение) — RUBY_ERROR. Результат: 63 PASS,
+Падение Ruby (необработанное исключение) — RUBY_ERROR. Результат: 71 PASS,
 1 RUBY_ERROR (неоднозначный длинный префикс `--s`: Ruby не перехватывает
 `OptionParser::AmbiguousOption`). CI запускает
 `python3 scripts/cli_matrix.py --baseline compatibility/cli/report.json`;
 `--case ID --show` печатает обе проекции.
+
+Двоичные файлы сценария задаются `binary_files` (hex), двоичный stdin —
+`stdin_hex`. Восемь сценариев проверяют кодировку входа, как
+`Helpers.prepare_source_string` Ruby: BOM UTF-16LE/BE декодирует весь файл
+или stdin; невалидный UTF-8 и UTF-16 нечётной длины прерывают загрузку
+сообщением `FAILED: <абсолютный путь>|<stdin>: Failed to load AsciiDoc
+document - source is either binary or contains invalid Unicode data` с кодом 1
+до записи вывода; docinfo с BOM UTF-16 декодируется, строки docinfo
+обрезаются справа по `rstrip` Ruby (U+00A0 остаётся, NUL/TAB/CR удаляются).
+Docinfo проверяется в `docinfo-footer`: проекция stdout не включает `<head>`.
 
 Не входят в матрицу: тексты справки и версии (различаются по замыслу),
 `-h syntax`/`-h manpage` (документация Ruby), бэкенды DocBook/manpage,

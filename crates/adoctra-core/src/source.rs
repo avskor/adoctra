@@ -153,6 +153,22 @@ impl SourceMap {
         })
     }
 
+    /// Load a primary document like Ruby's `Asciidoctor.load_file`: the bytes
+    /// pass `prepare_source_string`, so a UTF-16LE/BE BOM decodes the whole
+    /// source (spans address the decoded UTF-8 snapshot) and other input must
+    /// be valid UTF-8 (`InvalidEncoding` otherwise). A UTF-8 BOM stays in the
+    /// snapshot for the reader. Text-only providers keep using `load`.
+    pub fn load_document(
+        &mut self,
+        target: &str,
+        relative_to: Option<SourceId>,
+        provider: &dyn crate::ResourceProvider,
+    ) -> crate::ResourceResult<SourceId> {
+        self.load_using(target, relative_to, |request| {
+            crate::resource::load_source_text(provider, request).map(Into::into)
+        })
+    }
+
     /// Register an include after decoding its external encoding. Source spans
     /// address the decoded UTF-8 snapshot. Repeated loads reuse an id only when
     /// both the canonical name and decoded text match; different decoding of

@@ -1721,3 +1721,95 @@ fn cli_options_and_exit_status_follow_ruby() {
     assert!(root.join("out2/b.html").is_file());
     std::fs::remove_dir_all(&root).unwrap();
 }
+
+#[test]
+fn cli_decodes_a_utf16_bom_input_and_fails_on_malformed_input_like_ruby() {
+    use std::io::Write;
+    use std::process::{Command, Stdio};
+    let root = std::env::temp_dir().join(format!("adoctra-cli-input-bom-{}", std::process::id()));
+    std::fs::create_dir_all(&root).unwrap();
+    let utf16 = |little: bool, text: &str| {
+        let mut bytes = if little {
+            vec![0xff, 0xfe]
+        } else {
+            vec![0xfe, 0xff]
+        };
+        for unit in text.encode_utf16() {
+            bytes.extend(if little {
+                unit.to_le_bytes()
+            } else {
+                unit.to_be_bytes()
+            });
+        }
+        bytes
+    };
+    let run = |args: &[&str], stdin: &[u8]| {
+        let mut child = Command::new(env!("CARGO_BIN_EXE_adoctra"))
+            .current_dir(&root)
+            .args(args)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap();
+        child.stdin.take().unwrap().write_all(stdin).unwrap();
+        let output = child.wait_with_output().unwrap();
+        (
+            output.status.code(),
+            String::from_utf8(output.stdout).unwrap(),
+            String::from_utf8(output.stderr).unwrap(),
+        )
+    };
+    let text = "= Тест\n\n*жир* текст.\n";
+    for little in [true, false] {
+        std::fs::write(root.join("u.adoc"), utf16(little, text)).unwrap();
+        let (code, html, stderr) = run(&["u.adoc", "-s", "--stdout"], b"");
+        assert_eq!((code, stderr.as_str()), (Some(0), ""));
+        assert!(html.contains("<strong>жир</strong> текст."), "{html}");
+        let (code, html, _) = run(&["-", "-s", "--stdout"], &utf16(little, text));
+        assert_eq!(code, Some(0));
+        assert!(html.contains("<strong>жир</strong>"), "{html}");
+        let (code, json, _) = run(&["u.adoc", "--to", "json", "--stdout"], b"");
+        assert_eq!(code, Some(0));
+        assert!(json.contains("\"value\":\"жир\""), "{json}");
+        // Diagnostics count lines and Unicode columns of the decoded text.
+        let warned = format!("{text}\n=== Глубоко\n");
+        std::fs::write(root.join("w.adoc"), utf16(little, &warned)).unwrap();
+        let (code, _, stderr) = run(&["w.adoc", "-s", "-o", "/dev/null"], b"");
+        assert_eq!(code, Some(0));
+        assert!(
+            stderr.contains("w.adoc:5: warning: section title out of sequence"),
+            "{stderr}"
+        );
+        let (_, _, stderr) = run(
+            &["w.adoc", "-s", "--stdout", "--diagnostics", "editor"],
+            b"",
+        );
+        assert!(stderr.contains("w.adoc:5:1"), "{stderr}");
+    }
+    let message = "Failed to load AsciiDoc document - \
+                   source is either binary or contains invalid Unicode data";
+    std::fs::write(root.join("bad.adoc"), b"= T\n\nText \xff.\n").unwrap();
+    let mut odd = utf16(true, "= T\n");
+    odd.push(0);
+    std::fs::write(root.join("odd.adoc"), odd).unwrap();
+    let canonical = std::fs::canonicalize(&root).unwrap();
+    for name in ["bad.adoc", "odd.adoc"] {
+        let (code, stdout, stderr) = run(&[name, "-o", "out.html"], b"");
+        assert_eq!(code, Some(1));
+        assert!(stdout.is_empty());
+        let path = root.join(name);
+        let expected = format!("adoctra: FAILED: {}: {message}\n", path.display());
+        let resolved = format!(
+            "adoctra: FAILED: {}: {message}\n",
+            canonical.join(name).display()
+        );
+        assert!(stderr == expected || stderr == resolved, "{stderr}");
+        assert!(!root.join("out.html").exists());
+    }
+    let (code, stdout, stderr) = run(&["-", "-s"], b"Text \xff.\n");
+    assert_eq!(code, Some(1));
+    assert!(stdout.is_empty());
+    assert_eq!(stderr, format!("adoctra: FAILED: <stdin>: {message}\n"));
+    std::fs::remove_dir_all(root).unwrap();
+}

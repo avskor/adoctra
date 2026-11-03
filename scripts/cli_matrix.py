@@ -46,11 +46,12 @@ TIMING = re.compile(r"(Input file: |\s+Time to [^:]+: |\s+Total time [^:]+: )(.*
 
 
 def run(command, case, cwd):
-    stdin = case.get("stdin")
+    # `stdin_hex` feeds bytes that are not UTF-8 text (a UTF-16 BOM, bad bytes).
+    stdin = bytes.fromhex(case["stdin_hex"]) if "stdin_hex" in case else (case.get("stdin") or "").encode()
     with recording_writes(cwd) as files:
-        result = subprocess.run(command + case["args"], input=(stdin or "").encode(), cwd=cwd,
+        result = subprocess.run(command + case["args"], input=stdin, cwd=cwd,
                                 capture_output=True, env={**os.environ, **ENVIRONMENT}, timeout=120)
-    for name in case.get("files", {}):
+    for name in [*case.get("files", {}), *case.get("binary_files", {})]:
         files.pop(name, None)
     return {"code": result.returncode, "stdout": result.stdout.decode("utf-8", "replace"),
             "stderr": result.stderr.decode("utf-8", "replace"), "files": files}
@@ -124,6 +125,10 @@ def run_case(case, binary):
             path = root / name
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(content, encoding="utf-8")
+        for name, encoded in case.get("binary_files", {}).items():
+            path = root / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(bytes.fromhex(encoded))
         root.mkdir(exist_ok=True)
         for name in case.get("dirs", []):
             (root / name).mkdir(parents=True, exist_ok=True)
@@ -156,6 +161,11 @@ def main():
     ids = [case["id"] for case in manifest["cases"]]
     if len(ids) != len(set(ids)):
         sys.exit("duplicate case ids")
+    for case in manifest["cases"]:
+        if set(case.get("files", {})) & set(case.get("binary_files", {})):
+            sys.exit(f"{case['id']}: text and binary file names overlap")
+        if "stdin" in case and "stdin_hex" in case:
+            sys.exit(f"{case['id']}: stdin and stdin_hex are exclusive")
     results = {}
     for case in manifest["cases"]:
         if args.case and case["id"] not in args.case:

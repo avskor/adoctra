@@ -140,10 +140,11 @@ OutputPaths; `docname` after reading, header-pinned outfilesuffix) and
 conversion-only `outfile`/`outdir` below server; `resolve_system_path`
 is public.
 **CLI matrix** (docs/cli.adoc, `scripts/cli_matrix.py`, profile cli-v1,
-compatibility/cli/cases.json + report.json in CI): 64 scenarios run by
+compatibility/cli/cases.json + report.json in CI): 72 scenarios run by
 adoctra and Ruby's `asciidoctor` (scripts/ruby-cli.rb = Cli::Invoker) in one
 temp dir; compares exit code, stdout (HTML projected, usage/version by
-kind), normalized stderr and written files; 63 PASS, 1 RUBY_ERROR (Ruby's
+kind), normalized stderr and written files (`binary_files`/`stdin_hex` for
+non-UTF-8 inputs); 71 PASS, 1 RUBY_ERROR (Ruby's
 uncaught AmbiguousOption). crates/adoctra-cli/src/args.rs ports
 OptionParser (long-option/value prefixes, clusters, Ruby error texts; usage
 on stdout for errors); glob.rs is Dir.glob; main.rs logs through LOG
@@ -2336,7 +2337,29 @@ and callouts in STEM `subs` all match Ruby (60 body-DOM/diagnostic probes,
 2026-11-01); the remaining options are DocBook-only.
 **Include encoding order audit** covers 93 profiles
 (`scripts/generate_encoding_order.rb` adds every pinned-Ruby encoding with a
-UTF-8 converter): 2699 cases, 2649 PASS, 50 RUBY_ERROR, no DIFF.
+UTF-8 converter): 3104 cases, 3054 PASS, 50 RUBY_ERROR, no DIFF; 405 of them
+(`control-*`) put decoded CR/NEL/LS inside a listing line (Ruby splits at LF
+only; IBM037 LF is byte 25, NEL 15). Harnesses must read adoctra's output as
+bytes: text mode turned a lone CR into LF (fixed here, in audit_uri_cache.py
+and upstream_audit.py; the Ruby side arrives as JSON).
+**Primary input and docinfo encoding** (2026-11-03): Ruby runs
+`Helpers.prepare_source_string` on the primary document (file and stdin),
+docinfo and inline SVG: a UTF-16LE/BE BOM decodes the whole string (UTF-32 is
+not detected: `ff fe 00 00` reads as UTF-16LE with NULs), a UTF-8 BOM is
+dropped, anything else must be UTF-8. `SourceMap::load_document` registers the
+primary document through `resource::load_source_text` (=
+`ResourceProvider::load_asset_text`, falling back to `load` on `Unsupported`
+for text-only hosts); the CLI decodes stdin bytes with
+`BinaryResource::decode(None)`. Malformed input fails with Ruby's text
+`FAILED: <absolute docfile>|<stdin>: Failed to load AsciiDoc document - source
+is either binary or contains invalid Unicode data`, exit 1, nothing written.
+docinfo.rs reads through the same helper and normalizes with `ruby_rstrip`
+over LF-split lines (U+00A0/U+2028 stay, NUL goes). Ruby crashes on malformed
+docinfo; adoctra skips the file (a boundary). 41 `include-encoding-combo-*`
+cases in compatibility/cases.json pin markers matched on decoded text (lead
+bytes before `tag::`, JIS bytes, trail bytes `[`/`]`/`\` in tag names, the
+word boundary after non-ASCII letters), selectors with decoders, encoding
+name forms and nested independent encodings.
 **Hibernate ORM and Debezium corpus** (2026-11-01): five Hibernate 7.4.15 User
 Guide chapters (attributes from documentation.gradle, `root-project-dir=.`, tagged
 Java tests and `extras` SQL as resources, `source-highlighter=rouge`) and four

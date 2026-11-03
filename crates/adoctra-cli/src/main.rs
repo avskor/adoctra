@@ -800,18 +800,37 @@ fn expand_path(path: &Path) -> std::io::Result<PathBuf> {
     Ok(expanded)
 }
 
+/// Ruby's `Asciidoctor.load`: `prepare_source_string` decodes a UTF-16 BOM;
+/// other input must be UTF-8, or loading fails with Ruby's message naming
+/// the absolute input path (`docfile`) or `<stdin>`.
 fn load_source(
     args: &Args,
     sources: &mut adoctra::SourceMap,
     attributes: &mut adoctra::Attributes,
-) -> adoctra::Result<(adoctra::SourceId, Option<Arc<resources::FileResources>>)> {
+) -> Result<(adoctra::SourceId, Option<Arc<resources::FileResources>>), Failure> {
+    let unreadable = |docfile: &str| {
+        Failure::Message(format!(
+            "FAILED: {docfile}: Failed to load AsciiDoc document - \
+             source is either binary or contains invalid Unicode data"
+        ))
+    };
     let jail = |provider: resources::FileResources| match args.safe {
         adoctra::SafeMode::Unsafe => provider.unjailed(),
         _ => provider,
     };
     if args.input == "-" {
-        let mut s = String::new();
-        std::io::stdin().read_to_string(&mut s)?;
+        let mut bytes = Vec::new();
+        std::io::stdin()
+            .read_to_end(&mut bytes)
+            .map_err(adoctra::Error::from)?;
+        let s = adoctra::BinaryResource {
+            name: "-".to_owned(),
+            bytes,
+            content_type: None,
+        }
+        .decode(None)
+        .map_err(|_| unreadable("<stdin>"))?
+        .text;
         let base_dir = stdin_base_dir(args.base_dir.as_deref(), attributes)?;
         // Like Ruby, relative paths resolve against the base directory; a
         // missing one simply finds nothing.
@@ -820,7 +839,7 @@ fn load_source(
     } else {
         // The explicitly requested primary file establishes the resource
         // root, or `-B` does when it contains the file.
-        let path = std::fs::canonicalize(&args.input)?;
+        let path = std::fs::canonicalize(&args.input).map_err(adoctra::Error::from)?;
         let parent = path.parent().ok_or_else(|| {
             std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
@@ -828,7 +847,7 @@ fn load_source(
             )
         })?;
         let root = match &args.base_dir {
-            Some(dir) => std::fs::canonicalize(dir)?,
+            Some(dir) => std::fs::canonicalize(dir).map_err(adoctra::Error::from)?,
             None => parent.to_path_buf(),
         };
         let name = path
@@ -842,10 +861,14 @@ fn load_source(
                 )
             })?;
         let provider = jail(resources::FileResources::new(&root)?);
-        Ok((
-            sources.load(name, None, &provider)?,
-            Some(Arc::new(provider)),
-        ))
+        let id = match sources.load_document(name, None, &provider) {
+            Err(error) if error.kind == adoctra::ResourceErrorKind::InvalidEncoding => {
+                let docfile = expand_path(Path::new(&args.input)).map_err(adoctra::Error::from)?;
+                return Err(unreadable(&docfile.to_string_lossy()));
+            }
+            result => result?,
+        };
+        Ok((id, Some(Arc::new(provider))))
     }
 }
 

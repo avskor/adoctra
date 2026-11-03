@@ -475,6 +475,15 @@ id; изменённый текст получает новый id, а стар�
 в общей области идентичности: независимые provider с разными файлами не должны
 выдавать одинаковые канонические имена.
 
+`SourceMap::load_document(target, relative_to, provider)` регистрирует входной
+документ, как `Asciidoctor.load_file` Ruby (`prepare_source_string`): BOM
+UTF-16LE/BE декодирует весь исходник через `ResourceProvider::load_asset_text`,
+прочие байты должны быть UTF-8 (иначе `InvalidEncoding`). Spans относятся к
+декодированному UTF-8-снимку (U+FEFF BOM остаётся в нём, reader его снимает).
+Provider без двоичного доступа (`load_binary` даёт `Unsupported`) читается
+через `load`. Так же docinfo читается функцией `docinfo`; CLI использует
+`load_document` для входного файла.
+
 [source,rust]
 ----
 use adoctra::{MemoryResources, SourceMap, ParseOptions, parse_with_options};

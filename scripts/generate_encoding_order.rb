@@ -13,6 +13,10 @@ require 'json'
 path = File.expand_path('../compatibility/encoding-order/encodings.json', __dir__)
 profiles = JSON.parse File.read(path)
 FRAGMENTS = ["*ok*\r\n", 'A', "\nlast\n", "// tag::body[]\n*ok*\n// end::body[]\n"].freeze
+# Decoded CR, NEL and LS stay inside a line (Ruby splits lines at LF only).
+# Added to every profile, existing ones too; null where the encoding cannot
+# represent the text.
+CONTROLS = ["a\rb\nc\n", "a\u0085b\nc\n", "a\u2028b\nc\n"].freeze
 CANDIDATES = ["\xff", "\x80", "\x81", "\x8f", "\x98", "\xa0", "\xfe", "\x1b$X"].map { |s| s.b }.freeze
 
 def converts? name, bytes
@@ -24,7 +28,16 @@ rescue Encoding::InvalidByteSequenceError, Encoding::UndefinedConversionError
 end
 
 Encoding.list.map(&:name).sort.each do |name|
-  next if profiles.key? name
+  if profiles.key? name
+    CONTROLS.each do |text|
+      profiles[name]['fragments'][text] ||= begin
+        text.encode(name).b.unpack1('H*')
+      rescue Encoding::UndefinedConversionError
+        nil
+      end
+    end
+    next
+  end
   begin
     Encoding::Converter.new name, 'UTF-8'
     fragments = FRAGMENTS.to_h { |text| [text, text.encode(name).b.unpack1('H*')] }

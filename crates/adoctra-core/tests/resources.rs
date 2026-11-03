@@ -170,3 +170,101 @@ fn custom_provider_controls_identity_and_receives_the_registered_referrer() {
     );
     assert!(sources.get(SourceId(2)).is_none());
 }
+
+fn utf16(little: bool, text: &str) -> Vec<u8> {
+    let mut bytes = if little {
+        vec![0xff, 0xfe]
+    } else {
+        vec![0xfe, 0xff]
+    };
+    for unit in text.encode_utf16() {
+        bytes.extend(if little {
+            unit.to_le_bytes()
+        } else {
+            unit.to_be_bytes()
+        });
+    }
+    bytes
+}
+
+#[test]
+fn load_document_decodes_a_utf16_bom_like_ruby_prepare_source_string() {
+    let mut resources = MemoryResources::new();
+    let text = "= Тест\n\n*жир* a\rb\n";
+    resources
+        .insert_binary("/le.adoc", utf16(true, text))
+        .unwrap();
+    resources
+        .insert_binary("/be.adoc", utf16(false, text))
+        .unwrap();
+    resources.insert("/bom.adoc", "\u{feff}= T\n").unwrap();
+    resources
+        .insert_binary("/bad.adoc", b"= T\n\nText \xff.\n".to_vec())
+        .unwrap();
+    // An odd byte count after a UTF-16 BOM is malformed UTF-16.
+    let mut odd = utf16(true, "= T\n");
+    odd.push(0);
+    resources.insert_binary("/odd.adoc", odd).unwrap();
+    let mut sources = SourceMap::new();
+    for name in ["/le.adoc", "/be.adoc"] {
+        // The text API keeps rejecting the bytes; the document API decodes
+        // the whole source, BOM retained for the reader, CR kept mid-line.
+        assert_eq!(
+            sources.load(name, None, &resources).unwrap_err().kind,
+            ResourceErrorKind::NotFound
+        );
+        let source_id = sources.load_document(name, None, &resources).unwrap();
+        let file = sources.get(source_id).unwrap();
+        assert_eq!(file.text(), format!("\u{feff}{text}"));
+        let options = ParseOptions {
+            source_id,
+            ..Default::default()
+        };
+        let result = adoctra_core::parse_resource(&mut sources, &options, &resources).unwrap();
+        assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+        assert_eq!(result.document.attributes.get("doctitle"), Some("Тест"));
+        // Spans address the decoded UTF-8 snapshot.
+        let span = result.document.blocks.last().unwrap().span;
+        assert_eq!(span.source_id, source_id);
+        assert_eq!(sources.slice(span), Some("*жир* a\rb"));
+        let position = sources
+            .get(source_id)
+            .unwrap()
+            .position(span.start)
+            .unwrap();
+        assert_eq!((position.line, position.column), (3, 1));
+    }
+    let bom = sources
+        .load_document("/bom.adoc", None, &resources)
+        .unwrap();
+    assert_eq!(sources.get(bom).unwrap().text(), "\u{feff}= T\n");
+    for name in ["/bad.adoc", "/odd.adoc"] {
+        assert_eq!(
+            sources
+                .load_document(name, None, &resources)
+                .unwrap_err()
+                .kind,
+            ResourceErrorKind::InvalidEncoding
+        );
+    }
+    assert_eq!(
+        sources
+            .load_document("/missing.adoc", None, &resources)
+            .unwrap_err()
+            .kind,
+        ResourceErrorKind::NotFound
+    );
+
+    // A text-only host (no binary support) keeps its own snapshot.
+    struct TextOnly;
+    impl ResourceProvider for TextOnly {
+        fn load(&self, request: ResourceRequest<'_>) -> ResourceResult<Resource> {
+            Ok(Resource {
+                name: format!("/{}", request.target),
+                text: "\u{feff}hostet\n".to_owned(),
+            })
+        }
+    }
+    let id = sources.load_document("host.adoc", None, &TextOnly).unwrap();
+    assert_eq!(sources.get(id).unwrap().text(), "\u{feff}hostet\n");
+}

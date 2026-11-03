@@ -210,3 +210,89 @@ fn docinfo_selects_files_and_substitutes_attributes_like_ruby() {
     // Nothing selected, nothing read.
     assert_eq!(load(&attrs(&[]), DocinfoLocation::Head), "");
 }
+
+#[test]
+fn docinfo_decodes_utf16_boms_and_right_strips_lines_like_ruby() {
+    let utf16 = |little: bool, text: &str| {
+        let mut bytes = if little {
+            vec![0xff, 0xfe]
+        } else {
+            vec![0xfe, 0xff]
+        };
+        for unit in text.encode_utf16() {
+            bytes.extend(if little {
+                unit.to_le_bytes()
+            } else {
+                unit.to_be_bytes()
+            });
+        }
+        bytes
+    };
+    let mut attributes = Attributes::new();
+    attributes.set("docname", "guide");
+    attributes.set("doctitle", "Т");
+    attributes.set("docinfo", "shared,private");
+    let load = |resources: &dyn adoctra_core::ResourceProvider| {
+        text(&docinfo(
+            &attributes,
+            DocinfoLocation::Head,
+            ".html",
+            resources,
+            Some("/d/guide.adoc"),
+        ))
+    };
+    // `prepare_source_string`: a UTF-16 BOM decodes the file; `rstrip` keeps
+    // U+00A0 and U+2028 but drops NUL, tab and CR; only LF splits lines.
+    let mut resources = MemoryResources::new();
+    resources
+        .insert_binary(
+            "/d/docinfo.html",
+            utf16(
+                true,
+                "<meta content=\"{doctitle}\">\u{a0}\n<x>\0\t\r\n\n<y a\rb>\u{2028}",
+            ),
+        )
+        .unwrap();
+    resources
+        .insert_binary("/d/guide-docinfo.html", utf16(false, "<private>\n"))
+        .unwrap();
+    assert_eq!(
+        load(&resources),
+        "<meta content=\"Т\">\u{a0}\n<x>\n\n<y a\rb>\u{2028}\n<private>"
+    );
+    // UTF-8 is unchanged: BOM removed, lines stripped the same way.
+    resources.remove_binary("/d/docinfo.html").unwrap();
+    resources
+        .insert("/d/docinfo.html", "\u{feff}<a>\u{a0}\u{0}\n")
+        .unwrap();
+    assert_eq!(load(&resources), "<a>\u{a0}\n<private>");
+    // Ruby fails the whole conversion on malformed docinfo; adoctra skips the
+    // file like a missing one (an explicit boundary, not a compatible result).
+    resources
+        .insert_binary("/d/docinfo.html", b"<a>\xff\n".to_vec())
+        .unwrap();
+    let mut odd = utf16(true, "<a>");
+    odd.push(0);
+    resources
+        .insert_binary("/d/guide-docinfo.html", odd)
+        .unwrap();
+    assert_eq!(load(&resources), "");
+
+    // A text-only host keeps working through `load`.
+    struct TextOnly;
+    impl adoctra_core::ResourceProvider for TextOnly {
+        fn load(
+            &self,
+            request: adoctra_core::ResourceRequest<'_>,
+        ) -> adoctra_core::ResourceResult<adoctra_core::Resource> {
+            Ok(adoctra_core::Resource {
+                name: format!("/d/{}", request.target),
+                text: format!("<{}>\u{a0}\0\n", request.target),
+            })
+        }
+    }
+    assert_eq!(
+        load(&TextOnly),
+        "<docinfo.html>\u{a0}\n<guide-docinfo.html>\u{a0}"
+    );
+}

@@ -342,10 +342,17 @@ def raw_body(html):
     return " ".join(html.split())
 
 
+def decoded(run):
+    """Output read as bytes, not in text mode: universal newlines would turn
+    a lone CR of adoctra's HTML into LF, while Ruby's JSON keeps it."""
+    return subprocess.CompletedProcess(run.args, run.returncode, run.stdout.decode("utf-8", "replace"),
+                                       run.stderr.decode("utf-8", "replace"))
+
+
 def adoctra(binary, entry, args):
-    run = subprocess.run([str(binary), "-", "--to", "html", "--stdout", *args], input=entry["source"],
-                         text=True, encoding="utf-8", errors="replace", capture_output=True, timeout=60,
-                         env={**os.environ, **ENVIRONMENT})
+    run = decoded(subprocess.run([str(binary), "-", "--to", "html", "--stdout", *args],
+                                 input=entry["source"].encode("utf-8"), capture_output=True, timeout=60,
+                                 env={**os.environ, **ENVIRONMENT}))
     if run.returncode:
         return {"error": f"exit {run.returncode}: {run.stderr.strip()[-300:]}"}
     try:
@@ -404,9 +411,9 @@ def run_cli(binary, entry, args, root):
                     "failure": result["error"].split("\n")[0],
                     "diagnostics": result["diagnostics"], "files": files}
     with recording_writes(root) as files:
-        run = subprocess.run([str(binary), target, "--to", "html", *args], input=stdin or "", cwd=root,
-                             capture_output=True, text=True, encoding="utf-8", errors="replace",
-                             env=env, timeout=60)
+        run = decoded(subprocess.run([str(binary), target, "--to", "html", *args],
+                                     input=(stdin or "").encode("utf-8"), cwd=root,
+                                     capture_output=True, env=env, timeout=60))
     stderr = run.stderr
     failure = ""
     if run.returncode:

@@ -324,8 +324,11 @@ def run_side(case, cli, reference):
         # Keep local requests independent of the user's proxy configuration.
         env = {k: v for k, v in os.environ.items() if k.lower() not in
                {'http_proxy', 'https_proxy', 'all_proxy'}}
-        completed = subprocess.run(command, input=json.dumps(config), capture_output=True,
-                                   text=True, encoding='utf-8', timeout=30, env=env)
+        # Bytes, not text mode: universal newlines would turn a lone CR into LF.
+        raw = subprocess.run(command, input=json.dumps(config).encode('utf-8'), capture_output=True,
+                             timeout=30, env=env)
+        completed = subprocess.CompletedProcess(raw.args, raw.returncode, raw.stdout.decode('utf-8'),
+                                                raw.stderr.decode('utf-8'))
         if completed.returncode:
             raise RuntimeError(f'{command[0]} failed: {completed.stderr}')
         if reference:

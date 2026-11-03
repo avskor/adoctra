@@ -1095,6 +1095,122 @@
     "/dev/null",
     "l.adoc"
    ]
+  },
+  {
+   "id": "input-utf16le-bom",
+   "description": "A UTF-16LE BOM decodes the whole input file (prepare_source_string).",
+   "binary_files": {
+    "u.adoc": "fffe3d00200022043504410442040a003a0064006f00630069006e0066006f003a0020007300680061007200650064000a000a002a003604380440042a002000420435043a044104420420007b0064006f00630074007900700065007d002e000a000a003d003d002000200430043704340435043b040a000a00220435043b043e042e000a00"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-a",
+    "docinfo!",
+    "-o",
+    "-",
+    "u.adoc"
+   ]
+  },
+  {
+   "id": "input-utf16be-bom-file",
+   "description": "A UTF-16BE BOM input converts to a file next to it.",
+   "binary_files": {
+    "u.adoc": "feff003d00200422043504410442000a003a0064006f00630069006e0066006f003a0020007300680061007200650064000a000a002a043604380440002a002004420435043a044104420020007b0064006f00630074007900700065007d002e000a000a003d003d002004200430043704340435043b000a000a04220435043b043e002e000a"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-a",
+    "docinfo!",
+    "u.adoc"
+   ]
+  },
+  {
+   "id": "stdin-utf16le-bom",
+   "description": "A UTF-16LE BOM on standard input decodes too.",
+   "args": [
+    "-S",
+    "safe",
+    "-s",
+    "-"
+   ],
+   "stdin_hex": "fffe3d00200022043504410442040a003a0064006f00630069006e0066006f003a0020007300680061007200650064000a000a002a003604380440042a002000420435043a044104420420007b0064006f00630074007900700065007d002e000a000a003d003d002000200430043704340435043b040a000a00220435043b043e042e000a00"
+  },
+  {
+   "id": "input-invalid-utf8",
+   "description": "Malformed UTF-8 input fails to load with the absolute docfile path.",
+   "files": {
+    "a.adoc": "= Doc\n\nText.\n"
+   },
+   "binary_files": {
+    "bad.adoc": "3d20446f630a0a5465787420ff2e0a"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "bad.adoc",
+    "a.adoc"
+   ]
+  },
+  {
+   "id": "input-invalid-utf16",
+   "description": "A UTF-16 BOM input with an odd byte count fails to load.",
+   "binary_files": {
+    "bad.adoc": "fffe3d00200044006f0063000a0000"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-o",
+    "-",
+    "bad.adoc"
+   ]
+  },
+  {
+   "id": "stdin-invalid-utf8",
+   "description": "Malformed UTF-8 on standard input fails to load as <stdin>.",
+   "args": [
+    "-S",
+    "safe",
+    "-s",
+    "-"
+   ],
+   "stdin_hex": "5465787420ff2e0a"
+  },
+  {
+   "id": "docinfo-utf16-bom",
+   "description": "Footer docinfo with a UTF-16BE BOM is decoded; Ruby rstrip keeps U+00A0 and drops NUL.",
+   "files": {
+    "a.adoc": "= Doc\n:docinfo: shared-footer\n\nText.\n"
+   },
+   "binary_files": {
+    "docinfo-footer.html": "feff003c00700020007400690074006c0065003d0022044e00a0000a00620000000a00630022003e044e043d0438043a043e0434003c002f0070003e000a"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-o",
+    "-",
+    "a.adoc"
+   ]
+  },
+  {
+   "id": "docinfo-trailing-spaces",
+   "description": "Footer docinfo lines are right-stripped like Ruby: NBSP stays; NUL, tab and CR go.",
+   "files": {
+    "a.adoc": "= Doc\n:docinfo: shared-footer\n\nText.\n"
+   },
+   "binary_files": {
+    "docinfo-footer.html": "3c70207469746c653d2261c2a00a6200090d0a0a63223e783c2f703e"
+   },
+   "args": [
+    "-S",
+    "safe",
+    "-o",
+    "-",
+    "a.adoc"
+   ]
   }
  ]
 }

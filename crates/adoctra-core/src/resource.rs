@@ -163,6 +163,22 @@ pub struct BinaryResource {
     pub content_type: Option<String>,
 }
 
+/// Text normalized by the consumer like Ruby's `Helpers.prepare_source_string`
+/// (the primary document, docinfo): [`ResourceProvider::load_asset_text`]
+/// decodes a UTF-16 BOM, while a text-only provider without binary support
+/// keeps its own snapshot through `load`.
+pub(crate) fn load_source_text(
+    provider: &dyn ResourceProvider,
+    request: ResourceRequest<'_>,
+) -> ResourceResult<Resource> {
+    provider
+        .load_asset_text(request)
+        .or_else(|error| match error.kind {
+            ResourceErrorKind::Unsupported => provider.load(request),
+            _ => Err(error),
+        })
+}
+
 pub trait ResourceProvider {
     /// Enable URI caching for this provider's session. Called only for an
     /// allowed URI include or asset read with `cache-uri`; removing the attribute does not

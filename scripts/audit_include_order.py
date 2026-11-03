@@ -20,11 +20,14 @@ import compatibility as c
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def make_case(identifier, data, encoding, selection):
+def make_case(identifier, data, encoding, selection, listing=False):
     opts = ','.join(part for part in [f'encoding={encoding}' if encoding else '',
                                      selection, 'opts=optional'] if part)
+    source = f'include::part.adoc[{opts}]'
+    if listing:  # Verbatim content keeps control characters observable.
+        source = f'----\n{source}\n----'
     return dict(id=identifier, category='include', expect='pass',
-                profile='include-body-dom-v1', source=f'include::part.adoc[{opts}]',
+                profile='include-body-dom-v1', source=source,
                 resources={}, binary_resources={'part.adoc': data.hex()})
 
 
@@ -32,7 +35,7 @@ def build_cases():
     codecs = json.loads((ROOT / 'compatibility/encoding-order/encodings.json').read_text())
     cases = []
     for name, meta in codecs.items():
-        fragments = {key: bytes.fromhex(value) for key, value in meta['fragments'].items()}
+        fragments = {key: bytes.fromhex(value) for key, value in meta['fragments'].items() if value is not None}
         bom = bytes.fromhex(meta['bom'])
         first = bom + fragments['*ok*\r\n']
         variants = [('valid', first + fragments['\nlast\n'])]
@@ -47,6 +50,14 @@ def build_cases():
                               'lines=2..1', 'lines=3..-1', 'tag=body']:
                 identifier = f'order-{name.lower()}-{variant}-{selection or "all"}'
                 cases.append(make_case(identifier, data, name, selection))
+        # Decoded CR, NEL and LS stay inside a line: Ruby splits at LF only.
+        for text, control in [('a\rb\nc\n', 'cr'), ('a\u0085b\nc\n', 'nel'), ('a\u2028b\nc\n', 'ls')]:
+            if meta['fragments'].get(text) is None:
+                continue
+            data = bom + bytes.fromhex(meta['fragments'][text])
+            for selection in ['', 'lines=1', 'lines=2']:
+                identifier = f'control-{name.lower()}-{control}-{selection or "all"}'
+                cases.append(make_case(identifier, data, name, selection, listing=True))
     for little, explicit in [(True, 'UTF-16LE'), (False, 'UTF-16BE')]:
         data = (b'\xff\xfe' if little else b'\xfe\xff') + '*one*\n*two*\n*three*\n'.encode(
             'utf-16le' if little else 'utf-16be')
@@ -115,12 +126,18 @@ def compare(reference, actual, root):
     return dict(status='PASS')
 
 
+def invoke(command, source):
+    # Bytes, not text mode: universal newlines would turn a lone CR into LF
+    # in the HTML of adoctra, while the reference keeps it escaped in JSON.
+    raw = subprocess.run(command, input=source.encode('utf-8'), capture_output=True, timeout=30)
+    return subprocess.CompletedProcess(raw.args, raw.returncode, raw.stdout.decode('utf-8'),
+                                       raw.stderr.decode('utf-8'))
+
+
 def run_case(case, binary):
     with c.case_commands(case, binary) as (reference, actual):
-        expected = subprocess.run(reference + ['--report'], input=case['source'],
-                                  text=True, capture_output=True, timeout=30)
-        actual = subprocess.run(actual, input=case['source'], text=True,
-                                capture_output=True, timeout=30)
+        expected = invoke(reference + ['--report'], case['source'])
+        actual = invoke(actual, case['source'])
         result = compare(expected, actual, Path(reference[-1]))
     return dict(id=case['id'], **result)
 

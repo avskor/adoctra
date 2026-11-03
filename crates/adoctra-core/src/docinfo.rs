@@ -95,10 +95,16 @@ pub fn docinfo(
     };
     let mut content = Vec::new();
     for target in targets {
-        let Ok(resource) = provider.load(ResourceRequest {
-            target: &target,
-            referrer,
-        }) else {
+        // Ruby reads docinfo with `read_asset normalize: true`: a UTF-16 BOM
+        // decodes the file. Ruby fails the whole conversion on malformed
+        // text; adoctra skips such a file like a missing one.
+        let Ok(resource) = crate::resource::load_source_text(
+            provider,
+            ResourceRequest {
+                target: &target,
+                referrer,
+            },
+        ) else {
             continue;
         };
         if !content.is_empty() {
@@ -109,11 +115,13 @@ pub fn docinfo(
     content
 }
 
-/// Ruby's `prepare_source_string(…).join LF`: no BOM, each line right-stripped.
+/// Ruby's `prepare_source_string(…).join LF`: no BOM, lines split at LF only
+/// (`each_line`) and right-stripped with Ruby's `rstrip` (ASCII whitespace and
+/// NUL; Unicode spaces such as U+00A0 stay).
 fn normalize(text: &str) -> String {
     let text = text.strip_prefix('\u{feff}').unwrap_or(text);
-    text.lines()
-        .map(str::trim_end)
+    text.split_terminator('\n')
+        .map(RubyStrip::ruby_rstrip)
         .collect::<Vec<_>>()
         .join("\n")
 }
