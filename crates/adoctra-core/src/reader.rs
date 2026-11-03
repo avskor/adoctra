@@ -369,6 +369,12 @@ impl<'a> Reader<'a> {
         self.primary_eof.source_id = id;
     }
 
+    /// Ruby's `reader.cursor` once the primary input is exhausted: the line
+    /// after its last one (trailing blank lines are already dropped).
+    pub fn eof_cursor(&self) -> crate::DiagnosticCursor {
+        self.primary_eof
+    }
+
     pub fn report_cursor(&self, offset: usize) -> Option<crate::DiagnosticCursor> {
         let index = self
             .report_cursors
@@ -391,6 +397,15 @@ impl<'a> Reader<'a> {
     }
 
     pub fn map_diagnostic(&self, diagnostic: &mut Diagnostic, provenance: &mut Vec<Vec<Span>>) {
+        if diagnostic.report.location == crate::DiagnosticLocation::PreviousLine {
+            diagnostic.report.location = self.report_cursor(diagnostic.span.start).map_or(
+                crate::DiagnosticLocation::Source,
+                |mut cursor| {
+                    cursor.line -= 1;
+                    crate::DiagnosticLocation::Cursor(cursor)
+                },
+            );
+        }
         if diagnostic.report.location == crate::DiagnosticLocation::Source {
             let start = diagnostic.span.start;
             let cursor = if self.peeked_blocks.contains(&start) {

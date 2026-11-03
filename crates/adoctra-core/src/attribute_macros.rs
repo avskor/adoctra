@@ -1572,9 +1572,13 @@ fn apply_footnotes(text: Text, attributes: &mut Evaluation<'_>, report: &mut Rep
         text.copy(copied..at, &mut output);
         let span = text.match_span(at..m.end);
         if m.legacy && !compat {
+            // Ruby's `sub_macros` warns without a logger cursor.
             report.passes.diagnostics.push(crate::Diagnostic {
                 omitted_span: None,
-                report: Default::default(),
+                report: crate::DiagnosticReport {
+                    location: crate::DiagnosticLocation::Unlocated,
+                    ..Default::default()
+                },
                 span,
                 severity: crate::Severity::Warning,
                 message: format!(
@@ -1617,9 +1621,13 @@ fn apply_footnotes(text: Text, attributes: &mut Evaluation<'_>, report: &mut Rep
                 }
             }
             (None, None) => {
+                // Ruby's `sub_macros` warns without a logger cursor.
                 report.passes.diagnostics.push(crate::Diagnostic {
                     omitted_span: None,
-                    report: Default::default(),
+                    report: crate::DiagnosticReport {
+                        location: crate::DiagnosticLocation::Unlocated,
+                        ..Default::default()
+                    },
                     span,
                     severity: crate::Severity::Warning,
                     message: format!(

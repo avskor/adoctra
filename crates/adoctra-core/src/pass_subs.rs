@@ -138,9 +138,13 @@ pub(crate) fn resolve_block(
         }
     }
     if !invalid.is_empty() {
+        // Ruby's `resolve_subs` warns without a logger cursor.
         diagnostics.push(Diagnostic {
             omitted_span: None,
-            report: Default::default(),
+            report: crate::DiagnosticReport {
+                location: crate::DiagnosticLocation::Unlocated,
+                ..Default::default()
+            },
             span,
             severity: Severity::Warning,
             message: format!(
@@ -212,9 +216,13 @@ pub(crate) fn resolve(subs: &str, span: Span, diagnostics: &mut Vec<Diagnostic>)
         }
     }
     if !invalid.is_empty() {
+        // Ruby's `resolve_subs` warns without a logger cursor.
         diagnostics.push(Diagnostic {
             omitted_span: None,
-            report: Default::default(),
+            report: crate::DiagnosticReport {
+                location: crate::DiagnosticLocation::Unlocated,
+                ..Default::default()
+            },
             span,
             severity: Severity::Warning,
             message: format!(

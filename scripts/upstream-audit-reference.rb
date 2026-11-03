@@ -3,7 +3,7 @@
 # Reference side of scripts/upstream_audit.py: convert every inventory entry
 # with the pinned Asciidoctor in one process, using the options its upstream
 # test passed (as recorded), and print one JSON line per entry:
-#   {"id", "html", "diagnostics": [{"severity", "message"}]} or {"id", "error"}.
+#   {"id", "html", "diagnostics": [{"severity", "message", "location"}]} or {"id", "error"}.
 # Usage: ruby scripts/upstream-audit-reference.rb ENTRIES.json
 require 'json'
 
@@ -47,7 +47,11 @@ def logged logger
   logger.messages.filter_map do |message|
     next unless (severity = LEVELS[message[:severity]])
     text = message[:message]
-    { severity: severity, message: (Hash === text ? text.fetch(:text) : text.to_s) }
+    # The logger cursor, when the message has one (text mentioning a line
+    # is no cursor): the harness compares it with the CLI's file:line.
+    cursor = Hash === text ? text[:source_location] : nil
+    { severity: severity, message: (Hash === text ? text.fetch(:text) : text.to_s),
+      location: cursor ? { file: cursor.file || cursor.path, line: cursor.lineno } : nil }
   end
 end
 

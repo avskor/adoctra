@@ -2052,6 +2052,25 @@ with `render_with_start`), fixes highlighted pass slots and splits the HTML
 into Raw tags and decoded Text, so later stages see Ruby's string; marks
 return as Callout parts. Without the hook it is Ruby's `sub_source`. The CLI
 passes the hook in embedded mode too; `golden/rouge/` parses with it.
+**Upstream assertion mapping** (2026-11-03): a heuristic pass over the
+assert/refute lines of all 2568 upstream tests, joined with the audit
+inventory, showed two observations no profile compared: the standalone shell
+and diagnostic cursors. upstream_audit.py (report profile
+`upstream-audit-body-shell-positions-v2`) now compares `shell()` (`<html>`
+and `<body>` attributes, `<head>` children minus generator/http-equiv metas,
+the default stylesheet recognized by its opening comment, Ruby's default
+webfonts link) and `{severity, message, location}` (the reference emits
+`source_location`; stdin `<stdin>`, checkout files relative). Shells: 902/902
+equal. Cursors exposed: excluded abstract/partintro are now converter
+diagnostics (`BodySubs::excluded` maps the block range to its diagnostic,
+emitted when `Execution::enter_block` reaches it: Unlocated, conversion);
+`invalid footnote reference`, deprecated `footnoteref` and `invalid
+substitution type` are Unlocated; `invalid part` reports `reader.cursor`
+after the part (closing title's `report_cursor`, or `Reader::eof_cursor`);
+style-attribute warnings use `DiagnosticLocation::PreviousLine`
+(`cursor_at_prev_line`, line 0 on a first line; harness parsers accept 0).
+Four new positions probes, `upstream_single_cases.rs` tests. Still not
+compared: Ruby API attribute/model assertions beyond their HTML effect.
 **Matrix recheck** (2026-11-03): every "ahead"/"partial" entry of the initial
 matrix in compatibility.adoc was rechecked against Ruby; 54 probes became
 `matrix-*` cases of compatibility/cases.json (body-dom-v1; diagnostics were

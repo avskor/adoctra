@@ -165,6 +165,57 @@ class CompareTests(unittest.TestCase):
         self.assertEqual(compare(entry, styled, ours)[0], "DIFF")
 
 
+    def test_standalone_head_and_body_attributes_are_compared(self):
+        entry = {"options": {"standalone": True}}
+        page = ('<html lang="en"><head><meta charset="UTF-8"><meta name="generator" content="{g}">'
+                '<title>T</title>{fonts}<style>{css}</style><style>pre.x{{}}</style></head>'
+                '<body class="article"><p>a</p></body></html>')
+        fonts = ('<link rel="stylesheet" href="https://fonts.googleapis.com/'
+                 + upstream_audit.DEFAULT_WEBFONTS + '">')
+        ruby = {"html": page.format(g="Asciidoctor 2.0.23", fonts=fonts,
+                                    css="/*! Asciidoctor default stylesheet | x */"), "diagnostics": []}
+        ours = {"html": page.format(g="adoctra", fonts="",
+                                    css="/* adoctra reference stylesheet.\n */"), "diagnostics": []}
+        # The generator, Ruby's default webfonts and the default stylesheet's
+        # content differ by design; everything else around the body counts.
+        self.assertEqual(compare(entry, ruby, ours), ("PASS", []))
+        for change in ('<title>U</title>', '<body class="book">', '<html lang="de">',
+                       '<style>pre.y{}</style>'):
+            old = {"<t": "<title>T</title>", "<b": '<body class="article">', "<h": '<html lang="en">',
+                   "<s": "<style>pre.x{}</style>"}[change[:2]]
+            changed = {"html": ours["html"].replace(old, change), "diagnostics": []}
+            self.assertEqual(compare(entry, ruby, changed), ("DIFF", ["shell"]), change)
+        # An explicit webfonts value is no default: it is compared.
+        custom = '<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Other">'
+        self.assertEqual(compare(entry, {"html": ruby["html"].replace(fonts, custom), "diagnostics": []},
+                                 ours)[0], "DIFF")
+        linked = {k: {"html": page.format(g="x", fonts="", css="").replace(
+            "<style></style>", f'<link rel="stylesheet" href="./{name}">'), "diagnostics": []}
+            for k, name in (("ruby", "asciidoctor.css"), ("ours", "adoctra.css"))}
+        self.assertEqual(compare(entry, linked["ruby"], linked["ours"]), ("PASS", []))
+
+    def test_diagnostics_compare_their_cursor(self):
+        stderr = ("adoctra: -:3: warning: w\nadoctra: /root/doc/a.adoc:0: error: e\n"
+                  "continued\nadoctra: warning: unlocated\nadoctra: info: skipped\n")
+        diagnostics = upstream_audit.cli_diagnostics(stderr, Path("/root"))
+        self.assertEqual(diagnostics, [
+            {"severity": "warning", "message": "w", "location": {"file": "<stdin>", "line": 3}},
+            {"severity": "error", "message": "e\ncontinued", "location": {"file": "doc/a.adoc", "line": 0}},
+            {"severity": "warning", "message": "unlocated", "location": None}])
+        ruby = upstream_audit.reference_diagnostics([
+            {"severity": "warning", "message": "w", "location": {"file": "<stdin>", "line": 3}},
+            {"severity": "error", "message": "e\ncontinued", "location": {"file": "/root/doc/a.adoc", "line": 0}},
+            {"severity": "warning", "message": "unlocated", "location": None}], Path("/root"))
+        self.assertEqual(ruby, diagnostics)
+        entry = {"options": {"standalone": False}}
+        moved = [dict(d) for d in diagnostics]
+        moved[2] = dict(moved[2], location={"file": "<stdin>", "line": 1})
+        self.assertEqual(compare(entry, {"html": "<p>a</p>", "diagnostics": ruby},
+                                 {"html": "<p>a</p>", "diagnostics": moved}), ("DIFF", ["diagnostics"]))
+        with self.assertRaises(ValueError):
+            upstream_audit.cli_diagnostics("noise\n")
+
+
 class InventoryTests(unittest.TestCase):
     def test_committed_inventory_provenance_and_baseline(self):
         inventory = load_inventory()

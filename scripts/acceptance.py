@@ -153,7 +153,8 @@ def cli_diagnostics(stderr, root=None, multiline=False):
         # mode adds columns/byte offsets. Reject any unrecognized output.
         match = re.fullmatch(r"adoctra: (warning|error|info): (.*)", line, re.DOTALL)
         if match is None:
-            match = re.fullmatch(r"adoctra: [^\n]+?:[1-9]\d*: (warning|error|info): (.*)", line,
+            # Line 0 is Ruby's `cursor_at_prev_line` on a first line.
+            match = re.fullmatch(r"adoctra: [^\n]+?:(?:0|[1-9]\d*): (warning|error|info): (.*)", line,
                                  re.DOTALL)
         if match is None:
             match = re.fullmatch(

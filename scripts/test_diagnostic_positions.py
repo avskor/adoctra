@@ -25,8 +25,10 @@ class PositionTests(unittest.TestCase):
                          [{'severity': 'warning', 'message': 'warning text'}])
         for changed in [stderr.replace(':3:', ':4:'), 'adoctra: warning: warning text\n']:
             self.assertNotEqual(positions.cli_projection(changed), report())
+        # The CLI prints Ruby's line 0 (`cursor_at_prev_line` on a first line).
+        self.assertEqual(positions.cli_projection(stderr.replace(':3:', ':0:')), report(line=0))
         with self.assertRaises(ValueError):
-            positions.cli_projection(stderr.replace(':3:', ':0:'))
+            positions.cli_projection(stderr.replace(':3:', ':-1:'))
 
     def test_paths_preserve_nested_unicode_source_and_stdin(self):
         raw = report('/tmp/fixture/sub/я.adoc')
@@ -55,7 +57,9 @@ class PositionTests(unittest.TestCase):
 
     def test_schema_rejects_unknown_fields_bad_lines_and_paths(self):
         variants = [{}, {'diagnostics': {}}, {'diagnostics': [None]}]
-        for value in [0, -1, True, 1.5, '3']:
+        # Line 0 is valid: Ruby's `cursor_at_prev_line` on a first line.
+        positions.validate(report(line=0))
+        for value in [-1, True, 1.5, '3']:
             variants.append(report(line=value))
         for name in ['', '/tmp/a.adoc', '<fixture>/../a', '<fixture>//a', '<fixture>/a\\b']:
             variants.append(report(file=name))
@@ -117,7 +121,7 @@ class PositionHarnessTests(unittest.TestCase):
         self.assertEqual(self.run_case(stderr)[0]['status'], 'XFAIL')
         self.assertEqual(self.run_case(stderr.replace(':4:', ':5:'))[0]['status'], 'FAIL')
         self.assertEqual(self.run_case()[0]['status'], 'XPASS')
-        (self.root / 'baseline/case.json').write_text(json.dumps(report(line=0)))
+        (self.root / 'baseline/case.json').write_text(json.dumps(report(line=-1)))
         with self.assertRaises(ValueError):
             self.run_case(stderr)
 
@@ -136,7 +140,7 @@ class PositionHarnessTests(unittest.TestCase):
     def test_corpus_declares_all_pinned_inputs(self):
         manifest, cases = acceptance.load_corpus(acceptance.CORPUS / 'acceptance/positions.json')
         self.assertEqual(manifest['profile'], positions.PROFILE)
-        self.assertEqual(len(cases), 22)
+        self.assertEqual(len(cases), 26)
         xfails = [c['id'] for c in cases if c['expect'] != 'pass']
         self.assertEqual(xfails, [])
         self.assertTrue(all(c.get('reason') for c in cases if c['expect'] == 'xfail'))

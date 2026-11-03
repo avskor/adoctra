@@ -3,7 +3,7 @@
 `diagnostic-positions-v1` — отдельный профиль приёмки, закреплённый за
 Asciidoctor 2.0.23. Манифест:
 link:../compatibility/acceptance/positions.json[positions.json].
-22 собственные пробы дают *22 PASS*, XFAIL нет. Прежний XFAIL
+26 собственных проб дают *26 PASS*, XFAIL нет. Прежний XFAIL
 `position-comment-direct-peek` исправлен вместе с общим случаем
 (`position-block-peek-dropped-directive`): цикл разделов Ruby перед каждым
 блоком подглядывает две предобработанные строки (`is_next_line_section?`), и
@@ -32,7 +32,9 @@ HTML в этом профиле не сравнивается. Результа�
 * `message`: полный текст без изменения содержания;
 * `location`: `{file, line}` или явный `null`, если координат нет.
 
-Строки нумеруются с 1. Порядок и повторные сообщения значимы. Ruby launcher
+Строки нумеруются с 1; строка 0 — настоящий вывод Ruby для
+`reader.cursor_at_prev_line` на первой строке (предупреждения стиля `[#]`,
+`[#a#b]`). Порядок и повторные сообщения значимы. Ruby launcher
 `--diagnostic-positions` читает `source_location` из `MemoryLogger`.
 Он не восстанавливает координаты из текста сообщения. Адаптер adoctra читает
 файл/строку из stderr CLI; предупреждения backend без позиции получают `null`.
@@ -53,6 +55,17 @@ Ruby не предоставляет в этих logger cursors колонок �
 директиву include, а физический span adoctra — на сам ресурс.
 
 == Выборка и исправления
+
+Четыре пробы добавлены 2026-11-03 после того, как upstream-аудит стал
+сравнивать курсоры (см. link:upstream-tests.adoc[]):
+`position-converter-unlocated` (исключённые `abstract` и `partintro`, неверная
+ссылка на сноску и устаревший `footnoteref` — Ruby пишет их без курсора, а
+исключённые блоки — только при конвертации), `position-invalid-part-cursor`
+(часть без раздела — `reader.cursor` после чтения части: строка заголовка
+закрывающей части после её метаданных и комментариев или конец ввода),
+`position-style-attribute-previous-line` (`cursor_at_prev_line`, в том числе
+строка 0) и `position-invalid-substitutions` (`resolve_subs` без курсора).
+Все четыре на прежнем CLI давали FAIL.
 
 PASS проверяют пропуск уровня раздела, повторный id, неполную строку таблицы,
 отсутствие диагностик у корректного документа, Unicode/CRLF, порядок нескольких

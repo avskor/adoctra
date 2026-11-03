@@ -12,7 +12,9 @@ The default run converts each supported entry with pinned Ruby (one process,
 scripts/upstream-audit-reference.rb, the recorded options) and with the CLI
 (`-S` safe mode, `-s` for embedded output, `-a` attributes and doctype), and
 compares the existing body-dom-v1 projection (standalone shells mapped like
-the asset audit) and the ordered warning/error texts. Both sides get the same
+the asset audit), the standalone document shell (`<html>`/`<body>` attributes
+and the `<head>` children, see `shell`) and the ordered warning/error texts
+with their logger cursor (file and line, or none). Both sides get the same
 SOURCE_DATE_EPOCH and TZ. Statuses: PASS, DIFF (body and/or diagnostics),
 RUBY_ERROR, ADOCTRA_ERROR. Entries whose options this CLI contract cannot
 express (non-HTML backends, extensions, base_dir/to_file, …) are UNSUPPORTED
@@ -39,8 +41,7 @@ import tempfile
 import threading
 from contextlib import contextmanager
 
-from acceptance import cli_diagnostics
-from compatibility import projection
+from compatibility import BodyParser, Element, projection
 
 ROOT = Path(__file__).resolve().parent.parent
 AUDIT = ROOT / "compatibility" / "upstream" / "audit"
@@ -68,6 +69,103 @@ PLACEHOLDER = "<UPSTREAM>"
 SAFE = {"unsafe": "unsafe", "safe": "safe", "server": "server", "secure": "secure",
         0: "unsafe", 1: "safe", 10: "server", 20: "secure"}
 ENVIRONMENT = {"SOURCE_DATE_EPOCH": "1700000000", "TZ": "UTC"}
+PROFILE = "upstream-audit-body-shell-positions-v2"
+# Ruby's default `webfonts` (an empty value) links these Google fonts; the
+# adoctra theme uses system fonts (an explicit `webfonts` value is compared).
+# The opening comments of Ruby's default stylesheet and adoctra.css.
+DEFAULT_STYLESHEET_HEADERS = ("/*! Asciidoctor default stylesheet", "/* adoctra reference stylesheet.")
+DEFAULT_WEBFONTS = ("css?family=Open+Sans:300,300italic,400,400italic,600,600italic"
+                    "%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400,700")
+# Line 0 is Ruby's `cursor_at_prev_line` on a first line.
+DIAGNOSTIC = re.compile(r"adoctra: (?:(.+?):(0|[1-9]\d*): )?(warning|error|info): (.*)", re.DOTALL)
+
+
+def source_name(name, root):
+    """A diagnostic's file as both sides can compare it: standard input as
+    `<stdin>`, a file inside the materialized checkout relative to it."""
+    if name in (None, "-", "<stdin>"):
+        return "<stdin>"
+    if root is not None:
+        prefix = str(root).rstrip("/") + "/"
+        if name.startswith(prefix):
+            return name[len(prefix):]
+    return name
+
+
+def cli_diagnostics(stderr, root=None):
+    """Warnings and errors from the CLI's stderr with their file:line (a
+    line without the prefix continues the previous message, which keeps its
+    line feed like Ruby's)."""
+    lines = []
+    for line in stderr.removesuffix("\n").split("\n") if stderr else []:
+        if lines and not line.startswith("adoctra: "):
+            lines[-1] += "\n" + line
+        else:
+            lines.append(line)
+    diagnostics = []
+    for line in lines:
+        match = DIAGNOSTIC.fullmatch(line)
+        if match is None:
+            raise ValueError(f"unrecognized adoctra diagnostic: {line!r}")
+        name, lineno, severity, message = match.groups()
+        if severity == "info":
+            continue
+        location = {"file": source_name(name, root), "line": int(lineno)} if name else None
+        diagnostics.append({"severity": severity, "message": message, "location": location})
+    return diagnostics
+
+
+def reference_diagnostics(diagnostics, root=None):
+    """Ruby's logged diagnostics with the same file names as the CLI's."""
+    result = []
+    for diagnostic in diagnostics:
+        location = diagnostic.get("location")
+        if location is not None:
+            location = {"file": source_name(location["file"], root), "line": location["line"]}
+        result.append({"severity": diagnostic["severity"], "message": diagnostic["message"],
+                       "location": location})
+    return result
+
+
+def shell(html):
+    """The standalone document around the body: the `<html>` and `<body>`
+    attributes and the `<head>` children (tag, attributes, text). Three
+    differences are by design: the generator and http-equiv metas, the
+    content of the default stylesheet (only its place is compared, embedded
+    or linked, recognized by its opening comment) and Ruby's default webfonts
+    link. None for a fragment."""
+    parser = BodyParser()
+    parser.feed(html)
+    parser.close()
+    documents = [n for n in parser.root.children if isinstance(n, Element) and n.tag == "html"]
+    if not documents:
+        return None
+    result = {"html": dict(sorted(documents[0].attrs.items())), "head": [], "body": None}
+    for node in documents[0].children:
+        if not isinstance(node, Element):
+            continue
+        if node.tag == "body":
+            result["body"] = dict(sorted(node.attrs.items()))
+        if node.tag != "head":
+            continue
+        for child in node.children:
+            if not isinstance(child, Element):
+                continue
+            attrs = dict(child.attrs)
+            if child.tag == "meta" and ("http-equiv" in attrs or attrs.get("name") == "generator"):
+                continue
+            if child.tag == "link" and attrs.get("href", "").endswith(DEFAULT_WEBFONTS):
+                continue
+            text = "".join(c for c in child.children if isinstance(c, str)).strip()
+            if child.tag == "style" and text.startswith(DEFAULT_STYLESHEET_HEADERS):
+                result["head"].append(["style", {}, "<default stylesheet>"])
+                continue
+            href = attrs.get("href", "")
+            if child.tag == "link" and attrs.get("rel") == "stylesheet" \
+                    and href.rsplit("/", 1)[-1] in DEFAULT_STYLESHEETS:
+                attrs["href"] = href[:len(href) - len(href.rsplit("/", 1)[-1])] + "<default stylesheet>"
+            result["head"].append([child.tag, dict(sorted(attrs.items())), text])
+    return result
 
 
 def entry_id(source, options):
@@ -349,14 +447,14 @@ def decoded(run):
                                        run.stderr.decode("utf-8", "replace"))
 
 
-def adoctra(binary, entry, args):
+def adoctra(binary, entry, args, root=None):
     run = decoded(subprocess.run([str(binary), "-", "--to", "html", "--stdout", *args],
                                  input=entry["source"].encode("utf-8"), capture_output=True, timeout=60,
                                  env={**os.environ, **ENVIRONMENT}))
     if run.returncode:
         return {"error": f"exit {run.returncode}: {run.stderr.strip()[-300:]}"}
     try:
-        return {"html": run.stdout, "diagnostics": cli_diagnostics(run.stderr, multiline=True)}
+        return {"html": run.stdout, "diagnostics": cli_diagnostics(run.stderr, root)}
     except ValueError as error:
         return {"error": str(error)}
 
@@ -409,7 +507,7 @@ def run_cli(binary, entry, args, root):
         result = json.loads(run.stdout)
         expected = {"code": result["code"], "stdout": result["stdout"],
                     "failure": result["error"].split("\n")[0],
-                    "diagnostics": result["diagnostics"], "files": files}
+                    "diagnostics": reference_diagnostics(result["diagnostics"], root), "files": files}
     with recording_writes(root) as files:
         run = decoded(subprocess.run([str(binary), target, "--to", "html", *args],
                                      input=(stdin or "").encode("utf-8"), cwd=root,
@@ -421,7 +519,7 @@ def run_cli(binary, entry, args, root):
         failure = lines.pop().removeprefix("adoctra: ")
         stderr = "\n".join(lines) + ("\n" if lines else "")
     try:
-        diagnostics = cli_diagnostics(stderr, multiline=True)
+        diagnostics = cli_diagnostics(stderr, root)
     except ValueError as error:
         return expected, {"error": str(error)}
     actual = {"code": run.returncode, "stdout": run.stdout, "failure": failure,
@@ -447,7 +545,7 @@ def compare_files(entry, args, expected, actual):
 
     def page(html):
         try:
-            return body(html, standalone)
+            return body(html, standalone), shell(html) if standalone else None
         except ValueError:
             return raw_body(html)
     if bool(expected["stdout"]) != bool(actual["stdout"]) or (
@@ -507,6 +605,9 @@ def compare(entry, expected, actual):
             reasons.append("raw-body")
     elif projected[0] != projected[1]:
         reasons.append("body")
+    if standalone and not any(isinstance(p, ValueError) for p in projected) \
+            and shell(expected["html"]) != shell(actual["html"]):
+        reasons.append("shell")
     if expected["diagnostics"] != actual["diagnostics"]:
         reasons.append("diagnostics")
     return ("DIFF" if reasons else "PASS"), reasons
@@ -563,9 +664,12 @@ def audit(binary, only, jobs):
             if run.returncode:
                 sys.exit(f"reference runner failed: {run.stderr.strip()[-2000:]}")
             references = {r["id"]: r for r in map(json.loads, filter(None, run.stdout.split("\n")))}
+            for reference in references.values():
+                if "diagnostics" in reference:
+                    reference["diagnostics"] = reference_diagnostics(reference["diagnostics"], root)
             with ThreadPoolExecutor(jobs) as pool:
                 actuals = dict(zip((e["id"] for e in local), pool.map(
-                    lambda e: adoctra(binary, e, localize(classify(e["source"], e["options"])[0], root)),
+                    lambda e: adoctra(binary, e, localize(classify(e["source"], e["options"])[0], root), root),
                     local)))
             # File output changes the checkout: one entry at a time.
             written = {}
@@ -611,7 +715,9 @@ def show(entry, binary):
             run = subprocess.run(["ruby", str(ROOT / "scripts/upstream-audit-reference.rb"), str(batch)],
                                  capture_output=True, text=True, env={**os.environ, **ENVIRONMENT})
             expected = json.loads(run.stdout.split("\n")[0])
-            actual = adoctra(binary, local, args)
+            if "diagnostics" in expected:
+                expected["diagnostics"] = reference_diagnostics(expected["diagnostics"], root)
+            actual = adoctra(binary, local, args, root)
     for occurrence in entry["occurrences"]:
         print(f"{occurrence['file']}:{occurrence['test_line']} {occurrence['test']}")
     print("options:", json.dumps(entry["options"]), "cli:", " ".join(args))
@@ -619,7 +725,9 @@ def show(entry, binary):
     standalone = bool(entry["options"].get("standalone") or entry["options"].get("header_footer"))
     for name, side in (("ruby", expected), ("adoctra", actual)):
         print(f"--- {name} diagnostics:", json.dumps(side.get("diagnostics", side.get("error"))))
-    pretty = [json.dumps(body(side["html"], standalone), indent=1, ensure_ascii=False).splitlines()
+    pretty = [json.dumps({"body": body(side["html"], standalone),
+                          "shell": shell(side["html"]) if standalone else None},
+                         indent=1, ensure_ascii=False).splitlines()
               for side in (expected, actual)]
     print("\n".join(difflib.unified_diff(*pretty, "ruby", "adoctra", lineterm="")))
 
@@ -659,7 +767,7 @@ def main():
     for name, counts in files.items():
         print(f"{name:32} " + " ".join(f"{k}={v}" for k, v in counts.items()))
     print(json.dumps(totals))
-    report = {"profile": "upstream-audit-body-dom-diagnostics-v1",
+    report = {"profile": PROFILE,
               "asciidoctor": inventory["asciidoctor"], "commit": inventory["commit"],
               "totals": totals, "files": files, "results": dict(sorted(results.items()))}
     if args.report:

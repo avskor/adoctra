@@ -444,12 +444,16 @@ fn parse_style(
     let mut id = None;
     let mut roles = Vec::new();
     let mut options = Vec::new();
-    // Ruby's yield_buffered_attribute for the value preceding each sigil.
+    // Ruby's yield_buffered_attribute for the value preceding each sigil;
+    // it warns at `reader.cursor_at_prev_line`.
     let mut buffered = |sigil: Option<char>, value: &str| {
         let mut warn = |message: String| {
             diagnostics.push(Diagnostic {
                 omitted_span: None,
-                report: Default::default(),
+                report: crate::DiagnosticReport {
+                    location: crate::DiagnosticLocation::PreviousLine,
+                    ..Default::default()
+                },
                 span,
                 severity: Severity::Warning,
                 message,

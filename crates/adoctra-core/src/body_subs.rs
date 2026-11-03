@@ -95,9 +95,11 @@ pub(crate) struct BodySubs {
     /// AsciiDoc table cells, keyed by the cell's reader range.
     pub nested: BTreeMap<(usize, usize), Nested>,
     /// Blocks Ruby's converter excludes (a misplaced abstract or partintro),
-    /// keyed by their range: never converted, so nothing inside registers
-    /// (footnotes) or reads the conversion attributes.
-    pub excluded: BTreeSet<(usize, usize)>,
+    /// keyed by their range, with the converter's diagnostic: never
+    /// converted, so nothing inside registers (footnotes) or reads the
+    /// conversion attributes. The diagnostic is reported where conversion
+    /// reaches the block, like Ruby's `convert_open`.
+    pub excluded: BTreeMap<(usize, usize), Diagnostic>,
     /// AsciiDoc cells Ruby creates and then drops, keyed by their range:
     /// never converted, but a reference converts their titles (Ruby's lazy
     /// `Section#title`), so their deferred fields stay pending.
@@ -426,7 +428,7 @@ impl crate::visit::VisitorMut for Unregistered {
 
 struct Execution<'a, 's> {
     /// See [`BodySubs::excluded`].
-    excluded: BTreeSet<(usize, usize)>,
+    excluded: BTreeMap<(usize, usize), Diagnostic>,
     /// See [`BodySubs::dropped`].
     dropped: BTreeSet<(usize, usize)>,
     /// A heading's text was converted on entry; the walk skips it once.
@@ -1067,7 +1069,8 @@ impl Execution<'_, '_> {
 impl crate::visit::VisitorMut for Execution<'_, '_> {
     /// A block's conversion before its title and content.
     fn enter_block(&mut self, block: &mut Block) -> bool {
-        if self.excluded.contains(&(block.span.start, block.span.end)) {
+        if let Some(diagnostic) = self.excluded.remove(&(block.span.start, block.span.end)) {
+            self.diagnostics.push(diagnostic);
             return false;
         }
         self.replay(block.span.start);

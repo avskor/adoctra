@@ -50,6 +50,9 @@ pub enum DiagnosticLocation {
     Source,
     Unlocated,
     Cursor(DiagnosticCursor),
+    /// Ruby's `reader.cursor_at_prev_line`: the cursor of the span's line
+    /// minus one (line 0 for the first line, as Ruby prints it).
+    PreviousLine,
 }
 
 /// Presentation overrides for conversion logs; never used to rewrite spans or

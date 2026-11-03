@@ -33,7 +33,8 @@ def validate(report):
         if location is None:
             continue
         if (not isinstance(location, dict) or set(location) != {'file', 'line'}
-                or type(location['line']) is not int or location['line'] < 1
+                # Line 0: Ruby's `cursor_at_prev_line` on a first line.
+                or type(location['line']) is not int or location['line'] < 0
                 or not isinstance(location['file'], str)):
             raise ValueError('invalid diagnostic location')
         name = location['file']
@@ -72,7 +73,7 @@ def cli_projection(stderr, root=None):
                 raise ValueError('reversed diagnostic byte range')
             location = {'file': source_name(name, root), 'line': int(lineno)}
         else:
-            match = re.fullmatch(r'adoctra: (.+?):([1-9]\d*): (warning|error|info): (.*)', line)
+            match = re.fullmatch(r'adoctra: (.+?):(0|[1-9]\d*): (warning|error|info): (.*)', line)
             if match:
                 name, lineno, severity, message = match.groups()
                 location = {'file': source_name(name, root), 'line': int(lineno)}

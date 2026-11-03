@@ -280,12 +280,7 @@ pub(crate) fn parse_reader<'a>(
         &mut context,
         &lines,
     );
-    check_open_styles(
-        &mut body,
-        book,
-        &mut context.diagnostics,
-        &mut context.body_subs.excluded,
-    );
+    check_open_styles(&mut body, book, &mut context.body_subs.excluded);
     // Ruby's reader reaches the end of the input before conversion.
     lines.finish(&mut context);
     doc.blocks.extend(body);
@@ -957,13 +952,16 @@ fn nest_sections(
     // (`reading` for the parts closing at the end).
     let mut inserted: Vec<(crate::context::Stamp, Diagnostic)> = Vec::new();
     // Close the innermost open section into its parent (or the top level).
-    // Like Ruby, a book part must end with a nested section.
+    // Like Ruby, a book part must end with a nested section; Ruby reports a
+    // part without one at `reader.cursor` when its reading stops: the title
+    // line of the section that closes it, or the end of the input (`cursor`).
     fn close(
         open: &mut Vec<Block>,
         top: &mut Vec<Block>,
         book: bool,
         diagnostics: &mut Vec<(crate::context::Stamp, Diagnostic)>,
         at: crate::context::Stamp,
+        cursor: crate::DiagnosticLocation,
     ) {
         let mut section = open.pop().unwrap();
         if let BlockKind::Section { level, blocks } = &section.kind {
@@ -971,7 +969,10 @@ fn nest_sections(
             if book && *level == 0 && !matches!(last.kind, BlockKind::Section { .. }) {
                 diagnostics.push((at, Diagnostic {
                     omitted_span: None,
-                    report: Default::default(),
+                    report: crate::DiagnosticReport {
+                        location: cursor,
+                        ..Default::default()
+                    },
                     span: blocks[0].span,
                     severity: Severity::Error,
                     message: "invalid part, must have at least one section (e.g., chapter, appendix, etc.)"
@@ -1079,7 +1080,11 @@ fn nest_sections(
             open.last(),
             Some(Block { kind: BlockKind::Section { level: current, .. }, .. }) if raw <= *current
         ) {
-            close(&mut open, &mut top, book, &mut inserted, at);
+            let cursor = lines.report_cursor(block.span.start).map_or(
+                crate::DiagnosticLocation::Source,
+                crate::DiagnosticLocation::Cursor,
+            );
+            close(&mut open, &mut top, book, &mut inserted, at, cursor);
             numbering.pop();
             intros.pop();
         }
@@ -1179,7 +1184,8 @@ fn nest_sections(
         open.push(section);
     }
     while !open.is_empty() {
-        close(&mut open, &mut top, book, &mut inserted, reading);
+        let cursor = crate::DiagnosticLocation::Cursor(lines.eof_cursor());
+        close(&mut open, &mut top, book, &mut inserted, reading, cursor);
     }
     placed.extend(
         inserted
@@ -1318,20 +1324,20 @@ enum OpenParent {
     Other,
 }
 
-/// Report the abstract and partintro blocks that Ruby's HTML converter
+/// Find the abstract and partintro blocks that Ruby's HTML converter
 /// excludes: an abstract directly in a book document (no preamble) and a
-/// partintro outside a book part. Their content is not visited.
+/// partintro outside a book part. Their content is not visited. The
+/// converter logs them without a cursor when it converts the block, so the
+/// diagnostic waits in `excluded` for the conversion walk.
 fn check_open_styles(
     blocks: &mut [Block],
     book: bool,
-    diagnostics: &mut Vec<Diagnostic>,
-    excluded: &mut std::collections::BTreeSet<(usize, usize)>,
+    excluded: &mut std::collections::BTreeMap<(usize, usize), Diagnostic>,
 ) {
     struct Check<'a> {
         book: bool,
         parents: Vec<OpenParent>,
-        diagnostics: &'a mut Vec<Diagnostic>,
-        excluded: &'a mut std::collections::BTreeSet<(usize, usize)>,
+        excluded: &'a mut std::collections::BTreeMap<(usize, usize), Diagnostic>,
     }
     impl crate::visit::VisitorMut for Check<'_> {
         fn enter_block(&mut self, block: &mut Block) -> bool {
@@ -1349,14 +1355,18 @@ fn check_open_styles(
                     _ => None,
                 };
                 if let Some((severity, message)) = exclusion {
-                    self.diagnostics.push(Diagnostic {
+                    let diagnostic = Diagnostic {
                         omitted_span: None,
-                        report: Default::default(),
+                        report: crate::DiagnosticReport {
+                            location: crate::DiagnosticLocation::Unlocated,
+                            ..Default::default()
+                        },
                         span: block.span,
                         severity,
                         message: message.into(),
-                    });
-                    self.excluded.insert((block.span.start, block.span.end));
+                    };
+                    self.excluded
+                        .insert((block.span.start, block.span.end), diagnostic);
                     return false;
                 }
             }
@@ -1382,7 +1392,6 @@ fn check_open_styles(
         &mut Check {
             book,
             parents: Vec::new(),
-            diagnostics,
             excluded,
         },
         blocks,

@@ -333,6 +333,14 @@ fn convert(args: &Args, uri_cache: &resources::UriCache) -> Result<(), Failure> 
                         source_id: d.span.source_id,
                         line: position.line,
                     }),
+                // Resolved by the parser; a span alone still knows its line.
+                adoctra::DiagnosticLocation::PreviousLine => sources
+                    .get(d.span.source_id)
+                    .and_then(|source| source.position(d.span.start))
+                    .map(|position| adoctra::DiagnosticCursor {
+                        source_id: d.span.source_id,
+                        line: position.line - 1,
+                    }),
             };
             if let Some(cursor) = cursor {
                 let source = sources
