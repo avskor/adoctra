@@ -26,12 +26,16 @@ import subprocess
 import sys
 
 import acceptance
-from compatibility import CORPUS, ROOT, case_commands
+from compatibility import (CORPUS, ROOT, case_commands, load_reference_cache, ruby_environment,
+                           store_reference_cache, verification_key)
 
 
 PROFILE = "rouge-listings-v1"
 MANIFEST = CORPUS / "acceptance" / "cases.json"
 REFERENCE_DIR = CORPUS / "rouge-listings"
+# Local record of cases `--verify-reference` already checked with Ruby: a key
+# covers the Ruby environment, the configured case and its stored reference.
+REFERENCE_CACHE = ROOT / "target/reference-cache/rouge-listings.json"
 CONFIGURATIONS = {
     "default": {},
     "style": {"rouge-css": "style", "rouge-style": "monokai"},
@@ -131,6 +135,9 @@ def main(argv=None):
                          help="re-run Ruby and compare with the stored reference")
     actions.add_argument("--update-reference", action="store_true",
                          help="re-run Ruby and rewrite the stored reference")
+    parser.add_argument("--no-reference-cache", action="store_true",
+                        help="with --verify-reference, run Ruby for every case instead of skipping cases "
+                             "already verified with the same environment, inputs and reference")
     args = parser.parse_args(argv)
 
     _, cases = acceptance.load_corpus(MANIFEST)
@@ -142,12 +149,30 @@ def main(argv=None):
             parser.error("--update-reference rewrites whole configurations; do not combine it with --case")
         cases = [case for case in cases if case["id"] in args.case]
     ruby = args.verify_reference or args.update_reference
+    use_cache = args.verify_reference and not args.no_reference_cache
+    environment = ruby_environment() if use_cache else None
+    cached = load_reference_cache(REFERENCE_CACHE) if use_cache else set()
+    verified = set()
+    hits = checked = 0
     report = {"profile": PROFILE, "configurations": {}}
     failed = False
     for configuration in args.configuration or list(CONFIGURATIONS):
         jobs = [configured(case, configuration) for case in cases]
+        reference = None if args.update_reference else load_reference(configuration)
+
+        def key(case):
+            # The stored entry itself is part of the key: a changed reference
+            # (or input digest inside it) runs Ruby again.
+            entry = reference.get(case["id"]) if reference is not None else None
+            return verification_key(environment, case, [PROFILE, configuration], entry)
+
+        def side(case):
+            if use_cache and key(case) in cached:
+                return None  # verified earlier with this environment and reference
+            return convert(case, args.binary, ruby)
         with ThreadPoolExecutor(max_workers=max(1, args.jobs)) as pool:
-            results = list(pool.map(lambda case: convert(case, args.binary, ruby), jobs))
+            results = list(pool.map(side, jobs))
+        checked += len(jobs)
         if args.update_reference:
             data = {"profile": PROFILE, **versions(), "configuration": CONFIGURATIONS[configuration],
                     "cases": {case["id"]: {"inputs": inputs_digest(case), "listings": found}
@@ -159,11 +184,16 @@ def main(argv=None):
             print(f"{configuration}: {count} listings in {len(jobs)} documents written")
             report["configurations"][configuration] = {"listings": count}
             continue
-        reference = load_reference(configuration)
         counts = {}
         listings_total = 0
         for case, found in zip(jobs, results):
+            if found is None:
+                hits += 1
+                verified.add(key(case))
+                found = reference[case["id"]]["listings"]
             status, detail = compare(case["id"], inputs_digest(case), reference, found)
+            if use_cache and status == "PASS":
+                verified.add(key(case))
             counts[status] = counts.get(status, 0) + 1
             listings_total += len(found)
             if status != "PASS":
@@ -173,6 +203,10 @@ def main(argv=None):
         side = "Ruby" if ruby else "adoctra"
         print(f"{configuration}: {listings_total} {side} listings, {json.dumps(counts, sort_keys=True)}")
         report["configurations"][configuration] = {"listings": listings_total, "counts": counts}
+    if use_cache:
+        # A partial run keeps the other cases' keys; a full one prunes stale keys.
+        store_reference_cache(cached | verified if args.case or args.configuration else verified, REFERENCE_CACHE)
+        print(f"Ruby re-run for {checked - hits} configured cases; {hits} unchanged since their last verification.")
     if args.json_report:
         args.json_report.parent.mkdir(parents=True, exist_ok=True)
         args.json_report.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")

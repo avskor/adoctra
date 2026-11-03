@@ -2056,6 +2056,13 @@ with `render_with_start`), fixes highlighted pass slots and splits the HTML
 into Raw tags and decoded Text, so later stages see Ruby's string; marks
 return as Callout parts. Without the hook it is Ruby's `sub_source`. The CLI
 passes the hook in embedded mode too; `golden/rouge/` parses with it.
+**CI reference cache** (2026-11-03): `actions/cache` keeps
+`target/reference-cache/` between CI runs (key per run id, restored from the
+latest); its self-validating keys (Ruby environment, command, inputs, stored
+reference) make any restored cache safe. rouge_listings.py `--verify-reference`
+gained the same cache (`rouge-listings.json`, partial runs keep other keys).
+Weekly schedule and `workflow_dispatch` pass `--no-reference-cache`
+(`REFERENCE_CACHE_FLAG`).
 **Minimal corpus diagnostics** (2026-11-03): compatibility.py compares every
 case's diagnostics as a second check (`compare_diagnostics`, `result
 ["diagnostics"]`): Ruby's `--diagnostic-positions` report stored in

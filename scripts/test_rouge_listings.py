@@ -68,6 +68,24 @@ class RougeListingsTests(unittest.TestCase):
         with patch.object(rl.subprocess, 'run', return_value=done):
             self.assertEqual(rl.run(['adoctra'], 'x'), [rl.listings(LISTING)[0]])
 
+    def test_verification_skips_ruby_for_cases_already_verified(self):
+        _, cases = rl.acceptance.load_corpus(rl.MANIFEST)
+        case = cases[0]
+        with tempfile.TemporaryDirectory() as directory, \
+                patch.object(rl, 'REFERENCE_CACHE', Path(directory) / 'cache.json'), \
+                patch.object(rl, 'ruby_environment', return_value='env'), \
+                patch.object(rl, 'convert', side_effect=lambda c, binary, ruby: rl.load_reference('default')[c['id']]['listings']) as convert:
+            argv = ['--verify-reference', '--configuration', 'default', '--case', case['id']]
+            self.assertEqual(rl.main(argv), 0)
+            self.assertEqual(convert.call_count, 1)
+            self.assertEqual(rl.main(argv), 0)
+            self.assertEqual(convert.call_count, 1)  # the second run hits the cache
+            self.assertEqual(rl.main([*argv, '--no-reference-cache']), 0)
+            self.assertEqual(convert.call_count, 2)
+            with patch.object(rl, 'ruby_environment', return_value='other'):
+                self.assertEqual(rl.main(argv), 0)
+            self.assertEqual(convert.call_count, 3)  # another Ruby environment runs Ruby again
+
     def test_stored_references_cover_every_configuration_and_case(self):
         _, cases = rl.acceptance.load_corpus(rl.MANIFEST)
         for configuration in rl.CONFIGURATIONS:

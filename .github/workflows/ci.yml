@@ -1,10 +1,19 @@
 name: checks
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  # A weekly and a manual run verify every Ruby reference again, without the
+  # cache of already verified ones.
+  schedule:
+    - cron: '23 4 * * 1'
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      REFERENCE_CACHE_FLAG: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '--no-reference-cache' || '' }}
     steps:
       - uses: actions/checkout@v4
       - name: Rust toolchain
@@ -50,6 +59,16 @@ jobs:
         run: gem install --user-install asciidoctor --version "$(cat compatibility/asciidoctor-version)" --no-document
       - name: Install pinned URI cache reference
         run: gem install --user-install open-uri-cached --version "$(cat compatibility/open-uri-cached-version)" --no-document
+      # Keys of references already verified with Ruby (scripts/compatibility.py,
+      # scripts/rouge_listings.py). Each key covers the Ruby environment, the
+      # case's inputs and its stored reference, so any earlier cache is safe
+      # to restore: entries that no longer match simply run Ruby again.
+      - name: Restore verified Ruby references
+        uses: actions/cache@v4
+        with:
+          path: target/reference-cache
+          key: reference-cache-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: reference-cache-${{ runner.os }}-
       - name: Install pinned Rouge reference
         run: gem install --user-install rouge --version "$(cat compatibility/rouge-version)" --no-document
       - name: Verify generated Rouge tables, lexers and conformance corpora
@@ -74,7 +93,7 @@ jobs:
       - name: Test diagnostic position reference
         run: ruby scripts/test_asciidoctor_positions.rb
       - name: Verify reference fixtures and compatibility
-        run: python3 scripts/compatibility.py --verify-reference
+        run: python3 scripts/compatibility.py --verify-reference $REFERENCE_CACHE_FLAG
       - name: Verify acceptance references and diagnostics
         run: python3 scripts/acceptance.py --verify-reference
       - name: Verify document structure references
@@ -88,4 +107,4 @@ jobs:
       - name: Verify diagnostic position references
         run: python3 scripts/acceptance.py --manifest compatibility/acceptance/positions.json --verify-reference
       - name: Verify Rouge listing references
-        run: python3 scripts/rouge_listings.py --verify-reference
+        run: python3 scripts/rouge_listings.py --verify-reference $REFERENCE_CACHE_FLAG
