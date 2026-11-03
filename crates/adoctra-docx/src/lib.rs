@@ -17,6 +17,7 @@ mod media;
 mod numbering;
 mod package;
 mod props;
+mod sections;
 mod styles;
 mod table;
 mod template;
@@ -33,8 +34,9 @@ use adoctra_core::{Backend, Document, Error, Inline, ResourceProvider, Result};
 pub use builtin::Builtin;
 use inline::{Cx, Newlines, Runs};
 use props::CoreProperties;
+use sections::Sections;
 use template::{Fill, Template};
-use writer::{ChapterSections, Writer};
+use writer::Writer;
 
 /// The DOCX backend.
 #[derive(Default, Clone)]
@@ -94,14 +96,16 @@ impl DocxBackend {
         };
         let title = header_title(doc);
         let title_marker = template.has_marker("title");
-        let mut chapters = (doc.attributes.get("doctype") == Some("book"))
-            .then(|| template.body_sect_pr())
-            .flatten()
-            .filter(|sect_pr| sect_pr.contains("<w:titlePg/>") || sect_pr.contains("<w:titlePg "))
-            .map(ChapterSections::new);
-        let text_width = template
-            .body_sect_pr()
-            .map_or(writer::DEFAULT_TEXT_WIDTH, |s| writer::text_width(&s));
+        // Parts and chapters of a book start sections when its body section
+        // has a distinct first page.
+        let mut sections = template.body_sect_pr().map(|sect_pr| {
+            let chapters = doc.attributes.get("doctype") == Some("book")
+                && (sect_pr.contains("<w:titlePg/>") || sect_pr.contains("<w:titlePg "));
+            Sections::new(sect_pr, chapters)
+        });
+        let text_width = sections
+            .as_ref()
+            .map_or(sections::DEFAULT_TEXT_WIDTH, Sections::text_width);
         let first_footnote = template.first_footnote_id();
         let allow_uri = doc.attributes.get("allow-uri-read").is_some()
             && adoctra_core::SafeMode::of(&doc.attributes) < adoctra_core::SafeMode::Secure;
@@ -135,7 +139,7 @@ impl DocxBackend {
             }
             _ => None,
         };
-        let body = Writer::new(&mut cx, doc, chapters.as_mut(), text_width).body(lead);
+        let body = Writer::new(&mut cx, doc, sections.as_mut()).body(lead);
         let mut warnings = std::mem::take(&mut cx.warnings.list);
         let media = std::mem::take(&mut cx.media.parts);
         let footnotes = std::mem::take(&mut cx.notes.xml);
@@ -143,7 +147,7 @@ impl DocxBackend {
         template.add_media(media);
         template.add_footnotes(footnotes);
         template.set_core_properties(&core_properties(doc, title.as_ref()).to_xml());
-        let sect_pr = chapters.and_then(|c| c.final_sect_pr());
+        let sect_pr = sections.and_then(|s| s.final_sect_pr());
         let bytes = template.finish(&body, sect_pr, |field| match fields.get(field) {
             Some(runs) => Fill::Runs(runs.clone()),
             None => Fill::Remove,

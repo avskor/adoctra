@@ -9,6 +9,7 @@ use adoctra_core::{AttributeFormat, AttributePart, Document, Inline};
 
 use crate::inline::{Cx, Newlines, Runs};
 use crate::numbering::{self, Level, LIST_INDENT};
+use crate::sections::Sections;
 use crate::styles::StyleKind;
 use crate::table::{self, Slot};
 use crate::xml;
@@ -37,85 +38,6 @@ struct Ctx {
 
 /// A description's indent from its term (twips).
 const DESCRIPTION_INDENT: u32 = 360;
-
-/// The text width of a page when the template's section does not say (A4
-/// with 2 cm margins, twips).
-pub const DEFAULT_TEXT_WIDTH: u32 = 9638;
-
-/// The text width (twips) of section properties: page width minus margins
-/// and gutter.
-pub fn text_width(sect_pr: &str) -> u32 {
-    let attr = |tag: &str, name: &str| {
-        xml::tags(sect_pr, 0)
-            .find(|t| t.name == tag && t.opens())
-            .and_then(|t| t.attr(name))
-            .and_then(|v| v.parse::<i64>().ok())
-    };
-    let Some(page) = attr("w:pgSz", "w:w") else {
-        return DEFAULT_TEXT_WIDTH;
-    };
-    let margins = ["w:left", "w:right", "w:gutter"]
-        .iter()
-        .map(|m| attr("w:pgMar", m).unwrap_or(0))
-        .sum::<i64>();
-    u32::try_from(page - margins)
-        .ok()
-        .filter(|w| *w > 0)
-        .unwrap_or(DEFAULT_TEXT_WIDTH)
-}
-
-/// Section breaks of a book whose body section has a distinct first page
-/// (`w:titlePg`): every part and chapter starts a section, so its opening
-/// page gets the first-page header and footer.
-pub struct ChapterSections {
-    /// The template's body section properties.
-    sect_pr: String,
-    breaks: usize,
-}
-
-impl ChapterSections {
-    pub fn new(sect_pr: String) -> Self {
-        Self { sect_pr, breaks: 0 }
-    }
-
-    /// The break ending the current section: the first keeps the template's
-    /// page numbering restart, later ones continue the numbering.
-    fn next(&mut self) -> String {
-        let sect_pr = if self.breaks == 0 {
-            self.sect_pr.clone()
-        } else {
-            continue_numbering(&self.sect_pr)
-        };
-        self.breaks += 1;
-        format!("<w:p><w:pPr>{sect_pr}</w:pPr></w:p>")
-    }
-
-    /// The final section properties when breaks were inserted.
-    pub fn final_sect_pr(&self) -> Option<String> {
-        (self.breaks > 0).then(|| continue_numbering(&self.sect_pr))
-    }
-}
-
-/// Section properties without a page-number restart.
-pub fn continue_numbering(sect_pr: &str) -> String {
-    let Some(tag) = xml::tags(sect_pr, 0).find(|t| t.name == "w:pgNumType" && t.opens()) else {
-        return sect_pr.to_string();
-    };
-    let tag_text = &sect_pr[tag.range.clone()];
-    let Some(at) = tag_text.find(" w:start=") else {
-        return sect_pr.to_string();
-    };
-    let quote = tag_text.as_bytes()[at + 9];
-    let end = tag_text[at + 10..]
-        .find(quote as char)
-        .map_or(tag_text.len(), |e| at + 11 + e);
-    let rewritten = format!("{}{}", &tag_text[..at], &tag_text[end..]);
-    format!(
-        "{}{rewritten}{}",
-        &sect_pr[..tag.range.start],
-        &sect_pr[tag.range.end..]
-    )
-}
 
 /// Work on the explicit stack.
 enum Task<'c> {
@@ -162,6 +84,8 @@ enum Task<'c> {
     Literal(&'c str, &'static str),
     /// A table of contents (after a preamble).
     Toc(&'c adoctra_core::Toc, Option<&'c Block>),
+    /// Turn the page back after a rotated table.
+    Turn(bool),
     /// The end of a table cell, which must end with a paragraph.
     CloseCell,
 }
@@ -172,7 +96,7 @@ pub struct Writer<'c, 't> {
     out: String,
     /// Block ids waiting for the next paragraph's bookmark.
     pending: Vec<String>,
-    chapters: Option<&'c mut ChapterSections>,
+    sections: Option<&'c mut Sections>,
     book: bool,
     /// The indent of the paragraphs being written (twips).
     indent: u32,
@@ -182,18 +106,16 @@ pub struct Writer<'c, 't> {
 }
 
 impl<'c, 't> Writer<'c, 't> {
-    pub fn new(
-        cx: &'c mut Cx<'t>,
-        doc: &'c Document,
-        chapters: Option<&'c mut ChapterSections>,
-        text_width: u32,
-    ) -> Self {
+    pub fn new(cx: &'c mut Cx<'t>, doc: &'c Document, sections: Option<&'c mut Sections>) -> Self {
+        let text_width = sections
+            .as_deref()
+            .map_or(crate::sections::DEFAULT_TEXT_WIDTH, Sections::text_width);
         Self {
             cx,
             doc,
             out: String::new(),
             pending: Vec::new(),
-            chapters,
+            sections,
             book: doc.attributes.get("doctype") == Some("book"),
             indent: 0,
             keep_next: false,
@@ -285,6 +207,10 @@ impl<'c, 't> Writer<'c, 't> {
                     self.paragraph("Normal", jc, &runs);
                     Vec::new()
                 }
+                Task::Turn(landscape) => {
+                    self.turn(landscape);
+                    Vec::new()
+                }
                 Task::Toc(toc, block) => {
                     self.indent = 0;
                     self.toc(toc, block);
@@ -319,8 +245,7 @@ impl<'c, 't> Writer<'c, 't> {
         match &block.kind {
             BlockKind::Section { level, blocks } => {
                 if self.book && *level <= 1 && !self.out.is_empty() {
-                    if let Some(chapters) = self.chapters.as_deref_mut() {
-                        let page = chapters.next();
+                    if let Some(page) = self.sections.as_deref_mut().and_then(Sections::chapter) {
                         self.out.push_str(&page);
                     }
                 }
@@ -507,8 +432,18 @@ impl<'c, 't> Writer<'c, 't> {
                 Vec::new()
             }
             BlockKind::PageBreak => {
-                self.out
-                    .push_str(r#"<w:p><w:r><w:br w:type="page"/></w:r></w:p>"#);
+                // `page-layout` turns the page: a new section starts.
+                let landscape = match block.attrs.named.get("page-layout").map(String::as_str) {
+                    Some("landscape") => Some(true),
+                    Some("portrait") => Some(false),
+                    _ => None,
+                };
+                // A break to the current orientation is a plain page break.
+                let turned = landscape.and_then(|l| self.turn(l)) == Some(true);
+                if !turned {
+                    self.out
+                        .push_str(r#"<w:p><w:r><w:br w:type="page"/></w:r></w:p>"#);
+                }
                 Vec::new()
             }
             BlockKind::List {
@@ -895,6 +830,38 @@ impl<'c, 't> Writer<'c, 't> {
     /// A table: Ruby's columns, spans, frame, grid, stripes, header and
     /// footer rows, cell styles and alignment, on the `Table` style.
     fn table(&mut self, block: &'c Block, table: &'c Table, ctx: Ctx) -> Vec<Task<'c>> {
+        // `%rotate` puts the table on landscape pages of its own.
+        let rotate = (block.attrs.options.iter().any(|o| o == "rotate")
+            || block.attrs.named.contains_key("rotate-option"))
+            && self.sections.as_deref().is_some_and(|s| !s.landscape())
+            && self.turn(true) == Some(true);
+        let mut tasks = self.table_tasks(block, table, ctx);
+        if rotate {
+            tasks.push(Task::Turn(false));
+        }
+        tasks
+    }
+
+    /// Turn the page (`landscape` or portrait) with a section break, and
+    /// lay out by the new text width. `None` without sections (a template
+    /// without section properties), `Some(false)` when the page is already
+    /// so.
+    fn turn(&mut self, landscape: bool) -> Option<bool> {
+        let Some(sections) = self.sections.as_deref_mut() else {
+            self.cx
+                .warnings
+                .once("docx template has no section properties: page orientation is ignored");
+            return None;
+        };
+        let Some(page) = sections.orientation(landscape) else {
+            return Some(false);
+        };
+        self.text_width = sections.text_width();
+        self.out.push_str(&page);
+        Some(true)
+    }
+
+    fn table_tasks(&mut self, block: &'c Block, table: &'c Table, ctx: Ctx) -> Vec<Task<'c>> {
         // Ruby's caption stands above the table.
         self.title(block, "Caption");
         self.anchor(block);
@@ -1532,36 +1499,6 @@ pub fn partition_title(inlines: &[Inline], separator: &str) -> (Vec<Inline>, Opt
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn later_chapter_sections_continue_page_numbers() {
-        let sect = r#"<w:sectPr><w:pgNumType w:fmt="decimal" w:start="1"/><w:titlePg/></w:sectPr>"#;
-        assert_eq!(
-            continue_numbering(sect),
-            r#"<w:sectPr><w:pgNumType w:fmt="decimal"/><w:titlePg/></w:sectPr>"#
-        );
-        let mut chapters = ChapterSections::new(sect.to_string());
-        assert!(chapters.final_sect_pr().is_none());
-        assert!(chapters.next().contains(r#"w:start="1""#));
-        assert!(!chapters.next().contains("w:start"));
-        assert!(!chapters.final_sect_pr().unwrap().contains("w:start"));
-        assert_eq!(continue_numbering("<w:sectPr/>"), "<w:sectPr/>");
-    }
-
-    #[test]
-    fn text_width_is_the_page_minus_margins() {
-        assert_eq!(
-            text_width(
-                r#"<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:left="1134" w:right="1134" w:gutter="100"/></w:sectPr>"#
-            ),
-            9538
-        );
-        assert_eq!(text_width("<w:sectPr/>"), DEFAULT_TEXT_WIDTH);
-        assert_eq!(
-            text_width(r#"<w:sectPr><w:pgSz w:w="100"/><w:pgMar w:left="200"/></w:sectPr>"#),
-            DEFAULT_TEXT_WIDTH
-        );
-    }
 
     #[test]
     fn alignment_roles_set_justification() {

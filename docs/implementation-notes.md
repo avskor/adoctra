@@ -1831,6 +1831,18 @@ theme rules (`ThemeData::inline_style`) parsed into rPr (color, b, i, u,
 token background differing from the base), base color as default, base
 background as the frame cell's `w:shd`; `Line Number` runs right-aligned.
 `highlight` lines are not shaded (Ruby has no `hll` style).
+Stage 7 done 2026-11-04: `sections.rs` (`Sections`, replacing
+`ChapterSections`; `continue_numbering`/`text_width` moved there) tracks
+the current section kind (landscape, title page): `chapter()` (book with
+body `w:titlePg`) and `orientation(landscape)` end the current section
+with a `w:sectPr` paragraph rendered from the template's body sectPr
+(pgSz swapped + `w:orient` when turned, `w:titlePg` removed for turned
+sections, `w:pgNumType w:start` only in the first); `final_sect_pr()` for
+the body's last. Writer: `turn()` updates `text_width`; page break with a
+changing `page-layout` -> section break instead of `w:br`; `%rotate` table
+on portrait -> turn before, `Task::Turn(false)` after. No body sectPr ->
+warning, orientation ignored. Book header uses `w:ptab` (margin-relative
+right tab; LibreOffice imports it as a normal tab).
 
 Index terms (`((…))` / `indexterm2:[…]` visible, `(((…)))` /
 `indexterm:[…]` concealed) run after images and before links, as Ruby's

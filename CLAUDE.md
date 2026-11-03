@@ -19,9 +19,9 @@ Cargo workspace (`crates/*`), virtual manifest at the root.
 - `adoctra-core` — parser and document model. **Backend-agnostic.** Owns the
   `Backend` and extension (`TreeProcessor`/`Registry`) traits.
 - `adoctra-html` — HTML5 backend.
-- `adoctra-docx` — template-based DOCX backend **in progress** (stage 6 of 8:
+- `adoctra-docx` — template-based DOCX backend **in progress** (stage 7 of 8:
   body, cover, headers, lists, tables, frames, images, footnotes, TOC, index,
-  Rouge; next: page orientation, custom templates). Own OOXML
+  Rouge, page orientation; next: custom templates via `docx-template`). Own OOXML
   writer over `zip`; contract in `docs/docx.adoc`.
 - `adoctra-json` — JSON/ASG backend; intended TCK adapter.
 - `adoctra` — umbrella crate. Re-exports core; backends behind feature flags

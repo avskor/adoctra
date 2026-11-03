@@ -1100,3 +1100,115 @@ fn rouge_keeps_blank_edge_lines_only_when_numbered() {
         pairs(&[("Code", "1  "), ("Code", "2  x"), ("Code", "3  ")])
     );
 }
+
+/// The `w:pgSz` of each section, in order (the final one last).
+fn page_sizes(doc: &str) -> Vec<String> {
+    doc.split("<w:pgSz ")
+        .skip(1)
+        .map(|s| s.split("/>").next().unwrap().to_string())
+        .collect()
+}
+
+#[test]
+fn page_layout_breaks_turn_the_page() {
+    let doc = document(concat!(
+        "Portrait.\n\n",
+        "[page-layout=landscape]\n<<<\n\n",
+        "Wide.\n\n",
+        "[page-layout=landscape]\n<<<\n\n",
+        "Still wide.\n\n",
+        "[page-layout=portrait]\n<<<\n\n",
+        "Tall again.\n",
+    ));
+    assert_eq!(
+        page_sizes(&doc),
+        [
+            r#"w:w="11906" w:h="16838""#,
+            r#"w:w="16838" w:h="11906" w:orient="landscape""#,
+            r#"w:w="11906" w:h="16838""#,
+        ]
+    );
+    // A break to the current orientation is a plain page break.
+    assert_eq!(doc.matches(r#"<w:br w:type="page"/>"#).count(), 1);
+    // Every section keeps the template's footer.
+    assert_eq!(
+        doc.matches(r#"<w:footerReference w:type="default" r:id="rId5"/>"#)
+            .count(),
+        3
+    );
+}
+
+#[test]
+fn rotated_tables_get_landscape_pages_of_their_own() {
+    let doc = document("Before.\n\n[%rotate]\n|===\n|a |b\n|===\n\nAfter.\n");
+    assert_eq!(
+        page_sizes(&doc),
+        [
+            r#"w:w="11906" w:h="16838""#,
+            r#"w:w="16838" w:h="11906" w:orient="landscape""#,
+            r#"w:w="11906" w:h="16838""#,
+        ]
+    );
+    // The table spans the landscape text width.
+    assert!(
+        doc.contains(r#"<w:tblW w:w="14570" w:type="dxa"/>"#),
+        "{doc}"
+    );
+    let table = doc.find("<w:tbl>").unwrap();
+    let breaks: Vec<usize> = doc.match_indices("<w:sectPr>").map(|(i, _)| i).collect();
+    assert!(breaks[0] < table && table < breaks[1]);
+    // On landscape pages already, a rotated table stays in place.
+    let wide = document("[page-layout=landscape]\n<<<\n\n[%rotate]\n|===\n|a\n|===\n");
+    assert_eq!(page_sizes(&wide).len(), 2);
+}
+
+#[test]
+fn turned_book_sections_have_no_first_page_header() {
+    let out = render("= B\n:doctype: book\n\n== One\n\n[%rotate]\n|===\n|x\n|===\n\n== Two\n");
+    let doc = part(&out.bytes, "word/document.xml");
+    // Cover, chapter one (portrait, first page), its rotated table
+    // (landscape, no first page), its rest (portrait), chapter two.
+    let sections: Vec<&str> = doc.split("<w:sectPr>").skip(1).collect();
+    assert_eq!(sections.len(), 5, "{doc}");
+    assert!(sections[1].contains("<w:titlePg/>"));
+    assert!(
+        sections[2].contains(r#"w:orient="landscape""#) && !sections[2].contains("<w:titlePg/>")
+    );
+    assert!(!sections[3].contains("<w:titlePg/>"));
+    assert!(sections[4].contains("<w:titlePg/>"));
+    assert_eq!(doc.matches(r#"w:start="1""#).count(), 1);
+}
+
+#[test]
+fn a_template_without_sections_ignores_orientation() {
+    let mut zip_bytes = word_template();
+    // Drop the template body's section properties.
+    let mut archive = zip::ZipArchive::new(Cursor::new(zip_bytes.clone())).unwrap();
+    let mut out = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    for i in 0..archive.len() {
+        let mut file = archive.by_index(i).unwrap();
+        let mut text = String::new();
+        file.read_to_string(&mut text).unwrap();
+        let name = file.name().to_string();
+        if name == "word/document.xml" {
+            text = text.replace(
+                r#"<w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>"#,
+                "",
+            );
+        }
+        out.start_file(name, zip::write::SimpleFileOptions::default())
+            .unwrap();
+        out.write_all(text.as_bytes()).unwrap();
+    }
+    zip_bytes = out.finish().unwrap().into_inner();
+    let doc = parse("[page-layout=landscape]\n<<<\n\ntext\n").document;
+    let rendered = DocxBackend::new()
+        .with_template(zip_bytes)
+        .render(&doc)
+        .unwrap();
+    assert_eq!(
+        rendered.warnings,
+        ["docx template has no section properties: page orientation is ignored"]
+    );
+    assert!(part(&rendered.bytes, "word/document.xml").contains(r#"<w:br w:type="page"/>"#));
+}
