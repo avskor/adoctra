@@ -15,8 +15,9 @@ entries UNSUPPORTED. Observable document conversion and CLI behavior are
 still compared with Ruby.**
 
 **Current user priority: complete compatibility with pinned Asciidoctor
-2.0.23 comes before further performance optimization, incremental parsing,
-DOCX or new extension APIs.** Follow the compatibility-first queue in
+2.0.23 comes before further performance optimization, incremental parsing
+or new extension APIs.** The DOCX backend is a separate queue (user decision
+2026-11-04, see **DOCX backend** below). Follow the compatibility-first queue in
 `docs/implementation-plan.adoc` and the open-gap register at the start of
 `docs/compatibility.adoc`. Passing the existing normalized corpus is not proof
 of full compatibility. HTML keeps modern semantic markup by design; byte-exact
@@ -122,7 +123,7 @@ run per document (output chomped + LF, highlighter library status reset).
 every status. Output-neutral Ruby API options (sourcemap, catalog_assets,
 timings, eruby) pass to the reference only; `backend` (html5/html/xhtml/
 xhtml5) maps to a locked `-a backend=`. Remaining UNSUPPORTED: docbook/
-manpage backends (243; deferred with DOCX by user decision 2026-10-31 —
+manpage backends (243; deferred by user decision 2026-10-31 —
 do not start them unprompted), extension/logger API (22), parse_header_only (6).
 **File output** (Ruby's Asciidoctor.convert/Invoker): entries with
 to_dir/to_file run one CLI per side (`-D`/`-o`; Ruby through the reference
@@ -1704,8 +1705,39 @@ fixtures under `golden/quotes/` and `golden/verses/`, open-block fixtures under
 fixtures under `golden/tables/`, break fixtures under `golden/breaks/` and
 manual page fixtures under `golden/manpage/`).
 
-Scaffold only: DOCX backend; the extension API exists but `parse`/`convert` do
-not invoke it yet.
+The extension API exists but `parse`/`convert` do not invoke it yet.
+
+**DOCX backend** (user decision 2026-11-04; contract and status in
+`docs/docx.adoc`, stages in `docs/implementation-plan.adoc` «DOCX-бэкенд»).
+Template-based: the look comes from a Word template, every element gets a
+named style. Stage 1 done 2026-11-04. `adoctra-docx` modules: `package.rs`
+(OPC parts as bytes in a `BTreeMap`; `zip` 4.6 with flate2's pure-Rust
+miniz_oxide backend, both in `[workspace.dependencies]`; deterministic write:
+`[Content_Types].xml` first, name order, `DateTime::default()`, 0644;
+256 MiB part cap; content-type Default/Override edits; `Relationships`
+appends new `rId`s after the template's and reuses an equal relationship),
+`xml.rs` (escaping + a tolerant tag scanner with byte ranges: callers splice
+markup, template parts are never re-serialized), `styles.rs` (registry by
+name → alias → id, ASCII case-insensitive, per kind; `resolve` adds a missing
+Word built-in from `fallback.rs` with resolved `basedOn`/`next` ids and a
+non-colliding id, or reports a missing custom style once:
+`docx template is missing <kind> style: <name>`), `template.rs` (main part
+from `_rels/.rels`, styles part from its rels or created; `.dotx` main part
+re-declared as document; `adoctra:body` SDT replaced by the body, other
+`adoctra:*` SDTs filled with runs keeping the first paragraph's `w:pPr` or
+removed; no body marker → body cleared up to the final `w:sectPr`),
+`builtin.rs` (`book`/`article` assembled from `templates/` text sources via
+`include_str!`; `<!--@book:pageBreakBefore-->` in `styles.xml` becomes
+`<w:pageBreakBefore/>` for book; `Builtin::to_docx` for
+`examples/export_templates.rs`), `contract.rs` (style names). `lib.rs`:
+`DocxBackend::{new, with_template, render -> Output{bytes, warnings}}`,
+`check_template`. Stage 1 leaves the body empty and warns
+`docx backend does not convert block content yet` when there are blocks; the
+cover fields use raw attribute values (`doctitle` unsubstituted, no subtitle
+split) until stage 2; `revision` is Ruby's HTML details line (`version-label`
+lowercased). The CLI wraps the backend (`Docx` in `main.rs`) to print its
+warnings; binary output and `<docname>.docx` already worked. Validation:
+`scripts/docx_check.py` (stdlib; `--render` via LibreOffice).
 
 Index terms (`((…))` / `indexterm2:[…]` visible, `(((…)))` /
 `indexterm:[…]` concealed) run after images and before links, as Ruby's

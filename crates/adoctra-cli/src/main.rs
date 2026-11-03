@@ -949,7 +949,7 @@ fn select_backend(
             start,
         ))),
         "html" => Ok(Box::new(Html(html_backend(provider, referrer), start))),
-        "docx" => Ok(Box::new(adoctra::docx::DocxBackend::new())),
+        "docx" => Ok(Box::new(Docx(adoctra::docx::DocxBackend::new()))),
         "json" => Ok(Box::new(adoctra::json::JsonBackend::new())),
         other => Err(adoctra::Error::Unsupported(format!("backend `{other}`"))),
     }
@@ -1003,6 +1003,27 @@ impl Backend for Html {
         HIGHLIGHTER_STYLESHEET
             .with(|cell| *cell.borrow_mut() = output.highlighter_stylesheet.take());
         Ok(output.html.into_bytes())
+    }
+}
+
+/// The DOCX backend, printing its warnings like the parser's diagnostics.
+struct Docx(adoctra::docx::DocxBackend);
+
+impl Backend for Docx {
+    fn name(&self) -> &'static str {
+        self.0.name()
+    }
+
+    fn extension(&self) -> &'static str {
+        self.0.extension()
+    }
+
+    fn convert(&self, doc: &adoctra::Document) -> adoctra::Result<Vec<u8>> {
+        let output = self.0.render(doc)?;
+        for warning in &output.warnings {
+            warn(warning);
+        }
+        Ok(output.bytes)
     }
 }
 

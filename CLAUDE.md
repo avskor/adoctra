@@ -19,8 +19,9 @@ Cargo workspace (`crates/*`), virtual manifest at the root.
 - `adoctra-core` — parser and document model. **Backend-agnostic.** Owns the
   `Backend` and extension (`TreeProcessor`/`Registry`) traits.
 - `adoctra-html` — HTML5 backend.
-- `adoctra-docx` — DOCX backend. **Scaffold/stub** (returns `Unsupported`);
-  wire up `docx-rs` here. Do not delete the traversal seam.
+- `adoctra-docx` — template-based DOCX backend **in progress** (stage 1 of 7:
+  package, templates, cover fields; blocks not yet converted). Own OOXML
+  writer over `zip`; contract in `docs/docx.adoc`.
 - `adoctra-json` — JSON/ASG backend; intended TCK adapter.
 - `adoctra` — umbrella crate. Re-exports core; backends behind feature flags
   (`html` default, plus `docx`, `json`, `all-backends`).
@@ -71,8 +72,8 @@ The model serves three audiences; keep their needs in mind when changing core:
   `{ workspace = true }`.
 - Keep the scaffold **dependency-light**. The core/backends are intentionally
   `std`-only right now (the CLI uses `chrono` for the local clock and `ureq`
-  for URIs); the
-  `thiserror`/`docx-rs`/`clap`/`serde` lines in the
+  for URIs; `adoctra-docx` uses `zip` with pure-Rust deflate); the
+  `thiserror`/`clap`/`serde` lines in the
   root manifest are commented placeholders. Add a dependency only when it earns
   its place, and prefer `cargo add` so versions stay current.
 - WASM glue stays behind `#[cfg(target_arch = "wasm32")]`; the JSON
@@ -156,13 +157,14 @@ update that file (and `docs/implementation-plan.adoc`/`docs/compatibility.adoc`)
   still compared with Ruby.
 - **Priority:** complete compatibility with pinned Asciidoctor 2.0.23
   (`compatibility/asciidoctor-version`) comes before performance work,
-  incremental parsing, DOCX or new extension APIs. Follow the
+  incremental parsing or new extension APIs. Follow the
   compatibility-first queue in `docs/implementation-plan.adoc` and the open-gap
   register at the start of `docs/compatibility.adoc`; read both before
   compatibility work and update their status when completing a step.
-- DocBook/manpage *backends* are deferred together with DOCX (user decision
-  2026-10-31) — do not start them unprompted. Do not resume allocation
-  micro-optimizations as the next task.
+- DocBook/manpage *backends* are deferred (user decision 2026-10-31) — do not
+  start them unprompted. The DOCX backend was un-deferred 2026-11-04: follow
+  the «DOCX-бэкенд» stages in `docs/implementation-plan.adoc`. Do not resume
+  allocation micro-optimizations as the next task.
 - All 228 Rouge lexers are ported (`adoctra-highlight`); the user required all
   of them before claiming Rouge support.
 - The CLI's default safe mode jails output too (user decision 2026-10-31).
@@ -219,8 +221,9 @@ callouts, tables incl. AsciiDoc cells, images/SVG/data-uri/video/audio,
 xrefs/anchors/footnotes/index terms/UI macros/STEM, TOC, block `subs`,
 source highlighters incl. the Rouge port), HTML backend (standalone and
 embedded, XML syntax, `adoctra.css`), JSON backend, WASM bindings with spans,
-tokens and diagnostics, and a CLI matching Ruby's options. **Scaffold only:**
-DOCX backend; the extension API exists but `parse`/`convert` do not invoke it.
+tokens and diagnostics, and a CLI matching Ruby's options. **In progress:**
+the template-based DOCX backend (`docs/docx.adoc`). **Scaffold only:** the
+extension API exists but `parse`/`convert` do not invoke it.
 **Not yet implemented:** incremental/block reparse, a pull/event API, DocBook/manpage backends, Ruby
 API/extensions. (Admonition labels in list items and list item anchors were
 rechecked against Ruby on 2026-11-01 and match.)

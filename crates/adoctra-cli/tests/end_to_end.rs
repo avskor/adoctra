@@ -1959,3 +1959,36 @@ fn cli_base_dir_need_not_contain_the_input_and_write_errors_read_like_ruby() {
     assert!(failure.ends_with("/other.adoc"), "{stderr}");
     std::fs::remove_dir_all(root).unwrap();
 }
+
+#[test]
+fn cli_writes_docx_next_to_the_input_and_prints_its_warnings() {
+    use std::process::Command;
+    let root = std::env::temp_dir().join(format!("adoctra-cli-docx-{}", std::process::id()));
+    std::fs::create_dir_all(&root).unwrap();
+    let source = root.join("doc.adoc");
+    std::fs::write(&source, "= Title\n\ntext\n").unwrap();
+    let output = Command::new(env!("CARGO_BIN_EXE_adoctra"))
+        .arg(&source)
+        .args(["--to", "docx"])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    assert_eq!(
+        String::from_utf8(output.stderr).unwrap(),
+        "adoctra: warning: docx backend does not convert block content yet\n"
+    );
+    let bytes = std::fs::read(root.join("doc.docx")).unwrap();
+    // A zip whose first entry is the OPC content types, unmodified by the
+    // text-output newline handling.
+    assert_eq!(&bytes[..4], b"PK\x03\x04");
+    assert_eq!(&bytes[30..49], b"[Content_Types].xml");
+    // The same bytes on stdout.
+    let output = Command::new(env!("CARGO_BIN_EXE_adoctra"))
+        .arg(&source)
+        .args(["--to", "docx", "-o", "-"])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    assert_eq!(output.stdout, bytes);
+    std::fs::remove_dir_all(root).unwrap();
+}
