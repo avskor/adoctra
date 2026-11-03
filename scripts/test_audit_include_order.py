@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 import subprocess
 import unittest
+from unittest.mock import patch
 
 import audit_include_order as audit
 
@@ -12,6 +13,14 @@ class IncludeOrderAuditTests(unittest.TestCase):
             html='<p>\0<strong>\0t\0w\0o\0</strong></p>', diagnostics=[])), '')
         actual = subprocess.CompletedProcess([], 0, '<p><strong>two</strong></p>', '')
         self.assertEqual(audit.compare(reference, actual, Path('/fixture'))['status'], 'DIFF')
+
+    def test_output_is_read_as_bytes_so_a_lone_cr_survives(self):
+        done = subprocess.CompletedProcess([], 0, b'<pre>a\rb</pre>', b'')
+        with patch.object(audit.subprocess, 'run', return_value=done) as run:
+            result = audit.invoke(['adoctra'], 'source')
+        self.assertEqual(result.stdout, '<pre>a\rb</pre>')
+        self.assertEqual(run.call_args.kwargs['input'], b'source')
+        self.assertNotIn('text', run.call_args.kwargs)
 
     def test_ruby_exception_is_quarantined_and_never_a_pass(self):
         reference = subprocess.CompletedProcess([], 1, '', '/fixture/main.adoc: invalid Unicode')

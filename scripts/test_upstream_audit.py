@@ -1,13 +1,25 @@
 import json
 from pathlib import Path
 import shutil
+import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 
 import upstream_audit
 from acceptance import cli_diagnostics
 from upstream_audit import (attribute_args, classify, compare, entry_id, load_inventory, localize,
                             materialize, raw_body)
+
+
+class OutputTests(unittest.TestCase):
+    def test_cli_output_is_read_as_bytes_so_a_lone_cr_survives(self):
+        done = subprocess.CompletedProcess([], 0, b'<pre>a\rb</pre>', b'')
+        with patch("upstream_audit.subprocess.run", return_value=done) as run:
+            result = upstream_audit.adoctra(Path("/bin/adoctra"), {"source": "x"}, [])
+        self.assertEqual(result["html"], "<pre>a\rb</pre>")
+        self.assertEqual(run.call_args.kwargs["input"], b"x")
+        self.assertNotIn("text", run.call_args.kwargs)
 
 
 class ClassifyTests(unittest.TestCase):

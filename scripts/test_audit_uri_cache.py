@@ -1,7 +1,7 @@
 import copy
+import subprocess
 from contextlib import nullcontext
 from pathlib import Path
-from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -33,9 +33,20 @@ class UriCacheAuditTests(unittest.TestCase):
     def test_cli_failure_cannot_be_quarantined_as_a_ruby_exception(self):
         case = dict(source='text', responses={})
         with patch.object(audit, 'server', return_value=nullcontext(('http://fixture.test', []))), \
-                patch.object(audit.subprocess, 'run', return_value=SimpleNamespace(returncode=1, stderr='failed')):
+                patch.object(audit.subprocess, 'run',
+                             return_value=subprocess.CompletedProcess([], 1, b'', b'failed')):
             with self.assertRaisesRegex(RuntimeError, 'failed'):
                 audit.run_side(case, Path('/tmp/cli'), False)
+
+    def test_lone_carriage_return_of_the_cli_survives(self):
+        # Output is read as bytes: text mode would turn a lone CR into LF.
+        done = subprocess.CompletedProcess([], 0, b'<pre>a\rb</pre>', b'')
+        with patch.object(audit, 'server', return_value=nullcontext(('http://fixture.test', []))), \
+                patch.object(audit.subprocess, 'run', return_value=done) as run:
+            result = audit.run_side(dict(source='text', responses={}), Path('/tmp/cli'), False)
+        self.assertEqual(result['html'], '<pre>a\rb</pre>')
+        self.assertIsInstance(run.call_args.kwargs['input'], bytes)
+        self.assertNotIn('text', run.call_args.kwargs)
 
     def test_positions_and_literal_newlines_are_not_normalized_away(self):
         expected = dict(self.report, html='<pre>one\ntwo</pre>')
