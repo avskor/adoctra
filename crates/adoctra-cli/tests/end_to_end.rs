@@ -1966,7 +1966,15 @@ fn cli_writes_docx_next_to_the_input_and_prints_its_warnings() {
     let root = std::env::temp_dir().join(format!("adoctra-cli-docx-{}", std::process::id()));
     std::fs::create_dir_all(&root).unwrap();
     let source = root.join("doc.adoc");
-    std::fs::write(&source, "= Title\n\ntext\n\nimage::a.png[]\n").unwrap();
+    std::fs::write(
+        &source,
+        "= Title\n\ntext\n\nimage::missing.png[]\n\nimage::pic.png[]\n",
+    )
+    .unwrap();
+    // An image beside the document is read through the CLI's resources.
+    let mut png = b"\x89PNG\r\n\x1a\n\0\0\0\rIHDR".to_vec();
+    png.extend_from_slice(&[0, 0, 0, 8, 0, 0, 0, 4, 8, 6, 0, 0, 0]);
+    std::fs::write(root.join("pic.png"), &png).unwrap();
     let output = Command::new(env!("CARGO_BIN_EXE_adoctra"))
         .arg(&source)
         .args(["--to", "docx"])
@@ -1975,13 +1983,16 @@ fn cli_writes_docx_next_to_the_input_and_prints_its_warnings() {
     assert!(output.status.success());
     assert_eq!(
         String::from_utf8(output.stderr).unwrap(),
-        "adoctra: warning: docx backend does not convert block images yet\n"
+        "adoctra: warning: image not found or unreadable: missing.png\n"
     );
     let bytes = std::fs::read(root.join("doc.docx")).unwrap();
     // A zip whose first entry is the OPC content types, unmodified by the
     // text-output newline handling.
     assert_eq!(&bytes[..4], b"PK\x03\x04");
     assert_eq!(&bytes[30..49], b"[Content_Types].xml");
+    assert!(bytes
+        .windows(b"word/media/image1.png".len())
+        .any(|w| w == b"word/media/image1.png"));
     // The same bytes on stdout.
     let output = Command::new(env!("CARGO_BIN_EXE_adoctra"))
         .arg(&source)

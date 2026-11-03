@@ -43,6 +43,25 @@ impl Warnings {
     }
 }
 
+/// A complex field (`XE`, `NOTEREF`…): its instruction and, when Word
+/// should show something before updating, the result runs.
+pub fn field(instruction: &str, result: &str) -> String {
+    let instruction = escape_text(instruction);
+    if result.is_empty() {
+        return format!(
+            r#"<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> {instruction} </w:instrText></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>"#
+        );
+    }
+    format!(
+        r#"<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> {instruction} </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r>{result}<w:r><w:fldChar w:fldCharType="end"/></w:r>"#
+    )
+}
+
+/// A field instruction's quoted argument (Word's quotes cannot nest).
+fn field_text(text: &str) -> String {
+    text.replace('"', "\u{201d}")
+}
+
 /// Bookmark names for AsciiDoc ids. Word limits a name to 40 letters, digits
 /// and underscores, starting with a letter (an underscore makes a hidden
 /// bookmark, like Asciidoctor's generated `_section` ids). Each id maps to
@@ -85,6 +104,16 @@ impl Bookmarks {
         name
     }
 
+    /// A bookmark named `name` around `content`.
+    pub fn around(&mut self, name: &str, content: &str) -> String {
+        let n = self.next_id;
+        self.next_id += 1;
+        format!(
+            r#"<w:bookmarkStart w:id="{n}" w:name="{}"/>{content}<w:bookmarkEnd w:id="{n}"/>"#,
+            crate::xml::escape_attr(name)
+        )
+    }
+
     /// A zero-length bookmark for `id` (once per id: a duplicate anchor
     /// keeps the first).
     pub fn point(&mut self, id: &str) -> String {
@@ -109,6 +138,32 @@ pub struct Cx<'t> {
     pub numbering: &'t mut crate::numbering::Numbering,
     pub bookmarks: Bookmarks,
     pub warnings: Warnings,
+    pub media: crate::media::Media,
+    pub notes: Notes,
+    /// The page's text width (twips): the widest an inline image is drawn.
+    pub text_width: u32,
+    /// URIs are read (`allow-uri-read`), not linked.
+    pub allow_uri: bool,
+}
+
+/// The document's footnotes as Word footnotes.
+#[derive(Debug, Default)]
+pub struct Notes {
+    next_id: u32,
+    /// Footnote id and bookmark by Ruby's footnote index.
+    by_index: BTreeMap<String, (u32, String)>,
+    /// `w:footnote` elements.
+    pub xml: String,
+}
+
+impl Notes {
+    /// Footnotes numbered after `first` (the template's ids).
+    pub fn starting_at(first: u32) -> Self {
+        Self {
+            next_id: first,
+            ..Self::default()
+        }
+    }
 }
 
 impl Cx<'_> {
@@ -157,6 +212,9 @@ pub struct Runs<'c, 't> {
     newlines: Newlines,
     link_depth: u32,
     opened: Vec<Opened>,
+    /// Writing a copy of a title (a TOC entry): no anchors, footnotes or
+    /// index entries, which belong to the original.
+    outline: bool,
     /// A hard line break was just written: the source line end after it
     /// (a newline or the space core keeps for it) is not text.
     after_break: bool,
@@ -171,8 +229,15 @@ impl<'c, 't> Runs<'c, 't> {
             newlines,
             link_depth: 0,
             opened: Vec::new(),
+            outline: false,
             after_break: false,
         }
+    }
+
+    /// Runs for a copy of a title (see [`Runs::outline`]).
+    pub fn outline(mut self) -> Self {
+        self.outline = true;
+        self
     }
 
     /// The runs, closing a link left open by unbalanced parts.
@@ -231,6 +296,25 @@ impl<'c, 't> Runs<'c, 't> {
         let saved = self.fmt.special.replace(style);
         self.text(text);
         self.fmt.special = saved;
+    }
+
+    /// Raw run markup (a drawing).
+    pub fn markup(&mut self, markup: &str) {
+        self.out.push_str(markup);
+    }
+
+    /// `f`'s content as an external link to `target`.
+    pub fn link(&mut self, target: &str, f: impl FnOnce(&mut Self)) {
+        self.open_link(Some(target), None, None);
+        f(self);
+        self.close_link();
+    }
+
+    /// `f`'s content as a link to the bookmark of `id`.
+    pub fn anchor_link(&mut self, id: &str, f: impl FnOnce(&mut Self)) {
+        self.open_link(None, Some(id), None);
+        f(self);
+        self.close_link();
     }
 
     pub fn line_break(&mut self) {
@@ -429,6 +513,7 @@ impl<'c, 't> Runs<'c, 't> {
                 self.inlines(children);
                 self.close_link();
             }
+            Inline::Anchor { .. } if self.outline => {}
             Inline::Anchor { id, .. } => {
                 let mark = self.cx.bookmarks.point(id);
                 self.out.push_str(&mark);
@@ -436,11 +521,7 @@ impl<'c, 't> Runs<'c, 't> {
             Inline::Image { image, .. } => self.image(image),
             Inline::Footnote { footnote, .. } => self.footnote(footnote),
             Inline::Ui { ui, .. } => self.ui(ui),
-            Inline::IndexTerm { term, .. } => {
-                if let Some(text) = &term.text {
-                    self.parts(text);
-                }
-            }
+            Inline::IndexTerm { term, .. } => self.index_term(term),
             Inline::Stem { stem, .. } => self.parts(&stem.parts),
         }
     }
@@ -463,6 +544,7 @@ impl<'c, 't> Runs<'c, 't> {
                 AttributePart::CloseLink | AttributePart::CloseXref => self.close_link(),
                 AttributePart::OpenXref(xref) => self.open_xref(xref, true),
                 AttributePart::LineBreak => self.line_break(),
+                AttributePart::Anchor(_) if self.outline => {}
                 AttributePart::Anchor(id) => {
                     let mark = self.cx.bookmarks.point(&decode_references(id));
                     self.out.push_str(&mark);
@@ -470,11 +552,7 @@ impl<'c, 't> Runs<'c, 't> {
                 AttributePart::Image(image) => self.image(image),
                 AttributePart::Footnote(footnote) => self.footnote(footnote),
                 AttributePart::Ui(ui) => self.ui(ui),
-                AttributePart::IndexTerm(term) => {
-                    if let Some(text) = &term.text {
-                        self.parts(text);
-                    }
-                }
+                AttributePart::IndexTerm(term) => self.index_term(term),
                 AttributePart::Stem(stem) => self.parts(&stem.parts),
                 AttributePart::Callout(callout) => self.styled("Callout", &callout.number),
             }
@@ -514,36 +592,147 @@ impl<'c, 't> Runs<'c, 't> {
         }
     }
 
-    /// Inline images are embedded in a later stage; their alt text keeps
-    /// the content readable meanwhile.
+    /// An inline image (or an image icon) drawn in the text, sized by its
+    /// `width`/`height`; a text or font icon, or an image that cannot be
+    /// read, shows its alt text in brackets, like Ruby's text icon.
     fn image(&mut self, image: &adoctra_core::InlineImage) {
-        self.cx
-            .warnings
-            .once("docx backend does not convert inline images yet");
-        let mut alt = String::new();
-        for part in &image.alt {
-            match part {
-                AttributePart::Text(t) => alt.push_str(t),
-                AttributePart::Raw(r) => alt.push_str(&raw_text(r)),
-                _ => {}
-            }
+        let alt = decode_references(&parts_text(&image.alt));
+        let drawable = !image.icon || image.icons.as_deref().is_some_and(|i| i != "font");
+        if !drawable || self.outline {
+            self.text(&format!("[{alt}]"));
+            return;
         }
-        self.text(&format!("[{}]", decode_references(&alt)));
+        let src = if image.src.is_empty() {
+            &image.target
+        } else {
+            &image.src
+        };
+        let src = decode_references(src);
+        let picture = self.cx.media.picture(&src, self.cx.rels, self.cx.allow_uri);
+        let picture = match picture {
+            Ok(picture) => picture,
+            Err(reason) => {
+                self.cx.warnings.once(format!("{reason}: {src}"));
+                self.text(&format!("[{alt}]"));
+                return;
+            }
+        };
+        let size = crate::media::draw_size(&image.attributes, picture.pixels, self.cx.text_width);
+        let id = self.cx.media.doc_pr();
+        let name = src.rsplit('/').next().unwrap_or_default().to_string();
+        let drawing = crate::media::drawing(
+            &picture,
+            size,
+            id,
+            &name,
+            &alt,
+            crate::media::Placement::Inline,
+        );
+        match image.attributes.get("link") {
+            Some(link) => {
+                self.open_link(Some(&decode_references(link)), None, None);
+                self.out.push_str(&drawing);
+                self.close_link();
+            }
+            None => self.out.push_str(&drawing),
+        }
     }
 
-    /// Footnotes become Word footnotes in a later stage; their marker keeps
-    /// its place meanwhile.
+    /// A Word footnote: the first reference to a footnote defines it (its
+    /// content in the footnotes part, a bookmark at its mark); a repeated
+    /// reference is a `NOTEREF` to that mark. An unknown id shows `[id]`,
+    /// like Ruby.
     fn footnote(&mut self, footnote: &adoctra_core::Footnote) {
-        self.cx
-            .warnings
-            .once("docx backend does not convert footnotes yet");
-        let label = match footnote.kind {
-            adoctra_core::FootnoteKind::Unresolved => footnote.id.clone().unwrap_or_default(),
-            _ => footnote.index.clone().unwrap_or_default(),
+        if self.outline {
+            return;
+        }
+        let index = footnote.index.clone().unwrap_or_default();
+        let reference_props = match self.cx.style(StyleKind::Character, "Footnote Reference") {
+            Some(id) => format!(
+                r#"<w:rPr><w:rStyle w:val="{}"/></w:rPr>"#,
+                crate::xml::escape_attr(&id)
+            ),
+            None => r#"<w:rPr><w:vertAlign w:val="superscript"/></w:rPr>"#.to_string(),
         };
-        self.fmt.sup += 1;
-        self.text(&format!("[{label}]"));
-        self.fmt.sup -= 1;
+        match (footnote.kind, self.cx.notes.by_index.get(&index).cloned()) {
+            (adoctra_core::FootnoteKind::Unresolved, _) => {
+                self.fmt.sup += 1;
+                self.text(&format!("[{}]", footnote.id.clone().unwrap_or_default()));
+                self.fmt.sup -= 1;
+            }
+            (_, Some((_, bookmark))) => {
+                let result = format!(
+                    r#"<w:r>{reference_props}<w:t>{}</w:t></w:r>"#,
+                    escape_text(&index)
+                );
+                self.out
+                    .push_str(&field(&format!("NOTEREF {bookmark} \\f \\h"), &result));
+            }
+            (_, None) => {
+                let id = self.cx.notes.next_id;
+                self.cx.notes.next_id += 1;
+                let bookmark = format!("_Ref_footnote_{id}");
+                self.cx.notes.by_index.insert(index, (id, bookmark.clone()));
+                let mark =
+                    format!(r#"<w:r>{reference_props}<w:footnoteReference w:id="{id}"/></w:r>"#);
+                let marked = self.cx.bookmarks.around(&bookmark, &mark);
+                self.out.push_str(&marked);
+                // The footnote's text, written with the same styles.
+                let mut inner = Runs::new(self.cx, Newlines::Space);
+                inner.parts(&footnote.content);
+                let content = inner.finish();
+                let text_style = match self.cx.style(StyleKind::Paragraph, "Footnote Text") {
+                    Some(id) => format!(
+                        r#"<w:pPr><w:pStyle w:val="{}"/></w:pPr>"#,
+                        crate::xml::escape_attr(&id)
+                    ),
+                    None => String::new(),
+                };
+                self.cx.notes.xml.push_str(&format!(
+                    r#"<w:footnote w:id="{id}"><w:p>{text_style}<w:r>{reference_props}<w:footnoteRef/></w:r><w:r><w:t xml:space="preserve"> </w:t></w:r>{content}</w:p></w:footnote>"#
+                ));
+            }
+        }
+    }
+
+    /// An index term: a flow term's text, then an `XE` field with its
+    /// terms (`Big cats:Lions`) and a `see` reference; a concealed term only
+    /// the field.
+    fn index_term(&mut self, term: &adoctra_core::IndexTerm) {
+        if let Some(text) = &term.text {
+            self.parts(text);
+        }
+        if self.outline {
+            return;
+        }
+        let entry = if term.terms.is_empty() {
+            term.text.as_deref().map(parts_text).unwrap_or_default()
+        } else {
+            term.terms
+                .iter()
+                .map(|t| decode_references(t).replace(':', "\\:"))
+                .collect::<Vec<_>>()
+                .join(":")
+        };
+        if entry.trim().is_empty() {
+            return;
+        }
+        let mut instruction = format!("XE \"{}\"", field_text(&entry));
+        if let Some(see) = &term.see {
+            instruction.push_str(&format!(
+                " \\t \"See {}\"",
+                field_text(&decode_references(see))
+            ));
+        } else if !term.see_also.is_empty() {
+            let also = term
+                .see_also
+                .iter()
+                .map(|t| decode_references(t))
+                .collect::<Vec<_>>()
+                .join(", ");
+            instruction.push_str(&format!(" \\t \"See also {}\"", field_text(&also)));
+        }
+        self.out.push_str(&field(&instruction, ""));
     }
 
     /// Ruby's keyboard, button and menu macros: each label in its character

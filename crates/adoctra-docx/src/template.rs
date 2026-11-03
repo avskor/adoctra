@@ -27,6 +27,14 @@ const REL_NUMBERING: &str =
 const NUMBERING_CONTENT_TYPE: &str =
     "application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml";
 
+const REL_FOOTNOTES: &str =
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes";
+const FOOTNOTES_CONTENT_TYPE: &str =
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml";
+/// A footnotes part with Word's separator footnotes.
+const EMPTY_FOOTNOTES: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:footnote w:type="separator" w:id="-1"><w:p><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr><w:r><w:separator/></w:r></w:p></w:footnote><w:footnote w:type="continuationSeparator" w:id="0"><w:p><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr><w:r><w:continuationSeparator/></w:r></w:p></w:footnote></w:footnotes>"#;
+
 const EMPTY_STYLES: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"></w:styles>"#;
 
@@ -56,6 +64,12 @@ pub struct Template {
     /// The template's numbering part and its text, if it has one.
     numbering_part: Option<(String, String)>,
     pub numbering: Numbering,
+    /// The template's footnotes part and its text, if it has one.
+    footnotes_part: Option<(String, String)>,
+    /// Added footnotes (`w:footnote` elements).
+    footnotes: String,
+    /// Added parts (media): name, bytes, extension, content type.
+    media: Vec<(String, Vec<u8>, &'static str, &'static str)>,
 }
 
 /// What a marker is replaced by.
@@ -112,7 +126,17 @@ impl Template {
             (part, text)
         });
         let numbering = Numbering::parse(numbering_part.as_ref().map_or("", |(_, t)| t));
+        let footnotes_part = rels.target_of(REL_FOOTNOTES).map(|target| {
+            let part = package::resolve_target(&main, &target);
+            let text = package
+                .text(&part)
+                .unwrap_or_else(|| EMPTY_FOOTNOTES.to_string());
+            (part, text)
+        });
         Ok(Self {
+            footnotes_part,
+            footnotes: String::new(),
+            media: Vec::new(),
             numbering_part,
             numbering,
             styles: Styles::parse(&styles_text),
@@ -137,6 +161,26 @@ impl Template {
     /// body with.
     pub fn parts_mut(&mut self) -> (&mut Styles, &mut Relationships, &mut Numbering) {
         (&mut self.styles, &mut self.rels, &mut self.numbering)
+    }
+
+    /// The first id free for a footnote (after the template's).
+    pub fn first_footnote_id(&self) -> u32 {
+        let text = self.footnotes_part.as_ref().map_or("", |(_, t)| t);
+        xml::tags(text, 0)
+            .filter(|t| t.name == "w:footnote" && t.opens())
+            .filter_map(|t| t.attr("w:id")?.parse::<i64>().ok())
+            .max()
+            .map_or(1, |max| u32::try_from(max + 1).unwrap_or(1).max(1))
+    }
+
+    /// Footnotes (`w:footnote` elements) to add to the footnotes part.
+    pub fn add_footnotes(&mut self, footnotes: String) {
+        self.footnotes = footnotes;
+    }
+
+    /// Media parts to add.
+    pub fn add_media(&mut self, parts: Vec<(String, Vec<u8>, &'static str, &'static str)>) {
+        self.media = parts;
     }
 
     pub fn has_marker(&self, field: &str) -> bool {
@@ -177,8 +221,44 @@ impl Template {
         if let (Some(sect_pr), Some(range)) = (sect_pr_override, final_sect_pr(&document)) {
             document.replace_range(range, &sect_pr);
         }
-        if document.contains("r:id=\"") {
-            document = declare_relationships_namespace(&document);
+        for (prefix, uri) in [
+            (
+                "r",
+                "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
+            ),
+            (
+                "wp",
+                "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing",
+            ),
+        ] {
+            if document.contains(&format!("{prefix}:")) {
+                document = declare_namespace(&document, prefix, uri);
+            }
+        }
+        for (name, bytes, ext, content_type) in std::mem::take(&mut self.media) {
+            self.package.put(&name, bytes);
+            self.package.ensure_default_type(ext, content_type);
+        }
+        if !self.footnotes.is_empty() {
+            let (part, text) = match self.footnotes_part.take() {
+                Some(existing) => existing,
+                None => {
+                    let part = package::resolve_target(&self.main, "footnotes.xml");
+                    self.rels.add(REL_FOOTNOTES, "footnotes.xml", false);
+                    self.package
+                        .set_override_type(&part, FOOTNOTES_CONTENT_TYPE);
+                    (part, EMPTY_FOOTNOTES.to_string())
+                }
+            };
+            let mut text = package::insert_before_close(&text, "w:footnotes", &self.footnotes);
+            if text.contains("r:id=\"") || text.contains("r:embed=\"") {
+                text = declare_namespace(
+                    &text,
+                    "r",
+                    "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
+                );
+            }
+            self.package.put(&part, text);
         }
         self.package.put(&self.main, document);
         let parts: Vec<String> = self
@@ -266,21 +346,17 @@ fn final_sect_pr(doc: &str) -> Option<Range<usize>> {
         .map(|(_, range)| range)
 }
 
-/// Declare the relationships namespace on the root element (a template
-/// whose document had no relationships may lack it).
-fn declare_relationships_namespace(doc: &str) -> String {
+/// Declare namespace `prefix` on the root element (a template whose
+/// document had no relationships or drawings may lack it).
+fn declare_namespace(doc: &str, prefix: &str, uri: &str) -> String {
     let Some(root) = xml::tags(doc, 0).next() else {
         return doc.to_string();
     };
-    if root.attr("xmlns:r").is_some() {
+    if root.attr(&format!("xmlns:{prefix}")).is_some() {
         return doc.to_string();
     }
     let at = root.range.start + 1 + root.name.len();
-    format!(
-        r#"{} xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"{}"#,
-        &doc[..at],
-        &doc[at..]
-    )
+    format!(r#"{} xmlns:{prefix}="{uri}"{}"#, &doc[..at], &doc[at..])
 }
 
 /// Fill the markers of `doc`: the body marker with `body` (a header or

@@ -949,7 +949,13 @@ fn select_backend(
             start,
         ))),
         "html" => Ok(Box::new(Html(html_backend(provider, referrer), start))),
-        "docx" => Ok(Box::new(Docx(adoctra::docx::DocxBackend::new()))),
+        "docx" => {
+            let backend = adoctra::docx::DocxBackend::new();
+            Ok(Box::new(Docx(match provider {
+                Some(provider) => backend.with_resources(provider, referrer),
+                None => backend,
+            })))
+        }
         "json" => Ok(Box::new(adoctra::json::JsonBackend::new())),
         other => Err(adoctra::Error::Unsupported(format!("backend `{other}`"))),
     }

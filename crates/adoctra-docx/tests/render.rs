@@ -11,8 +11,9 @@ fn parts(bytes: &[u8]) -> Vec<(String, String)> {
     (0..zip.len())
         .map(|i| {
             let mut file = zip.by_index(i).unwrap();
-            let mut text = String::new();
-            file.read_to_string(&mut text).unwrap();
+            let mut bytes = Vec::new();
+            file.read_to_end(&mut bytes).unwrap();
+            let text = String::from_utf8_lossy(&bytes).into_owned();
             (file.name().to_string(), text)
         })
         .collect()
@@ -391,7 +392,7 @@ fn unconverted_blocks_are_reported_once_per_kind() {
     assert_eq!(
         out.warnings,
         [
-            "docx backend does not convert block images yet",
+            "images cannot be read without a resource provider: a.png",
             "docx backend drops passthrough blocks (raw output has no DOCX form)",
         ]
     );
@@ -855,4 +856,197 @@ fn table_frame_grid_width_caption_and_cell_kinds() {
 fn cell_backgrounds_come_from_cellbgcolor() {
     let doc = document("|===\n|{set:cellbgcolor:#ff0000}red |plain\n|===\n");
     assert!(doc.contains(r#"w:fill="FF0000""#), "{doc}");
+}
+
+fn png(width: u32, height: u32) -> Vec<u8> {
+    let mut bytes = b"\x89PNG\r\n\x1a\n\0\0\0\rIHDR".to_vec();
+    bytes.extend_from_slice(&width.to_be_bytes());
+    bytes.extend_from_slice(&height.to_be_bytes());
+    bytes.extend_from_slice(&[8, 6, 0, 0, 0]);
+    bytes
+}
+
+fn render_with_images(src: &str, images: &[(&str, Vec<u8>)]) -> adoctra_docx::Output {
+    let mut resources = adoctra_core::MemoryResources::new();
+    for (name, bytes) in images {
+        resources.insert_binary(name, bytes.clone()).unwrap();
+    }
+    DocxBackend::new()
+        .with_resources(std::sync::Arc::new(resources), None)
+        .render(&parse(src).document)
+        .unwrap()
+}
+
+#[test]
+fn block_images_are_embedded_sized_and_captioned() {
+    let out = render_with_images(
+        ".A figure\nimage::img/a.png[Alt text,width=150,align=center]\n\nimage::img/a.png[]\n\nimage::big.png[float=right]\n",
+        &[("img/a.png", png(300, 200)), ("big.png", png(2000, 1000))],
+    );
+    assert!(out.warnings.is_empty(), "{:?}", out.warnings);
+    let doc = part(&out.bytes, "word/document.xml");
+    // One media part per image file, declared once.
+    assert!(!part(&out.bytes, "word/media/image1.png").is_empty());
+    assert!(parts(&out.bytes)
+        .iter()
+        .all(|(n, _)| n != "word/media/image3.png"));
+    let types = part(&out.bytes, "[Content_Types].xml");
+    assert_eq!(types.matches(r#"Extension="png""#).count(), 1, "{types}");
+    // 150 px wide, the ratio kept (EMU at 96 DPI).
+    assert!(
+        doc.contains(r#"<wp:extent cx="1428750" cy="952500"/>"#),
+        "{doc}"
+    );
+    assert!(doc.contains(r#"descr="Alt text""#));
+    assert!(doc.contains(r#"<w:keepNext/><w:jc w:val="center"/>"#));
+    // The caption below, Ruby's figure caption.
+    let ps = paragraphs(&doc);
+    assert_eq!(ps[1], ("Caption".into(), "Figure 1. A figure".into()));
+    // Too wide for the text: scaled to the 9638 twips text width.
+    assert!(
+        doc.contains(r#"<wp:extent cx="6120130" cy="3060065"/>"#),
+        "{doc}"
+    );
+    assert!(doc.contains("<wp:align>right</wp:align>"));
+    assert!(doc.starts_with("<?xml") && doc.contains(r#"xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing""#));
+}
+
+#[test]
+fn missing_images_and_uris() {
+    let out = render_with_images(
+        "image::missing.png[Gone]\n\nimage::https://example.org/a.png[Web]\n",
+        &[],
+    );
+    assert_eq!(out.warnings, ["image not found or unreadable: missing.png"]);
+    let doc = part(&out.bytes, "word/document.xml");
+    assert!(paragraphs(&doc).contains(&("Normal".into(), "[Gone]".into())));
+    // A URI is linked, not read.
+    assert!(doc.contains(r#"<a:blip r:link="rId"#), "{doc}");
+    assert!(part(&out.bytes, "word/_rels/document.xml.rels")
+        .contains(r#"Target="https://example.org/a.png" TargetMode="External""#));
+}
+
+#[test]
+fn inline_images_and_icons() {
+    let out = render_with_images(
+        "Logo image:logo.png[Logo,32] and icon:heart[] here.",
+        &[("logo.png", png(64, 64))],
+    );
+    let doc = part(&out.bytes, "word/document.xml");
+    assert!(doc.contains(r#"<wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="304800" cy="304800"/>"#), "{doc}");
+    // A text icon is its alt text in brackets, like Ruby's.
+    assert_eq!(
+        paragraphs(&doc),
+        pairs(&[("Normal", "Logo  and [heart] here.")])
+    );
+}
+
+#[test]
+fn svg_images_get_a_fallback_picture() {
+    let svg = br#"<svg xmlns="http://www.w3.org/2000/svg" width="40" height="20"/>"#.to_vec();
+    let out = render_with_images("image::d.svg[]\n", &[("d.svg", svg)]);
+    let doc = part(&out.bytes, "word/document.xml");
+    assert!(doc.contains("asvg:svgBlip"));
+    assert!(doc.contains(r#"<wp:extent cx="381000" cy="190500"/>"#));
+    assert!(part(&out.bytes, "[Content_Types].xml").contains(r#"Extension="svg""#));
+}
+
+#[test]
+fn footnotes_become_word_footnotes() {
+    let out = render(
+        "A.footnote:[First *note*.] B.footnote:disc[Shared.] C.footnote:disc[] D.footnote:nope[]",
+    );
+    let doc = part(&out.bytes, "word/document.xml");
+    let notes = part(&out.bytes, "word/footnotes.xml");
+    assert!(doc.contains(r#"<w:footnoteReference w:id="1"/>"#));
+    assert!(doc.contains(r#"<w:footnoteReference w:id="2"/>"#));
+    // The repeated footnote refers back to its mark.
+    assert!(doc.contains("NOTEREF _Ref_footnote_2 \\f \\h"), "{doc}");
+    assert!(doc.contains(r#"<w:bookmarkStart w:id="1" w:name="_Ref_footnote_2"/>"#));
+    // An unknown footnote shows its id, like Ruby.
+    assert!(doc.contains(">[nope]<"));
+    assert!(notes.contains(r#"<w:footnote w:type="separator" w:id="-1">"#));
+    assert!(notes.contains(r#"<w:footnote w:id="1"><w:p><w:pPr><w:pStyle w:val="FootnoteText"/></w:pPr><w:r><w:rPr><w:rStyle w:val="FootnoteReference"/></w:rPr><w:footnoteRef/></w:r>"#), "{notes}");
+    assert!(
+        notes.contains(r#"<w:rStyle w:val="Strong"/></w:rPr><w:t xml:space="preserve">note</w:t>"#)
+    );
+    assert!(part(&out.bytes, "word/_rels/document.xml.rels").contains("relationships/footnotes"));
+    assert!(part(&out.bytes, "[Content_Types].xml").contains("/word/footnotes.xml"));
+}
+
+#[test]
+fn the_table_of_contents_links_core_outline() {
+    let doc = document(
+        "= Doc\n:toc:\n:toc-title: Содержание\n:sectnums:\n\n== One [[x]]x\n\n=== Sub\n\n==== Deep\n\n== Two\n",
+    );
+    assert!(doc.contains(r#"<w:docPartGallery w:val="Table of Contents"/>"#));
+    assert!(
+        doc.contains(r#"<w:instrText xml:space="preserve"> TOC \o "1-2" \h \z \u </w:instrText>"#)
+    );
+    assert!(doc.contains(r#"w:dirty="true""#));
+    let ps = paragraphs(&doc);
+    assert_eq!(
+        ps[1..5],
+        pairs(&[
+            ("TOCHeading", "Содержание"),
+            ("TOC1", "1. One x"),
+            ("TOC2", "1.1. Sub"),
+            ("TOC1", "2. Two"),
+        ])
+    );
+    // Entries link to the headings' bookmarks; the heading keeps its own
+    // inline anchor.
+    assert!(
+        doc.contains(r#"<w:hyperlink w:anchor="_one_x" w:history="1">"#),
+        "{doc}"
+    );
+    assert_eq!(doc.matches(r#"w:name="x""#).count(), 1);
+    let toc_end = doc.find("</w:sdt>").unwrap();
+    assert!(doc.find(r#"w:name="x""#).unwrap() > toc_end);
+}
+
+#[test]
+fn toc_macro_and_preamble_placements() {
+    let doc = document("= Doc\n:toc: macro\n\n== A\n\n.Contents\ntoc::[]\n\n== B\n");
+    let ps = paragraphs(&doc);
+    let at = ps.iter().position(|p| p.0 == "TOCHeading").unwrap();
+    assert_eq!(ps[at].1, "Contents");
+    assert_eq!(ps[at - 1].1, "A");
+    let doc = document("= Doc\n:toc: preamble\n\nIntro.\n\n== A\n");
+    let ps = paragraphs(&doc);
+    let at = ps.iter().position(|p| p.0 == "TOCHeading").unwrap();
+    assert_eq!(ps[at - 1].1, "Intro.");
+}
+
+#[test]
+fn index_terms_become_xe_fields() {
+    let doc = document(concat!(
+        "The ((Tiger)) and (((Big cats, Lions))) and ((Puma >> Big cats)).\n\n",
+        "[index]\n== Index\n",
+    ));
+    assert!(
+        doc.contains(r#"<w:instrText xml:space="preserve"> XE "Tiger" </w:instrText>"#),
+        "{doc}"
+    );
+    assert!(
+        doc.contains(r#"<w:instrText xml:space="preserve"> XE "Big cats:Lions" </w:instrText>"#)
+    );
+    assert!(doc.contains(r#"XE "Puma" \t "See Big cats""#));
+    assert!(doc.contains(r#"<w:instrText xml:space="preserve"> INDEX \c "2" </w:instrText>"#));
+    assert_eq!(
+        paragraphs(&doc)[0],
+        ("Normal".into(), "The Tiger and  and Puma.".into())
+    );
+}
+
+#[test]
+fn video_and_audio_are_links() {
+    let out = render("video::clip.mp4[]\n");
+    assert_eq!(
+        out.warnings,
+        ["docx backend links video and audio instead of embedding them"]
+    );
+    let doc = part(&out.bytes, "word/document.xml");
+    assert!(part(&out.bytes, "word/_rels/document.xml.rels").contains(r#"Target="clip.mp4""#));
+    assert!(doc.contains(">clip.mp4<"));
 }

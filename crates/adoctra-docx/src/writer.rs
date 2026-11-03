@@ -160,6 +160,8 @@ enum Task<'c> {
     },
     /// A literal table cell.
     Literal(&'c str, &'static str),
+    /// A table of contents (after a preamble).
+    Toc(&'c adoctra_core::Toc, Option<&'c Block>),
     /// The end of a table cell, which must end with a paragraph.
     CloseCell,
 }
@@ -174,6 +176,8 @@ pub struct Writer<'c, 't> {
     book: bool,
     /// The indent of the paragraphs being written (twips).
     indent: u32,
+    /// The next paragraph keeps with the one after it.
+    keep_next: bool,
     text_width: u32,
 }
 
@@ -192,6 +196,7 @@ impl<'c, 't> Writer<'c, 't> {
             chapters,
             book: doc.attributes.get("doctype") == Some("book"),
             indent: 0,
+            keep_next: false,
             text_width,
         }
     }
@@ -201,6 +206,10 @@ impl<'c, 't> Writer<'c, 't> {
     pub fn body(mut self, title: Option<String>) -> String {
         if let Some(title) = title {
             self.out.push_str(&title);
+        }
+        // The automatic table of contents (Ruby's header placement).
+        if let Some(toc) = &self.doc.toc {
+            self.toc(toc, None);
         }
         let blocks = &self.doc.blocks[usize::from(self.doc.has_title)..];
         let mut stack: Vec<Task<'c>> = blocks
@@ -276,6 +285,11 @@ impl<'c, 't> Writer<'c, 't> {
                     self.paragraph("Normal", jc, &runs);
                     Vec::new()
                 }
+                Task::Toc(toc, block) => {
+                    self.indent = 0;
+                    self.toc(toc, block);
+                    Vec::new()
+                }
                 Task::Literal(text, jc) => {
                     self.indent = 0;
                     let mut runs = Runs::new(self.cx, Newlines::Break);
@@ -322,6 +336,10 @@ impl<'c, 't> Writer<'c, 't> {
                     ctx.lead = matches!(first.kind, BlockKind::Paragraph { .. })
                         && first.roles.is_empty()
                         && first.attrs.style.is_none();
+                }
+                // `toc-placement=preamble`: the TOC ends the preamble.
+                if let Some(toc) = &block.toc {
+                    children.push(Task::Toc(toc, None));
                 }
                 children
             }
@@ -531,9 +549,29 @@ impl<'c, 't> Writer<'c, 't> {
                 }
             }
             BlockKind::Table(table) => self.table(block, table, ctx),
-            BlockKind::Image { .. } => self.not_yet("block images"),
-            BlockKind::Video { .. } | BlockKind::Audio { .. } => self.not_yet("video and audio"),
-            BlockKind::Toc => self.not_yet("the table of contents"),
+            BlockKind::Image { src, alt, .. } => {
+                self.block_image(block, src, alt, ctx);
+                Vec::new()
+            }
+            BlockKind::Video { src, target, .. } | BlockKind::Audio { src, target } => {
+                self.cx
+                    .warnings
+                    .once("docx backend links video and audio instead of embedding them");
+                self.title(block, "Block Title");
+                self.anchor(block);
+                let mut runs = Runs::new(self.cx, Newlines::Space);
+                runs.link(src, |r| r.text(target));
+                let runs = runs.finish();
+                self.paragraph("Normal", "", &runs);
+                Vec::new()
+            }
+            BlockKind::Toc => {
+                if let Some(toc) = &block.toc {
+                    self.anchor(block);
+                    self.toc(toc, Some(block));
+                }
+                Vec::new()
+            }
         }
     }
 
@@ -958,11 +996,141 @@ impl<'c, 't> Writer<'c, 't> {
         tasks
     }
 
-    fn not_yet(&mut self, what: &str) -> Vec<Task<'c>> {
-        self.cx
-            .warnings
-            .once(format!("docx backend does not convert {what} yet"));
-        Vec::new()
+    /// A block image: a paragraph holding the picture (aligned by `align`,
+    /// or floating with `float`), the caption below, like Ruby's figure.
+    /// An image that cannot be read shows its alt text, with a warning.
+    fn block_image(&mut self, block: &Block, src: &str, alt: &[AttributePart], ctx: Ctx) {
+        self.anchor(block);
+        let alt = crate::text::decode_references(&crate::inline::parts_text(alt));
+        let src = crate::text::decode_references(src);
+        let named = &block.attrs.named;
+        let picture = self.cx.media.picture(&src, self.cx.rels, self.cx.allow_uri);
+        let runs = match picture {
+            Ok(picture) => {
+                let available = self.text_width.saturating_sub(ctx.indent);
+                let size = crate::media::draw_size(named, picture.pixels, available);
+                let placement = match named.get("float").map(String::as_str) {
+                    Some("left") => crate::media::Placement::Float("left"),
+                    Some("right") => crate::media::Placement::Float("right"),
+                    _ => crate::media::Placement::Inline,
+                };
+                let id = self.cx.media.doc_pr();
+                let name = src.rsplit('/').next().unwrap_or_default().to_string();
+                let drawing = crate::media::drawing(&picture, size, id, &name, &alt, placement);
+                let mut runs = Runs::new(self.cx, Newlines::Space);
+                match named.get("link") {
+                    Some(link) => {
+                        let link = crate::text::decode_references(link);
+                        runs.link(&link, |r| r.markup(&drawing));
+                    }
+                    None => runs.markup(&drawing),
+                }
+                runs.finish()
+            }
+            Err(reason) => {
+                self.cx.warnings.once(format!("{reason}: {src}"));
+                let mut runs = Runs::new(self.cx, Newlines::Space);
+                runs.text(&format!("[{alt}]"));
+                runs.finish()
+            }
+        };
+        let jc = match named.get("align").map(String::as_str) {
+            Some("center") => r#"<w:jc w:val="center"/>"#,
+            Some("right") => r#"<w:jc w:val="right"/>"#,
+            _ => "",
+        };
+        // A captioned picture stays on the page of its caption.
+        if block.title.is_some() {
+            self.paragraph_keep_next("Normal", jc, &runs);
+        } else {
+            self.paragraph("Normal", jc, &runs);
+        }
+        self.title(block, "Caption");
+    }
+
+    /// A table of contents: Word's `TOC` field (a content control of the
+    /// Table of Contents gallery) whose result is filled in with links to
+    /// the sections core outlined, so it reads before Word updates it (page
+    /// numbers come with the update). The title is the block's, else
+    /// `toc-title`.
+    fn toc(&mut self, toc: &adoctra_core::Toc, block: Option<&Block>) {
+        let levels = toc.levels.clamp(1, 9);
+        let mut runs = Runs::new(self.cx, Newlines::Space);
+        match block.and_then(|b| b.title.as_ref()) {
+            Some(title) => runs.inlines(title),
+            None => match self.doc.attributes.raw_parts("toc-title") {
+                Some(parts) => runs.parts(parts),
+                None => runs.text(self.doc.attributes.get("toc-title").unwrap_or_default()),
+            },
+        }
+        let title = runs.finish();
+        // The listed sections: (depth, caption parts or heading, heading).
+        let mut entries: Vec<(usize, &Block, Option<&[AttributePart]>)> = Vec::new();
+        let mut stack: Vec<OutlineFrame> =
+            vec![(sections(&self.doc.blocks), Some(&toc.entries[..]), 0)];
+        while let Some((list, toc_entries, depth)) = stack.pop() {
+            let mut list = list.into_iter().enumerate();
+            if let Some((index, (level, heading, children))) = list.next() {
+                let entry = toc_entries.and_then(|e| e.get(index));
+                entries.push((depth + 1, heading, entry.and_then(|e| e.caption.as_deref())));
+                let rest: Vec<_> = list.map(|(_, s)| s).collect();
+                // The siblings after this section's subsections.
+                stack.push((
+                    rest,
+                    toc_entries.map(|e| &e[(index + 1).min(e.len())..]),
+                    depth,
+                ));
+                if i128::from(level) < levels {
+                    stack.push((
+                        sections(children),
+                        entry.map(|e| &e.sections[..]),
+                        depth + 1,
+                    ));
+                }
+            }
+        }
+        let mut sdt = String::from(
+            r#"<w:sdt><w:sdtPr><w:docPartObj><w:docPartGallery w:val="Table of Contents"/><w:docPartUnique/></w:docPartObj></w:sdtPr><w:sdtContent>"#,
+        );
+        let heading = simple_paragraph(self.cx, "TOC Heading", &title);
+        sdt.push_str(&heading);
+        let begin = format!(
+            r#"<w:r><w:fldChar w:fldCharType="begin" w:dirty="true"/></w:r><w:r><w:instrText xml:space="preserve"> TOC \o "1-{levels}" \h \z \u </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r>"#
+        );
+        let end = r#"<w:r><w:fldChar w:fldCharType="end"/></w:r>"#;
+        if entries.is_empty() {
+            sdt.push_str(&format!("<w:p>{begin}{end}</w:p>"));
+        }
+        let count = entries.len();
+        for (i, (depth, heading, caption)) in entries.into_iter().enumerate() {
+            let mut runs = Runs::new(self.cx, Newlines::Space).outline();
+            let id = heading.id.clone().unwrap_or_default();
+            runs.anchor_link(&id, |r| {
+                match caption {
+                    Some(parts) => r.parts(parts),
+                    None if !heading.caption_parts.is_empty() => r.parts(&heading.caption_parts),
+                    None => {
+                        if let Some(caption) = &heading.caption {
+                            r.text(caption);
+                        }
+                    }
+                }
+                if let BlockKind::Heading { inlines, .. } = &heading.kind {
+                    r.inlines(inlines);
+                }
+            });
+            let mut runs = runs.finish();
+            if i == 0 {
+                runs.insert_str(0, &begin);
+            }
+            if i + 1 == count {
+                runs.push_str(end);
+            }
+            let paragraph = simple_paragraph(self.cx, &format!("TOC {}", depth.min(9)), &runs);
+            sdt.push_str(&paragraph);
+        }
+        sdt.push_str("</w:sdtContent></w:sdt>");
+        self.out.push_str(&sdt);
     }
 
     /// The block's id becomes a bookmark in its next paragraph.
@@ -972,7 +1140,7 @@ impl<'c, 't> Writer<'c, 't> {
         }
     }
 
-    fn heading(&mut self, block: &Block, level: u8, inlines: &[Inline]) {
+    fn heading(&mut self, block: &'c Block, level: u8, inlines: &[Inline]) {
         let n = level.clamp(1, 6);
         let style = match block.attrs.style.as_deref() {
             Some("discrete" | "float") => format!("Floating Title {n}"),
@@ -990,6 +1158,12 @@ impl<'c, 't> Writer<'c, 't> {
         runs.inlines(inlines);
         let runs = runs.finish();
         self.paragraph(&style, "", &runs);
+        // Ruby's `[index]` section: Word builds the index from the `XE`
+        // fields when it updates the field.
+        if block.attrs.style.as_deref() == Some("index") {
+            let field = r#"<w:r><w:fldChar w:fldCharType="begin" w:dirty="true"/></w:r><w:r><w:instrText xml:space="preserve"> INDEX \c "2" </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>"#;
+            self.paragraph("Normal", "", field);
+        }
     }
 
     /// A block's `.Title` with its caption (`Example 1. `).
@@ -1079,6 +1253,13 @@ impl<'c, 't> Writer<'c, 't> {
         self.paragraph(style, "", &runs);
     }
 
+    /// A paragraph kept with the next (a picture with its caption below).
+    fn paragraph_keep_next(&mut self, name: &str, extra_ppr: &str, runs: &str) {
+        self.keep_next = true;
+        self.paragraph_with(name, None, extra_ppr, runs);
+        self.keep_next = false;
+    }
+
     /// A paragraph in style `name` (a missing custom style falls back to
     /// the template's default paragraph style), indented like its
     /// container, with the pending bookmarks.
@@ -1093,6 +1274,9 @@ impl<'c, 't> Writer<'c, 't> {
         let mut ppr = String::new();
         if let Some(id) = &id {
             ppr.push_str(&format!(r#"<w:pStyle w:val="{}"/>"#, xml::escape_attr(id)));
+        }
+        if self.keep_next {
+            ppr.push_str("<w:keepNext/>");
         }
         match num {
             Some(num) => ppr.push_str(num),
@@ -1121,6 +1305,27 @@ impl<'c, 't> Writer<'c, 't> {
         self.out.push_str(runs);
         self.out.push_str("</w:p>");
     }
+}
+
+/// A level of the outline walk: the sections left to list, the matching
+/// entries of core's TOC and the depth.
+type OutlineFrame<'b> = (
+    Vec<(u8, &'b Block, &'b [Block])>,
+    Option<&'b [adoctra_core::TocEntry]>,
+    usize,
+);
+
+/// The sections among `blocks`: level, heading and content.
+fn sections(blocks: &[Block]) -> Vec<(u8, &Block, &[Block])> {
+    blocks
+        .iter()
+        .filter_map(|b| match &b.kind {
+            BlockKind::Section { level, blocks } if !blocks.is_empty() => {
+                Some((*level, &blocks[0], &blocks[1..]))
+            }
+            _ => None,
+        })
+        .collect()
 }
 
 /// A table row's section.

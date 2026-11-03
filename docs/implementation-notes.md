@@ -1795,9 +1795,30 @@ content cell, `firstColumn` look, kind style if the template has it, else
 `Admonition Table`); `framed` closes it plus `SPACER` (8 pt exact empty
 paragraph: keeps tables apart, stands for Ruby's block margin). Frame
 content has no outer indent (`cell_ctx`); nested tables get `w:tblInd` and
-a narrower width. Quote/verse widths minus 360 (the style's inset). Not
-yet: images, video/audio, TOC (one warning per kind); footnotes as `[n]`,
-inline images as `[alt]`.
+a narrower width. Quote/verse widths minus 360 (the style's inset).
+Stage 5 done 2026-11-04: `media.rs` reads images only through the host
+provider (`DocxBackend::with_resources`, wired in the CLI like HTML) from
+core's `src` (data URIs decoded; URIs linked via `r:link` unless
+`allow-uri-read` below secure), sniffs PNG/JPEG/GIF/BMP/TIFF/SVG, reads
+pixel sizes (SVG width/height/viewBox), `draw_size` (pdfwidth > scaledwidth
+> width; px, CSS lengths, % of text width; aspect kept; capped to the text
+width; default 400x300; 96 DPI EMU), dedups by source, adds
+`word/media/imageN.ext` (Default content types). SVG: `asvg:svgBlip` + a
+valid 1x1 transparent PNG fallback (LibreOffice renders the SVG). Block
+images: paragraph with inline or `wp:anchor` (float) drawing, `align` jc,
+`link`, `Caption` below with keepNext; unreadable -> `[alt]` + warning.
+Inline images in `inline.rs`; text/font icons `[alt]`. Footnotes:
+`Notes` in `Cx` (ids after the template's, `Template::first_footnote_id`),
+first reference defines (bookmark `_Ref_footnote_N` around the mark,
+content from the inline node), repeats are `NOTEREF` fields, unresolved
+`[id]`; `footnotes.xml` created with separators when missing. TOC:
+`Writer::toc` walks `sections()` with core's `TocEntry` captions on a
+stack, SDT docPartGallery + dirty `TOC \o "1-n" \h \z \u` field
+prefilled with `TOC N` hyperlink entries (`Runs::outline` skips anchors,
+footnotes, XE); auto at body start, preamble/macro placements. Index:
+`XE` fields (terms joined by `:`, `\t "See …"`), `[index]` section ->
+dirty `INDEX \c "2"`. Video/audio: link paragraph + warning. Template
+declares `wp`/`r` namespaces on the root when used.
 
 Index terms (`((…))` / `indexterm2:[…]` visible, `(((…)))` /
 `indexterm:[…]` concealed) run after images and before links, as Ruby's

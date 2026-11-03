@@ -117,8 +117,7 @@ impl Package {
     }
 
     /// Declare `ext` (without the dot) with `content_type` unless an entry
-    /// for it exists (media parts, stage 5).
-    #[cfg(test)]
+    /// for it exists (media parts).
     pub fn ensure_default_type(&mut self, ext: &str, content_type: &str) {
         let types = self.text(CONTENT_TYPES).unwrap_or_default();
         let exists = xml::tags(&types, 0).any(|tag| {

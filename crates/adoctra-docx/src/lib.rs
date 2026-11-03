@@ -12,6 +12,7 @@ mod builtin;
 pub mod contract;
 mod fallback;
 mod inline;
+mod media;
 mod numbering;
 mod package;
 mod props;
@@ -26,7 +27,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use adoctra_core::ast::BlockKind;
-use adoctra_core::{Backend, Document, Error, Inline, Result};
+use adoctra_core::{Backend, Document, Error, Inline, ResourceProvider, Result};
 
 pub use builtin::Builtin;
 use inline::{Cx, Newlines, Runs};
@@ -35,9 +36,19 @@ use template::{Fill, Template};
 use writer::{ChapterSections, Writer};
 
 /// The DOCX backend.
-#[derive(Debug, Default, Clone)]
+#[derive(Default, Clone)]
 pub struct DocxBackend {
     template: Option<Arc<[u8]>>,
+    resources: Option<(Arc<dyn ResourceProvider>, Option<String>)>,
+}
+
+impl std::fmt::Debug for DocxBackend {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DocxBackend")
+            .field("template", &self.template.as_ref().map(|t| t.len()))
+            .field("resources", &self.resources.as_ref().map(|(_, r)| r))
+            .finish()
+    }
 }
 
 /// A converted document and the warnings the conversion reported.
@@ -56,6 +67,18 @@ impl DocxBackend {
     /// the built-in template for the document's doctype.
     pub fn with_template(mut self, template: impl Into<Arc<[u8]>>) -> Self {
         self.template = Some(template.into());
+        self
+    }
+
+    /// Read images through `provider`, relative to `referrer` (the primary
+    /// document's canonical name), like the HTML backend's assets. Without a
+    /// provider only data URIs are embedded (URIs are linked).
+    pub fn with_resources(
+        mut self,
+        provider: Arc<dyn ResourceProvider>,
+        referrer: Option<String>,
+    ) -> Self {
+        self.resources = Some((provider, referrer));
         self
     }
 
@@ -78,6 +101,13 @@ impl DocxBackend {
         let text_width = template
             .body_sect_pr()
             .map_or(writer::DEFAULT_TEXT_WIDTH, |s| writer::text_width(&s));
+        let first_footnote = template.first_footnote_id();
+        let allow_uri = doc.attributes.get("allow-uri-read").is_some()
+            && adoctra_core::SafeMode::of(&doc.attributes) < adoctra_core::SafeMode::Secure;
+        let (provider, referrer) = match &self.resources {
+            Some((provider, referrer)) => (Some(provider.clone()), referrer.clone()),
+            None => (None, None),
+        };
         let (styles, rels, numbering) = template.parts_mut();
         let mut cx = Cx {
             styles,
@@ -85,6 +115,10 @@ impl DocxBackend {
             numbering,
             bookmarks: Default::default(),
             warnings: Default::default(),
+            media: media::Media::new(provider, referrer),
+            notes: inline::Notes::starting_at(first_footnote),
+            text_width,
+            allow_uri,
         };
         let fields = header_fields(&mut cx, doc, title.as_ref());
         // Without a title marker the title opens the body.
@@ -102,7 +136,11 @@ impl DocxBackend {
         };
         let body = Writer::new(&mut cx, doc, chapters.as_mut(), text_width).body(lead);
         let mut warnings = std::mem::take(&mut cx.warnings.list);
+        let media = std::mem::take(&mut cx.media.parts);
+        let footnotes = std::mem::take(&mut cx.notes.xml);
         warnings.extend(template.styles.warnings.iter().cloned());
+        template.add_media(media);
+        template.add_footnotes(footnotes);
         template.set_core_properties(&core_properties(doc, title.as_ref()).to_xml());
         let sect_pr = chapters.and_then(|c| c.final_sect_pr());
         let bytes = template.finish(&body, sect_pr, |field| match fields.get(field) {
