@@ -286,6 +286,33 @@ class CompareTests(unittest.TestCase):
                          ["metadata:blocks[0]:listing:style"])
 
 
+    def test_reftext_titles_and_captions_compare_as_rendered_text(self):
+        nodes = [{"name": "text", "value": "Run "},
+                 {"name": "image", "icon": True, "icons": None, "alt": "gear"},
+                 {"name": "image", "icon": True, "icons": "font", "alt": "x"},
+                 {"name": "image", "icon": False, "alt": "Alt"},
+                 {"name": "footnote", "index": "2", "id": None},
+                 {"name": "footnote", "index": None, "id": "ex1"},
+                 {"name": "strong", "inlines": [{"name": "text", "value": " b"}]}]
+        # Ruby's text: an icon without `icons` is `[alt]`, images and other
+        # icons are markup, a footnote is its marker.
+        self.assertEqual(upstream_audit.inline_text(nodes), "Run [gear][2][ex1] b")
+        block = {"name": "example", "style": None, "options": [], "attributes": {},
+                 "title": [{"name": "text", "value": "T"}], "caption": "Example 1. ",
+                 "reftext": [{"name": "text", "value": "R "}, {"name": "raw", "value": "<b>x</b>"}]}
+        ours = upstream_audit.adoctra_metadata(block)[1]
+        self.assertEqual(ours, {"style": None, "options": [], "attributes": {}, "reftext": "R x",
+                                "title": "T", "caption": "Example 1. "})
+        ruby = {"context": "example", "meta": {"style": "example", "options": [], "attributes": {},
+                                               "alt": None, "reftext": "R <b>x</b>", "title": "T",
+                                               "caption": "Example 1. "}}
+        upstream_audit.reference_metadata(ruby)
+        self.assertEqual(ruby["meta"], ours)
+        heading = upstream_audit.adoctra_metadata({"name": "heading", "inlines": [{"name": "text", "value": "S"}],
+                                                   "caption": "1. "})[1]
+        self.assertEqual((heading["title"], heading.get("caption")), ("S", None))
+
+
 class InventoryTests(unittest.TestCase):
     def test_committed_inventory_provenance_and_baseline(self):
         inventory = load_inventory()

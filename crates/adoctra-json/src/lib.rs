@@ -966,6 +966,12 @@ fn write_caption(block: &Block, s: &mut String) {
         s.push_str(",\"caption_parts\":");
         adoctra_core::json::write_parts_array(&block.caption_parts, s);
     }
+    // `,"reftext":[…]` — the block's resolved reference text (an anchor's
+    // `[[id,reftext]]` or `reftext=`), only when it has one.
+    if let Some(reftext) = &block.reftext {
+        s.push_str(",\"reftext\":");
+        write_inlines(reftext, s);
+    }
 }
 
 /// Emit `,"simple":true` for a container with Ruby's simple content model (a
@@ -2691,8 +2697,30 @@ mod tests {
             json.contains("\"title\":[{\"name\":\"text\",\"value\":\"T\"}]"),
             "got: {json}"
         );
-        // The JSON projection has no reftext field; the id is still exposed.
+        // Without a reftext the block has no reftext field; the id is exposed.
         assert!(json.contains("\"id\":\"p\""), "got: {json}");
+        assert!(!json.contains("\"reftext\""), "got: {json}");
+    }
+
+    #[test]
+    fn block_reftext_serializes_its_resolved_inlines() {
+        // Ruby's `Block#reftext`: an anchor's `[[id,reftext]]` or `reftext=`
+        // after substitutions; a section's is on its heading.
+        let json = render(
+            ":x: X\n\n[[s,Sec *Ref*]]\n== Sec\n\n[#p,reftext=\"Para {x}\"]\npara\n\n[[l,Listing R]]\n.T\n----\nx\n----",
+        );
+        assert!(
+            json.contains(r#""caption":null,"reftext":[{"name":"text","value":"Sec "},{"name":"strong","inlines":[{"name":"text","value":"Ref"}]}]"#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""reftext":[{"name":"text","value":"Para "},"#),
+            "{json}"
+        );
+        assert!(
+            json.contains(r#""reftext":[{"name":"text","value":"Listing R"}]"#),
+            "{json}"
+        );
     }
 
     #[test]

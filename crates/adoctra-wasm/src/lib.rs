@@ -988,6 +988,12 @@ fn write_caption(block: &Block, s: &mut String) {
         s.push_str(",\"caption_parts\":");
         adoctra_core::json::write_parts_array(&block.caption_parts, s);
     }
+    // `,"reftext":[…]` — the block's resolved reference text (an anchor's
+    // `[[id,reftext]]` or `reftext=`), only when it has one.
+    if let Some(reftext) = &block.reftext {
+        s.push_str(",\"reftext\":");
+        write_inlines(reftext, s);
+    }
 }
 
 /// Emit `,"simple":true` for a container with Ruby's simple content model (a
@@ -2327,6 +2333,16 @@ mod tests {
             source.len()
         );
         assert!(json.contains(&text), "got: {json}");
+    }
+
+    #[test]
+    fn block_reftext_is_exposed_with_spans() {
+        // The editor sees a block's reference text like its title.
+        let source = "[[s,Sec *Ref*]]\n== Sec\n\npara";
+        let json = parse_json(source);
+        assert!(json.contains(r#""reftext":["#), "got: {json}");
+        assert!(json.contains(r#""name":"strong""#), "got: {json}");
+        assert_eq!(parse_json("== Sec\n\npara").matches("reftext").count(), 0);
     }
 
     #[test]

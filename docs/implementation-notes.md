@@ -2100,9 +2100,13 @@ each node (`strip_meta` before schema checks); the audit compares style
 attribute), options, named attributes as raw text minus Ruby's parser-state
 keys (`INTERNAL_ATTRIBUTES`), media target and `AbstractBlock#alt`, quote
 attribution. Finding: `,===`/`:===` fences set `format` (parser.rs, own named
-attributes yield to pending ones like `||=`). Not compared: block titles and
-captions (HTML), reftext (not in JSON), node line numbers, catalogs beyond
-HTML, file-output entries' model.
+attributes yield to pending ones like `||=`). Then (`…-model-v5`) JSON and
+WASM export a block's `reftext` (inlines, only when present, after
+`caption`), and the audit compares reftext, titles (a section's heading) and
+captions (an admonition's label) as text (`inline_text`: an icon without
+`icons` is `[alt]`, images markup only, footnotes their `[N]` marker): all
+equal. Not compared: paragraph text through the API, node line numbers,
+catalogs beyond HTML, file-output entries' model.
 **Matrix recheck** (2026-11-03): every "ahead"/"partial" entry of the initial
 matrix in compatibility.adoc was rechecked against Ruby; 54 probes became
 `matrix-*` cases of compatibility/cases.json (body-dom-v1; diagnostics were

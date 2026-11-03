@@ -73,7 +73,7 @@ PLACEHOLDER = "<UPSTREAM>"
 SAFE = {"unsafe": "unsafe", "safe": "safe", "server": "server", "secure": "secure",
         0: "unsafe", 1: "safe", 10: "server", 20: "secure"}
 ENVIRONMENT = {"SOURCE_DATE_EPOCH": "1700000000", "TZ": "UTC"}
-PROFILE = "upstream-audit-body-shell-positions-model-v4"
+PROFILE = "upstream-audit-body-shell-positions-model-v5"
 # Ruby's default `webfonts` (an empty value) links these Google fonts; the
 # adoctra theme uses system fonts (an explicit `webfonts` value is compared).
 # The opening comments of Ruby's default stylesheet and adoctra.css.
@@ -160,7 +160,14 @@ def inline_text(nodes):
     """The text of a JSON inline list (raw markup dropped, references decoded)."""
     out = []
     for node in nodes or []:
-        if node.get("inlines") is not None:
+        if node.get("name") == "image":
+            # Ruby's text of an inline image: an icon without `icons` is
+            # `[alt]`; an image or a font/image icon is markup only.
+            out.append(f"[{node.get('alt', '')}]" if node.get("icon") and node.get("icons") is None else "")
+        elif node.get("name") == "footnote":
+            # Ruby renders the marker: `[index]`, or `[id]` when unresolved.
+            out.append(f"[{node.get('index') or node.get('id') or ''}]")
+        elif node.get("inlines") is not None:
             out.append(inline_text(node["inlines"]))
         elif node.get("parts"):
             out.append("".join(attribute_text(p["value"]) if p.get("kind") == "raw" else p.get("value", "")
@@ -194,6 +201,15 @@ def adoctra_metadata(block):
         fields["target"] = block.get("target")
         if block["name"] == "image":
             fields["alt"] = attribute_text(block.get("alt") or "")
+    if block.get("reftext") is not None:
+        fields["reftext"] = inline_text(block["reftext"])
+    # The title as text (a section's is its heading) and the caption (an
+    # admonition's label; a section's number is no caption in Ruby).
+    heading = block["name"] == "heading"
+    title = block.get("inlines") if heading else block.get("title")
+    fields["title"] = inline_text(title) if title is not None else None
+    fields["caption"] = None if heading else (block.get("label") if block["name"] == "admonition"
+                                              else block.get("caption"))
     attribution = block.get("attribution") or {}
     if attribution.get("author"):
         fields["attribution"] = inline_text(attribution["author"])
@@ -227,6 +243,11 @@ def reference_metadata(node):
     for name in ("attribution", "citetitle"):
         if context in ("quote", "verse") and attributes.get(name) is not None:
             fields[name] = attribute_text(attributes[name])
+    if meta.get("reftext") is not None:
+        fields["reftext"] = attribute_text(meta["reftext"])
+    fields["title"] = attribute_text(meta["title"]) if meta.get("title") is not None else None
+    fields["caption"] = None if context == "section" else (
+        attribute_text(meta["caption"]) if meta.get("caption") is not None else None)
     node["meta"] = normal_metadata(context, meta["style"], meta["options"], attributes, fields)
 
 

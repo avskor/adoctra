@@ -101,13 +101,17 @@ require_relative 'asciidoctor-structure'
 
 # A block's metadata as the API exposes it (the harness normalizes it): the
 # style (a section's from its attributes), the `*-option` names, the named
-# attributes and an image's `AbstractBlock#alt` (after its substitutions).
+# attributes, an image's `AbstractBlock#alt`, the reference text, the title
+# and the caption (each after its substitutions).
 def block_metadata block
   attributes = block.attributes
   { style: (block.style || (block.context == :section ? attributes['style'] : nil))&.to_s,
     options: attributes.keys.grep(String).select {|name| name.end_with? '-option' }.map {|name| name.delete_suffix '-option' }.sort,
     attributes: (attribute_strings attributes.reject {|name, _| Integer === name }),
-    alt: (block.context == :image ? block.alt : nil) }
+    alt: (block.context == :image ? block.alt : nil),
+    reftext: (block.reftext? ? block.reftext : nil),
+    title: (block.title? ? block.title : nil),
+    caption: block.caption }
 end
 
 def attribute_strings attributes
