@@ -417,3 +417,21 @@ fn a_csv_or_dsv_table_fence_sets_format_like_ruby() {
         ]
     );
 }
+
+#[test]
+fn an_autowidth_column_overflow_warns_without_a_cursor_like_ruby() {
+    // tables_test.rb: `Table#assign_column_widths` warns without a cursor.
+    let result = parse("[cols=\"60,60,~\"]\n|===\n|a |b |c\n|===");
+    let warning = result
+        .diagnostics
+        .iter()
+        .find(|d| {
+            d.message
+                .starts_with("total column width must not exceed 100%")
+        })
+        .unwrap();
+    assert_eq!(
+        warning.report.location,
+        adoctra_core::DiagnosticLocation::Unlocated
+    );
+}

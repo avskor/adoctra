@@ -2052,6 +2052,20 @@ with `render_with_start`), fixes highlighted pass slots and splits the HTML
 into Raw tags and decoded Text, so later stages see Ruby's string; marks
 return as Callout parts. Without the hook it is Ruby's `sub_source`. The CLI
 passes the hook in embedded mode too; `golden/rouge/` parses with it.
+**Minimal corpus diagnostics** (2026-11-03): compatibility.py compares every
+case's diagnostics as a second check (`compare_diagnostics`, `result
+["diagnostics"]`): Ruby's `--diagnostic-positions` report stored in
+compatibility/reference-diagnostics.json with each case's `inputs_digest`
+(missing/stale fails), adoctra's stderr through
+`diagnostic_positions.cli_projection`; `diagnostics_expect`/`_reason` and
+`baseline/<id>.diagnostics.json` for a known difference; verification keys
+are cached like the HTML. Findings (14 cases): include directive errors in an
+included file (depth, cycle, byte limit) reported the outer file's line —
+their span is already physical, so `Reader::directive_cursor` gives Ruby's
+`cursor` explicitly (`error_at`); the autowidth column overflow warning is
+Unlocated. One XFAIL, an intentional difference (user decision 2026-11-03):
+a nested Markdown quote's duplicate anchor warning (Ruby's cursorless
+`Reader.new(lines)` names `<stdin>`) is not reproduced.
 **Upstream assertion mapping** (2026-11-03): a heuristic pass over the
 assert/refute lines of all 2568 upstream tests, joined with the audit
 inventory, showed two observations no profile compared: the standalone shell

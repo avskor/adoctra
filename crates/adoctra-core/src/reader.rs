@@ -733,6 +733,36 @@ impl<'a> Reader<'a> {
         primary
     }
 
+    /// Ruby's `cursor` at an include directive: its line in the input that
+    /// holds it. A directive's span is already physical there, so the reader
+    /// offset lookup of other diagnostics does not apply.
+    fn directive_cursor(&self) -> crate::DiagnosticCursor {
+        let current = self.inputs.last().expect("current input");
+        crate::DiagnosticCursor {
+            source_id: current.source_id,
+            line: (current.start_line + current.next as isize - 1).max(1) as usize,
+        }
+    }
+
+    /// An error reported at an include directive's cursor.
+    fn error_at(
+        context: &mut ParseContext,
+        span: Span,
+        message: String,
+        cursor: crate::DiagnosticCursor,
+    ) {
+        context.diagnostics.push(Diagnostic {
+            omitted_span: None,
+            report: crate::DiagnosticReport {
+                location: crate::DiagnosticLocation::Cursor(cursor),
+                ..Default::default()
+            },
+            span,
+            severity: Severity::Error,
+            message,
+        });
+    }
+
     fn error(context: &mut ParseContext, span: Span, message: String) {
         context.diagnostics.push(Diagnostic {
             omitted_span: None,
@@ -1132,7 +1162,8 @@ impl<'a> Reader<'a> {
         let current = self.inputs.last().expect("current input");
         if self.inputs.len() > current.max_depth {
             let message = format!("maximum include depth of {} exceeded", current.depth_label);
-            Self::error(context, span, message);
+            let cursor = self.directive_cursor();
+            Self::error_at(context, span, message, cursor);
             return false;
         }
         let attrs = self.include_attributes(attrlist, span, context);
@@ -1291,11 +1322,18 @@ impl<'a> Reader<'a> {
                 .get(input.source_id)
                 .is_some_and(|s| s.name() == file.name())
         }) {
-            Self::error(context, span, format!("cyclic include: {target}"));
+            let cursor = self.directive_cursor();
+            Self::error_at(context, span, format!("cyclic include: {target}"), cursor);
             return false;
         }
         if file.stored_bytes() > resources.limits.max_bytes.saturating_sub(resources.bytes) {
-            Self::error(context, span, "maximum included byte count exceeded".into());
+            let cursor = self.directive_cursor();
+            Self::error_at(
+                context,
+                span,
+                "maximum included byte count exceeded".into(),
+                cursor,
+            );
             return false;
         }
         resources.bytes += file.stored_bytes();

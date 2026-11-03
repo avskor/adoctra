@@ -1,3 +1,4 @@
+import json
 import argparse
 import subprocess
 import tempfile
@@ -6,7 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import compatibility
-from compatibility import (case_commands, check, classify, html_classes, load_reference_cache, projection,
+from compatibility import (inputs_digest, case_commands, check, classify, html_classes, load_reference_cache, projection,
                            read_reference, run, store_reference_cache, validate_attributes, validate_resources,
                            verification_key)
 
@@ -326,21 +327,30 @@ class ReferenceCacheTests(unittest.TestCase):
         self.args = argparse.Namespace(verify_reference=True, update_reference=False,
                                        record_known_differences=False, binary=Path("adoctra"))
 
-    def verify(self, cached, ruby="<p>Hello</p>\n", case=None, environment="env"):
+    def verify(self, cached, ruby="<p>Hello</p>\n", case=None, environment="env", diagnostics=None,
+               ruby_diagnostics="[]", stderr=""):
         calls = []
+        case = case or self.CASE
+        if diagnostics is None:
+            diagnostics = {"c": {"inputs": inputs_digest(case), "diagnostics": []}}
 
-        def fake_run(command, source):
+        def fake_run(command, source, stderr_wanted=False, **kwargs):
             calls.append(command[0])
-            return ruby if command[0] == "ruby" else "<p>Hello</p>"
+            if command[0] == "ruby" and "--diagnostic-positions" in command:
+                return '{"diagnostics": %s}' % ruby_diagnostics
+            output = ruby if command[0] == "ruby" else "<p>Hello</p>"
+            return (output, stderr) if kwargs.get("stderr") or stderr_wanted else output
 
         verified, hits = set(), []
         with patch("compatibility.run", side_effect=fake_run):
-            result = check(case or self.CASE, self.args, environment, cached, verified, hits)
+            result = check(case, self.args, environment, cached, verified, hits, diagnostics)
         return result, verified, hits, calls
 
     def test_an_unchanged_verified_reference_skips_ruby_but_still_compares_adoctra(self):
         result, verified, hits, calls = self.verify(set())
-        self.assertEqual((result["status"], hits, calls), ("PASS", [], ["ruby", str(Path("adoctra").resolve())]))
+        # Ruby runs for the HTML and for the diagnostics reference.
+        self.assertEqual((result["status"], hits, calls),
+                         ("PASS", [], ["ruby", "ruby", str(Path("adoctra").resolve())]))
         result, again, hits, calls = self.verify(verified)
         self.assertEqual((result["status"], hits, again), ("PASS", ["c"], verified))
         self.assertNotIn("ruby", calls)
@@ -353,6 +363,31 @@ class ReferenceCacheTests(unittest.TestCase):
         (self.root / "reference" / "c.html").write_text("<p>Edited</p>\n", encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "reference drift: c"):
             self.verify(verified)
+
+    def test_diagnostics_are_a_separate_check_with_their_own_expectation(self):
+        warning = {"severity": "warning", "message": "w", "location": {"file": "<stdin>", "line": 1}}
+        self.args.verify_reference = False
+        stored = {"c": {"inputs": inputs_digest(self.CASE), "diagnostics": [warning]}}
+        result, *_ = self.verify(set(), diagnostics=stored, stderr="adoctra: -:1: warning: w\n")
+        self.assertEqual((result["status"], result["diagnostics"]), ("PASS", "PASS"))
+        result, *_ = self.verify(set(), diagnostics=stored, stderr="adoctra: -:2: warning: w\n")
+        self.assertEqual((result["status"], result["diagnostics"]), ("FAIL", "FAIL"))
+        with self.assertRaisesRegex(ValueError, "stale diagnostic reference: c"):
+            self.verify(set(), diagnostics={"c": {"inputs": "old", "diagnostics": []}})
+        # A known difference freezes adoctra's complete diagnostics.
+        case = {**self.CASE, "diagnostics_expect": "xfail", "diagnostics_reason": "known"}
+        stored = {"c": {"inputs": inputs_digest(case), "diagnostics": [warning]}}
+        (self.root / "baseline").mkdir()
+        (self.root / "baseline" / "c.diagnostics.json").write_text(json.dumps(
+            [dict(warning, location={"file": "<stdin>", "line": 2})]), encoding="utf-8")
+        result, *_ = self.verify(set(), case=case, diagnostics=stored, stderr="adoctra: -:2: warning: w\n")
+        self.assertEqual((result["status"], result["diagnostics"]), ("PASS", "XFAIL"))
+        result, *_ = self.verify(set(), case=case, diagnostics=stored, stderr="adoctra: -:1: warning: w\n")
+        self.assertEqual((result["status"], result["diagnostics"]), ("XPASS", "XPASS"))
+
+    def test_a_drifted_diagnostics_reference_fails_verification(self):
+        with self.assertRaisesRegex(ValueError, "diagnostic reference drift: c"):
+            self.verify(set(), ruby_diagnostics='[{"severity": "warning", "message": "w", "location": null}]')
 
     def test_without_an_environment_every_reference_runs_ruby(self):
         *_, calls = self.verify({"anything"}, environment=None)

@@ -1166,7 +1166,11 @@ fn assign_widths(
             let width = if base.value() > 100.0 {
                 diagnostics.push(Diagnostic {
                     omitted_span: None,
-                    report: Default::default(),
+                    // Ruby's `Table#assign_column_widths` warns without a cursor.
+                    report: crate::DiagnosticReport {
+                        location: crate::DiagnosticLocation::Unlocated,
+                        ..Default::default()
+                    },
                     span: start,
                     severity: Severity::Warning,
                     message: format!(

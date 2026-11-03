@@ -3,6 +3,10 @@
 
 body-dom-v1 is an explicit HTML projection, not an ASG or exact-HTML oracle.
 Only known presentation wrappers are reconciled; unknown markup survives.
+Each case's diagnostics are compared as a separate check: severity, text and
+logger cursor (diagnostic-positions-v1), with Ruby's stored in
+compatibility/reference-diagnostics.json (keyed by the case's input digest)
+and their own expectation (`diagnostics_expect`, `diagnostics_reason`).
 """
 
 import argparse
@@ -24,6 +28,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CORPUS = ROOT / "compatibility"
 # Local, untracked record of references already verified against Ruby.
 REFERENCE_CACHE = ROOT / "target/reference-cache/compatibility.json"
+DIAGNOSTIC_REFERENCES = CORPUS / "reference-diagnostics.json"
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"}
 INLINE = {"p", "a", "strong", "em", "code", "mark", "sup", "sub", "span", "cite", "h1", "h2", "h3", "h4", "h5", "h6"}
 LIST_BLOCKS = {"ul", "ol", "dl", "p", "listing", "literal", "pre", "div", "aside", "figure", "blockquote", "table", "hr", "details",
@@ -403,12 +408,49 @@ def read_reference(path):
         return file.read()
 
 
-def run(command, source):
+def run(command, source, stderr=False):
     # Bytes, not text mode: universal newlines would turn a lone CR into LF.
     result = subprocess.run(command, input=source.encode("utf-8"), capture_output=True, timeout=30)
     if result.returncode:
         raise RuntimeError(f"{' '.join(map(str, command))}: {result.stderr.decode('utf-8', 'replace').strip()}")
+    if stderr:
+        return result.stdout.decode("utf-8"), result.stderr.decode("utf-8")
     return result.stdout.decode("utf-8")
+
+
+def inputs_digest(case):
+    """What a stored diagnostics reference depends on: the case's inputs."""
+    inputs = {key: case[key] for key in ("source", "attributes", "resources", "binary_resources") if key in case}
+    payload = json.dumps(inputs, ensure_ascii=False, sort_keys=True)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def load_diagnostic_references(path=DIAGNOSTIC_REFERENCES):
+    if not path.is_file():
+        return {}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    import diagnostic_positions
+    if data.get("profile") != diagnostic_positions.PROFILE or \
+            data.get("asciidoctor") != (CORPUS / "asciidoctor-version").read_text().strip():
+        raise ValueError("diagnostic reference profile/version mismatch")
+    return data["cases"]
+
+
+def store_diagnostic_references(references, path=DIAGNOSTIC_REFERENCES):
+    import diagnostic_positions
+    data = {"profile": diagnostic_positions.PROFILE,
+            "asciidoctor": (CORPUS / "asciidoctor-version").read_text().strip(),
+            "cases": dict(sorted(references.items()))}
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+
+
+def reference_diagnostics(case, reference_command, root):
+    """Ruby's diagnostics of a case, with their logger cursors."""
+    import diagnostic_positions
+    command = list(reference_command)
+    command.insert(2, "--diagnostic-positions")
+    report = json.loads(run(command, case["source"]))
+    return diagnostic_positions.reference_projection(report, root)["diagnostics"]
 
 
 def validate_resources(case):
@@ -531,6 +573,9 @@ def load_manifest():
             raise ValueError(f"invalid case: {case['id']}")
         if case["expect"] == "xfail" and not case.get("reason"):
             raise ValueError(f"xfail needs a reason: {case['id']}")
+        if case.get("diagnostics_expect", "pass") not in {"pass", "xfail"} or (
+                case.get("diagnostics_expect") == "xfail" and not case.get("diagnostics_reason")):
+            raise ValueError(f"invalid diagnostics expectation: {case['id']}")
     return manifest
 
 
@@ -565,9 +610,10 @@ def main():
     environment = ruby_environment() if use_cache else None
     cached = load_reference_cache() if use_cache and args.verify_reference else set()
     verified, hits = set(), []
+    diagnostics = {} if args.update_reference else load_diagnostic_references()
     try:
         for case in manifest["cases"]:
-            result = check(case, args, environment, cached, verified, hits)
+            result = check(case, args, environment, cached, verified, hits, diagnostics)
             if result is not None:
                 results.append(result)
     except BaseException:
@@ -577,24 +623,47 @@ def main():
     if use_cache:
         store_reference_cache(verified)
     if args.update_reference:
+        store_diagnostic_references(diagnostics)
+    if args.update_reference:
         print(f"Updated {len(manifest['cases'])} references using Asciidoctor {manifest['asciidoctor']}.")
         return 0
     if args.verify_reference and use_cache:
         print(f"Ruby re-run for {len(manifest['cases']) - len(hits)} cases; "
               f"{len(hits)} unchanged since their last verification.")
     counts = dict(Counter(r["status"] for r in results))
+    diagnostic_counts = dict(Counter(r["diagnostics"] for r in results))
     print(json.dumps(counts, sort_keys=True))
+    print("diagnostics:", json.dumps(diagnostic_counts, sort_keys=True))
     if args.json_report:
         args.json_report.write_text(pretty({"profile": manifest["profile"], "asciidoctor": manifest["asciidoctor"],
-                                           "counts": counts, "cases": results}), encoding="utf-8")
+                                           "counts": counts, "diagnostic_counts": diagnostic_counts,
+                                           "cases": results}), encoding="utf-8")
     return int(any(r["status"] in {"FAIL", "XPASS"} for r in results))
 
 
-def check(case, args, environment, cached, verified, hits):
-    """Verify (or update) one case's reference and compare adoctra with it."""
+def check(case, args, environment, cached, verified, hits, diagnostics):
+    """Verify (or update) one case's references and compare adoctra with them."""
+    import diagnostic_positions
     reference_path = CORPUS / "reference" / (case["id"] + ".html")
     baseline_path = CORPUS / "baseline" / (case["id"] + ".json")
     with case_commands(case, args.binary) as (reference_command, actual_command):
+        root = Path(actual_command[1]).parent if "resources" in case else None
+        digest = inputs_digest(case)
+        if args.verify_reference or args.update_reference:
+            stored = diagnostics.get(case["id"])
+            key = None
+            if args.verify_reference and environment is not None and stored is not None:
+                key = verification_key(environment, case, ["diagnostics", *reference_command], stored)
+            if key is None or key not in cached:
+                found = {"inputs": digest, "diagnostics": reference_diagnostics(case, reference_command, root)}
+                if args.update_reference:
+                    diagnostics[case["id"]] = stored = found
+                elif found != stored:
+                    raise ValueError(f"diagnostic reference drift: {case['id']}; review before --update-reference")
+                if environment is not None:
+                    key = verification_key(environment, case, ["diagnostics", *reference_command], stored)
+            if key is not None:
+                verified.add(key)
         if args.verify_reference or args.update_reference:
             key = None
             if args.verify_reference:
@@ -619,8 +688,42 @@ def check(case, args, environment, cached, verified, hits):
         if args.update_reference:
             return None
         expected = projection(read_reference(reference_path))
-        actual = projection(run(actual_command, case["source"]))
-    return compare(case, args, baseline_path, expected, actual)
+        output, stderr = run(actual_command, case["source"], stderr=True)
+        actual = projection(output)
+        actual_diagnostics = diagnostic_positions.cli_projection(stderr, root)["diagnostics"]
+    reference = diagnostics.get(case["id"])
+    if reference is None or reference["inputs"] != digest:
+        raise ValueError(f"missing or stale diagnostic reference: {case['id']} (run --update-reference)")
+    result = compare(case, args, baseline_path, expected, actual)
+    diagnostic_status = compare_diagnostics(case, args, reference["diagnostics"], actual_diagnostics)
+    result["diagnostics"] = diagnostic_status
+    if diagnostic_status in {"FAIL", "XPASS"} and result["status"] not in {"FAIL", "XPASS"}:
+        result["status"] = diagnostic_status
+    return result
+
+
+def compare_diagnostics(case, args, expected, actual):
+    """The diagnostics check, with its own expectation and baseline."""
+    baseline_path = CORPUS / "baseline" / (case["id"] + ".diagnostics.json")
+    expectation = {"expect": case.get("diagnostics_expect", "pass")}
+    baseline = None
+    if expectation["expect"] == "xfail":
+        if args.record_known_differences:
+            if actual == expected:
+                raise ValueError(f"{case['id']} diagnostics are fixed; drop diagnostics_expect")
+            baseline_path.parent.mkdir(exist_ok=True)
+            baseline_path.write_text(pretty(actual), encoding="utf-8")
+        baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
+    status = classify(expectation, actual, expected, baseline)
+    if status != "PASS":
+        print(f"{status:5} {case['id']} diagnostics" + (f" — {case['diagnostics_reason']}"
+                                                         if case.get("diagnostics_reason") else ""))
+    if status == "FAIL":
+        comparison = baseline if baseline is not None else expected
+        print("".join(difflib.unified_diff(pretty(comparison).splitlines(True), pretty(actual).splitlines(True),
+                                        fromfile="baseline" if baseline is not None else "asciidoctor",
+                                        tofile="adoctra")))
+    return status
 
 
 def compare(case, args, baseline_path, expected, actual):

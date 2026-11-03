@@ -19689,7 +19689,9 @@
       "id": "markdown-blockquote-comments-anchors",
       "category": "blocks",
       "expect": "pass",
-      "source": "> before [[a,Anchor A]] after\n// a comment\n> second\n> -- A\n\n<<a>> and <<b>>\n\n> > [[b]]nested anchor\n"
+      "source": "> before [[a,Anchor A]] after\n// a comment\n> second\n> -- A\n\n<<a>> and <<b>>\n\n> > [[b]]nested anchor\n",
+      "diagnostics_expect": "xfail",
+      "diagnostics_reason": "Ruby catalogs an anchor of a nested Markdown quote again in the quote's own Reader.new(lines), which has no line info (a FIXME in Parser.next_block): that duplicate-id warning names <stdin> and the line within the quote; adoctra reports the anchor's physical line (intentional difference, user decision 2026-11-03; see compatibility.adoc)"
     },
     {
       "id": "markdown-blockquote-not-matched",

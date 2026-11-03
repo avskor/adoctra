@@ -3398,3 +3398,48 @@ fn upstream_tag_selection_retains_physical_line_numbers() {
     }
     check_spans(&result, &sources);
 }
+
+#[test]
+fn directive_errors_in_an_included_file_report_its_line_like_ruby() {
+    // reader_test.rb: Ruby logs the depth error at `cursor`, the directive's
+    // line in the file that holds it (`part.adoc: line 3`), while the editor
+    // span already points there; a cyclic include reports the same way.
+    let cursor = |source: usize, line: usize| {
+        adoctra_core::DiagnosticLocation::Cursor(adoctra_core::DiagnosticCursor {
+            source_id: SourceId(source),
+            line,
+        })
+    };
+    let (mut sources, resources, options) = setup(
+        "x\n\ninclude::part.adoc[depth=0]\n",
+        &[
+            ("/docs/part.adoc", "line1\n\ninclude::nested.adoc[]\n"),
+            ("/docs/nested.adoc", "n\n"),
+        ],
+    );
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    let error = result
+        .diagnostics
+        .iter()
+        .find(|d| d.message == "maximum include depth of 0 exceeded")
+        .unwrap();
+    assert_eq!(error.report.location, cursor(1, 3));
+    assert_eq!(sources.slice(error.span), Some("include::nested.adoc[]"));
+    check_spans(&result, &sources);
+
+    let (mut sources, resources, options) = setup(
+        "x\n\ninclude::c1.adoc[]\n",
+        &[
+            ("/docs/c1.adoc", "a\n\ninclude::c2.adoc[]\n"),
+            ("/docs/c2.adoc", "b\ninclude::c1.adoc[]\n"),
+        ],
+    );
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    let error = result
+        .diagnostics
+        .iter()
+        .find(|d| d.message.starts_with("cyclic include"))
+        .unwrap();
+    assert_eq!(error.report.location, cursor(2, 2));
+    check_spans(&result, &sources);
+}
