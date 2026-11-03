@@ -60,7 +60,7 @@ fn main() -> ExitCode {
             eprintln!("adoctra: {message}");
             ExitCode::FAILURE
         }
-        Command::Convert(args) => invoke(args),
+        Command::Convert(args) => invoke(*args),
     }
 }
 
@@ -415,13 +415,22 @@ fn convert(args: &Args, uri_cache: &resources::UriCache) -> Result<(), Failure> 
         referrer,
         html_start,
     )?;
-    let bytes = if args.json_attributes {
+    let bytes = if args.json_attributes || args.json_locations {
         if args.format != "json" {
-            return Err(
-                adoctra::Error::Unsupported("--json-attributes requires --to json".into()).into(),
-            );
+            let flag = if args.json_attributes {
+                "--json-attributes"
+            } else {
+                "--json-locations"
+            };
+            return Err(adoctra::Error::Unsupported(format!("{flag} requires --to json")).into());
         }
-        adoctra::json::JsonBackend::new().convert_with_attributes(&result.document)?
+        adoctra::json::JsonBackend::new().convert_with(
+            &result.document,
+            adoctra::json::JsonOptions {
+                attributes: args.json_attributes,
+                locations: args.json_locations.then(|| sources.clone()),
+            },
+        )?
     } else {
         backend.convert(&result.document)?
     };
@@ -1022,6 +1031,7 @@ fn print_usage(out: &mut dyn Write) {
          \x20     --to FORMAT            html, json or docx\n\
          \x20     --stdout               write to stdout (like -o -)\n\
          \x20     --json-attributes      include header/final attributes with --to json\n\
+         \x20     --json-locations       include each block's file and line with --to json\n\
          \x20     --diagnostics MODE     compat (default) or editor with physical byte spans\n\
          \x20 -h, --help                 print this help\n\
          \x20 -V, --version              print the version"

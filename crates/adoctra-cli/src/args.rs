@@ -3,7 +3,8 @@
 //! clustered short flags (`-sn`) and attached values (`-Ssafe`), enumerated
 //! values by unique case-sensitive prefix (`-d b`), and Ruby's messages for
 //! invalid, ambiguous and missing arguments. `-h` and `-V` act when parsed.
-//! adoctra adds `--to`, `--stdout`, `--json-attributes` and `--diagnostics`.
+//! adoctra adds `--to`, `--stdout`, `--json-attributes`, `--json-locations`
+//! and `--diagnostics`.
 
 use std::path::PathBuf;
 
@@ -43,6 +44,7 @@ pub struct Args {
     pub attributes: adoctra::Attributes,
     pub safe: adoctra::SafeMode,
     pub json_attributes: bool,
+    pub json_locations: bool,
     pub editor_diagnostics: bool,
     pub base_dir: Option<PathBuf>,
     pub failure_level: Level,
@@ -57,7 +59,8 @@ pub struct Args {
 
 /// What the command line asks for.
 pub enum Command {
-    Convert(Args),
+    /// The options are large; boxed to keep the other variants small.
+    Convert(Box<Args>),
     /// `-h`: the usage on stdout, success.
     Help,
     /// `-V` (or a lone `-v`): the version on stdout, success.
@@ -124,6 +127,7 @@ const SPECS: &[Spec] = &[
     spec(None, "to", Value::Required),
     spec(None, "stdout", Value::None),
     spec(None, "json-attributes", Value::None),
+    spec(None, "json-locations", Value::None),
     spec(None, "diagnostics", Value::Choice(&["compat", "editor"])),
 ];
 
@@ -229,6 +233,7 @@ fn apply(state: &mut State, spec: &Spec, switch: &str, value: Option<String>) ->
         "to" => args.format = value,
         "stdout" => args.to_stdout = true,
         "json-attributes" => args.json_attributes = true,
+        "json-locations" => args.json_locations = true,
         "diagnostics" => args.editor_diagnostics = value == "editor",
         other => unreachable!("unhandled option {other}"),
     }
@@ -273,6 +278,7 @@ pub fn parse(arguments: impl IntoIterator<Item = String>) -> Command {
             // stay in the input's directory.
             safe: adoctra::SafeMode::Safe,
             json_attributes: false,
+            json_locations: false,
             editor_diagnostics: false,
             base_dir: None,
             failure_level: Level::Fatal,
@@ -413,7 +419,7 @@ fn inputs(mut state: State) -> Command {
         }
     }
     state.args.inputs = inputs;
-    Command::Convert(state.args)
+    Command::Convert(Box::new(state.args))
 }
 
 #[cfg(unix)]
@@ -444,7 +450,7 @@ mod tests {
 
     fn converted(args: &[&str]) -> Args {
         match parse_strs(args) {
-            Command::Convert(args) => args,
+            Command::Convert(args) => *args,
             _ => panic!("expected a conversion for {args:?}"),
         }
     }

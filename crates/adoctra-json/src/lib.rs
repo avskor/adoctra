@@ -7,8 +7,55 @@
 use adoctra_core::ast::{Attribution, Block, BlockKind, Inline};
 use adoctra_core::json::escape_into;
 use adoctra_core::segments::Out;
-use adoctra_core::{Backend, Document, Result};
+use adoctra_core::{Backend, Document, Result, SourceMap, Span};
+use std::cell::RefCell;
 use std::collections::BTreeMap;
+
+thread_local! {
+    /// The sources of a [`JsonBackend::convert_with`] call that asked for
+    /// block locations; the writers are free functions, so the call scopes
+    /// it here instead of threading it through every one of them.
+    static LOCATIONS: RefCell<Option<SourceMap>> = const { RefCell::new(None) };
+}
+
+/// What [`JsonBackend::convert_with`] adds to the ordinary JSON tree.
+#[derive(Debug, Default, Clone)]
+pub struct JsonOptions {
+    /// The header and final attribute snapshots (`attribute_snapshots`).
+    pub attributes: bool,
+    /// The sources the document was read from: each block, list item and
+    /// table cell then has `"location":{"file":…,"line":…}`, the line its
+    /// span starts on (1-based) in the file that holds it.
+    pub locations: Option<SourceMap>,
+}
+
+/// Restores the location slot when the conversion ends (also on panic).
+struct LocationScope;
+
+impl Drop for LocationScope {
+    fn drop(&mut self) {
+        LOCATIONS.with(|slot| slot.borrow_mut().take());
+    }
+}
+
+/// `,"location":{…}` for `span` when the current conversion asked for it.
+fn write_location(span: Span, s: &mut String) {
+    LOCATIONS.with(|slot| {
+        let Some(sources) = slot.borrow().as_ref().map(|sources| {
+            sources.get(span.source_id).and_then(|file| {
+                file.position(span.start)
+                    .map(|position| (file.name().to_owned(), position.line))
+            })
+        }) else {
+            return;
+        };
+        if let Some((file, line)) = sources {
+            s.push_str(",\"location\":{\"file\":");
+            escape_into(&file, s);
+            s.push_str(&format!(",\"line\":{line}}}"));
+        }
+    });
+}
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct JsonBackend;
@@ -21,7 +68,23 @@ impl JsonBackend {
     /// Include header and final effective document attributes, with semantic
     /// parts. The ordinary JSON tree stays unchanged unless explicitly asked.
     pub fn convert_with_attributes(&self, doc: &Document) -> Result<Vec<u8>> {
+        self.convert_with(
+            doc,
+            JsonOptions {
+                attributes: true,
+                locations: None,
+            },
+        )
+    }
+
+    /// The JSON tree with the additions `options` asks for.
+    pub fn convert_with(&self, doc: &Document, options: JsonOptions) -> Result<Vec<u8>> {
+        let _scope = LocationScope;
+        LOCATIONS.with(|slot| *slot.borrow_mut() = options.locations);
         let mut bytes = self.convert(doc)?;
+        if !options.attributes {
+            return Ok(bytes);
+        }
         let closing = bytes.pop();
         debug_assert_eq!(closing, Some(b'}'));
         let mut suffix = String::from(",\"attribute_snapshots\":{");
@@ -249,6 +312,7 @@ fn write_cell<'a>(cell: &'a adoctra_core::ast::TableCell, s: &mut Out<'a, Block>
         Some(color) => escape_into(color, s),
         None => s.push_str("null"),
     }
+    write_location(cell.span, s);
     match &cell.content {
         adoctra_core::ast::CellContent::Paragraphs(paragraphs) => {
             s.push_str(",\"paragraphs\":[");
@@ -339,6 +403,7 @@ fn write_list_item<'a>(item: &'a adoctra_core::ast::ListItem, s: &mut Out<'a, Bl
     if let Some(checked) = item.checkbox {
         s.push_str(&format!(",\"checkbox\":{checked}"));
     }
+    write_location(item.span, s);
     s.push_str(",\"blocks\":[");
     for (j, child) in item.blocks.iter().enumerate() {
         if j > 0 {
@@ -361,6 +426,7 @@ fn write_block_part<'a>(block: &'a Block, s: &mut Out<'a, Block>) {
         BlockKind::Heading { level, inlines } => {
             s.push_str(&format!("{{\"name\":\"heading\",\"level\":{level},"));
             write_id(&block.id, s);
+            write_location(block.span, s);
             write_roles(&block.roles, s);
             write_style(&block.attrs.style, s);
             write_attributes(&block.attrs.named, s);
@@ -374,6 +440,7 @@ fn write_block_part<'a>(block: &'a Block, s: &mut Out<'a, Block>) {
         BlockKind::Paragraph { inlines } => {
             s.push_str("{\"name\":\"paragraph\",");
             write_id(&block.id, s);
+            write_location(block.span, s);
             write_roles(&block.roles, s);
             write_style(&block.attrs.style, s);
             write_attributes(&block.attrs.named, s);
@@ -392,6 +459,7 @@ fn write_block_part<'a>(block: &'a Block, s: &mut Out<'a, Block>) {
         } => {
             s.push_str("{\"name\":\"listing\",");
             write_id(&block.id, s);
+            write_location(block.span, s);
             write_roles(&block.roles, s);
             write_style(&block.attrs.style, s);
             write_attributes(&block.attrs.named, s);
@@ -411,6 +479,7 @@ fn write_block_part<'a>(block: &'a Block, s: &mut Out<'a, Block>) {
         } => {
             s.push_str("{\"name\":\"literal\",");
             write_id(&block.id, s);
+            write_location(block.span, s);
             write_roles(&block.roles, s);
             write_style(&block.attrs.style, s);
             write_attributes(&block.attrs.named, s);
@@ -426,6 +495,7 @@ fn write_block_part<'a>(block: &'a Block, s: &mut Out<'a, Block>) {
         BlockKind::Stem { style, inlines } => {
             s.push_str("{\"name\":\"stem\",");
             write_id(&block.id, s);
+            write_location(block.span, s);
             write_roles(&block.roles, s);
             write_style(&Some(style.as_str().into()), s);
             write_attributes(&block.attrs.named, s);
@@ -438,6 +508,7 @@ fn write_block_part<'a>(block: &'a Block, s: &mut Out<'a, Block>) {
         BlockKind::Passthrough { text, inlines } => {
             s.push_str("{\"name\":\"pass\",");
             write_id(&block.id, s);
+            write_location(block.span, s);
             write_roles(&block.roles, s);
             write_style(&block.attrs.style, s);
             write_attributes(&block.attrs.named, s);
@@ -458,6 +529,7 @@ fn write_block_part<'a>(block: &'a Block, s: &mut Out<'a, Block>) {
                 "\"thematic\","
             });
             write_id(&block.id, s);
+            write_location(block.span, s);
             write_roles(&block.roles, s);
             write_style(&block.attrs.style, s);
             write_attributes(&block.attrs.named, s);
@@ -471,6 +543,7 @@ fn write_block_part<'a>(block: &'a Block, s: &mut Out<'a, Block>) {
             // disabled); the entries follow the sections in order.
             s.push_str("{\"name\":\"toc\",");
             write_id(&block.id, s);
+            write_location(block.span, s);
             write_roles(&block.roles, s);
             write_style(&block.attrs.style, s);
             write_attributes(&block.attrs.named, s);
@@ -498,6 +571,7 @@ fn write_block_part<'a>(block: &'a Block, s: &mut Out<'a, Block>) {
             adoctra_core::json::write_svg(svg.as_ref(), s);
             s.push(',');
             write_id(&block.id, s);
+            write_location(block.span, s);
             write_roles(&block.roles, s);
             write_style(&block.attrs.style, s);
             write_attributes(&block.attrs.named, s);
@@ -509,6 +583,7 @@ fn write_block_part<'a>(block: &'a Block, s: &mut Out<'a, Block>) {
         BlockKind::Table(table) => {
             s.push_str("{\"name\":\"table\",");
             write_id(&block.id, s);
+            write_location(block.span, s);
             write_roles(&block.roles, s);
             write_style(&block.attrs.style, s);
             write_attributes(&block.attrs.named, s);
@@ -536,6 +611,7 @@ fn write_block_part<'a>(block: &'a Block, s: &mut Out<'a, Block>) {
             }
             s.push_str(&format!(",\"embedded\":{embedded},"));
             write_id(&block.id, s);
+            write_location(block.span, s);
             write_roles(&block.roles, s);
             write_style(&block.attrs.style, s);
             write_attributes(&block.attrs.named, s);
@@ -551,6 +627,7 @@ fn write_block_part<'a>(block: &'a Block, s: &mut Out<'a, Block>) {
             escape_into(src, s);
             s.push(',');
             write_id(&block.id, s);
+            write_location(block.span, s);
             write_roles(&block.roles, s);
             write_style(&block.attrs.style, s);
             write_attributes(&block.attrs.named, s);
@@ -566,6 +643,7 @@ fn write_block_part<'a>(block: &'a Block, s: &mut Out<'a, Block>) {
         } => {
             s.push_str(&format!("{{\"name\":\"list\",\"ordered\":{ordered},"));
             write_id(&block.id, s);
+            write_location(block.span, s);
             write_roles(&block.roles, s);
             write_style(&block.attrs.style, s);
             write_attributes(&block.attrs.named, s);
@@ -589,6 +667,7 @@ fn write_block_part<'a>(block: &'a Block, s: &mut Out<'a, Block>) {
         BlockKind::CalloutList { items } => {
             s.push_str("{\"name\":\"colist\",");
             write_id(&block.id, s);
+            write_location(block.span, s);
             write_roles(&block.roles, s);
             write_style(&block.attrs.style, s);
             write_attributes(&block.attrs.named, s);
@@ -618,6 +697,7 @@ fn write_block_part<'a>(block: &'a Block, s: &mut Out<'a, Block>) {
         BlockKind::DescriptionList { items } => {
             s.push_str("{\"name\":\"dlist\",");
             write_id(&block.id, s);
+            write_location(block.span, s);
             write_roles(&block.roles, s);
             write_style(&block.attrs.style, s);
             write_attributes(&block.attrs.named, s);
@@ -659,6 +739,7 @@ fn write_block_part<'a>(block: &'a Block, s: &mut Out<'a, Block>) {
             escape_into(&adoctra_core::attributes::parts_text(label), s);
             s.push(',');
             write_id(&block.id, s);
+            write_location(block.span, s);
             write_roles(&block.roles, s);
             write_style(&block.attrs.style, s);
             write_attributes(&block.attrs.named, s);
@@ -679,6 +760,7 @@ fn write_block_part<'a>(block: &'a Block, s: &mut Out<'a, Block>) {
         BlockKind::Example { blocks } => {
             s.push_str("{\"name\":\"example\",");
             write_id(&block.id, s);
+            write_location(block.span, s);
             write_roles(&block.roles, s);
             write_style(&block.attrs.style, s);
             write_attributes(&block.attrs.named, s);
@@ -698,6 +780,7 @@ fn write_block_part<'a>(block: &'a Block, s: &mut Out<'a, Block>) {
         BlockKind::Sidebar { blocks } => {
             s.push_str("{\"name\":\"sidebar\",");
             write_id(&block.id, s);
+            write_location(block.span, s);
             write_roles(&block.roles, s);
             write_style(&block.attrs.style, s);
             write_attributes(&block.attrs.named, s);
@@ -746,6 +829,7 @@ fn write_block_part<'a>(block: &'a Block, s: &mut Out<'a, Block>) {
         BlockKind::Open { blocks } => {
             s.push_str("{\"name\":\"open\",");
             write_id(&block.id, s);
+            write_location(block.span, s);
             write_roles(&block.roles, s);
             write_style(&block.attrs.style, s);
             write_attributes(&block.attrs.named, s);
@@ -768,6 +852,7 @@ fn write_block_part<'a>(block: &'a Block, s: &mut Out<'a, Block>) {
         } => {
             s.push_str("{\"name\":\"quote\",");
             write_id(&block.id, s);
+            write_location(block.span, s);
             write_roles(&block.roles, s);
             write_style(&block.attrs.style, s);
             write_attributes(&block.attrs.named, s);
@@ -791,6 +876,7 @@ fn write_block_part<'a>(block: &'a Block, s: &mut Out<'a, Block>) {
         } => {
             s.push_str("{\"name\":\"verse\",");
             write_id(&block.id, s);
+            write_location(block.span, s);
             write_roles(&block.roles, s);
             write_style(&block.attrs.style, s);
             write_attributes(&block.attrs.named, s);
@@ -2700,6 +2786,63 @@ mod tests {
         // Without a reftext the block has no reftext field; the id is exposed.
         assert!(json.contains("\"id\":\"p\""), "got: {json}");
         assert!(!json.contains("\"reftext\""), "got: {json}");
+    }
+
+    #[test]
+    fn locations_are_opt_in_and_name_the_file_that_holds_each_node() {
+        let mut sources = adoctra_core::SourceMap::new();
+        let mut resources = adoctra_core::MemoryResources::new();
+        resources
+            .insert(
+                "/d/main.adoc",
+                "= T\n\n[[s]]\n== S\n\ninclude::part.adoc[]\n\n. one\n. two\n",
+            )
+            .unwrap();
+        resources.insert("/d/part.adoc", "\nfrom part\n").unwrap();
+        let source_id = sources.load("/d/main.adoc", None, &resources).unwrap();
+        let options = adoctra_core::ParseOptions {
+            source_id,
+            ..Default::default()
+        };
+        let doc = adoctra_core::parse_resource(&mut sources, &options, &resources)
+            .unwrap()
+            .document;
+        let plain = String::from_utf8(JsonBackend::new().convert(&doc).unwrap()).unwrap();
+        assert!(!plain.contains("location"), "{plain}");
+        let json = JsonBackend::new()
+            .convert_with(
+                &doc,
+                JsonOptions {
+                    attributes: false,
+                    locations: Some(sources.clone()),
+                },
+            )
+            .unwrap();
+        let json = String::from_utf8(json).unwrap();
+        let at =
+            |file: &str, line: usize| format!(r#""location":{{"file":"{file}","line":{line}}}"#);
+        // The section title (after its anchor), the included paragraph in
+        // its own file, the list and each item.
+        for (file, line) in [
+            ("/d/main.adoc", 1),
+            ("/d/main.adoc", 4),
+            ("/d/part.adoc", 2),
+            ("/d/main.adoc", 8),
+            ("/d/main.adoc", 9),
+        ] {
+            assert!(json.contains(&at(file, line)), "{file}:{line}: {json}");
+        }
+        assert_eq!(json.matches(r#""location":"#).count(), 6, "{json}");
+        // Without options the conversion equals the plain one.
+        assert_eq!(
+            String::from_utf8(
+                JsonBackend::new()
+                    .convert_with(&doc, JsonOptions::default())
+                    .unwrap()
+            )
+            .unwrap(),
+            plain
+        );
     }
 
     #[test]

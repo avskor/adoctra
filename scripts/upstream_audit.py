@@ -73,7 +73,7 @@ PLACEHOLDER = "<UPSTREAM>"
 SAFE = {"unsafe": "unsafe", "safe": "safe", "server": "server", "secure": "secure",
         0: "unsafe", 1: "safe", 10: "server", 20: "secure"}
 ENVIRONMENT = {"SOURCE_DATE_EPOCH": "1700000000", "TZ": "UTC"}
-PROFILE = "upstream-audit-body-shell-positions-model-v5"
+PROFILE = "upstream-audit-body-shell-positions-model-v6"
 # Ruby's default `webfonts` (an empty value) links these Google fonts; the
 # adoctra theme uses system fonts (an explicit `webfonts` value is compared).
 # The opening comments of Ruby's default stylesheet and adoctra.css.
@@ -190,8 +190,16 @@ def normal_metadata(context, style, options, attributes, fields):
             **{name: value for name, value in fields.items() if value is not None}}
 
 
-def adoctra_metadata(block):
-    """structure.py's `meta` hook for adoctra's JSON (a section's heading)."""
+def adoctra_location(node, root=None):
+    location = node.get("location")
+    return None if location is None else {"file": source_name(location["file"], root), "line": location["line"]}
+
+
+def adoctra_metadata(block, root=None):
+    """structure.py's `meta` hook for adoctra's JSON (a section's heading;
+    a list item or table cell has only its location)."""
+    if "name" not in block:
+        return "item", {"location": adoctra_location(block, root)}
     # A section passes its heading; a standalone heading is a floating title.
     floating = block.get("style") in ("discrete", "float")
     context = {"heading": "floating_title" if floating else "section",
@@ -215,23 +223,39 @@ def adoctra_metadata(block):
         fields["attribution"] = inline_text(attribution["author"])
     if attribution.get("citetitle"):
         fields["citetitle"] = inline_text(attribution["citetitle"])
+    if context != "preamble":
+        fields["location"] = adoctra_location(block, root)
     return context, normal_metadata(context, block.get("style"), block.get("options", []),
                                     block.get("attributes", {}), fields)
 
 
-def reference_metadata(node):
+def reference_location(location, root=None, docfile=None):
+    """Ruby's cursor file names the primary document by its `docfile` (the
+    harness passes it on standard input): that is the CLI's `<stdin>`."""
+    if location is None:
+        return None
+    primary = docfile is not None and location["file"] in (docfile, docfile.rsplit("/", 1)[-1])
+    file = "<stdin>" if primary else location["file"]
+    return {"file": source_name(file, root), "line": location["line"]}
+
+
+def reference_metadata(node, root=None, docfile=None):
     """Ruby's `meta` of each structure node, normalized like adoctra's."""
     if isinstance(node, list):
         for child in node:
-            reference_metadata(child)
+            reference_metadata(child, root, docfile)
         return
     if not isinstance(node, dict):
         return
     for key, value in node.items():
         if key != "meta":
-            reference_metadata(value)
+            reference_metadata(value, root, docfile)
     meta = node.get("meta")
-    if meta is None or "context" not in node:
+    if meta is None:
+        return
+    if "context" not in node:
+        # A list item or table cell.
+        node["meta"] = {"location": reference_location(meta.get("location"), root, docfile)}
         return
     context = node["context"]
     attributes = meta["attributes"]
@@ -248,24 +272,42 @@ def reference_metadata(node):
     fields["title"] = attribute_text(meta["title"]) if meta.get("title") is not None else None
     fields["caption"] = None if context == "section" else (
         attribute_text(meta["caption"]) if meta.get("caption") is not None else None)
+    if context != "preamble":
+        fields["location"] = reference_location(meta.get("location"), root, docfile)
     node["meta"] = normal_metadata(context, meta["style"], meta["options"], attributes, fields)
 
 
-def metadata_differences(expected, actual, path="", found=None):
-    """The fields whose metadata differ, by node path."""
+def metadata_differences(expected, actual, path="", found=None, fields=None):
+    """The metadata fields that differ, by node path: all but `location`, or
+    only those in `fields`."""
     found = [] if found is None else found
     if isinstance(expected, dict) and isinstance(actual, dict):
-        if "meta" in expected and "meta" in actual and expected["meta"] != actual["meta"]:
-            fields = sorted(k for k in set(expected["meta"]) | set(actual["meta"])
-                            if expected["meta"].get(k) != actual["meta"].get(k))
-            found.append(f"{path or 'document'}:{expected.get('context')}:{','.join(fields)}")
+        if "meta" in expected and "meta" in actual:
+            names = sorted(name for name in set(expected["meta"]) | set(actual["meta"])
+                           if (name in fields if fields is not None else name != "location")
+                           and expected["meta"].get(name) != actual["meta"].get(name))
+            if names:
+                found.append(f"{path or 'document'}:{expected.get('context', 'item')}:{','.join(names)}")
         for key in expected:
             if key != "meta" and key in actual:
-                metadata_differences(expected[key], actual[key], f"{path}.{key}" if path else key, found)
+                metadata_differences(expected[key], actual[key], f"{path}.{key}" if path else key, found, fields)
     elif isinstance(expected, list) and isinstance(actual, list):
         for index, (x, y) in enumerate(zip(expected, actual)):
-            metadata_differences(x, y, f"{path}[{index}]", found)
+            metadata_differences(x, y, f"{path}[{index}]", found, fields)
     return found
+
+
+def compare_locations(expected, actual):
+    """The separate location channel: where each block, list item and table
+    cell starts. Ruby's `source_location` is its reader cursor (with known
+    quirks; one upstream test asserts an "incorrect lineno"), adoctra's the
+    physical start of the node, so differences are frozen per entry in the
+    baseline rather than failing the entry. None without a compared model."""
+    if (expected is None or actual is None or "error" in expected or "error" in actual
+            or structure.strip_meta(expected["structure"]) != structure.strip_meta(actual["structure"])):
+        return None
+    differences = metadata_differences(expected["structure"], actual["structure"], fields={"location"})
+    return "DIFF" if differences else "PASS"
 
 
 def model_attributes(snapshot, root):
@@ -282,14 +324,14 @@ def model_attributes(snapshot, root):
     return result
 
 
-def reference_model(model, root):
+def reference_model(model, root, docfile=None):
     """Ruby's model with the same attribute text and checkout paths; a
     structure outside the block-structure-v1 schema is an error, not a pass."""
     try:
         structure.validate_structure(structure.strip_meta(model["structure"]))
     except ValueError as error:
         return {"error": f"ValueError: {error}"}
-    reference_metadata(model["structure"])
+    reference_metadata(model["structure"], root, docfile)
     attributes = {snapshot: {name: None if value is None else localize_back(attribute_text(value), root)
                              for name, value in values.items()}
                   for snapshot, values in model["attributes"].items()}
@@ -632,13 +674,14 @@ def adoctra(binary, entry, args, root=None):
     except ValueError as error:
         return {"error": str(error)}
     # The same conversion as JSON: block structure and attribute snapshots.
-    model = decoded(subprocess.run([str(binary), "-", "--to", "json", "--json-attributes", "--stdout", *args],
+    model = decoded(subprocess.run([str(binary), "-", "--to", "json", "--json-attributes", "--json-locations",
+                                    "--stdout", *args],
                                    input=entry["source"].encode("utf-8"), capture_output=True, timeout=60,
                                    env={**os.environ, **ENVIRONMENT}))
     try:
         document = json.loads(model.stdout)
         result["model"] = {"structure": structure.document_projection(
-                               document, lambda block: adoctra_metadata(block)[1]),
+                               document, lambda block: adoctra_metadata(block, root)[1]),
                            "attributes": {snapshot: model_attributes(values, root)
                                           for snapshot, values in document["attribute_snapshots"].items()}}
     except (ValueError, KeyError) as error:
@@ -875,11 +918,12 @@ def audit(binary, only, jobs):
             if run.returncode:
                 sys.exit(f"reference runner failed: {run.stderr.strip()[-2000:]}")
             references = {r["id"]: r for r in map(json.loads, filter(None, run.stdout.split("\n")))}
+            docfiles = {e["id"]: e["options"].get("attributes", {}).get("docfile") for e in local}
             for reference in references.values():
                 if "diagnostics" in reference:
                     reference["diagnostics"] = reference_diagnostics(reference["diagnostics"], root)
                 if "model" in reference:
-                    reference["model"] = reference_model(reference["model"], root)
+                    reference["model"] = reference_model(reference["model"], root, docfiles.get(reference["id"]))
             with ThreadPoolExecutor(jobs) as pool:
                 actuals = dict(zip((e["id"] for e in local), pool.map(
                     lambda e: adoctra(binary, e, localize(classify(e["source"], e["options"])[0], root), root),
@@ -900,7 +944,8 @@ def audit(binary, only, jobs):
             continue
         expected = references.get(entry["id"], {"error": "no reference output"})
         status, reasons = compare(entry, expected, actuals[entry["id"]])
-        results[entry["id"]] = {"status": status, "reasons": reasons}
+        results[entry["id"]] = {"status": status, "reasons": reasons,
+                                "locations": compare_locations(expected.get("model"), actuals[entry["id"]].get("model"))}
     return inventory, entries, results
 
 
@@ -931,7 +976,8 @@ def show(entry, binary):
             if "diagnostics" in expected:
                 expected["diagnostics"] = reference_diagnostics(expected["diagnostics"], root)
             if "model" in expected:
-                expected["model"] = reference_model(expected["model"], root)
+                expected["model"] = reference_model(expected["model"], root,
+                                                    local["options"].get("attributes", {}).get("docfile"))
             actual = adoctra(binary, local, args, root)
     for occurrence in entry["occurrences"]:
         print(f"{occurrence['file']}:{occurrence['test_line']} {occurrence['test']}")
@@ -979,12 +1025,15 @@ def main():
     inventory, entries, results = audit(args.binary, set(args.only), args.jobs)
     files = summary(entries, results)
     totals = dict(sorted(Counter(r["status"] for r in results.values()).items()))
+    locations = dict(sorted(Counter(r["locations"] for r in results.values() if r.get("locations")).items()))
     for name, counts in files.items():
         print(f"{name:32} " + " ".join(f"{k}={v}" for k, v in counts.items()))
     print(json.dumps(totals))
+    print("locations:", json.dumps(locations))
     report = {"profile": PROFILE,
               "asciidoctor": inventory["asciidoctor"], "commit": inventory["commit"],
-              "totals": totals, "files": files, "results": dict(sorted(results.items()))}
+              "totals": totals, "location_totals": locations, "files": files,
+              "results": dict(sorted(results.items()))}
     if args.report:
         args.report.parent.mkdir(parents=True, exist_ok=True)
         args.report.write_text(json.dumps(report, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")

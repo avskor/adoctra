@@ -37,8 +37,11 @@ def strip_meta(node):
 
 
 def item_projection(item, meta=None):
-    return {"checkbox": item.get("checkbox"),
-            "blocks": [block_projection(b, meta) for b in item["blocks"]]}
+    result = {"checkbox": item.get("checkbox"),
+              "blocks": [block_projection(b, meta) for b in item["blocks"]]}
+    if meta is not None:
+        result["meta"] = meta(item)
+    return result
 
 
 def block_projection(block, meta=None):
@@ -98,6 +101,8 @@ def cell_projection(cell, meta=None):
               "rowspan": 1 if cell["rowspan"] is None else cell["rowspan"]}
     result["document"] = (document_projection({"name": "document", "blocks": cell["blocks"]}, meta)
                           if "blocks" in cell else None)
+    if meta is not None:
+        result["meta"] = meta(cell)
     return result
 
 

@@ -103,7 +103,13 @@ require_relative 'asciidoctor-structure'
 # style (a section's from its attributes), the `*-option` names, the named
 # attributes, an image's `AbstractBlock#alt`, the reference text, the title
 # and the caption (each after its substitutions).
+def block_location node
+  (cursor = node.source_location) ? { file: cursor.file || cursor.path, line: cursor.lineno } : nil
+end
+
 def block_metadata block
+  # A list item or table cell: only where it starts.
+  return { location: (block_location block) } if [:list_item, :table_cell].include? block.context
   attributes = block.attributes
   { style: (block.style || (block.context == :section ? attributes['style'] : nil))&.to_s,
     options: attributes.keys.grep(String).select {|name| name.end_with? '-option' }.map {|name| name.delete_suffix '-option' }.sort,
@@ -111,7 +117,8 @@ def block_metadata block
     alt: (block.context == :image ? block.alt : nil),
     reftext: (block.reftext? ? block.reftext : nil),
     title: (block.title? ? block.title : nil),
-    caption: block.caption }
+    caption: block.caption,
+    location: (block_location block) }
 end
 
 def attribute_strings attributes
@@ -128,7 +135,8 @@ entries.each do |entry|
   logger = Asciidoctor::MemoryLogger.new
   Asciidoctor::LoggerManager.logger = logger
   begin
-    document = Asciidoctor::Document.new entry['source'], (options_of entry['options'])
+    # `sourcemap` only records where each block starts (no output effect).
+    document = Asciidoctor::Document.new entry['source'], (options_of entry['options']).merge(sourcemap: true)
     output = document.convert
     # What Ruby's CLI writes (the other side is the CLI): the output chomped
     # plus a LF, nothing for nil (the inline doctype without a candidate).

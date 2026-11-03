@@ -1184,6 +1184,47 @@ fn cli_json_attributes_are_opt_in_and_rejected_for_html() {
 }
 
 #[test]
+fn cli_json_locations_add_each_nodes_start_line() {
+    use std::io::Write;
+    use std::process::{Command, Stdio};
+    let run = |args: &[&str]| {
+        let mut child = Command::new(env!("CARGO_BIN_EXE_adoctra"))
+            .args(["-", "--stdout"])
+            .args(args)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap();
+        child
+            .stdin
+            .take()
+            .unwrap()
+            .write_all(b"para\n\n.T\n----\nx\n----\n\n* a\n* b\n\n|===\n|c\n|===\n")
+            .unwrap();
+        child.wait_with_output().unwrap()
+    };
+    let output = run(&["--to", "json", "--json-locations"]);
+    assert!(output.status.success());
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    // Blocks start after their metadata lines; list items and cells too.
+    for line in [1, 4, 8, 9, 11, 12] {
+        assert!(
+            stdout.contains(&format!("\"location\":{{\"file\":\"-\",\"line\":{line}}}")),
+            "line {line}: {stdout}"
+        );
+    }
+    assert!(!String::from_utf8(run(&["--to", "json"]).stdout)
+        .unwrap()
+        .contains("location"));
+    let html = run(&["--to", "html", "--json-locations"]);
+    assert!(!html.status.success());
+    assert!(String::from_utf8(html.stderr)
+        .unwrap()
+        .contains("--json-locations requires --to json"));
+}
+
+#[test]
 fn cli_inline_doctype_writes_a_newline_and_embedded_warnings() {
     use std::io::Write;
     use std::process::{Command, Stdio};

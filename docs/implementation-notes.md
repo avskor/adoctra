@@ -2056,6 +2056,17 @@ with `render_with_start`), fixes highlighted pass slots and splits the HTML
 into Raw tags and decoded Text, so later stages see Ruby's string; marks
 return as Callout parts. Without the hook it is Ruby's `sub_source`. The CLI
 passes the hook in embedded mode too; `golden/rouge/` parses with it.
+**JSON locations** (2026-11-03): `JsonBackend::convert_with(doc,
+JsonOptions { attributes, locations: Option<SourceMap> })` adds
+`"location":{"file","line"}` after each block's `id`, after a list item's
+`checkbox` and a cell's `background`; the free writer functions read the
+SourceMap from a thread-local slot scoped by `convert_with` (LocationScope
+restores it). CLI `--json-locations` (requires `--to json`). The upstream
+audit runs Ruby with `sourcemap: true` and compares locations as a separate
+per-entry channel (`locations`, `location_totals`, profile `…-model-v6`):
+2092 PASS, 213 DIFF frozen — Ruby's reader cursor vs adoctra's physical
+start (intentional difference, user decision 2026-11-03); a primary
+document Ruby names by `docfile` is the CLI's `<stdin>`.
 **CLI shell and base_dir assets** (2026-11-03): cli_matrix.py compares a
 standalone document's shell (upstream_audit.shell) in stdout and written
 files. It exposed that the stylesheet and docinfo were read from the

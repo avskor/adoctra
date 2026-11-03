@@ -313,6 +313,31 @@ class CompareTests(unittest.TestCase):
         self.assertEqual((heading["title"], heading.get("caption")), ("S", None))
 
 
+    def test_locations_are_a_separate_channel(self):
+        def tree(line, item_line):
+            return {"context": "document", "has_title": False, "blocks": [
+                {"context": "ulist", "id": None, "roles": [],
+                 "meta": {"style": None, "options": [], "attributes": {},
+                          "location": {"file": "<stdin>", "line": line}},
+                 "items": [{"checkbox": None, "blocks": [],
+                            "meta": {"location": {"file": "<stdin>", "line": item_line}}}]}]}
+        ruby, ours = {"structure": tree(3, 3), "attributes": {}}, {"structure": tree(3, 3), "attributes": {}}
+        self.assertEqual((upstream_audit.compare_model(ruby, ours), upstream_audit.compare_locations(ruby, ours)),
+                         ([], "PASS"))
+        moved = {"structure": tree(3, 4), "attributes": {}}
+        # A different start line is no model difference, only the channel's.
+        self.assertEqual((upstream_audit.compare_model(ruby, moved), upstream_audit.compare_locations(ruby, moved)),
+                         ([], "DIFF"))
+        self.assertIsNone(upstream_audit.compare_locations(ruby, {"error": "x"}))
+        # Ruby names the primary document by its docfile; the CLI reads stdin.
+        self.assertEqual(upstream_audit.reference_location({"file": "sample.adoc", "line": 2}, None, "/r/sample.adoc"),
+                         {"file": "<stdin>", "line": 2})
+        self.assertEqual(upstream_audit.reference_location({"file": "/r/other.adoc", "line": 2}, Path("/r"), "/r/s.adoc"),
+                         {"file": "other.adoc", "line": 2})
+        self.assertEqual(upstream_audit.adoctra_metadata({"location": {"file": "-", "line": 5}})[1],
+                         {"location": {"file": "<stdin>", "line": 5}})
+
+
 class InventoryTests(unittest.TestCase):
     def test_committed_inventory_provenance_and_baseline(self):
         inventory = load_inventory()

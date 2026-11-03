@@ -10,8 +10,10 @@ def structure_document(document, &meta)
 end
 
 def structure_item(item, &meta)
-  { checkbox: item.attr?('checkbox') ? item.attr?('checked') : nil,
-    blocks: item.blocks.map { |block| structure_block block, &meta } }
+  result = { checkbox: item.attr?('checkbox') ? item.attr?('checked') : nil,
+             blocks: item.blocks.map { |block| structure_block block, &meta } }
+  result[:meta] = meta.call item if meta
+  result
 end
 
 def structure_block(block, &meta)
@@ -34,8 +36,10 @@ def structure_block(block, &meta)
     [:head, :body, :foot].each do |group|
       result[group] = block.rows.public_send(group).map do |row|
         row.map do |cell|
-          { style: cell.style&.to_s, colspan: cell.colspan || 1, rowspan: cell.rowspan || 1,
-            document: cell.inner_document && structure_document(cell.inner_document, &meta) }
+          entry = { style: cell.style&.to_s, colspan: cell.colspan || 1, rowspan: cell.rowspan || 1,
+                    document: cell.inner_document && structure_document(cell.inner_document, &meta) }
+          entry[:meta] = meta.call cell if meta
+          entry
         end
       end
     end
