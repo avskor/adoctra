@@ -438,6 +438,37 @@ class SemanticProjectionTests(unittest.TestCase):
         self.assertNotEqual(semantics.parts_projection([dict(menu, submenus=[])]), [projected[2]])
         self.assertNotEqual(semantics.parts_projection([dict(button, parts=[text('Save')])]), [projected[0]])
 
+    def test_floating_titles_and_breaks_are_blocks_with_their_metadata(self):
+        heading = {'name': 'heading', 'level': 2, 'id': 'd', 'roles': ['r'], 'style': 'discrete', 'title': None,
+                   'inlines': [{'name': 'text', 'value': 'Floating'}]}
+        breaks = [{'name': 'break', 'variant': variant, 'id': None, 'roles': [], 'title': None}
+                  for variant in ['thematic', 'page']]
+        doc = document()
+        doc['blocks'] = [heading, *breaks]
+        blocks = semantics.document_projection(doc, [])['blocks']
+        self.assertEqual(blocks[0], {'context': 'floating_title', 'id': 'd', 'roles': ['r'], 'level': 2,
+                                     'title': [text('Floating')]})
+        self.assertEqual([b['context'] for b in blocks[1:]], ['thematic_break', 'page_break'])
+        for changed in [dict(heading, level=3), dict(heading, id='e'), dict(heading, style='float', roles=[])]:
+            doc['blocks'] = [changed, *breaks]
+            self.assertNotEqual(semantics.document_projection(doc, [])['blocks'], blocks)
+        # Only a discrete heading stands alone; any other heading is invalid here.
+        with self.assertRaises(ValueError):
+            semantics.block_projection(dict(heading, style=None))
+        with self.assertRaises(ValueError):
+            semantics.block_projection(dict(breaks[0], variant='other'))
+        with self.assertRaises(ValueError):
+            semantics.validate_block({'context': 'floating_title', 'id': None, 'roles': [], 'title': [], 'level': -1})
+
+    def test_pdf_only_image_sizes_are_accepted_but_not_compared(self):
+        node = {'name': 'image', 'target': 'a.png', 'src': 'a.png', 'alt': 'A', 'attributes': {'width': '9'}}
+        projected = semantics.inline_projection([node])
+        sized = copy.deepcopy(node)
+        sized['attributes'].update(pdfwidth='100%', scaledwidth='50%')
+        self.assertEqual(semantics.inline_projection([sized]), projected)
+        with self.assertRaises(ValueError):
+            semantics.inline_projection([dict(node, attributes={'width': '9', 'unknown': 'x'})])
+
     def test_image_fields_alt_and_metadata_survive_projection_and_mutations(self):
         node = {'name': 'image', 'target': 'cat.png', 'src': 'assets/cat.png', 'alt': 'Cat &amp; friend',
                 'attributes': {'id': 'cat', 'role': 'zoom wide', 'width': '24', 'link': 'https://example.org', 'align': 'center'},
@@ -675,13 +706,28 @@ class SemanticProjectionTests(unittest.TestCase):
     def test_pinned_fixture_expands_attributes_and_macros_inside_quotes(self):
         root = CORPUS / 'upstream'
         manifest, cases = acceptance.load_corpus(root / 'semantics.json')
-        self.assertEqual(len(cases), 151)
+        self.assertEqual(len(cases), 152)
         self.assertEqual(manifest['profile'], semantics.PROFILE)
         reference = json.loads((root / 'reference/semantic-attributes-macros-in-quotes.json').read_text())
         strong = reference['semantics']['blocks'][0]['inlines'][0]
         self.assertEqual(strong['kind'], 'strong')
         self.assertEqual(strong['inlines'][0], text('World '))
         self.assertEqual(strong['inlines'][1]['target'], 'https://example.org')
+
+    def test_floating_titles_breaks_and_bibliography_reference(self):
+        reference = json.loads((CORPUS / 'upstream/reference/semantic-floating-breaks-bibref.json').read_text())
+        preamble, section = reference['semantics']['blocks']
+        blocks = preamble['blocks']
+        self.assertEqual([b['context'] for b in blocks],
+                         ['floating_title', 'paragraph', 'thematic_break', 'floating_title', 'page_break'])
+        self.assertEqual((blocks[0]['id'], blocks[0]['roles'], blocks[0]['level']), ('d', ['r'], 2))
+        blocks = [preamble, section]
+        items = blocks[1]['blocks'][1]['items']
+        self.assertEqual(items[0]['inlines'][0], {'kind': 'anchor', 'id': 'gof'})
+        self.assertEqual(items[1]['inlines'][1], text('[Label] A labeled entry.'))
+        # The references resolve to the bracketed labels.
+        xrefs = [n for n in blocks[1]['blocks'][0]['inlines'] if n.get('kind') == 'xref']
+        self.assertEqual([x['inlines'] for x in xrefs], [[text('[gof]')], [text('[Label]')]])
 
     def test_incomplete_svg_start_tags_keep_the_read_file(self):
         # Upstream blocks_test.rb:2457: the oracle reads the file as is (the
@@ -701,7 +747,7 @@ class SemanticProjectionTests(unittest.TestCase):
         # 59 selected pages plus the rest of the full Asciidoctor, AsciiDoc
         # language, Asciidoctor PDF and Antora documentation
         # (test_documentation_corpus.py pins those).
-        self.assertEqual(len(cases), 611)
+        self.assertEqual(len(cases), 616)
         full = {'asciidoctor-docs-2.0.23', 'asciidoc-lang-0.3.0', 'asciidoctor-pdf-2.3.27', 'antora-3.2.2'}
         for path, provenance in manifest['files'].items():
             self.assertEqual(provenance, original_manifest['files'][path])

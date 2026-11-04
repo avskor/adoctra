@@ -154,7 +154,9 @@ def image_fields(node):
     require(set(node.get('options', [])) <= {'inline', 'interactive'} and not node.get('icon'),
             'image options/icons are outside inline-semantics-v1')
     attrs = node.get('attributes', {})
-    require(set(attrs) <= IMAGE_ATTRIBUTES | {'id', 'role', 'alt', 'fallback', 'format'},
+    # pdfwidth/scaledwidth size the image in PDF and DocBook only (as in the
+    # Ruby reference converter, they are accepted and not compared).
+    require(set(attrs) <= IMAGE_ATTRIBUTES | {'id', 'role', 'alt', 'fallback', 'format', 'pdfwidth', 'scaledwidth'},
             'image attributes are outside inline-semantics-v1')
     return {'target': lexical(node['target']), 'src': lexical(node['src']),
             'alt': parts_projection(node['parts']) if 'parts' in node else [{'kind': 'text', 'value': lexical(node['alt'])}],
@@ -289,6 +291,15 @@ def block_projection(block):
     context = block['name']
     if context == 'list':
         context = 'olist' if block['ordered'] else 'ulist'
+    if context == 'heading':
+        # A discrete heading outside a section's own heading.
+        require(block.get('style') in {'discrete', 'float'}, 'unexpected heading')
+        return {'context': 'floating_title', 'id': block.get('id'), 'roles': block.get('roles', []),
+                'level': block['level'], 'title': canonical(inline_projection(block['inlines']))}
+    if context == 'break':
+        require(block.get('variant') in {'thematic', 'page'} and not block.get('blocks'), 'invalid break')
+        return {'context': f"{block['variant']}_break", 'id': block.get('id'), 'roles': block.get('roles', []),
+                'title': canonical(inline_projection(block['title'])) if block.get('title') is not None else None}
     require(context in CONTAINERS | LISTS | VERBATIM | {'paragraph', 'image', 'table', 'stem', 'verse', 'toc'},
             f'unsupported semantic block: {context}')
     metadata = block
@@ -827,6 +838,15 @@ def validate_block(node):
     metadata(node)
     keys = {'context', 'id', 'roles', 'title'}
     context = node.get('context')
+    if context == 'floating_title':
+        require(set(node) == keys | {'level'} and type(node['level']) is int and node['level'] >= 0)
+        validate_inlines(node['title'])
+        return
+    if context in {'thematic_break', 'page_break'}:
+        require(set(node) == keys)
+        if node['title'] is not None:
+            validate_inlines(node['title'])
+        return
     require(context in CONTAINERS | LISTS | VERBATIM | {'paragraph', 'image', 'table', 'stem', 'verse', 'toc'})
     if node['title'] is not None:
         validate_inlines(node['title'])

@@ -103,8 +103,9 @@ class SemanticConverter < Asciidoctor::Converter::Base
   end
 
   def image_fields node
+    # pdfwidth/scaledwidth size the image in PDF and DocBook only.
     allowed = [:attribute_entries, *%w[alt default-alt width height title link float align id role imagesdir target
-                                       inline-option interactive-option fallback format]]
+                                       inline-option interactive-option fallback format pdfwidth scaledwidth]]
     raise 'image options are outside inline-semantics-v1' unless node.attributes.keys.all? { |key| Integer === key || allowed.include?(key) }
     attrs = node.attributes.select { |key, _| %w[width height title link float align].include? key }
     target = node.respond_to?(:target) ? node.target : (node.attr 'target')
@@ -310,6 +311,10 @@ class SemanticConverter < Asciidoctor::Converter::Base
     when 'section'
       { context: 'section', id: node.id, roles: node.roles, level: node.level,
         title: inlines(node.title), blocks: node.blocks.map { |block| block.convert } }
+    when 'floating_title'
+      { context: 'floating_title', id: node.id, roles: node.roles, level: node.level, title: inlines(node.title) }
+    when 'thematic_break', 'page_break'
+      metadata node
     when 'preamble', 'open', 'sidebar', 'example', 'admonition', 'quote'
       result = metadata node
       if transform == 'preamble'
@@ -402,6 +407,12 @@ class SemanticConverter < Asciidoctor::Converter::Base
         wrap(result, node.text)
       when :ref
         store(kind: 'anchor', id: node.id)
+      when :bibref
+        # The html5 converter's anchor followed by the bracketed label. Ruby's
+        # reftext subs escape markup the quotes stage put in a label, which
+        # only the HTML converter could write out as text.
+        raise 'bibref label markup is outside inline-semantics-v1' if node.text.to_s.include? "\uE000"
+        store(kind: 'anchor', id: node.id) + "[#{node.reftext || node.id}]"
       when :xref
         # The html5 converter writes an xref's role; `window` has no effect.
         # Positional keys hold the text the macro already parsed.

@@ -13,14 +13,12 @@ import import_docs
 # Framework pages.
 PAGES = {"asciidoctor-docs-2.0.23": 78, "asciidoc-lang-0.3.0": 202, "asciidoctor-pdf-2.3.27": 96,
          "antora-3.2.2": 205, "spring-framework-6.2.0": 6}
-# Full documentation pages outside the semantic profile's schema (they stay in
-# the body, structure and visual profiles): floating titles, a thematic break,
-# a bibliography anchor, diagnostics and raw markup, image options.
+# Full documentation pages outside the semantic profile by its design (they
+# stay in the body, structure and visual profiles): diagnostics (warnings
+# stop the profile) and raw markup.
 SEMANTIC_EXCLUSIONS = {
-    "asciidoc-lang-syntax-quick-reference", "asciidoc-lang-attributes-counters",
-    "asciidoc-lang-blocks-breaks", "asciidoc-lang-pass-pass-macro",
-    "asciidoc-lang-sections-bibliography", "asciidoc-lang-sections-titles-and-levels",
-    "asciidoc-lang-subs-apply-subs-to-text", "asciidoctor-pdf-convert-to-pdf",
+    "asciidoc-lang-syntax-quick-reference", "asciidoc-lang-pass-pass-macro",
+    "asciidoc-lang-subs-apply-subs-to-text",
 }
 
 

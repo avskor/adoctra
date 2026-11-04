@@ -2837,3 +2837,14 @@ in every manifest. A verbatim block in a list item keeps its `strong`
 spacing (`li pre strong { letter-spacing: inherit }`; Ruby's rule is
 `p strong`), golden lists/verbatim_quotes.
 visual-v1: 1886 of 1886 match (943 cases).
+
+**Semantic schema extension** (2026-11-04): `asciidoctor-semantics.rb` now
+projects `floating_title` (id, roles, level, title), `thematic_break` and
+`page_break` (block metadata) and `bibref` anchors (`anchor` + `[reftext or
+id]` text, the html5 output); a bibref label holding quotes-stage markup
+raises (Ruby's reftext subs escape that markup, which only the HTML converter
+could write as text). `pdfwidth`/`scaledwidth` image attributes are accepted
+and not compared (PDF/DocBook only) on both sides. `semantics.py` maps
+adoctra's standalone discrete `heading` and `break` blocks. Probe
+`semantic-floating-breaks-bibref`; five full-docs pages returned to the
+profile (616 + 152 = 768 PASS); three stay out by design (diagnostics, raw).

@@ -385,6 +385,41 @@ cases = {
       raise unless e.message == 'unclosed semantic handle'
     end
   end,
+  'floating titles, breaks, bibliography anchors and PDF image sizes are projected' => lambda do
+    source = <<~'ADOC'
+      [discrete#d.r]
+      === Floating *x*
+
+      '''
+
+      <<<
+
+      [bibliography]
+      == Refs
+
+      * [[[gof]]] Gamma.
+      * [[[ok,Label x]]] Other.
+
+      image::a.png[A,9,pdfwidth=100%,scaledwidth=50%]
+    ADOC
+    floating, thematic, page, section = project(source)[:blocks]
+    assert(floating[:context] == 'floating_title' && floating[:level] == 2 && floating[:id] == 'd' && floating[:roles] == ['r'],
+           'floating title metadata lost')
+    assert(floating[:title].any? { |n| Hash === n && n[:kind] == 'strong' }, 'floating title formatting lost')
+    assert(thematic[:context] == 'thematic_break' && page[:context] == 'page_break', 'breaks lost')
+    items = section[:blocks][0][:items]
+    assert(items[0][:inlines].first == { kind: 'anchor', id: 'gof' }, "bibref anchor lost: #{items[0][:inlines]}")
+    assert(items[0][:inlines][1] == { kind: 'text', value: '[gof] Gamma.' }, "bibref label lost: #{items[0][:inlines]}")
+    assert(items[1][:inlines] == [{ kind: 'anchor', id: 'ok' }, { kind: 'text', value: '[Label x] Other.' }], 'bibref reftext lost')
+    image = section[:blocks][1]
+    assert(image[:context] == 'image' && image[:attributes] == { 'width' => '9' }, "PDF-only sizes compared: #{image}")
+    begin
+      project("[bibliography]\n* [[[ok,Label *x*]]] Other.")
+      raise 'bibref label markup accepted'
+    rescue RuntimeError => e
+      raise unless e.message == 'bibref label markup is outside inline-semantics-v1'
+    end
+  end,
   'launcher rejects literal handle characters and diagnostics' => lambda do
     launcher = File.expand_path('asciidoctor-reference.rb', __dir__)
     ["forged \uE0000\uE001", ":attribute-missing: warn\n\n{missing}"].each do |source|
